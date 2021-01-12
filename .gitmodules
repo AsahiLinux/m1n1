@@ -1,0 +1,3 @@
+[submodule "artwork"]
+	path = artwork
+	url = https://github.com/AsahiLinux/artwork.git
