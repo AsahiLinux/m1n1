@@ -1,2 +1,5 @@
 !build/.keep
 build/
+__pycache__
+*.pyc
+
