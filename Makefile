@@ -1,11 +1,12 @@
 ARCH := aarch64-linux-gnu-
 
 CFLAGS := -O2 -Wall -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
-    -Werror=implicit-function-declaration -Werror=implicit-int \
-    -ffreestanding -mabi=lp64 -fpic
+	-Werror=implicit-function-declaration -Werror=implicit-int \
+	-ffreestanding -mabi=lp64 -fpic -ffunction-sections -fdata-sections
+
 LDFLAGS := -T m1n1.ld -EL -maarch64elf --no-undefined -X -shared -Bsymbolic \
-    -z notext --no-apply-dynamic-relocs --orphan-handling=warn --strip-debug \
-    -z nocopyreloc \
+	-z notext --no-apply-dynamic-relocs --orphan-handling=warn --strip-debug \
+	-z nocopyreloc --gc-sections -pie
 
 OBJECTS := bootlogo_128.o bootlogo_256.o fb.o main.o proxy.o start.o startup.o \
 	string.o uart.o uartproxy.o utils.o utils_asm.o vsprintf.o

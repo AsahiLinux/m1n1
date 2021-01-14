@@ -102,23 +102,23 @@ SECTIONS {
 
         _cmd_end = .;
         
-        . = ALIGN(0x8000);
+        . = ALIGN(0x4000);
         _hdr_end = .;
     } :hdr
     _text_start = .;
-    .init : ALIGN(0x8000) {
+    .init : ALIGN(0x4000) {
         *(.init)
         *(.init.*)
     } :text
-    .text : ALIGN(0x8000) {
+    .text : ALIGN(0x4000) {
         *(.text)
         *(.text.*)
         . = ALIGN(8);
         *(.got.plt)
-        . = ALIGN(0x8000);
+        . = ALIGN(0x4000);
     } :text
     _text_size = . - _text_start;
-    .rodata : ALIGN(0x8000) {
+    .rodata : ALIGN(0x4000) {
         *(.rodata)
         *(.rodata.*)
         . = ALIGN(8);
@@ -128,29 +128,29 @@ SECTIONS {
         *(.rela)
         *(.rela.*)
         _rela_end = .;
-        . = ALIGN(0x8000);
+        . = ALIGN(0x4000);
     } :rodata
     _rodata_end = .;
     _data_start = .;
-    .data : ALIGN(0x8000) {
+    .data : ALIGN(0x4000) {
         *(.data)
         *(.data.*)
         . = ALIGN(8);
         _got_start = .;
         *(.got)
         _got_end = .;
-        . = ALIGN(0x8000);
+        . = ALIGN(0x4000);
     } :data
-    .bss : ALIGN(0x8000) {
+    .bss : ALIGN(0x4000) {
         *(.bss)
         *(.bss.*)
         *(.dynbss)
         *(COMMON)
-        . = ALIGN(0x8000);
+        . = ALIGN(0x4000);
         PROVIDE(_stack_top = .);
         . += _stack_size;
         PROVIDE(_stack_bot = .);
-        . = ALIGN(0x8000);
+        . = ALIGN(0x4000);
     } :data
     _data_size = . - _data_start;
     _end = .;
