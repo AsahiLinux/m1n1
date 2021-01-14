@@ -7,6 +7,52 @@
 
 #define printf debug_printf
 
+static inline u64 read64(u64 addr)
+{
+    u64 data;
+    __asm__ volatile("ldr\t%0, [%1]" : "=r"(data) : "r"(addr));
+    return data;
+}
+
+static inline void write64(u64 addr, u64 data)
+{
+    __asm__ volatile("str\t%0, [%1]" : : "r"(data), "r"(addr));
+}
+
+static inline u64 set64(u64 addr, u64 set)
+{
+    u64 data;
+    __asm__ volatile("ldr\t%0, [%1]\n"
+                     "\torr\t%0, %0, %2\n"
+                     "\tstr\t%0, [%1]"
+                     : "=&r"(data)
+                     : "r"(addr), "r"(set));
+    return data;
+}
+
+static inline u64 clear64(u64 addr, u64 clear)
+{
+    u64 data;
+    __asm__ volatile("ldr\t%0, [%1]\n"
+                     "\tbic\t%0, %0, %2\n"
+                     "\tstr\t%0, [%1]"
+                     : "=&r"(data)
+                     : "r"(addr), "r"(clear));
+    return data;
+}
+
+static inline u64 mask64(u64 addr, u64 clear, u64 set)
+{
+    u64 data;
+    __asm__ volatile("ldr\t%0, [%1]\n"
+                     "\tbic\t%0, %0, %3\n"
+                     "\torr\t%0, %0, %2\n"
+                     "\tstr\t%0, [%1]"
+                     : "=&r"(data)
+                     : "r"(addr), "r"(set), "r"(clear));
+    return data;
+}
+
 static inline u32 read32(u64 addr)
 {
     u32 data;
@@ -93,7 +139,7 @@ static inline u16 mask16(u64 addr, u16 clear, u16 set)
 {
     u16 data;
     __asm__ volatile("ldrh\t%w0, [%1]\n"
-                     "\tbic\t%w0, %3\n"
+                     "\tbic\t%w0, %w0, %w3\n"
                      "\torr\t%w0, %w0, %w2\n"
                      "\tstrh\t%w0, [%1]"
                      : "=&r"(data)
@@ -151,14 +197,16 @@ static inline u8 mask8(u64 addr, u8 clear, u8 set)
  * These functions are guaranteed to copy by reading from src and writing to dst
  * in <n>-bit units If size is not aligned, the remaining bytes are not copied
  */
-void memset32(void *dst, u32 value, u32 size);
-void memcpy32(void *dst, void *src, u32 size);
-void memset16(void *dst, u16 value, u32 size);
-void memcpy16(void *dst, void *src, u32 size);
-void memset8(void *dst, u8 value, u32 size);
-void memcpy8(void *dst, void *src, u32 size);
+void memset64(void *dst, u64 value, size_t size);
+void memcpy64(void *dst, void *src, size_t size);
+void memset32(void *dst, u32 value, size_t size);
+void memcpy32(void *dst, void *src, size_t size);
+void memset16(void *dst, u16 value, size_t size);
+void memcpy16(void *dst, void *src, size_t size);
+void memset8(void *dst, u8 value, size_t size);
+void memcpy8(void *dst, void *src, size_t size);
 
-void hexdump(const void *d, int len);
+void hexdump(const void *d, size_t len);
 void regdump(u64 addr, int len);
 int sprintf(char *str, const char *fmt, ...);
 int debug_printf(const char *fmt, ...);

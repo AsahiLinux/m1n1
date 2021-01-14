@@ -16,10 +16,10 @@ static char ascii(char s)
     return s;
 }
 
-void hexdump(const void *d, int len)
+void hexdump(const void *d, size_t len)
 {
     u8 *data;
-    int i, off;
+    size_t i, off;
     data = (u8 *)d;
     for (off = 0; off < len; off += 16) {
         printf("%08x  ", off);

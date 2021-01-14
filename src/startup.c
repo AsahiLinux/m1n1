@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "xnuboot.h"
 
+u64 boot_args_addr;
 struct boot_args cur_boot_args;
 
 struct rela_entry {
@@ -62,13 +63,14 @@ void dump_boot_args(struct boot_args *ba)
 
 void _start_c(void *boot_args, void *base)
 {
-    uart_putc('s');
+    uart_putchar('s');
     uart_init();
-    uart_putc('c');
+    uart_putchar('c');
     uart_puts(": Initializing\n");
 
     printf("boot_args at %p\n", boot_args);
 
+    boot_args_addr = (u64)boot_args;
     memcpy(&cur_boot_args, boot_args, sizeof(cur_boot_args));
 
     dump_boot_args(&cur_boot_args);

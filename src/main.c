@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "fb.h"
+#include "uart.h"
+#include "uartproxy.h"
 #include "utils.h"
 #include "xnuboot.h"
 
@@ -18,8 +20,14 @@ void m1n1_main(void)
     u64 dtaddr = ((u64)cur_boot_args.devtree) - cur_boot_args.virt_base +
                  cur_boot_args.phys_base;
 
-    hexdump((void *)dtaddr, cur_boot_args.devtree_size);
+//     hexdump((void *)dtaddr, cur_boot_args.devtree_size);
+// 
+//     while (1)
+//         uart_putbyte(uart_getbyte());
 
+    printf("Running proxy...\n");
+    uartproxy_run();
+    
     while (1)
         ;
 }

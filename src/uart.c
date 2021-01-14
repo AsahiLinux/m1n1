@@ -33,7 +33,15 @@ void uart_putbyte(u8 c)
     write32(UART_BASE + UTXH, c);
 }
 
-void uart_putc(u8 c)
+u8 uart_getbyte(void)
+{
+    while (!(read32(UART_BASE + UTRSTAT) & 0x01))
+        ;
+
+    return read32(UART_BASE + URXH);
+}
+
+void uart_putchar(u8 c)
 {
     if (c == '\n')
         uart_putbyte('\r');
@@ -41,12 +49,17 @@ void uart_putc(u8 c)
     uart_putbyte(c);
 }
 
+u8 uart_getchar(void)
+{
+    return 0;
+}
+
 void uart_puts(const char *s)
 {
     while (*s)
-        uart_putc(*(s++));
+        uart_putchar(*(s++));
 
-    uart_putc('\n');
+    uart_putchar('\n');
 }
 
 void uart_write(const void *buf, size_t count)
@@ -57,7 +70,7 @@ void uart_write(const void *buf, size_t count)
         uart_putbyte(*p++);
 }
 
-u8 uart_getc(void)
+size_t uart_read(const void *buf, size_t count)
 {
     return 0;
 }
