@@ -2,6 +2,9 @@
 #include "string.h"
 #include "types.h"
 #include "uart.h"
+#include "utils.h"
+
+#define REQ_SIZE 64
 
 typedef struct {
     u32 _pad;
@@ -17,9 +20,11 @@ typedef struct {
     u32 checksum;
 } UartRequest;
 
+#define REPLY_SIZE 36
+
 typedef struct {
     u32 type;
-    u32 status;
+    s32 status;
     union {
         ProxyReply preply;
         struct {
@@ -77,10 +82,10 @@ void uartproxy_run(void)
             continue;
         memset(&request, 0, sizeof(request));
         request.type = 0x00AA55FF | ((c & 0xff) << 24);
-        bytes = uart_read((&request.type) + 1, sizeof(request) - 4);
-        if (bytes != (sizeof(UartRequest) - 4))
+        bytes = uart_read((&request.type) + 1, REQ_SIZE - 4);
+        if (bytes != REQ_SIZE - 4)
             continue;
-        if (checksum(&(request.type), sizeof(request) - 8) != request.checksum)
+        if (checksum(&(request.type), REQ_SIZE - 4) != request.checksum)
             continue;
 
         memset(&reply, 0, sizeof(reply));
@@ -113,8 +118,8 @@ void uartproxy_run(void)
                 reply.status = ST_BADCMD;
                 break;
         }
-        reply.checksum = checksum(&reply, sizeof(reply) - 4);
-        uart_write(&reply, sizeof(reply));
+        reply.checksum = checksum(&reply, REPLY_SIZE - 4);
+        uart_write(&reply, REPLY_SIZE);
 
         if ((request.type == REQ_MEMREAD) && (reply.status == ST_OK)) {
             uart_write((void *)request.mrequest.addr,

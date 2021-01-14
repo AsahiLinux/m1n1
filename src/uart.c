@@ -51,7 +51,7 @@ void uart_putchar(u8 c)
 
 u8 uart_getchar(void)
 {
-    return 0;
+    return uart_getbyte();
 }
 
 void uart_puts(const char *s)
@@ -70,7 +70,15 @@ void uart_write(const void *buf, size_t count)
         uart_putbyte(*p++);
 }
 
-size_t uart_read(const void *buf, size_t count)
+size_t uart_read(void *buf, size_t count)
 {
-    return 0;
+    u8 *p = buf;
+    size_t recvd = 0;
+
+    while (count--) {
+        *p++ = uart_getbyte();
+        recvd++;
+    }
+
+    return recvd;
 }
