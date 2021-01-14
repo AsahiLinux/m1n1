@@ -16,4 +16,8 @@ size_t uart_read(void *buf, size_t count);
 
 void uart_puts(const char *s);
 
+void uart_setbaud(int baudrate);
+
+void uart_flush(void);
+
 #endif

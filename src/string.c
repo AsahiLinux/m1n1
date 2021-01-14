@@ -44,6 +44,21 @@ void *memset(void *s, int c, size_t n)
     return s;
 }
 
+void *memchr(const void *s, int c, size_t n)
+{
+    const unsigned char *p = (const unsigned char *)s;
+
+    while (n--) {
+        if (*p == (unsigned char)c) {
+            return (void *)p;
+        }
+
+        ++p;
+    }
+
+    return NULL;
+}
+
 char *strcpy(char *s1, const char *s2)
 {
     char *rc = s1;
@@ -83,4 +98,26 @@ int strcmp(const char *s1, const char *s2)
     }
 
     return (*(unsigned char *)s1 - *(unsigned char *)s2);
+}
+
+size_t strlen(const char *s)
+{
+    size_t rc = 0;
+
+    while (s[rc]) {
+        ++rc;
+    }
+
+    return rc;
+}
+
+char *strchr(const char *s, int c)
+{
+    do {
+        if (*s == (char)c) {
+            return (char *)s;
+        }
+    } while (*s++);
+
+    return NULL;
 }

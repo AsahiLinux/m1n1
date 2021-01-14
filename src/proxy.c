@@ -1,7 +1,10 @@
 #include "proxy.h"
 #include "types.h"
+#include "uart.h"
 #include "utils.h"
 #include "xnuboot.h"
+
+extern char _base[0];
 
 int proxy_process(ProxyRequest *request, ProxyReply *reply)
 {
@@ -23,6 +26,21 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_GET_BOOTARGS:
             reply->retval = boot_args_addr;
             break;
+        case P_GET_BASE:
+            reply->retval = (u64)_base;
+            break;
+        case P_SET_BAUD: {
+            int cnt = request->args[1];
+            printf("Changing baud rate to %d...\n", request->args[0]);
+            uart_setbaud(request->args[0]);
+            while (cnt--) {
+                uart_putbyte(request->args[2]);
+                uart_putbyte(request->args[2] >> 8);
+                uart_putbyte(request->args[2] >> 16);
+                uart_putbyte(request->args[2] >> 24);
+            }
+            break;
+        }
 
         case P_WRITE64:
             write64(request->args[0], request->args[1]);

@@ -8,6 +8,7 @@
 
 u64 boot_args_addr;
 struct boot_args cur_boot_args;
+void *adt;
 
 struct rela_entry {
     uint64_t off, type, addend;
@@ -74,6 +75,9 @@ void _start_c(void *boot_args, void *base)
     memcpy(&cur_boot_args, boot_args, sizeof(cur_boot_args));
 
     dump_boot_args(&cur_boot_args);
+
+    adt = (void *)(((u64)cur_boot_args.devtree) - cur_boot_args.virt_base +
+                   cur_boot_args.phys_base);
 
     m1n1_main();
 }

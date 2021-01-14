@@ -38,6 +38,7 @@ typedef struct {
 #define REQ_PROXY 0x01AA55FF
 #define REQ_MEMREAD 0x02AA55FF
 #define REQ_MEMWRITE 0x03AA55FF
+#define REQ_BOOT 0x04AA55FF
 
 #define ST_OK 0
 #define ST_BADCMD -1
@@ -65,7 +66,9 @@ void uartproxy_run(void)
     u32 bytes;
 
     UartRequest request;
-    UartReply reply;
+    UartReply reply = {REQ_BOOT};
+    reply.checksum = checksum(&reply, REPLY_SIZE - 4);
+    uart_write(&reply, REPLY_SIZE);
 
     while (running) {
         c = uart_getbyte();
@@ -104,7 +107,7 @@ void uartproxy_run(void)
                 break;
             case REQ_MEMWRITE:
                 bytes = uart_read((void *)request.mrequest.addr,
-                                             request.mrequest.size);
+                                  request.mrequest.size);
                 if (bytes != request.mrequest.size) {
                     reply.status = ST_XFRERR;
                     break;
@@ -122,8 +125,7 @@ void uartproxy_run(void)
         uart_write(&reply, REPLY_SIZE);
 
         if ((request.type == REQ_MEMREAD) && (reply.status == ST_OK)) {
-            uart_write((void *)request.mrequest.addr,
-                                 request.mrequest.size);
+            uart_write((void *)request.mrequest.addr, request.mrequest.size);
         }
     }
 }

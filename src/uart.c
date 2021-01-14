@@ -7,6 +7,8 @@
 #include "utils.h"
 #include "vsprintf.h"
 
+#define UART_CLOCK 24000000
+
 #define UART_BASE 0x235200000L
 
 #define ULCON 0x000
@@ -81,4 +83,16 @@ size_t uart_read(void *buf, size_t count)
     }
 
     return recvd;
+}
+
+void uart_setbaud(int baudrate)
+{
+    uart_flush();
+    write32(UART_BASE + UBRDIV, ((UART_CLOCK / baudrate + 7) / 16) - 1);
+}
+
+void uart_flush(void)
+{
+    while (!(read32(UART_BASE + UTRSTAT) & 0x04))
+        ;
 }
