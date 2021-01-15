@@ -139,8 +139,8 @@ const void *adt_getprop(const void *adt, int nodeoffset, const char *name,
     return adt_getprop_namelen(adt, nodeoffset, name, strlen(name), lenp);
 }
 
-const int adt_getprop_copy(const void *adt, int nodeoffset, const char *name,
-                           void *out, int len)
+int adt_getprop_copy(const void *adt, int nodeoffset, const char *name,
+                     void *out, int len)
 {
     int plen;
 

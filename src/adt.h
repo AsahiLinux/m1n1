@@ -75,8 +75,8 @@ const void *adt_getprop(const void *adt, int nodeoffset, const char *name,
                         int *lenp);
 const void *adt_getprop_length(const void *adt, int nodeoffset,
                                const char *name, int len);
-const int adt_getprop_copy(const void *adt, int nodeoffset, const char *name,
-                           void *out, int len);
+int adt_getprop_copy(const void *adt, int nodeoffset, const char *name,
+                     void *out, int len);
 
 #define ADT_GETPROP(adt, nodeoffset, name, val)                                \
     adt_getprop_copy(adt, nodeoffset, name, (val), sizeof(*(val)))
