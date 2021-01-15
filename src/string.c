@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 
-#include <string.h>
+#include "string.h"
 
 // Routines based on The Public Domain C Library
 
