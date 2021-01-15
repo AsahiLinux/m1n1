@@ -13,7 +13,7 @@ Please see the Git history for authorship information.
 Portions of m1n1 are based on mini:
 
 * Copyright (C) 2008-2010 Hector Martin "marcan" <marcan@marcan.st>
-* Copyright (C) 2008-2010 Sven Peter <sven@svenpeter.dev
+* Copyright (C) 2008-2010 Sven Peter <sven@svenpeter.dev>
 * Copyright (C) 2008-2010 Andre Heider <a.heider@gmail.com>
 
 m1n1 embeds libfdt, which is dual [BSD](LICENSE.BSD-2) and
