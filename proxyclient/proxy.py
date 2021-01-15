@@ -376,17 +376,17 @@ class M1N1Proxy:
     def mask64(self, addr, clear, set):
         if addr & 7:
             raise AlignmentError()
-        self.request(self.P_CLEAR64, clear, set)
+        self.request(self.P_MASK64, addr, clear, set)
     def mask32(self, addr, clear, set):
         if addr & 3:
             raise AlignmentError()
-        self.request(self.P_CLEAR32, clear, set)
+        self.request(self.P_MASK32, addr, clear, set)
     def mask16(self, addr, clear, set):
         if addr & 1:
             raise AlignmentError()
-        self.request(self.P_CLEAR16, clear, set)
+        self.request(self.P_MASK16, addr, clear, set)
     def mask8(self, addr, clear, set):
-        self.request(self.P_CLEAR8, clear, set)
+        self.request(self.P_MASK8, addr, clear, set)
 
     def memcpy64(self, dst, src, size):
         if src & 7 or dst & 7:
