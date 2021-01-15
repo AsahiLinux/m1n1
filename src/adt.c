@@ -147,10 +147,10 @@ const int adt_getprop_copy(const void *adt, int nodeoffset, const char *name,
     const void *p = adt_getprop(adt, nodeoffset, name, &plen);
 
     if (!p)
-        return ADT_ERR_NOTFOUND;
+        return -ADT_ERR_NOTFOUND;
 
     if (plen != len)
-        return ADT_ERR_BADLENGTH;
+        return -ADT_ERR_BADLENGTH;
 
     memcpy(out, p, len);
     return len;
