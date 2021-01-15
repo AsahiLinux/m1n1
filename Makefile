@@ -57,7 +57,7 @@ build/%.bin: data/%.png
 
 build/%.o: build/%.bin
 	@echo "  BIN   $@"
-	@$(OBJCOPY) -I binary -O elf64-littleaarch64 $< $@
+	@$(OBJCOPY) -I binary -B aarch64 -O elf64-littleaarch64 $< $@
 
 build/main.o: build/build_tag.h src/main.c
 
