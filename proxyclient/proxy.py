@@ -3,8 +3,12 @@
 
 import os, sys, struct
 
-def hexdump(s,sep=" "):
+def hexdump(s, sep=" "):
     return sep.join(["%02x"%x for x in s])
+
+def hexdump32(s, sep=" "):
+    vals = struct.unpack("<%dI" % (len(s)//4), s)
+    return sep.join(["%08x"%x for x in vals])
 
 def ascii(s):
     s2 = ""
@@ -28,6 +32,21 @@ def chexdump(s,st=0):
             hexdump(s[i+8:i+16], ' ').rjust(23),
             ascii(s[i:i+16]),rjust(16)))
 
+def chexdump32(s, st=0, abbreviate=True):
+    last = None
+    skip = False
+    for i in range(0,len(s),32):
+        val = s[i:i+32]
+        if val == last and abbreviate:
+            if not skip:
+                print("%08x  *" % (i + st))
+                skip = True
+        else:
+            print("%08x  %s" % (
+                i + st,
+                hexdump32(val, ' ')))
+            last = val
+            skip = False
 
 class UartError(RuntimeError):
     pass
@@ -56,7 +75,7 @@ class UartInterface:
     ST_INVAL = -2
     ST_XFERERR = -3
     ST_CRCERR = -4
-    
+
     CMD_LEN = 56
     REPLY_LEN = 36
 
@@ -70,7 +89,7 @@ class UartInterface:
         #d = self.dev.read(1)
         #while d != "":
             #d = self.dev.read(1)
-        self.dev.timeout = 1.5
+        self.dev.timeout = 3
         self.tty_enable = True
 
     def checksum(self, data):
@@ -202,7 +221,7 @@ class UartInterface:
         if checksum != ccsum:
             raise UartCRCError("Reply data checksum error: Expected 0x%08x, got 0x%08x"%(checksum, ccsum))
         return data
-    
+
     def readstruct(self, addr, stype):
         return stype.parse(self.readmem(addr, stype.sizeof()))
 

@@ -4,6 +4,7 @@ import atexit, serial, os, struct, code, traceback, readline, rlcompleter
 from proxy import *
 import __main__
 import builtins
+from utils import *
 
 class HistoryConsole(code.InteractiveConsole):
     def __init__(self, locals=None, filename="<console>",
@@ -31,7 +32,8 @@ class HistoryConsole(code.InteractiveConsole):
 saved_display = sys.displayhook
 
 def display(val):
-    global saved_display
+    global saved_display, mon
+    mon.poll()
     if isinstance(val, int) or isinstance(val, int):
         builtins._ = val
         print(hex(val))
@@ -43,28 +45,20 @@ sys.displayhook = display
 # convenience
 h = hex
 
-uartdev = os.environ.get("M1N1DEVICE", "/dev/ttyUSB0")
-usbuart = serial.Serial(uartdev, 115200)
-
-iface = UartInterface(usbuart, debug=False)
-iface.nop()
-proxy = M1N1Proxy(iface, debug=False)
-proxy.nop()
+from setup import *
 
 locals = __main__.__dict__
 
 for attr in dir(iface):
     locals[attr] = getattr(iface,attr)
-for attr in dir(proxy):
-    locals[attr] = getattr(proxy,attr)
+for attr in dir(p):
+    locals[attr] = getattr(p,attr)
+for attr in dir(u):
+    locals[attr] = getattr(u,attr)
 del attr
 
 from armutils import *
 from tgtypes import *
-
-base = proxy.get_base()
-ba_addr = proxy.get_bootargs()
-ba = iface.readstruct(ba_addr, BootArgs)
 
 HistoryConsole(locals).interact("Have fun!")
 
