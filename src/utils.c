@@ -41,7 +41,7 @@ void hexdump(const void *d, size_t len)
     }
 }
 
-void regdump(u64 addr, int len)
+void regdump(u64 addr, size_t len)
 {
     u64 i, off;
     for (off = 0; off < len; off += 32) {

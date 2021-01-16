@@ -2,6 +2,7 @@ ARCH := aarch64-linux-gnu-
 
 CFLAGS := -O2 -Wall -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-Werror=implicit-function-declaration -Werror=implicit-int \
+	-Wsign-compare -Wunused-parameter \
 	-ffreestanding -mabi=lp64 -fpic -ffunction-sections -fdata-sections
 
 LDFLAGS := -T m1n1.ld -EL -maarch64elf --no-undefined -X -shared -Bsymbolic \
