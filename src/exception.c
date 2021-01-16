@@ -58,6 +58,7 @@ void exc_irq(u64 *regs)
 
     printf(" type: %d num: %d\n", reason >> 16, reason & 0xffff);
 
+    UNUSED(regs);
     // print_regs(regs);
 }
 
@@ -72,6 +73,7 @@ void exc_fiq(u64 *regs)
         msr(CNTP_CTL_EL0, 7);
     }
 
+    UNUSED(regs);
     // print_regs(regs);
 }
 
