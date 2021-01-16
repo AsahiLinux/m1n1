@@ -155,6 +155,10 @@ SECTIONS {
     _data_size = . - _data_start;
     _end = .;
 
+    .symtab 0 : { *(.symtab) }
+    .strtab 0 : { *(.strtab) }
+    .shstrtab 0 : { *(.shstrtab) }
+
     /DISCARD/ : {
         *(.discard)
         *(.discard.*)
