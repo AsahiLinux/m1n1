@@ -42,10 +42,8 @@ _v_sp0_serr:
 
     b _exc_return
 
-.globl push_hi_regs
-.type push_hi_regs, @function
-push_hi_regs:
-
+.globl _exc_entry
+.type _exc_entry, @function
 _exc_entry:
     stp x28, x29, [sp, #-16]!
     stp x26, x27, [sp, #-16]!
