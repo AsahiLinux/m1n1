@@ -1,10 +1,9 @@
 #include "proxy.h"
+#include "memory.h"
 #include "types.h"
 #include "uart.h"
 #include "utils.h"
 #include "xnuboot.h"
-
-extern char _base[0];
 
 int proxy_process(ProxyRequest *request, ProxyReply *reply)
 {
@@ -145,13 +144,39 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
                     request->args[2]);
             break;
 
-            /*
-                    case P_DC_FLUSHRANGE: dc_flushrange((void*)request->args[0],
-               request->args[1]); break; case P_DC_INVALRANGE:
-               dc_invalidaterange((void*)request->args[0], request->args[1]);
-               break; case P_DC_FLUSHALL: dc_flushall(); break; case
-               P_IC_INVALALL: ic_invalidateall(); break;
-            */
+        case P_IC_IALLUIS:
+            ic_ialluis();
+            break;
+        case P_IC_IALLU:
+            ic_iallu();
+            break;
+        case P_IC_IVAU:
+            ic_ivau_range((void *)request->args[0], request->args[1]);
+            break;
+        case P_DC_IVAC:
+            dc_ivac_range((void *)request->args[0], request->args[1]);
+            break;
+        case P_DC_ISW:
+            dc_isw((void *)request->args[0]);
+            break;
+        case P_DC_CSW:
+            dc_csw((void *)request->args[0]);
+            break;
+        case P_DC_CISW:
+            dc_cisw((void *)request->args[0]);
+            break;
+        case P_DC_ZVA:
+            dc_zva_range((void *)request->args[0], request->args[1]);
+            break;
+        case P_DC_CVAC:
+            dc_cvac_range((void *)request->args[0], request->args[1]);
+            break;
+        case P_DC_CVAU:
+            dc_cvau_range((void *)request->args[0], request->args[1]);
+            break;
+        case P_DC_CIVAC:
+            dc_civac_range((void *)request->args[0], request->args[1]);
+            break;
 
         default:
             reply->status = S_BADCMD;

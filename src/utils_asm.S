@@ -11,7 +11,7 @@ memcpy64:
     str     x3, [x0], #8
     subs    x2, x2, #8
     bne     1b
-2:    
+2:
     ret
 
 .globl memset64
@@ -22,7 +22,7 @@ memset64:
 1:  str     x1, [x0], #8
     subs    x2, x2, #8
     bne     1b
-2:    
+2:
     ret
 
 .globl memcpy32
@@ -30,11 +30,11 @@ memset64:
 memcpy32:
     ands    x2, x2, #~3
     beq     2f
-1:  ldr     x3, [x1], #4
+1:  ldr     w3, [x1], #4
     str     w3, [x0], #4
     subs    x2, x2, #4
     bne     1b
-2:    
+2:
     ret
 
 .globl memset32
@@ -45,7 +45,7 @@ memset32:
 1:  str     w1, [x0], #4
     subs    x2, x2, #4
     bne     1b
-2:    
+2:
     ret
 
 .globl memcpy16
@@ -57,7 +57,7 @@ memcpy16:
     strh    w3, [x0], #2
     subs    x2, x2, #2
     bne     1b
-2:    
+2:
     ret
 
 .globl memset16
@@ -68,7 +68,7 @@ memset16:
 1:  strh    w1, [x0], #2
     subs    x2, x2, #2
     bne     1b
-2:    
+2:
     ret
 
 .globl memcpy8
@@ -80,7 +80,7 @@ memcpy8:
     strb    w3, [x0], #1
     subs    x2, x2, #1
     bne     1b
-2:    
+2:
     ret
 
 .globl memset8
@@ -91,5 +91,5 @@ memset8:
 1:  strb    w1, [x0], #1
     subs    x2, x2, #1
     bne     1b
-2:    
+2:
     ret

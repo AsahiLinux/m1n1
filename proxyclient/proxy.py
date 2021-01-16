@@ -259,10 +259,17 @@ class M1N1Proxy:
     P_MEMSET16 = 0x206
     P_MEMSET8 = 0x207
 
-    P_DC_FLUSHRANGE = 0x300
-    P_DC_INVALRANGE = 0x301
-    P_DC_FLUSHALL = 0x302
-    P_IC_INVALALL = 0x303
+    P_IC_IALLUIS = 0x300
+    P_IC_IALLU = 0x301
+    P_IC_IVAU = 0x302
+    P_DC_IVAC = 0x303
+    P_DC_ISW = 0x304
+    P_DC_CSW = 0x305
+    P_DC_CISW = 0x306
+    P_DC_ZVA = 0x307
+    P_DC_CVAC = 0x308
+    P_DC_CVAU = 0x309
+    P_DC_CIVAC = 0x30a
 
     def __init__(self, iface, debug=False):
         self.debug = debug
@@ -417,15 +424,29 @@ class M1N1Proxy:
         self.request(self.P_MEMSET16, dst, src, size)
     def memset8(self, dst, src, size):
         self.request(self.P_MEMSET8, dst, src, size)
-    
-    def dc_flushrange(self, addr, size):
-        self.request(self.P_DC_FLUSHRANGE, addr, size)
-    def dc_invalrange(self, addr, size):
-        self.request(self.P_DC_INVALRANGE, addr, size)
-    def dc_flushall(self):
-        self.request(self.P_DC_FLUSHALL)
-    def ic_invalall(self):
-        self.request(self.P_IC_INVALALL)
+
+    def ic_ialluis(self):
+        self.request(self.P_IC_IALLUIS)
+    def ic_iallu(self):
+        self.request(self.P_IC_IALLU)
+    def ic_ivau(self, addr, size):
+        self.request(self.P_IC_IVAU, addr, size)
+    def ic_ivac(self, addr, size):
+        self.request(self.P_IC_IVAC, addr, size)
+    def dc_isw(self, sw):
+        self.request(self.P_DC_ISW, sw)
+    def dc_csw(self, sw):
+        self.request(self.P_DC_CSW, sw)
+    def dc_cisw(self, sw):
+        self.request(self.P_DC_CISW, sw)
+    def dc_zva(self, addr, size):
+        self.request(self.P_DC_ZVA, addr, size)
+    def dc_cvac(self, addr, size):
+        self.request(self.P_DC_CVAC, addr, size)
+    def dc_cvau(self, addr, size):
+        self.request(self.P_DC_CVAU, addr, size)
+    def dc_civac(self, addr, size):
+        self.request(self.P_DC_CIVAC, addr, size)
 
 if __name__ == "__main__":
     import serial

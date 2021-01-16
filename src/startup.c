@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "exception.h"
 #include "string.h"
 #include "types.h"
 #include "uart.h"
@@ -79,5 +80,6 @@ void _start_c(void *boot_args, void *base)
     adt = (void *)(((u64)cur_boot_args.devtree) - cur_boot_args.virt_base +
                    cur_boot_args.phys_base);
 
+    exception_initialize();
     m1n1_main();
 }

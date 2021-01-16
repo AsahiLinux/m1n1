@@ -30,7 +30,7 @@ SECTIONS {
         LONG(_cmd_end - _cmd_start); /* sizeofcmds */
         LONG(4); /* flags */
         LONG(0); /* reserved */
-        
+
         _cmd_start = .;
 
         /* unix_thread (entrypoint) */
@@ -41,7 +41,7 @@ SECTIONS {
         . += 32 * 8; /* useless registers */
         QUAD(_start + _va_off) /* pc */
         . += 8; /* useless registers */
-        
+
         ASSERT(. - _cmd_start == 0x120, "Bad unix_thread structure");
 
         /* segment: mach-o structures */
@@ -57,7 +57,7 @@ SECTIONS {
         LONG(PROT_READ); /* initprot */
         LONG(0); /* nsects */
         LONG(0); /* flags */
-        
+
         /* segment: text */
         LONG(0x19); /* type = SEGMENT_64 */
         LONG(0x48); /* cmdsize */
@@ -101,7 +101,7 @@ SECTIONS {
         LONG(0); /* flags */
 
         _cmd_end = .;
-        
+
         . = ALIGN(0x4000);
         _hdr_end = .;
     } :hdr
@@ -171,7 +171,7 @@ SECTIONS {
         *(.data.rel.ro)
     }
     ASSERT(SIZEOF(.empty) == 0, "Unexpected sections detected!")
-    
+
     .got.plt (NOLOAD) : {
         *(.got.plt)
     }

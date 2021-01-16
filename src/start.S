@@ -4,10 +4,67 @@
 #define UTRSTAT 0x010
 #define UTXH 0x020
 
+#define WDT_BASE 0x23d2b0000
+#define WDT_COUNT 0x10
+#define WDT_ALARM 0x14
+#define WDT_CTL 0x1c
+
 .extern _start_c
 .extern _stack_bot
+.extern _v_sp0_sync
+.extern _v_sp0_irq
+.extern _v_sp0_fiq
+.extern _v_sp0_serr
 
 .section .init, "ax"
+
+.globl _vectors_start
+_vectors_start:
+
+    mov x9, '0'
+    b exc_unk
+    .align 7
+    mov x9, '1'
+    b exc_unk
+    .align 7
+    mov x9, '2'
+    b exc_unk
+    .align 7
+    mov x9, '3'
+    b exc_unk
+    .align 7
+    b _v_sp0_sync
+    .align 7
+    b _v_sp0_irq
+    .align 7
+    b _v_sp0_fiq
+    .align 7
+    b _v_sp0_serr
+    .align 7
+    mov x9, 'a'
+    b exc_unk
+    .align 7
+    mov x9, 'b'
+    b exc_unk
+    .align 7
+    mov x9, 'c'
+    b exc_unk
+    .align 7
+    mov x9, 'd'
+    b exc_unk
+    .align 7
+    mov x9, 'p'
+    b exc_unk
+    .align 7
+    mov x9, 'q'
+    b exc_unk
+    .align 7
+    mov x9, 'r'
+    b exc_unk
+    .align 7
+    mov x9, 's'
+    b exc_unk
+    .align 7
 
 .globl _start
 .type _start, @function
@@ -46,6 +103,33 @@ _start:
     bl _start_c
     b .
 
+.globl exc_unk
+.type exc_unk, @function
+exc_unk:
+    mov w0, '\r'
+    bl debug_putc
+    mov w0, '\n'
+    bl debug_putc
+    mov w0, '!'
+    bl debug_putc
+    mov w0, 'E'
+    bl debug_putc
+    mov w0, 'x'
+    bl debug_putc
+    mov w0, 'C'
+    bl debug_putc
+    mov w0, ':'
+    bl debug_putc
+    mov w0, w9
+    bl debug_putc
+    mov w0, '!'
+    bl debug_putc
+    mov w0, '\r'
+    bl debug_putc
+    mov w0, '\n'
+    bl debug_putc
+    b reboot
+
 .globl debug_putc
 .type debug_putc, @function
 debug_putc:
@@ -58,4 +142,16 @@ debug_putc:
     str w0, [x1, UTXH]
     ret
 
-    .pool
+.globl reboot
+.type reboot, @function
+reboot:
+    ldr x1, =WDT_BASE
+    mov w0, #0x100000
+    str w0, [x1, #WDT_ALARM]
+    mov w0, #0
+    str w0, [x1, #WDT_COUNT]
+    mov w0, #4
+    str w0, [x1, #WDT_CTL]
+    b .
+
+.pool

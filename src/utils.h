@@ -193,6 +193,33 @@ static inline u8 mask8(u64 addr, u8 clear, u8 set)
     return data;
 }
 
+#define mrs(reg)                                                               \
+    ({                                                                         \
+        u64 val;                                                               \
+        __asm__ volatile("mrs\t%0, " #reg : "=r"(val));                        \
+        val;                                                                   \
+    })
+
+#define msr(reg, val) ({ __asm__ volatile("msr\t" #reg ", %0" : : "r"(val)); })
+
+#define sysop(op) __asm__ volatile(op)
+
+#define cacheop(op, val) ({ __asm__ volatile(op ", %0" : : "r"(val)); })
+
+#define ic_ialluis() sysop("ic ialluis")
+#define ic_iallu() sysop("ic iallu")
+#define ic_iavau(p) cacheop("ic ivau", p)
+#define dc_ivac(p) cacheop("dc ivac", p)
+#define dc_isw(p) cacheop("dc isw", p)
+#define dc_csw(p) cacheop("dc csw", p)
+#define dc_cisw(p) cacheop("dc cisw", p)
+#define dc_zva(p) cacheop("dc zva", p)
+#define dc_cvac(p) cacheop("dc cvac", p)
+#define dc_cvau(p) cacheop("dc cvau", p)
+#define dc_civac(p) cacheop("dc civac", p)
+
+extern char _base[0];
+
 /*
  * These functions are guaranteed to copy by reading from src and writing to dst
  * in <n>-bit units If size is not aligned, the remaining bytes are not copied
@@ -211,5 +238,6 @@ void regdump(u64 addr, int len);
 int sprintf(char *str, const char *fmt, ...);
 int debug_printf(const char *fmt, ...);
 void udelay(u32 d);
+void reboot(void);
 
 #endif

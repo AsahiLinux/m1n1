@@ -25,7 +25,7 @@ print("Loading %d bytes to 0x%x" % (len(payload), new_base))
 
 iface.writemem(new_base + 0x4000, payload[0x4000:], True)
 
-entry = new_base + 0x4000
+entry = new_base + 0x4800
 
 print("Jumping to 0x%x" % entry)
 

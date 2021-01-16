@@ -41,10 +41,17 @@ typedef enum {
     P_MEMSET16,
     P_MEMSET8,
 
-    P_DC_FLUSHRANGE = 0x300, // Cache and memory ops
-    P_DC_INVALRANGE,
-    P_DC_FLUSHALL,
-    P_IC_INVALALL,
+    P_IC_IALLUIS = 0x300, // Cache and memory ops
+    P_IC_IALLU,
+    P_IC_IVAU,
+    P_DC_IVAC,
+    P_DC_ISW,
+    P_DC_CSW,
+    P_DC_CISW,
+    P_DC_ZVA,
+    P_DC_CVAC,
+    P_DC_CVAU,
+    P_DC_CIVAC,
 
 } ProxyOp;
 

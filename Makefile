@@ -8,8 +8,9 @@ LDFLAGS := -T m1n1.ld -EL -maarch64elf --no-undefined -X -shared -Bsymbolic \
 	-z notext --no-apply-dynamic-relocs --orphan-handling=warn --strip-debug \
 	-z nocopyreloc --gc-sections -pie
 
-OBJECTS := adt.o bootlogo_128.o bootlogo_256.o fb.o main.o proxy.o start.o startup.o \
-	string.o uart.o uartproxy.o utils.o utils_asm.o vsprintf.o
+OBJECTS := adt.o bootlogo_128.o bootlogo_256.o exception.o exception_asm.o fb.o \
+	main.o memory.o proxy.o start.o startup.o string.o uart.o uartproxy.o utils.o \
+	utils_asm.o vsprintf.o
 
 BUILD_OBJS := $(patsubst %,build/%,$(OBJECTS))
 NAME := m1n1
@@ -42,14 +43,14 @@ build/%.o: src/%.c
 build/$(NAME).elf: $(BUILD_OBJS) m1n1.ld
 	@echo "  LD    $@"
 	@$(LD) $(LDFLAGS) -o $@ $(BUILD_OBJS)
-	
+
 build/$(NAME).macho: build/$(NAME).elf
 	@echo "  MACHO $@"
 	@$(OBJCOPY) -O binary $< $@
 
 build/build_tag.h:
 	@echo "  TAG   $@"
-	@echo "#define BUILD_TAG \"$$(git describe --always --dirty)\"" > $@ 
+	@echo "#define BUILD_TAG \"$$(git describe --always --dirty)\"" > $@
 
 build/%.bin: data/%.png
 	@echo "  IMG   $@"

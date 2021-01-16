@@ -10,7 +10,7 @@
 
 #include "../build/build_tag.h"
 
-//#define LOGO
+// #define LOGO
 
 void print_info(void)
 {
@@ -65,7 +65,9 @@ void m1n1_main(void)
 {
     printf("\n\nm1n1 v%s\n", BUILD_TAG);
     printf("Copyright (C) 2021 The Asahi Linux Contributors\n");
-    printf("Licensed under the MIT license\n");
+    printf("Licensed under the MIT license\n\n");
+
+    printf("Running in EL%d\n\n", mrs(CurrentEL) >> 2);
 
 #ifdef LOGO
     fb_init();
@@ -74,15 +76,6 @@ void m1n1_main(void)
 
     print_info();
     disable_wdt();
-
-    /*
-        u64 dtaddr = ((u64)cur_boot_args.devtree) - cur_boot_args.virt_base +
-                     cur_boot_args.phys_base;*/
-
-    //     hexdump((void *)dtaddr, cur_boot_args.devtree_size);
-    //
-    //     while (1)
-    //         uart_putbyte(uart_getbyte());
 
     printf("Running proxy...\n");
     uartproxy_run();
