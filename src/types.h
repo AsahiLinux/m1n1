@@ -19,6 +19,7 @@ typedef int64_t s64;
 typedef u64 uintptr_t;
 typedef s64 ptrdiff_t;
 
+#define UNUSED(x) (void)(x)
 #define ALIGNED(x) __attribute__((aligned(x)))
 #define PACKED __attribute__((packed))
 

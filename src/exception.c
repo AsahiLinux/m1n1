@@ -72,7 +72,7 @@ void exc_irq(u64 *regs)
     printf(" UERSTAT: 0x%x\n", uerstat);
     printf(" UFSTAT: 0x%x\n", ufstat);
 #endif
-
+    UNUSED(regs);
     // print_regs(regs);
 }
 
@@ -87,6 +87,7 @@ void exc_fiq(u64 *regs)
         msr(CNTP_CTL_EL0, 7L);
     }
 
+    UNUSED(regs);
     // print_regs(regs);
 }
 

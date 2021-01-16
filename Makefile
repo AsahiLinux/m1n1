@@ -2,6 +2,7 @@ ARCH := aarch64-linux-gnu-
 
 CFLAGS := -O2 -Wall -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-Werror=implicit-function-declaration -Werror=implicit-int \
+	-Wsign-compare -Wunused-parameter \
 	-ffreestanding -fpic -ffunction-sections -fdata-sections \
 	-fno-stack-protector -mgeneral-regs-only -mstrict-align
 

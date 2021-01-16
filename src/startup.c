@@ -66,6 +66,7 @@ void dump_boot_args(struct boot_args *ba)
 
 void _start_c(void *boot_args, void *base)
 {
+    UNUSED(base);
     uart_putchar('s');
     uart_init();
     uart_putchar('c');

@@ -234,7 +234,7 @@ void memset8(void *dst, u8 value, size_t size);
 void memcpy8(void *dst, void *src, size_t size);
 
 void hexdump(const void *d, size_t len);
-void regdump(u64 addr, int len);
+void regdump(u64 addr, size_t len);
 int sprintf(char *str, const char *fmt, ...);
 int debug_printf(const char *fmt, ...);
 void udelay(u32 d);
