@@ -69,7 +69,7 @@ void exc_fiq(u64 *regs)
 
     if (timer_ctl == 0x5) {
         uart_puts("  timer IRQ, masking");
-        msr(CNTP_CTL_EL0, 7);
+        msr(CNTP_CTL_EL0, 7L);
     }
 
     // print_regs(regs);
