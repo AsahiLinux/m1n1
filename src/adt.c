@@ -56,12 +56,12 @@ int adt_check_header(const void *adt)
     return _adt_check_node_offset(adt, 0);
 }
 
-static int _adt_string_eq(const char *a, const char *b, int len)
+static int _adt_string_eq(const char *a, const char *b, size_t len)
 {
     return (strlen(a) == len) && (memcmp(a, b, len) == 0);
 }
 
-static int _adt_nodename_eq(const char *a, const char *b, int len)
+static int _adt_nodename_eq(const char *a, const char *b, size_t len)
 {
     if (memcmp(a, b, len) != 0)
         return 0;
@@ -76,9 +76,9 @@ static int _adt_nodename_eq(const char *a, const char *b, int len)
 
 const struct adt_property *adt_get_property_namelen(const void *adt, int offset,
                                                     const char *name,
-                                                    int namelen)
+                                                    size_t namelen)
 {
-    dprintf("adt_get_property_namelen(%p, %d, \"%s\", %d)\n", adt, offset, name,
+    dprintf("adt_get_property_namelen(%p, %d, \"%s\", %u)\n", adt, offset, name,
             namelen);
 
     for (offset = adt_first_property_offset(adt, offset); (offset >= 0);
@@ -102,7 +102,7 @@ const struct adt_property *adt_get_property(const void *adt, int nodeoffset,
 }
 
 const void *adt_getprop_namelen(const void *adt, int nodeoffset,
-                                const char *name, int namelen, int *lenp)
+                                const char *name, size_t namelen, u32 *lenp)
 {
     const struct adt_property *prop;
 
@@ -118,7 +118,7 @@ const void *adt_getprop_namelen(const void *adt, int nodeoffset,
 }
 
 const void *adt_getprop_by_offset(const void *adt, int offset,
-                                  const char **namep, int *lenp)
+                                  const char **namep, u32 *lenp)
 {
     const struct adt_property *prop;
 
@@ -134,15 +134,15 @@ const void *adt_getprop_by_offset(const void *adt, int offset,
 }
 
 const void *adt_getprop(const void *adt, int nodeoffset, const char *name,
-                        int *lenp)
+                        u32 *lenp)
 {
     return adt_getprop_namelen(adt, nodeoffset, name, strlen(name), lenp);
 }
 
 int adt_getprop_copy(const void *adt, int nodeoffset, const char *name,
-                     void *out, int len)
+                     void *out, size_t len)
 {
-    int plen;
+    u32 plen;
 
     const void *p = adt_getprop(adt, nodeoffset, name, &plen);
 
@@ -160,7 +160,7 @@ int adt_first_child_offset(const void *adt, int offset)
 {
     const struct adt_node_hdr *node = ADT_NODE(adt, offset);
 
-    int cnt = node->property_count;
+    u32 cnt = node->property_count;
     offset = adt_first_property_offset(adt, offset);
 
     while (cnt--) {
@@ -174,7 +174,7 @@ int adt_next_sibling_offset(const void *adt, int offset)
 {
     const struct adt_node_hdr *node = ADT_NODE(adt, offset);
 
-    int cnt = node->child_count;
+    u32 cnt = node->child_count;
     offset = adt_first_child_offset(adt, offset);
 
     while (cnt--) {
@@ -185,7 +185,7 @@ int adt_next_sibling_offset(const void *adt, int offset)
 }
 
 int adt_subnode_offset_namelen(const void *adt, int offset, const char *name,
-                               int namelen)
+                               size_t namelen)
 {
     const struct adt_node_hdr *node = ADT_NODE(adt, offset);
 
@@ -193,7 +193,7 @@ int adt_subnode_offset_namelen(const void *adt, int offset, const char *name,
 
     offset = adt_first_child_offset(adt, offset);
 
-    for (int i = 0; i < node->child_count; i++) {
+    for (u32 i = 0; i < node->child_count; i++) {
         const char *cname = adt_get_name(adt, offset);
 
         if (_adt_nodename_eq(cname, name, namelen))
