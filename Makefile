@@ -2,9 +2,10 @@ ARCH := aarch64-linux-gnu-
 
 CFLAGS := -O2 -Wall -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-Werror=implicit-function-declaration -Werror=implicit-int \
-	-ffreestanding -mabi=lp64 -fpic -ffunction-sections -fdata-sections
+	-ffreestanding -fpic -ffunction-sections -fdata-sections \
+	-fno-stack-protector -mgeneral-regs-only
 
-LDFLAGS := -T m1n1.ld -EL -maarch64elf --no-undefined -X -shared -Bsymbolic \
+LDFLAGS := -T m1n1.ld -EL -maarch64elf --no-undefined -X -Bsymbolic \
 	-z notext --no-apply-dynamic-relocs --orphan-handling=warn --strip-debug \
 	-z nocopyreloc --gc-sections -pie
 
@@ -18,10 +19,17 @@ TARGET := m1n1.macho
 
 DEPDIR := build/.deps
 
+ifeq ($(USE_CLANG),1)
+CC := clang --target=$(ARCH)
+AS := clang --target=$(ARCH)
+LD := ld.lld
+OBJCOPY := llvm-objcopy
+else
 CC := $(ARCH)gcc
 AS := $(ARCH)gcc
 LD := $(ARCH)ld
 OBJCOPY := $(ARCH)objcopy
+endif
 
 .PHONY: all clean format
 all: build/$(TARGET)
