@@ -14,7 +14,7 @@ void exception_initialize(void)
 
 void print_regs(u64 *regs)
 {
-    u64 sp = ((u64)(regs)) - (8 * 31);
+    u64 sp = ((u64)(regs)) + 256;
 
     printf("Running in EL%d\n", mrs(CurrentEL) >> 2);
     printf("Registers: (@%p)\n", regs);
