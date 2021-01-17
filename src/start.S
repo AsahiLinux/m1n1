@@ -93,7 +93,7 @@ _start:
 
     mov w0, '1'
     bl debug_putc
-    mov w0, '\r'
+    mov w0, 0xd /* '\r', clang compat */
     bl debug_putc
     mov w0, '\n'
     bl debug_putc
@@ -106,7 +106,7 @@ _start:
 .globl exc_unk
 .type exc_unk, @function
 exc_unk:
-    mov w0, '\r'
+    mov w0, 0xd /* '\r', clang compat */
     bl debug_putc
     mov w0, '\n'
     bl debug_putc
@@ -124,7 +124,7 @@ exc_unk:
     bl debug_putc
     mov w0, '!'
     bl debug_putc
-    mov w0, '\r'
+    mov w0, 0xd /* '\r', clang compat */
     bl debug_putc
     mov w0, '\n'
     bl debug_putc
