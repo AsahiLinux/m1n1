@@ -3,12 +3,10 @@ ENTRY(_start)
 /* Fake virtual load address for the mach-o */
 _va_base = 0xFFFFFE0007004000;
 
-/* We are actually relocatable */
-_base = 0;
-
 _stack_size = 0x20000;
 
-. = _base;
+/* We are actually relocatable */
+. = 0;
 
 PHDRS
 {
@@ -19,6 +17,8 @@ PHDRS
 }
 
 SECTIONS {
+    _base = .;
+
     .header : {
         _mach_header = .;
         /* mach-o header */
