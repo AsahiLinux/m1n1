@@ -69,7 +69,7 @@ _vectors_start:
 .globl _start
 .type _start, @function
 _start:
-    mov x9, x0
+    mov x19, x0
 
     mov w0, 'm'
     bl debug_putc
@@ -84,7 +84,7 @@ _start:
     bl debug_putc
 
     adrp x0, _base
-    mov x10, x0
+    mov x20, x0
     adrp x1, _rela_start
     add x1, x1, :lo12:_rela_start
     adrp x2, _rela_end
@@ -98,8 +98,8 @@ _start:
     mov w0, '\n'
     bl debug_putc
     
-    mov x0, x9
-    mov x1, x10
+    mov x0, x19
+    mov x1, x20
     bl _start_c
     b .
 
