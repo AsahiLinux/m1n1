@@ -42,6 +42,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             }
             break;
         }
+        case P_UDELAY:
+            udelay(request->args[0]);
+            break;
 
         case P_WRITE64:
             write64(request->args[0], request->args[1]);

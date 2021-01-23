@@ -84,3 +84,12 @@ void __assert_fail(const char * assertion, const char * file, unsigned int line,
     printf("Assertion failed: '%s' on %s:%d:%s\n", assertion, file, line, function);
     reboot();
 }
+
+#define AIC_TIMER 0x23b108020
+
+void udelay(u32 d)
+{
+    u32 delay = d * 24;
+    u32 val = read32(AIC_TIMER);
+    while ((read32(AIC_TIMER) - val) < delay);
+}

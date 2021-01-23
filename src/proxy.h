@@ -10,6 +10,7 @@ typedef enum {
     P_GET_BOOTARGS,
     P_GET_BASE,
     P_SET_BAUD,
+    P_UDELAY,
 
     P_WRITE64 = 0x100, // Generic register functions
     P_WRITE32,

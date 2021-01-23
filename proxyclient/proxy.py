@@ -249,6 +249,7 @@ class M1N1Proxy:
     P_GET_BOOTARGS = 0x003
     P_GET_BASE = 0x004
     P_SET_BAUD = 0x005
+    P_UDELAY = 0x006
 
     P_WRITE64 = 0x100
     P_WRITE32 = 0x101
@@ -350,6 +351,8 @@ class M1N1Proxy:
             self.request(self.P_SET_BAUD, baudrate, 16, 0x005aa5f0)
         finally:
             self.iface.tty_enable = True
+    def udelay(self, usec):
+        self.request(self.P_UDELAY, usec)
 
     def write64(self, addr, data):
         if addr & 7:
