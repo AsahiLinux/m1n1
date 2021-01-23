@@ -52,11 +52,26 @@ void exc_sync(u64 *regs)
 
 void exc_irq(u64 *regs)
 {
+#ifdef DEBUG_UART_IRQS
+    u32 ucon, utrstat, uerstat, ufstat;
+    ucon = read32(0x235200004);
+    utrstat = read32(0x235200010);
+    uerstat = read32(0x235200014);
+    ufstat = read32(0x235200018);
+#endif
+
     uart_puts("Exception: IRQ");
 
     u32 reason = read32(0x23b102004);
 
     printf(" type: %d num: %d\n", reason >> 16, reason & 0xffff);
+
+#ifdef DEBUG_UART_IRQS
+    printf(" UCON: 0x%x\n", ucon);
+    printf(" UTRSTAT: 0x%x\n", utrstat);
+    printf(" UERSTAT: 0x%x\n", uerstat);
+    printf(" UFSTAT: 0x%x\n", ufstat);
+#endif
 
     // print_regs(regs);
 }
