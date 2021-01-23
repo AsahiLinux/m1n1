@@ -77,6 +77,15 @@ class ProxyUtils(object):
 
         self.proxy.call(self.code_buffer, val)
 
+    def inst(self, op):
+        func = struct.pack("<II", op, 0xd65f03c0)
+
+        self.iface.writemem(self.code_buffer, func)
+        self.proxy.dc_cvau(self.code_buffer, 8)
+        self.proxy.ic_ivau(self.code_buffer, 8)
+
+        self.proxy.call(self.code_buffer)
+
 class RegMonitor(object):
     def __init__(self, utils):
         self.utils = utils
