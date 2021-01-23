@@ -252,4 +252,10 @@ int debug_printf(const char *fmt, ...);
 void udelay(u32 d);
 void reboot(void);
 
+#define panic(fmt, ...)                                                                            \
+    do {                                                                                           \
+        debug_printf(fmt, ##__VA_ARGS__);                                                          \
+        reboot();                                                                                  \
+    } while (0)
+
 #endif
