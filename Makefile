@@ -3,15 +3,21 @@ ARCH := aarch64-linux-gnu-
 CFLAGS := -O2 -Wall -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-Werror=implicit-function-declaration -Werror=implicit-int \
 	-ffreestanding -fpic -ffunction-sections -fdata-sections \
-	-fno-stack-protector -mgeneral-regs-only
+	-fno-stack-protector -mgeneral-regs-only -mstrict-align
 
 LDFLAGS := -T m1n1.ld -EL -maarch64elf --no-undefined -X -Bsymbolic \
 	-z notext --no-apply-dynamic-relocs --orphan-handling=warn --strip-debug \
 	-z nocopyreloc --gc-sections -pie
 
+MINILZLIB_OBJECTS := $(patsubst %,minilzlib/%, \
+	dictbuf.o inputbuf.o lzma2dec.o lzmadec.o rangedec.o xzstream.o)
+
+TINF_OBJECTS := $(patsubst %,tinf/%, \
+	adler32.o crc32.o tinfgzip.o tinflate.o tinfzlib.o)
+
 OBJECTS := adt.o bootlogo_128.o bootlogo_256.o exception.o exception_asm.o fb.o \
 	main.o memory.o proxy.o start.o startup.o string.o uart.o uartproxy.o utils.o \
-	utils_asm.o vsprintf.o
+	utils_asm.o vsprintf.o $(MINILZLIB_OBJECTS) $(TINF_OBJECTS)
 
 BUILD_OBJS := $(patsubst %,build/%,$(OBJECTS))
 NAME := m1n1
@@ -41,11 +47,13 @@ format:
 build/%.o: src/%.S
 	@echo "  AS    $@"
 	@mkdir -p $(DEPDIR)
+	@mkdir -p "$(basename $@)"
 	@$(AS) -c $(CFLAGS) -Wp,-MMD,$(DEPDIR)/$(*F).d,-MQ,"$@",-MP -o $@ $<
 
 build/%.o: src/%.c
 	@echo "  CC    $@"
 	@mkdir -p $(DEPDIR)
+	@mkdir -p "$(basename $@)"
 	@$(CC) -c $(CFLAGS) -Wp,-MMD,$(DEPDIR)/$(*F).d,-MQ,"$@",-MP -o $@ $<
 
 build/$(NAME).elf: $(BUILD_OBJS) m1n1.ld

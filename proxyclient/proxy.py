@@ -290,11 +290,14 @@ class M1N1Proxy:
     P_DC_CVAU = 0x309
     P_DC_CIVAC = 0x30a
 
+    P_XZDEC = 0x400
+    P_GZDEC = 0x401
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
 
-    def request(self, opcode, *args, reboot=False):
+    def request(self, opcode, *args, reboot=False, signed=False):
         if len(args) > 6:
             raise ValueError("Too many arguments")
         args = list(args) + [0] * (6 - len(args))
@@ -302,7 +305,8 @@ class M1N1Proxy:
         if self.debug:
             print("<<<< %08x: %08x %08x %08x %08x %08x %08x"%tuple([opcode] + args))
         reply = self.iface.proxyreq(req, reboot=reboot)
-        rop, status, retval = struct.unpack("<QqQ", reply)
+        ret_fmt = "q" if signed else "Q"
+        rop, status, retval = struct.unpack("<Qq" + ret_fmt, reply)
         if self.debug:
             print(">>>> %08x: %d %08x"%(rop, status, retval))
         if reboot:
@@ -466,6 +470,14 @@ class M1N1Proxy:
         self.request(self.P_DC_CVAU, addr, size)
     def dc_civac(self, addr, size):
         self.request(self.P_DC_CIVAC, addr, size)
+
+    def xzdec(self, inbuf, insize, outbuf=0, outsize=0):
+        return self.request(self.P_XZDEC, inbuf, insize, outbuf,
+                            outsize, signed=True)
+
+    def gzdec(self, inbuf, insize, outbuf, outsize):
+        return self.request(self.P_GZDEC, inbuf, insize, outbuf,
+                            outsize, signed=True)
 
 if __name__ == "__main__":
     import serial

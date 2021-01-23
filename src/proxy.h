@@ -53,6 +53,9 @@ typedef enum {
     P_DC_CVAU,
     P_DC_CIVAC,
 
+    P_XZDEC = 0x400,
+    P_GZDEC,
+
 } ProxyOp;
 
 #define S_OK 0
