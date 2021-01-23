@@ -1,0 +1,109 @@
+// SPDX-License-Identifier: GPL-2.0+
+
+/dts-v1/;
+
+/ {
+	model = "Apple Mac Mini M1 2020";
+	compatible = "apple,j274";
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	chosen {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		bootargs = "earlycon debug";
+		stdout-path = "serial0:1500000";
+
+		linux,initrd-start = <0x8 0x30000000>;
+		linux,initrd-end = <0x8 0x30800000>;
+
+		framebuffer0: framebuffer@9e0df8000 {
+			compatible = "simple-framebuffer";
+			allwinner,pipeline = "de_be0-lcd0";
+			reg = <0x9 0xe0df8000 0 8294400>;
+			width = <1920>;
+			height = <1080>;
+			stride = <7680>;
+			format = "x2r10g10b10";
+		};
+	};
+
+	memory@800000000 {
+		device_type = "memory";
+		reg = <0x8 0x00000000 0x1 0x00000000>;
+	};
+
+	reserved-memory {
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+
+			resv@800000000 {
+					reg = <0x8 0x0 0x0 0x3000000>;
+					no-map;
+			};
+	};
+
+	aliases {
+		serial0 = &serial0;
+	};
+
+	cpus {
+		cpu0: cpu {
+			compatible = "arm,apple-firestorm";
+			device_type = "cpu";
+		};
+	};
+
+	fiq: interrupt-controller {
+		compatible = "apple,t8103-fiq";
+		#interrupt-cells = <2>;
+		#address-cells = <0>;
+		interrupt-controller;
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupt-parent = <&fiq>;
+		interrupts = <0 8>,
+				<0 8>,
+				<0 8>,
+				<0 8>;
+	};
+
+	clk24: clk24 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+		clock-output-names = "clk24";
+	};
+
+	soc {
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		aic: interrupt-controller@23b100000 {
+			compatible = "apple,t8103-aic";
+			#interrupt-cells = <2>;
+			#address-cells = <0>;
+			interrupt-controller;
+			reg = <0x2 0x3b100000 0x0 0x8000>;
+		};
+
+		serial0: serial@235200000 {
+			compatible = "apple,t8103-uart";
+			reg = <0x2 0x35200000 0x0 0x1000>;
+			reg-shift = <2>;
+			reg-io-width = <4>;
+			interrupt-parent = <&aic>;
+			interrupts = <605 8>;
+			clocks = <&clk24>, <&clk24>;
+			clock-names = "uart", "clk_uart_baud0";
+		};
+
+	};
+};

@@ -19,7 +19,11 @@ OBJECTS := adt.o bootlogo_128.o bootlogo_256.o exception.o exception_asm.o fb.o 
 	main.o memory.o proxy.o start.o startup.o string.o uart.o uartproxy.o utils.o \
 	utils_asm.o vsprintf.o $(MINILZLIB_OBJECTS) $(TINF_OBJECTS)
 
+DTS := apple-j274.dts
+
 BUILD_OBJS := $(patsubst %,build/%,$(OBJECTS))
+DTBS := $(patsubst %.dts,build/dtb/%.dtb,$(DTS))
+
 NAME := m1n1
 TARGET := m1n1.macho
 
@@ -38,22 +42,27 @@ OBJCOPY := $(ARCH)objcopy
 endif
 
 .PHONY: all clean format
-all: build/$(TARGET)
+all: build/$(TARGET) $(DTBS)
 clean:
 	rm -rf build/*
 format:
 	clang-format -i src/*.c src/*.h
 
+build/dtb/%.dtb: dts/%.dts
+	@echo "  DTC   $@"
+	@mkdir -p "$(dir $@)"
+	@dtc -I dts $< >$@
+
 build/%.o: src/%.S
 	@echo "  AS    $@"
 	@mkdir -p $(DEPDIR)
-	@mkdir -p "$(basename $@)"
+	@mkdir -p "$(dir $@)"
 	@$(AS) -c $(CFLAGS) -Wp,-MMD,$(DEPDIR)/$(*F).d,-MQ,"$@",-MP -o $@ $<
 
 build/%.o: src/%.c
 	@echo "  CC    $@"
 	@mkdir -p $(DEPDIR)
-	@mkdir -p "$(basename $@)"
+	@mkdir -p "$(dir $@)"
 	@$(CC) -c $(CFLAGS) -Wp,-MMD,$(DEPDIR)/$(*F).d,-MQ,"$@",-MP -o $@ $<
 
 build/$(NAME).elf: $(BUILD_OBJS) m1n1.ld
