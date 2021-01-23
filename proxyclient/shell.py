@@ -57,7 +57,6 @@ for attr in dir(u):
     locals[attr] = getattr(u,attr)
 del attr
 
-from armutils import *
 from tgtypes import *
 
 HistoryConsole(locals).interact("Have fun!")
