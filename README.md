@@ -32,3 +32,9 @@ m1n1 embeds a slightly modified version of [tinf](https://github.com/jibsen/tinf
 [ZLIB](3rdparty_licenses/LICENSE.tinf) licensed and copyright:
 
 * Copyright (c) 2003-2019 Joergen Ibsen
+
+m1n1 embeds portions taken from
+[arm-trusted-firwmare](https://github.com/ARM-software/arm-trusted-firmware), which is
+[BSD](3rdparty_licenses/LICENSE.BSD-3.arm) licensed and copyright:
+
+* Copyright (c) 2013-2020, ARM Limited and Contributors. All rights reserved.
