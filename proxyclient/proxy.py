@@ -133,6 +133,13 @@ class UartInterface:
             sys.stdout.write(chr(c))
             sys.stdout.flush()
 
+    def ttymode(self):
+        self.tty_enable = True
+        self.dev.timeout = None
+        while True:
+            sys.stdout.buffer.write(self.readfull(1))
+            sys.stdout.buffer.flush()
+
     def reply(self, cmd):
         reply = b''
         while True:
