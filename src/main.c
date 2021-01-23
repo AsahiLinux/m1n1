@@ -4,6 +4,7 @@
 
 #include "adt.h"
 #include "fb.h"
+#include "memory.h"
 #include "smp.h"
 #include "string.h"
 #include "uart.h"
@@ -69,6 +70,7 @@ void m1n1_main(void)
     printf("Licensed under the MIT license\n\n");
 
     printf("Running in EL%d\n\n", mrs(CurrentEL) >> 2);
+    mmu_init();
 
 #ifdef SHOW_LOGO
     fb_init();

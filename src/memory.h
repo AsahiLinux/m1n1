@@ -12,4 +12,6 @@ void dc_cvac_range(void *addr, size_t length);
 void dc_cvau_range(void *addr, size_t length);
 void dc_civac_range(void *addr, size_t length);
 
+void mmu_init(void);
+void mmu_shutdown(void);
 #endif
