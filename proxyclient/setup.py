@@ -15,4 +15,7 @@ p.set_baud(1500000)
 
 iface.nop()
 
+fb = u.ba.video.base
+
 print("Base at: 0x%x" % u.base)
+print("FB at: 0x%x" % fb)
