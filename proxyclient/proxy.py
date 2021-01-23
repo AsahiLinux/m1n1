@@ -183,9 +183,11 @@ class UartInterface:
         self.cmd(self.REQ_NOP)
         self.reply(self.REQ_NOP)
 
-    def proxyreq(self, req, reboot=False):
+    def proxyreq(self, req, reboot=False, no_reply=False):
         self.cmd(self.REQ_PROXY, req)
-        if reboot:
+        if no_reply:
+            return
+        elif reboot:
             return self.reply(self.REQ_BOOT)
         else:
             return self.reply(self.REQ_PROXY)
@@ -297,14 +299,16 @@ class M1N1Proxy:
         self.debug = debug
         self.iface = iface
 
-    def request(self, opcode, *args, reboot=False, signed=False):
+    def request(self, opcode, *args, reboot=False, signed=False, no_reply=False):
         if len(args) > 6:
             raise ValueError("Too many arguments")
         args = list(args) + [0] * (6 - len(args))
         req = struct.pack("<7Q", opcode, *args)
         if self.debug:
             print("<<<< %08x: %08x %08x %08x %08x %08x %08x"%tuple([opcode] + args))
-        reply = self.iface.proxyreq(req, reboot=reboot)
+        reply = self.iface.proxyreq(req, reboot=reboot, no_reply=no_reply)
+        if no_reply:
+            return
         ret_fmt = "q" if signed else "Q"
         rop, status, retval = struct.unpack("<Qq" + ret_fmt, reply)
         if self.debug:
@@ -328,10 +332,14 @@ class M1N1Proxy:
         if len(args) > 4:
             raise ValueError("Too many arguments")
         return self.request(self.P_CALL, addr, *args)
-    def vector(self, addr, *args):
+    def reboot(self, addr, *args):
         if len(args) > 4:
             raise ValueError("Too many arguments")
         self.request(self.P_CALL, addr, *args, reboot=True)
+    def vector(self, addr, *args):
+        if len(args) > 4:
+            raise ValueError("Too many arguments")
+        self.request(self.P_CALL, addr, *args, no_reply=True)
     def get_bootargs(self):
         return self.request(self.P_GET_BOOTARGS)
     def get_base(self):

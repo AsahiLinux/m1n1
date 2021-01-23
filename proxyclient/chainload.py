@@ -29,7 +29,7 @@ entry = new_base + 0x4800
 
 print("Jumping to 0x%x" % entry)
 
-proxy.vector(entry, ba_addr)
+proxy.reboot(entry, ba_addr)
 
 iface.nop()
 print("Proxy is alive again")
