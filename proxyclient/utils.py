@@ -17,6 +17,21 @@ CNTP_TVAL_EL0 = 3,3,14,2,0
 CNTP_CTL_EL0 = 3,3,14,2,1
 CNTP_CVAL_EL0 = 3,3,14,2,2
 
+SCTLR_EL1 = 3,0,1,0,0
+TTBR0_EL1 = 3,0,2,0,0
+TTBR0_EL2 = 3,4,2,0,0
+TCR_EL1 = 3,0,2,0,2
+TCR_EL2 = 3,4,2,0,2
+HCR_EL2 = 3,4,1,1,0
+
+MIDR_EL1 = 3,0,0,0,0
+MPIDR_EL1 = 3,0,0,0,5
+AA64MMFR0_EL1 = 3,0,0,7,0
+
+OSLAR_EL1 = 2,0,1,0,4
+
+ACTLR_EL1 = 3,0,1,0,1
+
 class ProxyUtils(object):
     def __init__(self, p):
         self.iface = p.iface
