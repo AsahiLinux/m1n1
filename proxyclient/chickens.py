@@ -50,20 +50,21 @@ def h13e_init():
     mpidr = u.mrs(MPIDR_EL1)
     print("mpidr = 0x%x" % mpidr)
 
-    print("OSLAR")
-    u.msr(OSLAR_EL1, 0)
-    print("s3_6_c15_c1_0")
-    u.msr(s3_6_c15_c1_0, 1)
-    print("tlbi_vmalle1")
-    u.inst(tlbi_vmalle1)
+    #print("OSLAR")
+    #u.msr(OSLAR_EL1, 0)
+    #print("s3_6_c15_c1_0")
+    #u.msr(s3_6_c15_c1_0, 1)
+    #print("tlbi_vmalle1")
+    #u.inst(tlbi_vmalle1)
 
-    v = u.mrs(s3_6_c15_c1_6)
-    print("s3_6_c15_c1_6 == 0x%x" % v)
-    v = 0x2020a505f020f0f0
-    print("s3_6_c15_c1_6 <= 0x%x" % v)
-    u.msr(s3_6_c15_c1_6, v)
+    ## This looks like APRR stuff?
+    #v = u.mrs(s3_6_c15_c1_6)
+    #print("s3_6_c15_c1_6 == 0x%x" % v)
+    #v = 0x2020a505f020f0f0
+    #print("s3_6_c15_c1_6 <= 0x%x" % v)
+    #u.msr(s3_6_c15_c1_6, v)
 
-    u.msr(s3_6_c15_c1_0, 0)
+    #u.msr(s3_6_c15_c1_0, 0)
 
     for reg, clearb, setb in h13e_chickenbits:
         v = u.mrs(sys_regs[reg])
@@ -75,8 +76,8 @@ def h13e_init():
 
     v = u.mrs(s3_4_c15_c5_0)
     print("s3_4_c15_c5_0 == 0x%x" % v)
-    print("s3_4_c15_c5_0 <= 0x%x" % (mpidr & 3))
-    u.msr(s3_4_c15_c5_0, mpidr & 3)
+    print("s3_4_c15_c5_0 <= 0x%x" % (mpidr & 0xff))
+    u.msr(s3_4_c15_c5_0, mpidr & 0xff)
 
     u.msr(s3_4_c15_c1_4, 0x100)
 
