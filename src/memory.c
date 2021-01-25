@@ -302,8 +302,8 @@ void mmu_init(void)
 
 void mmu_shutdown(void)
 {
-    // FIXME: do we need to flush caches here?
     printf("MMU: shutting down...\n");
     write_sctlr(read_sctlr() & ~(SCTLR_I | SCTLR_C | SCTLR_M));
-    printf("MMU: shutdown successful.\n");
+    printf("MMU: shutdown successful, clearing caches\n");
+    dcsw_op_all(DCSW_OP_DCCISW);
 }
