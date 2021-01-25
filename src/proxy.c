@@ -1,6 +1,6 @@
 #include "proxy.h"
 #include "memory.h"
-#include "minlzma.h"
+#include "minilzlib/minlzma.h"
 #include "tinf/tinf.h"
 #include "types.h"
 #include "uart.h"
