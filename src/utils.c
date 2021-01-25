@@ -79,9 +79,11 @@ int debug_printf(const char *fmt, ...)
     return i;
 }
 
-void __assert_fail(const char * assertion, const char * file, unsigned int line, const char * function)
+void __assert_fail(const char *assertion, const char *file, unsigned int line,
+                   const char *function)
 {
-    printf("Assertion failed: '%s' on %s:%d:%s\n", assertion, file, line, function);
+    printf("Assertion failed: '%s' on %s:%d:%s\n", assertion, file, line,
+           function);
     reboot();
 }
 
@@ -91,5 +93,6 @@ void udelay(u32 d)
 {
     u32 delay = d * 24;
     u32 val = read32(AIC_TIMER);
-    while ((read32(AIC_TIMER) - val) < delay);
+    while ((read32(AIC_TIMER) - val) < delay)
+        ;
 }

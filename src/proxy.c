@@ -186,7 +186,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_XZDEC: {
             u32 output_size = request->args[3];
             if (XzDecode((void *)request->args[0], request->args[1],
-                        (void *)request->args[2], &output_size))
+                         (void *)request->args[2], &output_size))
                 reply->retval = output_size;
             else
                 reply->retval = ~0L;
@@ -196,8 +196,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             unsigned int destlen, srclen;
             destlen = request->args[3];
             srclen = request->args[1];
-            size_t ret = tinf_gzip_uncompress((void *)request->args[2], &destlen,
-                        (void *)request->args[0], srclen);
+            size_t ret =
+                tinf_gzip_uncompress((void *)request->args[2], &destlen,
+                                     (void *)request->args[0], srclen);
             if (ret != TINF_OK)
                 reply->retval = ret;
             else
