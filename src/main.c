@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "../config.h"
+
 #include "adt.h"
 #include "fb.h"
 #include "string.h"
@@ -9,8 +11,6 @@
 #include "xnuboot.h"
 
 #include "../build/build_tag.h"
-
-// #define LOGO
 
 void print_info(void)
 {
@@ -69,7 +69,7 @@ void m1n1_main(void)
 
     printf("Running in EL%d\n\n", mrs(CurrentEL) >> 2);
 
-#ifdef LOGO
+#ifdef SHOW_LOGO
     fb_init();
     fb_display_logo();
 #endif
