@@ -26,7 +26,7 @@ SECTIONS {
         LONG(0x100000c); /* cputype */
         LONG(0x02); /* cputype */
         LONG(0x0c); /* filetype */
-        LONG(5); /* ncmds */
+        LONG(6); /* ncmds */
         LONG(_cmd_end - _cmd_start); /* sizeofcmds */
         LONG(4); /* flags */
         LONG(0); /* reserved */
@@ -100,6 +100,20 @@ SECTIONS {
         LONG(0); /* nsects */
         LONG(0); /* flags */
 
+        /* segment: payload */
+        LONG(0x19); /* type = SEGMENT_64 */
+        LONG(0x48); /* cmdsize */
+        LONG(0x444C5950); /* segmname = "PYLD" */
+        . += 12;
+        QUAD(_end + _va_off); /* vmaddr */
+        QUAD(64*1024*1024); /* vmsize */
+        QUAD(_file_end - _base); /* fileoff */
+        QUAD(64*1024*1024); /* filesize */
+        LONG(PROT_READ | PROT_WRITE); /* maxprot */
+        LONG(PROT_READ | PROT_WRITE); /* initprot */
+        LONG(0); /* nsects */
+        LONG(0); /* flags */
+
         _cmd_end = .;
 
         . = ALIGN(0x4000);
@@ -140,6 +154,7 @@ SECTIONS {
         *(.got)
         _got_end = .;
         . = ALIGN(0x4000);
+        _file_end = .;
     } :data
     .bss : ALIGN(0x4000) {
         *(.bss)
