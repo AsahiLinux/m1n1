@@ -55,8 +55,6 @@ void m1n1_main(void)
     print_info();
     wdt_disable();
 
-    smp_start_secondaries();
-
     printf("Running proxy...\n");
     uartproxy_run();
 
