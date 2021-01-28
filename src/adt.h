@@ -55,8 +55,12 @@ static inline const struct adt_property *adt_get_property_by_offset(const void *
     return ADT_PROP(adt, offset);
 }
 
-int adt_first_child(const void *adt, int offset);
-int adt_next_sibling(const void *adt, int offset);
+static inline int adt_get_child_count(const void *adt, int offset)
+{
+    return ADT_NODE(adt, offset)->child_count;
+}
+int adt_first_child_offset(const void *adt, int offset);
+int adt_next_sibling_offset(const void *adt, int offset);
 
 int adt_subnode_offset_namelen(const void *adt, int parentoffset, const char *name, size_t namelen);
 int adt_subnode_offset(const void *adt, int parentoffset, const char *name);
@@ -76,6 +80,14 @@ int adt_getprop_copy(const void *adt, int nodeoffset, const char *name, void *ou
 #define ADT_GETPROP(adt, nodeoffset, name, val)                                                    \
     adt_getprop_copy(adt, nodeoffset, name, (val), sizeof(*(val)))
 
+#define ADT_GETPROP_ARRAY(adt, nodeoffset, name, arr)                                              \
+    adt_getprop_copy(adt, nodeoffset, name, (arr), sizeof(arr))
+
 int adt_get_reg(const void *adt, int *path, const char *prop, int idx, u64 *addr, u64 *size);
+
+#define ADT_FOREACH_CHILD(adt, node)                                                               \
+    for (int _child_count = adt_get_child_count(adt, node); _child_count; _child_count = 0)        \
+        for (node = adt_first_child_offset(adt, node); _child_count--;                             \
+             node = adt_next_sibling_offset(adt, node))
 
 #endif
