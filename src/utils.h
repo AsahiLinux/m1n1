@@ -10,13 +10,13 @@
 static inline u64 read64(u64 addr)
 {
     u64 data;
-    __asm__ volatile("ldr\t%0, [%1]" : "=r"(data) : "r"(addr));
+    __asm__ volatile("ldr\t%0, [%1]" : "=r"(data) : "r"(addr) : "memory");
     return data;
 }
 
 static inline void write64(u64 addr, u64 data)
 {
-    __asm__ volatile("str\t%0, [%1]" : : "r"(data), "r"(addr));
+    __asm__ volatile("str\t%0, [%1]" : : "r"(data), "r"(addr) : "memory");
 }
 
 static inline u64 set64(u64 addr, u64 set)
@@ -26,7 +26,8 @@ static inline u64 set64(u64 addr, u64 set)
                      "\torr\t%0, %0, %2\n"
                      "\tstr\t%0, [%1]"
                      : "=&r"(data)
-                     : "r"(addr), "r"(set));
+                     : "r"(addr), "r"(set)
+                     : "memory");
     return data;
 }
 
@@ -37,7 +38,8 @@ static inline u64 clear64(u64 addr, u64 clear)
                      "\tbic\t%0, %0, %2\n"
                      "\tstr\t%0, [%1]"
                      : "=&r"(data)
-                     : "r"(addr), "r"(clear));
+                     : "r"(addr), "r"(clear)
+                     : "memory");
     return data;
 }
 
@@ -49,20 +51,21 @@ static inline u64 mask64(u64 addr, u64 clear, u64 set)
                      "\torr\t%0, %0, %2\n"
                      "\tstr\t%0, [%1]"
                      : "=&r"(data)
-                     : "r"(addr), "r"(set), "r"(clear));
+                     : "r"(addr), "r"(set), "r"(clear)
+                     : "memory");
     return data;
 }
 
 static inline u32 read32(u64 addr)
 {
     u32 data;
-    __asm__ volatile("ldr\t%w0, [%1]" : "=r"(data) : "r"(addr));
+    __asm__ volatile("ldr\t%w0, [%1]" : "=r"(data) : "r"(addr) : "memory");
     return data;
 }
 
 static inline void write32(u64 addr, u32 data)
 {
-    __asm__ volatile("str\t%w0, [%1]" : : "r"(data), "r"(addr));
+    __asm__ volatile("str\t%w0, [%1]" : : "r"(data), "r"(addr) : "memory");
 }
 
 static inline u32 set32(u64 addr, u32 set)
@@ -72,7 +75,8 @@ static inline u32 set32(u64 addr, u32 set)
                      "\torr\t%w0, %w0, %w2\n"
                      "\tstr\t%w0, [%1]"
                      : "=&r"(data)
-                     : "r"(addr), "r"(set));
+                     : "r"(addr), "r"(set)
+                     : "memory");
     return data;
 }
 
@@ -83,7 +87,8 @@ static inline u32 clear32(u64 addr, u32 clear)
                      "\tbic\t%w0, %w0, %w2\n"
                      "\tstr\t%w0, [%1]"
                      : "=&r"(data)
-                     : "r"(addr), "r"(clear));
+                     : "r"(addr), "r"(clear)
+                     : "memory");
     return data;
 }
 
@@ -95,20 +100,21 @@ static inline u32 mask32(u64 addr, u32 clear, u32 set)
                      "\torr\t%w0, %w0, %w2\n"
                      "\tstr\t%w0, [%1]"
                      : "=&r"(data)
-                     : "r"(addr), "r"(set), "r"(clear));
+                     : "r"(addr), "r"(set), "r"(clear)
+                     : "memory");
     return data;
 }
 
 static inline u16 read16(u64 addr)
 {
     u32 data;
-    __asm__ volatile("ldrh\t%w0, [%1]" : "=r"(data) : "r"(addr));
+    __asm__ volatile("ldrh\t%w0, [%1]" : "=r"(data) : "r"(addr) : "memory");
     return data;
 }
 
 static inline void write16(u64 addr, u16 data)
 {
-    __asm__ volatile("strh\t%w0, [%1]" : : "r"(data), "r"(addr));
+    __asm__ volatile("strh\t%w0, [%1]" : : "r"(data), "r"(addr) : "memory");
 }
 
 static inline u16 set16(u64 addr, u16 set)
@@ -119,6 +125,7 @@ static inline u16 set16(u64 addr, u16 set)
                      "\tstrh\t%w0, [%1]"
                      : "=&r"(data)
                      : "r"(addr), "r"(set)
+                     : "memory"
 
     );
     return data;
@@ -131,7 +138,8 @@ static inline u16 clear16(u64 addr, u16 clear)
                      "\tbic\t%w0, %w0, %w2\n"
                      "\tstrh\t%w0, [%1]"
                      : "=&r"(data)
-                     : "r"(addr), "r"(clear));
+                     : "r"(addr), "r"(clear)
+                     : "memory");
     return data;
 }
 
@@ -143,20 +151,21 @@ static inline u16 mask16(u64 addr, u16 clear, u16 set)
                      "\torr\t%w0, %w0, %w2\n"
                      "\tstrh\t%w0, [%1]"
                      : "=&r"(data)
-                     : "r"(addr), "r"(set), "r"(clear));
+                     : "r"(addr), "r"(set), "r"(clear)
+                     : "memory");
     return data;
 }
 
 static inline u8 read8(u64 addr)
 {
     u32 data;
-    __asm__ volatile("ldrb\t%w0, [%1]" : "=r"(data) : "r"(addr));
+    __asm__ volatile("ldrb\t%w0, [%1]" : "=r"(data) : "r"(addr) : "memory");
     return data;
 }
 
 static inline void write8(u64 addr, u8 data)
 {
-    __asm__ volatile("strb\t%w0, [%1]" : : "r"(data), "r"(addr));
+    __asm__ volatile("strb\t%w0, [%1]" : : "r"(data), "r"(addr) : "memory");
 }
 
 static inline u8 set8(u64 addr, u8 set)
@@ -166,7 +175,8 @@ static inline u8 set8(u64 addr, u8 set)
                      "\torr\t%w0, %w0, %w2\n"
                      "\tstrb\t%w0, [%1]"
                      : "=&r"(data)
-                     : "r"(addr), "r"(set));
+                     : "r"(addr), "r"(set)
+                     : "memory");
     return data;
 }
 
@@ -177,7 +187,8 @@ static inline u8 clear8(u64 addr, u8 clear)
                      "\tbic\t%w0, %w0, %w2\n"
                      "\tstrb\t%w0, [%1]"
                      : "=&r"(data)
-                     : "r"(addr), "r"(clear));
+                     : "r"(addr), "r"(clear)
+                     : "memory");
     return data;
 }
 
@@ -189,7 +200,8 @@ static inline u8 mask8(u64 addr, u8 clear, u8 set)
                      "\torr\t%w0, %w0, %w2\n"
                      "\tstrb\t%w0, [%1]"
                      : "=&r"(data)
-                     : "r"(addr), "r"(set), "r"(clear));
+                     : "r"(addr), "r"(set), "r"(clear)
+                     : "memory");
     return data;
 }
 
@@ -202,9 +214,9 @@ static inline u8 mask8(u64 addr, u8 clear, u8 set)
 
 #define msr(reg, val) ({ __asm__ volatile("msr\t" #reg ", %0" : : "r"(val)); })
 
-#define sysop(op) __asm__ volatile(op)
+#define sysop(op) __asm__ volatile(op ::: "memory")
 
-#define cacheop(op, val) ({ __asm__ volatile(op ", %0" : : "r"(val)); })
+#define cacheop(op, val) ({ __asm__ volatile(op ", %0" : : "r"(val) : "memory"); })
 
 #define ic_ialluis() sysop("ic ialluis")
 #define ic_iallu()   sysop("ic iallu")
