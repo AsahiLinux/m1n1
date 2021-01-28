@@ -76,11 +76,13 @@ _start:
     mov w0, 'm'
     bl debug_putc
 
+    adrp x1, _stack_bot
+    mov sp, x1
+
     mov w0, '1'
     bl debug_putc
 
-    adrp x1, _stack_bot
-    mov sp, x1
+    ldr x2, [sp, #-8]
 
     mov w0, 'n'
     bl debug_putc
@@ -141,6 +143,8 @@ cpu_reset:
     adrp x1, _reset_stack
     ldr x1, [x1]
     mov sp, x1
+
+    ldr x2, [sp, #-8]
 
     mov w0, 'K'
     bl debug_putc
