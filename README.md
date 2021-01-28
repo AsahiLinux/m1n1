@@ -2,6 +2,15 @@
 
 (And perhaps some day a Linux bootloader)
 
+* Needs submodule artwork installed so populate submodule if not recursively cloned:
+<pre>
+    git submodule init
+    git submodule update
+</pre>
+* Build with (requires gcc-aarch64-linux-gnu on debian/buster)
+<pre>
+    make
+</pre>
 ## License
 
 m1n1 is licensed under the MIT license, as included in the [LICENSE](LICENSE) file.
