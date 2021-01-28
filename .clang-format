@@ -4,4 +4,6 @@ UseTab: Never
 BreakBeforeBraces: Linux
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortFunctionsOnASingleLine: false
+AlignConsecutiveMacros: true
 IndentCaseLabels: true
+ColumnLimit: 100
