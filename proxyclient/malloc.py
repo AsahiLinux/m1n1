@@ -10,20 +10,40 @@ class Heap(object):
         self.count = (end - start) // block
         self.blocks = [(self.count,False)]
         self.block = block
+
     def malloc(self, size):
         size = (size + self.block - 1) // self.block
         pos = 0
         for i, (bsize, full) in enumerate(self.blocks):
-            if not full:
-                if bsize == size:
-                    self.blocks[i] = (bsize,True)
-                    return self.offset + self.block * pos
+            if not full and bsize >= size:
+                self.blocks[i] = (size, True)
                 if bsize > size:
-                    self.blocks[i] = (size,True)
-                    self.blocks.insert(i+1, (bsize-size, False))
-                    return self.offset + self.block * pos
+                    self.blocks.insert(i+1, (bsize - size, False))
+                return self.offset + self.block * pos
             pos += bsize
         raise Exception("Out of memory")
+
+    def memalign(self, align, size):
+        assert (align & (align - 1)) == 0
+        align = max(align, self.block) // self.block
+        size = (size + self.block - 1) // self.block
+        pos = 0
+        for i, (bsize, full) in enumerate(self.blocks):
+            if not full:
+                offset = 0
+                if pos % align:
+                    offset = align - (pos % align)
+                if bsize >= (size + offset):
+                    if offset:
+                        self.blocks.insert(i, (offset, False))
+                        i += 1
+                    self.blocks[i] = (size, True)
+                    if bsize > (size + offset):
+                        self.blocks.insert(i+1, (bsize - size - offset, False))
+                    return self.offset + self.block * (pos + offset)
+            pos += bsize
+        raise Exception("Out of memory")
+
     def free(self, addr):
         if addr%self.block:
             raise ValueError("free address not aligned")
@@ -51,6 +71,7 @@ class Heap(object):
                 return
             pos += bsize
         raise ValueError("bad free address")
+
     def check(self):
         free = 0
         inuse = 0

@@ -45,6 +45,7 @@ class ProxyUtils(object):
         self.heap = malloc.Heap(self._scratch, self._scratch + 0x1000000)
 
         self.malloc = self.heap.malloc
+        self.memalign = self.heap.memalign
         self.free = self.heap.free
 
         self.code_buffer = self.malloc(0x10000)
