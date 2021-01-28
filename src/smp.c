@@ -1,11 +1,12 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "smp.h"
+#include "adt.h"
+#include "string.h"
 #include "types.h"
 #include "utils.h"
 
-#define CPU_START_BASE 0x23b754000L
-#define RVBAR_BASE     0x210050000L
+#define CPU_START_OFF 0x54000
 
 struct spin_table {
     u64 flag;
@@ -40,10 +41,9 @@ void smp_secondary_entry(void)
     }
 }
 
-static void smp_start_cpu(int index, int cluster, int core)
+static void smp_start_cpu(int index, int cluster, int core, u64 rvbar, u64 cpu_start_base)
 {
     int i;
-    int cpu_id = (cluster << 4) | core;
 
     printf("Starting CPU %d (%d:%d)... ", index, cluster, core);
 
@@ -54,12 +54,12 @@ static void smp_start_cpu(int index, int cluster, int core)
 
     sysop("dmb sy");
 
-    write64(RVBAR_BASE + (cpu_id << 20), (u64)_vectors_start);
+    write64(rvbar, (u64)_vectors_start);
 
     if (cluster == 0) {
-        write32(CPU_START_BASE + 0x8, 1 << core);
+        write32(cpu_start_base + 0x8, 1 << core);
     } else {
-        write32(CPU_START_BASE + 0xc, 1 << core);
+        write32(cpu_start_base + 0xc, 1 << core);
     }
 
     for (i = 0; i < 500; i++) {
@@ -77,11 +77,55 @@ void smp_start_secondaries(void)
 {
     printf("Starting secondary CPUs...\n");
 
-    smp_start_cpu(1, 0, 1);
-    smp_start_cpu(2, 0, 2);
-    smp_start_cpu(3, 0, 3);
-    smp_start_cpu(4, 1, 0);
-    smp_start_cpu(5, 1, 1);
-    smp_start_cpu(6, 1, 2);
-    smp_start_cpu(7, 1, 3);
+    int pmgr_path[8];
+    u64 pmgr_reg;
+
+    if (adt_path_offset_trace(adt, "/arm-io/pmgr", pmgr_path) < 0) {
+        printf("Error getting /arm-io/pmgr node\n");
+        return;
+    }
+    if (adt_get_reg(adt, pmgr_path, "reg", 0, &pmgr_reg, NULL) < 0) {
+        printf("Error getting /arm-io/pmgr regs\n");
+        return;
+    }
+
+    int node = adt_path_offset(adt, "/cpus");
+    if (node < 0) {
+        printf("Error getting /cpus node\n");
+        return;
+    }
+
+    int cpu_nodes[MAX_CPUS];
+
+    memset(cpu_nodes, 0, sizeof(cpu_nodes));
+
+    ADT_FOREACH_CHILD(adt, node)
+    {
+        u32 cpu_id;
+
+        if (ADT_GETPROP(adt, node, "cpu-id", &cpu_id) < 0)
+            continue;
+        if (cpu_id >= MAX_CPUS) {
+            printf("cpu-id %d exceeds max CPU count %d: increase MAX_CPUS\n", cpu_id, MAX_CPUS);
+            continue;
+        }
+
+        cpu_nodes[cpu_id] = node;
+    }
+
+    for (int i = 1; i < MAX_CPUS; i++) {
+        int node = cpu_nodes[i];
+
+        if (!node)
+            break;
+
+        u32 reg;
+        u64 cpu_impl_reg[2];
+        if (ADT_GETPROP(adt, node, "reg", &reg) < 0)
+            continue;
+        if (ADT_GETPROP_ARRAY(adt, node, "cpu-impl-reg", cpu_impl_reg) < 0)
+            continue;
+
+        smp_start_cpu(i, reg >> 8, reg & 0xff, cpu_impl_reg[0], pmgr_reg + CPU_START_OFF);
+    }
 }
