@@ -9,6 +9,9 @@
 
 #define ADT_ERR_NOTFOUND  1
 #define ADT_ERR_BADOFFSET 4
+#define ADT_ERR_BADPATH   5
+#define ADT_ERR_BADNCELLS 14
+#define ADT_ERR_BADVALUE  15
 #define ADT_ERR_BADLENGTH 20
 
 #define ADT_ALIGN 4
@@ -58,6 +61,8 @@ int adt_next_sibling(const void *adt, int offset);
 int adt_subnode_offset_namelen(const void *adt, int parentoffset, const char *name, size_t namelen);
 int adt_subnode_offset(const void *adt, int parentoffset, const char *name);
 int adt_path_offset(const void *adt, const char *path);
+int adt_path_offset_trace(const void *adt, const char *path, int *offsets);
+
 const char *adt_get_name(const void *adt, int nodeoffset);
 const struct adt_property *adt_get_property_namelen(const void *adt, int nodeoffset,
                                                     const char *name, size_t namelen);
@@ -70,5 +75,7 @@ int adt_getprop_copy(const void *adt, int nodeoffset, const char *name, void *ou
 
 #define ADT_GETPROP(adt, nodeoffset, name, val)                                                    \
     adt_getprop_copy(adt, nodeoffset, name, (val), sizeof(*(val)))
+
+int adt_get_reg(const void *adt, int *path, const char *prop, int idx, u64 *addr, u64 *size);
 
 #endif
