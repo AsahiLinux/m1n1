@@ -303,6 +303,10 @@ class M1N1Proxy:
     P_XZDEC = 0x400
     P_GZDEC = 0x401
 
+    P_SMP_START_SECONDARIES = 0x500
+    P_SMP_CALL = 0x501
+    P_SMP_CALL_SYNC = 0x502
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
@@ -496,6 +500,19 @@ class M1N1Proxy:
     def gzdec(self, inbuf, insize, outbuf, outsize):
         return self.request(self.P_GZDEC, inbuf, insize, outbuf,
                             outsize, signed=True)
+
+    def smp_start_secondaries(self):
+        self.request(self.P_SMP_START_SECONDARIES)
+
+    def smp_call(self, cpu, addr, *args):
+        if len(args) > 4:
+            raise ValueError("Too many arguments")
+        self.request(self.P_SMP_CALL, cpu, addr, *args)
+
+    def smp_call_sync(self, cpu, addr, *args):
+        if len(args) > 4:
+            raise ValueError("Too many arguments")
+        return self.request(self.P_SMP_CALL_SYNC, cpu, addr, *args)
 
 if __name__ == "__main__":
     import serial

@@ -13,14 +13,16 @@
 struct spin_table {
     u64 flag;
     u64 target;
+    u64 args[4];
+    u64 retval;
 };
 
 void *_reset_stack;
 
-u8 secondary_stacks[MAX_CPUS][SECONDARY_STACK_SIZE] ALIGNED(64);
+static u8 secondary_stacks[MAX_CPUS][SECONDARY_STACK_SIZE] ALIGNED(64);
 
-int target_cpu;
-struct spin_table spin_table[MAX_CPUS];
+static int target_cpu;
+static struct spin_table spin_table[MAX_CPUS];
 
 extern u8 _vectors_start[0];
 
@@ -38,10 +40,13 @@ void smp_secondary_entry(void)
             sysop("wfe");
         }
         sysop("dmb sy");
-        me->target = 0;
         me->flag++;
         sysop("dmb sy");
-        ((void (*)(void))target)();
+        me->retval = ((u64(*)(u64 a, u64 b, u64 c, u64 d))target)(me->args[0], me->args[1],
+                                                                  me->args[2], me->args[3]);
+        sysop("dmb sy");
+        me->target = 0;
+        sysop("dmb sy");
     }
 }
 
@@ -49,9 +54,12 @@ static void smp_start_cpu(int index, int cluster, int core, u64 rvbar, u64 cpu_s
 {
     int i;
 
+    if (spin_table[index].flag)
+        return;
+
     printf("Starting CPU %d (%d:%d)... ", index, cluster, core);
 
-    spin_table[index].flag = 0;
+    memset(&spin_table[index], 0, sizeof(struct spin_table));
 
     target_cpu = index;
     _reset_stack = secondary_stacks[index] + SECONDARY_STACK_SIZE;
@@ -132,4 +140,34 @@ void smp_start_secondaries(void)
 
         smp_start_cpu(i, reg >> 8, reg & 0xff, cpu_impl_reg[0], pmgr_reg + CPU_START_OFF);
     }
+}
+
+void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
+{
+    struct spin_table *target = &spin_table[cpu];
+
+    if (cpu == 0)
+        return;
+
+    u64 flag = target->flag;
+    target->args[0] = arg0;
+    target->args[1] = arg1;
+    target->args[2] = arg2;
+    target->args[3] = arg3;
+    sysop("dmb sy");
+    target->target = (u64)func;
+    sysop("dmb sy");
+    sysop("sev");
+    while (target->flag == flag)
+        sysop("dmb sy");
+}
+
+u64 smp_wait(int cpu)
+{
+    struct spin_table *target = &spin_table[cpu];
+
+    while (target->target)
+        sysop("dmb sy");
+
+    return target->retval;
 }

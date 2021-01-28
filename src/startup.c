@@ -98,5 +98,6 @@ void _cpu_reset_c(void *stack)
     const char *type = init_cpu();
     printf("  CPU: %s\n", type);
 
+    exception_initialize();
     smp_secondary_entry();
 }

@@ -7,8 +7,6 @@ extern char _vectors_start[0];
 
 void exception_initialize(void)
 {
-    printf("Initializing exceptions...\n");
-
     msr(vbar_el2, _vectors_start);
 }
 

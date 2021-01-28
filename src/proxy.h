@@ -54,8 +54,12 @@ typedef enum {
     P_DC_CVAU,
     P_DC_CIVAC,
 
-    P_XZDEC = 0x400,
+    P_XZDEC = 0x400, // Decompression and data processing ops
     P_GZDEC,
+
+    P_SMP_START_SECONDARIES = 0x500, // SMP and system management ops
+    P_SMP_CALL,
+    P_SMP_CALL_SYNC,
 
 } ProxyOp;
 
