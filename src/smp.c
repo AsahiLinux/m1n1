@@ -23,16 +23,18 @@ extern u8 _vectors_start[0];
 
 void smp_secondary_entry(void)
 {
-    spin_table[target_cpu].flag = 1;
+    struct spin_table *me = &spin_table[target_cpu];
+    sysop("dmb sy");
+    me->flag = 1;
     sysop("dmb sy");
     u64 target;
     while (1) {
-        while (!(target = spin_table[target_cpu].target)) {
+        while (!(target = me->target)) {
             sysop("wfe");
         }
         sysop("dmb sy");
-        spin_table[target_cpu].target = 0;
-        spin_table[target_cpu].flag++;
+        me->target = 0;
+        me->flag++;
         sysop("dmb sy");
         ((void (*)(void))target)();
     }
