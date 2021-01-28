@@ -141,6 +141,7 @@ cpu_reset:
     bl debug_putc
 
     adrp x1, _reset_stack
+    add x1, x1, :lo12:_reset_stack
     ldr x1, [x1]
     mov sp, x1
 
@@ -149,6 +150,7 @@ cpu_reset:
     mov w0, 'K'
     bl debug_putc
 
+    mov x0, sp
     bl _cpu_reset_c
     b .
 

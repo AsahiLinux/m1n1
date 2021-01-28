@@ -8,6 +8,8 @@
 
 #define CPU_START_OFF 0x54000
 
+#define SECONDARY_STACK_SIZE 0x4000
+
 struct spin_table {
     u64 flag;
     u64 target;
@@ -15,7 +17,7 @@ struct spin_table {
 
 void *_reset_stack;
 
-u8 secondary_stacks[MAX_CPUS][0x8000] ALIGNED(64);
+u8 secondary_stacks[MAX_CPUS][SECONDARY_STACK_SIZE] ALIGNED(64);
 
 int target_cpu;
 struct spin_table spin_table[MAX_CPUS];
@@ -25,6 +27,8 @@ extern u8 _vectors_start[0];
 void smp_secondary_entry(void)
 {
     struct spin_table *me = &spin_table[target_cpu];
+    printf("  Index: %d (table: %p)\n\n", target_cpu, me);
+
     sysop("dmb sy");
     me->flag = 1;
     sysop("dmb sy");
@@ -50,7 +54,7 @@ static void smp_start_cpu(int index, int cluster, int core, u64 rvbar, u64 cpu_s
     spin_table[index].flag = 0;
 
     target_cpu = index;
-    _reset_stack = secondary_stacks[index];
+    _reset_stack = secondary_stacks[index] + SECONDARY_STACK_SIZE;
 
     sysop("dmb sy");
 

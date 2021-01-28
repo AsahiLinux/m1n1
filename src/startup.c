@@ -91,11 +91,12 @@ void _start_c(void *boot_args, void *base)
 }
 
 /* Secondary SMP core boot */
-void _cpu_reset_c(void)
+void _cpu_reset_c(void *stack)
 {
-    printf("\n  MPIDR: 0x%lx\n", mrs(MPIDR_EL1));
+    printf("\n  Stack base: %p\n", stack);
+    printf("  MPIDR: 0x%lx\n", mrs(MPIDR_EL1));
     const char *type = init_cpu();
-    printf("  CPU: %s\n\n", type);
+    printf("  CPU: %s\n", type);
 
     smp_secondary_entry();
 }
