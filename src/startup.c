@@ -2,6 +2,7 @@
 
 #include "chickens.h"
 #include "exception.h"
+#include "smp.h"
 #include "string.h"
 #include "types.h"
 #include "uart.h"
@@ -87,4 +88,14 @@ void _start_c(void *boot_args, void *base)
 
     exception_initialize();
     m1n1_main();
+}
+
+/* Secondary SMP core boot */
+void _cpu_reset_c(void)
+{
+    printf("\n  MPIDR: 0x%lx\n", mrs(MPIDR_EL1));
+    const char *type = init_cpu();
+    printf("  CPU: %s\n\n", type);
+
+    smp_secondary_entry();
 }

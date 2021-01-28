@@ -17,7 +17,7 @@ TINF_OBJECTS := $(patsubst %,tinf/%, \
 	adler32.o crc32.o tinfgzip.o tinflate.o tinfzlib.o)
 
 OBJECTS := adt.o bootlogo_128.o bootlogo_256.o chickens.o exception.o exception_asm.o fb.o \
-	main.o memory.o proxy.o start.o startup.o string.o uart.o uartproxy.o utils.o \
+	main.o memory.o proxy.o smp.o start.o startup.o string.o uart.o uartproxy.o utils.o \
 	utils_asm.o vsprintf.o $(MINILZLIB_OBJECTS) $(TINF_OBJECTS)
 
 DTS := apple-j274.dts

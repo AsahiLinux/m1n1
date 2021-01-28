@@ -4,6 +4,7 @@
 
 #include "adt.h"
 #include "fb.h"
+#include "smp.h"
 #include "string.h"
 #include "uart.h"
 #include "uartproxy.h"
@@ -76,6 +77,7 @@ void m1n1_main(void)
 
     print_info();
     disable_wdt();
+    smp_start_secondaries();
 
     printf("Running proxy...\n");
     uartproxy_run();

@@ -15,6 +15,8 @@
 .extern _v_sp0_irq
 .extern _v_sp0_fiq
 .extern _v_sp0_serr
+.extern _reset_stack
+.extern _cpu_reset_c
 
 .section .init, "ax"
 
@@ -22,7 +24,7 @@
 _vectors_start:
 
     mov x9, '0'
-    b exc_unk
+    b cpu_reset
     .align 7
     mov x9, '1'
     b exc_unk
@@ -73,13 +75,13 @@ _start:
 
     mov w0, 'm'
     bl debug_putc
-    
+
     mov w0, '1'
     bl debug_putc
 
     adrp x1, _stack_bot
     mov sp, x1
-    
+
     mov w0, 'n'
     bl debug_putc
 
@@ -97,7 +99,7 @@ _start:
     bl debug_putc
     mov w0, '\n'
     bl debug_putc
-    
+
     mov x0, x19
     mov x1, x20
     bl _start_c
@@ -129,6 +131,22 @@ exc_unk:
     mov w0, '\n'
     bl debug_putc
     b reboot
+
+.globl cpu_reset
+.type cpu_reset, @function
+cpu_reset:
+    mov w0, 'O'
+    bl debug_putc
+
+    adrp x1, _reset_stack
+    ldr x1, [x1]
+    mov sp, x1
+
+    mov w0, 'K'
+    bl debug_putc
+
+    bl _cpu_reset_c
+    b .
 
 .globl debug_putc
 .type debug_putc, @function
