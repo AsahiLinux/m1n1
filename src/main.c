@@ -10,6 +10,7 @@
 #include "uart.h"
 #include "uartproxy.h"
 #include "utils.h"
+#include "wdt.h"
 #include "xnuboot.h"
 
 #include "../build/build_tag.h"
@@ -37,32 +38,6 @@ void print_info(void)
     printf("\n");
 }
 
-void disable_wdt(void)
-{
-    int node = adt_path_offset(adt, "/arm-io/wdt");
-
-    if (node < 0) {
-        printf("WDT node not found!\n");
-        return;
-    }
-
-    printf("WDT node @ 0x%x\n", node);
-
-    const void *reg = adt_getprop(adt, node, "reg", NULL);
-
-    if (!reg) {
-        printf("WDT reg property not found!\n");
-        return;
-    }
-
-    u64 wdt_regs;
-    memcpy(&wdt_regs, reg, sizeof(u64));
-
-    printf("WDT registers @ 0x%lx\n", wdt_regs);
-
-    write32(0x23d2b001c, 0);
-}
-
 void m1n1_main(void)
 {
     printf("\n\nm1n1 v%s\n", BUILD_TAG);
@@ -78,7 +53,8 @@ void m1n1_main(void)
 #endif
 
     print_info();
-    disable_wdt();
+    wdt_disable();
+
     smp_start_secondaries();
 
     printf("Running proxy...\n");
