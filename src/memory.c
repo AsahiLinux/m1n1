@@ -5,15 +5,15 @@
 
 #define CACHE_LINE_SIZE 64
 
-#define CACHE_RANGE_OP(func, op)                                               \
-    void func(void *addr, size_t length)                                       \
-    {                                                                          \
-        u64 p = (u64)addr;                                                     \
-        u64 end = p + length;                                                  \
-        while (p < end) {                                                      \
-            cacheop(op, p);                                                    \
-            p += CACHE_LINE_SIZE;                                              \
-        }                                                                      \
+#define CACHE_RANGE_OP(func, op)                                                                   \
+    void func(void *addr, size_t length)                                                           \
+    {                                                                                              \
+        u64 p = (u64)addr;                                                                         \
+        u64 end = p + length;                                                                      \
+        while (p < end) {                                                                          \
+            cacheop(op, p);                                                                        \
+            p += CACHE_LINE_SIZE;                                                                  \
+        }                                                                                          \
     }
 
 CACHE_RANGE_OP(ic_ivau_range, "ic ivau")

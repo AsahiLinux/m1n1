@@ -5,11 +5,11 @@
 
 /* This API is designed to match libfdt's read-only API */
 
-#define ADT_CHECK_HEADER(adt)                                                  \
-    {                                                                          \
-        int err;                                                               \
-        if ((err = adt_check_header(adt)) != 0)                                \
-            return err;                                                        \
+#define ADT_CHECK_HEADER(adt)                                                                      \
+    {                                                                                              \
+        int err;                                                                                   \
+        if ((err = adt_check_header(adt)) != 0)                                                    \
+            return err;                                                                            \
     }
 
 //#define DEBUG
@@ -18,8 +18,8 @@
 #include "utils.h"
 #define dprintf printf
 #else
-#define dprintf(...)                                                           \
-    do {                                                                       \
+#define dprintf(...)                                                                               \
+    do {                                                                                           \
     } while (0)
 #endif
 
@@ -31,8 +31,7 @@ int _adt_check_node_offset(const void *adt, int offset)
     const struct adt_node_hdr *node = ADT_NODE(adt, offset);
 
     // Sanity check
-    if (node->property_count > 2048 || !node->property_count ||
-        node->child_count > 2048)
+    if (node->property_count > 2048 || !node->property_count || node->child_count > 2048)
         return -ADT_ERR_BADOFFSET;
 
     return 0;
@@ -74,12 +73,10 @@ static int _adt_nodename_eq(const char *a, const char *b, size_t len)
         return 0;
 }
 
-const struct adt_property *adt_get_property_namelen(const void *adt, int offset,
-                                                    const char *name,
+const struct adt_property *adt_get_property_namelen(const void *adt, int offset, const char *name,
                                                     size_t namelen)
 {
-    dprintf("adt_get_property_namelen(%p, %d, \"%s\", %u)\n", adt, offset, name,
-            namelen);
+    dprintf("adt_get_property_namelen(%p, %d, \"%s\", %u)\n", adt, offset, name, namelen);
 
     for (offset = adt_first_property_offset(adt, offset); (offset >= 0);
          (offset = adt_next_property_offset(adt, offset))) {
@@ -95,14 +92,13 @@ const struct adt_property *adt_get_property_namelen(const void *adt, int offset,
     return NULL;
 }
 
-const struct adt_property *adt_get_property(const void *adt, int nodeoffset,
-                                            const char *name)
+const struct adt_property *adt_get_property(const void *adt, int nodeoffset, const char *name)
 {
     return adt_get_property_namelen(adt, nodeoffset, name, strlen(name));
 }
 
-const void *adt_getprop_namelen(const void *adt, int nodeoffset,
-                                const char *name, size_t namelen, u32 *lenp)
+const void *adt_getprop_namelen(const void *adt, int nodeoffset, const char *name, size_t namelen,
+                                u32 *lenp)
 {
     const struct adt_property *prop;
 
@@ -117,8 +113,7 @@ const void *adt_getprop_namelen(const void *adt, int nodeoffset,
     return prop->value;
 }
 
-const void *adt_getprop_by_offset(const void *adt, int offset,
-                                  const char **namep, u32 *lenp)
+const void *adt_getprop_by_offset(const void *adt, int offset, const char **namep, u32 *lenp)
 {
     const struct adt_property *prop;
 
@@ -133,14 +128,12 @@ const void *adt_getprop_by_offset(const void *adt, int offset,
     return prop->value;
 }
 
-const void *adt_getprop(const void *adt, int nodeoffset, const char *name,
-                        u32 *lenp)
+const void *adt_getprop(const void *adt, int nodeoffset, const char *name, u32 *lenp)
 {
     return adt_getprop_namelen(adt, nodeoffset, name, strlen(name), lenp);
 }
 
-int adt_getprop_copy(const void *adt, int nodeoffset, const char *name,
-                     void *out, size_t len)
+int adt_getprop_copy(const void *adt, int nodeoffset, const char *name, void *out, size_t len)
 {
     u32 plen;
 
@@ -184,8 +177,7 @@ int adt_next_sibling_offset(const void *adt, int offset)
     return offset;
 }
 
-int adt_subnode_offset_namelen(const void *adt, int offset, const char *name,
-                               size_t namelen)
+int adt_subnode_offset_namelen(const void *adt, int offset, const char *name, size_t namelen)
 {
     const struct adt_node_hdr *node = ADT_NODE(adt, offset);
 

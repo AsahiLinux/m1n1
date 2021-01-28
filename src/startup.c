@@ -21,8 +21,7 @@ void m1n1_main(void);
 
 #define R_AARCH64_RELATIVE 1027
 
-void apply_rela(uint64_t base, struct rela_entry *rela_start,
-                struct rela_entry *rela_end)
+void apply_rela(uint64_t base, struct rela_entry *rela_start, struct rela_entry *rela_end)
 {
     struct rela_entry *e = rela_start;
 
@@ -83,8 +82,8 @@ void _start_c(void *boot_args, void *base)
     dump_boot_args(&cur_boot_args);
     printf("\n");
 
-    adt = (void *)(((u64)cur_boot_args.devtree) - cur_boot_args.virt_base +
-                   cur_boot_args.phys_base);
+    adt =
+        (void *)(((u64)cur_boot_args.devtree) - cur_boot_args.virt_base + cur_boot_args.phys_base);
 
     exception_initialize();
     m1n1_main();

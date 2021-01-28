@@ -59,7 +59,7 @@ typedef enum {
 
 } ProxyOp;
 
-#define S_OK 0
+#define S_OK     0
 #define S_BADCMD -1
 
 typedef u64(callfunc)(u64, u64, u64, u64);

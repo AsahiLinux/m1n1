@@ -96,13 +96,13 @@
 #include "types.h"
 #include <stdarg.h>
 
-#define VA_START(ap, last) va_start(ap, last)
+#define VA_START(ap, last)        va_start(ap, last)
 #define VA_SHIFT(ap, value, type) /* No-op for ANSI C. */
 
-#define ULLONG unsigned long long
+#define ULLONG    unsigned long long
 #define UINTMAX_T unsigned long
-#define LLONG long
-#define INTMAX_T long
+#define LLONG     long
+#define INTMAX_T  long
 
 /* Support for uintptr_t. */
 #ifndef UINTPTR_T
@@ -150,35 +150,35 @@
 #define MAX_CONVERT_LENGTH 43
 
 /* Format read states. */
-#define PRINT_S_DEFAULT 0
-#define PRINT_S_FLAGS 1
-#define PRINT_S_WIDTH 2
-#define PRINT_S_DOT 3
+#define PRINT_S_DEFAULT   0
+#define PRINT_S_FLAGS     1
+#define PRINT_S_WIDTH     2
+#define PRINT_S_DOT       3
 #define PRINT_S_PRECISION 4
-#define PRINT_S_MOD 5
-#define PRINT_S_CONV 6
+#define PRINT_S_MOD       5
+#define PRINT_S_CONV      6
 
 /* Format flags. */
-#define PRINT_F_MINUS (1 << 0)
-#define PRINT_F_PLUS (1 << 1)
-#define PRINT_F_SPACE (1 << 2)
-#define PRINT_F_NUM (1 << 3)
-#define PRINT_F_ZERO (1 << 4)
-#define PRINT_F_QUOTE (1 << 5)
-#define PRINT_F_UP (1 << 6)
+#define PRINT_F_MINUS    (1 << 0)
+#define PRINT_F_PLUS     (1 << 1)
+#define PRINT_F_SPACE    (1 << 2)
+#define PRINT_F_NUM      (1 << 3)
+#define PRINT_F_ZERO     (1 << 4)
+#define PRINT_F_QUOTE    (1 << 5)
+#define PRINT_F_UP       (1 << 6)
 #define PRINT_F_UNSIGNED (1 << 7)
-#define PRINT_F_TYPE_G (1 << 8)
-#define PRINT_F_TYPE_E (1 << 9)
+#define PRINT_F_TYPE_G   (1 << 8)
+#define PRINT_F_TYPE_E   (1 << 9)
 
 /* Conversion flags. */
-#define PRINT_C_CHAR 1
+#define PRINT_C_CHAR  1
 #define PRINT_C_SHORT 2
-#define PRINT_C_LONG 3
+#define PRINT_C_LONG  3
 #define PRINT_C_LLONG 4
 //#define PRINT_C_LDOUBLE         5
-#define PRINT_C_SIZE 6
+#define PRINT_C_SIZE    6
 #define PRINT_C_PTRDIFF 7
-#define PRINT_C_INTMAX 8
+#define PRINT_C_INTMAX  8
 
 #ifndef MAX
 #define MAX(x, y) ((x >= y) ? x : y)
@@ -190,11 +190,11 @@
 #define ISDIGIT(ch) ('0' <= (unsigned char)ch && (unsigned char)ch <= '9')
 #endif /* !defined(ISDIGIT) */
 
-#define OUTCHAR(str, len, size, ch)                                            \
-    do {                                                                       \
-        if (len + 1 < size)                                                    \
-            str[len] = ch;                                                     \
-        (len)++;                                                               \
+#define OUTCHAR(str, len, size, ch)                                                                \
+    do {                                                                                           \
+        if (len + 1 < size)                                                                        \
+            str[len] = ch;                                                                         \
+        (len)++;                                                                                   \
     } while (/* CONSTCOND */ 0)
 
 static void fmtstr(char *, size_t *, size_t, const char *, int, int, int);
@@ -396,8 +396,7 @@ int vsnprintf(char *str, size_t size, const char *format, va_list args)
                                 value = va_arg(args, int);
                                 break;
                         }
-                        fmtint(str, &len, size, value, 10, width, precision,
-                               flags);
+                        fmtint(str, &len, size, value, 10, width, precision, flags);
                         break;
                     case 'X':
                         flags |= PRINT_F_UP;
@@ -415,12 +414,10 @@ int vsnprintf(char *str, size_t size, const char *format, va_list args)
                         flags |= PRINT_F_UNSIGNED;
                         switch (cflags) {
                             case PRINT_C_CHAR:
-                                value =
-                                    (unsigned char)va_arg(args, unsigned int);
+                                value = (unsigned char)va_arg(args, unsigned int);
                                 break;
                             case PRINT_C_SHORT:
-                                value = (unsigned short int)va_arg(
-                                    args, unsigned int);
+                                value = (unsigned short int)va_arg(args, unsigned int);
                                 break;
                             case PRINT_C_LONG:
                                 value = va_arg(args, unsigned long int);
@@ -441,8 +438,7 @@ int vsnprintf(char *str, size_t size, const char *format, va_list args)
                                 value = va_arg(args, unsigned int);
                                 break;
                         }
-                        fmtint(str, &len, size, value, base, width, precision,
-                               flags);
+                        fmtint(str, &len, size, value, base, width, precision, flags);
                         break;
                     case 'c':
                         cvalue = va_arg(args, int);
@@ -450,8 +446,7 @@ int vsnprintf(char *str, size_t size, const char *format, va_list args)
                         break;
                     case 's':
                         strvalue = va_arg(args, char *);
-                        fmtstr(str, &len, size, strvalue, width, precision,
-                               flags);
+                        fmtstr(str, &len, size, strvalue, width, precision, flags);
                         break;
                     case 'p':
                         /*
@@ -474,8 +469,8 @@ int vsnprintf(char *str, size_t size, const char *format, va_list args)
                              */
                             flags |= PRINT_F_NUM;
                             flags |= PRINT_F_UNSIGNED;
-                            fmtint(str, &len, size, (UINTPTR_T)strvalue, 16,
-                                   width, precision, flags);
+                            fmtint(str, &len, size, (UINTPTR_T)strvalue, 16, width, precision,
+                                   flags);
                         }
                         break;
                     case 'n':
@@ -545,8 +540,8 @@ out:
     return (int)len;
 }
 
-static void fmtstr(char *str, size_t *len, size_t size, const char *value,
-                   int width, int precision, int flags)
+static void fmtstr(char *str, size_t *len, size_t size, const char *value, int width, int precision,
+                   int flags)
 {
     int padlen, strln; /* Amount to pad. */
     int noprecision = (precision == -1);
@@ -555,8 +550,7 @@ static void fmtstr(char *str, size_t *len, size_t size, const char *value,
         value = "(null)";
 
     /* If a precision was specified, don't read the string past it. */
-    for (strln = 0; value[strln] != '\0' && (noprecision || strln < precision);
-         strln++)
+    for (strln = 0; value[strln] != '\0' && (noprecision || strln < precision); strln++)
         continue;
 
     if ((padlen = width - strln) < 0)
@@ -578,8 +572,8 @@ static void fmtstr(char *str, size_t *len, size_t size, const char *value,
     }
 }
 
-static void fmtint(char *str, size_t *len, size_t size, INTMAX_T value,
-                   int base, int width, int precision, int flags)
+static void fmtint(char *str, size_t *len, size_t size, INTMAX_T value, int base, int width,
+                   int precision, int flags)
 {
     UINTMAX_T uvalue;
     char iconvert[MAX_CONVERT_LENGTH];

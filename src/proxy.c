@@ -21,8 +21,8 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             return 0;
         case P_CALL:
             f = (callfunc *)request->args[0];
-            reply->retval = f(request->args[1], request->args[2],
-                              request->args[3], request->args[4]);
+            reply->retval =
+                f(request->args[1], request->args[2], request->args[3], request->args[4]);
             break;
         case P_GET_BOOTARGS:
             reply->retval = boot_args_addr;
@@ -99,54 +99,42 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
 
         case P_MASK64:
-            reply->retval =
-                mask64(request->args[0], request->args[1], request->args[2]);
+            reply->retval = mask64(request->args[0], request->args[1], request->args[2]);
             break;
         case P_MASK32:
-            reply->retval =
-                mask32(request->args[0], request->args[1], request->args[2]);
+            reply->retval = mask32(request->args[0], request->args[1], request->args[2]);
             break;
         case P_MASK16:
-            reply->retval =
-                mask16(request->args[0], request->args[1], request->args[2]);
+            reply->retval = mask16(request->args[0], request->args[1], request->args[2]);
             break;
         case P_MASK8:
-            reply->retval =
-                mask8(request->args[0], request->args[1], request->args[2]);
+            reply->retval = mask8(request->args[0], request->args[1], request->args[2]);
             break;
 
         case P_MEMCPY64:
-            memcpy64((void *)request->args[0], (void *)request->args[1],
-                     request->args[2]);
+            memcpy64((void *)request->args[0], (void *)request->args[1], request->args[2]);
             break;
         case P_MEMCPY32:
-            memcpy32((void *)request->args[0], (void *)request->args[1],
-                     request->args[2]);
+            memcpy32((void *)request->args[0], (void *)request->args[1], request->args[2]);
             break;
         case P_MEMCPY16:
-            memcpy16((void *)request->args[0], (void *)request->args[1],
-                     request->args[2]);
+            memcpy16((void *)request->args[0], (void *)request->args[1], request->args[2]);
             break;
         case P_MEMCPY8:
-            memcpy8((void *)request->args[0], (void *)request->args[1],
-                    request->args[2]);
+            memcpy8((void *)request->args[0], (void *)request->args[1], request->args[2]);
             break;
 
         case P_MEMSET64:
-            memset64((void *)request->args[0], request->args[1],
-                     request->args[2]);
+            memset64((void *)request->args[0], request->args[1], request->args[2]);
             break;
         case P_MEMSET32:
-            memset32((void *)request->args[0], request->args[1],
-                     request->args[2]);
+            memset32((void *)request->args[0], request->args[1], request->args[2]);
             break;
         case P_MEMSET16:
-            memset16((void *)request->args[0], request->args[1],
-                     request->args[2]);
+            memset16((void *)request->args[0], request->args[1], request->args[2]);
             break;
         case P_MEMSET8:
-            memset8((void *)request->args[0], request->args[1],
-                    request->args[2]);
+            memset8((void *)request->args[0], request->args[1], request->args[2]);
             break;
 
         case P_IC_IALLUIS:
@@ -185,8 +173,8 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
 
         case P_XZDEC: {
             u32 output_size = request->args[3];
-            if (XzDecode((void *)request->args[0], request->args[1],
-                         (void *)request->args[2], &output_size))
+            if (XzDecode((void *)request->args[0], request->args[1], (void *)request->args[2],
+                         &output_size))
                 reply->retval = output_size;
             else
                 reply->retval = ~0L;
@@ -196,9 +184,8 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             unsigned int destlen, srclen;
             destlen = request->args[3];
             srclen = request->args[1];
-            size_t ret =
-                tinf_gzip_uncompress((void *)request->args[2], &destlen,
-                                     (void *)request->args[0], srclen);
+            size_t ret = tinf_gzip_uncompress((void *)request->args[2], &destlen,
+                                              (void *)request->args[0], srclen);
             if (ret != TINF_OK)
                 reply->retval = ret;
             else

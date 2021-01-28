@@ -18,20 +18,13 @@ void print_regs(u64 *regs)
 
     printf("Running in EL%d\n", mrs(CurrentEL) >> 2);
     printf("Registers: (@%p)\n", regs);
-    printf("  x0-x3: %016lx %016lx %016lx %016lx\n", regs[0], regs[1], regs[2],
-           regs[3]);
-    printf("  x4-x7: %016lx %016lx %016lx %016lx\n", regs[4], regs[5], regs[6],
-           regs[7]);
-    printf(" x8-x11: %016lx %016lx %016lx %016lx\n", regs[8], regs[9], regs[10],
-           regs[11]);
-    printf("x12-x15: %016lx %016lx %016lx %016lx\n", regs[12], regs[13],
-           regs[14], regs[15]);
-    printf("x16-x19: %016lx %016lx %016lx %016lx\n", regs[16], regs[17],
-           regs[18], regs[19]);
-    printf("x20-x23: %016lx %016lx %016lx %016lx\n", regs[20], regs[21],
-           regs[22], regs[23]);
-    printf("x24-x27: %016lx %016lx %016lx %016lx\n", regs[24], regs[25],
-           regs[26], regs[27]);
+    printf("  x0-x3: %016lx %016lx %016lx %016lx\n", regs[0], regs[1], regs[2], regs[3]);
+    printf("  x4-x7: %016lx %016lx %016lx %016lx\n", regs[4], regs[5], regs[6], regs[7]);
+    printf(" x8-x11: %016lx %016lx %016lx %016lx\n", regs[8], regs[9], regs[10], regs[11]);
+    printf("x12-x15: %016lx %016lx %016lx %016lx\n", regs[12], regs[13], regs[14], regs[15]);
+    printf("x16-x19: %016lx %016lx %016lx %016lx\n", regs[16], regs[17], regs[18], regs[19]);
+    printf("x20-x23: %016lx %016lx %016lx %016lx\n", regs[20], regs[21], regs[22], regs[23]);
+    printf("x24-x27: %016lx %016lx %016lx %016lx\n", regs[24], regs[25], regs[26], regs[27]);
     printf("x28-x30: %016lx %016lx %016lx\n", regs[28], regs[29], regs[30]);
 
     u64 elr = mrs(elr_el2);

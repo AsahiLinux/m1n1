@@ -19,31 +19,29 @@ typedef int64_t s64;
 typedef u64 uintptr_t;
 typedef s64 ptrdiff_t;
 
-#define UNUSED(x) (void)(x)
+#define UNUSED(x)  (void)(x)
 #define ALIGNED(x) __attribute__((aligned(x)))
-#define PACKED __attribute__((packed))
+#define PACKED     __attribute__((packed))
 
-#define STACK_ALIGN(type, name, cnt, alignment)                                \
-    u8 _al__##name[(                                                           \
-        (sizeof(type) * (cnt)) + (alignment) +                                 \
-        (((sizeof(type) * (cnt)) % (alignment)) > 0                            \
-             ? ((alignment) - ((sizeof(type) * (cnt)) % (alignment)))          \
-             : 0))];                                                           \
-    type *name =                                                               \
-        (type *)(((u32)(_al__##name)) +                                        \
-                 ((alignment) - (((u32)(_al__##name)) & ((alignment)-1))))
+#define STACK_ALIGN(type, name, cnt, alignment)                                                    \
+    u8 _al__##name[((sizeof(type) * (cnt)) + (alignment) +                                         \
+                    (((sizeof(type) * (cnt)) % (alignment)) > 0                                    \
+                         ? ((alignment) - ((sizeof(type) * (cnt)) % (alignment)))                  \
+                         : 0))];                                                                   \
+    type *name =                                                                                   \
+        (type *)(((u32)(_al__##name)) + ((alignment) - (((u32)(_al__##name)) & ((alignment)-1))))
 
-#define INT_MAX ((int)0x7fffffff)
+#define INT_MAX  ((int)0x7fffffff)
 #define UINT_MAX ((unsigned int)0xffffffff)
 
-#define LONG_MAX ((long)0x7fffffffffffffffl)
+#define LONG_MAX  ((long)0x7fffffffffffffffl)
 #define ULONG_MAX ((unsigned long)0xfffffffffffffffful)
 
-#define LLONG_MAX LONG_MAX
+#define LLONG_MAX  LONG_MAX
 #define ULLONG_MAX ULLONG_MAX
 
 #define HAVE_PTRDIFF_T 1
 #define HAVE_UINTPTR_T 1
-#define UPTRDIFF_T uintptr_t
+#define UPTRDIFF_T     uintptr_t
 
 #endif

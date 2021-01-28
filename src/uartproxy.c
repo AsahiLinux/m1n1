@@ -34,15 +34,15 @@ typedef struct {
     u32 checksum;
 } UartReply;
 
-#define REQ_NOP 0x00AA55FF
-#define REQ_PROXY 0x01AA55FF
-#define REQ_MEMREAD 0x02AA55FF
+#define REQ_NOP      0x00AA55FF
+#define REQ_PROXY    0x01AA55FF
+#define REQ_MEMREAD  0x02AA55FF
 #define REQ_MEMWRITE 0x03AA55FF
-#define REQ_BOOT 0x04AA55FF
+#define REQ_BOOT     0x04AA55FF
 
-#define ST_OK 0
+#define ST_OK     0
 #define ST_BADCMD -1
-#define ST_INVAL -2
+#define ST_INVAL  -2
 #define ST_XFRERR -3
 #define ST_CRCERR -4
 
@@ -102,18 +102,17 @@ void uartproxy_run(void)
                 running = proxy_process(&request.prequest, &reply.preply);
                 break;
             case REQ_MEMREAD:
-                reply.mreply.dchecksum = checksum((void *)request.mrequest.addr,
-                                                  request.mrequest.size);
+                reply.mreply.dchecksum =
+                    checksum((void *)request.mrequest.addr, request.mrequest.size);
                 break;
             case REQ_MEMWRITE:
-                bytes = uart_read((void *)request.mrequest.addr,
-                                  request.mrequest.size);
+                bytes = uart_read((void *)request.mrequest.addr, request.mrequest.size);
                 if (bytes != request.mrequest.size) {
                     reply.status = ST_XFRERR;
                     break;
                 }
-                reply.mreply.dchecksum = checksum((void *)request.mrequest.addr,
-                                                  request.mrequest.size);
+                reply.mreply.dchecksum =
+                    checksum((void *)request.mrequest.addr, request.mrequest.size);
                 if (reply.mreply.dchecksum != request.mrequest.dchecksum)
                     reply.status = ST_XFRERR;
                 break;

@@ -57,6 +57,5 @@ void fb_fill(int x, int y, int w, int h, u32 color)
 void fb_display_logo(void)
 {
     printf("fb: display logo\n");
-    fb_blit((fb_w - logo_w) / 2, (fb_h - logo_h) / 2, logo_w, logo_h, logo,
-            logo_w);
+    fb_blit((fb_w - logo_w) / 2, (fb_h - logo_h) / 2, logo_w, logo_h, logo, logo_w);
 }

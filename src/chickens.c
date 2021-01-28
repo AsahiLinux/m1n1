@@ -4,53 +4,50 @@
 #include "uart.h"
 #include "utils.h"
 
-#define sys_reg(op0, op1, CRn, CRm, op2)                                           \
-    s##op0##_##op1##_c##CRn##_c##CRm##_##op2
+#define sys_reg(op0, op1, CRn, CRm, op2) s##op0##_##op1##_c##CRn##_c##CRm##_##op2
 
-#define reg_clr(reg, bits) msr(reg, mrs(reg) & ~(bits))
-#define reg_set(reg, bits) msr(reg, mrs(reg) | bits)
+#define reg_clr(reg, bits)      msr(reg, mrs(reg) & ~(bits))
+#define reg_set(reg, bits)      msr(reg, mrs(reg) | bits)
 #define reg_mask(reg, clr, set) msr(reg, (mrs(reg) & ~(clr)) | set)
 
 /* Part IDs in MIDR_EL1 */
 #define MIDR_PART_M1_FIRESTORM 33
-#define MIDR_PART_M1_ICESTORM 34
+#define MIDR_PART_M1_ICESTORM  34
 
 /* HID registers */
-#define SYS_HID4                    sys_reg(3, 0, 15, 4, 0)
-#define SYS_EHID4                   sys_reg(3, 0, 15, 4, 1)
-#define HID4_DISABLE_DC_MVA         (1UL << 11)
-#define HID4_DISABLE_DC_SW_L2_OPS   (1UL << 44)
+#define SYS_HID4                  sys_reg(3, 0, 15, 4, 0)
+#define SYS_EHID4                 sys_reg(3, 0, 15, 4, 1)
+#define HID4_DISABLE_DC_MVA       (1UL << 11)
+#define HID4_DISABLE_DC_SW_L2_OPS (1UL << 44)
 
-#define SYS_HID5                    sys_reg(3, 0, 15, 5, 0)
-#define HID5_DISABLE_FILL_2C_MERGE  (1UL << 61)
+#define SYS_HID5                   sys_reg(3, 0, 15, 5, 0)
+#define HID5_DISABLE_FILL_2C_MERGE (1UL << 61)
 
-#define SYS_EHID9           sys_reg(3, 0, 15, 9, 1)
+#define SYS_EHID9                   sys_reg(3, 0, 15, 9, 1)
 #define EHID9_DEV_THROTTLE_2_ENABLE (1UL << 5)
 
-#define SYS_EHID10                  sys_reg(3, 0, 15, 10, 1)
+#define SYS_EHID10                      sys_reg(3, 0, 15, 10, 1)
 #define HID10_FORCE_WAIT_STATE_DRAIN_UC (1UL << 32)
 #define HID10_DISABLE_ZVA_TEMPORAL_TSO  (1UL << 49)
 
-#define SYS_EHID20                  sys_reg(3, 0, 15, 1, 2)
-#define EHID20_TRAP_SMC             (1UL << 8)
+#define SYS_EHID20      sys_reg(3, 0, 15, 1, 2)
+#define EHID20_TRAP_SMC (1UL << 8)
 
-#define EHID20_FORCE_NONSPEC_IF_OLDEST_REDIR_VALID_AND_OLDER            (1UL << 15)
-#define EHID20_FORCE_NONSPEC_IF_SPEC_FLUSH_POINTER_NE_BLK_RTR_POINTER   (1UL << 16)
-#define EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL(x)          (((unsigned long)x) << 21)
-#define EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL_MASK        (3UL << 21)
+#define EHID20_FORCE_NONSPEC_IF_OLDEST_REDIR_VALID_AND_OLDER          (1UL << 15)
+#define EHID20_FORCE_NONSPEC_IF_SPEC_FLUSH_POINTER_NE_BLK_RTR_POINTER (1UL << 16)
+#define EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL(x)                    (((unsigned long)x) << 21)
+#define EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL_MASK                  (3UL << 21)
 
 /* ACC/CYC Registers */
-#define SYS_ACC_CFG                 sys_reg(3, 5, 15, 4, 0)
-#define ACC_CFG_BP_SLEEP(x)         (((unsigned long)x) << 2)
-#define ACC_CFG_BP_SLEEP_MASK       (3UL << 2)
+#define SYS_ACC_CFG           sys_reg(3, 5, 15, 4, 0)
+#define ACC_CFG_BP_SLEEP(x)   (((unsigned long)x) << 2)
+#define ACC_CFG_BP_SLEEP_MASK (3UL << 2)
 
-#define SYS_CYC_OVRD                sys_reg(3, 5, 15, 5, 0)
-#define CYC_OVRD_FIQ_MODE(x)        (((unsigned long)x) << 20)
-#define CYC_OVRD_FIQ_MODE_MASK      (3UL << 20)
-#define CYC_OVRD_IRQ_MODE(x)        (((unsigned long)x) << 22)
-#define CYC_OVRD_IRQ_MODE_MASK      (3UL << 22)
-
-
+#define SYS_CYC_OVRD           sys_reg(3, 5, 15, 5, 0)
+#define CYC_OVRD_FIQ_MODE(x)   (((unsigned long)x) << 20)
+#define CYC_OVRD_FIQ_MODE_MASK (3UL << 20)
+#define CYC_OVRD_IRQ_MODE(x)   (((unsigned long)x) << 22)
+#define CYC_OVRD_IRQ_MODE_MASK (3UL << 22)
 
 void init_m1_common(void)
 {
@@ -60,7 +57,6 @@ void init_m1_common(void)
     msr(s3_4_c15_c5_0, core);
     msr(s3_4_c15_c1_4, 0x100);
     sysop("isb");
-
 }
 
 void init_m1_icestorm(void)
@@ -77,7 +73,7 @@ void init_m1_icestorm(void)
     reg_clr(SYS_EHID9, EHID9_DEV_THROTTLE_2_ENABLE);
 
     reg_set(SYS_EHID20, EHID20_FORCE_NONSPEC_IF_OLDEST_REDIR_VALID_AND_OLDER |
-                        EHID20_FORCE_NONSPEC_IF_SPEC_FLUSH_POINTER_NE_BLK_RTR_POINTER);
+                            EHID20_FORCE_NONSPEC_IF_SPEC_FLUSH_POINTER_NE_BLK_RTR_POINTER);
 
     reg_mask(SYS_EHID20, EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL_MASK,
              EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL(3));
@@ -132,4 +128,3 @@ const char *init_cpu(void)
 
     return cpu;
 }
-
