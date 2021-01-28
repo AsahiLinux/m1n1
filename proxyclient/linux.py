@@ -61,6 +61,7 @@ daif |= 0x3c0
 u.msr(DAIF, daif)
 print("DAIF: %x" % daif)
 
+p.mmu_shutdown()
 p.vector(kernel_base, dtb_addr)
 
 iface.ttymode()

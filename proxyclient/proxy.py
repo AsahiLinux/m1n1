@@ -299,6 +299,7 @@ class M1N1Proxy:
     P_DC_CVAC = 0x308
     P_DC_CVAU = 0x309
     P_DC_CIVAC = 0x30a
+    P_MMU_SHUTDOWN = 0x30b
 
     P_XZDEC = 0x400
     P_GZDEC = 0x401
@@ -492,6 +493,8 @@ class M1N1Proxy:
         self.request(self.P_DC_CVAU, addr, size)
     def dc_civac(self, addr, size):
         self.request(self.P_DC_CIVAC, addr, size)
+    def mmu_shutdown(self):
+        self.request(self.P_MMU_SHUTDOWN)
 
     def xzdec(self, inbuf, insize, outbuf=0, outsize=0):
         return self.request(self.P_XZDEC, inbuf, insize, outbuf,

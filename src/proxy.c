@@ -171,6 +171,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_DC_CIVAC:
             dc_civac_range((void *)request->args[0], request->args[1]);
             break;
+        case P_MMU_SHUTDOWN:
+            mmu_shutdown();
+            break;
 
         case P_XZDEC: {
             u32 output_size = request->args[3];
