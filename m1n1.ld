@@ -159,11 +159,13 @@ SECTIONS {
         _file_end = .;
     } :data
     .bss : ALIGN(0x4000) {
+        _bss_start = .;
         *(.bss)
         *(.bss.*)
         *(.dynbss)
         *(COMMON)
         . = ALIGN(0x4000);
+        _bss_end = .;
         PROVIDE(_stack_top = .);
         . += _stack_size;
         PROVIDE(_stack_bot = .);

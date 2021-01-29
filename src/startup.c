@@ -20,6 +20,9 @@ struct rela_entry {
 void debug_putc(char c);
 void m1n1_main(void);
 
+extern char _bss_start[0];
+extern char _bss_end[0];
+
 #define R_AARCH64_RELATIVE 1027
 
 void apply_rela(uint64_t base, struct rela_entry *rela_start, struct rela_entry *rela_end)
@@ -67,6 +70,7 @@ void dump_boot_args(struct boot_args *ba)
 void _start_c(void *boot_args, void *base)
 {
     UNUSED(base);
+    memset64(_bss_start, 0, _bss_end - _bss_start);
     uart_putchar('s');
     uart_init();
     uart_putchar('c');
