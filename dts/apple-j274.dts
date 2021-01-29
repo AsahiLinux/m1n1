@@ -13,37 +13,20 @@
 		#size-cells = <2>;
 		ranges;
 
-		bootargs = "earlycon debug";
+		bootargs = "earlycon keep_bootcon debug";
 		stdout-path = "serial0:1500000";
 
-		linux,initrd-start = <0x8 0x30000000>;
-		linux,initrd-end = <0x8 0x30800000>;
-
-		framebuffer0: framebuffer@9e0df8000 {
+		framebuffer0: framebuffer@0 {
 			compatible = "simple-framebuffer";
-			allwinner,pipeline = "de_be0-lcd0";
-			reg = <0x9 0xe0df8000 0 8294400>;
-			width = <1920>;
-			height = <1080>;
-			stride = <7680>;
-			format = "x2r10g10b10";
+			reg = <0 0 0 0>;
+			// To be filled by loader
+			status = "disabled";
 		};
 	};
 
 	memory@800000000 {
 		device_type = "memory";
-		reg = <0x8 0x00000000 0x1 0x00000000>;
-	};
-
-	reserved-memory {
-			#address-cells = <2>;
-			#size-cells = <2>;
-			ranges;
-
-			resv@800000000 {
-					reg = <0x8 0x0 0x0 0x3000000>;
-					no-map;
-			};
+		reg = <0 0 0 0>; // To be filled by loader
 	};
 
 	aliases {

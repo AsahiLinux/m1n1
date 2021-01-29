@@ -11,15 +11,12 @@ else:
     initramfs = None
     initramfs_size = 0
 
-kernel_base = 0x820000000
-initramfs_base = 0x830000000
-
 compressed_size = len(payload)
 compressed_addr = u.malloc(compressed_size)
 
 dtb_addr = u.malloc(len(dtb))
 
-print("Loading %d bytes to 0x%x..." % (compressed_size, compressed_addr))
+print("Loading %d bytes to 0x%x..0x%x..." % (compressed_size, compressed_addr, compressed_addr + compressed_size))
 
 iface.writemem(compressed_addr, payload, True)
 
@@ -27,13 +24,24 @@ print("Loading DTB to 0x%x..." % dtb_addr)
 
 iface.writemem(dtb_addr, dtb)
 
-if initramfs is not None:
-    print("Loading %d initramfs bytes to 0x%x..." % (initramfs_size, initramfs_base))
+kernel_size = 32 * 1024 * 1024
+kernel_base = u.memalign(2 * 1024 * 1024, kernel_size)
 
+print("Kernel_base: 0x%x" % kernel_base)
+
+assert not (kernel_base & 0xffff)
+
+if initramfs is not None:
+    initramfs_base = u.memalign(65536, initramfs_size)
+    print("Loading %d initramfs bytes to 0x%x..." % (initramfs_size, initramfs_base))
     iface.writemem(initramfs_base, initramfs, True)
+    p.kboot_set_initrd(initramfs_base, initramfs_size)
+
+if p.kboot_prepare_dt(dtb_addr):
+    print("DT prepare failed")
+    sys.exit(1)
 
 #kernel_size = p.xzdec(compressed_addr, compressed_size)
-kernel_size = 32 * 1024 * 1024
 
 #if kernel_size < 0:
     #raise Exception("Decompression header check error!",)
@@ -61,7 +69,5 @@ daif |= 0x3c0
 u.msr(DAIF, daif)
 print("DAIF: %x" % daif)
 
-p.mmu_shutdown()
-p.vector(kernel_base, dtb_addr)
-
+p.kboot_boot(kernel_base)
 iface.ttymode()

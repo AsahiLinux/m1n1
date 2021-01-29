@@ -313,6 +313,11 @@ class M1N1Proxy:
     P_MEMALIGN = 0x602
     P_FREE = 0x602
 
+    P_KBOOT_BOOT = 0x700
+    P_KBOOT_SET_BOOTARGS = 0x701
+    P_KBOOT_SET_INITRD = 0x702
+    P_KBOOT_PREPARE_DT = 0x703
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
@@ -530,6 +535,15 @@ class M1N1Proxy:
         return self.request(self.P_MEMALIGN, align, size)
     def free(self, ptr):
         self.request(self.P_FREE, ptr)
+
+    def kboot_boot(self, kernel):
+        self.request(self.P_KBOOT_BOOT, kernel, no_reply=True)
+    def kboot_set_bootargs(self, ba_p):
+        self.request(self.P_KBOOT_SET_BOOTARGS, ba_p)
+    def kboot_set_initrd(self, base, size):
+        self.request(self.P_KBOOT_SET_INITRD, base, size)
+    def kboot_prepare_dt(self, dt_addr):
+        return self.request(self.P_KBOOT_PREPARE_DT, dt_addr)
 
 if __name__ == "__main__":
     import serial

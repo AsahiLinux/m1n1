@@ -1,5 +1,6 @@
 #include "proxy.h"
 #include "heapblock.h"
+#include "kboot.h"
 #include "malloc.h"
 #include "memory.h"
 #include "minilzlib/minlzma.h"
@@ -223,6 +224,19 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_FREE:
             free((void *)request->args[0]);
+            break;
+
+        case P_KBOOT_BOOT:
+            kboot_boot((void *)request->args[0]);
+            break;
+        case P_KBOOT_SET_BOOTARGS:
+            kboot_set_bootargs((void *)request->args[0]);
+            break;
+        case P_KBOOT_SET_INITRD:
+            kboot_set_initrd((void *)request->args[0], request->args[1]);
+            break;
+        case P_KBOOT_PREPARE_DT:
+            reply->retval = kboot_prepare_dt((void *)request->args[0]);
             break;
 
         default:

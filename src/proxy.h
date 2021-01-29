@@ -67,6 +67,11 @@ typedef enum {
     P_MEMALIGN,
     P_FREE,
 
+    P_KBOOT_BOOT = 0x700, // Kernel boot ops
+    P_KBOOT_SET_BOOTARGS,
+    P_KBOOT_SET_INITRD,
+    P_KBOOT_PREPARE_DT,
+
 } ProxyOp;
 
 #define S_OK     0
