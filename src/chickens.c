@@ -96,6 +96,8 @@
 #define CYC_OVRD_IRQ_MODE(x)   (((unsigned long)x) << 22)
 #define CYC_OVRD_IRQ_MODE_MASK (3UL << 22)
 
+#define SYS_L2C_ERR_STS sys_reg(3, 3, 15, 8, 0)
+
 void init_m1_common(void)
 {
     int core = mrs(MPIDR_EL1) & 0xff;
@@ -104,6 +106,9 @@ void init_m1_common(void)
     msr(s3_4_c15_c5_0, core);
     msr(s3_4_c15_c1_4, 0x100);
     sysop("isb");
+
+    // Unknown, seems to fix some crashes
+    msr(SYS_L2C_ERR_STS, 0);
 }
 
 void init_m1_icestorm(void)
@@ -167,8 +172,7 @@ void init_m1_firestorm(void)
 
     // Best bit names...
     // Maybe: "RF bank and Multipass conflict forward progress widget does not
-    // handle 3+
-    //         cycle livelock"
+    // handle 3+ cycle livelock"
     reg_set(SYS_HID16, HID16_SPAREBIT0 | HID16_SPAREBIT3 | HID16_ENABLE_MPX_PICK_45 |
                            HID16_ENABLE_MP_CYCLONE_7);
 
