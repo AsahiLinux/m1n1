@@ -252,7 +252,7 @@ void regdump(u64 addr, size_t len);
 int sprintf(char *str, const char *fmt, ...);
 int debug_printf(const char *fmt, ...);
 void udelay(u32 d);
-void reboot(void);
+void reboot(void) __attribute__((noreturn));
 
 #define panic(fmt, ...)                                                                            \
     do {                                                                                           \
