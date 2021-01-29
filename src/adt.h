@@ -38,6 +38,11 @@ struct adt_node_hdr {
 /* Basic sanity check */
 int adt_check_header(const void *adt);
 
+static inline int adt_get_property_count(const void *adt, int offset)
+{
+    return ADT_NODE(adt, offset)->property_count;
+}
+
 static inline int adt_first_property_offset(const void *adt, int offset)
 {
     UNUSED(adt);
@@ -59,6 +64,7 @@ static inline int adt_get_child_count(const void *adt, int offset)
 {
     return ADT_NODE(adt, offset)->child_count;
 }
+
 int adt_first_child_offset(const void *adt, int offset);
 int adt_next_sibling_offset(const void *adt, int offset);
 
@@ -89,5 +95,12 @@ int adt_get_reg(const void *adt, int *path, const char *prop, int idx, u64 *addr
     for (int _child_count = adt_get_child_count(adt, node); _child_count; _child_count = 0)        \
         for (node = adt_first_child_offset(adt, node); _child_count--;                             \
              node = adt_next_sibling_offset(adt, node))
+
+#define ADT_FOREACH_PROPERTY(adt, node, prop)                                                      \
+    for (int _prop_count = adt_get_property_count(adt, node),                                      \
+             _poff = adt_first_property_offset(adt, node);                                         \
+         _prop_count; _prop_count = 0)                                                             \
+        for (const struct adt_property *prop = ADT_PROP(adt, _poff); _prop_count--;                \
+             prop = ADT_PROP(adt, _poff = adt_next_property_offset(adt, _poff)))
 
 #endif
