@@ -18,10 +18,14 @@ TINF_OBJECTS := $(patsubst %,tinf/%, \
 
 DLMALLOC_OBJECTS := dlmalloc/malloc.o
 
+LIBFDT_OBJECTS := $(patsubst %,libfdt/%, \
+	fdt_addresses.o fdt_empty_tree.o fdt_overlay.o fdt_ro.o fdt_rw.o fdt_strerror.o fdt_sw.o \
+	fdt_wip.o fdt.o)
+
 OBJECTS := adt.o bootlogo_128.o bootlogo_256.o chickens.o exception.o exception_asm.o fb.o \
 	heapblock.o main.o memory.o memory_asm.o proxy.o smp.o start.o startup.o string.o uart.o \
 	uartproxy.o utils.o utils_asm.o vsprintf.o wdt.o $(MINILZLIB_OBJECTS) $(TINF_OBJECTS) \
-	$(DLMALLOC_OBJECTS)
+	$(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS)
 
 DTS := apple-j274.dts
 

@@ -19,7 +19,13 @@ Portions of m1n1 are based on mini:
 m1n1 embeds libfdt, which is dual [BSD](3rdparty_licenses/LICENSE.BSD-2.libfdt) and
 [GPL-2](3rdparty_licenses/LICENSE.GPL-2) licensed and copyright:
 
-* Copyright (C) 2006 David Gibson, IBM Corporation.
+* Copyright (C) 2014 David Gibson <david@gibson.dropbear.id.au>
+* Copyright (C) 2018 embedded brains GmbH
+* Copyright (C) 2006-2012 David Gibson, IBM Corporation.
+* Copyright (C) 2012 David Gibson, IBM Corporation.
+* Copyright 2012 Kim Phillips, Freescale Semiconductor.
+* Copyright (C) 2016 Free Electrons
+* Copyright (C) 2016 NextThing Co.
 
 The ADT code in mini is also based on libfdt and subject to the same license.
 
