@@ -40,9 +40,22 @@ class ProxyUtils(object):
         self.ba_addr = p.get_bootargs()
 
         self.ba = self.iface.readstruct(self.ba_addr, BootArgs)
-        self._scratch = self.base + ((self.ba.top_of_kernel_data + 0xffff) & ~0xffff) - self.ba.phys_base
 
-        self.heap = malloc.Heap(self._scratch, self._scratch + 0x1000000)
+        # We allocate a 128MB heap, 128MB after the m1n1 heap, without telling it about it.
+        # This frees up from having to coordinate memory management or free stuff after a Python
+        # script runs, at the expense that if m1n1 ever uses more than 128MB of heap it will
+        # clash with Python (m1n1 will normally not use *any* heap when running proxy ops though,
+        # except when running very high-level operations like booting a kernel, so this should be
+        # OK).
+        self.heap_size = 128 * 1024 * 1024
+        try:
+            self.heap_base = p.heapblock_alloc(0)
+        except ProxyRemoteError:
+            # Compat with versions that don't have heapblock yet
+            self.heap_base = (self.base + ((self.ba.top_of_kernel_data + 0xffff) & ~0xffff) -
+                              self.ba.phys_base)
+        self.heap_base += 128 * 1024 * 1024 # We leave 128MB for m1n1 heap
+        self.heap = malloc.Heap(self.heap_base, self.heap_base + self.heap_size)
 
         self.malloc = self.heap.malloc
         self.memalign = self.heap.memalign

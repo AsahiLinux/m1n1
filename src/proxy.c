@@ -1,4 +1,6 @@
 #include "proxy.h"
+#include "heapblock.h"
+#include "malloc.h"
 #include "memory.h"
 #include "minilzlib/minlzma.h"
 #include "smp.h"
@@ -208,6 +210,19 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             smp_call4(request->args[0], (void *)request->args[1], request->args[2],
                       request->args[3], request->args[4], request->args[5]);
             reply->retval = smp_wait(request->args[0]);
+            break;
+
+        case P_HEAPBLOCK_ALLOC:
+            reply->retval = (u64)heapblock_alloc(request->args[0]);
+            break;
+        case P_MALLOC:
+            reply->retval = (u64)malloc(request->args[0]);
+            break;
+        case P_MEMALIGN:
+            reply->retval = (u64)memalign(request->args[0], request->args[1]);
+            break;
+        case P_FREE:
+            free((void *)request->args[0]);
             break;
 
         default:

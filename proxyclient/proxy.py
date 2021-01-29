@@ -308,6 +308,11 @@ class M1N1Proxy:
     P_SMP_CALL = 0x501
     P_SMP_CALL_SYNC = 0x502
 
+    P_HEAPBLOCK_ALLOC = 0x600
+    P_MALLOC = 0x601
+    P_MEMALIGN = 0x602
+    P_FREE = 0x602
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
@@ -516,6 +521,15 @@ class M1N1Proxy:
         if len(args) > 4:
             raise ValueError("Too many arguments")
         return self.request(self.P_SMP_CALL_SYNC, cpu, addr, *args)
+
+    def heapblock_alloc(self, size):
+        return self.request(self.P_HEAPBLOCK_ALLOC, size)
+    def malloc(self, size):
+        return self.request(self.P_MALLOC, size)
+    def memalign(self, align, size):
+        return self.request(self.P_MEMALIGN, align, size)
+    def free(self, ptr):
+        self.request(self.P_FREE, ptr)
 
 if __name__ == "__main__":
     import serial

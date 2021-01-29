@@ -38,3 +38,10 @@ m1n1 embeds portions taken from
 [BSD](3rdparty_licenses/LICENSE.BSD-3.arm) licensed and copyright:
 
 * Copyright (c) 2013-2020, ARM Limited and Contributors. All rights reserved.
+
+m1n1 embeds [Doug Lea's malloc](ftp://gee.cs.oswego.edu/pub/misc/malloc.c) (dlmalloc), which is in
+the public domain ([CC0](3rdparty_licenses/LICENSE.CC0)).
+
+m1n1 embeds portions of [PDCLib](https://github.com/DevSolar/pdclib), which is in the public
+domain ([CC0](3rdparty_licenses/LICENSE.CC0).
+

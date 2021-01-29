@@ -16,9 +16,12 @@ MINILZLIB_OBJECTS := $(patsubst %,minilzlib/%, \
 TINF_OBJECTS := $(patsubst %,tinf/%, \
 	adler32.o crc32.o tinfgzip.o tinflate.o tinfzlib.o)
 
+DLMALLOC_OBJECTS := dlmalloc/malloc.o
+
 OBJECTS := adt.o bootlogo_128.o bootlogo_256.o chickens.o exception.o exception_asm.o fb.o \
-	main.o memory.o memory_asm.o proxy.o smp.o start.o startup.o string.o uart.o uartproxy.o \
-	utils.o utils_asm.o vsprintf.o wdt.o $(MINILZLIB_OBJECTS) $(TINF_OBJECTS)
+	heapblock.o main.o memory.o memory_asm.o proxy.o smp.o start.o startup.o string.o uart.o \
+	uartproxy.o utils.o utils_asm.o vsprintf.o wdt.o $(MINILZLIB_OBJECTS) $(TINF_OBJECTS) \
+	$(DLMALLOC_OBJECTS)
 
 DTS := apple-j274.dts
 

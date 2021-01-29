@@ -62,6 +62,11 @@ typedef enum {
     P_SMP_CALL,
     P_SMP_CALL_SYNC,
 
+    P_HEAPBLOCK_ALLOC = 0x600, // Heap and memory management ops
+    P_MALLOC,
+    P_MEMALIGN,
+    P_FREE,
+
 } ProxyOp;
 
 #define S_OK     0

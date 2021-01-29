@@ -231,6 +231,8 @@ static inline u8 mask8(u64 addr, u8 clear, u8 set)
 #define dc_civac(p)  cacheop("dc civac", p)
 
 extern char _base[0];
+extern char _payload_start[];
+extern char _payload_end[];
 
 /*
  * These functions are guaranteed to copy by reading from src and writing to dst

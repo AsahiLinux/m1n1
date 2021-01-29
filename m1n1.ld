@@ -5,6 +5,8 @@ _va_base = 0xFFFFFE0007004000;
 
 _stack_size = 0x20000;
 
+_max_payload_size = 64*1024*1024;
+
 /* We are actually relocatable */
 . = 0;
 
@@ -106,9 +108,9 @@ SECTIONS {
         LONG(0x444C5950); /* segmname = "PYLD" */
         . += 12;
         QUAD(_end + _va_off); /* vmaddr */
-        QUAD(64*1024*1024); /* vmsize */
+        QUAD(_max_payload_size); /* vmsize */
         QUAD(_file_end - _base); /* fileoff */
-        QUAD(64*1024*1024); /* filesize */
+        QUAD(_max_payload_size); /* filesize */
         LONG(PROT_READ | PROT_WRITE); /* maxprot */
         LONG(PROT_READ | PROT_WRITE); /* initprot */
         LONG(0); /* nsects */
@@ -169,6 +171,8 @@ SECTIONS {
     } :data
     _data_size = . - _data_start;
     _end = .;
+    _payload_start = .;
+    _payload_end = . + _max_payload_size;
 
     .symtab 0 : { *(.symtab) }
     .strtab 0 : { *(.strtab) }
