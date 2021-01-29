@@ -27,7 +27,7 @@ class Heap(object):
         assert (align & (align - 1)) == 0
         align = max(align, self.block) // self.block
         size = (size + self.block - 1) // self.block
-        pos = 0
+        pos = self.offset // self.block
         for i, (bsize, full) in enumerate(self.blocks):
             if not full:
                 offset = 0
@@ -40,7 +40,7 @@ class Heap(object):
                     self.blocks[i] = (size, True)
                     if bsize > (size + offset):
                         self.blocks.insert(i+1, (bsize - size - offset, False))
-                    return self.offset + self.block * (pos + offset)
+                    return self.block * (pos + offset)
             pos += bsize
         raise Exception("Out of memory")
 
