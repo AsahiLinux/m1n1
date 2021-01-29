@@ -24,7 +24,6 @@ Environment:
 --*/
 
 #pragma once
-#pragma warning(disable:4214)
 
 //
 // XZ streams encode certain numbers as "variable length integers", with 7 bits
