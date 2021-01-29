@@ -66,7 +66,7 @@ def h13e_init():
 
     #u.msr(s3_6_c15_c1_0, 0)
 
-    for reg, clearb, setb in h13e_chickenbits:
+    for reg, setb, clearb in h13e_chickenbits:
         v = u.mrs(sys_regs[reg])
         print("%r == 0x%x" % (reg, v))
         v &= ~clearb
@@ -95,10 +95,11 @@ def h13e_init():
 
     v = u.mrs(CYC_CFG)
     print("CYC_CFG == 0x%x" % v)
-    v |= 0x12
+    v |= 0xc
     print("CYC_CFG <= 0x%x" % v)
     u.msr(CYC_CFG, v)
 
+    print("L2C_ERR_STS = %x" %  u.mrs(L2C_ERR_STS))
     u.msr(L2C_ERR_STS, 0)
 
 h13e_init()
