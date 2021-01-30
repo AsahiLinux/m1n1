@@ -21,7 +21,15 @@ iface.writemem(new_base + 0x4000, payload[0x4000:], True)
 
 entry = new_base + 0x4800
 
+p.dc_cvau(new_base, len(payload))
+p.ic_ivau(new_base, len(payload))
+
 print("Jumping to 0x%x" % entry)
+
+try:
+    p.mmu_shutdown()
+except:
+    pass
 
 p.reboot(entry, u.ba_addr)
 
