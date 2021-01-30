@@ -201,5 +201,6 @@ void exc_serr(u64 *regs)
     sysop("dsb sy");
 
     print_regs(regs);
-    reboot();
+
+    //     reboot();
 }
