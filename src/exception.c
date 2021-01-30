@@ -70,7 +70,7 @@ void print_regs(u64 *regs)
     u64 sp = ((u64)(regs)) + 256;
 
     printf("Running in EL%d\n", mrs(CurrentEL) >> 2);
-    printf("MPIDR: 0x%x\n", mrs(MPIDR_EL1));
+    printf("MPIDR: 0x%lx\n", mrs(MPIDR_EL1));
     printf("Registers: (@%p)\n", regs);
     printf("  x0-x3: %016lx %016lx %016lx %016lx\n", regs[0], regs[1], regs[2], regs[3]);
     printf("  x4-x7: %016lx %016lx %016lx %016lx\n", regs[4], regs[5], regs[6], regs[7]);
@@ -86,11 +86,11 @@ void print_regs(u64 *regs)
     printf("PC:       0x%lx (rel: 0x%lx)\n", elr, elr - (u64)_base);
     printf("SPSEL:    0x%lx\n", mrs(SPSEL));
     printf("SP:       0x%lx\n", sp);
-    printf("SPSR_EL2: 0x%x\n", mrs(SPSR_EL2));
-    printf("FAR_EL2:  0x%x\n", mrs(FAR_EL2));
+    printf("SPSR_EL2: 0x%lx\n", mrs(SPSR_EL2));
+    printf("FAR_EL2:  0x%lx\n", mrs(FAR_EL2));
 
     const char *ec_desc = ec_table[(mrs(ESR_EL2) >> 26) & 0x3f];
-    printf("ESR_EL2:  0x%x (%s)\n", mrs(ESR_EL2), ec_desc ? ec_desc : "unknown");
+    printf("ESR_EL2:  0x%lx (%s)\n", mrs(ESR_EL2), ec_desc ? ec_desc : "unknown");
 
     u64 l2c_err_sts = mrs(SYS_L2C_ERR_STS);
 
