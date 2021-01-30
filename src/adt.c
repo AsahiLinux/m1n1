@@ -78,7 +78,8 @@ const struct adt_property *adt_get_property_namelen(const void *adt, int offset,
 {
     dprintf("adt_get_property_namelen(%p, %d, \"%s\", %u)\n", adt, offset, name, namelen);
 
-    ADT_FOREACH_PROPERTY(adt, offset, prop) {
+    ADT_FOREACH_PROPERTY(adt, offset, prop)
+    {
         dprintf(" off=0x%x name=\"%s\"\n", offset, prop->name);
         if (_adt_string_eq(prop->name, name, namelen))
             return prop;
@@ -176,7 +177,8 @@ int adt_subnode_offset_namelen(const void *adt, int offset, const char *name, si
 {
     ADT_CHECK_HEADER(adt);
 
-    ADT_FOREACH_CHILD(adt, offset) {
+    ADT_FOREACH_CHILD(adt, offset)
+    {
         const char *cname = adt_get_name(adt, offset);
 
         if (_adt_nodename_eq(cname, name, namelen))

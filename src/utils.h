@@ -205,6 +205,8 @@ static inline u8 mask8(u64 addr, u8 clear, u8 set)
     return data;
 }
 
+#define sys_reg(op0, op1, CRn, CRm, op2) s##op0##_##op1##_c##CRn##_c##CRm##_##op2
+
 #define _mrs(reg)                                                                                  \
     ({                                                                                             \
         u64 val;                                                                                   \
@@ -231,6 +233,11 @@ static inline u8 mask8(u64 addr, u8 clear, u8 set)
 #define dc_cvac(p)   cacheop("dc cvac", p)
 #define dc_cvau(p)   cacheop("dc cvau", p)
 #define dc_civac(p)  cacheop("dc civac", p)
+
+static inline int is_ecore(void)
+{
+    return !(mrs(MPIDR_EL1) & (1 << 16));
+}
 
 extern char _base[0];
 extern char _payload_start[];

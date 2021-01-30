@@ -4,8 +4,6 @@
 #include "uart.h"
 #include "utils.h"
 
-#define sys_reg(op0, op1, CRn, CRm, op2) s##op0##_##op1##_c##CRn##_c##CRm##_##op2
-
 #define reg_clr(reg, bits)      msr(reg, mrs(reg) & ~(bits))
 #define reg_set(reg, bits)      msr(reg, mrs(reg) | bits)
 #define reg_mask(reg, clr, set) msr(reg, (mrs(reg) & ~(clr)) | set)
@@ -186,12 +184,11 @@ void init_m1_firestorm(void)
 const char *init_cpu(void)
 {
     const char *cpu = "Unknown";
-    int is_ecore = !(mrs(MPIDR_EL1) & (1 << 16));
 
     msr(OSLAR_EL1, 0);
 
     /* This is performed unconditionally on all cores (necessary?) */
-    if (is_ecore)
+    if (is_ecore())
         reg_set(SYS_EHID4, HID4_DISABLE_DC_MVA | HID4_DISABLE_DC_SW_L2_OPS);
     else
         reg_set(SYS_HID4, HID4_DISABLE_DC_MVA | HID4_DISABLE_DC_SW_L2_OPS);
