@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "adt.h"
+#include "exception.h"
 #include "kboot.h"
 #include "libfdt/libfdt.h"
 #include "malloc.h"
@@ -204,6 +205,7 @@ int kboot_prepare_dt(void *fdt)
 int kboot_boot(void *kernel)
 {
     mmu_shutdown();
+    exception_shutdown();
 
     printf("Booting kernel at %p with fdt at %p\n", kernel, dt);
 

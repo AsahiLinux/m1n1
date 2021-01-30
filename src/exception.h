@@ -9,5 +9,6 @@ extern volatile enum exc_guard_t exc_guard;
 extern volatile int exc_count;
 
 void exception_initialize(void);
+void exception_shutdown(void);
 
 #endif

@@ -56,7 +56,13 @@ static char *ec_table[] = {
 
 void exception_initialize(void)
 {
-    msr(vbar_el2, _vectors_start);
+    msr(VBAR_EL2, _vectors_start);
+    msr(DAIF, 0 << 6); // Enable SError, IRQ and FIQ
+}
+
+void exception_shutdown(void)
+{
+    msr(DAIF, 7 << 6); // Disable SError, IRQ and FIQ
 }
 
 void print_regs(u64 *regs)
