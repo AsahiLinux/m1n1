@@ -87,6 +87,7 @@ void print_regs(u64 *regs)
     printf("SPSEL:    0x%lx\n", mrs(SPSEL));
     printf("SP:       0x%lx\n", sp);
     printf("SPSR_EL2: 0x%x\n", mrs(SPSR_EL2));
+    printf("FAR_EL2:  0x%x\n", mrs(FAR_EL2));
 
     const char *ec_desc = ec_table[(mrs(ESR_EL2) >> 26) & 0x3f];
     printf("ESR_EL2:  0x%x (%s)\n", mrs(ESR_EL2), ec_desc ? ec_desc : "unknown");
