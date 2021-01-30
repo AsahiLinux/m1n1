@@ -105,8 +105,9 @@ void init_m1_common(void)
     msr(s3_4_c15_c1_4, 0x100);
     sysop("isb");
 
-    // Unknown, seems to fix some crashes
-    msr(SYS_L2C_ERR_STS, 0);
+    // Disables a bunch of memory subsystem errors. This patches up some faults, but we'd rather
+    // fix the underlying problems.
+    // msr(SYS_L2C_ERR_STS, 0);
 }
 
 void init_m1_icestorm(void)
