@@ -257,6 +257,13 @@ class M1N1Proxy:
     P_GET_BASE = 0x004
     P_SET_BAUD = 0x005
     P_UDELAY = 0x006
+    P_SET_EXC_GUARD = 0x007
+    P_GET_EXC_COUNT = 0x008
+
+    GUARD_OFF = 0
+    GUARD_SKIP = 1
+    GUARD_MARK = 2
+    GUARD_RETURN = 3
 
     P_WRITE64 = 0x100
     P_WRITE32 = 0x101
@@ -375,6 +382,10 @@ class M1N1Proxy:
             self.iface.tty_enable = True
     def udelay(self, usec):
         self.request(self.P_UDELAY, usec)
+    def set_exc_guard(self, mode):
+        self.request(self.P_SET_EXC_GUARD, mode)
+    def get_exc_count(self):
+        return self.request(self.P_GET_EXC_COUNT)
 
     def write64(self, addr, data):
         if addr & 7:

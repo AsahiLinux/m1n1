@@ -1,9 +1,23 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "exception.h"
 #include "uart.h"
 #include "utils.h"
 
 extern char _vectors_start[0];
+
+volatile enum exc_guard_t exc_guard = GUARD_OFF;
+volatile int exc_count = 0;
+
+#define SYS_L2C_ERR_STS   sys_reg(3, 3, 15, 8, 0)
+#define SYS_L2C_ERR_ADR   sys_reg(3, 3, 15, 9, 0)
+#define SYS_L2C_ERR_INF   sys_reg(3, 3, 15, 10, 0)
+#define SYS_LSU_ERR_STS   sys_reg(3, 3, 15, 0, 0)
+#define SYS_FED_ERR_STS   sys_reg(3, 4, 15, 0, 0)
+#define SYS_MMU_ERR_STS   sys_reg(3, 6, 15, 0, 0)
+#define SYS_E_LSU_ERR_STS sys_reg(3, 3, 15, 2, 0)
+#define SYS_E_FED_ERR_STS sys_reg(3, 4, 15, 0, 2)
+#define SYS_E_MMU_ERR_STS sys_reg(3, 6, 15, 2, 0)
 
 void exception_initialize(void)
 {
@@ -15,6 +29,7 @@ void print_regs(u64 *regs)
     u64 sp = ((u64)(regs)) + 256;
 
     printf("Running in EL%d\n", mrs(CurrentEL) >> 2);
+    printf("MPIDR: 0x%x\n", mrs(MPIDR_EL1));
     printf("Registers: (@%p)\n", regs);
     printf("  x0-x3: %016lx %016lx %016lx %016lx\n", regs[0], regs[1], regs[2], regs[3]);
     printf("  x4-x7: %016lx %016lx %016lx %016lx\n", regs[4], regs[5], regs[6], regs[7]);
@@ -28,17 +43,59 @@ void print_regs(u64 *regs)
     u64 elr = mrs(elr_el2);
 
     printf("PC:       0x%lx (rel: 0x%lx)\n", elr, elr - (u64)_base);
-    printf("SPSEL:    0x%lx\n", mrs(spsel));
+    printf("SPSEL:    0x%lx\n", mrs(SPSEL));
     printf("SP:       0x%lx\n", sp);
-    printf("SPSR_EL2: 0x%x\n", mrs(spsr_el2));
+    printf("SPSR_EL2: 0x%x\n", mrs(SPSR_EL2));
+    printf("ESR_EL2:  0x%x\n", mrs(ESR_EL2));
+
+    printf("L2C_ERR_STS: 0x%lx\n", mrs(SYS_L2C_ERR_STS));
+    printf("L2C_ERR_ADR: 0x%lx\n", mrs(SYS_L2C_ERR_ADR));
+    printf("L2C_ERR_INF: 0x%lx\n", mrs(SYS_L2C_ERR_INF));
+
+    if (is_ecore()) {
+        printf("SYS_E_LSU_ERR_STS: 0x%lx\n", mrs(SYS_E_LSU_ERR_STS));
+        printf("SYS_E_FED_ERR_STS: 0x%lx\n", mrs(SYS_E_FED_ERR_STS));
+        printf("SYS_E_MMU_ERR_STS: 0x%lx\n", mrs(SYS_E_MMU_ERR_STS));
+    } else {
+        printf("SYS_LSU_ERR_STS: 0x%lx\n", mrs(SYS_LSU_ERR_STS));
+        printf("SYS_FED_ERR_STS: 0x%lx\n", mrs(SYS_FED_ERR_STS));
+        printf("SYS_MMU_ERR_STS: 0x%lx\n", mrs(SYS_MMU_ERR_STS));
+    }
 }
 
 void exc_sync(u64 *regs)
 {
+    u64 elr;
+    u32 insn;
+
     uart_puts("Exception: SYNC");
 
     print_regs(regs);
-    reboot();
+
+    switch (exc_guard) {
+        case GUARD_SKIP:
+            elr = mrs(ELR_EL2) + 4;
+            break;
+        case GUARD_MARK:
+            // Assuming this is a load or store, dest reg is in low bits
+            insn = read32(mrs(ELR_EL2));
+            regs[insn & 0x1f] = 0xacce5515abad1dea;
+            elr = mrs(ELR_EL2) + 4;
+            break;
+        case GUARD_RETURN:
+            regs[0] = 0xacce5515abad1dea;
+            elr = regs[30];
+            exc_guard = GUARD_OFF;
+            break;
+        case GUARD_OFF:
+        default:
+            reboot();
+    }
+
+    exc_count++;
+
+    printf("Recovering from exception (ELR=0x%lx)\n", elr);
+    msr(ELR_EL2, elr);
 }
 
 void exc_irq(u64 *regs)

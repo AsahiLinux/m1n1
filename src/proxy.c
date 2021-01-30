@@ -1,4 +1,5 @@
 #include "proxy.h"
+#include "exception.h"
 #include "heapblock.h"
 #include "kboot.h"
 #include "malloc.h"
@@ -13,6 +14,8 @@
 
 int proxy_process(ProxyRequest *request, ProxyReply *reply)
 {
+    enum exc_guard_t guard_save = exc_guard;
+
     callfunc *f;
 
     reply->opcode = request->opcode;
@@ -49,95 +52,131 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_UDELAY:
             udelay(request->args[0]);
             break;
+        case P_SET_EXC_GUARD:
+            exc_count = 0;
+            guard_save = request->args[0];
+            break;
+        case P_GET_EXC_COUNT:
+            reply->retval = exc_count;
+            exc_count = 0;
+            break;
 
         case P_WRITE64:
+            exc_guard = GUARD_SKIP;
             write64(request->args[0], request->args[1]);
             break;
         case P_WRITE32:
+            exc_guard = GUARD_SKIP;
             write32(request->args[0], request->args[1]);
             break;
         case P_WRITE16:
+            exc_guard = GUARD_SKIP;
             write16(request->args[0], request->args[1]);
             break;
         case P_WRITE8:
+            exc_guard = GUARD_SKIP;
             write8(request->args[0], request->args[1]);
             break;
 
         case P_READ64:
+            exc_guard = GUARD_MARK;
             reply->retval = read64(request->args[0]);
             break;
         case P_READ32:
+            exc_guard = GUARD_MARK;
             reply->retval = read32(request->args[0]);
             break;
         case P_READ16:
+            exc_guard = GUARD_MARK;
             reply->retval = read16(request->args[0]);
             break;
         case P_READ8:
+            exc_guard = GUARD_MARK;
             reply->retval = read8(request->args[0]);
             break;
 
         case P_SET64:
+            exc_guard = GUARD_MARK;
             reply->retval = set64(request->args[0], request->args[1]);
             break;
         case P_SET32:
+            exc_guard = GUARD_MARK;
             reply->retval = set32(request->args[0], request->args[1]);
             break;
         case P_SET16:
+            exc_guard = GUARD_MARK;
             reply->retval = set16(request->args[0], request->args[1]);
             break;
         case P_SET8:
+            exc_guard = GUARD_MARK;
             reply->retval = set8(request->args[0], request->args[1]);
             break;
 
         case P_CLEAR64:
+            exc_guard = GUARD_MARK;
             reply->retval = clear64(request->args[0], request->args[1]);
             break;
         case P_CLEAR32:
+            exc_guard = GUARD_MARK;
             reply->retval = clear32(request->args[0], request->args[1]);
             break;
         case P_CLEAR16:
+            exc_guard = GUARD_MARK;
             reply->retval = clear16(request->args[0], request->args[1]);
             break;
         case P_CLEAR8:
+            exc_guard = GUARD_MARK;
             reply->retval = clear8(request->args[0], request->args[1]);
             break;
 
         case P_MASK64:
+            exc_guard = GUARD_MARK;
             reply->retval = mask64(request->args[0], request->args[1], request->args[2]);
             break;
         case P_MASK32:
+            exc_guard = GUARD_MARK;
             reply->retval = mask32(request->args[0], request->args[1], request->args[2]);
             break;
         case P_MASK16:
+            exc_guard = GUARD_MARK;
             reply->retval = mask16(request->args[0], request->args[1], request->args[2]);
             break;
         case P_MASK8:
+            exc_guard = GUARD_MARK;
             reply->retval = mask8(request->args[0], request->args[1], request->args[2]);
             break;
 
         case P_MEMCPY64:
+            exc_guard = GUARD_RETURN;
             memcpy64((void *)request->args[0], (void *)request->args[1], request->args[2]);
             break;
         case P_MEMCPY32:
+            exc_guard = GUARD_RETURN;
             memcpy32((void *)request->args[0], (void *)request->args[1], request->args[2]);
             break;
         case P_MEMCPY16:
+            exc_guard = GUARD_RETURN;
             memcpy16((void *)request->args[0], (void *)request->args[1], request->args[2]);
             break;
         case P_MEMCPY8:
+            exc_guard = GUARD_RETURN;
             memcpy8((void *)request->args[0], (void *)request->args[1], request->args[2]);
             break;
 
         case P_MEMSET64:
+            exc_guard = GUARD_RETURN;
             memset64((void *)request->args[0], request->args[1], request->args[2]);
             break;
         case P_MEMSET32:
+            exc_guard = GUARD_RETURN;
             memset32((void *)request->args[0], request->args[1], request->args[2]);
             break;
         case P_MEMSET16:
+            exc_guard = GUARD_RETURN;
             memset16((void *)request->args[0], request->args[1], request->args[2]);
             break;
         case P_MEMSET8:
+            exc_guard = GUARD_RETURN;
             memset8((void *)request->args[0], request->args[1], request->args[2]);
             break;
 
@@ -243,5 +282,6 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->status = S_BADCMD;
             break;
     }
+    exc_guard = guard_save;
     return 1;
 }
