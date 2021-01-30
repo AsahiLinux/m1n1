@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "exception.h"
+#include "cpu_regs.h"
 #include "uart.h"
 #include "utils.h"
 
@@ -8,16 +9,6 @@ extern char _vectors_start[0];
 
 volatile enum exc_guard_t exc_guard = GUARD_OFF;
 volatile int exc_count = 0;
-
-#define SYS_L2C_ERR_STS   sys_reg(3, 3, 15, 8, 0)
-#define SYS_L2C_ERR_ADR   sys_reg(3, 3, 15, 9, 0)
-#define SYS_L2C_ERR_INF   sys_reg(3, 3, 15, 10, 0)
-#define SYS_LSU_ERR_STS   sys_reg(3, 3, 15, 0, 0)
-#define SYS_FED_ERR_STS   sys_reg(3, 4, 15, 0, 0)
-#define SYS_MMU_ERR_STS   sys_reg(3, 6, 15, 0, 0)
-#define SYS_E_LSU_ERR_STS sys_reg(3, 3, 15, 2, 0)
-#define SYS_E_FED_ERR_STS sys_reg(3, 4, 15, 0, 2)
-#define SYS_E_MMU_ERR_STS sys_reg(3, 6, 15, 2, 0)
 
 static char *ec_table[] = {
     [0x00] = "unknown",
