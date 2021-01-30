@@ -120,6 +120,9 @@ void exc_sync(u64 *regs)
 
     uart_puts("Exception: SYNC");
 
+    sysop("isb");
+    sysop("dsb sy");
+
     print_regs(regs);
 
     switch (exc_guard) {
@@ -146,6 +149,9 @@ void exc_sync(u64 *regs)
 
     printf("Recovering from exception (ELR=0x%lx)\n", elr);
     msr(ELR_EL2, elr);
+
+    sysop("isb");
+    sysop("dsb sy");
 }
 
 void exc_irq(u64 *regs)
@@ -192,6 +198,9 @@ void exc_fiq(u64 *regs)
 void exc_serr(u64 *regs)
 {
     printf("Exception: SError\n");
+
+    sysop("isb");
+    sysop("dsb sy");
 
     print_regs(regs);
     reboot();
