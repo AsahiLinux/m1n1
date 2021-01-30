@@ -23,7 +23,6 @@ Environment:
 --*/
 
 #pragma once
-#pragma warning(disable:4214)
 
 //
 // The most complex LZMA sequence possible is a "match" sequence where the
