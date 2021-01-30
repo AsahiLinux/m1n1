@@ -70,7 +70,11 @@ static inline void write_sctlr(u64 val)
  * TCR_T0SZ_48BIT selects 48bit virtual addresses
  */
 #define TCR_IPS_1TB    ((0b010UL) << 32)
-#define TCR_PS_1TB     ((0b010UL) << 16)
+#define TCR_TG1_16K    ((0b01UL) << 30)
+#define TCR_SH1_IS     ((0b11UL) << 28)
+#define TCR_ORGN1_WBWA ((0b01UL) << 26)
+#define TCR_IRGN1_WBWA ((0b01UL) << 24)
+#define TCR_T1SZ_48BIT ((16UL) << 16)
 #define TCR_TG0_16K    ((0b10UL) << 14)
 #define TCR_SH0_IS     ((0b11UL) << 12)
 #define TCR_ORGN0_WBWA ((0b01UL) << 10)
@@ -273,9 +277,11 @@ static void mmu_configure(void)
     msr(MAIR_EL2, (MAIR_ATTR_NORMAL_DEFAULT << MAIR_SHIFT_NORMAL) |
                       (MAIR_ATTR_DEVICE_nGnRnE << MAIR_SHIFT_DEVICE_nGnRnE) |
                       (MAIR_ATTR_DEVICE_nGnRE << MAIR_SHIFT_DEVICE_nGnRE));
-    msr(TCR_EL2,
-        TCR_TG0_16K | TCR_IPS_1TB | TCR_SH0_IS | TCR_ORGN0_WBWA | TCR_IRGN0_WBWA | TCR_T0SZ_48BIT);
+    msr(TCR_EL2, TCR_IPS_1TB | TCR_TG1_16K | TCR_SH1_IS | TCR_ORGN1_WBWA | TCR_IRGN1_WBWA |
+                     TCR_T1SZ_48BIT | TCR_TG0_16K | TCR_SH0_IS | TCR_ORGN0_WBWA | TCR_IRGN0_WBWA |
+                     TCR_T0SZ_48BIT);
     msr(TTBR0_EL2, (uintptr_t)pagetable_L0);
+    msr(TTBR1_EL2, (uintptr_t)pagetable_L0);
 
     // Armv8-A Address Translation, 100940_0101_en, page 28
     sysop("dsb ishst");
