@@ -19,6 +19,50 @@ volatile int exc_count = 0;
 #define SYS_E_FED_ERR_STS sys_reg(3, 4, 15, 0, 2)
 #define SYS_E_MMU_ERR_STS sys_reg(3, 6, 15, 2, 0)
 
+static char *ec_table[] = {
+    [0x00] = "unknown",
+    [0x01] = "wf*",
+    [0x03] = "c15 mcr/mrc",
+    [0x04] = "c15 mcrr/mrrc",
+    [0x05] = "c14 mcr/mrc",
+    [0x06] = "ldc/stc",
+    [0x07] = "FP off",
+    [0x08] = "VMRS access",
+    [0x09] = "PAC off",
+    [0x0a] = "ld/st64b",
+    [0x0c] = "c14 mrrc",
+    [0x0d] = "branch target",
+    [0x0e] = "illegal state",
+    [0x11] = "svc in a32",
+    [0x12] = "hvc in a32",
+    [0x13] = "smc in a32",
+    [0x15] = "svc in a64",
+    [0x16] = "hvc in a64",
+    [0x17] = "smc in a64",
+    [0x18] = "other mcr/mrc/sys",
+    [0x19] = "SVE off",
+    [0x1a] = "eret",
+    [0x1c] = "PAC failure",
+    [0x20] = "instruction abort (lower)",
+    [0x21] = "instruction abort (current)",
+    [0x22] = "pc misaligned",
+    [0x24] = "data abort (lower)",
+    [0x25] = "data abort (current)",
+    [0x26] = "sp misaligned",
+    [0x28] = "FP exception (a32)",
+    [0x2c] = "FP exception (a64)",
+    [0x2f] = "SError",
+    [0x30] = "BP (lower)",
+    [0x31] = "BP (current)",
+    [0x32] = "step (lower)",
+    [0x33] = "step (current)",
+    [0x34] = "watchpoint (lower)",
+    [0x35] = "watchpoint (current)",
+    [0x38] = "bkpt (a32)",
+    [0x3a] = "vector catch (a32)",
+    [0x3c] = "brk (a64)",
+};
+
 void exception_initialize(void)
 {
     msr(vbar_el2, _vectors_start);
@@ -46,7 +90,9 @@ void print_regs(u64 *regs)
     printf("SPSEL:    0x%lx\n", mrs(SPSEL));
     printf("SP:       0x%lx\n", sp);
     printf("SPSR_EL2: 0x%x\n", mrs(SPSR_EL2));
-    printf("ESR_EL2:  0x%x\n", mrs(ESR_EL2));
+
+    const char *ec_desc = ec_table[(mrs(ESR_EL2) >> 26) & 0x3f];
+    printf("ESR_EL2:  0x%x (%s)\n", mrs(ESR_EL2), ec_desc ? ec_desc : "unknown");
 
     printf("L2C_ERR_STS: 0x%lx\n", mrs(SYS_L2C_ERR_STS));
     printf("L2C_ERR_ADR: 0x%lx\n", mrs(SYS_L2C_ERR_ADR));
