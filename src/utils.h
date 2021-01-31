@@ -215,8 +215,12 @@ static inline u8 mask8(u64 addr, u8 clear, u8 set)
     })
 #define mrs(reg) _mrs(reg)
 
-#define _msr(reg, val) ({ __asm__ volatile("msr\t" #reg ", %0" : : "r"(val)); })
-#define msr(reg, val)  _msr(reg, val)
+#define _msr(reg, val)                                                                             \
+    ({                                                                                             \
+        u64 __val = (u64)val;                                                                      \
+        __asm__ volatile("msr\t" #reg ", %0" : : "r"(__val));                                      \
+    })
+#define msr(reg, val) _msr(reg, val)
 
 #define sysop(op) __asm__ volatile(op ::: "memory")
 
