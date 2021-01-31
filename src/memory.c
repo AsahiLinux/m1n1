@@ -47,6 +47,14 @@ static inline void write_sctlr(u64 val)
 #define PTE_TYPE_TABLE    0b11
 #define PTE_FLAG_ACCESS   (1 << 10)
 #define PTE_MAIR_INDEX(i) ((i & 7) << 2)
+#define PTE_PXN           (1L << 53)
+#define PTE_UXN           (1L << 54)
+#define PTE_AP_RO         (1L << 7)
+#define PTE_AP_EL0        (1L << 6)
+
+#define PERM_RO  PTE_AP_RO | PTE_PXN | PTE_UXN
+#define PERM_RW  PTE_PXN | PTE_UXN
+#define PERM_RWX 0
 
 /*
  * https://developer.arm.com/docs/ddi0595/g/aarch64-system-registers/sctlr_el2
@@ -140,12 +148,13 @@ static u64 pagetable_L1[2][ENTRIES_PER_TABLE] ALIGNED(PAGE_SIZE);
 static u64 pagetable_L2[MAX_L2_TABLES][ENTRIES_PER_TABLE] ALIGNED(PAGE_SIZE);
 static u32 pagetable_L2_next = 0;
 
-static u64 mmu_make_block_pte(uintptr_t addr, u8 attribute_index)
+static u64 mmu_make_block_pte(uintptr_t addr, u8 attribute_index, u64 perms)
 {
     u64 pte = PTE_TYPE_BLOCK;
     pte |= addr;
     pte |= PTE_FLAG_ACCESS;
     pte |= PTE_MAIR_INDEX(attribute_index);
+    pte |= perms;
 
     return pte;
 }
@@ -228,7 +237,7 @@ static u64 *mmu_get_L2_table(uintptr_t addr)
     return (u64 *)mmu_extract_addr(desc_l1);
 }
 
-static void mmu_add_single_mapping(uintptr_t from, uintptr_t to, u8 attribute_index)
+static void mmu_add_single_mapping(uintptr_t from, uintptr_t to, u8 attribute_index, u64 perms)
 {
     u64 *tbl_l2 = mmu_get_L2_table(from);
     u64 l2_idx = mmu_extract_L2_index(from);
@@ -236,10 +245,11 @@ static void mmu_add_single_mapping(uintptr_t from, uintptr_t to, u8 attribute_in
     if (tbl_l2[l2_idx])
         panic("MMU: mapping for %lx already exists", from);
 
-    tbl_l2[l2_idx] = mmu_make_block_pte(to, attribute_index);
+    tbl_l2[l2_idx] = mmu_make_block_pte(to, attribute_index, perms);
 }
 
-static void mmu_add_mapping(uintptr_t from, uintptr_t to, size_t size, u8 attribute_index)
+static void mmu_add_mapping(uintptr_t from, uintptr_t to, size_t size, u8 attribute_index,
+                            u64 perms)
 {
     if (from % L2_PAGE_SIZE)
         panic("mmu_add_mapping: from address not aligned: %lx", from);
@@ -249,7 +259,7 @@ static void mmu_add_mapping(uintptr_t from, uintptr_t to, size_t size, u8 attrib
         panic("mmu_add_mapping: size not aligned: %lx", size);
 
     while (size > 0) {
-        mmu_add_single_mapping(from, to, attribute_index);
+        mmu_add_single_mapping(from, to, attribute_index, perms);
         from += L2_PAGE_SIZE;
         to += L2_PAGE_SIZE;
         size -= L2_PAGE_SIZE;
@@ -262,14 +272,14 @@ static void mmu_add_default_mappings(void)
      * create MMIO mapping as both nGnRnE (identity) and nGnRE (starting at
      * 0xf0_0000_0000)
      */
-    mmu_add_mapping(0x0000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRnE);
-    mmu_add_mapping(0xf000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRE);
+    mmu_add_mapping(0x0000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW);
+    mmu_add_mapping(0xf000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW);
 
     /*
      * create identity mapping for 16GB RAM from 0x08_0000_0000 to
      * 0x0c_0000_0000
      */
-    mmu_add_mapping(0x0800000000, 0x0800000000, 0x0400000000, MAIR_INDEX_NORMAL);
+    mmu_add_mapping(0x0800000000, 0x0800000000, 0x0400000000, MAIR_INDEX_NORMAL, PERM_RWX);
 }
 
 static void mmu_configure(void)
