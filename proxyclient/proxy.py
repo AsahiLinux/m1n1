@@ -16,7 +16,7 @@ def ascii(s):
         if c < 0x20 or c > 0x7e:
             s2 += "."
         else:
-            s2 += c
+            s2 += chr(c)
     return s2
 
 def pad(s,c,l):
@@ -30,7 +30,7 @@ def chexdump(s,st=0):
             i + st,
             hexdump(s[i:i+8], ' ').rjust(23),
             hexdump(s[i+8:i+16], ' ').rjust(23),
-            ascii(s[i:i+16]),rjust(16)))
+            ascii(s[i:i+16]).rjust(16)))
 
 def chexdump32(s, st=0, abbreviate=True):
     last = None
