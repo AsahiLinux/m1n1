@@ -190,8 +190,10 @@ class UartInterface:
         self.cmd(self.REQ_NOP)
         self.reply(self.REQ_NOP)
 
-    def proxyreq(self, req, reboot=False, no_reply=False):
+    def proxyreq(self, req, reboot=False, no_reply=False, pre_reply=None):
         self.cmd(self.REQ_PROXY, req)
+        if pre_reply:
+            pre_reply()
         if no_reply:
             return
         elif reboot:
@@ -329,14 +331,14 @@ class M1N1Proxy:
         self.debug = debug
         self.iface = iface
 
-    def request(self, opcode, *args, reboot=False, signed=False, no_reply=False):
+    def request(self, opcode, *args, reboot=False, signed=False, no_reply=False, pre_reply=None):
         if len(args) > 6:
             raise ValueError("Too many arguments")
         args = list(args) + [0] * (6 - len(args))
         req = struct.pack("<7Q", opcode, *args)
         if self.debug:
             print("<<<< %08x: %08x %08x %08x %08x %08x %08x"%tuple([opcode] + args))
-        reply = self.iface.proxyreq(req, reboot=reboot, no_reply=no_reply)
+        reply = self.iface.proxyreq(req, reboot=reboot, no_reply=no_reply, pre_reply=None)
         if no_reply:
             return
         ret_fmt = "q" if signed else "Q"
@@ -376,8 +378,10 @@ class M1N1Proxy:
         return self.request(self.P_GET_BASE)
     def set_baud(self, baudrate):
         self.iface.tty_enable = False
+        def change():
+            self.iface.dev.baudrate = baudrate
         try:
-            self.request(self.P_SET_BAUD, baudrate, 16, 0x005aa5f0)
+            self.request(self.P_SET_BAUD, baudrate, 16, 0x005aa5f0, pre_reply=change)
         finally:
             self.iface.tty_enable = True
     def udelay(self, usec):
