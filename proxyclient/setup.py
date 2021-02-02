@@ -17,6 +17,8 @@ except UartTimeout:
     uart.baudrate = 1500000
     iface.nop()
 
+uart.timeout = 3
+
 u = ProxyUtils(p)
 mon = RegMonitor(u)
 
