@@ -166,7 +166,7 @@ void exc_irq(u64 *regs)
 
     u32 reason = read32(0x23b102004);
 
-    printf(" type: %d num: %d\n", reason >> 16, reason & 0xffff);
+    printf(" type: %d num: %d mpidr: %x\n", reason >> 16, reason & 0xffff, mrs(MPIDR_EL1));
 
 #ifdef DEBUG_UART_IRQS
     printf(" UCON: 0x%x\n", ucon);
