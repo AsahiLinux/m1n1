@@ -68,6 +68,11 @@ static void smp_start_cpu(int index, int cluster, int core, u64 rvbar, u64 cpu_s
 
     write64(rvbar, (u64)_vectors_start);
 
+    // Some kind of system level startup/status bit
+    // Without this, IRQs don't work
+    write32(cpu_start_base + 0x4, 1 << index);
+
+    // Actually start the core
     if (cluster == 0) {
         write32(cpu_start_base + 0x8, 1 << core);
     } else {
