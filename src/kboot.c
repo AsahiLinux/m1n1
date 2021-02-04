@@ -8,6 +8,7 @@
 #include "libfdt/libfdt.h"
 #include "malloc.h"
 #include "memory.h"
+#include "smp.h"
 #include "types.h"
 #include "utils.h"
 #include "xnuboot.h"
@@ -150,6 +151,41 @@ static int dt_set_memory(void)
     return 0;
 }
 
+static int dt_set_cpus(void)
+{
+    int cpus = fdt_path_offset(dt, "/cpus");
+    if (cpus < 0)
+        bail("FDT: /cpus node not found in devtree\n");
+
+    int node, cpu = 0;
+    fdt_for_each_subnode(node, dt, cpus)
+    {
+        const fdt64_t *prop = fdt_getprop(dt, node, "reg", NULL);
+        if (!prop)
+            bail("FDT: failed to get reg property of CPU\n");
+
+        u64 dt_mpidr = fdt64_ld(prop);
+        u64 mpidr = smp_get_mpidr(cpu);
+
+        if (dt_mpidr != mpidr)
+            bail("FDT: DT CPU %d MPIDR mismatch: 0x%x != 0x%x\n", cpu, dt_mpidr, mpidr);
+
+        u64 release_addr = smp_get_release_addr(cpu);
+        if (fdt_setprop_u64(dt, node, "cpu-release-addr", release_addr))
+            bail("FDT: couldn't set cpu-release-addr property\n");
+
+        printf("FDT: CPU %d MPIDR=0x%x release-addr=0x%lx\n", cpu, mpidr, release_addr);
+
+        cpu++;
+    }
+
+    if ((node < 0) && (node != -FDT_ERR_NOTFOUND)) {
+        bail("FDT: error iterating through CPUs\n");
+    }
+
+    return 0;
+}
+
 void kboot_set_initrd(void *start, size_t size)
 {
     initrd_start = start;
@@ -192,6 +228,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_chosen())
         return -1;
     if (dt_set_memory())
+        return -1;
+    if (dt_set_cpus())
         return -1;
 
     if (fdt_pack(dt))

@@ -11,6 +11,7 @@
 #define SECONDARY_STACK_SIZE 0x4000
 
 struct spin_table {
+    u64 mpidr;
     u64 flag;
     u64 target;
     u64 args[4];
@@ -30,6 +31,8 @@ void smp_secondary_entry(void)
 {
     struct spin_table *me = &spin_table[target_cpu];
     printf("  Index: %d (table: %p)\n\n", target_cpu, me);
+
+    me->mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
 
     sysop("dmb sy");
     me->flag = 1;
@@ -145,6 +148,8 @@ void smp_start_secondaries(void)
 
         smp_start_cpu(i, reg >> 8, reg & 0xff, cpu_impl_reg[0], pmgr_reg + CPU_START_OFF);
     }
+
+    spin_table[0].mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
 }
 
 void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
@@ -175,4 +180,20 @@ u64 smp_wait(int cpu)
         sysop("dmb sy");
 
     return target->retval;
+}
+
+int smp_get_mpidr(int cpu)
+{
+    return spin_table[cpu].mpidr;
+}
+
+u64 smp_get_release_addr(int cpu)
+{
+    struct spin_table *target = &spin_table[cpu];
+
+    target->args[0] = 0;
+    target->args[1] = 0;
+    target->args[2] = 0;
+    target->args[3] = 0;
+    return (u64)&target->target;
 }
