@@ -4,7 +4,7 @@
 
 / {
 	model = "Apple Mac Mini M1 2020";
-	compatible = "apple,j274";
+	compatible = "AAPL,j274", "AAPL,arm-platform";
 	#address-cells = <2>;
 	#size-cells = <2>;
 
@@ -13,13 +13,12 @@
 		#size-cells = <2>;
 		ranges;
 
-		bootargs = "earlycon keep_bootcon debug";
+		bootargs = "earlycon debug";
 		stdout-path = "serial0:1500000";
 
 		framebuffer0: framebuffer@0 {
 			compatible = "simple-framebuffer";
-			reg = <0 0 0 0>;
-			// To be filled by loader
+			reg = <0 0 0 0>; // To be filled by loader
 			status = "disabled";
 		};
 	};
@@ -34,26 +33,74 @@
 	};
 
 	cpus {
-		cpu0: cpu {
-			compatible = "arm,apple-firestorm";
-			device_type = "cpu";
-		};
-	};
+		#address-cells = <2>;
+		#size-cells = <0>;
 
-	fiq: interrupt-controller {
-		compatible = "apple,t8103-fiq";
-		#interrupt-cells = <2>;
-		#address-cells = <0>;
-		interrupt-controller;
+		cpu0: cpu@0 {
+			compatible = "AAPL,icestorm";
+			device_type = "cpu";
+			reg = <0x0 0x0>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0 0>; // To be filled by loader
+		};
+		cpu1: cpu@1 {
+			compatible = "AAPL,icestorm";
+			device_type = "cpu";
+			reg = <0x0 0x1>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0 0>; // To be filled by loader
+		};
+		cpu2: cpu@2 {
+			compatible = "AAPL,icestorm";
+			device_type = "cpu";
+			reg = <0x0 0x2>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0 0>; // To be filled by loader
+		};
+		cpu3: cpu@3 {
+			compatible = "AAPL,icestorm";
+			device_type = "cpu";
+			reg = <0x0 0x3>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0 0>; // To be filled by loader
+		};
+		cpu4: cpu@10100 {
+			compatible = "AAPL,firestorm";
+			device_type = "cpu";
+			reg = <0x0 0x10100>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0 0>; // To be filled by loader
+		};
+		cpu5: cpu@10101 {
+			compatible = "AAPL,firestorm";
+			device_type = "cpu";
+			reg = <0x0 0x10101>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0 0>; // To be filled by loader
+		};
+		cpu6: cpu@10102 {
+			compatible = "AAPL,firestorm";
+			device_type = "cpu";
+			reg = <0x0 0x10102>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0 0>; // To be filled by loader
+		};
+		cpu7: cpu@10103 {
+			compatible = "AAPL,firestorm";
+			device_type = "cpu";
+			reg = <0x0 0x10103>;
+			enable-method = "spin-table";
+			cpu-release-addr = <0 0>; // To be filled by loader
+		};
 	};
 
 	timer {
 		compatible = "arm,armv8-timer";
-		interrupt-parent = <&fiq>;
-		interrupts = <0 8>,
-				<0 8>,
-				<0 8>,
-				<0 8>;
+		interrupt-parent = <&aic>;
+		interrupts = <1 0 4>,
+				<1 0 4>,
+				<1 1 4>,
+				<1 0 4>;
 	};
 
 	clk24: clk24 {
@@ -70,20 +117,19 @@
 		ranges;
 
 		aic: interrupt-controller@23b100000 {
-			compatible = "apple,t8103-aic";
-			#interrupt-cells = <2>;
-			#address-cells = <0>;
+			compatible = "AAPL,m1-aic", "AAPL,aic";
+			#interrupt-cells = <3>;
 			interrupt-controller;
 			reg = <0x2 0x3b100000 0x0 0x8000>;
 		};
 
 		serial0: serial@235200000 {
-			compatible = "apple,t8103-uart";
+			compatible = "AAPL,s5l-uart";
 			reg = <0x2 0x35200000 0x0 0x1000>;
 			reg-shift = <2>;
 			reg-io-width = <4>;
 			interrupt-parent = <&aic>;
-			interrupts = <605 8>;
+			interrupts = <0 605 4>;
 			clocks = <&clk24>, <&clk24>;
 			clock-names = "uart", "clk_uart_baud0";
 		};
