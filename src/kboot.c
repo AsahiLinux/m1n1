@@ -106,7 +106,7 @@ static int dt_set_chosen(void)
 
         fdt_delprop(dt, fb, "status"); // may fail if it does not exist
 
-        printf("FDT: %s size 0x%lx\n", fbname, fb_base, fb_size);
+        printf("FDT: %s base 0x%lx size 0x%lx\n", fbname, fb_base, fb_size);
 
         // We do not need to reserve the framebuffer, as it will be excluded from the usable RAM
         // range already.
