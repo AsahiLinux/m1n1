@@ -101,3 +101,5 @@
 #define CYC_OVRD_FIQ_MODE_MASK (3UL << 20)
 #define CYC_OVRD_IRQ_MODE(x)   (((unsigned long)x) << 22)
 #define CYC_OVRD_IRQ_MODE_MASK (3UL << 22)
+#define CYC_OVRD_WFI_MODE(x)   (((unsigned long)x) << 24)
+#define CYC_OVRD_WFI_MODE_MASK (3UL << 20)

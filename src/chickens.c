@@ -129,9 +129,9 @@ const char *init_cpu(void)
             break;
     }
 
-    /* Unmask external IRQs */
-    reg_mask(SYS_CYC_OVRD, CYC_OVRD_FIQ_MODE_MASK | CYC_OVRD_IRQ_MODE_MASK,
-             CYC_OVRD_FIQ_MODE(0) | CYC_OVRD_IRQ_MODE(0));
+    /* Unmask external IRQs, set WFI mode to up (2) */
+    reg_mask(SYS_CYC_OVRD, CYC_OVRD_FIQ_MODE_MASK | CYC_OVRD_IRQ_MODE_MASK | CYC_OVRD_WFI_MODE_MASK,
+             CYC_OVRD_FIQ_MODE(0) | CYC_OVRD_IRQ_MODE(0) | CYC_OVRD_WFI_MODE(2));
 
     /* Enable branch prediction state retention across ACC sleep */
     reg_mask(SYS_ACC_CFG, ACC_CFG_BP_SLEEP_MASK, ACC_CFG_BP_SLEEP(3));
