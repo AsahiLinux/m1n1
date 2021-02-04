@@ -37,6 +37,8 @@ if initramfs is not None:
     iface.writemem(initramfs_base, initramfs, True)
     p.kboot_set_initrd(initramfs_base, initramfs_size)
 
+p.smp_start_secondaries()
+
 if p.kboot_prepare_dt(dtb_addr):
     print("DT prepare failed")
     sys.exit(1)
