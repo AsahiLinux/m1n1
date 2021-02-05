@@ -49,5 +49,5 @@ m1n1 embeds [Doug Lea's malloc](ftp://gee.cs.oswego.edu/pub/misc/malloc.c) (dlma
 the public domain ([CC0](3rdparty_licenses/LICENSE.CC0)).
 
 m1n1 embeds portions of [PDCLib](https://github.com/DevSolar/pdclib), which is in the public
-domain ([CC0](3rdparty_licenses/LICENSE.CC0).
+domain ([CC0](3rdparty_licenses/LICENSE.CC0)).
 
