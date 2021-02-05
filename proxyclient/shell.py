@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import atexit, serial, os, struct, code, traceback, readline, rlcompleter
 from proxy import *

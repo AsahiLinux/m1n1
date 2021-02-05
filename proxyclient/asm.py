@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
 import os, tempfile, shutil, subprocess
 
 class AsmException(Exception):
