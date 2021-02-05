@@ -1,11 +1,19 @@
 #!/usr/bin/python
 
+import argparse, pathlib
+
+parser = argparse.ArgumentParser(description='(Linux) kernel loader for m1n1')
+parser.add_argument('payload', nargs=1, type=pathlib.Path)
+parser.add_argument('dtb', nargs=1, type=pathlib.Path)
+parser.add_argument('initramfs', nargs='?', type=pathlib.Path)
+args = parser.parse_args()
+
 from setup import *
 
-payload = open(sys.argv[1], "rb").read()
-dtb = open(sys.argv[2], "rb").read()
-if len(sys.argv) > 3:
-    initramfs = open(sys.argv[3], "rb").read()
+payload = args.payload[0].read_bytes()
+dtb = args.dtb[0].read_bytes()
+if args.initramfs is not None:
+    initramfs = args.initramfs[0].read_bytes()
     initramfs_size = len(initramfs)
 else:
     initramfs = None
