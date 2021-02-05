@@ -7,6 +7,7 @@ parser.add_argument('payload', nargs=1, type=pathlib.Path)
 parser.add_argument('dtb', nargs=1, type=pathlib.Path)
 parser.add_argument('initramfs', nargs='?', type=pathlib.Path)
 parser.add_argument('--compression', choices=['auto', 'none', 'gz', 'xz'], default='auto')
+parser.add_argument('-b', '--bootargs', type=str, metavar='"boot arguments"')
 args = parser.parse_args()
 
 from setup import *
@@ -29,6 +30,14 @@ if args.initramfs is not None:
 else:
     initramfs = None
     initramfs_size = 0
+
+if args.bootargs is not None:
+    bootargs = bytes(args.bootargs, encoding="utf-8")
+    print('Setting boot args: "{}"'.format(args.bootargs))
+    bootargs_addr = u.malloc(len(bootargs) + 1)
+    iface.writemem(bootargs_addr, bootargs, len(bootargs))
+    p.memset8(bootargs_addr + len(bootargs) , 0, 1)
+    p.kboot_set_bootargs(bootargs_addr)
 
 if args.compression != 'none':
     compressed_size = len(payload)
