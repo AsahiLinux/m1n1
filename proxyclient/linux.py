@@ -6,9 +6,20 @@ parser = argparse.ArgumentParser(description='(Linux) kernel loader for m1n1')
 parser.add_argument('payload', nargs=1, type=pathlib.Path)
 parser.add_argument('dtb', nargs=1, type=pathlib.Path)
 parser.add_argument('initramfs', nargs='?', type=pathlib.Path)
+parser.add_argument('--compression', choices=['auto', 'none', 'gz', 'xz'], default='auto')
 args = parser.parse_args()
 
 from setup import *
+
+if args.compression == 'auto':
+    suffix = args.payload[0].suffix
+    if suffix == '.gz':
+        args.compression = 'gz'
+    elif suffix == '.xz':
+        args.compression = 'xz'
+    else:
+        raise ValueError('unknown compression for {}'.format(args.payload))
+
 
 payload = args.payload[0].read_bytes()
 dtb = args.dtb[0].read_bytes()
@@ -19,15 +30,14 @@ else:
     initramfs = None
     initramfs_size = 0
 
-compressed_size = len(payload)
-compressed_addr = u.malloc(compressed_size)
+if args.compression != 'none':
+    compressed_size = len(payload)
+    compressed_addr = u.malloc(compressed_size)
+
+    print("Loading %d bytes to 0x%x..0x%x..." % (compressed_size, compressed_addr, compressed_addr + compressed_size))
+    iface.writemem(compressed_addr, payload, True)
 
 dtb_addr = u.malloc(len(dtb))
-
-print("Loading %d bytes to 0x%x..0x%x..." % (compressed_size, compressed_addr, compressed_addr + compressed_size))
-
-iface.writemem(compressed_addr, payload, True)
-
 print("Loading DTB to 0x%x..." % dtb_addr)
 
 iface.writemem(dtb_addr, dtb)
@@ -51,17 +61,21 @@ if p.kboot_prepare_dt(dtb_addr):
     print("DT prepare failed")
     sys.exit(1)
 
-#kernel_size = p.xzdec(compressed_addr, compressed_size)
-
-#if kernel_size < 0:
-    #raise Exception("Decompression header check error!",)
-
-#print("Uncompressed kernel size: %d bytes" % kernel_size)
-print("Uncompressing...")
-
 iface.dev.timeout = 40
 
-kernel_size = p.gzdec(compressed_addr, compressed_size, kernel_base, kernel_size)
+if args.compression == 'none':
+    kernel_size = len(payload)
+    print("Loading %d bytes to 0x%x..0x%x..." % (kernel_size, kernel_base, kernel_base + kernel_size))
+    iface.writemem(kernel_base, payload, True)
+elif args.compression == 'gz':
+    print("Uncompressing gz ...")
+    kernel_size = p.gzdec(compressed_addr, compressed_size, kernel_base, kernel_size)
+elif args.compression == 'xz':
+    print("Uncompressing xz ...")
+    kernel_size = p.xzdec(compressed_addr, compressed_size, kernel_base, kernel_size)
+else:
+    raise ValueError('unsupported compression {}'.format(args.compression))
+
 print(kernel_size)
 
 if kernel_size < 0:
