@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 class Heap(object):
     def __init__(self, start, end, block=64):
         if start%block:

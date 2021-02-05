@@ -1,6 +1,6 @@
+#!/usr/bin/env python3
+
 from setup import *
-
-
 
 sys_regs = dict([
     ("HID0", (3, 0, 15, 0, 0)),
