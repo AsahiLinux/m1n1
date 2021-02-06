@@ -2,9 +2,9 @@ ARCH := aarch64-linux-gnu-
 
 CFLAGS := -O2 -Wall -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-Werror=implicit-function-declaration -Werror=implicit-int \
-	-Wsign-compare -Wunused-parameter \
+	-Wsign-compare -Wunused-parameter -Wno-multichar \
 	-ffreestanding -fpic -ffunction-sections -fdata-sections \
-	-fno-stack-protector -mgeneral-regs-only -mstrict-align -march=armv8.2-a\
+	-fno-stack-protector -mgeneral-regs-only -mstrict-align -march=armv8.2-a
 
 LDFLAGS := -T m1n1.ld -EL -maarch64elf --no-undefined -X -Bsymbolic \
 	-z notext --no-apply-dynamic-relocs --orphan-handling=warn --strip-debug \
