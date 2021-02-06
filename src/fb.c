@@ -5,7 +5,8 @@
 #include "xnuboot.h"
 
 u32 *fb;
-int fb_s, fb_w, fb_h;
+int fb_s, fb_w, fb_h, fb_d;
+int scale = 1;
 
 static u32 *logo;
 static int logo_w, logo_h;
@@ -19,9 +20,10 @@ void fb_init(void)
     fb_s = cur_boot_args.video.stride / 4;
     fb_w = cur_boot_args.video.width;
     fb_h = cur_boot_args.video.height;
-    printf("fb init: %dx%d [s=%d] @%p\n", fb_w, fb_h, fb_s, fb);
+    fb_d = cur_boot_args.video.depth & 0xff;
+    printf("fb init: %dx%d (%d) [s=%d] @%p\n", fb_w, fb_h, fb_d, fb_s, fb);
 
-    if (fb_w > 2048) { // random guess
+    if (cur_boot_args.video.depth & 0x10000) {
         logo = (void *)_binary_build_bootlogo_256_bin_start;
         logo_w = logo_h = 256;
     } else {

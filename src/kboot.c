@@ -87,7 +87,7 @@ static int dt_set_chosen(void)
 
         const char *format = NULL;
 
-        switch (cur_boot_args.video.depth) {
+        switch (cur_boot_args.video.depth & 0xff) {
             case 32:
                 format = "x8r8g8b8";
                 break;
