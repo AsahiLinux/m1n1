@@ -3,9 +3,10 @@
 #ifndef XDT_H
 #define XDT_H
 
-#include "types.h"
 #include <stddef.h>
 #include <stdint.h>
+
+#include "types.h"
 
 #define ADT_ERR_NOTFOUND  1
 #define ADT_ERR_BADOFFSET 4

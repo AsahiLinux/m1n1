@@ -4,13 +4,14 @@
 #include "kboot.h"
 #include "malloc.h"
 #include "memory.h"
-#include "minilzlib/minlzma.h"
 #include "smp.h"
-#include "tinf/tinf.h"
 #include "types.h"
 #include "uart.h"
 #include "utils.h"
 #include "xnuboot.h"
+
+#include "minilzlib/minlzma.h"
+#include "tinf/tinf.h"
 
 int proxy_process(ProxyRequest *request, ProxyReply *reply)
 {

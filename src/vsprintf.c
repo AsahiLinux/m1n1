@@ -93,8 +93,9 @@
  * 	2.5 printf(3S) man page.
  */
 
-#include "types.h"
 #include <stdarg.h>
+
+#include "types.h"
 
 #define VA_START(ap, last)        va_start(ap, last)
 #define VA_SHIFT(ap, value, type) /* No-op for ANSI C. */

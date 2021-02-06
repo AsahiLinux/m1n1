@@ -5,13 +5,14 @@
 #include "adt.h"
 #include "exception.h"
 #include "kboot.h"
-#include "libfdt/libfdt.h"
 #include "malloc.h"
 #include "memory.h"
 #include "smp.h"
 #include "types.h"
 #include "utils.h"
 #include "xnuboot.h"
+
+#include "libfdt/libfdt.h"
 
 static void *dt = NULL;
 static int dt_bufsize = 0;

@@ -7,3 +7,23 @@ AllowShortFunctionsOnASingleLine: false
 AlignConsecutiveMacros: true
 IndentCaseLabels: true
 ColumnLimit: 100
+IncludeBlocks: Regroup
+
+# Include block order goes like this
+# - config.h style files, including ../config.h
+# - system headers (<>)
+# - All m1n1 headers, starting with the "this file" header, rest sorted
+# - 3rd party code headers
+# - build artifact headers (stuff outside of src/)
+IncludeCategories:
+  - Regex:           '^"(\.\./)*config\.h"$'
+    Priority:        -2
+  - Regex:           '^<'
+    Priority:        -1
+  - Regex:           '^"\.\./'
+    Priority:        3
+  - Regex:           '/'
+    Priority:        2
+  - Regex:           '.*'
+    Priority:        0
+    SortPriority:    1

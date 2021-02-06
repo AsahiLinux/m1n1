@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: MIT */
 
+#include <stdarg.h>
+
 #include "utils.h"
 #include "types.h"
 #include "uart.h"
 #include "vsprintf.h"
-
-#include <stdarg.h>
 
 static char ascii(char s)
 {
