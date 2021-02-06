@@ -232,6 +232,8 @@ XzDecodeStreamFooter (
     //
     if ((streamFooter->u.Flags != 0) &&
         ((streamFooter->u.s.CheckType != XzCheckTypeCrc32) &&
+         (streamFooter->u.s.CheckType != XzCheckTypeCrc64) &&
+         (streamFooter->u.s.CheckType != XzCheckTypeSha2) &&
          (streamFooter->u.s.CheckType != XzCheckTypeNone)))
     {
         return false;
@@ -350,6 +352,8 @@ XzDecodeStreamHeader (
     //
     if ((streamHeader->u.Flags != 0) &&
         ((streamHeader->u.s.CheckType != XzCheckTypeCrc32) &&
+         (streamHeader->u.s.CheckType != XzCheckTypeCrc64) &&
+         (streamHeader->u.s.CheckType != XzCheckTypeSha2) &&
          (streamHeader->u.s.CheckType != XzCheckTypeNone)))
     {
         return false;
@@ -358,7 +362,13 @@ XzDecodeStreamHeader (
     //
     // Remember that a checksum might come at the end of the block later
     //
-    Container.ChecksumSize = streamHeader->u.s.CheckType * 4;
+    if (streamHeader->u.s.CheckType == 0)
+    {
+        Container.ChecksumSize = 0;
+    } else {
+        Container.ChecksumSize = 4 << ((streamHeader->u.s.CheckType - 1) / 3);
+    }
+
 #endif
 #ifdef MINLZ_INTEGRITY_CHECKS
     //
