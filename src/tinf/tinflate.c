@@ -3,6 +3,8 @@
  *
  * Copyright (c) 2003-2019 Joergen Ibsen
  *
+ * This version of tinfzlib was modified for use with m1n1.
+ *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
  * arising from the use of this software.
@@ -484,7 +486,7 @@ static int tinf_inflate_uncompressed_block(struct tinf_data *d)
 {
 	unsigned int length, invlength;
 
-	if (d->source_end - d->source < 4) {
+	if (d->source_end && d->source_end - d->source < 4) {
 		return TINF_DATA_ERROR;
 	}
 
@@ -501,7 +503,7 @@ static int tinf_inflate_uncompressed_block(struct tinf_data *d)
 
 	d->source += 4;
 
-	if (d->source_end - d->source < length) {
+	if (d->source_end && d->source_end - d->source < length) {
 		return TINF_DATA_ERROR;
 	}
 
@@ -555,14 +557,17 @@ void tinf_init(void)
 
 /* Inflate stream from source to dest */
 int tinf_uncompress(void *dest, unsigned int *destLen,
-                    const void *source, unsigned int sourceLen)
+                    const void *source, unsigned int *sourceLen)
 {
 	struct tinf_data d;
 	int bfinal;
 
 	/* Initialise data */
 	d.source = (const unsigned char *) source;
-	d.source_end = d.source + sourceLen;
+	if (sourceLen && *sourceLen)
+		d.source_end = d.source + *sourceLen;
+	else
+		d.source_end = 0;
 	d.tag = 0;
 	d.bitcount = 0;
 	d.overflow = 0;
@@ -610,8 +615,15 @@ int tinf_uncompress(void *dest, unsigned int *destLen,
 		return TINF_DATA_ERROR;
 	}
 
-	*destLen = d.dest - d.dest_start;
+	if (sourceLen) {
+		unsigned int slen = d.source - (const unsigned char *)source;
+		if (!*sourceLen)
+			*sourceLen = slen;
+		else if (*sourceLen != slen)
+			return TINF_DATA_ERROR;
+	}
 
+	*destLen = d.dest - d.dest_start;
 	return TINF_OK;
 }
 

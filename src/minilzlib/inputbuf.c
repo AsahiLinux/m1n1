@@ -102,6 +102,14 @@ BfSeek (
     return true;
 }
 
+uint32_t
+BfTell (
+    void
+    )
+{
+    return In.Offset;
+}
+
 bool
 BfRead (
     uint8_t* Byte

@@ -28,6 +28,8 @@ Environment:
 
 --*/
 
+#define MINLZ_META_CHECKS
+
 #include "minlzlib.h"
 #include "xzstream.h"
 #include "../utils.h"
@@ -467,17 +469,16 @@ XzDecodeBlockHeader (
 bool
 XzDecode (
     uint8_t* InputBuffer,
-    uint32_t InputSize,
+    uint32_t* InputSize,
     uint8_t* OutputBuffer,
     uint32_t* OutputSize
     )
 {
 
-    printf("Output size: %p %ld\n", OutputSize, *OutputSize);
     //
     // Initialize the input buffer descriptor and history buffer (dictionary)
     //
-    BfInitialize(InputBuffer, InputSize);
+    BfInitialize(InputBuffer, *InputSize ? *InputSize : UINT32_MAX);
     DtInitialize(OutputBuffer, *OutputSize);
 
     //
@@ -498,11 +499,9 @@ XzDecode (
         printf("block header failed\n");
         return false;
     case XzBlockHeaderNoBlock:
-        printf("no block\n");
         *OutputSize = 0;
         break;
     case XzBlockHeaderSuccess:
-        printf("block ok\n");
         //
         // Decode the actual block
         //
@@ -530,6 +529,9 @@ XzDecode (
     {
         return false;
     }
+
+    if (!*InputSize)
+        *InputSize = BfTell();
 #endif
     return true;
 }

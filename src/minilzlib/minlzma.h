@@ -10,7 +10,8 @@
  *                 either CRC32 or None as the checksum type.
  *
  * @param[in]      InputBuffer - A fully formed buffer containing the XZ stream.
- * @param[in]      InputSize - The size of the input buffer.
+ * @param[in,out]  InputSize - The size of the input buffer. On output, the size
+ *                 consumed from the input buffer.
  * @param[in]      OutputBuffer - A fully allocated buffer to receive the output.
  *                 Callers can pass in NULL if they do not intend to decompress,
  *                 in combination with setting OutputSize to 0, in order to query
@@ -26,7 +27,7 @@
 bool
 XzDecode (
     uint8_t* InputBuffer,
-    uint32_t InputSize,
+    uint32_t* InputSize,
     uint8_t* OutputBuffer,
     uint32_t* OutputSize
     );

@@ -37,6 +37,7 @@ Environment:
 //
 bool BfRead(uint8_t* Byte);
 bool BfSeek(uint32_t Length, uint8_t** Bytes);
+uint32_t BfTell(void);
 bool BfAlign(void);
 void BfInitialize(uint8_t* InputBuffer, uint32_t InputSize);
 bool BfSetSoftLimit(uint32_t Remaining);

@@ -3,6 +3,8 @@
  *
  * Copyright (c) 2003-2019 Joergen Ibsen
  *
+ * This version of tinfzlib was modified for use with m1n1.
+ *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
  * arising from the use of this software.
@@ -77,7 +79,7 @@ void TINFCC tinf_init(void);
  * @return `TINF_OK` on success, error code on error
  */
 int TINFCC tinf_uncompress(void *dest, unsigned int *destLen,
-                           const void *source, unsigned int sourceLen);
+                           const void *source, unsigned int *sourceLen);
 
 /**
  * Decompress `sourceLen` bytes of gzip data from `source` to `dest`.
@@ -95,7 +97,7 @@ int TINFCC tinf_uncompress(void *dest, unsigned int *destLen,
  * @return `TINF_OK` on success, error code on error
  */
 int TINFCC tinf_gzip_uncompress(void *dest, unsigned int *destLen,
-                                const void *source, unsigned int sourceLen);
+                                const void *source, unsigned int *sourceLen);
 
 /**
  * Decompress `sourceLen` bytes of zlib data from `source` to `dest`.
@@ -113,7 +115,7 @@ int TINFCC tinf_gzip_uncompress(void *dest, unsigned int *destLen,
  * @return `TINF_OK` on success, error code on error
  */
 int TINFCC tinf_zlib_uncompress(void *dest, unsigned int *destLen,
-                                const void *source, unsigned int sourceLen);
+                                const void *source, unsigned int *sourceLen);
 
 /**
  * Compute Adler-32 checksum of `length` bytes starting at `data`.

@@ -1,6 +1,8 @@
 /*
  * tinfzlib - tiny zlib decompressor
  *
+ * This version of tinfzlib was modified for use with m1n1.
+ *
  * Copyright (c) 2003-2019 Joergen Ibsen
  *
  * This software is provided 'as-is', without any express or implied
@@ -34,18 +36,19 @@ static unsigned int read_be32(const unsigned char *p)
 }
 
 int tinf_zlib_uncompress(void *dest, unsigned int *destLen,
-                         const void *source, unsigned int sourceLen)
+                         const void *source, unsigned int *sourceLen)
 {
 	const unsigned char *src = (const unsigned char *) source;
 	unsigned char *dst = (unsigned char *) dest;
 	unsigned int a32;
 	int res;
 	unsigned char cmf, flg;
+	unsigned int sourceDataLen = sourceLen ? *sourceLen - 6 : 0;
 
 	/* -- Check header -- */
 
 	/* Check room for at least 2 byte header and 4 byte trailer */
-	if (sourceLen < 6) {
+	if (*sourceLen && *sourceLen < 6) {
 		return TINF_DATA_ERROR;
 	}
 
@@ -73,13 +76,9 @@ int tinf_zlib_uncompress(void *dest, unsigned int *destLen,
 		return TINF_DATA_ERROR;
 	}
 
-	/* -- Get Adler-32 checksum of original data -- */
-
-	a32 = read_be32(&src[sourceLen - 4]);
-
 	/* -- Decompress data -- */
 
-	res = tinf_uncompress(dst, destLen, src + 2, sourceLen - 6);
+	res = tinf_uncompress(dst, destLen, src + 2, &sourceDataLen);
 
 	if (res != TINF_OK) {
 		return TINF_DATA_ERROR;
@@ -87,9 +86,14 @@ int tinf_zlib_uncompress(void *dest, unsigned int *destLen,
 
 	/* -- Check Adler-32 checksum -- */
 
+	a32 = read_be32(&src[sourceDataLen + 2]);
+
 	if (a32 != tinf_adler32(dst, *destLen)) {
 		return TINF_DATA_ERROR;
 	}
+
+	if (sourceLen)
+		*sourceLen = sourceDataLen + 6;
 
 	return TINF_OK;
 }
