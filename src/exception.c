@@ -183,10 +183,26 @@ void exc_fiq(u64 *regs)
     uart_puts("Exception: FIQ");
 
     u32 timer_ctl = mrs(CNTP_CTL_EL0);
-
     if (timer_ctl == 0x5) {
-        uart_puts("  timer IRQ, masking");
+        uart_puts("  PHYS timer IRQ, masking");
         msr(CNTP_CTL_EL0, 7L);
+    }
+
+    timer_ctl = mrs(CNTV_CTL_EL0);
+    if (timer_ctl == 0x5) {
+        uart_puts("  VIRT timer IRQ, masking");
+        msr(CNTP_CTL_EL0, 7L);
+    }
+
+    timer_ctl = mrs(CNTP_CTL_EL02);
+    if (timer_ctl == 0x5) {
+        uart_puts("  PHYS EL02 timer IRQ, masking");
+        msr(CNTP_CTL_EL02, 7L);
+    }
+    timer_ctl = mrs(CNTV_CTL_EL02);
+    if (timer_ctl == 0x5) {
+        uart_puts("  VIRT EL02 timer IRQ, masking");
+        msr(CNTP_CTL_EL02, 7L);
     }
 
     UNUSED(regs);
