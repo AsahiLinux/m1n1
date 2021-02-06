@@ -3,8 +3,8 @@
 import argparse, pathlib
 
 parser = argparse.ArgumentParser(description='(Linux) kernel loader for m1n1')
-parser.add_argument('payload', nargs=1, type=pathlib.Path)
-parser.add_argument('dtb', nargs=1, type=pathlib.Path)
+parser.add_argument('payload', type=pathlib.Path)
+parser.add_argument('dtb', type=pathlib.Path)
 parser.add_argument('initramfs', nargs='?', type=pathlib.Path)
 parser.add_argument('--compression', choices=['auto', 'none', 'gz', 'xz'], default='auto')
 parser.add_argument('-b', '--bootargs', type=str, metavar='"boot arguments"')
@@ -13,7 +13,7 @@ args = parser.parse_args()
 from setup import *
 
 if args.compression == 'auto':
-    suffix = args.payload[0].suffix
+    suffix = args.payload.suffix
     if suffix == '.gz':
         args.compression = 'gz'
     elif suffix == '.xz':
@@ -22,10 +22,10 @@ if args.compression == 'auto':
         raise ValueError('unknown compression for {}'.format(args.payload))
 
 
-payload = args.payload[0].read_bytes()
-dtb = args.dtb[0].read_bytes()
+payload = args.payload.read_bytes()
+dtb = args.dtb.read_bytes()
 if args.initramfs is not None:
-    initramfs = args.initramfs[0].read_bytes()
+    initramfs = args.initramfs.read_bytes()
     initramfs_size = len(initramfs)
 else:
     initramfs = None
