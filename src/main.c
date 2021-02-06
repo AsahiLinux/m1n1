@@ -6,6 +6,7 @@
 #include "fb.h"
 #include "heapblock.h"
 #include "memory.h"
+#include "payload.h"
 #include "smp.h"
 #include "string.h"
 #include "uart.h"
@@ -57,6 +58,12 @@ void m1n1_main(void)
 
     print_info();
     wdt_disable();
+
+    printf("Checking for payloads...\n");
+
+    payload_run();
+
+    printf("No valid payload found\n");
 
     printf("Running proxy...\n");
     uartproxy_run();
