@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MIT */
+
 #ifndef __PROXY_H__
 #define __PROXY_H__
 
