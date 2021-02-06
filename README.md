@@ -1,6 +1,45 @@
 # m1n1: an experimentation playground for Apple Silicon
 
-(And perhaps some day a Linux bootloader)
+(And to some extent a Linux bootloader)
+
+## Building
+
+You need an `aarch64-linux-gnu-gcc` cross-compiler toolchain (or a native one, if running on ARM64).
+You also need `dtc` (the devicetree compiler) and `convert` (from ImageMagick) for the boot logos.
+
+```shell
+$ git clone --recursive https://github.com/AsahiLinux/m1n1.git
+$ cd m1n1
+$ make
+```
+
+The output will be in build/m1n1.macho.
+
+To build on a native arm64 machine, use `make ARCH=`.
+
+## Usage
+
+Our [developer quickstart](https://github.com/AsahiLinux/docs/wiki/Developer-Quickstart#using-m1n1)
+guide has more information on how to use m1n1.
+
+## Payloads
+
+m1n1 supports running payloads by simple concatenation:
+
+```shell
+$ cat build/m1n1.macho Image.gz build/dtb/apple-j274.dtb initramfs.cpio.gz > m1n1-payload.macho
+```
+
+Supported payload file formats:
+
+* Kernel images (or compatible). Must be compressed or last payload.
+* Devicetree blobs (FDT). May be uncompressed or compressed.
+* Initramfs cpio images. Must be compressed.
+
+Supported compression formats:
+
+* gzip
+* xz
 
 ## License
 
