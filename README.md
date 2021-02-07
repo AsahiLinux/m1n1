@@ -17,6 +17,18 @@ The output will be in build/m1n1.macho.
 
 To build on a native arm64 machine, use `make ARCH=`.
 
+### Building using the container setup
+
+If you have a container runtime installed, like Podman or Docker, you can make use of the compose setup, which contains all build dependencies.
+
+```shell
+$ git clone --recursive https://github.com/AsahiLinux/m1n1.git
+$ cd m1n1
+$ podman-compose run m1n1 make
+$ # or
+$ docker-compose run m1n1 make
+```
+
 ## Usage
 
 Our [developer quickstart](https://github.com/AsahiLinux/docs/wiki/Developer-Quickstart#using-m1n1)
