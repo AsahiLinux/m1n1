@@ -1,0 +1,5 @@
+services:
+  m1n1:
+    build: .
+    volumes:
+      - .:/m1n1
