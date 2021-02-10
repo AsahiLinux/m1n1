@@ -1,59 +1,14 @@
-import serial, os, struct, sys, time
+import serial, os, struct, sys, time, json, os.path
 from proxy import *
 from tgtypes import *
 import malloc
 
-CurrentEL = 3,0,4,2,2
-DAIF = 3,3,4,2,1
+def load_registers():
+    data = json.load(open(os.path.join(os.path.dirname(__file__), "regs.json")))
+    for reg in data:
+        yield reg["name"], reg["enc"]
 
-DAIFSet = 0,3,4,2,6
-DAIFClr = 0,3,4,2,7
-
-TPIDR_EL0 = 3,3,13,0,2
-
-CNTFRQ_EL0 = 3,3,14,0,0
-CNTPCT_EL0 = 3,3,14,0,1
-
-CNTP_TVAL_EL0 = 3,3,14,2,0
-CNTP_CTL_EL0 = 3,3,14,2,1
-CNTP_CVAL_EL0 = 3,3,14,2,2
-
-CNTV_TVAL_EL0 = 3,3,14,3,0
-CNTV_CTL_EL0 = 3,3,14,3,1
-CNTV_CVAL_EL0 = 3,3,14,3,2
-
-CNTHP_TVAL_EL2 = 3,4,14,2,0
-CNTHP_CTL_EL2 = 3,4,14,2,1
-CNTHP_CVAL_EL2 = 3,4,14,2,2
-
-CNTHV_TVAL_EL2 = 3,4,14,3,0
-CNTHV_CTL_EL2 = 3,4,14,3,1
-CNTHV_CVAL_EL2 = 3,4,14,3,2
-
-CNTP_TVAL_EL02 = 3,5,14,2,0
-CNTP_CTL_EL02 = 3,5,14,2,1
-CNTP_CVAL_EL02 = 3,5,14,2,2
-
-CNTV_TVAL_EL02 = 3,5,14,3,0
-CNTV_CTL_EL02 = 3,5,14,3,1
-CNTV_CVAL_EL02 = 3,5,14,3,2
-
-SCTLR_EL1 = 3,0,1,0,0
-TTBR0_EL1 = 3,0,2,0,0
-TTBR0_EL2 = 3,4,2,0,0
-TCR_EL1 = 3,0,2,0,2
-TCR_EL2 = 3,4,2,0,2
-HCR_EL2 = 3,4,1,1,0
-
-MIDR_EL1 = 3,0,0,0,0
-MPIDR_EL1 = 3,0,0,0,5
-ID_AA64MMFR0_EL1 = 3,0,0,7,0
-ID_AA64MMFR1_EL1 = 3,0,0,7,1
-ID_AA64MMFR2_EL1 = 3,0,0,7,2
-
-OSLAR_EL1 = 2,0,1,0,4
-
-ACTLR_EL1 = 3,0,1,0,1
+globals().update(dict(load_registers()))
 
 class ProxyUtils(object):
     def __init__(self, p):
