@@ -116,14 +116,16 @@ void exc_sync(u64 *regs)
     u64 elr;
     u32 insn;
 
-    uart_puts("Exception: SYNC");
+    if (!(exc_guard & GUARD_SILENT))
+        uart_puts("Exception: SYNC");
 
     sysop("isb");
     sysop("dsb sy");
 
-    print_regs(regs);
+    if (!(exc_guard & GUARD_SILENT))
+        print_regs(regs);
 
-    switch (exc_guard) {
+    switch (exc_guard & GUARD_TYPE_MASK) {
         case GUARD_SKIP:
             elr = mrs(ELR_EL2) + 4;
             break;
@@ -145,7 +147,8 @@ void exc_sync(u64 *regs)
 
     exc_count++;
 
-    printf("Recovering from exception (ELR=0x%lx)\n", elr);
+    if (!(exc_guard & GUARD_SILENT))
+        printf("Recovering from exception (ELR=0x%lx)\n", elr);
     msr(ELR_EL2, elr);
 
     sysop("isb");
@@ -211,12 +214,14 @@ void exc_fiq(u64 *regs)
 
 void exc_serr(u64 *regs)
 {
-    printf("Exception: SError\n");
+    if (!(exc_guard & GUARD_SILENT))
+        printf("Exception: SError\n");
 
     sysop("isb");
     sysop("dsb sy");
 
-    print_regs(regs);
+    if (!(exc_guard & GUARD_SILENT))
+        print_regs(regs);
 
     //     reboot();
 }

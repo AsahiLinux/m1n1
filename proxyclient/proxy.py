@@ -266,6 +266,7 @@ class M1N1Proxy:
     GUARD_SKIP = 1
     GUARD_MARK = 2
     GUARD_RETURN = 3
+    GUARD_SILENT = 0x100
 
     P_WRITE64 = 0x100
     P_WRITE32 = 0x101
