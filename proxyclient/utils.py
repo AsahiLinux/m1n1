@@ -53,7 +53,13 @@ class ProxyUtils(object):
         self.proxy.dc_cvau(self.code_buffer, 8)
         self.proxy.ic_ivau(self.code_buffer, 8)
 
-        return self.proxy.call(self.code_buffer)
+        self.proxy.set_exc_guard(self.proxy.GUARD_MARK)
+        retval = self.proxy.call(self.code_buffer)
+        cnt = self.proxy.get_exc_count()
+        self.proxy.set_exc_guard(self.proxy.GUARD_OFF)
+        if cnt:
+            raise ProxyError("Exception occurred")
+        return retval
 
     def msr(self, reg, val):
         op0, op1, CRn, CRm, op2 = reg
@@ -67,7 +73,12 @@ class ProxyUtils(object):
         self.proxy.dc_cvau(self.code_buffer, 8)
         self.proxy.ic_ivau(self.code_buffer, 8)
 
+        self.proxy.set_exc_guard(self.proxy.GUARD_SKIP)
         self.proxy.call(self.code_buffer, val)
+        cnt = self.proxy.get_exc_count()
+        self.proxy.set_exc_guard(self.proxy.GUARD_OFF)
+        if cnt:
+            raise ProxyError("Exception occurred")
 
     def inst(self, op):
         func = struct.pack("<II", op, 0xd65f03c0)
@@ -76,7 +87,12 @@ class ProxyUtils(object):
         self.proxy.dc_cvau(self.code_buffer, 8)
         self.proxy.ic_ivau(self.code_buffer, 8)
 
+        self.proxy.set_exc_guard(self.proxy.GUARD_SKIP)
         self.proxy.call(self.code_buffer)
+        cnt = self.proxy.get_exc_count()
+        self.proxy.set_exc_guard(self.proxy.GUARD_OFF)
+        if cnt:
+            raise ProxyError("Exception occurred")
 
 class RegMonitor(object):
     def __init__(self, utils):
