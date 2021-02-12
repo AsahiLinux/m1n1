@@ -102,3 +102,8 @@ the public domain ([CC0](3rdparty_licenses/LICENSE.CC0)).
 m1n1 embeds portions of [PDCLib](https://github.com/DevSolar/pdclib), which is in the public
 domain ([CC0](3rdparty_licenses/LICENSE.CC0)).
 
+m1n1 embeds the [Source Code Pro](https://github.com/adobe-fonts/source-code-pro) font, which is
+licensed under the [OFL-1.1](3rdparty_licenses/LICENSE.OFL-1.1) license and copyright:
+
+* Copyright 2010-2019 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.
+* This Font Software is licensed under the SIL Open Font License, Version 1.1.
