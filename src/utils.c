@@ -2,9 +2,9 @@
 
 #include <stdarg.h>
 
-#include "utils.h"
 #include "types.h"
 #include "uart.h"
+#include "utils.h"
 #include "vsprintf.h"
 
 static char ascii(char s)
