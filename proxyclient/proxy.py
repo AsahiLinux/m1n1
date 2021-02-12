@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import os, sys, struct
+from serial.tools.miniterm import Miniterm
 
 def hexdump(s, sep=" "):
     return sep.join(["%02x"%x for x in s])
@@ -134,11 +135,30 @@ class UartInterface:
             sys.stdout.flush()
 
     def ttymode(self):
+        tout = self.dev.timeout
         self.tty_enable = True
         self.dev.timeout = None
-        while True:
-            sys.stdout.buffer.write(self.readfull(1))
-            sys.stdout.buffer.flush()
+
+        term = Miniterm(self.dev, eol='cr')
+        term.exit_character = chr(0x1d)  # GS/CTRL+]
+        term.menu_character = chr(0x14)  # Menu: CTRL+T
+        term.raw = True
+        term.set_rx_encoding('UTF-8')
+        term.set_tx_encoding('UTF-8')
+
+        print('--- TTY mode | Quit: CTRL+] | Menu: CTRL+T ---')
+        term.start()
+        try:
+            term.join(True)
+        except KeyboardInterrupt:
+            pass
+
+        print('--- Exit TTY mode ---')
+        term.join()
+        term.close()
+
+        self.dev.timeout = tout
+        self.tty_enable = False
 
     def reply(self, cmd):
         reply = b''
