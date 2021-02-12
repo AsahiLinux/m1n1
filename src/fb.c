@@ -14,6 +14,9 @@ static int logo_w, logo_h;
 extern char _binary_build_bootlogo_128_bin_start[0];
 extern char _binary_build_bootlogo_256_bin_start[0];
 
+extern u8 _binary_build_font_bin_start[];
+extern u8 _binary_build_font_retina_bin_start[];
+
 void fb_init(void)
 {
     fb = (void *)cur_boot_args.video.base;

@@ -35,7 +35,7 @@ LIBFDT_OBJECTS := $(patsubst %,libfdt/%, \
 	fdt_addresses.o fdt_empty_tree.o fdt_ro.o fdt_rw.o fdt_strerror.o fdt_sw.o \
 	fdt_wip.o fdt.o)
 
-OBJECTS := adt.o bootlogo_128.o bootlogo_256.o chickens.o dart.o exception.o exception_asm.o fb.o \
+OBJECTS := adt.o bootlogo_128.o bootlogo_256.o chickens.o dart.o exception.o exception_asm.o fb.o font.o font_retina.o \
 	heapblock.o kboot.o main.o memory.o memory_asm.o payload.o pmgr.o proxy.o ringbuffer.o smp.o start.o startup.o \
 	string.o uart.o uartproxy.o usb.o usb_dwc3.o utils.o utils_asm.o vsprintf.o wdt.o $(MINILZLIB_OBJECTS) \
 	$(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS)
@@ -98,6 +98,14 @@ build/%.bin: data/%.png
 build/%.o: build/%.bin
 	@echo "  BIN   $@"
 	@$(OBJCOPY) -I binary -B aarch64 -O elf64-littleaarch64 $< $@
+
+build/font.bin: font/SourceCodePro-Bold.ttf
+	@echo "  FONT  $@"
+	@font/makefont.sh 8 16 12 $< $@
+
+build/font_retina.bin: font/SourceCodePro-Bold.ttf
+	@echo "  FONT  $@"
+	@font/makefont.sh 16 32 12 $< $@
 
 build/main.o: build/build_tag.h src/main.c
 
