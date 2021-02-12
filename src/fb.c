@@ -27,13 +27,20 @@ static struct {
 } logo;
 
 static struct {
+    u32 initialized;
     console_pos_t cursor;
     u32 row_offset;
     u8 text[CONSOLE_MAX_ROWS][CONSOLE_MAX_COLS];
-} console = {.cursor = {.row = 0, .col = 0}, .row_offset = 0, .text = {{0}}};
+} console = {.initialized = 0, .cursor = {.row = 0, .col = 0}, .row_offset = 0, .text = {{0}}};
 
 extern u8 _binary_build_bootlogo_128_bin_start[];
 extern u8 _binary_build_bootlogo_256_bin_start[];
+
+extern u8 _binary_build_font_bin_start[];
+
+static const rgb_t color_black = {.r = 0, .g = 0, .b = 0};
+
+static void fb_console_blit_all(void);
 
 void fb_init(void)
 {
@@ -51,6 +58,9 @@ void fb_init(void)
         logo.ptr = (void *)_binary_build_bootlogo_128_bin_start;
         logo.width = logo.height = 128;
     }
+
+    console.initialized = 1;
+    fb_console_blit_all();
 }
 
 static void fb_set_pixel(u32 x, u32 y, rgb_t c)
@@ -63,9 +73,31 @@ static u32 fb_console_get_row(u32 row)
     return (row + console.row_offset) % CONSOLE_MAX_ROWS;
 }
 
+static rgb_t font_get_pixel(u8 c, u32 x, u32 y)
+{
+    c -= 0x20;
+    u8 *ptr = &_binary_build_font_bin_start[c * 512 + (y * 8 + x) * 4];
+
+    rgb_t col = {.r = *ptr++, .g = *ptr++, .b = *ptr++};
+    return col;
+}
+
 static void fb_console_blit_char(console_pos_t pos)
 {
-    UNUSED(pos);
+    u32 x = 30 + pos.col * 8;
+    u32 y = 50 + pos.row * 16;
+    u8 c = console.text[fb_console_get_row(pos.row)][pos.col];
+
+    if (!console.initialized)
+        return;
+
+    if (c == '\0') {
+        fb_fill(x, y, 8, 16, color_black);
+    } else {
+        for (int i = 0; i < 16; i++)
+            for (int j = 0; j < 8; j++)
+                fb_set_pixel(x + j, y + i, font_get_pixel(c, j, i));
+    }
 }
 
 static void fb_console_blit_row(u32 row)
