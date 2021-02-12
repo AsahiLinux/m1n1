@@ -41,7 +41,7 @@ OBJECTS := \
 	chickens.o \
 	dart.o \
 	exception.o exception_asm.o \
-	fb.o \
+	fb.o font.o font_retina.o \
 	heapblock.o \
 	kboot.o \
 	main.o \
@@ -121,6 +121,10 @@ build/%.bin: data/%.png
 build/%.o: build/%.bin
 	@echo "  BIN   $@"
 	@$(OBJCOPY) -I binary -B aarch64 -O elf64-littleaarch64 $< $@
+
+build/%.bin: font/%.bin
+	@echo "  CP    $@"
+	@cp $< $@
 
 build/main.o: build/build_tag.h src/main.c
 
