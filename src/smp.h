@@ -23,4 +23,6 @@ u64 smp_wait(int cpu);
 int smp_get_mpidr(int cpu);
 u64 smp_get_release_addr(int cpu);
 
+int smp_is_primary(void);
+
 #endif

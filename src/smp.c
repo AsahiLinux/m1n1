@@ -197,3 +197,8 @@ u64 smp_get_release_addr(int cpu)
     target->args[3] = 0;
     return (u64)&target->target;
 }
+
+int smp_is_primary(void)
+{
+    return mrs(MPIDR_EL1) == 0x80000000;
+}
