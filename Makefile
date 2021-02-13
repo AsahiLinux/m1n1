@@ -1,4 +1,4 @@
-ARCH := aarch64-linux-gnu-
+ARCH ?= aarch64-linux-gnu-
 
 CFLAGS := -O2 -Wall -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-Werror=implicit-function-declaration -Werror=implicit-int \
