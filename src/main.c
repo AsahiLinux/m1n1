@@ -54,6 +54,7 @@ void m1n1_main(void)
 #ifdef SHOW_LOGO
     fb_init();
     fb_display_logo();
+    fb_console_init();
 #endif
 
     print_info();

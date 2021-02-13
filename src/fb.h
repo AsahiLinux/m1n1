@@ -29,5 +29,6 @@ void fb_display_logo(void);
 
 void fb_console_putc(u8 c);
 void fb_console_write(const void *buf, size_t count);
+void fb_console_init(void);
 
 #endif

@@ -12,7 +12,12 @@
 #define FB_DEPTH_MASK        0xff
 
 #define CONSOLE_MAX_ROWS 60
-#define CONSOLE_MAX_COLS 80
+#define CONSOLE_MAX_COLS 240
+
+#define CONSOLE_MARGIN_LEFT   30
+#define CONSOLE_MARGIN_RIGHT  30
+#define CONSOLE_MARGIN_TOP    50
+#define CONSOLE_MARGIN_BOTTOM 50
 
 fb_t fb;
 
@@ -25,14 +30,28 @@ static struct {
     u32 *ptr;
     u32 width;
     u32 height;
-} logo;
+    u32 x;
+    u32 y;
+
+    u32 enabled;
+} logo = {.enabled = 0};
 
 static struct {
     u32 initialized;
+
     console_pos_t cursor;
+
+    u32 n_rows;
+    u32 n_cols;
     u32 row_offset;
+
     u8 text[CONSOLE_MAX_ROWS][CONSOLE_MAX_COLS];
-} console = {.initialized = 0, .cursor = {.row = 0, .col = 0}, .row_offset = 0, .text = {{0}}};
+} console = {.initialized = 0,
+             .cursor = {.row = 0, .col = 0},
+             .n_rows = CONSOLE_MAX_ROWS,
+             .n_cols = CONSOLE_MAX_COLS,
+             .row_offset = 0,
+             .text = {{0}}};
 
 extern u8 _binary_build_bootlogo_128_bin_start[];
 extern u8 _binary_build_bootlogo_256_bin_start[];
@@ -40,8 +59,6 @@ extern u8 _binary_build_bootlogo_256_bin_start[];
 extern u8 _binary_build_font_bin_start[];
 
 static const rgb_t color_black = {.r = 0, .g = 0, .b = 0};
-
-static void fb_console_blit_all(void);
 
 void fb_init(void)
 {
@@ -60,8 +77,8 @@ void fb_init(void)
         logo.width = logo.height = 128;
     }
 
-    console.initialized = 1;
-    fb_console_blit_all();
+    logo.x = (fb.width - logo.width) / 2;
+    logo.y = (fb.height - logo.height) / 2;
 }
 
 static void fb_set_pixel(u32 x, u32 y, rgb_t c)
@@ -71,7 +88,7 @@ static void fb_set_pixel(u32 x, u32 y, rgb_t c)
 
 static u32 fb_console_get_row(u32 row)
 {
-    return (row + console.row_offset) % CONSOLE_MAX_ROWS;
+    return (row + console.row_offset) % console.n_rows;
 }
 
 static rgb_t font_get_pixel(u8 c, u32 x, u32 y)
@@ -85,12 +102,15 @@ static rgb_t font_get_pixel(u8 c, u32 x, u32 y)
 
 static void fb_console_blit_char(console_pos_t pos)
 {
-    u32 x = 30 + pos.col * 8;
-    u32 y = 50 + pos.row * 16;
+    u32 x = CONSOLE_MARGIN_LEFT + pos.col * 8;
+    u32 y = CONSOLE_MARGIN_TOP + pos.row * 16;
     u8 c = console.text[fb_console_get_row(pos.row)][pos.col];
 
     if (!console.initialized)
         return;
+
+    if (logo.enabled && x >= logo.x && y >= logo.y && y <= (logo.y + logo.height))
+        x += logo.width;
 
     if (c == '\0') {
         fb_fill(x, y, 8, 16, color_black);
@@ -105,7 +125,7 @@ static void fb_console_blit_row(u32 row)
 {
     console_pos_t pos = {.row = row, .col = 0};
 
-    while (pos.col < CONSOLE_MAX_COLS) {
+    while (pos.col < console.n_cols) {
         fb_console_blit_char(pos);
         pos.col++;
     }
@@ -113,13 +133,13 @@ static void fb_console_blit_row(u32 row)
 
 static void fb_console_blit_all(void)
 {
-    for (u32 row = 0; row < CONSOLE_MAX_ROWS; ++row)
+    for (u32 row = 0; row < console.n_rows; ++row)
         fb_console_blit_row(row);
 }
 
 static void fb_console_putbyte(u8 c)
 {
-    if (console.cursor.col >= CONSOLE_MAX_COLS)
+    if (console.cursor.col >= console.n_cols)
         return;
 
     console.text[fb_console_get_row(console.cursor.row)][console.cursor.col] = c;
@@ -130,14 +150,14 @@ static void fb_console_putbyte(u8 c)
 
 static void fb_check_scroll(void)
 {
-    if (console.cursor.row < CONSOLE_MAX_ROWS)
+    if (console.cursor.row < console.n_rows)
         return;
 
     memset(console.text[fb_console_get_row(0)], 0, CONSOLE_MAX_COLS);
-    console.row_offset = (console.row_offset + 1) % CONSOLE_MAX_ROWS;
+    console.row_offset = (console.row_offset + 1) % console.n_rows;
     console.cursor.row--;
 
-    assert(console.cursor.row < CONSOLE_MAX_ROWS);
+    assert(console.cursor.row < console.n_rows);
 
     fb_console_blit_all();
 }
@@ -169,6 +189,43 @@ void fb_console_write(const void *buf, size_t count)
         fb_console_putc(*p++);
 }
 
+void fb_console_init(void)
+{
+    console.n_rows =
+        min(CONSOLE_MAX_ROWS, (fb.height - CONSOLE_MARGIN_TOP - CONSOLE_MARGIN_BOTTOM) / 16);
+    console.n_cols = min(CONSOLE_MAX_COLS,
+                         (fb.width - CONSOLE_MARGIN_LEFT - CONSOLE_MARGIN_RIGHT - logo.width) / 8);
+
+    if (console.row_offset > 0) {
+        /*
+         * TODO: handle this case better if we ever print more than CONSOLE_MAX_ROWS before calling
+         * fb_console_init
+         */
+        printf("fb console: printed more than %d rows before init, discarding early console.\n",
+               CONSOLE_MAX_ROWS);
+        memset(console.text, 0, sizeof(console.text));
+        console.cursor.col = 0;
+        console.cursor.row = 0;
+    }
+
+    /*
+     * this size of our console may have shrunk and we'll need to throw away some early rows
+     * and copy later ones to the start.
+     * we can't use fb_check_scroll() here because we will need to copy rows that are already
+     * larger than console.n_rows.
+     */
+    if (console.cursor.row > console.n_rows) {
+        u32 row_offset = console.cursor.row - console.n_rows;
+        for (u32 row = 0; row < console.n_rows; ++row)
+            memcpy(console.text[row], console.text[row + row_offset], CONSOLE_MAX_COLS);
+        console.cursor.row = console.n_rows;
+    }
+    fb_check_scroll();
+
+    console.initialized = 1;
+    fb_console_blit_all();
+}
+
 void fb_blit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride)
 {
     u8 *p = data;
@@ -193,6 +250,6 @@ void fb_fill(u32 x, u32 y, u32 w, u32 h, rgb_t color)
 void fb_display_logo(void)
 {
     printf("fb: display logo\n");
-    fb_blit((fb.width - logo.width) / 2, (fb.height - logo.height) / 2, logo.width, logo.height,
-            logo.ptr, logo.width);
+    fb_blit(logo.x, logo.y, logo.width, logo.height, logo.ptr, logo.width);
+    logo.enabled = 1;
 }

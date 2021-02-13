@@ -7,6 +7,8 @@
 
 #define printf debug_printf
 
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+
 static inline u64 read64(u64 addr)
 {
     u64 data;
