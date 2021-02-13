@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 class Heap(object):
     def __init__(self, start, end, block=64):
         if start%block:
@@ -83,3 +85,11 @@ class Heap(object):
         print("Heap stats:")
         print(" In use: %8dkB"%(inuse * self.block // 1024))
         print(" Free:   %8dkB"%(free * self.block // 1024))
+
+    @contextmanager
+    def guarded_malloc(self, size):
+        addr = self.malloc(size)
+        try:
+            yield addr
+        finally:
+            self.free(addr)

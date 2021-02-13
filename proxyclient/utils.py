@@ -1,4 +1,4 @@
-import serial, os, struct, sys, time, json, os.path
+import serial, os, struct, sys, time, json, os.path, lzma
 from proxy import *
 from tgtypes import *
 import malloc
@@ -94,6 +94,19 @@ class ProxyUtils(object):
         if cnt:
             raise ProxyError("Exception occurred")
         return ret
+
+    def compressed_writemem(self, dest, data, progress):
+        if not len(data):
+            return
+
+        payload = lzma.compress(data)
+        compressed_size = len(payload)
+
+        with self.heap.guarded_malloc(compressed_size) as compressed_addr:
+            self.iface.writemem(compressed_addr, payload, progress)
+            decompressed_size = self.proxy.xzdec(compressed_addr, compressed_size, dest, len(data))
+
+            assert decompressed_size == len(data)
 
 class RegMonitor(object):
     def __init__(self, utils):
