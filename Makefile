@@ -23,7 +23,7 @@ LIBFDT_OBJECTS := $(patsubst %,libfdt/%, \
 	fdt_wip.o fdt.o)
 
 OBJECTS := adt.o bootlogo_128.o bootlogo_256.o chickens.o exception.o exception_asm.o fb.o font.o \
-	heapblock.o kboot.o main.o memory.o memory_asm.o payload.o proxy.o smp.o start.o startup.o \
+	font_retina.o heapblock.o kboot.o main.o memory.o memory_asm.o payload.o proxy.o smp.o start.o startup.o \
 	string.o uart.o uartproxy.o utils.o utils_asm.o vsprintf.o wdt.o $(MINILZLIB_OBJECTS) \
 	$(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS)
 
@@ -95,7 +95,11 @@ build/%.o: build/%.bin
 
 build/font.bin: font/SourceCodePro-Bold.ttf
 	@echo "  FONT  $@"
-	@font/makefont.sh $< $@
+	@font/makefont.sh 8 16 12 $< $@
+
+build/font_retina.bin: font/SourceCodePro-Bold.ttf
+	@echo "  FONT  $@"
+	@font/makefont.sh 16 32 12 $< $@
 
 build/main.o: build/build_tag.h src/main.c
 

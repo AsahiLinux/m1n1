@@ -39,6 +39,12 @@ static struct {
 static struct {
     u32 initialized;
 
+    struct {
+        u8 *ptr;
+        u32 width;
+        u32 height;
+    } font;
+
     console_pos_t cursor;
 
     u32 n_rows;
@@ -57,6 +63,7 @@ extern u8 _binary_build_bootlogo_128_bin_start[];
 extern u8 _binary_build_bootlogo_256_bin_start[];
 
 extern u8 _binary_build_font_bin_start[];
+extern u8 _binary_build_font_retina_bin_start[];
 
 static const rgb_t color_black = {.r = 0, .g = 0, .b = 0};
 
@@ -94,7 +101,8 @@ static u32 fb_console_get_row(u32 row)
 static rgb_t font_get_pixel(u8 c, u32 x, u32 y)
 {
     c -= 0x20;
-    u8 *ptr = &_binary_build_font_bin_start[c * 512 + (y * 8 + x) * 4];
+    u8 *ptr = &console.font.ptr[c * (console.font.width * console.font.height * 4) +
+                                (y * console.font.width + x) * 4];
 
     rgb_t col = {.r = *ptr++, .g = *ptr++, .b = *ptr++};
     return col;
@@ -102,8 +110,8 @@ static rgb_t font_get_pixel(u8 c, u32 x, u32 y)
 
 static void fb_console_blit_char(console_pos_t pos)
 {
-    u32 x = CONSOLE_MARGIN_LEFT + pos.col * 8;
-    u32 y = CONSOLE_MARGIN_TOP + pos.row * 16;
+    u32 x = CONSOLE_MARGIN_LEFT + pos.col * console.font.width;
+    u32 y = CONSOLE_MARGIN_TOP + pos.row * console.font.height;
     u8 c = console.text[fb_console_get_row(pos.row)][pos.col];
 
     if (!console.initialized)
@@ -113,10 +121,10 @@ static void fb_console_blit_char(console_pos_t pos)
         x += logo.width;
 
     if (c == '\0') {
-        fb_fill(x, y, 8, 16, color_black);
+        fb_fill(x, y, console.font.width, console.font.height, color_black);
     } else {
-        for (int i = 0; i < 16; i++)
-            for (int j = 0; j < 8; j++)
+        for (u32 i = 0; i < console.font.height; i++)
+            for (u32 j = 0; j < console.font.width; j++)
                 fb_set_pixel(x + j, y + i, font_get_pixel(c, j, i));
     }
 }
@@ -191,10 +199,22 @@ void fb_console_write(const void *buf, size_t count)
 
 void fb_console_init(void)
 {
+    if (cur_boot_args.video.depth & FB_DEPTH_FLAG_RETINA) {
+        console.font.ptr = _binary_build_font_retina_bin_start;
+        console.font.width = 16;
+        console.font.height = 32;
+    } else {
+        console.font.ptr = _binary_build_font_bin_start;
+        console.font.width = 8;
+        console.font.height = 16;
+    }
+
     console.n_rows =
-        min(CONSOLE_MAX_ROWS, (fb.height - CONSOLE_MARGIN_TOP - CONSOLE_MARGIN_BOTTOM) / 16);
-    console.n_cols = min(CONSOLE_MAX_COLS,
-                         (fb.width - CONSOLE_MARGIN_LEFT - CONSOLE_MARGIN_RIGHT - logo.width) / 8);
+        min(CONSOLE_MAX_ROWS,
+            (fb.height - CONSOLE_MARGIN_TOP - CONSOLE_MARGIN_BOTTOM) / console.font.height);
+    console.n_cols =
+        min(CONSOLE_MAX_COLS, (fb.width - CONSOLE_MARGIN_LEFT - CONSOLE_MARGIN_RIGHT - logo.width) /
+                                  console.font.width);
 
     if (console.row_offset > 0) {
         /*

@@ -1,6 +1,9 @@
 #!/bin/bash
-fontfile=$1
-outfile=$2
+width=$1
+height=$2
+size=$3
+fontfile=$4
+outfile=$5
 
 echo -n "" > $outfile
 
@@ -9,10 +12,10 @@ do
 	printf "\x$(printf %x $ord)" | convert \
 		-background black \
 		-fill white \
-		-resize 8x16\! \
+		-resize ${width}x${height}\! \
 		-antialias \
 		-font $fontfile \
-		-pointsize 12 \
+		-pointsize $size \
 		-define quantum:format=unsigned \
 		-depth 8 \
 		label:\@- \
