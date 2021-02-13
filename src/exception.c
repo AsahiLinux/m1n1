@@ -92,22 +92,22 @@ void print_regs(u64 *regs)
     const char *ec_desc = ec_table[(mrs(ESR_EL2) >> 26) & 0x3f];
     printf("ESR_EL2:  0x%lx (%s)\n", mrs(ESR_EL2), ec_desc ? ec_desc : "unknown");
 
-    u64 l2c_err_sts = mrs(SYS_L2C_ERR_STS);
+    u64 l2c_err_sts = mrs(SYS_APL_L2C_ERR_STS);
 
     printf("L2C_ERR_STS: 0x%lx\n", l2c_err_sts);
-    printf("L2C_ERR_ADR: 0x%lx\n", mrs(SYS_L2C_ERR_ADR));
-    printf("L2C_ERR_INF: 0x%lx\n", mrs(SYS_L2C_ERR_INF));
+    printf("L2C_ERR_ADR: 0x%lx\n", mrs(SYS_APL_L2C_ERR_ADR));
+    printf("L2C_ERR_INF: 0x%lx\n", mrs(SYS_APL_L2C_ERR_INF));
 
-    msr(SYS_L2C_ERR_STS, l2c_err_sts); // Clear the flag bits
+    msr(SYS_APL_L2C_ERR_STS, l2c_err_sts); // Clear the flag bits
 
     if (is_ecore()) {
-        printf("SYS_E_LSU_ERR_STS: 0x%lx\n", mrs(SYS_E_LSU_ERR_STS));
-        printf("SYS_E_FED_ERR_STS: 0x%lx\n", mrs(SYS_E_FED_ERR_STS));
-        printf("SYS_E_MMU_ERR_STS: 0x%lx\n", mrs(SYS_E_MMU_ERR_STS));
+        printf("SYS_APL_E_LSU_ERR_STS: 0x%lx\n", mrs(SYS_APL_E_LSU_ERR_STS));
+        printf("SYS_APL_E_FED_ERR_STS: 0x%lx\n", mrs(SYS_APL_E_FED_ERR_STS));
+        printf("SYS_APL_E_MMU_ERR_STS: 0x%lx\n", mrs(SYS_APL_E_MMU_ERR_STS));
     } else {
-        printf("SYS_LSU_ERR_STS: 0x%lx\n", mrs(SYS_LSU_ERR_STS));
-        printf("SYS_FED_ERR_STS: 0x%lx\n", mrs(SYS_FED_ERR_STS));
-        printf("SYS_MMU_ERR_STS: 0x%lx\n", mrs(SYS_MMU_ERR_STS));
+        printf("SYS_APL_LSU_ERR_STS: 0x%lx\n", mrs(SYS_APL_LSU_ERR_STS));
+        printf("SYS_APL_FED_ERR_STS: 0x%lx\n", mrs(SYS_APL_FED_ERR_STS));
+        printf("SYS_APL_MMU_ERR_STS: 0x%lx\n", mrs(SYS_APL_MMU_ERR_STS));
     }
 }
 
