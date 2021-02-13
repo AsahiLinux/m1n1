@@ -27,4 +27,7 @@ void fb_fill(u32 x, u32 y, u32 w, u32 h, rgb_t color);
 
 void fb_display_logo(void);
 
+void fb_console_putc(u8 c);
+void fb_console_write(const void *buf, size_t count);
+
 #endif

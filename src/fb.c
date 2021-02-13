@@ -10,13 +10,27 @@
 #define FB_DEPTH_FLAG_RETINA 0x10000
 #define FB_DEPTH_MASK        0xff
 
+#define CONSOLE_MAX_ROWS 60
+#define CONSOLE_MAX_COLS 80
+
 fb_t fb;
+
+typedef struct {
+    u32 row;
+    u32 col;
+} console_pos_t;
 
 static struct {
     u32 *ptr;
     u32 width;
     u32 height;
 } logo;
+
+static struct {
+    console_pos_t cursor;
+    u32 row_offset;
+    u8 text[CONSOLE_MAX_ROWS][CONSOLE_MAX_COLS];
+} console = {.cursor = {.row = 0, .col = 0}, .row_offset = 0, .text = {{0}}};
 
 extern u8 _binary_build_bootlogo_128_bin_start[];
 extern u8 _binary_build_bootlogo_256_bin_start[];
@@ -42,6 +56,81 @@ void fb_init(void)
 static void fb_set_pixel(u32 x, u32 y, rgb_t c)
 {
     fb.ptr[x + y * fb.stride] = (c.b << 2) | (c.g << 12) | (c.r << 22);
+}
+
+static u32 fb_console_get_row(u32 row)
+{
+    return (row + console.row_offset) % CONSOLE_MAX_ROWS;
+}
+
+static void fb_console_blit_char(console_pos_t pos)
+{
+    UNUSED(pos);
+}
+
+static void fb_console_blit_row(u32 row)
+{
+    console_pos_t pos = {.row = row, .col = 0};
+
+    while (pos.col < CONSOLE_MAX_COLS) {
+        fb_console_blit_char(pos);
+        pos.col++;
+    }
+}
+
+static void fb_console_blit_all(void)
+{
+    for (u32 row = 0; row < CONSOLE_MAX_ROWS; ++row)
+        fb_console_blit_row(row);
+}
+
+static void fb_console_putbyte(u8 c)
+{
+    if (console.cursor.col >= CONSOLE_MAX_COLS)
+        return;
+
+    console.text[fb_console_get_row(console.cursor.row)][console.cursor.col] = c;
+    fb_console_blit_char(console.cursor);
+
+    console.cursor.col++;
+}
+
+static void fb_check_scroll(void)
+{
+    if (console.cursor.row < CONSOLE_MAX_ROWS)
+        return;
+
+    memset(console.text[fb_console_get_row(0)], 0, CONSOLE_MAX_COLS);
+    console.row_offset = (console.row_offset + 1) % CONSOLE_MAX_ROWS;
+    console.cursor.row--;
+
+    assert(console.cursor.row < CONSOLE_MAX_ROWS);
+
+    fb_console_blit_all();
+}
+
+void fb_console_putc(u8 c)
+{
+    if (c == '\n') {
+        console.cursor.row++;
+        console.cursor.col = 0;
+    } else if (c == '\r') {
+        console.cursor.col = 0;
+    } else if (c >= 0x20 && c <= 0x7e) {
+        fb_console_putbyte(c);
+    } else {
+        fb_console_putbyte('?');
+    }
+
+    fb_check_scroll();
+}
+
+void fb_console_write(const void *buf, size_t count)
+{
+    const u8 *p = buf;
+
+    while (count--)
+        fb_console_putc(*p++);
 }
 
 void fb_blit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride)
