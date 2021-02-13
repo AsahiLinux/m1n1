@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "fb.h"
+#include "smp.h"
 #include "string.h"
 #include "utils.h"
 #include "xnuboot.h"
@@ -143,6 +144,9 @@ static void fb_check_scroll(void)
 
 void fb_console_putc(u8 c)
 {
+    if (!smp_is_primary())
+        return;
+
     if (c == '\n') {
         console.cursor.row++;
         console.cursor.col = 0;
