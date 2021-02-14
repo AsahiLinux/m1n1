@@ -39,7 +39,7 @@ for cmd in obj.cmds:
         end = min(len(payload), cmd.args.fileoff + cmd.args.filesize)
         size = end - cmd.args.fileoff
         print("Loading %d bytes from 0x%x to 0x%x" % (size, cmd.args.fileoff, dest))
-        iface.writemem(dest, payload[cmd.args.fileoff:end], True)
+        u.compressed_writemem(dest, payload[cmd.args.fileoff:end], True)
         if cmd.args.vmsize > size:
             clearsize = cmd.args.vmsize - size
             print("Zeroing %d bytes from 0x%x to 0x%x" % (clearsize, dest + size, dest + size + clearsize))
