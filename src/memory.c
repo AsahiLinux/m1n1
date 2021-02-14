@@ -295,7 +295,7 @@ static void mmu_configure(void)
 
     // Armv8-A Address Translation, 100940_0101_en, page 28
     sysop("dsb ishst");
-    sysop("tlbi vmalls12e1is");
+    sysop("tlbi alle2");
     sysop("dsb ish");
     sysop("isb");
 }
