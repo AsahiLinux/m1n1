@@ -269,17 +269,27 @@ static void mmu_add_mapping(uintptr_t from, uintptr_t to, size_t size, u8 attrib
 static void mmu_add_default_mappings(void)
 {
     /*
-     * create MMIO mapping as both nGnRnE (identity) and nGnRE (starting at
-     * 0xf0_0000_0000)
+     * create MMIO mappings. PCIe has to be mapped as nGnRE while MMIO needs nGnRnE.
+     * see https://lore.kernel.org/linux-arm-kernel/c1bc2a087747c4d9@bloch.sibelius.xs4all.nl/
      */
-    mmu_add_mapping(0x0000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW);
-    mmu_add_mapping(0xf000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW);
+    mmu_add_mapping(0x0200000000, 0x0200000000, 0x0200000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW);
+    mmu_add_mapping(0x0400000000, 0x0400000000, 0x0100000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW);
+    mmu_add_mapping(0x0500000000, 0x0500000000, 0x0080000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW);
+    mmu_add_mapping(0x0580000000, 0x0580000000, 0x0100000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW);
+    mmu_add_mapping(0x0680000000, 0x0680000000, 0x0020000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW);
+    mmu_add_mapping(0x06a0000000, 0x06a0000000, 0x0060000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW);
 
     /*
      * create identity mapping for 16GB RAM from 0x08_0000_0000 to
      * 0x0c_0000_0000
      */
     mmu_add_mapping(0x0800000000, 0x0800000000, 0x0400000000, MAIR_INDEX_NORMAL, PERM_RWX);
+
+    /*
+     * create two seperate nGnRnE and nGnRE full mappings of MMIO space
+     */
+    mmu_add_mapping(0xe000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW);
+    mmu_add_mapping(0xf000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW);
 }
 
 static void mmu_configure(void)
