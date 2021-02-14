@@ -181,9 +181,55 @@ void exc_irq(u64 *regs)
     // print_regs(regs);
 }
 
+#ifdef PMU_EXPERIMENTS
+static void pmu_fiq(void)
+{
+    u64 pmsr = mrs(SYS_APL_PMSR);
+
+#define WRAP_PMC(c)                                 \
+    if (pmsr & (1UL << c)) {                        \
+        uart_puts("  PMC " #c " overflow");         \
+        u64 pmc = mrs(SYS_APL_PMC ## c);            \
+        msr(SYS_APL_PMC ## c, pmc & ~(1UL << 47));  \
+    }
+
+    WRAP_PMC(0)
+    WRAP_PMC(1)
+    WRAP_PMC(2)
+    WRAP_PMC(3)
+    WRAP_PMC(4)
+    WRAP_PMC(5)
+    WRAP_PMC(6)
+    WRAP_PMC(7)
+    WRAP_PMC(8)
+    WRAP_PMC(9)
+}
+#endif
+
 void exc_fiq(u64 *regs)
 {
     uart_puts("Exception: FIQ");
+
+    u64 pmcr0 = mrs(SYS_APL_PMCR0);
+    if ((pmcr0 & (PMCR0_IMODE_MASK | PMCR0_IACT)) == (PMCR0_IMODE_FIQ | PMCR0_IACT)) {
+#ifndef PMU_EXPERIMENTS
+        uart_puts("  spurious PMU core IRQ, disabling");
+        msr(SYS_APL_PMCR0, pmcr0 & ~(PMCR0_IMODE_MASK | PMCR0_IACT));
+#else
+        uart_puts("  PMU core IRQ, masking");
+        pmu_fiq();
+        msr(SYS_APL_PMCR0, pmcr0 & ~PMCR0_IACT);
+#endif
+    }
+
+    if ((mrs(SYS_APL_UPMCR0) & UPMCR0_IMODE_MASK) == UPMCR0_IMODE_FIQ) {
+        u32 upmsr = mrs(SYS_APL_UPMSR);
+        if (upmsr & UPMSR_IACT) {
+            uart_puts("  spurios PMU uncore IRQ, disabling");
+            msr(SYS_APL_UPMSR, upmsr & ~UPMSR_IACT);
+            msr(SYS_APL_UPMCR0, mrs(SYS_APL_UPMCR0) & ~UPMCR0_IMODE_MASK);
+        }
+    }
 
     u32 timer_ctl = mrs(CNTP_CTL_EL0);
     if (timer_ctl == 0x5) {
