@@ -7,6 +7,9 @@ def load_registers():
     data = json.load(open(os.path.join(os.path.dirname(__file__), "regs.json")))
     for reg in data:
         yield reg["name"], reg["enc"]
+    data = json.load(open(os.path.join(os.path.dirname(__file__), "regs_apple.json")))
+    for reg in data:
+        yield reg["name"], reg["enc"]
 
 globals().update(dict(load_registers()))
 
