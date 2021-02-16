@@ -6,7 +6,7 @@ import struct
 total accessible MMIO space is from 0x0 to 0x4000
 everything after 0x0300 reads back as zeros
 
-NOTE: some of the registers or bits called "real-only" might still have some meaning
+NOTE: some of the registers or bits called "read-only" might still have some meaning
 and be flags (e.g. some bit i couldn't set might be a busy flag that was already cleared again 
 by the time i read the register the second time)
 
@@ -34,10 +34,10 @@ base
 0x5c: read-only, 0x0
 
 0x60:
-    can set 0x8001ffff bits.
-    initial value was 0x80016100.
-    setting all bits will break the translations (!)
-    bits can only be set but not cleared again
+    can set 0x8001ffff bits, initial value was 0x80016100.
+    setting 0x400 seems to kill the framebuffer
+    setting 0x8000 seems to locked down the DART for further configuration changes
+
 0x64: can set 0xfffffff, no effect observed
 0x68: starts at 0xf0f0f, can only clear/set these bits
 0x6c: can set 0xffffff, starts at 0x80808
@@ -49,6 +49,7 @@ base
 0x7c: can set 0x7070707, starts at 0x1010101, can clear all bits. no effect observed
 
 0x80: can set bits up to 0xf0f0f0f, starts at 0x03020100. changing the lowest byte breaks disp0
+    this seems to remap devices. if i copy the TCR and TBBRs from 0x100/0x200..20c to 0x104/0x210..21c and then set this to 0x03020101 everything still works
 0x84: can set bits up to 0xf0f0f0f, starts at 0x07060504
 0x88: can set bits up to 0xf0f0f0f, starts at 0x0b0a0908
 0x8c: can set bits up to 0xf0f0f0f, starts at 0x0f0e0d0c
@@ -70,12 +71,13 @@ base
 0xf8: stuck at 0
 0xfc: starts at 0x00007fff, can set 0x0000ffff with no effect, can clear all bits
         bit 0: enables/disables framebuffer. maybe enable/disable one device? would fir the 16 bits
-        rest seems to have no effect 
+        rest seems to have no effect
 
 
 from 0x100 to 0x140 there are 16 TCR registers 
     bits that can be set to 1: 0xff1bdf
     0x80 seems to be translation enabled
+    0x100 might be another mode or flag (maybe). seems to be used with all TBBRs = 0.
 
 
 from 0x200 to 0x300 there are 16x4 TTBR regsiters. bits that can be set: 0x8fffffff
