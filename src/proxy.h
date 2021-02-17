@@ -36,6 +36,10 @@ typedef enum {
     P_MASK32,
     P_MASK16,
     P_MASK8,
+    P_WRITEREAD64,
+    P_WRITEREAD32,
+    P_WRITEREAD16,
+    P_WRITEREAD8,
 
     P_MEMCPY64 = 0x200, // Memory block transfer functions
     P_MEMCPY32,
