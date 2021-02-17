@@ -352,6 +352,13 @@ class M1N1Proxy:
     P_KBOOT_SET_INITRD = 0x702
     P_KBOOT_PREPARE_DT = 0x703
 
+    P_DART_INIT = 0x800
+    P_DART_MAP = 0x801
+    P_DART_UNMAP = 0x802
+    P_DART_ENABLE_DEVICE = 0x803
+    P_DART_DISABLE_DEVICE = 0x804
+    P_DART_SHUTDOWN = 0x804
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
@@ -593,6 +600,20 @@ class M1N1Proxy:
         self.request(self.P_KBOOT_SET_INITRD, base, size)
     def kboot_prepare_dt(self, dt_addr):
         return self.request(self.P_KBOOT_PREPARE_DT, dt_addr)
+
+
+    def dart_init(self, base):
+        self.request(self.P_DART_INIT, base)
+    def dart_map(self, base, device, vaddr, paddr, len_):
+        self.request(self.P_DART_MAP, base, device, vaddr, paddr, len_)
+    def dart_unmap(self, base, device, vaddr, paddr, len_):
+        self.request(self.P_DART_UNMAP, base, device, vaddr, len_)
+    def dart_enable_device(self, base, device):
+        self.request(self.P_DART_ENABLE_DEVICE, base, device)
+    def dart_disable_device(self, base, device):
+        self.request(self.P_DART_DISABLE_DEVICE, base, device)
+    def dart_shutdown(self, base):
+        self.request(self.P_DART_SHUTDOWN, base, device)
 
 if __name__ == "__main__":
     import serial
