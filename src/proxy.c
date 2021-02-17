@@ -149,6 +149,23 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->retval = mask8(request->args[0], request->args[1], request->args[2]);
             break;
 
+        case P_WRITEREAD64:
+            exc_guard = GUARD_MARK;
+            reply->retval = writeread64(request->args[0], request->args[1]);
+            break;
+        case P_WRITEREAD32:
+            exc_guard = GUARD_MARK;
+            reply->retval = writeread32(request->args[0], request->args[1]);
+            break;
+        case P_WRITEREAD16:
+            exc_guard = GUARD_MARK;
+            reply->retval = writeread16(request->args[0], request->args[1]);
+            break;
+        case P_WRITEREAD8:
+            exc_guard = GUARD_MARK;
+            reply->retval = writeread8(request->args[0], request->args[1]);
+            break;
+
         case P_MEMCPY64:
             exc_guard = GUARD_RETURN;
             memcpy64((void *)request->args[0], (void *)request->args[1], request->args[2]);

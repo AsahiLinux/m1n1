@@ -308,6 +308,10 @@ class M1N1Proxy:
     P_MASK32 = 0x111
     P_MASK16 = 0x112
     P_MASK8 = 0x113
+    P_WRITEREAD64 = 0x114
+    P_WRITEREAD32 = 0x115
+    P_WRITEREAD16 = 0x116
+    P_WRITEREAD8 = 0x117
 
     P_MEMCPY64 = 0x200
     P_MEMCPY32 = 0x201
@@ -486,6 +490,15 @@ class M1N1Proxy:
         self.request(self.P_MASK16, addr, clear, set)
     def mask8(self, addr, clear, set):
         self.request(self.P_MASK8, addr, clear, set)
+
+    def writeread64(self, addr, data):
+        return self.request(self.P_WRITEREAD64, addr, data)
+    def writeread32(self, addr, data):
+        return self.request(self.P_WRITEREAD32, addr, data)
+    def writeread16(self, addr, data):
+        return self.request(self.P_WRITEREAD16, addr, data)
+    def writeread8(self, addr, data):
+        return self.request(self.P_WRITEREAD8, addr, data)
 
     def memcpy64(self, dst, src, size):
         if src & 7 or dst & 7:
