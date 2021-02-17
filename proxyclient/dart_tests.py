@@ -23,12 +23,15 @@ base
 0x38: can't set any bits
 0x3c: can't set any bits
 
-0x40: probably error status. writing to most bits clears them. seems to start at 0x3080000
+0x40: very likely error status. seems to start at 0x03080000
+    0x80000000 -> error flag; writing this bit clears the register
+    0x00000001 -> translation fault (?)
+
 0x44: read-only, 0x0100_0000, maybe another error status that i haven't triggered yet?
 0x48: read-only, 0x3000_0300, maybe another error status that i haven't triggered yet?
 0x4c: read-only, 0x0 or 0x1, but can't modify any bits
 
-0x50: read-only, seems to change on translation faults, maybe fault address?
+0x50: read-only, fault address
 0x54: read-only, 0x0
 0x58: read-only, 0x0
 0x5c: read-only, 0x0
@@ -36,23 +39,29 @@ base
 0x60:
     can set 0x8001ffff bits, initial value was 0x80016100.
     setting 0x400 seems to kill the framebuffer
-    setting 0x8000 seems to locked down the DART for further configuration changes
+    setting 0x8000 seems to lock down the DART for further configuration changes
 
 0x64: can set 0xfffffff, no effect observed
 0x68: starts at 0xf0f0f, can only clear/set these bits
 0x6c: can set 0xffffff, starts at 0x80808
 
 0x70: can set 0x3f3f3f3f, setting to zero breaks translation. maybe some kind of access/enable flags?
-    needs at least 0x00010000 for the framebuffer to work
+    needs at least 0x00010000 for the framebuffer to work.
+    not device specific (i.e. if i remap the framebuffer from 0x00 to 0x0f the same bit is still required here)
 0x74: stuck at zero
 0x78: stuck at zero
 0x7c: can set 0x7070707, starts at 0x1010101, can clear all bits. no effect observed
 
-0x80: can set bits up to 0xf0f0f0f, starts at 0x03020100. changing the lowest byte breaks disp0
-    this seems to remap devices. if i copy the TCR and TBBRs from 0x100/0x200..20c to 0x104/0x210..21c and then set this to 0x03020101 everything still works
-0x84: can set bits up to 0xf0f0f0f, starts at 0x07060504
-0x88: can set bits up to 0xf0f0f0f, starts at 0x0b0a0908
-0x8c: can set bits up to 0xf0f0f0f, starts at 0x0f0e0d0c
+0x80 - 0x90: the individual bytes here determine the device index mapping
+    initialized as 00010203 04050607 08090a0b0 c0d0e0f
+    valid values for each byte are 00...0f
+        0x80: can set bits up to 0xf0f0f0f, starts at 0x03020100
+            remaps devices: if i copy the TCR and TBBRs from 0x100/0x200..20c to
+                             0x104/0x210..21c and then set this to 0x03020101
+                             everything still works
+        0x84: can set bits up to 0xf0f0f0f, starts at 0x07060504
+        0x88: can set bits up to 0xf0f0f0f, starts at 0x0b0a0908
+        0x8c: can set bits up to 0xf0f0f0f, starts at 0x0f0e0d0c
 
 0x90 - 0x9c: stuck at 0
 0xa0 - 0xac: stuck at 0
@@ -69,9 +78,7 @@ base
 0xf0: starts as 0, can only set 0x00000001 with no visible effect
 0xf4: stuck at 0
 0xf8: stuck at 0
-0xfc: starts at 0x00007fff, can set 0x0000ffff with no effect, can clear all bits
-        bit 0: enables/disables framebuffer. maybe enable/disable one device? would fir the 16 bits
-        rest seems to have no effect
+0xfc: bit n = DART enabled for device n
 
 
 from 0x100 to 0x140 there are 16 TCR registers 
@@ -90,6 +97,13 @@ from 0x200 to 0x300 there are 16x4 TTBR regsiters. bits that can be set: 0x8ffff
 
     l2_pagetable_base is identical to l1_pagetable_base except that its entries now directly
     point to physical memory. the lowest two bits are set.
+
+    looks like an entry is considered active as soon 0b01 is set. no idea what 0b10 means - maybe access flags?
+    i can't seem to be able to directly map from l1 to physcial memory even when i create entries with 0b11.
+
+
+running clear32(0x231304000+0x100, 0x80); set32(0x231304000+0x100, 0x80); a few times seems to break translations
+with the only fix being to run it again. no idea what's going on.
 '''
 
 
@@ -102,22 +116,23 @@ class DART:
 
         for i in range(0, len(tbl)//8):
             pte = struct.unpack("<Q",tbl[i*8:i*8+8])[0]
-            if not (pte & 0b11):
+            if not (pte & 0b01):
+                #print("    page (%d): %08x ... %08x -> DISABLED" % (i, base + i*0x4000, base + (i+1)*0x4000))
                 continue
 
-            print("    page: %016x ... %016x -> %016x [%s]" % (base + i*0x4000, base + (i+1)*0x4000, pte&~0b11, bin(pte&0b11)))
-
+            print("    page (%d): %08x ... %08x -> %016x [%s]" % (i, base + i*0x4000, base + (i+1)*0x4000, pte&~0b11, bin(pte&0b11)))
 
     def dump_table(self, base, l1_addr):
         tbl = iface.readmem(l1_addr, 0x4000)
 
         for i in range(0, len(tbl)//8):
             pte = struct.unpack("<Q",tbl[i*8:i*8+8])[0]
-            if not (pte & 0b11):
+            if not (pte & 0b01):
+                print("  table (%d): %08x ... %08x -> DISABLED" % (i, base + i*0x2000000, base + (i+1)*0x2000000))
                 continue
 
-            print("  table: %016x ... %016x -> %016x [%s]" % (base + i*0x4000*0x4000, base + (i+1)*0x4000*0x4000, pte&~0b11, bin(pte&0b11)))
-            self.dump_table2(base + i*0x4000*0x4000, pte & ~0b11)
+            print("  table (%d): %08x ... %08x -> %016x [%s]" % (i, base + i*0x2000000, base + (i+1)*0x2000000, pte&~0b11, bin(pte&0b11)))
+            self.dump_table2(base + i*0x2000000, pte & ~0b11)
 
     def dump_ttbr(self, idx, ttbr):
         if not ttbr & (1<<31):
@@ -155,5 +170,3 @@ class DART:
 # note that there's another range just before this one
 disp0 = DART(0x231304000)
 disp0.dump_all()
-
-
