@@ -56,6 +56,12 @@ static inline u64 mask64(u64 addr, u64 clear, u64 set)
     return data;
 }
 
+static inline u64 writeread64(u64 addr, u64 data)
+{
+    write64(addr, data);
+    return read64(addr);
+}
+
 static inline u32 read32(u64 addr)
 {
     u32 data;
@@ -66,6 +72,12 @@ static inline u32 read32(u64 addr)
 static inline void write32(u64 addr, u32 data)
 {
     __asm__ volatile("str\t%w0, [%1]" : : "r"(data), "r"(addr) : "memory");
+}
+
+static inline u32 writeread32(u64 addr, u32 data)
+{
+    write32(addr, data);
+    return read32(addr);
 }
 
 static inline u32 set32(u64 addr, u32 set)
@@ -156,6 +168,12 @@ static inline u16 mask16(u64 addr, u16 clear, u16 set)
     return data;
 }
 
+static inline u16 writeread16(u64 addr, u16 data)
+{
+    write16(addr, data);
+    return read16(addr);
+}
+
 static inline u8 read8(u64 addr)
 {
     u32 data;
@@ -203,6 +221,12 @@ static inline u8 mask8(u64 addr, u8 clear, u8 set)
                      : "r"(addr), "r"(set), "r"(clear)
                      : "memory");
     return data;
+}
+
+static inline u8 writeread8(u64 addr, u8 data)
+{
+    write8(addr, data);
+    return read8(addr);
 }
 
 #define sys_reg(op0, op1, CRn, CRm, op2) s##op0##_##op1##_c##CRn##_c##CRm##_##op2
