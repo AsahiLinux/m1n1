@@ -3,6 +3,7 @@
 #include "../config.h"
 
 #include "adt.h"
+#include "dart.h"
 #include "fb.h"
 #include "heapblock.h"
 #include "memory.h"
