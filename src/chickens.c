@@ -5,10 +5,6 @@
 #include "uart.h"
 #include "utils.h"
 
-#define reg_clr(reg, bits)      msr(reg, mrs(reg) & ~(bits))
-#define reg_set(reg, bits)      msr(reg, mrs(reg) | bits)
-#define reg_mask(reg, clr, set) msr(reg, (mrs(reg) & ~(clr)) | set)
-
 /* Part IDs in MIDR_EL1 */
 #define MIDR_PART_M1_ICESTORM  34
 #define MIDR_PART_M1_FIRESTORM 35

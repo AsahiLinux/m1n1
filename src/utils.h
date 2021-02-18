@@ -246,6 +246,10 @@ static inline u8 writeread8(u64 addr, u8 data)
     })
 #define msr(reg, val) _msr(reg, val)
 
+#define reg_clr(reg, bits)      msr(reg, mrs(reg) & ~(bits))
+#define reg_set(reg, bits)      msr(reg, mrs(reg) | bits)
+#define reg_mask(reg, clr, set) msr(reg, (mrs(reg) & ~(clr)) | set)
+
 #define sysop(op) __asm__ volatile(op ::: "memory")
 
 #define cacheop(op, val) ({ __asm__ volatile(op ", %0" : : "r"(val) : "memory"); })
