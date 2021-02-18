@@ -7,6 +7,8 @@
 
 #define printf debug_printf
 
+#define BIT(x) (1L << (x))
+
 static inline u64 read64(u64 addr)
 {
     u64 data;
