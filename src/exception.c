@@ -185,27 +185,37 @@ void exc_fiq(u64 *regs)
 {
     uart_puts("Exception: FIQ");
 
-    u32 timer_ctl = mrs(CNTP_CTL_EL0);
-    if (timer_ctl == 0x5) {
+    u64 reg = mrs(CNTP_CTL_EL0);
+    if (reg == 0x5) {
         uart_puts("  PHYS timer IRQ, masking");
         msr(CNTP_CTL_EL0, 7L);
     }
 
-    timer_ctl = mrs(CNTV_CTL_EL0);
-    if (timer_ctl == 0x5) {
+    reg = mrs(CNTV_CTL_EL0);
+    if (reg == 0x5) {
         uart_puts("  VIRT timer IRQ, masking");
         msr(CNTV_CTL_EL0, 7L);
     }
 
-    timer_ctl = mrs(CNTP_CTL_EL02);
-    if (timer_ctl == 0x5) {
+    reg = mrs(CNTP_CTL_EL02);
+    if (reg == 0x5) {
         uart_puts("  PHYS EL02 timer IRQ, masking");
         msr(CNTP_CTL_EL02, 7L);
     }
-    timer_ctl = mrs(CNTV_CTL_EL02);
-    if (timer_ctl == 0x5) {
+    reg = mrs(CNTV_CTL_EL02);
+    if (reg == 0x5) {
         uart_puts("  VIRT EL02 timer IRQ, masking");
         msr(CNTV_CTL_EL02, 7L);
+    }
+    reg = mrs(SYS_APL_PMCR0);
+    if ((reg & (PMCR0_IMODE_MASK | PMCR0_IACT)) == (PMCR0_IMODE_FIQ | PMCR0_IACT)) {
+        uart_puts("  PMC IRQ, masking");
+        reg_clr(SYS_APL_PMCR0, PMCR0_IACT | PMCR0_IMODE_MASK);
+    }
+    reg = mrs(SYS_APL_UPMCR0);
+    if ((reg & UPMCR0_IMODE_MASK) == UPMCR0_IMODE_FIQ && (mrs(SYS_APL_UPMSR) & UPMSR_IACT)) {
+        uart_puts("  UPMC IRQ, masking");
+        reg_clr(SYS_APL_UPMCR0, UPMCR0_IMODE_MASK);
     }
 
     UNUSED(regs);

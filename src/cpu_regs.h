@@ -73,6 +73,15 @@
 #define SYS_APL_HID21                 sys_reg(3, 0, 15, 1, 3)
 #define HID21_ENABLE_LDREX_FILL_REPLY (1UL << 19)
 
+#define SYS_APL_PMCR0    sys_reg(3, 1, 15, 0, 0)
+#define PMCR0_IMODE_OFF  (0 << 8)
+#define PMCR0_IMODE_PMI  (1 << 8)
+#define PMCR0_IMODE_AIC  (2 << 8)
+#define PMCR0_IMODE_HALT (3 << 8)
+#define PMCR0_IMODE_FIQ  (4 << 8)
+#define PMCR0_IMODE_MASK (7 << 8)
+#define PMCR0_IACT       (BIT(11))
+
 #define SYS_APL_LSU_ERR_STS   sys_reg(3, 3, 15, 0, 0)
 #define SYS_APL_E_LSU_ERR_STS sys_reg(3, 3, 15, 2, 0)
 
@@ -103,3 +112,13 @@
 #define CYC_OVRD_IRQ_MODE_MASK (3UL << 22)
 #define CYC_OVRD_WFI_MODE(x)   (((unsigned long)x) << 24)
 #define CYC_OVRD_WFI_MODE_MASK (3UL << 20)
+
+#define SYS_APL_UPMCR0    sys_reg(3, 7, 15, 0, 4)
+#define UPMCR0_IMODE_OFF  (0 << 16)
+#define UPMCR0_IMODE_AIC  (2 << 16)
+#define UPMCR0_IMODE_HALT (3 << 16)
+#define UPMCR0_IMODE_FIQ  (4 << 16)
+#define UPMCR0_IMODE_MASK (7 << 16)
+
+#define SYS_APL_UPMSR sys_reg(3, 7, 15, 6, 4)
+#define UPMSR_IACT    (BIT(0))
