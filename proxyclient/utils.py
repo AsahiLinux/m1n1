@@ -80,7 +80,7 @@ class ProxyUtils(object):
         if cnt:
             raise ProxyError("Exception occurred")
 
-    def inst(self, op):
+    def inst(self, op, r0=0, r1=0, r2=0, r3=0):
         func = struct.pack("<II", op, 0xd65f03c0)
 
         self.iface.writemem(self.code_buffer, func)
@@ -88,11 +88,12 @@ class ProxyUtils(object):
         self.proxy.ic_ivau(self.code_buffer, 8)
 
         self.proxy.set_exc_guard(self.proxy.GUARD_SKIP)
-        self.proxy.call(self.code_buffer)
+        ret = self.proxy.call(self.code_buffer, r0, r1, r2, r3)
         cnt = self.proxy.get_exc_count()
         self.proxy.set_exc_guard(self.proxy.GUARD_OFF)
         if cnt:
             raise ProxyError("Exception occurred")
+        return ret
 
 class RegMonitor(object):
     def __init__(self, utils):
