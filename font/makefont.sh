@@ -4,20 +4,24 @@ height=$2
 size=$3
 fontfile=$4
 outfile=$5
+shift 5
 
-echo -n "" > $outfile
-
-for ord in `seq 32 126`
-do
-	printf "\x$(printf %x $ord)" | convert \
-		-background black \
-		-fill white \
-		-resize ${width}x${height}\! \
-		-antialias \
-		-font $fontfile \
-		-pointsize $size \
-		-define quantum:format=unsigned \
-		-depth 8 \
-		label:\@- \
-		rgba:- >> $outfile
+(
+for ord in $(seq 32 126); do
+    printf "\\x$(printf %x $ord)\\n"
 done
+) | convert \
+    -page ${width}x$((height*95)) \
+    -background black \
+    -fill white \
+    -antialias \
+    -font $fontfile \
+    -density 72 \
+    -gravity north \
+    -pointsize $size \
+    $* \
+    -define quantum:format=unsigned \
+    -depth 8 \
+    label:\@- \
+    -crop ${width}x$((height*95)) \
+    rgba:$outfile

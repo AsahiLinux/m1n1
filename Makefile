@@ -101,11 +101,11 @@ build/%.o: build/%.bin
 
 build/font.bin: font/SourceCodePro-Bold.ttf
 	@echo "  FONT  $@"
-	@font/makefont.sh 8 16 12 $< $@
+	@font/makefont.sh 8 16 13 $< $@ -interline-spacing -1
 
 build/font_retina.bin: font/SourceCodePro-Bold.ttf
 	@echo "  FONT  $@"
-	@font/makefont.sh 16 32 12 $< $@
+	@font/makefont.sh 16 32 26 $< $@ -interline-spacing -2
 
 build/main.o: build/build_tag.h src/main.c
 
