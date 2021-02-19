@@ -7,6 +7,7 @@
 #include "heapblock.h"
 #include "memory.h"
 #include "payload.h"
+#include "pmgr.h"
 #include "smp.h"
 #include "string.h"
 #include "uart.h"
@@ -58,6 +59,7 @@ void m1n1_main(void)
 
     print_info();
     wdt_disable();
+    pmgr_init();
 
     printf("Checking for payloads...\n");
 
