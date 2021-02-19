@@ -86,6 +86,8 @@ from 0x100 to 0x140 there are 16 TCR registers
     0x80 seems to be translation enabled
     0x100 might be another mode or flag (maybe). seems to be used with all TBBRs = 0.
 
+0x180 to 0x1a0 contains some kind of flags; one u32 for each of the 16 devices
+
 
 from 0x200 to 0x300 there are 16x4 TTBR regsiters. bits that can be set: 0x8fffffff
     bit 31 indicates an entry is valid
@@ -104,8 +106,45 @@ from 0x200 to 0x300 there are 16x4 TTBR regsiters. bits that can be set: 0x8ffff
 
 running clear32(0x231304000+0x100, 0x80); set32(0x231304000+0x100, 0x80); a few times seems to break translations
 with the only fix being to run it again. no idea what's going on.
-'''
 
+
+
+
+
+second memory range from 0x231300000 to 0x0000000231304000; this is called SMMU according to the device tree
+
+0x20 configuration; 0x80000000 is set by default
+    0x8000 locks down this range for further changes
+    0x0400 seems to disable translation and/or break the framebuffer
+
+0x40 seems to be error flags again; clear on write
+    0x80000000 error status
+    0x00000010 can be triggered with write32(0x231302000, 0xffffffff); some kind of translation fault?
+
+0x50 might be the fault address again; changes together with 0x40
+
+0x1000 some kind of flags, can only set 0x40003000
+    0x00001000 debug enable to dump "something" to 0x231301020
+
+
+0x1004 some kind of device select, can only set 0xffff
+    only when a device is selected here debug stuff appears at 0x231301020
+
+
+
+kill the fb:
+0000000231300020 8000*96ff* 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+0000000231300040 07000400 00000001 00420707 000007a6 c595b599 00000000 00001e73 000000*1f*
+
+
+write32(0x231301000, 0x40003000) 
+
+write32(0x231301000, 0x00001000) seems to enable some kind of debug dump starting at 0x231301020
+write32(0x231301004, 0xffff) <-- only needs 1 to be set; probably device selection register
+and suddenly 0x0000000231301020 starts to change?
+
+
+'''
 
 class DART:
     def __init__(self, base):
