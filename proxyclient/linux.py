@@ -98,7 +98,7 @@ p.ic_ivau(kernel_base, kernel_size)
 print("Ready to boot")
 
 daif = u.mrs(DAIF)
-daif |= 0x3c0
+daif = 0xc0
 u.msr(DAIF, daif)
 print("DAIF: %x" % daif)
 
