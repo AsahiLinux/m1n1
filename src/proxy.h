@@ -15,6 +15,7 @@ typedef enum {
     P_UDELAY,
     P_SET_EXC_GUARD,
     P_GET_EXC_COUNT,
+    P_EL0_CALL,
 
     P_WRITE64 = 0x100, // Generic register functions
     P_WRITE32,

@@ -5,10 +5,25 @@
 #include "uart.h"
 #include "utils.h"
 
+#define EL0_STACK_SIZE 0x4000
+
+u8 el0_stack[EL0_STACK_SIZE] ALIGNED(64);
+void *el0_stack_base = &el0_stack[EL0_STACK_SIZE];
+
 extern char _vectors_start[0];
 
 volatile enum exc_guard_t exc_guard = GUARD_OFF;
 volatile int exc_count = 0;
+
+void el0_ret(void);
+
+static char *m_table[] = {
+    [0x00] = "EL0t",
+    [0x04] = "EL1t",
+    [0x05] = "EL1h",
+    [0x08] = "EL2t",
+    [0x09] = "EL2h",
+};
 
 static char *ec_table[] = {
     [0x00] = "unknown",
@@ -69,6 +84,9 @@ void print_regs(u64 *regs)
 {
     u64 sp = ((u64)(regs)) + 256;
 
+    const char *m_desc = m_table[mrs(SPSR_EL2) & 0xf];
+    printf("Exception taken from %s\n", m_desc ? m_desc : "?");
+
     printf("Running in EL%d\n", mrs(CurrentEL) >> 2);
     printf("MPIDR: 0x%lx\n", mrs(MPIDR_EL1));
     printf("Registers: (@%p)\n", regs);
@@ -84,13 +102,12 @@ void print_regs(u64 *regs)
     u64 elr = mrs(elr_el2);
 
     printf("PC:       0x%lx (rel: 0x%lx)\n", elr, elr - (u64)_base);
-    printf("SPSEL:    0x%lx\n", mrs(SPSEL));
     printf("SP:       0x%lx\n", sp);
     printf("SPSR_EL2: 0x%lx\n", mrs(SPSR_EL2));
     printf("FAR_EL2:  0x%lx\n", mrs(FAR_EL2));
 
     const char *ec_desc = ec_table[(mrs(ESR_EL2) >> 26) & 0x3f];
-    printf("ESR_EL2:  0x%lx (%s)\n", mrs(ESR_EL2), ec_desc ? ec_desc : "unknown");
+    printf("ESR_EL2:  0x%lx (%s)\n", mrs(ESR_EL2), ec_desc ? ec_desc : "?");
 
     u64 l2c_err_sts = mrs(SYS_APL_L2C_ERR_STS);
 
@@ -115,6 +132,17 @@ void exc_sync(u64 *regs)
 {
     u64 elr;
     u32 insn;
+
+    u64 spsr = mrs(SPSR_EL2);
+    u64 esr = mrs(ESR_EL2);
+
+    if ((spsr & 0xf) == 0 && ((esr >> 26) & 0x3f) == 0x3c) {
+        // On clean EL0 return, let the normal exception return
+        // path take us back to the return thunk.
+        msr(spsr_el2, 0x09); // EL2h
+        msr(elr_el2, el0_ret);
+        return;
+    }
 
     if (!(exc_guard & GUARD_SILENT))
         uart_puts("Exception: SYNC");

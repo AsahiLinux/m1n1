@@ -5,6 +5,7 @@
 .globl exc_fiq
 .globl exc_serr
 .globl _vectors_start
+.globl el0_stack
 
 .globl _v_sp0_sync
 .type _v_sp0_sync, @function
@@ -80,3 +81,40 @@ _exc_return:
 
     ldr x30, [sp], #16
     eret
+
+.globl el0_call
+.type el0_call, @function
+el0_call:
+    str x30, [sp, #-16]!
+
+    mrs x5, daif
+    msr daifclr, 3
+    msr spsr_el2, x5
+
+    ldr x5, =_el0_thunk
+    msr elr_el2, x5
+
+    ldr x5, =el0_stack_base
+    ldr x5, [x5]
+    msr spsel, #0
+    mov sp, x5
+
+    eret
+
+_el0_thunk:
+    mov x5, x0
+    mov x0, x1
+    mov x1, x2
+    mov x2, x3
+    mov x3, x4
+
+    blr x5
+
+    brk 0
+    .long 0
+
+.globl el0_ret
+.type el0_ret, @function
+el0_ret:
+    ldr x30, [sp], #16
+    ret

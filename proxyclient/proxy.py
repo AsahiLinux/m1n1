@@ -281,6 +281,7 @@ class M1N1Proxy:
     P_UDELAY = 0x006
     P_SET_EXC_GUARD = 0x007
     P_GET_EXC_COUNT = 0x008
+    P_EL0_CALL = 0x009
 
     GUARD_OFF = 0
     GUARD_SKIP = 1
@@ -415,6 +416,10 @@ class M1N1Proxy:
         self.request(self.P_SET_EXC_GUARD, mode)
     def get_exc_count(self):
         return self.request(self.P_GET_EXC_COUNT)
+    def el0_call(self, addr, *args):
+        if len(args) > 4:
+            raise ValueError("Too many arguments")
+        return self.request(self.P_EL0_CALL, addr, *args)
 
     def write64(self, addr, data):
         if addr & 7:

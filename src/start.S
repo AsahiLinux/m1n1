@@ -43,16 +43,16 @@ _vectors_start:
     .align 7
     b _v_sp0_serr
     .align 7
-    mov x9, 'a'
+    b _v_sp0_sync
     b exc_unk
     .align 7
-    mov x9, 'b'
+    b _v_sp0_irq
     b exc_unk
     .align 7
-    mov x9, 'c'
+    b _v_sp0_fiq
     b exc_unk
     .align 7
-    mov x9, 'd'
+    b _v_sp0_serr
     b exc_unk
     .align 7
     mov x9, 'p'
