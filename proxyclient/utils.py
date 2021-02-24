@@ -41,7 +41,9 @@ class ProxyUtils(object):
 
         self.code_buffer = self.malloc(0x10000)
 
-    def mrs(self, reg):
+    def mrs(self, reg, silent=False, call=None):
+        if call is None:
+            call = self.proxy.call
         op0, op1, CRn, CRm, op2 = reg
 
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
@@ -53,15 +55,17 @@ class ProxyUtils(object):
         self.proxy.dc_cvau(self.code_buffer, 8)
         self.proxy.ic_ivau(self.code_buffer, 8)
 
-        self.proxy.set_exc_guard(self.proxy.GUARD_MARK)
-        retval = self.proxy.call(self.code_buffer)
+        self.proxy.set_exc_guard(self.proxy.GUARD_MARK | (self.proxy.GUARD_SILENT if silent else 0))
+        retval = call(self.code_buffer)
         cnt = self.proxy.get_exc_count()
         self.proxy.set_exc_guard(self.proxy.GUARD_OFF)
         if cnt:
             raise ProxyError("Exception occurred")
         return retval
 
-    def msr(self, reg, val):
+    def msr(self, reg, val, silent=False, el0=False, call=None):
+        if call is None:
+            call = self.proxy.call
         op0, op1, CRn, CRm, op2 = reg
 
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
@@ -73,14 +77,16 @@ class ProxyUtils(object):
         self.proxy.dc_cvau(self.code_buffer, 8)
         self.proxy.ic_ivau(self.code_buffer, 8)
 
-        self.proxy.set_exc_guard(self.proxy.GUARD_SKIP)
-        self.proxy.call(self.code_buffer, val)
+        self.proxy.set_exc_guard(self.proxy.GUARD_SKIP | (self.proxy.GUARD_SILENT if silent else 0))
+        call(self.code_buffer, val)
         cnt = self.proxy.get_exc_count()
         self.proxy.set_exc_guard(self.proxy.GUARD_OFF)
         if cnt:
             raise ProxyError("Exception occurred")
 
-    def inst(self, op, r0=0, r1=0, r2=0, r3=0, silent=False):
+    def inst(self, op, r0=0, r1=0, r2=0, r3=0, silent=False, el0=False):
+        if call is None:
+            call = self.proxy.call
         func = struct.pack("<II", op, 0xd65f03c0)
 
         self.iface.writemem(self.code_buffer, func)
@@ -88,7 +94,7 @@ class ProxyUtils(object):
         self.proxy.ic_ivau(self.code_buffer, 8)
 
         self.proxy.set_exc_guard(self.proxy.GUARD_SKIP | (self.proxy.GUARD_SILENT if silent else 0))
-        ret = self.proxy.call(self.code_buffer, r0, r1, r2, r3)
+        ret = call(self.code_buffer, r0, r1, r2, r3)
         cnt = self.proxy.get_exc_count()
         self.proxy.set_exc_guard(self.proxy.GUARD_OFF)
         if cnt:

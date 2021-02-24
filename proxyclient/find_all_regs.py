@@ -46,9 +46,9 @@ for op1 in range(1 << 3):
                     print("s3_%d_c%d_c%d_%d (3, %d, %d, %d, %d) = 0x%x" % (
                         op1, CRn, CRm, op2, op1, CRn, CRm, op2, v))
                     try:
-                        u.msr((3, op1, CRn, CRm, op2), v)
+                        u.msr((3, op1, CRn, CRm, op2), v, silent=True)
                     except:
-                        pass
+                        print(" - READONLY")
                     else:
                         print(" - writable")
                 i += 1
