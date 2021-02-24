@@ -51,6 +51,12 @@ for op1 in range(1 << 3):
                         print(" - READONLY")
                     else:
                         print(" - writable")
+                    try:
+                        u.mrs((3, op1, CRn, CRm, op2), silent=True, call=p.el0_call)
+                    except:
+                        pass
+                    else:
+                        print(" - *** EL0 accessible ***")
                 i += 1
 
 p.set_exc_guard(p.GUARD_OFF)
