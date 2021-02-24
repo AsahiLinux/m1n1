@@ -26,5 +26,7 @@ iface.nop()
 
 fb = u.ba.video.base
 
+EL0_REGION = 0x8000000000
+
 print("Base at: 0x%x" % u.base)
 print("FB at: 0x%x" % fb)

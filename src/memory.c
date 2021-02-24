@@ -45,26 +45,32 @@ static inline void write_sctlr(u64 val)
  */
 #define PTE_TYPE_BLOCK    0b01
 #define PTE_TYPE_TABLE    0b11
-#define PTE_FLAG_ACCESS   (1 << 10)
+#define PTE_FLAG_ACCESS   BIT(10)
 #define PTE_MAIR_INDEX(i) ((i & 7) << 2)
-#define PTE_PXN           (1L << 53)
-#define PTE_UXN           (1L << 54)
-#define PTE_AP_RO         (1L << 7)
-#define PTE_AP_EL0        (1L << 6)
+#define PTE_PXN           BIT(53)
+#define PTE_UXN           BIT(54)
+#define PTE_AP_RO         BIT(7)
+#define PTE_AP_EL0        BIT(6)
 
-#define PERM_RO  PTE_AP_RO | PTE_PXN | PTE_UXN
-#define PERM_RW  PTE_PXN | PTE_UXN
-#define PERM_RWX 0
+#define PERM_RO_EL0     PTE_AP_EL0 | PTE_AP_RO | PTE_PXN | PTE_UXN
+#define PERM_RW_EL0     PTE_AP_EL0 | PTE_PXN | PTE_UXN
+#define PERM_RWX_EL0    PTE_AP_EL0
+
+#define PERM_RO         PTE_AP_RO | PTE_PXN | PTE_UXN
+#define PERM_RW         PTE_PXN | PTE_UXN
+#define PERM_RWX        0
 
 /*
  * https://developer.arm.com/docs/ddi0595/g/aarch64-system-registers/sctlr_el2
+ * SCTLR_SPAN disables PAN getting enabled on exceptions.
  * SCTLR_I enables instruction caches.
  * SCTLR_C enables data caches.
  * SCTLR_M enables the MMU.
  */
-#define SCTLR_I (1UL << 12)
-#define SCTLR_C (1UL << 2)
-#define SCTLR_M (1UL)
+#define SCTLR_SPAN BIT(23)
+#define SCTLR_I BIT(12)
+#define SCTLR_C BIT(2)
+#define SCTLR_M BIT(0)
 
 /*
  * https://developer.arm.com/docs/ddi0595/h/aarch64-system-registers/tcr_el2
@@ -272,12 +278,12 @@ static void mmu_add_default_mappings(void)
      * create MMIO mappings. PCIe has to be mapped as nGnRE while MMIO needs nGnRnE.
      * see https://lore.kernel.org/linux-arm-kernel/c1bc2a087747c4d9@bloch.sibelius.xs4all.nl/
      */
-    mmu_add_mapping(0x0200000000, 0x0200000000, 0x0200000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW);
-    mmu_add_mapping(0x0400000000, 0x0400000000, 0x0100000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW);
-    mmu_add_mapping(0x0500000000, 0x0500000000, 0x0080000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW);
-    mmu_add_mapping(0x0580000000, 0x0580000000, 0x0100000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW);
-    mmu_add_mapping(0x0680000000, 0x0680000000, 0x0020000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW);
-    mmu_add_mapping(0x06a0000000, 0x06a0000000, 0x0060000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW);
+    mmu_add_mapping(0x0200000000, 0x0200000000, 0x0200000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW_EL0);
+    mmu_add_mapping(0x0400000000, 0x0400000000, 0x0100000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW_EL0);
+    mmu_add_mapping(0x0500000000, 0x0500000000, 0x0080000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW_EL0);
+    mmu_add_mapping(0x0580000000, 0x0580000000, 0x0100000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW_EL0);
+    mmu_add_mapping(0x0680000000, 0x0680000000, 0x0020000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW_EL0);
+    mmu_add_mapping(0x06a0000000, 0x06a0000000, 0x0060000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW_EL0);
 
     /*
      * create identity mapping for 16GB RAM from 0x08_0000_0000 to
@@ -286,10 +292,16 @@ static void mmu_add_default_mappings(void)
     mmu_add_mapping(0x0800000000, 0x0800000000, 0x0400000000, MAIR_INDEX_NORMAL, PERM_RWX);
 
     /*
+     * create identity mapping for 16GB RAM from 0x88_0000_0000 to
+     * 0x8c_0000_0000, writable by EL0 (but not executable by EL2)
+     */
+    mmu_add_mapping(0x8800000000, 0x0800000000, 0x0400000000, MAIR_INDEX_NORMAL, PERM_RWX_EL0);
+
+    /*
      * create two seperate nGnRnE and nGnRE full mappings of MMIO space
      */
-    mmu_add_mapping(0xe000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW);
-    mmu_add_mapping(0xf000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW);
+    mmu_add_mapping(0xe000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW_EL0);
+    mmu_add_mapping(0xf000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW_EL0);
 }
 
 static void mmu_configure(void)
@@ -318,8 +330,11 @@ void mmu_init(void)
     mmu_add_default_mappings();
     mmu_configure();
 
+    // Enable EL0 memory access by EL2
+    msr(pan, 0);
+
     u64 sctlr_old = read_sctlr();
-    u64 sctlr_new = sctlr_old | SCTLR_I | SCTLR_C | SCTLR_M;
+    u64 sctlr_new = sctlr_old | SCTLR_I | SCTLR_C | SCTLR_M | SCTLR_SPAN;
 
     printf("MMU: SCTLR_EL2: %x -> %x\n", sctlr_old, sctlr_new);
     write_sctlr(sctlr_new);
