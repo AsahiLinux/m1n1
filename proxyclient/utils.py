@@ -80,14 +80,14 @@ class ProxyUtils(object):
         if cnt:
             raise ProxyError("Exception occurred")
 
-    def inst(self, op, r0=0, r1=0, r2=0, r3=0):
+    def inst(self, op, r0=0, r1=0, r2=0, r3=0, silent=False):
         func = struct.pack("<II", op, 0xd65f03c0)
 
         self.iface.writemem(self.code_buffer, func)
         self.proxy.dc_cvau(self.code_buffer, 8)
         self.proxy.ic_ivau(self.code_buffer, 8)
 
-        self.proxy.set_exc_guard(self.proxy.GUARD_SKIP)
+        self.proxy.set_exc_guard(self.proxy.GUARD_SKIP | (self.proxy.GUARD_SILENT if silent else 0))
         ret = self.proxy.call(self.code_buffer, r0, r1, r2, r3)
         cnt = self.proxy.get_exc_count()
         self.proxy.set_exc_guard(self.proxy.GUARD_OFF)
