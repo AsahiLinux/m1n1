@@ -84,7 +84,7 @@ class ProxyUtils(object):
         if cnt:
             raise ProxyError("Exception occurred")
 
-    def inst(self, op, r0=0, r1=0, r2=0, r3=0, silent=False, el0=False):
+    def inst(self, op, r0=0, r1=0, r2=0, r3=0, silent=False, call=None):
         if call is None:
             call = self.proxy.call
         func = struct.pack("<II", op, 0xd65f03c0)
