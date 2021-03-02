@@ -102,3 +102,5 @@ the public domain ([CC0](3rdparty_licenses/LICENSE.CC0)).
 m1n1 embeds portions of [PDCLib](https://github.com/DevSolar/pdclib), which is in the public
 domain ([CC0](3rdparty_licenses/LICENSE.CC0)).
 
+m1n1 embeds portions of the 2013 dwc3 usb linux driver, which is [BSD-or-GPLv2 dual-licensed](3rdparty_licenses/LICENSE.BSD-3.dwc3) and copyright
+* Copyright (C) 2010-2011 Texas Instruments Incorporated - http://www.ti.com
