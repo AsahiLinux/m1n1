@@ -44,4 +44,6 @@ typedef s64 ptrdiff_t;
 #define HAVE_UINTPTR_T 1
 #define UPTRDIFF_T     uintptr_t
 
+#define BIT(x) (1L << (x))
+
 #endif
