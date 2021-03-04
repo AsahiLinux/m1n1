@@ -1,11 +1,12 @@
 /* SPDX-License-Identifier: MIT */
 
-#include "proxy.h"
+#include "dart.h"
 #include "exception.h"
 #include "heapblock.h"
 #include "kboot.h"
 #include "malloc.h"
 #include "memory.h"
+#include "proxy.h"
 #include "smp.h"
 #include "types.h"
 #include "uart.h"
@@ -307,6 +308,20 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_KBOOT_PREPARE_DT:
             reply->retval = kboot_prepare_dt((void *)request->args[0]);
+            break;
+
+        case P_DART_INIT:
+            reply->retval = (u64)dart_init(request->args[0], request->args[1]);
+            break;
+        case P_DART_MAP:
+            reply->retval = dart_map((dart_dev_t *)request->args[0], request->args[1],
+                                     (void *)request->args[2], request->args[3]);
+            break;
+        case P_DART_UNMAP:
+            dart_unmap((dart_dev_t *)request->args[0], request->args[1], request->args[2]);
+            break;
+        case P_DART_SHUTDOWN:
+            dart_shutdown((dart_dev_t *)request->args[0]);
             break;
 
         default:
