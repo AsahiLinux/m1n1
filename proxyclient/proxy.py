@@ -391,14 +391,14 @@ class M1N1Proxy:
         if len(args) > 4:
             raise ValueError("Too many arguments")
         return self.request(self.P_CALL, addr, *args)
-    def reboot(self, addr, *args):
+    def reboot(self, addr, *args, el1=False):
         if len(args) > 4:
             raise ValueError("Too many arguments")
-        self.request(self.P_CALL, addr, *args, reboot=True)
-    def vector(self, addr, *args):
+        self.request(self.P_EL1_CALL if el1 else self.P_CALL, addr, *args, reboot=True)
+    def vector(self, addr, *args, el1=False):
         if len(args) > 4:
             raise ValueError("Too many arguments")
-        self.request(self.P_CALL, addr, *args, no_reply=True)
+        self.request(self.P_EL1_CALL if el1 else self.P_CALL, addr, *args, no_reply=True)
     def get_bootargs(self):
         return self.request(self.P_GET_BOOTARGS)
     def get_base(self):

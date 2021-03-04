@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 
+import argparse, pathlib
+
+parser = argparse.ArgumentParser(description='(Linux) kernel loader for m1n1')
+parser.add_argument('payload', type=pathlib.Path)
+parser.add_argument('-1', '--el1', action="store_true")
+args = parser.parse_args()
+
 from setup import *
 from tgtypes import *
 
-payload = open(sys.argv[1], "rb").read()
+payload = args.payload.read_bytes()
 
 obj = MachO.parse(payload)
 
@@ -58,7 +65,7 @@ try:
 except:
     pass
 
-p.reboot(entry, u.ba_addr)
+p.reboot(entry, u.ba_addr, el1=args.el1)
 
 iface.nop()
 print("Proxy is alive again")
