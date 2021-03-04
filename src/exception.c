@@ -17,15 +17,15 @@ volatile int exc_count = 0;
 
 void el0_ret(void);
 
-static char *m_table[] = {
-    [0x00] = "EL0t",
-    [0x04] = "EL1t",
-    [0x05] = "EL1h",
-    [0x08] = "EL2t",
-    [0x09] = "EL2h",
+static char *m_table[0x10] = {
+    [0x00] = "EL0t", //
+    [0x04] = "EL1t", //
+    [0x05] = "EL1h", //
+    [0x08] = "EL2t", //
+    [0x09] = "EL2h", //
 };
 
-static char *ec_table[] = {
+static char *ec_table[0x40] = {
     [0x00] = "unknown",
     [0x01] = "wf*",
     [0x03] = "c15 mcr/mrc",
