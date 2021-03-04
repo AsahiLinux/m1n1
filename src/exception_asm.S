@@ -89,10 +89,10 @@ el0_call:
 
     mrs x5, daif
     msr daifclr, 3
-    msr spsr_el2, x5
+    msr spsr_el1, x5
 
     ldr x5, =_el0_thunk
-    msr elr_el2, x5
+    msr elr_el1, x5
 
     ldr x5, =el0_stack_base
     ldr x5, [x5]

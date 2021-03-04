@@ -27,12 +27,12 @@ CACHE_RANGE_OP(dc_civac_range, "dc civac")
 static inline u64 read_sctlr(void)
 {
     sysop("isb");
-    return mrs(SCTLR_EL2);
+    return mrs(SCTLR_EL1);
 }
 
 static inline void write_sctlr(u64 val)
 {
-    msr(SCTLR_EL2, val);
+    msr(SCTLR_EL1, val);
     sysop("isb");
 }
 
@@ -61,7 +61,7 @@ static inline void write_sctlr(u64 val)
 #define PERM_RWX 0
 
 /*
- * https://developer.arm.com/docs/ddi0595/g/aarch64-system-registers/sctlr_el2
+ * https://developer.arm.com/docs/ddi0595/g/aarch64-system-registers/sctlr_el1
  * SCTLR_SPAN disables PAN getting enabled on exceptions.
  * SCTLR_I enables instruction caches.
  * SCTLR_C enables data caches.
@@ -73,7 +73,7 @@ static inline void write_sctlr(u64 val)
 #define SCTLR_M    BIT(0)
 
 /*
- * https://developer.arm.com/docs/ddi0595/h/aarch64-system-registers/tcr_el2
+ * https://developer.arm.com/docs/ddi0595/h/aarch64-system-registers/tcr_el1
  * TCR_IPS_1TB selects 40 bits/1TB intermediate physical address size
  * TCR_PS_1TB selects 40 bits/1TB physical address size
  * TCR_TG0_16K selects 16K pages
@@ -293,7 +293,7 @@ static void mmu_add_default_mappings(void)
 
     /*
      * create identity mapping for 16GB RAM from 0x88_0000_0000 to
-     * 0x8c_0000_0000, writable by EL0 (but not executable by EL2)
+     * 0x8c_0000_0000, writable by EL0 (but not executable by EL1)
      */
     mmu_add_mapping(0x8800000000, 0x0800000000, 0x0400000000, MAIR_IDX_NORMAL, PERM_RWX_EL0);
 
@@ -306,14 +306,14 @@ static void mmu_add_default_mappings(void)
 
 static void mmu_configure(void)
 {
-    msr(MAIR_EL2, (MAIR_ATTR_NORMAL_DEFAULT << MAIR_SHIFT_NORMAL) |
+    msr(MAIR_EL1, (MAIR_ATTR_NORMAL_DEFAULT << MAIR_SHIFT_NORMAL) |
                       (MAIR_ATTR_DEVICE_nGnRnE << MAIR_SHIFT_DEVICE_nGnRnE) |
                       (MAIR_ATTR_DEVICE_nGnRE << MAIR_SHIFT_DEVICE_nGnRE));
-    msr(TCR_EL2, TCR_IPS_1TB | TCR_TG1_16K | TCR_SH1_IS | TCR_ORGN1_WBWA | TCR_IRGN1_WBWA |
+    msr(TCR_EL1, TCR_IPS_1TB | TCR_TG1_16K | TCR_SH1_IS | TCR_ORGN1_WBWA | TCR_IRGN1_WBWA |
                      TCR_T1SZ_48BIT | TCR_TG0_16K | TCR_SH0_IS | TCR_ORGN0_WBWA | TCR_IRGN0_WBWA |
                      TCR_T0SZ_48BIT);
-    msr(TTBR0_EL2, (uintptr_t)pagetable_L0);
-    msr(TTBR1_EL2, (uintptr_t)pagetable_L0);
+    msr(TTBR0_EL1, (uintptr_t)pagetable_L0);
+    msr(TTBR1_EL1, (uintptr_t)pagetable_L0);
 
     // Armv8-A Address Translation, 100940_0101_en, page 28
     sysop("dsb ishst");
@@ -330,13 +330,13 @@ void mmu_init(void)
     mmu_add_default_mappings();
     mmu_configure();
 
-    // Enable EL0 memory access by EL2
-    msr(pan, 0);
+    // Enable EL0 memory access by EL1
+    msr(PAN, 0);
 
     u64 sctlr_old = read_sctlr();
     u64 sctlr_new = sctlr_old | SCTLR_I | SCTLR_C | SCTLR_M | SCTLR_SPAN;
 
-    printf("MMU: SCTLR_EL2: %x -> %x\n", sctlr_old, sctlr_new);
+    printf("MMU: SCTLR_EL1: %x -> %x\n", sctlr_old, sctlr_new);
     write_sctlr(sctlr_new);
     printf("MMU: running with MMU and caches enabled!\n");
 }

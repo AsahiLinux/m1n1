@@ -71,7 +71,7 @@ static char *ec_table[0x40] = {
 
 void exception_initialize(void)
 {
-    msr(VBAR_EL2, _vectors_start);
+    msr(VBAR_EL1, _vectors_start);
     msr(DAIF, 0 << 6); // Enable SError, IRQ and FIQ
 }
 
@@ -84,7 +84,7 @@ void print_regs(u64 *regs)
 {
     u64 sp = ((u64)(regs)) + 256;
 
-    const char *m_desc = m_table[mrs(SPSR_EL2) & 0xf];
+    const char *m_desc = m_table[mrs(SPSR_EL1) & 0xf];
     printf("Exception taken from %s\n", m_desc ? m_desc : "?");
 
     printf("Running in EL%d\n", mrs(CurrentEL) >> 2);
@@ -99,15 +99,15 @@ void print_regs(u64 *regs)
     printf("x24-x27: %016lx %016lx %016lx %016lx\n", regs[24], regs[25], regs[26], regs[27]);
     printf("x28-x30: %016lx %016lx %016lx\n", regs[28], regs[29], regs[30]);
 
-    u64 elr = mrs(elr_el2);
+    u64 elr = mrs(elr_el1);
 
     printf("PC:       0x%lx (rel: 0x%lx)\n", elr, elr - (u64)_base);
     printf("SP:       0x%lx\n", sp);
-    printf("SPSR_EL2: 0x%lx\n", mrs(SPSR_EL2));
-    printf("FAR_EL2:  0x%lx\n", mrs(FAR_EL2));
+    printf("SPSR_EL1: 0x%lx\n", mrs(SPSR_EL1));
+    printf("FAR_EL1:  0x%lx\n", mrs(FAR_EL1));
 
-    const char *ec_desc = ec_table[(mrs(ESR_EL2) >> 26) & 0x3f];
-    printf("ESR_EL2:  0x%lx (%s)\n", mrs(ESR_EL2), ec_desc ? ec_desc : "?");
+    const char *ec_desc = ec_table[(mrs(ESR_EL1) >> 26) & 0x3f];
+    printf("ESR_EL1:  0x%lx (%s)\n", mrs(ESR_EL1), ec_desc ? ec_desc : "?");
 
     u64 l2c_err_sts = mrs(SYS_APL_L2C_ERR_STS);
 
@@ -133,14 +133,14 @@ void exc_sync(u64 *regs)
     u64 elr;
     u32 insn;
 
-    u64 spsr = mrs(SPSR_EL2);
-    u64 esr = mrs(ESR_EL2);
+    u64 spsr = mrs(SPSR_EL1);
+    u64 esr = mrs(ESR_EL1);
 
     if ((spsr & 0xf) == 0 && ((esr >> 26) & 0x3f) == 0x3c) {
         // On clean EL0 return, let the normal exception return
         // path take us back to the return thunk.
-        msr(spsr_el2, 0x09); // EL2h
-        msr(elr_el2, el0_ret);
+        msr(SPSR_EL1, 0x09); // EL2h
+        msr(ELR_EL1, el0_ret);
         return;
     }
 
@@ -155,13 +155,13 @@ void exc_sync(u64 *regs)
 
     switch (exc_guard & GUARD_TYPE_MASK) {
         case GUARD_SKIP:
-            elr = mrs(ELR_EL2) + 4;
+            elr = mrs(ELR_EL1) + 4;
             break;
         case GUARD_MARK:
             // Assuming this is a load or store, dest reg is in low bits
-            insn = read32(mrs(ELR_EL2));
+            insn = read32(mrs(ELR_EL1));
             regs[insn & 0x1f] = 0xacce5515abad1dea;
-            elr = mrs(ELR_EL2) + 4;
+            elr = mrs(ELR_EL1) + 4;
             break;
         case GUARD_RETURN:
             regs[0] = 0xacce5515abad1dea;
@@ -177,7 +177,7 @@ void exc_sync(u64 *regs)
 
     if (!(exc_guard & GUARD_SILENT))
         printf("Recovering from exception (ELR=0x%lx)\n", elr);
-    msr(ELR_EL2, elr);
+    msr(ELR_EL1, elr);
 
     sysop("isb");
     sysop("dsb sy");
