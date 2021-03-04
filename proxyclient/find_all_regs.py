@@ -49,8 +49,10 @@ for op1 in range(1 << 3):
                         u.msr((3, op1, CRn, CRm, op2), v, silent=True)
                     except:
                         print(" - READONLY")
-                    else:
-                        print(" - writable")
+                    try:
+                        u.mrs((3, op1, CRn, CRm, op2), silent=True, call=p.el1_call)
+                    except:
+                        print(" - ### EL2 only ###")
                     try:
                         u.mrs((3, op1, CRn, CRm, op2), silent=True, call=p.el0_call)
                     except:
