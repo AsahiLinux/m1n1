@@ -142,7 +142,7 @@ int dart_map(dart_dev_t dart, uintptr_t iova, void *bfr, size_t len)
 
     if (len % SZ_16K)
         return -1;
-    if (paddr & SZ_16K)
+    if (paddr % SZ_16K)
         return -1;
     if (iova % SZ_16K)
         return -1;

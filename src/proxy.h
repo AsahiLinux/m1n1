@@ -81,6 +81,11 @@ typedef enum {
     P_KBOOT_SET_INITRD,
     P_KBOOT_PREPARE_DT,
 
+    P_DART_INIT = 0x800, // DART iommu ops
+    P_DART_MAP,
+    P_DART_UNMAP,
+    P_DART_SHUTDOWN,
+
 } ProxyOp;
 
 #define S_OK     0
