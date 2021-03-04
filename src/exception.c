@@ -11,11 +11,13 @@ u8 el0_stack[EL0_STACK_SIZE] ALIGNED(64);
 void *el0_stack_base = &el0_stack[EL0_STACK_SIZE];
 
 extern char _vectors_start[0];
+extern char _el1_vectors_start[0];
 
 volatile enum exc_guard_t exc_guard = GUARD_OFF;
 volatile int exc_count = 0;
 
 void el0_ret(void);
+void el1_ret(void);
 
 static char *m_table[0x10] = {
     [0x00] = "EL0t", //
@@ -73,6 +75,23 @@ void exception_initialize(void)
 {
     msr(VBAR_EL1, _vectors_start);
     msr(DAIF, 0 << 6); // Enable SError, IRQ and FIQ
+
+    if (in_el2()) {
+        // Set up a sane HCR_EL2
+        msr(HCR_EL2, (BIT(41) | // API
+                      BIT(40) | // APK
+                      BIT(37) | // TEA
+                      BIT(34) | // E2H
+                      BIT(31) | // RW
+                      BIT(27) | // TGE
+                      BIT(5) |  // AMO
+                      BIT(4) |  // IMO
+                      BIT(3));  // FMO
+        );
+        // Set up exception forwarding from EL1
+        msr(VBAR_EL12, _el1_vectors_start);
+        sysop("isb");
+    }
 }
 
 void exception_shutdown(void)
@@ -80,11 +99,13 @@ void exception_shutdown(void)
     msr(DAIF, 7 << 6); // Disable SError, IRQ and FIQ
 }
 
-void print_regs(u64 *regs)
+void print_regs(u64 *regs, int el12)
 {
     u64 sp = ((u64)(regs)) + 256;
 
-    const char *m_desc = m_table[mrs(SPSR_EL1) & 0xf];
+    u64 spsr = el12 ? mrs(SPSR_EL12) : mrs(SPSR_EL1);
+
+    const char *m_desc = m_table[spsr & 0xf];
     printf("Exception taken from %s\n", m_desc ? m_desc : "?");
 
     printf("Running in EL%d\n", mrs(CurrentEL) >> 2);
@@ -99,15 +120,16 @@ void print_regs(u64 *regs)
     printf("x24-x27: %016lx %016lx %016lx %016lx\n", regs[24], regs[25], regs[26], regs[27]);
     printf("x28-x30: %016lx %016lx %016lx\n", regs[28], regs[29], regs[30]);
 
-    u64 elr = mrs(elr_el1);
+    u64 elr = el12 ? mrs(ELR_EL12) : mrs(ELR_EL1);
+    u64 esr = el12 ? mrs(ESR_EL12) : mrs(ESR_EL1);
 
     printf("PC:       0x%lx (rel: 0x%lx)\n", elr, elr - (u64)_base);
     printf("SP:       0x%lx\n", sp);
-    printf("SPSR_EL1: 0x%lx\n", mrs(SPSR_EL1));
-    printf("FAR_EL1:  0x%lx\n", mrs(FAR_EL1));
+    printf("SPSR_EL1: 0x%lx\n", spsr);
+    printf("FAR_EL1:  0x%lx\n", el12 ? mrs(FAR_EL12) : mrs(FAR_EL1));
 
-    const char *ec_desc = ec_table[(mrs(ESR_EL1) >> 26) & 0x3f];
-    printf("ESR_EL1:  0x%lx (%s)\n", mrs(ESR_EL1), ec_desc ? ec_desc : "?");
+    const char *ec_desc = ec_table[(esr >> 26) & 0x3f];
+    printf("ESR_EL1:  0x%lx (%s)\n", esr, ec_desc ? ec_desc : "?");
 
     u64 l2c_err_sts = mrs(SYS_APL_L2C_ERR_STS);
 
@@ -132,6 +154,7 @@ void exc_sync(u64 *regs)
 {
     u64 elr;
     u32 insn;
+    int el12 = 0;
 
     u64 spsr = mrs(SPSR_EL1);
     u64 esr = mrs(ESR_EL1);
@@ -144,14 +167,39 @@ void exc_sync(u64 *regs)
         return;
     }
 
-    if (!(exc_guard & GUARD_SILENT))
-        uart_puts("Exception: SYNC");
+    if (in_el2() && (spsr & 0xf) == 5 && ((esr >> 26) & 0x3f) == 0x16) {
+        // Hypercall
+        u32 imm = mrs(ESR_EL2) & 0xffff;
+        switch (imm) {
+            case 0:
+                // On clean EL1 return, let the normal exception return
+                // path take us back to the return thunk.
+                msr(SPSR_EL2, 0x09); // EL2h
+                msr(ELR_EL2, el1_ret);
+                return;
+            case 0x10 ... 0x1f:
+                if (!(exc_guard & GUARD_SILENT))
+                    printf("EL1 Exception: 0x%x\n", imm);
+                // Short-circuit the hypercall and handle the EL1 exception
+                el12 = 1;
+                msr(SPSR_EL2, mrs(SPSR_EL12));
+                msr(ELR_EL2, mrs(ELR_EL12));
+                break;
+            default:
+                printf("Unknown HVC: 0x%x\n", imm);
+                break;
+
+        }
+    } else {
+        if (!(exc_guard & GUARD_SILENT))
+            uart_puts("Exception: SYNC");
+    }
 
     sysop("isb");
     sysop("dsb sy");
 
     if (!(exc_guard & GUARD_SILENT))
-        print_regs(regs);
+        print_regs(regs, el12);
 
     switch (exc_guard & GUARD_TYPE_MASK) {
         case GUARD_SKIP:
@@ -259,7 +307,7 @@ void exc_serr(u64 *regs)
     sysop("dsb sy");
 
     if (!(exc_guard & GUARD_SILENT))
-        print_regs(regs);
+        print_regs(regs, 0);
 
     //     reboot();
 }

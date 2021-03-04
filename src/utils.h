@@ -273,6 +273,11 @@ static inline int is_ecore(void)
     return !(mrs(MPIDR_EL1) & (1 << 16));
 }
 
+static inline int in_el2(void)
+{
+    return (mrs(CurrentEL) >> 2) == 2;
+}
+
 extern char _base[0];
 extern char _payload_start[];
 extern char _payload_end[];

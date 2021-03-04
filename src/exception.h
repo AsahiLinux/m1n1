@@ -21,5 +21,6 @@ void exception_initialize(void);
 void exception_shutdown(void);
 
 uint64_t el0_call(void *func, uint64_t a, uint64_t b, uint64_t c, uint64_t d);
+uint64_t el1_call(void *func, uint64_t a, uint64_t b, uint64_t c, uint64_t d);
 
 #endif

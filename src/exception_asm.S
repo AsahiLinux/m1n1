@@ -87,6 +87,12 @@ _exc_return:
 el0_call:
     str x30, [sp, #-16]!
 
+    // Disable EL1
+    mrs x5, hcr_el2
+    orr x5, x5, #(1 << 27)
+    msr hcr_el2, x5
+    isb
+
     mrs x5, daif
     msr daifclr, 3
     msr spsr_el1, x5
@@ -118,3 +124,86 @@ _el0_thunk:
 el0_ret:
     ldr x30, [sp], #16
     ret
+
+.globl el1_call
+.type el1_call, @function
+el1_call:
+    str x30, [sp, #-16]!
+
+    // Enable EL1
+    mrs x5, hcr_el2
+    bic x5, x5, #(1 << 27)
+    msr hcr_el2, x5
+    isb
+
+    mrs x5, daif
+    msr daifclr, 3
+    mov x6, #5
+    orr x5, x5, x6 // EL1h
+    msr spsr_el2, x5
+
+    ldr x5, =_el1_thunk
+    msr elr_el2, x5
+
+    ldr x5, =el0_stack_base
+    ldr x5, [x5]
+    msr spsel, #0
+    mov sp, x5
+
+    eret
+
+_el1_thunk:
+    mov x5, x0
+    mov x0, x1
+    mov x1, x2
+    mov x2, x3
+    mov x3, x4
+
+    blr x5
+
+    hvc 0
+    .long 0
+
+.globl el1_ret
+.type el1_ret, @function
+el1_ret:
+    ldr x30, [sp], #16
+    ret
+
+.align 11
+.globl _el1_vectors_start
+_el1_vectors_start:
+    hvc 0x10
+    .align 7
+    hvc 0x11
+    .align 7
+    hvc 0x12
+    .align 7
+    hvc 0x13
+    .align 7
+
+    hvc 0x14
+    .align 7
+    hvc 0x15
+    .align 7
+    hvc 0x16
+    .align 7
+    hvc 0x17
+    .align 7
+
+    hvc 0x18
+    .align 7
+    hvc 0x19
+    .align 7
+    hvc 0x1a
+    .align 7
+    hvc 0x1b
+    .align 7
+
+    hvc 0x1c
+    .align 7
+    hvc 0x1d
+    .align 7
+    hvc 0x1e
+    .align 7
+    hvc 0x1f
