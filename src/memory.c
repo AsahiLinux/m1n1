@@ -41,24 +41,24 @@ static inline void write_sctlr(u64 val)
  * PTE_TYPE_BLOCK indicates that the page table entry (PTE) points to a physical memory block
  * PTE_TYPE_TABLE indicates that the PTE points to another PTE
  * PTE_FLAG_ACCESS is required to allow access to the memory region
- * PTE_MAIR_INDEX sets the MAIR index to be used for this PTE
+ * PTE_MAIR_IDX sets the MAIR index to be used for this PTE
  */
-#define PTE_TYPE_BLOCK    0b01
-#define PTE_TYPE_TABLE    0b11
-#define PTE_FLAG_ACCESS   BIT(10)
-#define PTE_MAIR_INDEX(i) ((i & 7) << 2)
-#define PTE_PXN           BIT(53)
-#define PTE_UXN           BIT(54)
-#define PTE_AP_RO         BIT(7)
-#define PTE_AP_EL0        BIT(6)
+#define PTE_TYPE_BLOCK  0b01
+#define PTE_TYPE_TABLE  0b11
+#define PTE_FLAG_ACCESS BIT(10)
+#define PTE_MAIR_IDX(i) ((i & 7) << 2)
+#define PTE_PXN         BIT(53)
+#define PTE_UXN         BIT(54)
+#define PTE_AP_RO       BIT(7)
+#define PTE_AP_EL0      BIT(6)
 
-#define PERM_RO_EL0     PTE_AP_EL0 | PTE_AP_RO | PTE_PXN | PTE_UXN
-#define PERM_RW_EL0     PTE_AP_EL0 | PTE_PXN | PTE_UXN
-#define PERM_RWX_EL0    PTE_AP_EL0
+#define PERM_RO_EL0  PTE_AP_EL0 | PTE_AP_RO | PTE_PXN | PTE_UXN
+#define PERM_RW_EL0  PTE_AP_EL0 | PTE_PXN | PTE_UXN
+#define PERM_RWX_EL0 PTE_AP_EL0
 
-#define PERM_RO         PTE_AP_RO | PTE_PXN | PTE_UXN
-#define PERM_RW         PTE_PXN | PTE_UXN
-#define PERM_RWX        0
+#define PERM_RO  PTE_AP_RO | PTE_PXN | PTE_UXN
+#define PERM_RW  PTE_PXN | PTE_UXN
+#define PERM_RWX 0
 
 /*
  * https://developer.arm.com/docs/ddi0595/g/aarch64-system-registers/sctlr_el2
@@ -68,9 +68,9 @@ static inline void write_sctlr(u64 val)
  * SCTLR_M enables the MMU.
  */
 #define SCTLR_SPAN BIT(23)
-#define SCTLR_I BIT(12)
-#define SCTLR_C BIT(2)
-#define SCTLR_M BIT(0)
+#define SCTLR_I    BIT(12)
+#define SCTLR_C    BIT(2)
+#define SCTLR_M    BIT(0)
 
 /*
  * https://developer.arm.com/docs/ddi0595/h/aarch64-system-registers/tcr_el2
@@ -103,13 +103,13 @@ static inline void write_sctlr(u64 val)
  * contains a field to select one of these which will then be used
  * to select the corresponding memory access flags from MAIR.
  */
-#define MAIR_INDEX_NORMAL        0
-#define MAIR_INDEX_DEVICE_nGnRnE 1
-#define MAIR_INDEX_DEVICE_nGnRE  2
+#define MAIR_IDX_NORMAL        0
+#define MAIR_IDX_DEVICE_nGnRnE 1
+#define MAIR_IDX_DEVICE_nGnRE  2
 
-#define MAIR_SHIFT_NORMAL        (MAIR_INDEX_NORMAL * 8)
-#define MAIR_SHIFT_DEVICE_nGnRnE (MAIR_INDEX_DEVICE_nGnRnE * 8)
-#define MAIR_SHIFT_DEVICE_nGnRE  (MAIR_INDEX_DEVICE_nGnRE * 8)
+#define MAIR_SHIFT_NORMAL        (MAIR_IDX_NORMAL * 8)
+#define MAIR_SHIFT_DEVICE_nGnRnE (MAIR_IDX_DEVICE_nGnRnE * 8)
+#define MAIR_SHIFT_DEVICE_nGnRE  (MAIR_IDX_DEVICE_nGnRE * 8)
 
 /*
  * https://developer.arm.com/documentation/ddi0500/e/system-control/aarch64-register-descriptions/memory-attribute-indirection-register--el1
@@ -159,7 +159,7 @@ static u64 mmu_make_block_pte(uintptr_t addr, u8 attribute_index, u64 perms)
     u64 pte = PTE_TYPE_BLOCK;
     pte |= addr;
     pte |= PTE_FLAG_ACCESS;
-    pte |= PTE_MAIR_INDEX(attribute_index);
+    pte |= PTE_MAIR_IDX(attribute_index);
     pte |= perms;
 
     return pte;
@@ -278,30 +278,30 @@ static void mmu_add_default_mappings(void)
      * create MMIO mappings. PCIe has to be mapped as nGnRE while MMIO needs nGnRnE.
      * see https://lore.kernel.org/linux-arm-kernel/c1bc2a087747c4d9@bloch.sibelius.xs4all.nl/
      */
-    mmu_add_mapping(0x0200000000, 0x0200000000, 0x0200000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW_EL0);
-    mmu_add_mapping(0x0400000000, 0x0400000000, 0x0100000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW_EL0);
-    mmu_add_mapping(0x0500000000, 0x0500000000, 0x0080000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW_EL0);
-    mmu_add_mapping(0x0580000000, 0x0580000000, 0x0100000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW_EL0);
-    mmu_add_mapping(0x0680000000, 0x0680000000, 0x0020000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW_EL0);
-    mmu_add_mapping(0x06a0000000, 0x06a0000000, 0x0060000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW_EL0);
+    mmu_add_mapping(0x0200000000, 0x0200000000, 0x0200000000, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
+    mmu_add_mapping(0x0400000000, 0x0400000000, 0x0100000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
+    mmu_add_mapping(0x0500000000, 0x0500000000, 0x0080000000, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
+    mmu_add_mapping(0x0580000000, 0x0580000000, 0x0100000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
+    mmu_add_mapping(0x0680000000, 0x0680000000, 0x0020000000, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
+    mmu_add_mapping(0x06a0000000, 0x06a0000000, 0x0060000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
 
     /*
      * create identity mapping for 16GB RAM from 0x08_0000_0000 to
      * 0x0c_0000_0000
      */
-    mmu_add_mapping(0x0800000000, 0x0800000000, 0x0400000000, MAIR_INDEX_NORMAL, PERM_RWX);
+    mmu_add_mapping(0x0800000000, 0x0800000000, 0x0400000000, MAIR_IDX_NORMAL, PERM_RWX);
 
     /*
      * create identity mapping for 16GB RAM from 0x88_0000_0000 to
      * 0x8c_0000_0000, writable by EL0 (but not executable by EL2)
      */
-    mmu_add_mapping(0x8800000000, 0x0800000000, 0x0400000000, MAIR_INDEX_NORMAL, PERM_RWX_EL0);
+    mmu_add_mapping(0x8800000000, 0x0800000000, 0x0400000000, MAIR_IDX_NORMAL, PERM_RWX_EL0);
 
     /*
      * create two seperate nGnRnE and nGnRE full mappings of MMIO space
      */
-    mmu_add_mapping(0xe000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRnE, PERM_RW_EL0);
-    mmu_add_mapping(0xf000000000, 0x0000000000, 0x0800000000, MAIR_INDEX_DEVICE_nGnRE, PERM_RW_EL0);
+    mmu_add_mapping(0xe000000000, 0x0000000000, 0x0800000000, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
+    mmu_add_mapping(0xf000000000, 0x0000000000, 0x0800000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
 }
 
 static void mmu_configure(void)
