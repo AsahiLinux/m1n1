@@ -24,7 +24,7 @@ LIBFDT_OBJECTS := $(patsubst %,libfdt/%, \
 
 OBJECTS := adt.o bootlogo_128.o bootlogo_256.o chickens.o exception.o exception_asm.o fb.o \
 	heapblock.o kboot.o main.o memory.o memory_asm.o payload.o proxy.o smp.o start.o startup.o \
-	string.o uart.o uartproxy.o utils.o utils_asm.o vsprintf.o wdt.o $(MINILZLIB_OBJECTS) \
+	string.o tunable.o uart.o uartproxy.o utils.o utils_asm.o vsprintf.o wdt.o $(MINILZLIB_OBJECTS) \
 	$(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS)
 
 DTS := apple-j274.dts
