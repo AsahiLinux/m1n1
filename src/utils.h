@@ -231,6 +231,17 @@ static inline u8 writeread8(u64 addr, u8 data)
     return read8(addr);
 }
 
+static inline int poll32(u64 addr, u32 mask, u32 target, u32 timeout)
+{
+    while (--timeout > 0) {
+        u32 value = read32(addr) & mask;
+        if (value == target)
+            return 0;
+    }
+
+    return -1;
+}
+
 #define sys_reg(op0, op1, CRn, CRm, op2) s##op0##_##op1##_c##CRn##_c##CRm##_##op2
 
 #define _mrs(reg)                                                                                  \
