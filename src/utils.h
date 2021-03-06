@@ -119,6 +119,17 @@ static inline u32 mask32(u64 addr, u32 clear, u32 set)
     return data;
 }
 
+static inline int poll32(u64 addr, u32 mask, u32 target, u32 timeout)
+{
+    while (--timeout > 0) {
+        u32 value = read32(addr) & mask;
+        if (value == target)
+            return 0;
+    }
+
+    return -1;
+}
+
 static inline u16 read16(u64 addr)
 {
     u32 data;
