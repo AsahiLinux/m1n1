@@ -313,4 +313,16 @@ void reboot(void) __attribute__((noreturn));
         reboot();                                                                                  \
     } while (0)
 
+static inline int poll32(u64 addr, u32 mask, u32 target, u32 timeout)
+{
+    while (--timeout > 0) {
+        u32 value = read32(addr) & mask;
+        if (value == target)
+            return 0;
+        udelay(1);
+    }
+
+    return -1;
+}
+
 #endif
