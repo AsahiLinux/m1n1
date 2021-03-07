@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
-#include <assert.h>
-
 #include "adt.h"
+#include "assert.h"
 #include "exception.h"
 #include "kboot.h"
 #include "malloc.h"

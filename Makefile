@@ -1,9 +1,22 @@
 ARCH := aarch64-linux-gnu-
 
+ifeq ($(USE_CLANG),1)
+CC := clang --target=$(ARCH)
+AS := clang --target=$(ARCH)
+LD := ld.lld
+OBJCOPY := llvm-objcopy
+else
+CC := $(ARCH)gcc
+AS := $(ARCH)gcc
+LD := $(ARCH)ld
+OBJCOPY := $(ARCH)objcopy
+endif
+
 CFLAGS := -O2 -Wall -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-Werror=implicit-function-declaration -Werror=implicit-int \
 	-Wsign-compare -Wunused-parameter -Wno-multichar \
 	-ffreestanding -fpic -ffunction-sections -fdata-sections \
+	-nostdinc -isystem $(shell $(CC) -print-file-name=include) -isystem sysinc \
 	-fno-stack-protector -mgeneral-regs-only -mstrict-align -march=armv8.2-a
 
 LDFLAGS := -T m1n1.ld -EL -maarch64elf --no-undefined -X -Bsymbolic \
@@ -19,7 +32,7 @@ TINF_OBJECTS := $(patsubst %,tinf/%, \
 DLMALLOC_OBJECTS := dlmalloc/malloc.o
 
 LIBFDT_OBJECTS := $(patsubst %,libfdt/%, \
-	fdt_addresses.o fdt_empty_tree.o fdt_overlay.o fdt_ro.o fdt_rw.o fdt_strerror.o fdt_sw.o \
+	fdt_addresses.o fdt_empty_tree.o fdt_ro.o fdt_rw.o fdt_strerror.o fdt_sw.o \
 	fdt_wip.o fdt.o)
 
 OBJECTS := adt.o bootlogo_128.o bootlogo_256.o chickens.o exception.o exception_asm.o fb.o \
@@ -37,24 +50,12 @@ TARGET := m1n1.macho
 
 DEPDIR := build/.deps
 
-ifeq ($(USE_CLANG),1)
-CC := clang --target=$(ARCH)
-AS := clang --target=$(ARCH)
-LD := ld.lld
-OBJCOPY := llvm-objcopy
-else
-CC := $(ARCH)gcc
-AS := $(ARCH)gcc
-LD := $(ARCH)ld
-OBJCOPY := $(ARCH)objcopy
-endif
-
 .PHONY: all clean format
 all: build/$(TARGET) $(DTBS)
 clean:
 	rm -rf build/*
 format:
-	clang-format -i src/*.c src/*.h
+	clang-format -i src/*.c src/*.h sysinc/*.h
 
 build/dtb/%.dtb: dts/%.dts
 	@echo "  DTC   $@"

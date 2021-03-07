@@ -3,6 +3,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -30,15 +31,6 @@ typedef s64 ptrdiff_t;
                          : 0))];                                                                   \
     type *name =                                                                                   \
         (type *)(((u32)(_al__##name)) + ((alignment) - (((u32)(_al__##name)) & ((alignment)-1))))
-
-#define INT_MAX  ((int)0x7fffffff)
-#define UINT_MAX ((unsigned int)0xffffffff)
-
-#define LONG_MAX  ((long)0x7fffffffffffffffl)
-#define ULONG_MAX ((unsigned long)0xfffffffffffffffful)
-
-#define LLONG_MAX  LONG_MAX
-#define ULLONG_MAX ULLONG_MAX
 
 #define HAVE_PTRDIFF_T 1
 #define HAVE_UINTPTR_T 1

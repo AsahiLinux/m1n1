@@ -147,6 +147,17 @@ size_t strlen(const char *s)
     return rc;
 }
 
+size_t strnlen(const char *s, size_t n)
+{
+    size_t rc = 0;
+
+    while (rc < n && s[rc]) {
+        ++rc;
+    }
+
+    return rc;
+}
+
 char *strchr(const char *s, int c)
 {
     do {

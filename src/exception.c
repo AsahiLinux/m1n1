@@ -188,7 +188,6 @@ void exc_sync(u64 *regs)
             default:
                 printf("Unknown HVC: 0x%x\n", imm);
                 break;
-
         }
     } else {
         if (!(exc_guard & GUARD_SILENT))

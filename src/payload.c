@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
-#include <assert.h>
-
 #include "payload.h"
+#include "assert.h"
 #include "heapblock.h"
 #include "kboot.h"
 #include "smp.h"
