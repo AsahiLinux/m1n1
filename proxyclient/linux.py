@@ -51,7 +51,7 @@ print("Loading DTB to 0x%x..." % dtb_addr)
 
 iface.writemem(dtb_addr, dtb)
 
-kernel_size = 32 * 1024 * 1024
+kernel_size = 512 * 1024 * 1024
 kernel_base = u.memalign(2 * 1024 * 1024, kernel_size)
 
 print("Kernel_base: 0x%x" % kernel_base)

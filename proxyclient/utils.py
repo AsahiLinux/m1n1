@@ -25,7 +25,7 @@ class ProxyUtils(object):
         # clash with Python (m1n1 will normally not use *any* heap when running proxy ops though,
         # except when running very high-level operations like booting a kernel, so this should be
         # OK).
-        self.heap_size = 128 * 1024 * 1024
+        self.heap_size = 1024 * 1024 * 1024
         try:
             self.heap_base = p.heapblock_alloc(0)
         except ProxyRemoteError:
