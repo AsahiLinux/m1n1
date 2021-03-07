@@ -9,6 +9,9 @@
 
 #define BIT(x) (1L << (x))
 
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+
 static inline u64 read64(u64 addr)
 {
     u64 data;
