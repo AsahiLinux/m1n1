@@ -375,26 +375,6 @@
 /* This last one is specific to EP0 */
 #define DWC3_EP0_DIR_IN (1 << 31)
 
-enum dwc3_phy {
-    DWC3_PHY_UNKNOWN = 0,
-    DWC3_PHY_USB3,
-    DWC3_PHY_USB2,
-};
-
-enum dwc3_ep0_next {
-    DWC3_EP0_UNKNOWN = 0,
-    DWC3_EP0_COMPLETE,
-    DWC3_EP0_NRDY_DATA,
-    DWC3_EP0_NRDY_STATUS,
-};
-
-enum dwc3_ep0_state {
-    EP0_UNCONNECTED = 0,
-    EP0_SETUP_PHASE,
-    EP0_DATA_PHASE,
-    EP0_STATUS_PHASE,
-};
-
 enum dwc3_link_state {
     /* In SuperSpeed */
     DWC3_LINK_STATE_U0 = 0x00, /* in HS, means ON */
@@ -560,6 +540,18 @@ struct dwc3_event_depevt {
     u32 parameters : 16;
 } PACKED;
 
+#define DWC3_DEVT_DISCONN         0x00
+#define DWC3_DEVT_USBRST          0x01
+#define DWC3_DEVT_CONNECTDONE     0x02
+#define DWC3_DEVT_ULSTCHNG        0x03
+#define DWC3_DEVT_WKUPEVT         0x04
+#define DWC3_DEVT_EOPF            0x06
+#define DWC3_DEVT_SOF             0x07
+#define DWC3_DEVT_ERRTICERR       0x09
+#define DWC3_DEVT_CMDCMPLT        0x0a
+#define DWC3_DEVT_EVNTOVERFLOW    0x0b
+#define DWC3_DEVT_VNDRDEVTSTRCVED 0x0c
+
 /**
  * struct dwc3_event_devt - Device Events
  * @one_bit: indicates this is a non-endpoint event (not used)
@@ -604,5 +596,30 @@ struct dwc3_event_gevt {
     u32 phy_port_number : 4;
     u32 reserved31_12 : 20;
 } PACKED;
+
+union dwc3_event {
+    u32 raw;
+    struct dwc3_event_type type;
+    struct dwc3_event_depevt depevt;
+    struct dwc3_event_devt devt;
+    struct dwc3_event_gevt gevt;
+};
+
+#define DWC3_DEPCFG_EP_TYPE(n)         (((n)&0x3) << 1)
+#define DWC3_DEPCFG_EP_NUMBER(n)       (((n)&0x1f) << 25)
+#define DWC3_DEPCFG_FIFO_NUMBER(n)     (((n)&0xf) << 17)
+#define DWC3_DEPCFG_MAX_PACKET_SIZE(n) (((n)&0x7ff) << 3)
+
+#define DWC3_DEPCFG_INT_NUM(n)          (((n)&0x1f) << 0)
+#define DWC3_DEPCFG_XFER_COMPLETE_EN    BIT(8)
+#define DWC3_DEPCFG_XFER_IN_PROGRESS_EN BIT(9)
+#define DWC3_DEPCFG_XFER_NOT_READY_EN   BIT(10)
+#define DWC3_DEPCFG_FIFO_ERROR_EN       BIT(11)
+#define DWC3_DEPCFG_STREAM_EVENT_EN     BIT(13)
+#define DWC3_DEPCFG_BINTERVAL_M1(n)     (((n)&0xff) << 16)
+#define DWC3_DEPCFG_STREAM_CAPABLE      BIT(24)
+#define DWC3_DEPCFG_EP_NUMBER(n)        (((n)&0x1f) << 25)
+#define DWC3_DEPCFG_BULK_BASED          BIT(30)
+#define DWC3_DEPCFG_FIFO_BASED          BIT(31)
 
 #endif /* __DRIVERS_USB_DWC3_CORE_H */
