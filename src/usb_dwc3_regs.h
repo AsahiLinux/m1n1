@@ -375,26 +375,6 @@
 /* This last one is specific to EP0 */
 #define DWC3_EP0_DIR_IN (1 << 31)
 
-enum dwc3_phy {
-    DWC3_PHY_UNKNOWN = 0,
-    DWC3_PHY_USB3,
-    DWC3_PHY_USB2,
-};
-
-enum dwc3_ep0_next {
-    DWC3_EP0_UNKNOWN = 0,
-    DWC3_EP0_COMPLETE,
-    DWC3_EP0_NRDY_DATA,
-    DWC3_EP0_NRDY_STATUS,
-};
-
-enum dwc3_ep0_state {
-    EP0_UNCONNECTED = 0,
-    EP0_SETUP_PHASE,
-    EP0_DATA_PHASE,
-    EP0_STATUS_PHASE,
-};
-
 enum dwc3_link_state {
     /* In SuperSpeed */
     DWC3_LINK_STATE_U0 = 0x00, /* in HS, means ON */
