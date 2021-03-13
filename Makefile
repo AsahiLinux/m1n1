@@ -49,6 +49,7 @@ OBJECTS := \
 	payload.o \
 	pmgr.o \
 	proxy.o \
+	ringbuffer.o \
 	smp.o \
 	start.o \
 	startup.o \
