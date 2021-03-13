@@ -268,6 +268,10 @@ static inline u8 writeread8(u64 addr, u8 data)
 #define dc_cvau(p)   cacheop("dc cvau", p)
 #define dc_civac(p)  cacheop("dc civac", p)
 
+#define dma_mb()  sysop("dmb osh")
+#define dma_rmb() sysop("dmb oshld")
+#define dma_wmb() sysop("dmb oshst")
+
 static inline int is_ecore(void)
 {
     return !(mrs(MPIDR_EL1) & (1 << 16));
