@@ -296,6 +296,11 @@ static inline int in_el2(void)
     return (mrs(CurrentEL) >> 2) == 2;
 }
 
+static inline int is_primary_core(void)
+{
+    return mrs(MPIDR_EL1) == 0x80000000;
+}
+
 extern char _base[];
 extern char _end[];
 extern char _payload_start[];
