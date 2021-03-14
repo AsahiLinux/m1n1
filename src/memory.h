@@ -5,8 +5,6 @@
 
 #include "types.h"
 
-#define SZ_16K 0x4000
-
 void ic_ivau_range(void *addr, size_t length);
 void dc_ivac_range(void *addr, size_t length);
 void dc_zva_range(void *addr, size_t length);
