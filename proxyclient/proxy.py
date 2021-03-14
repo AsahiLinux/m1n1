@@ -359,6 +359,10 @@ class M1N1Proxy:
     P_PMGR_ADT_CLOCKS_ENABLE = 0x802
     P_PMGR_ADT_CLOCKS_DISABLE = 0x803
 
+    P_FB_CONSOLE_DISABLE = 0x900
+    P_FB_CONSOLE_ENABLE = 0x901
+    P_FB_SCROLL = 0x902
+
     P_TUNABLES_APPLY_GLOBAL = 0xa00
     P_TUNABLES_APPLY_LOCAL = 0xa01
 
@@ -627,6 +631,13 @@ class M1N1Proxy:
         return self.request(self.P_TUNABLES_APPLY_LOCAL, path, prop, reg_offset)
     def tunables_apply_local_addr(self, path, prop, base):
         return self.request(self.P_TUNABLES_APPLY_LOCAL, path, prop, base)
+
+    def fb_console_disable(self):
+        self.request(self.P_FB_CONSOLE_DISABLE)
+    def fb_console_enable(self):
+        self.request(self.P_FB_CONSOLE_ENABLE)
+    def fb_console_scroll(self, n):
+        self.request(self.P_FB_SCROLL, n)
 
 if __name__ == "__main__":
     import serial

@@ -2,6 +2,7 @@
 
 #include "proxy.h"
 #include "exception.h"
+#include "fb.h"
 #include "heapblock.h"
 #include "kboot.h"
 #include "malloc.h"
@@ -335,6 +336,16 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_TUNABLES_APPLY_LOCAL_ADDR:
             reply->retval = tunables_apply_local_addr(
                 (const char *)request->args[0], (const char *)request->args[1], request->args[2]);
+            break;
+
+        case P_FB_CONSOLE_DISABLE:
+            fb_console_disable();
+            break;
+        case P_FB_CONSOLE_ENABLE:
+            fb_console_enable();
+            break;
+        case P_FB_SCROLL:
+            fb_console_scroll(request->args[0]);
             break;
 
         default:
