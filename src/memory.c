@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "memory.h"
+#include "fb.h"
 #include "utils.h"
 
 #define PAGE_SIZE       0x4000
@@ -343,6 +344,7 @@ void mmu_init(void)
 
 void mmu_shutdown(void)
 {
+    fb_console_scroll(3);
     printf("MMU: shutting down...\n");
     write_sctlr(read_sctlr() & ~(SCTLR_I | SCTLR_C | SCTLR_M));
     printf("MMU: shutdown successful, clearing caches\n");
