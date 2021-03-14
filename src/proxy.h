@@ -87,6 +87,10 @@ typedef enum {
     P_DART_UNMAP,
     P_DART_SHUTDOWN,
 
+    P_FB_CONSOLE_DISABLE = 0x900, // framebuffer console ops
+    P_FB_CONSOLE_ENABLE,
+    P_FB_SCROLL,
+
 } ProxyOp;
 
 #define S_OK     0

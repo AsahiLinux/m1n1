@@ -359,6 +359,10 @@ class M1N1Proxy:
     P_DART_UNMAP = 0x802
     P_DART_SHUTDOWN = 0x803
 
+    P_FB_CONSOLE_DISABLE = 0x900
+    P_FB_CONSOLE_ENABLE = 0x901
+    P_FB_SCROLL = 0x902
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
@@ -617,6 +621,13 @@ class M1N1Proxy:
         self.request(self.P_DART_UNMAP, dart, iova, length)
     def dart_shutdown(self, dart):
         self.request(self.P_DART_SHUTDOWN, dart)
+
+    def fb_console_disable(self):
+        self.request(self.P_FB_CONSOLE_DISABLE)
+    def fb_console_enable(self):
+        self.request(self.P_FB_CONSOLE_ENABLE)
+    def fb_console_scroll(self, n):
+        self.request(self.P_FB_SCROLL, n)
 
 if __name__ == "__main__":
     import serial
