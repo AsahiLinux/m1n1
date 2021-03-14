@@ -2,6 +2,7 @@
 
 #include <stdarg.h>
 
+#include "fb.h"
 #include "types.h"
 #include "uart.h"
 #include "utils.h"
@@ -75,6 +76,7 @@ int debug_printf(const char *fmt, ...)
     va_end(args);
 
     uart_write(buffer, i);
+    fb_console_write(buffer, i);
 
     return i;
 }
