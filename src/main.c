@@ -12,6 +12,7 @@
 #include "string.h"
 #include "uart.h"
 #include "uartproxy.h"
+#include "usb.h"
 #include "utils.h"
 #include "wdt.h"
 #include "xnuboot.h"
