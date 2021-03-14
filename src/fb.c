@@ -41,7 +41,8 @@ static struct {
     } margin;
 
     int initialized;
-} console = {.initialized = 0};
+    int disabled;
+} console = {.initialized = 0, .disabled = 0};
 
 static struct {
     char bfr[EARLYCON_BUFFER_SIZE];
@@ -218,6 +219,8 @@ void fb_console_write(const char *bfr, size_t len)
 {
     if (!is_primary_core())
         return;
+    if (console.disabled)
+        return;
     if (!console.initialized) {
         u32 copy = min(EARLYCON_BUFFER_SIZE - earlycon.offset, len);
 
@@ -231,4 +234,14 @@ void fb_console_write(const char *bfr, size_t len)
 
     while (len--)
         fb_putchar(*bfr++);
+}
+
+void fb_console_enable(void)
+{
+    console.disabled = 0;
+}
+
+void fb_console_disable(void)
+{
+    console.disabled = 1;
 }
