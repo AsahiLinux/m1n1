@@ -36,6 +36,7 @@ typedef s64 ptrdiff_t;
 #define HAVE_UINTPTR_T 1
 #define UPTRDIFF_T     uintptr_t
 
+#define SZ_2K  (1 << 11)
 #define SZ_16K (1 << 14)
 #define SZ_1M  (1 << 20)
 

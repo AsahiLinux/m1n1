@@ -10,6 +10,8 @@
 #define FB_DEPTH_FLAG_RETINA 0x10000
 #define FB_DEPTH_MASK        0xff
 
+#define EARLYCON_BUFFER_SIZE SZ_2K
+
 fb_t fb;
 
 static struct {
@@ -40,6 +42,12 @@ static struct {
 
     int initialized;
 } console = {.initialized = 0};
+
+static struct {
+    char bfr[EARLYCON_BUFFER_SIZE];
+    u32 offset;
+    u32 overflow;
+} earlycon = {.offset = 0, .overflow = 0};
 
 extern u8 _binary_build_bootlogo_128_bin_start[];
 extern u8 _binary_build_bootlogo_256_bin_start[];
@@ -107,6 +115,12 @@ void fb_init(void)
 
     for (u32 row = 0; row < console.cursor.max_row; ++row)
         fb_clear_font_row(row);
+
+    fb_console_write(earlycon.bfr, earlycon.offset);
+    if (earlycon.overflow) {
+        printf("\nearlycon: WARNING: overflowed earlycon buffer, there are likely missing messages "
+               "above.\n");
+    }
 
     printf("fb console: max rows %d, max cols %d\n", console.cursor.max_row,
            console.cursor.max_col);
@@ -202,10 +216,18 @@ void fb_console_scroll(u32 n)
 
 void fb_console_write(const char *bfr, size_t len)
 {
-    if (!console.initialized)
-        return;
     if (!is_primary_core())
         return;
+    if (!console.initialized) {
+        u32 copy = min(EARLYCON_BUFFER_SIZE - earlycon.offset, len);
+
+        memcpy(earlycon.bfr + earlycon.offset, bfr, copy);
+        earlycon.offset += copy;
+
+        if (copy != len)
+            earlycon.overflow = 1;
+        return;
+    }
 
     while (len--)
         fb_putchar(*bfr++);
