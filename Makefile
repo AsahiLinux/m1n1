@@ -57,6 +57,7 @@ OBJECTS := \
 	tunables.o \
 	uart.o \
 	uartproxy.o \
+	usb_dwc3.o \
 	utils.o utils_asm.o \
 	vsprintf.o \
 	wdt.o \
