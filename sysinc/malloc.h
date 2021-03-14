@@ -3,6 +3,8 @@
 #ifndef MALLOC_H
 #define MALLOC_H
 
+#include <stddef.h>
+
 void *malloc(size_t);
 void free(void *);
 void *calloc(size_t, size_t);
