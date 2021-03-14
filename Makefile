@@ -40,7 +40,7 @@ OBJECTS := adt.o bootlogo_128.o bootlogo_256.o chickens.o exception.o exception_
 	string.o uart.o uartproxy.o utils.o utils_asm.o vsprintf.o wdt.o $(MINILZLIB_OBJECTS) \
 	$(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS)
 
-DTS := apple-j274.dts
+DTS := t8103-j274.dts
 
 BUILD_OBJS := $(patsubst %,build/%,$(OBJECTS))
 DTBS := $(patsubst %.dts,build/dtb/%.dtb,$(DTS))
@@ -57,10 +57,15 @@ clean:
 format:
 	clang-format -i src/*.c src/*.h sysinc/*.h
 
-build/dtb/%.dtb: dts/%.dts
+build/dtb/%.dts: dts/%.dts
+	@echo "  DTCPP $@"
+	@mkdir -p "$(dir $@)"
+	@$(CC) -E -nostdinc -I dts -x assembler-with-cpp -o $@ $<
+
+build/dtb/%.dtb: build/dtb/%.dts
 	@echo "  DTC   $@"
 	@mkdir -p "$(dir $@)"
-	@dtc -I dts $< >$@
+	@dtc -I dts -i dts $< -o $@
 
 build/%.o: src/%.S
 	@echo "  AS    $@"
