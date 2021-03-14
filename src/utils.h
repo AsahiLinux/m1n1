@@ -278,7 +278,8 @@ static inline int in_el2(void)
     return (mrs(CurrentEL) >> 2) == 2;
 }
 
-extern char _base[0];
+extern char _base[];
+extern char _end[];
 extern char _payload_start[];
 extern char _payload_end[];
 

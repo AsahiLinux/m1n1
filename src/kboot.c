@@ -271,6 +271,9 @@ int kboot_prepare_dt(void *fdt)
     if (fdt_add_mem_rsv(dt, (u64)dt, dt_bufsize))
         bail("FDT: couldn't add reservation for the devtree\n");
 
+    if (fdt_add_mem_rsv(dt, (u64)_base, ((u64)_end) - ((u64)_base)))
+        bail("FDT: couldn't add reservation for m1n1\n");
+
     if (dt_set_chosen())
         return -1;
     if (dt_set_memory())
