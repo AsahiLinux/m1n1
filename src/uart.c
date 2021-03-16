@@ -27,6 +27,16 @@ void uart_init(void)
     /* keep UART config from iBoot */
 }
 
+int uart_can_read(void)
+{
+    return read32(UART_BASE + UTRSTAT) & 0x01;
+}
+
+int uart_can_write(void)
+{
+    return read32(UART_BASE + UTRSTAT) & 0x01;
+}
+
 void uart_putbyte(u8 c)
 {
     while (!(read32(UART_BASE + UTRSTAT) & 0x02))
