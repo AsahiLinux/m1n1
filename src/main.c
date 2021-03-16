@@ -61,6 +61,7 @@ void m1n1_main(void)
     print_info();
     wdt_disable();
     pmgr_init();
+    usb_init();
 
     printf("Checking for payloads...\n");
 

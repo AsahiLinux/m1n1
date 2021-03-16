@@ -10,6 +10,12 @@
 #include "usb_dwc3_regs.h"
 #include "utils.h"
 
+static dart_dev_t *usb_dart_port0;
+dwc3_dev_t *usb_dwc3_port0;
+
+static dart_dev_t *usb_dart_port1;
+dwc3_dev_t *usb_dwc3_port1;
+
 struct usb_drd_regs {
     uintptr_t drd_regs;
     uintptr_t atc;
@@ -104,30 +110,66 @@ static void usb_phy_bringup(struct usb_drd_regs *usb_regs)
     /* TODO */
 }
 
-dwc3_dev_t *usb_bringup(u32 idx)
+static int usb_bringup(u32 idx, dart_dev_t **dart_dev, dwc3_dev_t **usb_dev)
 {
+    *dart_dev = NULL;
+    *usb_dev = NULL;
+
     if (idx >= 2)
-        return NULL;
+        goto error;
 
     if (pmgr_adt_clocks_enable(usb_drd_paths[idx].atc_path) < 0)
-        return NULL;
+        goto error;
 
     if (pmgr_adt_clocks_enable(usb_drd_paths[idx].dart_path) < 0)
-        return NULL;
+        goto error;
 
     if (pmgr_adt_clocks_enable(usb_drd_paths[idx].drd_path) < 0)
-        return NULL;
+        goto error;
 
-    dart_dev_t *usb_dart =
-        usb_dart_init(usb_drd_paths[idx].dart_path, usb_drd_paths[idx].dart_mapper_path);
-    if (!usb_dart)
-        return NULL;
+    *dart_dev = usb_dart_init(usb_drd_paths[idx].dart_path, usb_drd_paths[idx].dart_mapper_path);
+    if (!*dart_dev)
+        goto error;
 
     struct usb_drd_regs usb_regs;
     if (usb_drd_get_regs(usb_drd_paths[idx].atc_path, usb_drd_paths[idx].drd_path, &usb_regs) < 0)
-        return NULL;
+        goto error;
 
     usb_phy_bringup(&usb_regs);
 
-    return usb_dwc3_init(usb_regs.drd_regs, usb_dart);
+    *usb_dev = usb_dwc3_init(usb_regs.drd_regs, *dart_dev);
+
+    if (!*usb_dev)
+        goto error;
+
+    return 0;
+
+error:
+    if (*dart_dev)
+        dart_shutdown(*dart_dev);
+    return -1;
+}
+
+static void usb_dev_shutdown(dart_dev_t *dart_dev, dwc3_dev_t *usb_dev)
+{
+    usb_dwc3_shutdown(usb_dev);
+    dart_shutdown(dart_dev);
+}
+
+int usb_init(void)
+{
+    if (usb_bringup(0, &usb_dart_port0, &usb_dwc3_port0) < 0)
+        return -1;
+    if (usb_bringup(1, &usb_dart_port1, &usb_dwc3_port1) < 0) {
+        usb_dev_shutdown(usb_dart_port0, usb_dwc3_port0);
+        return -1;
+    }
+
+    return 0;
+}
+
+void usb_shutdown(void)
+{
+    usb_dev_shutdown(usb_dart_port0, usb_dwc3_port0);
+    usb_dev_shutdown(usb_dart_port1, usb_dwc3_port1);
 }
