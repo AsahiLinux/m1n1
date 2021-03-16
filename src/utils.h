@@ -5,8 +5,6 @@
 
 #include "types.h"
 
-#define printf debug_printf
-
 #define BIT(x) (1L << (x))
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
@@ -319,18 +317,25 @@ void memcpy16(void *dst, void *src, size_t size);
 void memset8(void *dst, u8 value, size_t size);
 void memcpy8(void *dst, void *src, size_t size);
 
+#define DEBUG_PRINTF_DEVICE_UART BIT(0)
+#define DEBUG_PRINTF_DEVICE_FB   BIT(1)
+#define DEBUG_PRINTF_DEVICE_ALL                                                                    \
+    (DEBUG_PRINTF_DEVICE_UART | DEBUG_PRINTF_DEVICE_FB)
+
 void hexdump(const void *d, size_t len);
 void regdump(u64 addr, size_t len);
 int sprintf(char *str, const char *fmt, ...);
-int debug_printf(const char *fmt, ...);
+int debug_printf(u32 devices, const char *fmt, ...);
 void udelay(u32 d);
 void reboot(void) __attribute__((noreturn));
+
+#define printf(fmt, ...) debug_printf(DEBUG_PRINTF_DEVICE_ALL, fmt, ##__VA_ARGS__)
 
 #define mdelay(m) udelay((m)*1000)
 
 #define panic(fmt, ...)                                                                            \
     do {                                                                                           \
-        debug_printf(fmt, ##__VA_ARGS__);                                                          \
+        printf(fmt, ##__VA_ARGS__);                                                                \
         reboot();                                                                                  \
     } while (0)
 

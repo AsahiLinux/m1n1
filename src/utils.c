@@ -65,7 +65,7 @@ int sprintf(char *buffer, const char *fmt, ...)
     return i;
 }
 
-int debug_printf(const char *fmt, ...)
+int debug_printf(u32 devices, const char *fmt, ...)
 {
     va_list args;
     char buffer[512];
@@ -75,8 +75,10 @@ int debug_printf(const char *fmt, ...)
     i = vsprintf(buffer, fmt, args);
     va_end(args);
 
-    uart_write(buffer, i);
-    fb_console_write(buffer, i);
+    if (devices & DEBUG_PRINTF_DEVICE_UART)
+        uart_write(buffer, i);
+    if (devices & DEBUG_PRINTF_DEVICE_FB)
+        fb_console_write(buffer, i);
 
     return i;
 }
