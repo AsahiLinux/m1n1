@@ -993,6 +993,18 @@ size_t usb_dwc3_read(dwc3_dev_t *dev, void *buf, size_t count)
     return recvd;
 }
 
+size_t usb_dwc3_write_unsafe(dwc3_dev_t *dev, const void *buf, size_t count)
+{
+    usb_dwc3_handle_events(dev);
+    return ringbuffer_write(buf, count, dev->device2host);
+}
+
+size_t usb_dwc3_read_unsafe(dwc3_dev_t *dev, void *buf, size_t count)
+{
+    usb_dwc3_handle_events(dev);
+    return ringbuffer_read(buf, count, dev->host2device);
+}
+
 int usb_dwc3_can_read(dwc3_dev_t *dev)
 {
     usb_dwc3_handle_events(dev);
