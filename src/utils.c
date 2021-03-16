@@ -5,6 +5,7 @@
 #include "fb.h"
 #include "types.h"
 #include "uart.h"
+#include "usb.h"
 #include "utils.h"
 #include "vsprintf.h"
 
@@ -79,6 +80,8 @@ int debug_printf(u32 devices, const char *fmt, ...)
         uart_write(buffer, i);
     if (devices & DEBUG_PRINTF_DEVICE_FB)
         fb_console_write(buffer, i);
+    if (devices & DEBUG_PRINTF_DEVICE_USB)
+        usb_console_write(buffer, i);
 
     return i;
 }

@@ -173,3 +173,14 @@ void usb_shutdown(void)
     usb_dev_shutdown(usb_dart_port0, usb_dwc3_port0);
     usb_dev_shutdown(usb_dart_port1, usb_dwc3_port1);
 }
+
+void usb_console_write(const char *bfr, size_t len)
+{
+    if (!is_primary_core())
+        return;
+
+    if (usb_dwc3_port0)
+        usb_dwc3_write_unsafe(usb_dwc3_port0, bfr, len);
+    if (usb_dwc3_port1)
+        usb_dwc3_write_unsafe(usb_dwc3_port1, bfr, len);
+}

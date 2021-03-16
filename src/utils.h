@@ -319,8 +319,9 @@ void memcpy8(void *dst, void *src, size_t size);
 
 #define DEBUG_PRINTF_DEVICE_UART BIT(0)
 #define DEBUG_PRINTF_DEVICE_FB   BIT(1)
+#define DEBUG_PRINTF_DEVICE_USB  BIT(2)
 #define DEBUG_PRINTF_DEVICE_ALL                                                                    \
-    (DEBUG_PRINTF_DEVICE_UART | DEBUG_PRINTF_DEVICE_FB)
+    (DEBUG_PRINTF_DEVICE_UART | DEBUG_PRINTF_DEVICE_FB | DEBUG_PRINTF_DEVICE_USB)
 
 void hexdump(const void *d, size_t len);
 void regdump(u64 addr, size_t len);
