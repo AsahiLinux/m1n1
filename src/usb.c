@@ -5,10 +5,13 @@
 #include "dart.h"
 #include "malloc.h"
 #include "pmgr.h"
+#include "string.h"
 #include "types.h"
 #include "usb_dwc3.h"
 #include "usb_dwc3_regs.h"
 #include "utils.h"
+
+#define EARLYCON_BUFFER_SIZE SZ_2K
 
 static dart_dev_t *usb_dart_port0;
 dwc3_dev_t *usb_dwc3_port0;
@@ -20,6 +23,13 @@ struct usb_drd_regs {
     uintptr_t drd_regs;
     uintptr_t atc;
 };
+
+static struct {
+    char bfr[EARLYCON_BUFFER_SIZE];
+    u32 offset;
+    u32 overflow;
+    u32 flushed;
+} earlycon;
 
 static const struct {
     const char *dart_path;
@@ -179,8 +189,33 @@ void usb_console_write(const char *bfr, size_t len)
     if (!is_primary_core())
         return;
 
-    if (usb_dwc3_port0)
-        usb_dwc3_write_unsafe(usb_dwc3_port0, bfr, len);
-    if (usb_dwc3_port1)
-        usb_dwc3_write_unsafe(usb_dwc3_port1, bfr, len);
+    /*
+     * we only need to check for port0 since usb_init guarantees
+     * that either both ports or no port is up and running
+     */
+    if (!usb_dwc3_port0) {
+        u32 copy = min(EARLYCON_BUFFER_SIZE - earlycon.offset, len);
+
+        memcpy(earlycon.bfr + earlycon.offset, bfr, copy);
+        earlycon.offset += copy;
+
+        if (copy != len)
+            earlycon.overflow = 1;
+        return;
+    }
+
+    if (!earlycon.flushed) {
+        if (earlycon.overflow) {
+            static const char overflow_msg[] =
+                "earlycon: buffer has overflown; some messages above are missing.\n";
+            usb_dwc3_write_unsafe(usb_dwc3_port0, overflow_msg, sizeof(overflow_msg));
+            usb_dwc3_write_unsafe(usb_dwc3_port1, overflow_msg, sizeof(overflow_msg));
+        }
+        usb_dwc3_write_unsafe(usb_dwc3_port0, earlycon.bfr, earlycon.offset);
+        usb_dwc3_write_unsafe(usb_dwc3_port1, earlycon.bfr, earlycon.offset);
+        earlycon.flushed = 1;
+    }
+
+    usb_dwc3_write_unsafe(usb_dwc3_port0, bfr, len);
+    usb_dwc3_write_unsafe(usb_dwc3_port1, bfr, len);
 }
