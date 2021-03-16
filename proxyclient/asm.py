@@ -49,7 +49,7 @@ class BaseAsm(object):
             self._tmp = None
 
 class ARMAsm(BaseAsm):
-    PREFIX = os.path.join("aarch64-linux-gnu-")
+    PREFIX = os.path.join(os.environ.get("ARCH", "aarch64-linux-gnu-"))
     CFLAGS = "-pipe -Wall -nostartfiles -nodefaultlibs"
     HEADER = """
     .text
