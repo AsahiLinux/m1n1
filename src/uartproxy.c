@@ -6,6 +6,8 @@
 #include "string.h"
 #include "types.h"
 #include "uart.h"
+#include "usb.h"
+#include "usb_dwc3.h"
 #include "utils.h"
 
 #define REQ_SIZE 64
@@ -65,93 +67,160 @@ static u64 __attribute__((noinline)) checksum(void *start, u32 length)
     return sum ^ 0xADDEDBAD;
 }
 
-void uartproxy_run(void)
+static int uartproxy_uart_can_read(void *cookie)
+{
+    UNUSED(cookie);
+    return uart_can_read();
+}
+
+static void uartproxy_uart_write(void *cookie, const void *buf, size_t count)
+{
+    UNUSED(cookie);
+    uart_write(buf, count);
+}
+
+static size_t uartproxy_uart_read(void *cookie, void *buf, size_t count)
+{
+    UNUSED(cookie);
+    return uart_read(buf, count);
+}
+
+struct uartproxy_dev_ops {
+    int (*can_read)(void *);
+    void (*write)(void *, const void *, size_t);
+    size_t (*read)(void *, void *, size_t);
+};
+
+struct uartproxy_dev {
+    const struct uartproxy_dev_ops *ops;
+    void *cookie;
+};
+
+const struct uartproxy_dev_ops uart_dev_ops = {.can_read = uartproxy_uart_can_read,
+                                               .write = uartproxy_uart_write,
+                                               .read = uartproxy_uart_read};
+
+const struct uartproxy_dev_ops usb_dev_ops = {
+    .can_read = (int (*)(void *))usb_dwc3_can_read,
+    .write = (void (*)(void *, const void *, size_t))usb_dwc3_write,
+    .read = (size_t(*)(void *, void *, size_t))usb_dwc3_read};
+
+int uartproxy_handle_request(struct uartproxy_dev *dev, u32 type)
 {
     int running = 1;
-    int c;
     size_t bytes;
     u64 checksum_val;
 
     UartRequest request;
+    UartReply reply;
+
+    memset(&request, 0, sizeof(request));
+    request.type = type;
+    bytes = dev->ops->read(dev->cookie, (&request.type) + 1, REQ_SIZE - 4);
+    if (bytes != REQ_SIZE - 4)
+        return 1;
+    if (checksum(&(request.type), REQ_SIZE - 4) != request.checksum)
+        return 1;
+
+    memset(&reply, 0, sizeof(reply));
+    reply.type = request.type;
+    reply.status = ST_OK;
+
+    switch (request.type) {
+        case REQ_NOP:
+            break;
+        case REQ_PROXY:
+            running = proxy_process(&request.prequest, &reply.preply);
+            break;
+        case REQ_MEMREAD:
+            if (request.mrequest.size == 0)
+                break;
+            exc_count = 0;
+            exc_guard = GUARD_RETURN;
+            checksum_val = checksum((void *)request.mrequest.addr, request.mrequest.size);
+            exc_guard = GUARD_OFF;
+            if (exc_count)
+                reply.status = ST_XFRERR;
+            reply.mreply.dchecksum = checksum_val;
+            break;
+        case REQ_MEMWRITE:
+            exc_count = 0;
+            exc_guard = GUARD_SKIP;
+            if (request.mrequest.size != 0) {
+                // Probe for exception guard
+                // We can't do the whole buffer easily, because we'd drop UART data
+                write8(request.mrequest.addr, 0);
+                write8(request.mrequest.addr + request.mrequest.size - 1, 0);
+            }
+            exc_guard = GUARD_OFF;
+            if (exc_count) {
+                reply.status = ST_XFRERR;
+                break;
+            }
+            bytes =
+                dev->ops->read(dev->cookie, (void *)request.mrequest.addr, request.mrequest.size);
+            if (bytes != request.mrequest.size) {
+                reply.status = ST_XFRERR;
+                break;
+            }
+            checksum_val = checksum((void *)request.mrequest.addr, request.mrequest.size);
+            reply.mreply.dchecksum = checksum_val;
+            if (reply.mreply.dchecksum != request.mrequest.dchecksum)
+                reply.status = ST_XFRERR;
+            break;
+        default:
+            reply.status = ST_BADCMD;
+            break;
+    }
+    reply.checksum = checksum(&reply, REPLY_SIZE - 4);
+    dev->ops->write(dev->cookie, &reply, REPLY_SIZE);
+
+    if ((request.type == REQ_MEMREAD) && (reply.status == ST_OK)) {
+        dev->ops->write(dev->cookie, (void *)request.mrequest.addr, request.mrequest.size);
+    }
+
+    return running;
+}
+
+void uartproxy_run(void)
+{
+    struct uartproxy_dev devs[3] = {
+        {
+            .ops = &uart_dev_ops,
+            .cookie = NULL,
+        },
+        {
+            .ops = &usb_dev_ops,
+            .cookie = usb_dwc3_port0,
+        },
+        {
+            .ops = &usb_dev_ops,
+            .cookie = usb_dwc3_port1,
+        },
+    };
+    u32 request_type[3];
+
+    int running = 1;
+    int c;
+
     UartReply reply = {REQ_BOOT};
     reply.checksum = checksum(&reply, REPLY_SIZE - 4);
     uart_write(&reply, REPLY_SIZE);
 
     while (running) {
-        c = uart_getbyte();
-        if (c != 0xFF)
-            continue;
-        c = uart_getbyte();
-        if (c != 0x55)
-            continue;
-        c = uart_getbyte();
-        if (c != 0xAA)
-            continue;
-        c = uart_getbyte();
-        if (c < 0)
-            continue;
-        memset(&request, 0, sizeof(request));
-        request.type = 0x00AA55FF | ((c & 0xff) << 24);
-        bytes = uart_read((&request.type) + 1, REQ_SIZE - 4);
-        if (bytes != REQ_SIZE - 4)
-            continue;
-        if (checksum(&(request.type), REQ_SIZE - 4) != request.checksum)
-            continue;
+        for (int i = 0; i < 3; ++i) {
+            struct uartproxy_dev *dev = &devs[i];
+            if (!dev->ops->can_read(dev->cookie))
+                continue;
 
-        memset(&reply, 0, sizeof(reply));
-        reply.type = request.type;
-        reply.status = ST_OK;
+            dev->ops->read(dev->cookie, &c, 1);
+            request_type[i] >>= 8;
+            request_type[i] |= c << 24;
 
-        switch (request.type) {
-            case REQ_NOP:
+            if ((request_type[i] & 0x00ffffff) == 0x00aa55ff)
+                running = uartproxy_handle_request(dev, request_type[i]);
+            if (!running)
                 break;
-            case REQ_PROXY:
-                running = proxy_process(&request.prequest, &reply.preply);
-                break;
-            case REQ_MEMREAD:
-                if (request.mrequest.size == 0)
-                    break;
-                exc_count = 0;
-                exc_guard = GUARD_RETURN;
-                checksum_val = checksum((void *)request.mrequest.addr, request.mrequest.size);
-                exc_guard = GUARD_OFF;
-                if (exc_count)
-                    reply.status = ST_XFRERR;
-                reply.mreply.dchecksum = checksum_val;
-                break;
-            case REQ_MEMWRITE:
-                exc_count = 0;
-                exc_guard = GUARD_SKIP;
-                if (request.mrequest.size != 0) {
-                    // Probe for exception guard
-                    // We can't do the whole buffer easily, because we'd drop UART data
-                    write8(request.mrequest.addr, 0);
-                    write8(request.mrequest.addr + request.mrequest.size - 1, 0);
-                }
-                exc_guard = GUARD_OFF;
-                if (exc_count) {
-                    reply.status = ST_XFRERR;
-                    break;
-                }
-                bytes = uart_read((void *)request.mrequest.addr, request.mrequest.size);
-                if (bytes != request.mrequest.size) {
-                    reply.status = ST_XFRERR;
-                    break;
-                }
-                checksum_val = checksum((void *)request.mrequest.addr, request.mrequest.size);
-                reply.mreply.dchecksum = checksum_val;
-                if (reply.mreply.dchecksum != request.mrequest.dchecksum)
-                    reply.status = ST_XFRERR;
-                break;
-            default:
-                reply.status = ST_BADCMD;
-                break;
-        }
-        reply.checksum = checksum(&reply, REPLY_SIZE - 4);
-        uart_write(&reply, REPLY_SIZE);
-
-        if ((request.type == REQ_MEMREAD) && (reply.status == ST_OK)) {
-            uart_write((void *)request.mrequest.addr, request.mrequest.size);
         }
     }
 }
