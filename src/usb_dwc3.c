@@ -992,3 +992,15 @@ size_t usb_dwc3_read(dwc3_dev_t *dev, void *buf, size_t count)
 
     return recvd;
 }
+
+int usb_dwc3_can_read(dwc3_dev_t *dev)
+{
+    usb_dwc3_handle_events(dev);
+    return ringbuffer_get_used(dev->host2device) > 0;
+}
+
+int usb_dwc3_can_write(dwc3_dev_t *dev)
+{
+    usb_dwc3_handle_events(dev);
+    return ringbuffer_get_free(dev->device2host) > 0;
+}
