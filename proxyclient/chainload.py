@@ -58,6 +58,15 @@ p.ic_ivau(new_base, memory_size)
 entry -= vmin
 entry += new_base
 
+if args.el1:
+    print("Setting up EL1 config")
+
+    # Enable physical timer for EL1
+    u.msr(CNTHCTL_EL2, 3 << 10) # EL1PTEN | EL1PCTEN
+
+    # Unredirect IRQs/FIQs
+    u.msr(HCR_EL2, u.mrs(HCR_EL2) & ~(3 << 3)) # ~(IMO | FMO)
+
 print("Jumping to 0x%x" % entry)
 
 try:
