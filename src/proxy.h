@@ -82,6 +82,9 @@ typedef enum {
     P_KBOOT_SET_INITRD,
     P_KBOOT_PREPARE_DT,
 
+    P_TUNABLES_APPLY_GLOBAL = 0xa00,
+    P_TUNABLES_APPLY_LOCAL,
+
 } ProxyOp;
 
 #define S_OK     0

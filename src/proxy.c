@@ -7,6 +7,7 @@
 #include "malloc.h"
 #include "memory.h"
 #include "smp.h"
+#include "tunables.h"
 #include "types.h"
 #include "uart.h"
 #include "utils.h"
@@ -307,6 +308,15 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_KBOOT_PREPARE_DT:
             reply->retval = kboot_prepare_dt((void *)request->args[0]);
+            break;
+
+        case P_TUNABLES_APPLY_GLOBAL:
+            reply->retval = tunables_apply_global((const char *)request->args[0],
+                                                  (const char *)request->args[1]);
+            break;
+        case P_TUNABLES_APPLY_LOCAL:
+            reply->retval = tunables_apply_local((const char *)request->args[0],
+                                                 (const char *)request->args[1], request->args[2]);
             break;
 
         default:
