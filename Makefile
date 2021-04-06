@@ -56,6 +56,8 @@ clean:
 	rm -rf build/*
 format:
 	clang-format -i src/*.c src/*.h sysinc/*.h
+format-check:
+	clang-format --dry-run --Werror src/*.c src/*.h sysinc/*.h
 
 build/dtb/%.dts: dts/%.dts
 	@echo "  DTCPP $@"
