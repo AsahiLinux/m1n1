@@ -354,6 +354,9 @@ class M1N1Proxy:
     P_KBOOT_SET_INITRD = 0x702
     P_KBOOT_PREPARE_DT = 0x703
 
+    P_TUNABLES_APPLY_GLOBAL = 0xa00
+    P_TUNABLES_APPLY_LOCAL = 0xa01
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
@@ -603,6 +606,11 @@ class M1N1Proxy:
         self.request(self.P_KBOOT_SET_INITRD, base, size)
     def kboot_prepare_dt(self, dt_addr):
         return self.request(self.P_KBOOT_PREPARE_DT, dt_addr)
+
+    def tunables_apply_global(self, path, prop):
+        return self.request(self.P_TUNABLES_APPLY_GLOBAL, path, prop)
+    def tunables_apply_local(self, path, prop, reg_offset):
+        return self.request(self.P_TUNABLES_APPLY_LOCAL, path, prop, reg_offset)
 
 if __name__ == "__main__":
     import serial
