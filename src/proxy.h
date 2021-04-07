@@ -84,6 +84,7 @@ typedef enum {
 
     P_TUNABLES_APPLY_GLOBAL = 0xa00,
     P_TUNABLES_APPLY_LOCAL,
+    P_TUNABLES_APPLY_LOCAL_ADDR,
 
 } ProxyOp;
 

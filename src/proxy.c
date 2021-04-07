@@ -318,6 +318,10 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->retval = tunables_apply_local((const char *)request->args[0],
                                                  (const char *)request->args[1], request->args[2]);
             break;
+        case P_TUNABLES_APPLY_LOCAL_ADDR:
+            reply->retval = tunables_apply_local_addr(
+                (const char *)request->args[0], (const char *)request->args[1], request->args[2]);
+            break;
 
         default:
             reply->status = S_BADCMD;

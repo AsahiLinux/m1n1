@@ -611,6 +611,8 @@ class M1N1Proxy:
         return self.request(self.P_TUNABLES_APPLY_GLOBAL, path, prop)
     def tunables_apply_local(self, path, prop, reg_offset):
         return self.request(self.P_TUNABLES_APPLY_LOCAL, path, prop, reg_offset)
+    def tunables_apply_local_addr(self, path, prop, base):
+        return self.request(self.P_TUNABLES_APPLY_LOCAL, path, prop, base)
 
 if __name__ == "__main__":
     import serial

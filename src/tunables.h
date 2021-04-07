@@ -26,4 +26,15 @@ int tunables_apply_global(const char *path, const char *prop);
  */
 int tunables_apply_local(const char *path, const char *prop, u32 reg_idx);
 
+/*
+ * This functions does the same as tunables_apply_local except that it allows
+ * to specify the base address to which the tunables will be applied to instead
+ * of extracting it from the "regs" property.
+ *
+ * Example usage for two tunables for the USB DRD DART node:
+ *  tunables_apply_local_addr("/arm-io/dart-usb0", "dart-tunables-instance-0", 0x382f00000);
+ *  tunables_apply_local_addr("/arm-io/dart-usb0", "dart-tunables-instance-1", 0x382f80000);
+ */
+int tunables_apply_local_addr(const char *path, const char *prop, uintptr_t base);
+
 #endif

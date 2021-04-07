@@ -75,18 +75,12 @@ struct tunable_local {
     u64 value;
 } PACKED;
 
-int tunables_apply_local(const char *path, const char *prop, u32 reg_offset)
+int tunables_apply_local_addr(const char *path, const char *prop, uintptr_t base)
 {
     struct tunable_info info;
 
     if (tunables_adt_find(path, prop, &info, sizeof(struct tunable_local)) < 0)
         return -1;
-
-    u64 base;
-    if (adt_get_reg(adt, info.node_path, "reg", reg_offset, &base, NULL) < 0) {
-        printf("tunable: Error getting regs\n");
-        return -1;
-    }
 
     const struct tunable_local *tunables = (const struct tunable_local *)info.tunable_raw;
     for (u32 i = 0; i < info.tunable_len; ++i) {
@@ -111,4 +105,20 @@ int tunables_apply_local(const char *path, const char *prop, u32 reg_offset)
         }
     }
     return 0;
+}
+
+int tunables_apply_local(const char *path, const char *prop, u32 reg_offset)
+{
+    struct tunable_info info;
+
+    if (tunables_adt_find(path, prop, &info, sizeof(struct tunable_local)) < 0)
+        return -1;
+
+    u64 base;
+    if (adt_get_reg(adt, info.node_path, "reg", reg_offset, &base, NULL) < 0) {
+        printf("tunable: Error getting regs\n");
+        return -1;
+    }
+
+    return tunables_apply_local_addr(path, prop, base);
 }
