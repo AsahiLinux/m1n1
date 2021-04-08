@@ -6,6 +6,7 @@
 #include "kboot.h"
 #include "malloc.h"
 #include "memory.h"
+#include "pmgr.h"
 #include "smp.h"
 #include "tunables.h"
 #include "types.h"
@@ -308,6 +309,19 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_KBOOT_PREPARE_DT:
             reply->retval = kboot_prepare_dt((void *)request->args[0]);
+            break;
+
+        case P_PMGR_CLOCK_ENABLE:
+            reply->retval = pmgr_clock_enable(request->args[0]);
+            break;
+        case P_PMGR_CLOCK_DISABLE:
+            reply->retval = pmgr_clock_enable(request->args[0]);
+            break;
+        case P_PMGR_ADT_CLOCKS_ENABLE:
+            reply->retval = pmgr_adt_clocks_enable((const char *)request->args[0]);
+            break;
+        case P_PMGR_ADT_CLOCKS_DISABLE:
+            reply->retval = pmgr_adt_clocks_disable((const char *)request->args[0]);
             break;
 
         case P_TUNABLES_APPLY_GLOBAL:
