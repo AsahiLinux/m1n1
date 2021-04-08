@@ -354,6 +354,11 @@ class M1N1Proxy:
     P_KBOOT_SET_INITRD = 0x702
     P_KBOOT_PREPARE_DT = 0x703
 
+    P_PMGR_CLOCK_ENABLE = 0x800
+    P_PMGR_CLOCK_DISABLE = 0x801
+    P_PMGR_ADT_CLOCKS_ENABLE = 0x802
+    P_PMGR_ADT_CLOCKS_DISABLE = 0x803
+
     P_TUNABLES_APPLY_GLOBAL = 0xa00
     P_TUNABLES_APPLY_LOCAL = 0xa01
 
@@ -606,6 +611,15 @@ class M1N1Proxy:
         self.request(self.P_KBOOT_SET_INITRD, base, size)
     def kboot_prepare_dt(self, dt_addr):
         return self.request(self.P_KBOOT_PREPARE_DT, dt_addr)
+
+    def pmgr_clock_enable(self, clkid):
+        return self.request(self.P_PMGR_CLOCK_ENABLE, clkid)
+    def pmgr_clock_disable(self, clkid):
+        return self.request(self.P_PMGR_CLOCK_DISABLE, clkid)
+    def pmgr_adt_clocks_enable(self, path):
+        return self.request(self.P_PMGR_ADT_CLOCKS_ENABLE, path)
+    def pmgr_adt_clocks_disable(self, path):
+        return self.request(self.P_PMGR_ADT_CLOCKS_DISABLE, path)
 
     def tunables_apply_global(self, path, prop):
         return self.request(self.P_TUNABLES_APPLY_GLOBAL, path, prop)
