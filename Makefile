@@ -50,6 +50,7 @@ OBJECTS := \
 	main.o \
 	memory.o memory_asm.o \
 	payload.o \
+	pcie.o \
 	pmgr.o \
 	proxy.o \
 	ringbuffer.o \
