@@ -366,6 +366,11 @@ class M1N1Proxy:
     P_TUNABLES_APPLY_GLOBAL = 0xa00
     P_TUNABLES_APPLY_LOCAL = 0xa01
 
+    P_DART_INIT = 0xb00
+    P_DART_SHUTDOWN = 0xb01
+    P_DART_MAP = 0xb02
+    P_DART_UNMAP = 0xb03
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
@@ -638,6 +643,15 @@ class M1N1Proxy:
         self.request(self.P_FB_CONSOLE_ENABLE)
     def fb_console_scroll(self, n):
         self.request(self.P_FB_SCROLL, n)
+
+    def dart_init(self, base, sid):
+        return self.request(self.P_DART_INIT, base, sid)
+    def dart_shutdown(self, dart):
+        return self.request(self.P_DART_SHUTDOWN, dart)
+    def dart_map(self, dart, iova, bfr, len):
+        return self.request(self.P_DART_MAP, dart, iova, bfr, len)
+    def dart_unmap(self, dart, iova, len):
+        return self.request(self.P_DART_UNMAP, dart, iova, len)
 
 if __name__ == "__main__":
     import serial
