@@ -258,7 +258,8 @@ void exc_irq(u64 *regs)
 
 void exc_fiq(u64 *regs)
 {
-    uart_puts("Exception: FIQ");
+    const char *m_desc = m_table[mrs(SPSR_EL1) & 0xf];
+    printf("Exception: FIQ (from %s)\n", m_desc ? m_desc : "?");
 
     u64 reg = mrs(CNTP_CTL_EL0);
     if (reg == 0x5) {
