@@ -50,7 +50,7 @@ class BaseAsm(object):
 
 class ARMAsm(BaseAsm):
     PREFIX = os.path.join(os.environ.get("ARCH", "aarch64-linux-gnu-"))
-    CFLAGS = "-pipe -Wall -nostartfiles -nodefaultlibs"
+    CFLAGS = "-pipe -Wall -nostartfiles -nodefaultlibs -march=armv8.2-a"
     HEADER = """
     .text
     .globl _start
