@@ -370,8 +370,9 @@ class M1N1Proxy:
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
+        self.heap = None
 
-    def request(self, opcode, *args, reboot=False, signed=False, no_reply=False, pre_reply=None):
+    def _request(self, opcode, *args, reboot=False, signed=False, no_reply=False, pre_reply=None):
         if len(args) > 6:
             raise ValueError("Too many arguments")
         args = list(args) + [0] * (6 - len(args))
@@ -395,6 +396,27 @@ class M1N1Proxy:
             else:
                 raise ProxyRemoteError("Reply error: Unknown error (%d)"%status)
         return retval
+
+    def request(self, opcode, *args, **kwargs):
+        free = []
+        args = list(args)
+        args2 = []
+        for i, arg in enumerate(args):
+            if isinstance(arg, str):
+                arg = arg.encode("utf-8") + b"\0"
+            if isinstance(arg, bytes) and self.heap:
+                p = self.heap.malloc(len(arg))
+                free.append(p)
+                self.iface.writemem(p, arg)
+                if (i < (len(args) - 1)) and args[i + 1] is None:
+                    args[i + 1] = len(arg)
+                arg = p
+            args2.append(arg)
+        try:
+            return self._request(opcode, *args2, **kwargs)
+        finally:
+            for i in free:
+                self.heap.free(i)
 
     def nop(self):
         self.request(self.P_NOP)
@@ -610,8 +632,8 @@ class M1N1Proxy:
 
     def kboot_boot(self, kernel):
         self.request(self.P_KBOOT_BOOT, kernel, no_reply=True)
-    def kboot_set_bootargs(self, ba_p):
-        self.request(self.P_KBOOT_SET_BOOTARGS, ba_p)
+    def kboot_set_bootargs(self, bootargs):
+        self.request(self.P_KBOOT_SET_BOOTARGS, bootargs)
     def kboot_set_initrd(self, base, size):
         self.request(self.P_KBOOT_SET_INITRD, base, size)
     def kboot_prepare_dt(self, dt_addr):

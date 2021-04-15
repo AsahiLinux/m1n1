@@ -34,6 +34,7 @@ class ProxyUtils(object):
                               self.ba.phys_base)
         self.heap_base += 128 * 1024 * 1024 # We leave 128MB for m1n1 heap
         self.heap = malloc.Heap(self.heap_base, self.heap_base + self.heap_size)
+        self.proxy.heap = self.heap
 
         self.malloc = self.heap.malloc
         self.memalign = self.heap.memalign

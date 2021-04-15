@@ -32,12 +32,8 @@ else:
     initramfs_size = 0
 
 if args.bootargs is not None:
-    bootargs = bytes(args.bootargs, encoding="utf-8")
     print('Setting boot args: "{}"'.format(args.bootargs))
-    bootargs_addr = u.malloc(len(bootargs) + 1)
-    iface.writemem(bootargs_addr, bootargs, len(bootargs))
-    p.memset8(bootargs_addr + len(bootargs) , 0, 1)
-    p.kboot_set_bootargs(bootargs_addr)
+    p.kboot_set_bootargs(args.bootargs)
 
 if args.compression != 'none':
     compressed_size = len(payload)
