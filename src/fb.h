@@ -28,6 +28,7 @@ void fb_fill(u32 x, u32 y, u32 w, u32 h, rgb_t color);
 void fb_display_logo(void);
 
 void fb_console_scroll(u32 n);
+void fb_console_reserve_lines(u32 n);
 void fb_console_write(const char *bfr, size_t len);
 
 void fb_console_enable(void);

@@ -200,6 +200,12 @@ void fb_console_scroll(u32 n)
     console.cursor.row -= n;
 }
 
+void fb_console_reserve_lines(u32 n)
+{
+    if ((console.cursor.max_row - console.cursor.row) <= n)
+        fb_console_scroll(1 + n - (console.cursor.max_row - console.cursor.row));
+}
+
 void fb_console_write(const char *bfr, size_t len)
 {
     if (!is_primary_core())
