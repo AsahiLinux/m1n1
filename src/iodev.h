@@ -36,4 +36,9 @@ ssize_t iodev_write(iodev_id_t id, const void *buf, size_t length);
 
 void iodev_console_write(const void *buf, size_t length);
 
+static inline void iodev_set_usage(iodev_id_t id, iodev_usage_t usage)
+{
+    iodevs[id]->usage = usage;
+}
+
 #endif

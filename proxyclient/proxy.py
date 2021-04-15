@@ -290,6 +290,12 @@ class M1N1Proxy:
     GUARD_RETURN = 3
     GUARD_SILENT = 0x100
 
+    IODEV_UART = 0
+    IODEV_FB = 1
+
+    USAGE_CONSOLE = (1 << 0)
+    USAGE_UARTPROXY = (1 << 1)
+
     P_WRITE64 = 0x100
     P_WRITE32 = 0x101
     P_WRITE16 = 0x102
@@ -358,6 +364,12 @@ class M1N1Proxy:
     P_PMGR_CLOCK_DISABLE = 0x801
     P_PMGR_ADT_CLOCKS_ENABLE = 0x802
     P_PMGR_ADT_CLOCKS_DISABLE = 0x803
+
+    P_IODEV_SET_USAGE = 0x900
+    P_IODEV_CAN_READ = 0x901
+    P_IODEV_CAN_WRITE = 0x902
+    P_IODEV_READ = 0x903
+    P_IODEV_WRITE = 0x904
 
     P_TUNABLES_APPLY_GLOBAL = 0xa00
     P_TUNABLES_APPLY_LOCAL = 0xa01
@@ -647,6 +659,17 @@ class M1N1Proxy:
         return self.request(self.P_PMGR_ADT_CLOCKS_ENABLE, path)
     def pmgr_adt_clocks_disable(self, path):
         return self.request(self.P_PMGR_ADT_CLOCKS_DISABLE, path)
+
+    def iodev_set_usage(self, iodev, usage):
+        return self.request(self.P_IODEV_SET_USAGE, iodev, usage)
+    def iodev_can_read(self, iodev):
+        return self.request(self.P_IODEV_CAN_READ, iodev)
+    def iodev_can_write(self, iodev):
+        return self.request(self.P_IODEV_CAN_WRITE, iodev)
+    def iodev_read(self, iodev, buf, size=None):
+        return self.request(self.P_IODEV_READ, iodev, buf, size)
+    def iodev_write(self, iodev, buf, size=None):
+        return self.request(self.P_IODEV_WRITE, iodev, buf, size)
 
     def tunables_apply_global(self, path, prop):
         return self.request(self.P_TUNABLES_APPLY_GLOBAL, path, prop)

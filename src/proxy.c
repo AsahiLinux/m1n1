@@ -4,6 +4,7 @@
 #include "dart.h"
 #include "exception.h"
 #include "heapblock.h"
+#include "iodev.h"
 #include "kboot.h"
 #include "malloc.h"
 #include "memory.h"
@@ -323,6 +324,24 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_PMGR_ADT_CLOCKS_DISABLE:
             reply->retval = pmgr_adt_clocks_disable((const char *)request->args[0]);
+            break;
+
+        case P_IODEV_SET_USAGE:
+            iodev_set_usage(request->args[0], request->args[1]);
+            break;
+        case P_IODEV_CAN_READ:
+            reply->retval = iodev_can_read(request->args[0]);
+            break;
+        case P_IODEV_CAN_WRITE:
+            reply->retval = iodev_can_write(request->args[0]);
+            break;
+        case P_IODEV_READ:
+            reply->retval =
+                iodev_read(request->args[0], (void *)request->args[1], request->args[2]);
+            break;
+        case P_IODEV_WRITE:
+            reply->retval =
+                iodev_write(request->args[0], (void *)request->args[1], request->args[2]);
             break;
 
         case P_TUNABLES_APPLY_GLOBAL:
