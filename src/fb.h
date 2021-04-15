@@ -31,7 +31,4 @@ void fb_console_scroll(u32 n);
 void fb_console_reserve_lines(u32 n);
 ssize_t fb_console_write(const char *bfr, size_t len);
 
-void fb_console_enable(void);
-void fb_console_disable(void);
-
 #endif

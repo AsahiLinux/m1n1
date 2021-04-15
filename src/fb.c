@@ -40,8 +40,7 @@ static struct {
     } margin;
 
     int initialized;
-    int disabled;
-} console = {.initialized = 0, .disabled = 0};
+} console = {.initialized = 0};
 
 extern u8 _binary_build_bootlogo_128_bin_start[];
 extern u8 _binary_build_bootlogo_256_bin_start[];
@@ -214,8 +213,6 @@ ssize_t fb_console_write(const char *bfr, size_t len)
 
     if (!is_primary_core())
         return 0;
-    if (console.disabled)
-        return 0;
     if (!console.initialized)
         return 0;
 
@@ -225,16 +222,6 @@ ssize_t fb_console_write(const char *bfr, size_t len)
     }
 
     return wrote;
-}
-
-void fb_console_enable(void)
-{
-    console.disabled = 0;
-}
-
-void fb_console_disable(void)
-{
-    console.disabled = 1;
 }
 
 static bool fb_console_iodev_can_write(void *opaque)
