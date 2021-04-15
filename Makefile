@@ -43,6 +43,7 @@ OBJECTS := \
 	exception.o exception_asm.o \
 	fb.o font.o font_retina.o \
 	heapblock.o \
+	iodev.o \
 	kboot.o \
 	main.o \
 	memory.o memory_asm.o \

@@ -2,7 +2,9 @@
 
 #include "assert.h"
 #include "fb.h"
+#include "iodev.h"
 #include "string.h"
+#include "types.h"
 #include "utils.h"
 #include "xnuboot.h"
 
@@ -206,17 +208,23 @@ void fb_console_reserve_lines(u32 n)
         fb_console_scroll(1 + n - (console.cursor.max_row - console.cursor.row));
 }
 
-void fb_console_write(const char *bfr, size_t len)
+ssize_t fb_console_write(const char *bfr, size_t len)
 {
-    if (!is_primary_core())
-        return;
-    if (console.disabled)
-        return;
-    if (!console.initialized)
-        return;
+    ssize_t wrote = 0;
 
-    while (len--)
+    if (!is_primary_core())
+        return 0;
+    if (console.disabled)
+        return 0;
+    if (!console.initialized)
+        return 0;
+
+    while (len--) {
         fb_putchar(*bfr++);
+        wrote++;
+    }
+
+    return wrote;
 }
 
 void fb_console_enable(void)
@@ -228,3 +236,25 @@ void fb_console_disable(void)
 {
     console.disabled = 1;
 }
+
+static bool fb_console_iodev_can_write(void *opaque)
+{
+    UNUSED(opaque);
+    return console.initialized;
+}
+
+static ssize_t fb_console_iodev_write(void *opaque, const void *buf, size_t len)
+{
+    UNUSED(opaque);
+    return fb_console_write(buf, len);
+}
+
+const struct iodev_ops iodev_fb_ops = {
+    .can_write = fb_console_iodev_can_write,
+    .write = fb_console_iodev_write,
+};
+
+struct iodev iodev_fb = {
+    .ops = &iodev_fb_ops,
+    .usage = USAGE_CONSOLE,
+};

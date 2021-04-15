@@ -2,10 +2,9 @@
 
 #include <stdarg.h>
 
-#include "fb.h"
-#include "types.h"
-#include "uart.h"
 #include "utils.h"
+#include "iodev.h"
+#include "types.h"
 #include "vsprintf.h"
 
 static char ascii(char s)
@@ -75,8 +74,7 @@ int debug_printf(const char *fmt, ...)
     i = vsprintf(buffer, fmt, args);
     va_end(args);
 
-    uart_write(buffer, i);
-    fb_console_write(buffer, i);
+    iodev_console_write(buffer, i);
 
     return i;
 }

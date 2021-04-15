@@ -2,8 +2,9 @@
 
 #include <stdarg.h>
 
-#include "types.h"
 #include "uart.h"
+#include "iodev.h"
+#include "types.h"
 #include "utils.h"
 #include "vsprintf.h"
 
@@ -96,3 +97,40 @@ void uart_flush(void)
     while (!(read32(UART_BASE + UTRSTAT) & 0x04))
         ;
 }
+
+static bool uart_iodev_can_write(void *opaque)
+{
+    UNUSED(opaque);
+    return true;
+}
+
+static bool uart_iodev_can_read(void *opaque)
+{
+    UNUSED(opaque);
+    return read32(UART_BASE + UTRSTAT) & 0x01;
+}
+
+static ssize_t uart_iodev_read(void *opaque, void *buf, size_t len)
+{
+    UNUSED(opaque);
+    return uart_read(buf, len);
+}
+
+static ssize_t uart_iodev_write(void *opaque, const void *buf, size_t len)
+{
+    UNUSED(opaque);
+    uart_write(buf, len);
+    return len;
+}
+
+static struct iodev_ops iodev_uart_ops = {
+    .can_read = uart_iodev_can_read,
+    .can_write = uart_iodev_can_write,
+    .read = uart_iodev_read,
+    .write = uart_iodev_write,
+};
+
+struct iodev iodev_uart = {
+    .ops = &iodev_uart_ops,
+    .usage = USAGE_CONSOLE | USAGE_UARTPROXY,
+};
