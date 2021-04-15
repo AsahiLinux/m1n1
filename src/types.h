@@ -4,6 +4,7 @@
 #define TYPES_H
 
 #include <limits.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -19,6 +20,8 @@ typedef int64_t s64;
 
 typedef u64 uintptr_t;
 typedef s64 ptrdiff_t;
+
+typedef s64 ssize_t;
 
 #define UNUSED(x)  (void)(x)
 #define ALIGNED(x) __attribute__((aligned(x)))
