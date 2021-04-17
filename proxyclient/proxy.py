@@ -134,12 +134,15 @@ class UartInterface:
             sys.stdout.write(chr(c))
             sys.stdout.flush()
 
-    def ttymode(self):
-        tout = self.dev.timeout
-        self.tty_enable = True
-        self.dev.timeout = None
+    def ttymode(self, dev=None):
+        if dev is None:
+            dev = self.dev
 
-        term = Miniterm(self.dev, eol='cr')
+        tout = dev.timeout
+        self.tty_enable = True
+        dev.timeout = None
+
+        term = Miniterm(dev, eol='cr')
         term.exit_character = chr(0x1d)  # GS/CTRL+]
         term.menu_character = chr(0x14)  # Menu: CTRL+T
         term.raw = True
@@ -157,7 +160,7 @@ class UartInterface:
         term.join()
         term.close()
 
-        self.dev.timeout = tout
+        dev.timeout = tout
         self.tty_enable = False
 
     def reply(self, cmd):
