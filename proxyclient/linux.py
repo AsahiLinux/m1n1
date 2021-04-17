@@ -9,6 +9,7 @@ parser.add_argument('initramfs', nargs='?', type=pathlib.Path)
 parser.add_argument('--compression', choices=['auto', 'none', 'gz', 'xz'], default='auto')
 parser.add_argument('-b', '--bootargs', type=str, metavar='"boot arguments"')
 parser.add_argument('-t', '--tty', type=str)
+parser.add_argument('-u', '--u-boot', type=pathlib.Path, help="load u-boot before linux")
 args = parser.parse_args()
 
 from setup import *
@@ -22,6 +23,12 @@ if args.compression == 'auto':
     else:
         raise ValueError('unknown compression for {}'.format(args.payload))
 
+if args.tty is not None:
+    tty_dev = serial.Serial(args.tty)
+    tty_dev.reset_input_buffer()
+    tty_dev.baudrate = 1500000
+else:
+    tty_dev = uart
 
 payload = args.payload.read_bytes()
 dtb = args.dtb.read_bytes()
@@ -50,6 +57,7 @@ iface.writemem(dtb_addr, dtb)
 
 kernel_size = 512 * 1024 * 1024
 kernel_base = u.memalign(2 * 1024 * 1024, kernel_size)
+boot_addr = kernel_base
 
 print("Kernel_base: 0x%x" % kernel_base)
 
@@ -60,6 +68,42 @@ if initramfs is not None:
     print("Loading %d initramfs bytes to 0x%x..." % (initramfs_size, initramfs_base))
     iface.writemem(initramfs_base, initramfs, True)
     p.kboot_set_initrd(initramfs_base, initramfs_size)
+
+
+if args.u_boot:
+    uboot = bytearray(args.u_boot.read_bytes())
+    uboot_size = len(uboot)
+    uboot_addr = u.memalign(2*1024*1024, len(uboot))
+    print("Loading u-boot to 0x%x..." % uboot_addr)
+
+    bootenv_start = uboot.find(b"bootcmd=run distro_bootcmd")
+    bootenv_len = uboot[bootenv_start:].find(b"\x00\x00")
+    bootenv_old = uboot[bootenv_start:bootenv_start+bootenv_len]
+    bootenv = str(bootenv_old, "ascii").split("\x00")
+    bootenv = list(filter(lambda x: not (x.startswith("baudrate") or x.startswith("boot_") or x.startswith("distro_bootcmd")), bootenv))
+
+    if initramfs is not None:
+        bootcmd = "distro_bootcmd=booti 0x%x 0x%x:0x%x 0x%x" % (kernel_base, initramfs_base, initramfs_size, dtb_addr)
+    else:
+        bootcmd = "distro_bootcmd=booti 0x%x - 0x%x" % (kernel_base, dtb_addr)
+
+    bootenv.append("baudrate=%d" % tty_dev.baudrate)
+    bootenv.append(bootcmd)
+    if args.bootargs is not None:
+        bootenv.append("bootargs=" + args.bootargs)
+
+    bootenv_new = b"\x00".join(map(lambda x: bytes(x, "ascii"), bootenv))
+    bootenv_new = bootenv_new.ljust(len(bootenv_old), b"\x00")
+
+    if len(bootenv_new) > len(bootenv_old):
+        raise Exception("New bootenv cannot be larger than original bootenv")
+    uboot[bootenv_start:bootenv_start+bootenv_len] = bootenv_new
+
+    u.compressed_writemem(uboot_addr, uboot, True)
+    p.dc_cvau(uboot_addr, uboot_size)
+    p.ic_ivau(uboot_addr, uboot_size)
+
+    boot_addr = uboot_addr
 
 p.smp_start_secondaries()
 
@@ -99,11 +143,6 @@ daif = 0xc0
 u.msr(DAIF, daif)
 print("DAIF: %x" % daif)
 
-tty_dev = None
-if args.tty is not None:
-    tty_dev = serial.Serial(args.tty)
-    tty_dev.reset_input_buffer()
-
-p.kboot_boot(kernel_base)
+p.kboot_boot(boot_addr)
 
 iface.ttymode(tty_dev)
