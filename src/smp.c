@@ -91,6 +91,8 @@ static void smp_start_cpu(int index, int cluster, int core, u64 rvbar, u64 cpu_s
 
     if (i >= 500)
         printf("Failed!\n");
+    else
+        printf("  Started.\n");
 }
 
 void smp_start_secondaries(void)
