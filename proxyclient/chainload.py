@@ -127,7 +127,7 @@ if args.el1:
 
 print(f"Jumping to stub at 0x{stub.addr:x}")
 
-p.reboot(stub.addr, new_base + bootargs_off, image_addr, new_base, image_size)
+p.reboot(stub.addr, new_base + bootargs_off, image_addr, new_base, image_size, el1=args.el1)
 
 iface.nop()
 print("Proxy is alive again")
