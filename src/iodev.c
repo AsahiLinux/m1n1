@@ -17,10 +17,13 @@
 
 extern struct iodev iodev_uart;
 extern struct iodev iodev_fb;
+extern struct iodev iodev_usb[];
 
 struct iodev *iodevs[IODEV_MAX] = {
     &iodev_uart,
     &iodev_fb,
+    &iodev_usb[0],
+    &iodev_usb[1],
 };
 
 char con_buf[CONSOLE_BUFFER_SIZE];

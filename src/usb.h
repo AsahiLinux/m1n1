@@ -8,4 +8,6 @@
 
 dwc3_dev_t *usb_bringup(u32 idx);
 
+void usb_init(void);
+
 #endif

@@ -3,12 +3,15 @@
 #include "usb.h"
 #include "adt.h"
 #include "dart.h"
+#include "iodev.h"
 #include "malloc.h"
 #include "pmgr.h"
 #include "types.h"
 #include "usb_dwc3.h"
 #include "usb_dwc3_regs.h"
 #include "utils.h"
+
+#define USB_INSTANCES 2
 
 struct usb_drd_regs {
     uintptr_t drd_regs;
@@ -144,4 +147,34 @@ dwc3_dev_t *usb_bringup(u32 idx)
     usb_phy_bringup(&usb_regs);
 
     return usb_dwc3_init(usb_regs.drd_regs, usb_dart);
+}
+
+static struct iodev_ops iodev_usb_ops = {
+    .can_read = (bool (*)(void *))usb_dwc3_can_read,
+    .can_write = (bool (*)(void *))usb_dwc3_can_write,
+    .read = (ssize_t(*)(void *, void *, size_t))usb_dwc3_read,
+    .write = (ssize_t(*)(void *, const void *, size_t))usb_dwc3_write,
+    .handle_events = (void (*)(void *))usb_dwc3_handle_events,
+};
+
+struct iodev iodev_usb[USB_INSTANCES] = {
+    {
+        .ops = &iodev_usb_ops,
+        .usage = USAGE_CONSOLE | USAGE_UARTPROXY,
+    },
+    {
+        .ops = &iodev_usb_ops,
+        .usage = USAGE_CONSOLE | USAGE_UARTPROXY,
+    },
+};
+
+void usb_init(void)
+{
+    for (int i = 0; i < USB_INSTANCES; i++) {
+        iodev_usb[i].opaque = usb_bringup(i);
+        if (!iodev_usb[i].opaque)
+            continue;
+
+        printf("USB%d: initialized at %p\n", i, iodev_usb[i].opaque);
+    }
 }

@@ -6,7 +6,7 @@
 #include "types.h"
 #include "utils.h"
 
-typedef enum _iodev_id_t { IODEV_UART, IODEV_FB, IODEV_MAX } iodev_id_t;
+typedef enum _iodev_id_t { IODEV_UART, IODEV_FB, IODEV_USB0, IODEV_USB1, IODEV_MAX } iodev_id_t;
 
 typedef enum _iodev_usage_t {
     USAGE_CONSOLE = BIT(0),

@@ -68,6 +68,8 @@ void m1n1_main(void)
 
     printf("No valid payload found\n");
 
+    usb_init();
+
     printf("Running proxy...\n");
     uartproxy_run();
 
