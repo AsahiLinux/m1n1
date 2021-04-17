@@ -127,7 +127,15 @@ if args.el1:
 
 print(f"Jumping to stub at 0x{stub.addr:x}")
 
-p.reboot(stub.addr, new_base + bootargs_off, image_addr, new_base, image_size, el1=args.el1)
+try:
+    p.reboot(stub.addr, new_base + bootargs_off, image_addr, new_base, image_size, el1=args.el1)
+except:
+    # in case of USB interface, serial device will be lost
+    print("Got an exception,most likely USB disconnect => Reconnecting")
+    uart.close()
+    while (not os.path.exists(uartdev)):
+        time.sleep(2)
+    uart,iface,p,u,mon=setup_connect()
 
 iface.nop()
 print("Proxy is alive again")
