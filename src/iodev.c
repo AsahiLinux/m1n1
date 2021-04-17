@@ -46,7 +46,7 @@ bool iodev_can_write(iodev_id_t id)
 ssize_t iodev_read(iodev_id_t id, void *buf, size_t length)
 {
     if (!iodevs[id]->ops->read)
-        return false;
+        return -1;
 
     return iodevs[id]->ops->read(iodevs[id]->opaque, buf, length);
 }
@@ -54,7 +54,7 @@ ssize_t iodev_read(iodev_id_t id, void *buf, size_t length)
 ssize_t iodev_write(iodev_id_t id, const void *buf, size_t length)
 {
     if (!iodevs[id]->ops->write)
-        return false;
+        return -1;
 
     return iodevs[id]->ops->write(iodevs[id]->opaque, buf, length);
 }
