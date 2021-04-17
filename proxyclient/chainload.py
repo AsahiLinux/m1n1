@@ -127,11 +127,6 @@ if args.el1:
 
 print(f"Jumping to stub at 0x{stub.addr:x}")
 
-try:
-    p.mmu_shutdown()
-except:
-    pass
-
 p.reboot(stub.addr, new_base + bootargs_off, image_addr, new_base, image_size)
 
 iface.nop()

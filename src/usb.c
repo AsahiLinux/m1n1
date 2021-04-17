@@ -178,3 +178,14 @@ void usb_init(void)
         printf("USB%d: initialized at %p\n", i, iodev_usb[i].opaque);
     }
 }
+
+void usb_shutdown(void)
+{
+    for (int i = 0; i < USB_INSTANCES; i++) {
+        if (!iodev_usb[i].opaque)
+            continue;
+
+        printf("USB%d: shutdown\n", i);
+        usb_dwc3_shutdown(iodev_usb[i].opaque);
+    }
+}

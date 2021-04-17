@@ -17,6 +17,7 @@ typedef enum {
     P_GET_EXC_COUNT,
     P_EL0_CALL,
     P_EL1_CALL,
+    P_VECTOR,
 
     P_WRITE64 = 0x100, // Generic register functions
     P_WRITE32,
@@ -106,8 +107,6 @@ typedef enum {
 
 #define S_OK     0
 #define S_BADCMD -1
-
-typedef u64(callfunc)(u64, u64, u64, u64);
 
 typedef struct {
     u64 opcode;

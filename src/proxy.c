@@ -10,6 +10,7 @@
 #include "memory.h"
 #include "pmgr.h"
 #include "smp.h"
+#include "string.h"
 #include "tunables.h"
 #include "types.h"
 #include "uart.h"
@@ -23,8 +24,6 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
 {
     enum exc_guard_t guard_save = exc_guard;
 
-    callfunc *f;
-
     reply->opcode = request->opcode;
     reply->status = S_OK;
     reply->retval = 0;
@@ -33,11 +32,12 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_EXIT:
             return 0;
-        case P_CALL:
-            f = (callfunc *)request->args[0];
+        case P_CALL: {
+            generic_func *f = (generic_func *)request->args[0];
             reply->retval =
                 f(request->args[1], request->args[2], request->args[3], request->args[4]);
             break;
+        }
         case P_GET_BOOTARGS:
             reply->retval = boot_args_addr;
             break;
@@ -68,15 +68,17 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             exc_count = 0;
             break;
         case P_EL0_CALL:
-            f = (callfunc *)request->args[0];
             reply->retval = el0_call((void *)request->args[0], request->args[1], request->args[2],
                                      request->args[3], request->args[4]);
             break;
         case P_EL1_CALL:
-            f = (callfunc *)request->args[0];
             reply->retval = el1_call((void *)request->args[0], request->args[1], request->args[2],
                                      request->args[3], request->args[4]);
             break;
+        case P_VECTOR:
+            next_stage.entry = (generic_func *)request->args[0];
+            memcpy(next_stage.args, &request->args[1], 4 * sizeof(u64));
+            return 0;
 
         case P_WRITE64:
             exc_guard = GUARD_SKIP;
@@ -301,7 +303,8 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
 
         case P_KBOOT_BOOT:
-            kboot_boot((void *)request->args[0]);
+            if (kboot_boot((void *)request->args[0]) == 0)
+                return 0;
             break;
         case P_KBOOT_SET_BOOTARGS:
             kboot_set_bootargs((void *)request->args[0]);

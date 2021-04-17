@@ -27,8 +27,6 @@ static size_t initrd_size = 0;
         return -1;                                                                                 \
     } while (0)
 
-typedef void (*kernel_entry)(void *devtree, u64 rsv1, u64 rsv2, u64 rsv3);
-
 static int dt_set_chosen(void)
 {
 
@@ -291,12 +289,13 @@ int kboot_prepare_dt(void *fdt)
 
 int kboot_boot(void *kernel)
 {
-    mmu_shutdown();
-    exception_shutdown();
+    printf("Preparing to boot kernel at %p with fdt at %p\n", kernel, dt);
 
-    printf("Booting kernel at %p with fdt at %p\n", kernel, dt);
+    next_stage.entry = kernel;
+    next_stage.args[0] = (u64)dt;
+    next_stage.args[1] = 0;
+    next_stage.args[2] = 0;
+    next_stage.args[3] = 0;
 
-    ((kernel_entry)kernel)(dt, 0, 0, 0);
-
-    panic("kernel returned\n");
+    return 0;
 }

@@ -206,6 +206,9 @@ class UartInterface:
                     raise UartRemoteError("Reply error: Unknown error (%d)"%status)
             return data
 
+    def wait_boot(self):
+        self.reply(self.REQ_BOOT)
+
     def nop(self):
         self.cmd(self.REQ_NOP)
         self.reply(self.REQ_NOP)
@@ -259,10 +262,13 @@ class UartInterface:
 class ProxyError(RuntimeError):
     pass
 
-class ProxyCMDError(ProxyError):
+class ProxyReplyError(ProxyError):
     pass
 
 class ProxyRemoteError(ProxyError):
+    pass
+
+class ProxyCommandError(ProxyRemoteError):
     pass
 
 class AlignmentError(Exception):
@@ -283,6 +289,7 @@ class M1N1Proxy:
     P_GET_EXC_COUNT = 0x008
     P_EL0_CALL = 0x009
     P_EL1_CALL = 0x00a
+    P_VECTOR = 0x00b
 
     GUARD_OFF = 0
     GUARD_SKIP = 1
@@ -401,10 +408,10 @@ class M1N1Proxy:
         if reboot:
             return
         if rop != opcode:
-            raise ProxyCMDError("Reply opcode mismatch: Expected 0x%08x, got 0x%08x"%(opcode,rop))
+            raise ProxyReplyError("Reply opcode mismatch: Expected 0x%08x, got 0x%08x"%(opcode,rop))
         if status != self.S_OK:
             if status == self.S_BADCMD:
-                raise ProxyRemoteError("Reply error: Bad Command")
+                raise ProxyCommandError("Reply error: Bad Command")
             else:
                 raise ProxyRemoteError("Reply error: Unknown error (%d)"%status)
         return retval
@@ -441,11 +448,18 @@ class M1N1Proxy:
     def reboot(self, addr, *args, el1=False):
         if len(args) > 4:
             raise ValueError("Too many arguments")
-        self.request(self.P_EL1_CALL if el1 else self.P_CALL, addr, *args, reboot=True)
-    def vector(self, addr, *args, el1=False):
-        if len(args) > 4:
-            raise ValueError("Too many arguments")
-        self.request(self.P_EL1_CALL if el1 else self.P_CALL, addr, *args, no_reply=True)
+        if el1:
+            self.request(self.P_EL1_CALL, addr, *args, no_reply=True)
+        else:
+            try:
+                self.request(self.P_VECTOR, addr, *args)
+                self.iface.wait_boot()
+            except ProxyCommandError: # old m1n1 does not support P_VECTOR
+                try:
+                    self.mmu_shutdown()
+                except ProxyCommandError: # older m1n1 does not support MMU
+                    pass
+                self.request(self.P_CALL, addr, *args, reboot=True)
     def get_bootargs(self):
         return self.request(self.P_GET_BOOTARGS)
     def get_base(self):
@@ -643,7 +657,7 @@ class M1N1Proxy:
         self.request(self.P_FREE, ptr)
 
     def kboot_boot(self, kernel):
-        self.request(self.P_KBOOT_BOOT, kernel, no_reply=True)
+        self.request(self.P_KBOOT_BOOT, kernel)
     def kboot_set_bootargs(self, bootargs):
         self.request(self.P_KBOOT_SET_BOOTARGS, bootargs)
     def kboot_set_initrd(self, base, size):

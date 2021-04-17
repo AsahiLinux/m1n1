@@ -335,4 +335,13 @@ static inline int poll32(u64 addr, u32 mask, u32 target, u32 timeout)
     return -1;
 }
 
+typedef u64(generic_func)(u64, u64, u64, u64);
+
+struct vector_args {
+    generic_func *entry;
+    u64 args[4];
+};
+
+extern struct vector_args next_stage;
+
 #endif

@@ -3,6 +3,7 @@
 #include "../config.h"
 
 #include "adt.h"
+#include "exception.h"
 #include "fb.h"
 #include "heapblock.h"
 #include "memory.h"
@@ -18,6 +19,8 @@
 #include "xnuboot.h"
 
 #include "../build/build_tag.h"
+
+struct vector_args next_stage;
 
 void print_info(void)
 {
@@ -42,6 +45,24 @@ void print_info(void)
     printf("\n");
 }
 
+void run_actions(void)
+{
+    printf("Checking for payloads...\n");
+
+    if (payload_run() == 0) {
+        printf("Valid payload found\n");
+        return;
+    }
+
+    printf("No valid payload found\n");
+
+    usb_init();
+
+    printf("Running proxy...\n");
+
+    uartproxy_run();
+}
+
 void m1n1_main(void)
 {
     printf("\n\nm1n1 v%s\n", BUILD_TAG);
@@ -62,17 +83,24 @@ void m1n1_main(void)
     wdt_disable();
     pmgr_init();
 
-    printf("Checking for payloads...\n");
+    printf("Initialization complete.\n");
 
-    payload_run();
+    run_actions();
 
-    printf("No valid payload found\n");
+    if (!next_stage.entry) {
+        panic("Nothing to do!\n");
+    }
 
-    usb_init();
+    printf("Preparing to run next stage at %p...\n", next_stage.entry);
 
-    printf("Running proxy...\n");
-    uartproxy_run();
+    mmu_shutdown();
+    exception_shutdown();
+    usb_shutdown();
 
-    while (1)
-        ;
+    printf("Vectoring to next stage...\n");
+
+    next_stage.entry(next_stage.args[0], next_stage.args[1], next_stage.args[2],
+                     next_stage.args[3]);
+
+    panic("Next stage returned!\n");
 }
