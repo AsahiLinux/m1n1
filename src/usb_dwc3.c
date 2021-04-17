@@ -32,8 +32,8 @@
 
 #define CDC_DEVICE_CLASS 0x02
 
-#define CDC_USB_VID 0x1337
-#define CDC_USB_PID 0xbeef
+#define CDC_USB_VID 0x1209
+#define CDC_USB_PID 0x316d
 
 #define CDC_INTERFACE_CLASS         0x02
 #define CDC_INTERFACE_CLASS_DATA    0x0a
