@@ -211,8 +211,6 @@ ssize_t fb_console_write(const char *bfr, size_t len)
 {
     ssize_t wrote = 0;
 
-    if (!is_primary_core())
-        return 0;
     if (!console.initialized)
         return 0;
 

@@ -59,19 +59,16 @@ ssize_t iodev_write(iodev_id_t id, const void *buf, size_t length)
     return iodevs[id]->ops->write(iodevs[id]->opaque, buf, length);
 }
 
-#ifdef DEBUG_IODEV
-bool in_iodev = false;
-#endif
+int in_iodev = 0;
 
 void iodev_console_write(const void *buf, size_t length)
 {
-#ifdef DEBUG_IODEV
-    if (in_iodev) {
+    if (in_iodev || !is_primary_core()) {
+        iodev_write(IODEV_UART, "*", 1);
         iodev_write(IODEV_UART, buf, length);
         return;
     }
-    in_iodev = true;
-#endif
+    in_iodev++;
 
     dprintf("  iodev_console_write() wp=%d\n", con_wp);
     for (iodev_id_t id = 0; id < IODEV_MAX; id++) {
@@ -137,7 +134,5 @@ void iodev_console_write(const void *buf, size_t length)
         length -= block;
     }
 
-#ifdef DEBUG_IODEV
-    in_iodev = false;
-#endif
+    in_iodev--;
 }
