@@ -2,10 +2,10 @@
 
 #include "uartproxy.h"
 #include "exception.h"
+#include "iodev.h"
 #include "proxy.h"
 #include "string.h"
 #include "types.h"
-#include "uart.h"
 #include "utils.h"
 
 #define REQ_SIZE 64
@@ -50,6 +50,8 @@ typedef struct {
 #define ST_XFRERR  -3
 #define ST_CSUMERR -4
 
+static u32 iodev_proxy_buffer[IODEV_MAX];
+
 // I just totally pulled this out of my arse
 // Noinline so that this can be bailed out by exc_guard = EXC_RETURN
 // We assume this function does not use the stack
@@ -68,31 +70,36 @@ static u64 __attribute__((noinline)) checksum(void *start, u32 length)
 void uartproxy_run(void)
 {
     int running = 1;
-    int c;
     size_t bytes;
     u64 checksum_val;
+
+    iodev_id_t iodev = IODEV_MAX;
 
     UartRequest request;
     UartReply reply = {REQ_BOOT};
     reply.checksum = checksum(&reply, REPLY_SIZE - 4);
-    uart_write(&reply, REPLY_SIZE);
+
+    // Startup notification only goes out via UART
+    iodev_write(IODEV_UART, &reply, REPLY_SIZE);
 
     while (running) {
-        c = uart_getbyte();
-        if (c != 0xFF)
-            continue;
-        c = uart_getbyte();
-        if (c != 0x55)
-            continue;
-        c = uart_getbyte();
-        if (c != 0xAA)
-            continue;
-        c = uart_getbyte();
-        if (c < 0)
-            continue;
+        for (iodev = 0; iodev < IODEV_MAX;) {
+            u8 b;
+            iodev_handle_events(iodev);
+            if (iodev_can_read(iodev) && iodev_read(iodev, &b, 1) == 1) {
+                iodev_proxy_buffer[iodev] >>= 8;
+                iodev_proxy_buffer[iodev] |= b << 24;
+                if ((iodev_proxy_buffer[iodev] & 0xffffff) == 0xAA55FF)
+                    break;
+            }
+            iodev++;
+            if (iodev == IODEV_MAX)
+                iodev = 0;
+        }
+
         memset(&request, 0, sizeof(request));
-        request.type = 0x00AA55FF | ((c & 0xff) << 24);
-        bytes = uart_read((&request.type) + 1, REQ_SIZE - 4);
+        request.type = iodev_proxy_buffer[iodev];
+        bytes = iodev_read(iodev, (&request.type) + 1, REQ_SIZE - 4);
         if (bytes != REQ_SIZE - 4)
             continue;
 
@@ -101,7 +108,7 @@ void uartproxy_run(void)
             reply.type = request.type;
             reply.status = ST_CSUMERR;
             reply.checksum = checksum(&reply, REPLY_SIZE - 4);
-            uart_write(&reply, REPLY_SIZE);
+            iodev_write(iodev, &reply, REPLY_SIZE);
             continue;
         }
 
@@ -140,7 +147,7 @@ void uartproxy_run(void)
                     reply.status = ST_XFRERR;
                     break;
                 }
-                bytes = uart_read((void *)request.mrequest.addr, request.mrequest.size);
+                bytes = iodev_read(iodev, (void *)request.mrequest.addr, request.mrequest.size);
                 if (bytes != request.mrequest.size) {
                     reply.status = ST_XFRERR;
                     break;
@@ -155,10 +162,10 @@ void uartproxy_run(void)
                 break;
         }
         reply.checksum = checksum(&reply, REPLY_SIZE - 4);
-        uart_write(&reply, REPLY_SIZE);
+        iodev_write(iodev, &reply, REPLY_SIZE);
 
         if ((request.type == REQ_MEMREAD) && (reply.status == ST_OK)) {
-            uart_write((void *)request.mrequest.addr, request.mrequest.size);
+            iodev_write(iodev, (void *)request.mrequest.addr, request.mrequest.size);
         }
     }
 }
