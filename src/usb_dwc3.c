@@ -7,13 +7,13 @@
  * - https://www.beyondlogic.org/usbnutshell/usb1.shtml
  */
 
+#include "usb_dwc3.h"
 #include "dart.h"
 #include "malloc.h"
 #include "memory.h"
 #include "ringbuffer.h"
 #include "string.h"
 #include "types.h"
-#include "usb_dwc3.h"
 #include "usb_dwc3_regs.h"
 #include "usb_types.h"
 #include "utils.h"
@@ -58,9 +58,12 @@
 #define USB_LEP_CTRL_OUT 0
 #define USB_LEP_CTRL_IN  1
 
+/* maps to interrupt endpoint 0x81 */
+#define USB_LEP_CDC_INTR_IN 3
+
 /* these map to physical endpoints 0x02 and 0x82 */
-#define USB_LEP_CDC_BULK_IN  5
 #define USB_LEP_CDC_BULK_OUT 4
+#define USB_LEP_CDC_BULK_IN  5
 
 /* content doesn't matter at all, this is the setting linux writes by default */
 static const u8 cdc_default_line_coding[] = {0x80, 0x25, 0x00, 0x00, 0x00, 0x00, 0x08};
@@ -111,18 +114,21 @@ typedef struct dwc3_dev {
 
     ringbuffer_t *host2device;
     ringbuffer_t *device2host;
+
+    bool ready;
 } dwc3_dev_t;
 
 static const struct usb_string_descriptor str_manufacturer =
     make_usb_string_descriptor("Asahi Linux");
 static const struct usb_string_descriptor str_product =
-    make_usb_string_descriptor("m1n1 " BUILD_TAG);
-static const struct usb_string_descriptor str_serial = make_usb_string_descriptor("m1n1-uartproxy");
+    make_usb_string_descriptor("m1n1 uartproxy" BUILD_TAG);
+static const struct usb_string_descriptor str_serial = make_usb_string_descriptor("P-0");
 
-static const struct usb_string_descriptor_languages str_langs = {.bLength = sizeof(str_langs) + 2,
-                                                                 .bDescriptorType =
-                                                                     USB_STRING_DESCRIPTOR,
-                                                                 .wLANGID = {USB_LANGID_EN_US}};
+static const struct usb_string_descriptor_languages str_langs = {
+    .bLength = sizeof(str_langs) + 2,
+    .bDescriptorType = USB_STRING_DESCRIPTOR,
+    .wLANGID = {USB_LANGID_EN_US},
+};
 
 struct cdc_dev_desc {
     const struct usb_configuration_descriptor configuration;
@@ -148,26 +154,35 @@ static const struct usb_device_descriptor usb_cdc_device_descriptor = {
     .iManufacturer = STRING_DESCRIPTOR_MANUFACTURER,
     .iProduct = STRING_DESCRIPTOR_PRODUCT,
     .iSerialNumber = STRING_DESCRIPTOR_SERIAL,
-    .bNumConfigurations = 1};
+    .bNumConfigurations = 1,
+};
 
 static const struct cdc_dev_desc cdc_configuration_descriptor = {
-    .configuration = {.bLength = sizeof(cdc_configuration_descriptor.configuration),
-                      .bDescriptorType = USB_CONFIGURATION_DESCRIPTOR,
-                      .wTotalLength = sizeof(cdc_configuration_descriptor),
-                      .bNumInterfaces = 2,
-                      .bConfigurationValue = 1,
-                      .iConfiguration = 0,
-                      .bmAttributes = USB_CONFIGURATION_ATTRIBUTE_RES1,
-                      .bMaxPower = 250},
-    .interface_management = {.bLength = sizeof(cdc_configuration_descriptor.interface_management),
-                             .bDescriptorType = USB_INTERFACE_DESCRIPTOR,
-                             .bInterfaceNumber = 0,
-                             .bAlternateSetting = 0,
-                             .bNumEndpoints = 1,
-                             .bInterfaceClass = CDC_INTERFACE_CLASS,
-                             .bInterfaceSubClass = CDC_INTERFACE_SUBCLASS_ACM,
-                             .bInterfaceProtocol = CDC_INTERFACE_PROTOCOL_NONE,
-                             .iInterface = 0},
+    .configuration =
+        {
+            .bLength = sizeof(cdc_configuration_descriptor.configuration),
+            .bDescriptorType = USB_CONFIGURATION_DESCRIPTOR,
+            .wTotalLength = sizeof(cdc_configuration_descriptor),
+            .bNumInterfaces = 2,
+            .bConfigurationValue = 1,
+            .iConfiguration = 0,
+            .bmAttributes = USB_CONFIGURATION_ATTRIBUTE_RES1 | USB_CONFIGURATION_SELF_POWERED,
+            .bMaxPower = 250,
+
+        },
+    .interface_management =
+        {
+            .bLength = sizeof(cdc_configuration_descriptor.interface_management),
+            .bDescriptorType = USB_INTERFACE_DESCRIPTOR,
+            .bInterfaceNumber = 0,
+            .bAlternateSetting = 0,
+            .bNumEndpoints = 1,
+            .bInterfaceClass = CDC_INTERFACE_CLASS,
+            .bInterfaceSubClass = CDC_INTERFACE_SUBCLASS_ACM,
+            .bInterfaceProtocol = CDC_INTERFACE_PROTOCOL_NONE,
+            .iInterface = 0,
+
+        },
     .cdc_union_func =
         {
             .bFunctionLength = sizeof(cdc_configuration_descriptor.cdc_union_func),
@@ -177,37 +192,62 @@ static const struct cdc_dev_desc cdc_configuration_descriptor = {
             .bDataInterface = 1,
         },
     /*
-     * we actually never configure or use this endpoint on our side and just ignore it.
+     * we never use this endpoint, but it should exist and always be idle.
      * it needs to exist in the descriptor though to make hosts correctly recognize
      * us as a ACM CDC device.
      */
-    .endpoint_notification = {.bLength = sizeof(cdc_configuration_descriptor.endpoint_notification),
-                              .bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
-                              .bEndpointAddress = USB_ENDPOINT_ADDR_OUT(1),
-                              .bmAttributes = USB_ENDPOINT_ATTR_TYPE_INTERRUPT,
-                              .wMaxPacketSize = 64,
-                              .bInterval = 10},
-    .interface_data = {.bLength = sizeof(cdc_configuration_descriptor.interface_data),
-                       .bDescriptorType = USB_INTERFACE_DESCRIPTOR,
-                       .bInterfaceNumber = 1,
-                       .bAlternateSetting = 0,
-                       .bNumEndpoints = 2,
-                       .bInterfaceClass = CDC_INTERFACE_CLASS_DATA,
-                       .bInterfaceSubClass = 0, // unused
-                       .bInterfaceProtocol = 0, // unused
-                       .iInterface = 0},
-    .endpoint_data_in = {.bLength = sizeof(cdc_configuration_descriptor.endpoint_data_in),
-                         .bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
-                         .bEndpointAddress = USB_ENDPOINT_ADDR_OUT(2),
-                         .bmAttributes = USB_ENDPOINT_ATTR_TYPE_BULK,
-                         .wMaxPacketSize = 512,
-                         .bInterval = 10},
-    .endpoint_data_out = {.bLength = sizeof(cdc_configuration_descriptor.endpoint_data_out),
-                          .bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
-                          .bEndpointAddress = USB_ENDPOINT_ADDR_IN(2),
-                          .bmAttributes = USB_ENDPOINT_ATTR_TYPE_BULK,
-                          .wMaxPacketSize = 512,
-                          .bInterval = 10}};
+    .endpoint_notification =
+        {
+            .bLength = sizeof(cdc_configuration_descriptor.endpoint_notification),
+            .bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
+            .bEndpointAddress = USB_ENDPOINT_ADDR_IN(1),
+            .bmAttributes = USB_ENDPOINT_ATTR_TYPE_INTERRUPT,
+            .wMaxPacketSize = 64,
+            .bInterval = 10,
+
+        },
+    .interface_data =
+        {
+            .bLength = sizeof(cdc_configuration_descriptor.interface_data),
+            .bDescriptorType = USB_INTERFACE_DESCRIPTOR,
+            .bInterfaceNumber = 1,
+            .bAlternateSetting = 0,
+            .bNumEndpoints = 2,
+            .bInterfaceClass = CDC_INTERFACE_CLASS_DATA,
+            .bInterfaceSubClass = 0, // unused
+            .bInterfaceProtocol = 0, // unused
+            .iInterface = 0,
+        },
+    .endpoint_data_in =
+        {
+            .bLength = sizeof(cdc_configuration_descriptor.endpoint_data_in),
+            .bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
+            .bEndpointAddress = USB_ENDPOINT_ADDR_OUT(2),
+            .bmAttributes = USB_ENDPOINT_ATTR_TYPE_BULK,
+            .wMaxPacketSize = 512,
+            .bInterval = 10,
+        },
+    .endpoint_data_out =
+        {
+            .bLength = sizeof(cdc_configuration_descriptor.endpoint_data_out),
+            .bDescriptorType = USB_ENDPOINT_DESCRIPTOR,
+            .bEndpointAddress = USB_ENDPOINT_ADDR_IN(2),
+            .bmAttributes = USB_ENDPOINT_ATTR_TYPE_BULK,
+            .wMaxPacketSize = 512,
+            .bInterval = 10,
+        },
+};
+
+static const struct usb_device_qualifier_descriptor usb_cdc_device_qualifier_descriptor = {
+    .bLength = sizeof(struct usb_device_qualifier_descriptor),
+    .bDescriptorType = USB_DEVICE_QUALIFIER_DESCRIPTOR,
+    .bcdUSB = 0x0200,
+    .bDeviceClass = CDC_DEVICE_CLASS,
+    .bDeviceSubClass = 0, // unused
+    .bDeviceProtocol = 0, // unused
+    .bMaxPacketSize0 = 64,
+    .bNumConfigurations = 0,
+};
 
 static const char *devt_names[] = {
     "DisconnEvt", "USBRst",   "ConnectDone", "ULStChng", "WkUpEvt",      "Reserved",       "EOPF",
@@ -269,7 +309,7 @@ static int usb_dwc3_ep_configure(dwc3_dev_t *dev, u8 ep, u8 type, u32 max_packet
     u32 param0, param1;
 
     param0 = DWC3_DEPCFG_EP_TYPE(type) | DWC3_DEPCFG_MAX_PACKET_SIZE(max_packet_len);
-    if (type == DWC3_DEPCMD_TYPE_BULK)
+    if (type != DWC3_DEPCMD_TYPE_CONTROL)
         param0 |= DWC3_DEPCFG_FIFO_NUMBER(ep);
 
     param1 =
@@ -434,6 +474,10 @@ usb_dwc3_handle_ep0_get_descriptor(dwc3_dev_t *dev,
         case USB_STRING_DESCRIPTOR:
             usb_cdc_get_string_descriptor(get_descriptor->index, &descriptor, &descriptor_len);
             break;
+        case USB_DEVICE_QUALIFIER_DESCRIPTOR:
+            descriptor = &usb_cdc_device_qualifier_descriptor;
+            descriptor_len = usb_cdc_device_qualifier_descriptor.bLength;
+            break;
         default:
             usb_debug_printf("Unknown descriptor type: %d\n", get_descriptor->type);
             break;
@@ -459,10 +503,27 @@ static void usb_dwc3_ep0_handle_standard_device(dwc3_dev_t *dev,
             break;
 
         case USB_REQUEST_SET_CONFIGURATION:
-            /* we've already configured these endpoints so that we just need to enable them here */
-            set32(dev->regs + DWC3_DALEPENA, DWC3_DALEPENA_EP(USB_LEP_CDC_BULK_OUT));
-            set32(dev->regs + DWC3_DALEPENA, DWC3_DALEPENA_EP(USB_LEP_CDC_BULK_IN));
-            dev->ep0_state = USB_DWC3_EP0_STATE_DATA_SEND_STATUS;
+            switch (setup->set_configuration.configuration) {
+                case 0:
+                    clear32(dev->regs + DWC3_DALEPENA, DWC3_DALEPENA_EP(USB_LEP_CDC_BULK_OUT));
+                    clear32(dev->regs + DWC3_DALEPENA, DWC3_DALEPENA_EP(USB_LEP_CDC_BULK_IN));
+                    clear32(dev->regs + DWC3_DALEPENA, DWC3_DALEPENA_EP(USB_LEP_CDC_INTR_IN));
+                    dev->ep0_state = USB_DWC3_EP0_STATE_DATA_SEND_STATUS;
+                    dev->ready = false;
+                    break;
+                case 1:
+                    /* we've already configured these endpoints so that we just need to enable them
+                     * here */
+                    set32(dev->regs + DWC3_DALEPENA, DWC3_DALEPENA_EP(USB_LEP_CDC_BULK_OUT));
+                    set32(dev->regs + DWC3_DALEPENA, DWC3_DALEPENA_EP(USB_LEP_CDC_BULK_IN));
+                    set32(dev->regs + DWC3_DALEPENA, DWC3_DALEPENA_EP(USB_LEP_CDC_INTR_IN));
+                    dev->ep0_state = USB_DWC3_EP0_STATE_DATA_SEND_STATUS;
+                    break;
+                default:
+                    usb_dwc3_ep_set_stall(dev, 0, 1);
+                    dev->ep0_state = USB_DWC3_EP0_STATE_IDLE;
+                    break;
+            }
             break;
 
         case USB_REQUEST_GET_DESCRIPTOR:
@@ -474,6 +535,50 @@ static void usb_dwc3_ep0_handle_standard_device(dwc3_dev_t *dev,
             }
             break;
 
+        case USB_REQUEST_GET_STATUS: {
+            static const u16 device_status = 0x0001; // self-powered
+            dev->ep0_buffer = &device_status;
+            dev->ep0_buffer_len = 2;
+            dev->ep0_state = USB_DWC3_EP0_STATE_DATA_SEND;
+            break;
+        }
+
+        default:
+            usb_dwc3_ep_set_stall(dev, 0, 1);
+            dev->ep0_state = USB_DWC3_EP0_STATE_IDLE;
+            usb_debug_printf("unsupported SETUP packet\n");
+    }
+}
+
+static void usb_dwc3_ep0_handle_standard_interface(dwc3_dev_t *dev,
+                                                   const union usb_setup_packet *setup)
+{
+    switch (setup->raw.bRequest) {
+        case USB_REQUEST_GET_STATUS: {
+            static const u16 device_status = 0x0000; // reserved
+            dev->ep0_buffer = &device_status;
+            dev->ep0_buffer_len = 2;
+            dev->ep0_state = USB_DWC3_EP0_STATE_DATA_SEND;
+            break;
+        }
+        default:
+            usb_dwc3_ep_set_stall(dev, 0, 1);
+            dev->ep0_state = USB_DWC3_EP0_STATE_IDLE;
+            usb_debug_printf("unsupported SETUP packet\n");
+    }
+}
+
+static void usb_dwc3_ep0_handle_standard_endpoint(dwc3_dev_t *dev,
+                                                  const union usb_setup_packet *setup)
+{
+    switch (setup->raw.bRequest) {
+        case USB_REQUEST_GET_STATUS: {
+            static const u16 device_status = 0x0000; // reserved
+            dev->ep0_buffer = &device_status;
+            dev->ep0_buffer_len = 2;
+            dev->ep0_state = USB_DWC3_EP0_STATE_DATA_SEND;
+            break;
+        }
         default:
             usb_dwc3_ep_set_stall(dev, 0, 1);
             dev->ep0_state = USB_DWC3_EP0_STATE_IDLE;
@@ -486,6 +591,14 @@ static void usb_dwc3_ep0_handle_standard(dwc3_dev_t *dev, const union usb_setup_
     switch (setup->raw.bmRequestType & USB_REQUEST_TYPE_RECIPIENT_MASK) {
         case USB_REQUEST_TYPE_RECIPIENT_DEVICE:
             usb_dwc3_ep0_handle_standard_device(dev, setup);
+            break;
+
+        case USB_REQUEST_TYPE_RECIPIENT_INTERFACE:
+            usb_dwc3_ep0_handle_standard_interface(dev, setup);
+            break;
+
+        case USB_REQUEST_TYPE_RECIPIENT_ENDPOINT:
+            usb_dwc3_ep0_handle_standard_endpoint(dev, setup);
             break;
 
         default:
@@ -505,6 +618,14 @@ static void usb_dwc3_ep0_handle_class(dwc3_dev_t *dev, const union usb_setup_pac
             break;
 
         case USB_REQUEST_CDC_SET_CTRL_LINE_STATE:
+            if (setup->raw.wValue & 1) { // DTR
+                dev->ready = false;
+                usb_debug_printf("ACM device opened\n");
+                dev->ready = true;
+            } else {
+                dev->ready = false;
+                usb_debug_printf("ACM device closed\n");
+            }
             dev->ep0_state = USB_DWC3_EP0_STATE_DATA_SEND_STATUS;
             break;
 
@@ -661,6 +782,8 @@ static void usb_dwc3_handle_event_ep(dwc3_dev_t *dev, const struct dwc3_event_de
             case USB_LEP_CTRL_IN:
             case USB_LEP_CTRL_OUT:
                 return usb_dwc3_ep0_handle_xfer_done(dev, event);
+            case USB_LEP_CDC_INTR_IN:
+                return;
             case USB_LEP_CDC_BULK_IN:
                 return;
             case USB_LEP_CDC_BULK_OUT:
@@ -678,6 +801,8 @@ static void usb_dwc3_handle_event_ep(dwc3_dev_t *dev, const struct dwc3_event_de
             case USB_LEP_CTRL_IN:
             case USB_LEP_CTRL_OUT:
                 return usb_dwc3_ep0_handle_xfer_not_ready(dev, event);
+            case USB_LEP_CDC_INTR_IN:
+                return;
             case USB_LEP_CDC_BULK_IN:
                 return usb_dwc3_cdc_handle_bulk_in_xfer_not_ready(dev, event);
             case USB_LEP_CDC_BULK_OUT:
@@ -895,6 +1020,10 @@ dwc3_dev_t *usb_dwc3_init(uintptr_t regs, dart_dev_t *dart)
     if (usb_dwc3_ep_configure(dev, USB_LEP_CTRL_IN, DWC3_DEPCMD_TYPE_CONTROL, 64))
         goto error;
 
+    /* prepare INTR endpoint so that we don't have to reconfigure this device later */
+    if (usb_dwc3_ep_configure(dev, USB_LEP_CDC_INTR_IN, DWC3_DEPCMD_TYPE_INTR, 64))
+        goto error;
+
     /* prepare BULK endpoints so that we don't have to reconfigure this device later */
     if (usb_dwc3_ep_configure(dev, USB_LEP_CDC_BULK_OUT, DWC3_DEPCMD_TYPE_BULK, 512))
         goto error;
@@ -920,6 +1049,8 @@ error:
 
 void usb_dwc3_shutdown(dwc3_dev_t *dev)
 {
+    dev->ready = false;
+
     /* stop all ongoing transfers */
     for (int i = 1; i < MAX_ENDPOINTS; ++i) {
         if (!dev->endpoints[i].xfer_in_progress)

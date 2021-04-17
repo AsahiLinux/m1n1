@@ -79,19 +79,22 @@ union usb_setup_packet {
     struct usb_set_packet_set_configuration set_configuration;
 };
 
-#define USB_DEVICE_DESCRIPTOR        0x01
-#define USB_CONFIGURATION_DESCRIPTOR 0x02
-#define USB_STRING_DESCRIPTOR        0x03
-#define USB_INTERFACE_DESCRIPTOR     0x04
-#define USB_ENDPOINT_DESCRIPTOR      0x05
+#define USB_DEVICE_DESCRIPTOR                    0x01
+#define USB_CONFIGURATION_DESCRIPTOR             0x02
+#define USB_STRING_DESCRIPTOR                    0x03
+#define USB_INTERFACE_DESCRIPTOR                 0x04
+#define USB_ENDPOINT_DESCRIPTOR                  0x05
+#define USB_DEVICE_QUALIFIER_DESCRIPTOR          0x06
+#define USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR 0x07
 
 #define USB_CDC_INTERFACE_FUNCTIONAL_DESCRIPTOR 0x24
 #define USB_CDC_UNION_SUBTYPE                   0x06
 
+#define USB_CONFIGURATION_SELF_POWERED   0x40
 #define USB_CONFIGURATION_ATTRIBUTE_RES1 0x80
 
-#define USB_ENDPOINT_ADDR_IN(ep)  (0x00 | (ep))
-#define USB_ENDPOINT_ADDR_OUT(ep) (0x80 | (ep))
+#define USB_ENDPOINT_ADDR_IN(ep)  (0x80 | (ep))
+#define USB_ENDPOINT_ADDR_OUT(ep) (0x00 | (ep))
 
 #define USB_ENDPOINT_ATTR_TYPE_CONTROL     0b00
 #define USB_ENDPOINT_ATTR_TYPE_ISOCHRONOUS 0b01
@@ -167,6 +170,18 @@ struct cdc_union_functional_descriptor {
     u8 bDescriptorSubtype;
     u8 bControlInterface;
     u8 bDataInterface;
+} PACKED;
+
+struct usb_device_qualifier_descriptor {
+    u8 bLength;
+    u8 bDescriptorType;
+    u16 bcdUSB;
+    u8 bDeviceClass;
+    u8 bDeviceSubClass;
+    u8 bDeviceProtocol;
+    u8 bMaxPacketSize0;
+    u8 bNumConfigurations;
+    u8 bReserved;
 } PACKED;
 
 /*
