@@ -44,11 +44,11 @@ typedef struct {
 #define REQ_MEMWRITE 0x03AA55FF
 #define REQ_BOOT     0x04AA55FF
 
-#define ST_OK     0
-#define ST_BADCMD -1
-#define ST_INVAL  -2
-#define ST_XFRERR -3
-#define ST_CRCERR -4
+#define ST_OK      0
+#define ST_BADCMD  -1
+#define ST_INVAL   -2
+#define ST_XFRERR  -3
+#define ST_CSUMERR -4
 
 // I just totally pulled this out of my arse
 // Noinline so that this can be bailed out by exc_guard = EXC_RETURN
@@ -95,8 +95,15 @@ void uartproxy_run(void)
         bytes = uart_read((&request.type) + 1, REQ_SIZE - 4);
         if (bytes != REQ_SIZE - 4)
             continue;
-        if (checksum(&(request.type), REQ_SIZE - 4) != request.checksum)
+
+        if (checksum(&(request.type), REQ_SIZE - 4) != request.checksum) {
+            memset(&reply, 0, sizeof(reply));
+            reply.type = request.type;
+            reply.status = ST_CSUMERR;
+            reply.checksum = checksum(&reply, REPLY_SIZE - 4);
+            uart_write(&reply, REPLY_SIZE);
             continue;
+        }
 
         memset(&reply, 0, sizeof(reply));
         reply.type = request.type;

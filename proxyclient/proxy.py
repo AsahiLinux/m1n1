@@ -75,7 +75,7 @@ class UartInterface:
     ST_BADCMD = -1
     ST_INVAL = -2
     ST_XFERERR = -3
-    ST_CRCERR = -4
+    ST_CSUMERR = -4
 
     CMD_LEN = 56
     REPLY_LEN = 36
@@ -200,7 +200,7 @@ class UartInterface:
                     raise UartRemoteError("Reply error: Invalid argument")
                 elif status == self.ST_XFERERR:
                     raise UartRemoteError("Reply error: Data transfer failed")
-                elif status == self.ST_CRCERR:
+                elif status == self.ST_CSUMERR:
                     raise UartRemoteError("Reply error: Data checksum failed")
                 else:
                     raise UartRemoteError("Reply error: Unknown error (%d)"%status)
@@ -250,7 +250,7 @@ class UartInterface:
             chexdump(data)
         ccsum = self.checksum(data)
         if checksum != ccsum:
-            raise UartCRCError("Reply data checksum error: Expected 0x%08x, got 0x%08x"%(checksum, ccsum))
+            raise UartChecksumError("Reply data checksum error: Expected 0x%08x, got 0x%08x"%(checksum, ccsum))
         return data
 
     def readstruct(self, addr, stype):
