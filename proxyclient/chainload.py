@@ -137,5 +137,16 @@ except:
         time.sleep(2)
     uart,iface,p,u,mon=setup_connect()
 
-iface.nop()
+try:
+    iface.nop()
+except:
+    # in case of USB interface, serial device will be lost
+    # for some reason when using --el1 argument,
+    # we do not get the exception on reboot but on iface.nop()
+    print("Got an exception,most likely USB disconnect => Reconnecting")
+    uart.close()
+    while (not os.path.exists(uartdev)):
+        time.sleep(2)
+    uart,iface,p,u,mon=setup_connect()
+
 print("Proxy is alive again")
