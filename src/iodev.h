@@ -18,6 +18,7 @@ struct iodev_ops {
     bool (*can_write)(void *opaque);
     ssize_t (*read)(void *opaque, void *buf, size_t length);
     ssize_t (*write)(void *opaque, const void *buf, size_t length);
+    void (*handle_events)(void *opaque);
 };
 
 struct iodev {
@@ -33,8 +34,13 @@ bool iodev_can_read(iodev_id_t id);
 bool iodev_can_write(iodev_id_t id);
 ssize_t iodev_read(iodev_id_t id, void *buf, size_t length);
 ssize_t iodev_write(iodev_id_t id, const void *buf, size_t length);
+void iodev_handle_events(iodev_id_t id);
 
 void iodev_console_write(const void *buf, size_t length);
+static inline void iodev_console_flush(void)
+{
+    iodev_console_write(NULL, 0);
+}
 
 static inline void iodev_set_usage(iodev_id_t id, iodev_usage_t usage)
 {

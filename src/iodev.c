@@ -136,3 +136,19 @@ void iodev_console_write(const void *buf, size_t length)
 
     in_iodev--;
 }
+
+void iodev_handle_events(iodev_id_t id)
+{
+    if (in_iodev)
+        return;
+
+    in_iodev++;
+
+    if (iodevs[id]->ops->handle_events)
+        iodevs[id]->ops->handle_events(iodevs[id]->opaque);
+
+    in_iodev--;
+
+    if (iodev_can_write(id))
+        iodev_console_flush();
+}
