@@ -733,36 +733,46 @@ static void usb_dwc3_ep0_handle_xfer_not_ready(dwc3_dev_t *dev,
     }
 }
 
-static void usb_dwc3_cdc_handle_bulk_out_xfer_not_ready(dwc3_dev_t *dev,
-                                                        const struct dwc3_event_depevt event)
+static void usb_dwc3_cdc_start_bulk_out_xfer(dwc3_dev_t *dev, u8 endpoint_number)
 {
     struct dwc3_trb *trb;
     uintptr_t trb_iova;
 
-    size_t len = min(ringbuffer_get_free(dev->host2device), 512);
-    memset(dev->endpoints[event.endpoint_number].xfer_buffer, 0xaa, 512);
-    trb_iova = usb_dwc3_init_trb(dev, event.endpoint_number, &trb);
-    trb->ctrl |= DWC3_TRBCTL_NORMAL;
-    trb->size = DWC3_TRB_SIZE_LENGTH(len);
+    if (dev->endpoints[endpoint_number].xfer_in_progress)
+        return;
 
-    usb_dwc3_ep_start_transfer(dev, event.endpoint_number, trb_iova);
-    dev->endpoints[event.endpoint_number].xfer_in_progress = 1;
+    if (ringbuffer_get_free(dev->host2device) < 512)
+        return;
+
+    memset(dev->endpoints[endpoint_number].xfer_buffer, 0xaa, 512);
+    trb_iova = usb_dwc3_init_trb(dev, endpoint_number, &trb);
+    trb->ctrl |= DWC3_TRBCTL_NORMAL;
+    trb->size = DWC3_TRB_SIZE_LENGTH(512);
+
+    usb_dwc3_ep_start_transfer(dev, endpoint_number, trb_iova);
+    dev->endpoints[endpoint_number].xfer_in_progress = 1;
 }
 
-static void usb_dwc3_cdc_handle_bulk_in_xfer_not_ready(dwc3_dev_t *dev,
-                                                       const struct dwc3_event_depevt event)
+static void usb_dwc3_cdc_start_bulk_in_xfer(dwc3_dev_t *dev, u8 endpoint_number)
 {
     struct dwc3_trb *trb;
     uintptr_t trb_iova;
 
+    if (dev->endpoints[endpoint_number].xfer_in_progress)
+        return;
+
     size_t len =
-        ringbuffer_read(dev->endpoints[event.endpoint_number].xfer_buffer, 512, dev->device2host);
-    trb_iova = usb_dwc3_init_trb(dev, event.endpoint_number, &trb);
+        ringbuffer_read(dev->endpoints[endpoint_number].xfer_buffer, 512, dev->device2host);
+
+    if (!len)
+        return;
+
+    trb_iova = usb_dwc3_init_trb(dev, endpoint_number, &trb);
     trb->ctrl |= DWC3_TRBCTL_NORMAL;
     trb->size = DWC3_TRB_SIZE_LENGTH(len);
 
-    usb_dwc3_ep_start_transfer(dev, event.endpoint_number, trb_iova);
-    dev->endpoints[event.endpoint_number].xfer_in_progress = 1;
+    usb_dwc3_ep_start_transfer(dev, endpoint_number, trb_iova);
+    dev->endpoints[endpoint_number].xfer_in_progress = 1;
 }
 
 static void usb_dwc3_cdc_handle_bulk_out_xfer_done(dwc3_dev_t *dev,
@@ -804,9 +814,9 @@ static void usb_dwc3_handle_event_ep(dwc3_dev_t *dev, const struct dwc3_event_de
             case USB_LEP_CDC_INTR_IN:
                 return;
             case USB_LEP_CDC_BULK_IN:
-                return usb_dwc3_cdc_handle_bulk_in_xfer_not_ready(dev, event);
+                return usb_dwc3_cdc_start_bulk_in_xfer(dev, event.endpoint_number);
             case USB_LEP_CDC_BULK_OUT:
-                return usb_dwc3_cdc_handle_bulk_out_xfer_not_ready(dev, event);
+                return usb_dwc3_cdc_start_bulk_out_xfer(dev, event.endpoint_number);
         }
     }
 
@@ -1092,34 +1102,73 @@ void usb_dwc3_shutdown(dwc3_dev_t *dev)
 u8 usb_dwc3_getbyte(dwc3_dev_t *dev)
 {
     u8 c;
-    while (ringbuffer_read(&c, 1, dev->host2device) < 1)
+    while (ringbuffer_read(&c, 1, dev->host2device) < 1) {
         usb_dwc3_handle_events(dev);
+        usb_dwc3_cdc_start_bulk_out_xfer(dev, USB_LEP_CDC_BULK_OUT);
+    }
     return c;
 }
 
 void usb_dwc3_putbyte(dwc3_dev_t *dev, u8 byte)
 {
-    while (ringbuffer_write(&byte, 1, dev->device2host) < 1)
+    while (ringbuffer_write(&byte, 1, dev->device2host) < 1) {
         usb_dwc3_handle_events(dev);
+        usb_dwc3_cdc_start_bulk_in_xfer(dev, USB_LEP_CDC_BULK_IN);
+    }
 }
 
-void usb_dwc3_write(dwc3_dev_t *dev, const void *buf, size_t count)
+size_t usb_dwc3_write(dwc3_dev_t *dev, const void *buf, size_t count)
 {
     const u8 *p = buf;
+    size_t wrote, sent = 0;
 
-    while (count--)
-        usb_dwc3_putbyte(dev, *p++);
+    if (!dev || !dev->ready)
+        return 0;
+
+    while (count) {
+        wrote = ringbuffer_write(p, count, dev->device2host);
+        count -= wrote;
+        p += wrote;
+        sent += wrote;
+        usb_dwc3_handle_events(dev);
+        usb_dwc3_cdc_start_bulk_in_xfer(dev, USB_LEP_CDC_BULK_IN);
+    }
+
+    return sent;
 }
 
 size_t usb_dwc3_read(dwc3_dev_t *dev, void *buf, size_t count)
 {
     u8 *p = buf;
-    size_t recvd = 0;
+    size_t read, recvd = 0;
 
-    while (count--) {
-        *p++ = usb_dwc3_getbyte(dev);
-        recvd++;
+    if (!dev || !dev->ready)
+        return 0;
+
+    while (count) {
+        read = ringbuffer_read(p, count, dev->host2device);
+        count -= read;
+        p += read;
+        recvd += read;
+        usb_dwc3_handle_events(dev);
+        usb_dwc3_cdc_start_bulk_out_xfer(dev, USB_LEP_CDC_BULK_OUT);
     }
 
     return recvd;
+}
+
+bool usb_dwc3_can_read(dwc3_dev_t *dev)
+{
+    if (!dev || !dev->ready)
+        return false;
+
+    return ringbuffer_get_used(dev->host2device);
+}
+
+bool usb_dwc3_can_write(dwc3_dev_t *dev)
+{
+    if (!dev)
+        return false;
+
+    return dev->ready;
 }
