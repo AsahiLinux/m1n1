@@ -45,6 +45,7 @@ OBJECTS := \
 	heapblock.o \
 	iodev.o \
 	kboot.o \
+	macho.o \
 	main.o \
 	memory.o memory_asm.o \
 	payload.o \

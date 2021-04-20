@@ -4,6 +4,7 @@
 #include "assert.h"
 #include "heapblock.h"
 #include "kboot.h"
+#include "macho.h"
 #include "smp.h"
 #include "utils.h"
 
@@ -19,6 +20,7 @@ const u8 xz_magic[] = {0xfd, '7', 'z', 'X', 'Z', 0x00};
 const u8 fdt_magic[] = {0xd0, 0x0d, 0xfe, 0xed};
 const u8 kernel_magic[] = {'A', 'R', 'M', 0x64};   // at 0x38
 const u8 cpio_magic[] = {'0', '7', '0', '7', '0'}; // '1' or '2' next
+const u8 macho_magic[] = {0xcf, 0xfa, 0xed, 0xfe};
 const u8 empty[] = {0, 0, 0, 0};
 
 struct kernel_header *kernel = NULL;
@@ -157,6 +159,9 @@ static void *load_one_payload(void *start, size_t size)
     } else if (!memcmp(p + 0x38, kernel_magic, sizeof kernel_magic)) {
         printf("Found a kernel at %p\n", p);
         return load_kernel(p, size);
+    } else if (!memcmp(p, macho_magic, sizeof macho_magic)) {
+        printf("Found a Mach-O image at %p\n", p);
+        return macho_load(p, size);
     } else if (!memcmp(p, empty, sizeof empty)) {
         printf("No more payloads at %p\n", p);
         return NULL;
@@ -172,6 +177,9 @@ int payload_run(void)
 
     while (p)
         p = load_one_payload(p, 0);
+
+    if (macho_boot)
+        return macho_boot();
 
     if (kernel && fdt) {
         smp_start_secondaries();
