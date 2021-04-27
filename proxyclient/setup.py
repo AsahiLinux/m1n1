@@ -3,21 +3,18 @@ from proxy import *
 from tgtypes import *
 from utils import *
 
-uartdev = os.environ.get("M1N1DEVICE", "/dev/ttyUSB0")
-uart = serial.Serial(uartdev, 115200)
-
-iface = UartInterface(uart, debug=False)
+iface = UartInterface()
 p = M1N1Proxy(iface, debug=False)
 
 try:
-    uart.timeout = 0.15
+    iface.dev.timeout = 0.15
     iface.nop()
     p.set_baud(1500000)
 except UartTimeout:
-    uart.baudrate = 1500000
+    iface.dev.baudrate = 1500000
     iface.nop()
 
-uart.timeout = 3
+iface.dev.timeout = 3
 
 u = ProxyUtils(p)
 mon = RegMonitor(u)

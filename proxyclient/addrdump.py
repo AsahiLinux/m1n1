@@ -3,10 +3,7 @@
 import serial, os
 from proxy import *
 
-uartdev = os.environ.get("M1N1DEVICE", "/dev/ttyUSB0")
-usbuart = serial.Serial(uartdev, 115200)
-
-iface = UartInterface(usbuart, debug=False)
+iface = UartInterface()
 proxy = M1N1Proxy(iface, debug=False)
 
 SCRATCH = 0x24F00000

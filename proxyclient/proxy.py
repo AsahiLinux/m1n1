@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
-import os, sys, struct
+import os, sys, struct, serial
 from serial.tools.miniterm import Miniterm
 
 def hexdump(s, sep=" "):
@@ -80,8 +80,21 @@ class UartInterface:
     CMD_LEN = 56
     REPLY_LEN = 36
 
-    def __init__(self, device, debug=False):
+    def __init__(self, device=None, debug=False):
         self.debug = debug
+        self.devpath = None
+        if device is None:
+            device = os.environ.get("M1N1DEVICE", "/dev/ttyUSB0:115200")
+        if isinstance(device, str):
+            baud = 115200
+            if ":" in device:
+                device, baud = device.rsplit(":", 1)
+                baud = int(baud)
+            self.devpath = device
+            self.baudrate = baud
+
+            device = serial.Serial(self.devpath, baud)
+
         self.dev = device
         self.dev.timeout = 0
         self.dev.flushOutput()
