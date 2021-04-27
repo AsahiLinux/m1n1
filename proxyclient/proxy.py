@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
-import os, sys, struct, serial
+import os, sys, struct, serial, time
 from serial.tools.miniterm import Miniterm
 
 def hexdump(s, sep=" "):
@@ -223,7 +223,23 @@ class UartInterface:
             return data
 
     def wait_boot(self):
-        self.reply(self.REQ_BOOT)
+        try:
+            self.reply(self.REQ_BOOT)
+        except:
+            # Over USB, reboots cause a reconnect
+            self.dev.close()
+            print("Waiting fo reconnection... ", end="")
+            sys.stdout.flush()
+            for i in range(100):
+                print(".", end="")
+                sys.stdout.flush()
+                try:
+                    self.dev.open()
+                except serial.serialutil.SerialException:
+                    time.sleep(0.1)
+                else:
+                    break
+            print(" Connected")
 
     def nop(self):
         self.cmd(self.REQ_NOP)
