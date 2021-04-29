@@ -131,22 +131,22 @@ void print_regs(u64 *regs, int el12)
     const char *ec_desc = ec_table[(esr >> 26) & 0x3f];
     printf("ESR_EL1:  0x%lx (%s)\n", esr, ec_desc ? ec_desc : "?");
 
-    u64 l2c_err_sts = mrs(SYS_APL_L2C_ERR_STS);
+    u64 l2c_err_sts = mrs(SYS_IMP_APL_L2C_ERR_STS);
 
     printf("L2C_ERR_STS: 0x%lx\n", l2c_err_sts);
-    printf("L2C_ERR_ADR: 0x%lx\n", mrs(SYS_APL_L2C_ERR_ADR));
-    printf("L2C_ERR_INF: 0x%lx\n", mrs(SYS_APL_L2C_ERR_INF));
+    printf("L2C_ERR_ADR: 0x%lx\n", mrs(SYS_IMP_APL_L2C_ERR_ADR));
+    printf("L2C_ERR_INF: 0x%lx\n", mrs(SYS_IMP_APL_L2C_ERR_INF));
 
-    msr(SYS_APL_L2C_ERR_STS, l2c_err_sts); // Clear the flag bits
+    msr(SYS_IMP_APL_L2C_ERR_STS, l2c_err_sts); // Clear the flag bits
 
     if (is_ecore()) {
-        printf("SYS_APL_E_LSU_ERR_STS: 0x%lx\n", mrs(SYS_APL_E_LSU_ERR_STS));
-        printf("SYS_APL_E_FED_ERR_STS: 0x%lx\n", mrs(SYS_APL_E_FED_ERR_STS));
-        printf("SYS_APL_E_MMU_ERR_STS: 0x%lx\n", mrs(SYS_APL_E_MMU_ERR_STS));
+        printf("E_LSU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_E_LSU_ERR_STS));
+        printf("E_FED_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_E_FED_ERR_STS));
+        printf("E_MMU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_E_MMU_ERR_STS));
     } else {
-        printf("SYS_APL_LSU_ERR_STS: 0x%lx\n", mrs(SYS_APL_LSU_ERR_STS));
-        printf("SYS_APL_FED_ERR_STS: 0x%lx\n", mrs(SYS_APL_FED_ERR_STS));
-        printf("SYS_APL_MMU_ERR_STS: 0x%lx\n", mrs(SYS_APL_MMU_ERR_STS));
+        printf("LSU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_LSU_ERR_STS));
+        printf("FED_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_FED_ERR_STS));
+        printf("MMU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_MMU_ERR_STS));
     }
 }
 
@@ -286,15 +286,15 @@ void exc_fiq(u64 *regs)
         }
     }
 
-    reg = mrs(SYS_APL_PMCR0);
+    reg = mrs(SYS_IMP_APL_PMCR0);
     if ((reg & (PMCR0_IMODE_MASK | PMCR0_IACT)) == (PMCR0_IMODE_FIQ | PMCR0_IACT)) {
         uart_puts("  PMC IRQ, masking");
-        reg_clr(SYS_APL_PMCR0, PMCR0_IACT | PMCR0_IMODE_MASK);
+        reg_clr(SYS_IMP_APL_PMCR0, PMCR0_IACT | PMCR0_IMODE_MASK);
     }
-    reg = mrs(SYS_APL_UPMCR0);
-    if ((reg & UPMCR0_IMODE_MASK) == UPMCR0_IMODE_FIQ && (mrs(SYS_APL_UPMSR) & UPMSR_IACT)) {
+    reg = mrs(SYS_IMP_APL_UPMCR0);
+    if ((reg & UPMCR0_IMODE_MASK) == UPMCR0_IMODE_FIQ && (mrs(SYS_IMP_APL_UPMSR) & UPMSR_IACT)) {
         uart_puts("  UPMC IRQ, masking");
-        reg_clr(SYS_APL_UPMCR0, UPMCR0_IMODE_MASK);
+        reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
     }
 
     UNUSED(regs);
