@@ -886,6 +886,9 @@ static void usb_dwc3_handle_event(dwc3_dev_t *dev, const union dwc3_event event)
 
 void usb_dwc3_handle_events(dwc3_dev_t *dev)
 {
+    if (!dev)
+        return;
+
     u32 n_events = read32(dev->regs + DWC3_GEVNTCOUNT(0)) / sizeof(union dwc3_event);
     if (n_events == 0)
         return;

@@ -75,6 +75,9 @@ void iodev_console_write(const void *buf, size_t length)
 
     dprintf("  iodev_console_write() wp=%d\n", con_wp);
     for (iodev_id_t id = 0; id < IODEV_MAX; id++) {
+        if (!iodevs[id])
+            return;
+
         if (!(iodevs[id]->usage & USAGE_CONSOLE)) {
             /* Drop buffer */
             con_rp[id] = con_wp + length;
