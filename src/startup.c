@@ -56,14 +56,14 @@ void dump_boot_args(struct boot_args *ba)
     printf("    base:       0x%lx\n", ba->video.base);
     printf("    display:    0x%lx\n", ba->video.display);
     printf("    stride:     0x%lx\n", ba->video.stride);
-    printf("    width:      %d\n", ba->video.width);
-    printf("    height:     %d\n", ba->video.height);
+    printf("    width:      %lu\n", ba->video.width);
+    printf("    height:     %lu\n", ba->video.height);
     printf("    depth:      0x%lx\n", ba->video.depth);
     printf("  machine_type: %d\n", ba->machine_type);
     printf("  devtree:      %p\n", ba->devtree);
     printf("  devtree_size: 0x%x\n", ba->devtree_size);
     printf("  cmdline:      %s\n", ba->cmdline);
-    printf("  boot_flags:   0x%x\n", ba->boot_flags);
+    printf("  boot_flags:   0x%lx\n", ba->boot_flags);
     printf("  mem_size_act: 0x%lx\n", ba->mem_size_actual);
 }
 

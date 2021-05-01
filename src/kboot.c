@@ -95,7 +95,7 @@ static int dt_set_chosen(void)
                 format = "r5g6b5";
                 break;
             default:
-                printf("FDT: unsupported fb depth %d, not enabling\n", cur_boot_args.video.depth);
+                printf("FDT: unsupported fb depth %lu, not enabling\n", cur_boot_args.video.depth);
                 return 0; // Do not error out, but don't set the FB
         }
 
@@ -212,13 +212,13 @@ static int dt_set_cpus(void)
         u64 mpidr = smp_get_mpidr(cpu);
 
         if (dt_mpidr != mpidr)
-            bail("FDT: DT CPU %d MPIDR mismatch: 0x%x != 0x%x\n", cpu, dt_mpidr, mpidr);
+            bail("FDT: DT CPU %d MPIDR mismatch: 0x%lx != 0x%lx\n", cpu, dt_mpidr, mpidr);
 
         u64 release_addr = smp_get_release_addr(cpu);
         if (fdt_setprop_u64(dt, node, "cpu-release-addr", release_addr))
             bail("FDT: couldn't set cpu-release-addr property\n");
 
-        printf("FDT: CPU %d MPIDR=0x%x release-addr=0x%lx\n", cpu, mpidr, release_addr);
+        printf("FDT: CPU %d MPIDR=0x%lx release-addr=0x%lx\n", cpu, mpidr, release_addr);
 
         cpu++;
     }

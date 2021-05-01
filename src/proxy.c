@@ -46,7 +46,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_SET_BAUD: {
             int cnt = request->args[1];
-            printf("Changing baud rate to %d...\n", request->args[0]);
+            printf("Changing baud rate to %lu...\n", request->args[0]);
             uart_setbaud(request->args[0]);
             while (cnt--) {
                 uart_putbyte(request->args[2]);

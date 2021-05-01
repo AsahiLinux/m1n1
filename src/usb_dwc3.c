@@ -23,7 +23,7 @@
 #define MAX_ENDPOINTS   16
 #define CDC_BUFFER_SIZE SZ_1M
 
-#define usb_debug_printf(fmt, ...) debug_printf("usb-dwc3@%p: " fmt, dev->regs, ##__VA_ARGS__)
+#define usb_debug_printf(fmt, ...) debug_printf("usb-dwc3@%lx: " fmt, dev->regs, ##__VA_ARGS__)
 
 #define STRING_DESCRIPTOR_LANGUAGES    0
 #define STRING_DESCRIPTOR_MANUFACTURER 1
@@ -908,7 +908,7 @@ dwc3_dev_t *usb_dwc3_init(uintptr_t regs, dart_dev_t *dart)
     /* sanity check */
     u32 snpsid = read32(regs + DWC3_GSNPSID);
     if ((snpsid & DWC3_GSNPSID_MASK) != 0x33310000) {
-        debug_printf("no DWC3 core found at %p: %08x\n", regs, snpsid);
+        debug_printf("no DWC3 core found at 0x%lx: %08x\n", regs, snpsid);
         return NULL;
     }
 

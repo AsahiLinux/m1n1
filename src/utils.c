@@ -22,7 +22,7 @@ void hexdump(const void *d, size_t len)
     size_t i, off;
     data = (u8 *)d;
     for (off = 0; off < len; off += 16) {
-        printf("%08x  ", off);
+        printf("%08lx  ", off);
         for (i = 0; i < 16; i++) {
             if ((i + off) >= len)
                 printf("   ");
@@ -45,7 +45,7 @@ void regdump(u64 addr, size_t len)
 {
     u64 i, off;
     for (off = 0; off < len; off += 32) {
-        printf("%016x  ", addr + off);
+        printf("%016lx  ", addr + off);
         for (i = 0; i < 32; i += 4) {
             printf("%08x ", read32(addr + off + i));
         }

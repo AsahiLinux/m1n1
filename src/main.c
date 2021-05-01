@@ -25,8 +25,8 @@ struct vector_args next_stage;
 void print_info(void)
 {
     printf("Device info:\n");
-    printf("  Model: %s\n", adt_getprop(adt, 0, "model", NULL));
-    printf("  Target: %s\n", adt_getprop(adt, 0, "target-type", NULL));
+    printf("  Model: %s\n", (const char *)adt_getprop(adt, 0, "model", NULL));
+    printf("  Target: %s\n", (const char *)adt_getprop(adt, 0, "target-type", NULL));
 
     int chosen = adt_path_offset(adt, "/chosen");
     if (chosen > 0) {
@@ -69,7 +69,7 @@ void m1n1_main(void)
     printf("Copyright (C) 2021 The Asahi Linux Contributors\n");
     printf("Licensed under the MIT license\n\n");
 
-    printf("Running in EL%d\n\n", mrs(CurrentEL) >> 2);
+    printf("Running in EL%lu\n\n", mrs(CurrentEL) >> 2);
 
     mmu_init();
     heapblock_init();

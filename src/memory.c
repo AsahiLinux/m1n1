@@ -337,7 +337,7 @@ void mmu_init(void)
     u64 sctlr_old = read_sctlr();
     u64 sctlr_new = sctlr_old | SCTLR_I | SCTLR_C | SCTLR_M | SCTLR_SPAN;
 
-    printf("MMU: SCTLR_EL1: %x -> %x\n", sctlr_old, sctlr_new);
+    printf("MMU: SCTLR_EL1: %lx -> %lx\n", sctlr_old, sctlr_new);
     write_sctlr(sctlr_new);
     printf("MMU: running with MMU and caches enabled!\n");
 }

@@ -108,7 +108,7 @@ void print_regs(u64 *regs, int el12)
     const char *m_desc = m_table[spsr & 0xf];
     printf("Exception taken from %s\n", m_desc ? m_desc : "?");
 
-    printf("Running in EL%d\n", mrs(CurrentEL) >> 2);
+    printf("Running in EL%lu\n", mrs(CurrentEL) >> 2);
     printf("MPIDR: 0x%lx\n", mrs(MPIDR_EL1));
     printf("Registers: (@%p)\n", regs);
     printf("  x0-x3: %016lx %016lx %016lx %016lx\n", regs[0], regs[1], regs[2], regs[3]);
@@ -244,7 +244,7 @@ void exc_irq(u64 *regs)
 
     u32 reason = read32(0x23b102004);
 
-    printf(" type: %d num: %d mpidr: %x\n", reason >> 16, reason & 0xffff, mrs(MPIDR_EL1));
+    printf(" type: %d num: %d mpidr: %lx\n", reason >> 16, reason & 0xffff, mrs(MPIDR_EL1));
 
 #ifdef DEBUG_UART_IRQS
     printf(" UCON: 0x%x\n", ucon);

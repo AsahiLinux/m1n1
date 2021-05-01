@@ -75,7 +75,7 @@ dart_dev_t *dart_init(uintptr_t base, u8 device)
     dart->l1 = NULL;
 
     if (read32(dart->regs + DART_CONFIG) & DART_CONFIG_LOCK) {
-        printf("dart: dart at %p is locked\n", dart->regs);
+        printf("dart: dart at 0x%lx is locked\n", dart->regs);
         goto error;
     }
 
@@ -125,12 +125,12 @@ static int dart_map_page(dart_dev_t *dart, uintptr_t iova, uintptr_t paddr)
 
     u64 *l2 = dart_get_l2(dart, l1_index);
     if (!l2) {
-        printf("dart: couldn't create l2 for iova %llx\n", iova);
+        printf("dart: couldn't create l2 for iova %lx\n", iova);
         return -1;
     }
 
     if (l2[l2_index] & DART_PTE_VALID) {
-        printf("dart: iova %llx already has a valid PTE: %llx\n", iova, l2[l2_index]);
+        printf("dart: iova %lx already has a valid PTE: %lx\n", iova, l2[l2_index]);
         return -1;
     }
 
