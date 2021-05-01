@@ -5,6 +5,7 @@ from proxy import *
 import __main__
 import builtins
 from proxyutils import *
+from utils import *
 
 class HistoryConsole(code.InteractiveConsole):
     def __init__(self, locals=None, filename="<console>",
