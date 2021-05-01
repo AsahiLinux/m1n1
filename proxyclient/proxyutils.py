@@ -11,7 +11,7 @@ def load_registers():
 globals().update(dict(load_registers()))
 
 class ProxyUtils(object):
-    def __init__(self, p):
+    def __init__(self, p, heap_size=1024 * 1024 * 1024):
         self.iface = p.iface
         self.proxy = p
         self.base = p.get_base()
@@ -25,7 +25,7 @@ class ProxyUtils(object):
         # clash with Python (m1n1 will normally not use *any* heap when running proxy ops though,
         # except when running very high-level operations like booting a kernel, so this should be
         # OK).
-        self.heap_size = 1024 * 1024 * 1024
+        self.heap_size = heap_size
         try:
             self.heap_base = p.heapblock_alloc(0)
         except ProxyRemoteError:
@@ -33,7 +33,8 @@ class ProxyUtils(object):
             self.heap_base = (self.base + ((self.ba.top_of_kernel_data + 0xffff) & ~0xffff) -
                               self.ba.phys_base)
         self.heap_base += 128 * 1024 * 1024 # We leave 128MB for m1n1 heap
-        self.heap = malloc.Heap(self.heap_base, self.heap_base + self.heap_size)
+        self.heap_top = self.heap_base + self.heap_size
+        self.heap = malloc.Heap(self.heap_base, self.heap_top)
         self.proxy.heap = self.heap
 
         self.malloc = self.heap.malloc
