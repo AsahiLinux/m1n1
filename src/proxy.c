@@ -4,6 +4,7 @@
 #include "dart.h"
 #include "exception.h"
 #include "heapblock.h"
+#include "hv.h"
 #include "iodev.h"
 #include "kboot.h"
 #include "malloc.h"
@@ -372,6 +373,13 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_DART_UNMAP:
             dart_unmap((dart_dev_t *)request->args[0], request->args[1], request->args[2]);
+            break;
+
+        case P_HV_INIT:
+            hv_init();
+            break;
+        case P_HV_MAP:
+            hv_map(request->args[0], request->args[1], request->args[2], request->args[3]);
             break;
 
         default:

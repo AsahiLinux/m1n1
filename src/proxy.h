@@ -103,6 +103,9 @@ typedef enum {
     P_DART_MAP,
     P_DART_UNMAP,
 
+    P_HV_INIT = 0xc00,
+    P_HV_MAP = 0xc01,
+
 } ProxyOp;
 
 #define S_OK     0

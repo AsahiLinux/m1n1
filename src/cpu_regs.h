@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "arm_cpu_regs.h"
 #include "utils.h"
 
 /* HID registers */

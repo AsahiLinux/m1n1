@@ -418,6 +418,9 @@ class M1N1Proxy:
     P_DART_MAP = 0xb02
     P_DART_UNMAP = 0xb03
 
+    P_HV_INIT = 0xc00
+    P_HV_MAP = 0xc01
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
@@ -732,6 +735,11 @@ class M1N1Proxy:
         return self.request(self.P_DART_MAP, dart, iova, bfr, len)
     def dart_unmap(self, dart, iova, len):
         return self.request(self.P_DART_UNMAP, dart, iova, len)
+
+    def hv_init(self):
+        return self.request(self.P_HV_INIT)
+    def hv_map(self, from_, to, size, incr):
+        return self.request(self.P_HV_MAP, from_, to, size, incr)
 
 if __name__ == "__main__":
     import serial
