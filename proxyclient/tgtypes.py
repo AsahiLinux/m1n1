@@ -27,7 +27,7 @@ BootArgs = Struct(
     "mem_size_actual"       / Hex(Int64ul),
 )
 
-LoadCmdType = "LoadCmdType" / Enum(Int32ul,
+MachOLoadCmdType = "LoadCmdType" / Enum(Int32ul,
     UNIXTHREAD = 0x05,
     SEGMENT_64 = 0x19,
     UUID = 0x1b,
@@ -36,11 +36,11 @@ LoadCmdType = "LoadCmdType" / Enum(Int32ul,
     FILESET_ENTRY = 0x80000035,
 )
 
-ArmThreadStateFlavor = "ThreadStateFlavor" / Enum(Int32ul,
+MachOArmThreadStateFlavor = "ThreadStateFlavor" / Enum(Int32ul,
     THREAD64 = 6,
 )
 
-MachHeader = Struct(
+MachOHeader = Struct(
     "magic" / Hex(Int32ul),
     "cputype" / Hex(Int32ul),
     "cpusubtype" / Hex(Int32ul),
@@ -51,16 +51,16 @@ MachHeader = Struct(
     "reserved" / Hex(Int32ul),
 )
 
-VmProt = FlagsEnum(Int32sl,
+MachOVmProt = FlagsEnum(Int32sl,
     PROT_READ = 0x01,
     PROT_WRITE = 0x02,
     PROT_EXECUTE = 0x04,
 )
 
-CmdUnixThread = GreedyRange(Struct(
-    "flavor" / ArmThreadStateFlavor,
+MachOCmdUnixThread = GreedyRange(Struct(
+    "flavor" / MachOArmThreadStateFlavor,
     "data" / Prefixed(ExprAdapter(Int32ul, obj_ * 4, obj_ / 4), Switch(this.flavor, {
-        ArmThreadStateFlavor.THREAD64: Struct(
+        MachOArmThreadStateFlavor.THREAD64: Struct(
             "x" / Array(29, Hex(Int64ul)),
             "fp" / Hex(Int64ul),
             "lr" / Hex(Int64ul),
@@ -73,14 +73,14 @@ CmdUnixThread = GreedyRange(Struct(
 ))
 
 
-CmdSegment64 = Struct(
+MachOCmdSegment64 = Struct(
     "segname" / PaddedString(16, "ascii"),
     "vmaddr" / Hex(Int64ul),
     "vmsize" / Hex(Int64ul),
     "fileoff" / Hex(Int64ul),
     "filesize" / Hex(Int64ul),
-    "maxprot" / VmProt,
-    "initprot" / VmProt,
+    "maxprot" / MachOVmProt,
+    "initprot" / MachOVmProt,
     "nsects" / Int32ul,
     "flags" / Hex(Int32ul),
     "sections" / GreedyRange(Struct(
@@ -99,17 +99,17 @@ CmdSegment64 = Struct(
     )),
 )
 
-Cmd = Struct(
-    "cmd" / Hex(LoadCmdType),
+MachOCmd = Struct(
+    "cmd" / Hex(MachOLoadCmdType),
     "args" / Prefixed(ExprAdapter(Int32ul, obj_ - 8, obj_ + 8), Switch(this.cmd, {
-        LoadCmdType.UNIXTHREAD: CmdUnixThread,
-        LoadCmdType.SEGMENT_64: CmdSegment64,
-        LoadCmdType.UUID: Hex(Bytes(16)),
+        MachOLoadCmdType.UNIXTHREAD: MachOCmdUnixThread,
+        MachOLoadCmdType.SEGMENT_64: MachOCmdSegment64,
+        MachOLoadCmdType.UUID: Hex(Bytes(16)),
     }, default=GreedyBytes)),
 )
 
-MachO = Struct(
-    "header" / MachHeader,
-    "cmds" / Array(this.header.ncmds, Cmd),
+MachOFile = Struct(
+    "header" / MachOHeader,
+    "cmds" / Array(this.header.ncmds, MachOCmd),
     "extradata" / GreedyBytes,
 )

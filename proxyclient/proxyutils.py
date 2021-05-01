@@ -1,7 +1,7 @@
-import serial, os, struct, sys, time, json, os.path, lzma
+import serial, os, struct, sys, time, json, os.path, lzma, functools
 from proxy import *
 from tgtypes import *
-import malloc
+import malloc, adt
 
 def load_registers():
     data = json.load(open(os.path.join(os.path.dirname(__file__), "..", "tools", "arm_regs.json")))
@@ -41,6 +41,9 @@ class ProxyUtils(object):
         self.free = self.heap.free
 
         self.code_buffer = self.malloc(0x10000)
+
+        self.adt_data = None
+        self.adt = LazyADT(self)
 
     def mrs(self, reg, silent=False, call=None):
         if call is None:
@@ -114,6 +117,31 @@ class ProxyUtils(object):
             decompressed_size = self.proxy.xzdec(compressed_addr, compressed_size, dest, len(data))
 
             assert decompressed_size == len(data)
+
+    def get_adt(self):
+        if self.adt_data is not None:
+            return self.adt_data
+        adt_base = self.ba.devtree - self.ba.virt_base + self.ba.phys_base
+        adt_size = self.ba.devtree_size
+        print(f"Fetching ADT ({adt_size} bytes)...")
+        self.adt_data = self.iface.readmem(adt_base, self.ba.devtree_size)
+        return self.adt_data
+
+class LazyADT:
+    def __init__(self, utils):
+        self.utils = utils
+
+    @functools.cached_property
+    def _adt(self):
+        return adt.load_adt(self.utils.get_adt())
+    def __getitem__(self, item):
+        return self._adt[item]
+    def __getattr__(self, attr):
+        return getattr(self._adt, item)
+    def __str__(self, t=""):
+        return gstr(self._adt)
+    def __iter__(self):
+        return iter(self._adt)
 
 class RegMonitor(object):
     def __init__(self, utils):
