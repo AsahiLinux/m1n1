@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
-#include "assert.h"
 #include "fb.h"
+#include "assert.h"
 #include "iodev.h"
 #include "string.h"
 #include "types.h"

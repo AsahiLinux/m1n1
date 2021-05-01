@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
-#include "adt.h"
 #include "pmgr.h"
+#include "adt.h"
 #include "string.h"
 #include "types.h"
 #include "utils.h"

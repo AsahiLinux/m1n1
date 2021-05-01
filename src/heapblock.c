@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
-#include "assert.h"
 #include "heapblock.h"
+#include "assert.h"
 #include "types.h"
 #include "utils.h"
 #include "xnuboot.h"

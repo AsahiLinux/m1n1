@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
-#include "assert.h"
 #include "dart.h"
+#include "assert.h"
 #include "malloc.h"
 #include "memory.h"
 #include "string.h"
