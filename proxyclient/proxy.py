@@ -228,7 +228,7 @@ class UartInterface:
         except:
             # Over USB, reboots cause a reconnect
             self.dev.close()
-            print("Waiting fo reconnection... ", end="")
+            print("Waiting for reconnection... ", end="")
             sys.stdout.flush()
             for i in range(100):
                 print(".", end="")
