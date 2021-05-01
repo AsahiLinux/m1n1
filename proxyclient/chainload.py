@@ -10,7 +10,6 @@ args = parser.parse_args()
 from setup import *
 from tgtypes import BootArgs
 from macho import MachO
-import adt
 import asm
 
 macho = MachO(args.payload.read_bytes())
