@@ -6,21 +6,10 @@ from utils import *
 
 iface = UartInterface()
 p = M1N1Proxy(iface, debug=False)
-
-try:
-    iface.dev.timeout = 0.15
-    iface.nop()
-    p.set_baud(1500000)
-except UartTimeout:
-    iface.dev.baudrate = 1500000
-    iface.nop()
-
-iface.dev.timeout = 3
+bootstrap_port(iface, p)
 
 u = ProxyUtils(p)
 mon = RegMonitor(u)
-
-iface.nop()
 
 fb = u.ba.video.base
 

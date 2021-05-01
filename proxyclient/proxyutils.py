@@ -196,3 +196,14 @@ class RegMonitor(object):
                         print(s, end=" ")
                     print()
         self.last = cur
+
+def bootstrap_port(iface, proxy):
+    try:
+        iface.dev.timeout = 0.15
+        iface.nop()
+        proxy.set_baud(1500000)
+    except UartTimeout:
+        iface.dev.baudrate = 1500000
+
+    iface.nop()
+    iface.dev.timeout = 3
