@@ -4,7 +4,7 @@ from tgtypes import *
 import malloc
 
 def load_registers():
-    data = json.load(open(os.path.join(os.path.dirname(__file__), "regs.json")))
+    data = json.load(open(os.path.join(os.path.dirname(__file__), "..", "tools", "arm_regs.json")))
     for reg in data:
         yield reg["name"], reg["enc"]
 

@@ -49,8 +49,6 @@ class ADTNode:
         self.children = []
         self.properties = {}
 
-
-
         if val is not None:
             for p in val.properties:
                 if p.name == "name":
