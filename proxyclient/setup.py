@@ -1,7 +1,7 @@
 import serial, os, struct, sys, time
 from proxy import *
 from tgtypes import *
-from utils import *
+from proxyutils import *
 
 iface = UartInterface()
 p = M1N1Proxy(iface, debug=False)

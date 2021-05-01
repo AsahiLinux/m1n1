@@ -4,7 +4,7 @@ import atexit, serial, os, struct, code, traceback, readline, rlcompleter
 from proxy import *
 import __main__
 import builtins
-from utils import *
+from proxyutils import *
 
 class HistoryConsole(code.InteractiveConsole):
     def __init__(self, locals=None, filename="<console>",
