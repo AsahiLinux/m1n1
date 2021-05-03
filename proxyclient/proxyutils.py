@@ -128,17 +128,32 @@ class ProxyUtils(object):
         self.adt_data = self.iface.readmem(adt_base, self.ba.devtree_size)
         return self.adt_data
 
+    def push_adt(self):
+        self.adt_data = self.adt.build()
+        adt_base = self.ba.devtree - self.ba.virt_base + self.ba.phys_base
+        adt_size = len(self.adt_data)
+        print(f"Pushing ADT ({adt_size} bytes)...")
+        self.iface.writemem(adt_base, self.adt_data)
+
 class LazyADT:
     def __init__(self, utils):
-        self.utils = utils
+        self.__dict__["_utils"] = utils
 
     @functools.cached_property
     def _adt(self):
-        return adt.load_adt(self.utils.get_adt())
+        return adt.load_adt(self._utils.get_adt())
     def __getitem__(self, item):
         return self._adt[item]
+    def __setitem__(self, item, value):
+         self._adt[item] = value
+    def __delitem__(self, item):
+         del self._adt[item]
     def __getattr__(self, attr):
-        return getattr(self._adt, item)
+        return getattr(self._adt, attr)
+    def __setattr__(self, attr, value):
+        return setattr(self._adt, attr, value)
+    def __delattr__(self, attr):
+        return delattr(self._adt, attr)
     def __str__(self, t=""):
         return gstr(self._adt)
     def __iter__(self):
