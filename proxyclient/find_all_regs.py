@@ -32,7 +32,7 @@ for op1 in range(1 << 3):
         p.dc_cvau(code_buffer, code_len)
         p.ic_ivau(code_buffer, code_len)
 
-        p.set_exc_guard(p.GUARD_SILENT | p.GUARD_SKIP)
+        p.set_exc_guard(GUARD.SILENT | GUARD.SKIP)
         p.call(code_buffer, BAD, data_buffer)
         cnt = p.get_exc_count()
 
@@ -61,4 +61,4 @@ for op1 in range(1 << 3):
                         print(" - *** EL0 accessible ***")
                 i += 1
 
-p.set_exc_guard(p.GUARD_OFF)
+p.set_exc_guard(GUARD.OFF)

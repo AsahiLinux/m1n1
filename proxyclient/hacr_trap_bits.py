@@ -42,7 +42,7 @@ def test():
             p.dc_cvau(code_buffer, code_len)
             p.ic_ivau(code_buffer, code_len)
 
-            p.set_exc_guard(p.GUARD_SILENT | p.GUARD_SKIP)
+            p.set_exc_guard(GUARD.SILENT | GUARD.SKIP)
             p.el1_call(code_buffer, BAD, data_buffer)
             cnt = p.get_exc_count()
 
@@ -81,4 +81,4 @@ for bit in range(64):
             print("s3_%d_c%d_c%d_%d (3, %d, %d, %d, %d)" % (
                     op1, CRn, CRm, op2, op1, CRn, CRm, op2))
 
-p.set_exc_guard(p.GUARD_OFF)
+p.set_exc_guard(GUARD.OFF)

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import os, sys, struct, serial, time
+from enum import IntEnum, IntFlag
 from serial.tools.miniterm import Miniterm
 
 def hexdump(s, sep=" "):
@@ -306,6 +307,23 @@ class ProxyCommandError(ProxyRemoteError):
 class AlignmentError(Exception):
     pass
 
+class IODEV(IntEnum):
+    UART = 0
+    FB = 1
+    USB0 = 2
+    USB1 = 3
+
+class USAGE(IntFlag):
+    CONSOLE = (1 << 0)
+    UARTPROXY = (1 << 1)
+
+class GUARD(IntFlag):
+    OFF = 0
+    SKIP = 1
+    MARK = 2
+    RETURN = 3
+    SILENT = 0x100
+
 class M1N1Proxy:
     S_OK = 0
     S_BADCMD = -1
@@ -322,18 +340,6 @@ class M1N1Proxy:
     P_EL0_CALL = 0x009
     P_EL1_CALL = 0x00a
     P_VECTOR = 0x00b
-
-    GUARD_OFF = 0
-    GUARD_SKIP = 1
-    GUARD_MARK = 2
-    GUARD_RETURN = 3
-    GUARD_SILENT = 0x100
-
-    IODEV_UART = 0
-    IODEV_FB = 1
-
-    USAGE_CONSOLE = (1 << 0)
-    USAGE_UARTPROXY = (1 << 1)
 
     P_WRITE64 = 0x100
     P_WRITE32 = 0x101

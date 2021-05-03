@@ -60,10 +60,10 @@ class ProxyUtils(object):
         self.proxy.dc_cvau(self.code_buffer, 8)
         self.proxy.ic_ivau(self.code_buffer, 8)
 
-        self.proxy.set_exc_guard(self.proxy.GUARD_MARK | (self.proxy.GUARD_SILENT if silent else 0))
+        self.proxy.set_exc_guard(GUARD.MARK | (GUARD.SILENT if silent else 0))
         retval = call(self.code_buffer)
         cnt = self.proxy.get_exc_count()
-        self.proxy.set_exc_guard(self.proxy.GUARD_OFF)
+        self.proxy.set_exc_guard(GUARD.OFF)
         if cnt:
             raise ProxyError("Exception occurred")
         return retval
@@ -82,10 +82,10 @@ class ProxyUtils(object):
         self.proxy.dc_cvau(self.code_buffer, 8)
         self.proxy.ic_ivau(self.code_buffer, 8)
 
-        self.proxy.set_exc_guard(self.proxy.GUARD_SKIP | (self.proxy.GUARD_SILENT if silent else 0))
+        self.proxy.set_exc_guard(GUARD.SKIP | (GUARD.SILENT if silent else 0))
         call(self.code_buffer, val)
         cnt = self.proxy.get_exc_count()
-        self.proxy.set_exc_guard(self.proxy.GUARD_OFF)
+        self.proxy.set_exc_guard(GUARD.OFF)
         if cnt:
             raise ProxyError("Exception occurred")
 
@@ -98,10 +98,10 @@ class ProxyUtils(object):
         self.proxy.dc_cvau(self.code_buffer, 8)
         self.proxy.ic_ivau(self.code_buffer, 8)
 
-        self.proxy.set_exc_guard(self.proxy.GUARD_SKIP | (self.proxy.GUARD_SILENT if silent else 0))
+        self.proxy.set_exc_guard(GUARD.SKIP | (GUARD.SILENT if silent else 0))
         ret = call(self.code_buffer, r0, r1, r2, r3)
         cnt = self.proxy.get_exc_count()
-        self.proxy.set_exc_guard(self.proxy.GUARD_OFF)
+        self.proxy.set_exc_guard(GUARD.OFF)
         if cnt:
             raise ProxyError("Exception occurred")
         return ret
