@@ -415,6 +415,7 @@ class M1N1Proxy:
     P_IODEV_CAN_WRITE = 0x902
     P_IODEV_READ = 0x903
     P_IODEV_WRITE = 0x904
+    P_IODEV_WHOAMI = 0x905
 
     P_TUNABLES_APPLY_GLOBAL = 0xa00
     P_TUNABLES_APPLY_LOCAL = 0xa01
@@ -725,6 +726,8 @@ class M1N1Proxy:
         return self.request(self.P_IODEV_READ, iodev, buf, size)
     def iodev_write(self, iodev, buf, size=None):
         return self.request(self.P_IODEV_WRITE, iodev, buf, size)
+    def iodev_whoami(self):
+        return IODEV(self.request(self.P_IODEV_WHOAMI))
 
     def tunables_apply_global(self, path, prop):
         return self.request(self.P_TUNABLES_APPLY_GLOBAL, path, prop)

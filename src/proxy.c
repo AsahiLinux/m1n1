@@ -15,6 +15,7 @@
 #include "tunables.h"
 #include "types.h"
 #include "uart.h"
+#include "uartproxy.h"
 #include "utils.h"
 #include "xnuboot.h"
 
@@ -346,6 +347,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_IODEV_WRITE:
             reply->retval =
                 iodev_write(request->args[0], (void *)request->args[1], request->args[2]);
+            break;
+        case P_IODEV_WHOAMI:
+            reply->retval = uartproxy_iodev;
             break;
 
         case P_TUNABLES_APPLY_GLOBAL:

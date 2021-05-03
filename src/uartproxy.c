@@ -67,6 +67,8 @@ static u64 __attribute__((noinline)) checksum(void *start, u32 length)
     return sum ^ 0xADDEDBAD;
 }
 
+iodev_id_t uartproxy_iodev;
+
 void uartproxy_run(void)
 {
     int running = 1;
@@ -115,6 +117,8 @@ void uartproxy_run(void)
         memset(&reply, 0, sizeof(reply));
         reply.type = request.type;
         reply.status = ST_OK;
+
+        uartproxy_iodev = iodev;
 
         switch (request.type) {
             case REQ_NOP:
