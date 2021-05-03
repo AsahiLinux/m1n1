@@ -184,6 +184,11 @@ u64 smp_wait(int cpu)
     return target->retval;
 }
 
+bool smp_is_alive(int cpu)
+{
+    return spin_table[cpu].flag;
+}
+
 int smp_get_mpidr(int cpu)
 {
     return spin_table[cpu].mpidr;

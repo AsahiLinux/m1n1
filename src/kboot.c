@@ -209,6 +209,17 @@ static int dt_set_cpus(void)
             bail("FDT: failed to get reg property of CPU\n");
 
         u64 dt_mpidr = fdt64_ld(prop);
+
+        if (dt_mpidr == (mrs(MPIDR_EL1) & 0xFFFFFF))
+            goto next;
+
+        if (!smp_is_alive(cpu)) {
+            printf("FDT: CPU %d is not alive, disabling...\n", cpu);
+            if (fdt_setprop_string(dt, node, "status", "disabled"))
+                bail("FDT: couldn't set status property\n");
+            goto next;
+        }
+
         u64 mpidr = smp_get_mpidr(cpu);
 
         if (dt_mpidr != mpidr)
@@ -220,6 +231,7 @@ static int dt_set_cpus(void)
 
         printf("FDT: CPU %d MPIDR=0x%lx release-addr=0x%lx\n", cpu, mpidr, release_addr);
 
+    next:
         cpu++;
     }
 
