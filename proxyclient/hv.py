@@ -81,6 +81,11 @@ class HV:
                 print(f"Removing ADT node /arm-io/{name}")
                 del self.adt["arm-io"][name]
 
+        for cpu in list(self.adt["cpus"]):
+            if cpu.name != "cpu0":
+                print(f"Removing ADT node {cpu._path}")
+                del self.adt["cpus"][cpu.name]
+
         self.u.push_adt()
 
         print(f"Setting up bootargs...")
