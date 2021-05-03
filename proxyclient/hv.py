@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 from tgtypes import *
+from proxy import IODEV
 from utils import *
 from macho import MachO
 
@@ -21,6 +22,7 @@ class HV:
         self.iface = iface
         self.p = proxy
         self.u = utils
+        self.adt = self.u.adt
 
     def unmap(self, ipa, size):
         assert self.p.hv_map(ipa, 0, size, 0) >= 0
@@ -32,6 +34,9 @@ class HV:
         assert self.p.hv_map(ipa, pa | self.SPTE_MAP, size, 1) >= 0
 
     def init(self):
+        self.iodev = self.p.iodev_whoami()
+
+        print("Initializing hypervisor over iodev %s" % self.iodev)
         self.p.hv_init()
 
         self.map_hw(0x2_00000000, 0x2_00000000, 0x5_00000000)
@@ -66,6 +71,18 @@ class HV:
         print(f"Copying SEPFW (0x{sepfw_length:x} bytes)...")
         self.p.memcpy8(guest_base + sepfw_off, sepfw_start, sepfw_length)
 
+        print(f"Adjusting SEPFW address in ADT...")
+        self.adt["chosen"]["memory-map"].SEPFW = (guest_base + sepfw_off, sepfw_length)
+
+        if self.iodev in (IODEV.USB0, IODEV.USB1):
+            idx = str(self.iodev)[-1]
+            for prefix in ("dart-usb", "atc-phy", "usb-drd"):
+                name = f"{prefix}{idx}"
+                print(f"Removing ADT node /arm-io/{name}")
+                del self.adt["arm-io"][name]
+
+        self.u.push_adt()
+
         print(f"Setting up bootargs...")
         tba = self.u.ba.copy()
         mem_top = tba.phys_base + tba.mem_size
@@ -80,6 +97,12 @@ class HV:
         self.iface.writemem(guest_base + self.bootargs_off, BootArgs.build(tba))
 
     def start(self):
+        print(f"Disabling other iodevs...")
+        for iodev in IODEV:
+            if iodev != self.iodev:
+                print(f" - {iodev!s}")
+                self.p.iodev_set_usage(iodev, 0)
+
         print(f"Jumping to entrypoint at 0x{self.entry:x}")
 
         self.p.reboot(self.entry, self.guest_base + self.bootargs_off, el1=True)

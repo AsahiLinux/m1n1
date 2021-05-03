@@ -3,6 +3,7 @@ from proxy import *
 from tgtypes import *
 from proxyutils import *
 from utils import *
+from hv import HV
 
 iface = UartInterface()
 p = M1N1Proxy(iface, debug=False)
@@ -10,6 +11,7 @@ bootstrap_port(iface, p)
 
 u = ProxyUtils(p)
 mon = RegMonitor(u)
+hv = HV(iface, p, u)
 
 fb = u.ba.video.base
 
