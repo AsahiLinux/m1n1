@@ -20,6 +20,41 @@
 #define CNTHCTL_EL0VCTEN BIT(1)
 #define CNTHCTL_EL0PCTEN BIT(0)
 
+#define SYS_ESR_EL2 sys_reg(3, 4, 5, 2, 0)
+#define ESR_ISS2    GENMASK(36, 32)
+#define ESR_EC      GENMASK(31, 26)
+#define ESR_IL      BIT(25)
+#define ESR_ISS     GENMASK(24, 0)
+
+#define ESR_EC_UNKNOWN      0b000000
+#define ESR_EC_WFI          0b000001
+#define ESR_EC_FP_TRAP      0b000111
+#define ESR_EC_PAUTH_TRAP   0b001000
+#define ESR_EC_LS64         0b001010
+#define ESR_EC_BTI          0b001101
+#define ESR_EC_ILLEGAL      0b001110
+#define ESR_EC_SVC          0b010101
+#define ESR_EC_HVC          0b010110
+#define ESR_EC_SMC          0b010111
+#define ESR_EC_MSR          0b011000
+#define ESR_EC_SVE          0b011001
+#define ESR_EC_PAUTH_FAIL   0b011100
+#define ESR_EC_IABORT_LOWER 0b100000
+#define ESR_EC_IABORT       0b100001
+#define ESR_EC_PC_ALIGN     0b100010
+#define ESR_EC_DABORT_LOWER 0b100100
+#define ESR_EC_DABORT       0b100101
+#define ESR_EC_SP_ALIGN     0b100110
+#define ESR_EC_FP_EXC       0b101100
+#define ESR_EC_SERROR       0b101111
+#define ESR_EC_BKPT_LOWER   0b110000
+#define ESR_EC_BKPT         0b110001
+#define ESR_EC_SSTEP_LOWER  0b110010
+#define ESR_EC_SSTEP        0b110011
+#define ESR_EC_WATCH_LOWER  0b110100
+#define ESR_EC_WATCH        0b110101
+#define ESR_EC_BRK          0b111100
+
 #define SYS_HCR_EL2  sys_reg(3, 4, 1, 1, 0)
 #define HCR_TWEDEL   GENMASK(63, 60)
 #define HCR_TWEDEn   BIT(59)
