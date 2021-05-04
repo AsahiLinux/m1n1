@@ -20,8 +20,8 @@ class HV:
     PTE_ACCESS              = 1 << 10
     PTE_ATTRIBUTES          = PTE_ACCESS | PTE_SH_NS | PTE_S2AP_RW | PTE_MEMATTR_UNCHANGED
 
-    SPTE_MAP                = 0 << 48
-    SPTE_HOOK               = 1 << 48
+    SPTE_MAP                = 0 << 50
+    SPTE_HOOK               = 1 << 50
 
     def __init__(self, iface, proxy, utils):
         self.iface = iface
