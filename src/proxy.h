@@ -107,6 +107,7 @@ typedef enum {
     P_HV_INIT = 0xc00,
     P_HV_MAP,
     P_HV_START,
+    P_HV_TRANSLATE,
 
 } ProxyOp;
 

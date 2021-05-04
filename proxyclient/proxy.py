@@ -100,6 +100,9 @@ ExcInfo = Struct(
     "regs" / Array(31, Int64ul),
     "sp" / Array(3, Int64ul),
     "mpidr" / Int64ul,
+    "elr_phys" / Int64ul,
+    "far_phys" / Int64ul,
+    "sp_phys" / Int64ul,
 )
 
 class UartInterface:
@@ -480,6 +483,7 @@ class M1N1Proxy:
     P_HV_INIT = 0xc00
     P_HV_MAP = 0xc01
     P_HV_START = 0xc02
+    P_HV_TRANSLATE = 0xc03
 
     def __init__(self, iface, debug=False):
         self.debug = debug
@@ -804,6 +808,8 @@ class M1N1Proxy:
         return self.request(self.P_HV_MAP, from_, to, size, incr)
     def hv_start(self, entry, *args):
         return self.request(self.P_HV_START, entry, *args)
+    def hv_translate(self, addr):
+        return self.request(self.P_HV_TRANSLATE, addr)
 
 if __name__ == "__main__":
     import serial

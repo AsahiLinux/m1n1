@@ -56,6 +56,61 @@ class ESR_ISS_MSR(Register32):
     CRm = 4, 1
     DIR = 0, 0, MSR_DIR
 
+class DABORT_DFSC(IntEnum):
+    ASIZE_L0         = 0b000000
+    ASIZE_L1         = 0b000001
+    ASIZE_L2         = 0b000010
+    ASIZE_L3         = 0b000011
+    XLAT_L0          = 0b000100
+    XLAT_L1          = 0b000101
+    XLAT_L2          = 0b000110
+    XLAT_L3          = 0b000111
+    AF_L0            = 0b001000
+    AF_L1            = 0b001001
+    AF_L2            = 0b001010
+    AF_L3            = 0b001011
+    PERM_L0          = 0b001100
+    PERM_L1          = 0b001101
+    PERM_L2          = 0b001110
+    PERM_L3          = 0b001111
+    EABORT           = 0b010000
+    TAG_CHECK        = 0b010001
+    PT_EABORT_Lm1    = 0b010011
+    PT_EABORT_L0     = 0b010100
+    PT_EABORT_L1     = 0b010101
+    PT_EABORT_L2     = 0b010110
+    PT_EABORT_L3     = 0b010111
+    ECC_ERROR        = 0b011000
+    PT_ECC_ERROR_Lm1 = 0b011011
+    PT_ECC_ERROR_L0  = 0b011100
+    PT_ECC_ERROR_L1  = 0b011101
+    PT_ECC_ERROR_L2  = 0b011110
+    PT_ECC_ERROR_L3  = 0b011111
+    ALIGN            = 0b100001
+    ASIZE_Lm1        = 0b101001
+    XLAT_Lm1         = 0b101011
+    TLB_CONFLICT     = 0b110000
+    UNSUPP_ATOMIC    = 0b110001
+    IMPDEF_LOCKDOWN  = 0b110100
+    IMPDEF_ATOMIC    = 0b110101
+
+class ESR_ISS_DABORT(Register32):
+    ISV = 24
+    SAS = 23, 22
+    SSE = 21
+    SRT = 20, 16
+    SF = 15
+    AR = 14
+    VNCR = 13
+    SET = 12, 11
+    LSR = 12, 11
+    FnV = 10
+    EA = 9
+    CM = 8
+    S1PTR = 7
+    WnR = 6
+    DFSC = 5, 0, DABORT_DFSC
+
 class ESR(Register64):
     ISS2 = 36, 32
     EC = 31, 26, ESR_EC

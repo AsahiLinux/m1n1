@@ -390,6 +390,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_HV_START:
             hv_start((void *)request->args[0], &request->args[1]);
             break;
+        case P_HV_TRANSLATE:
+            reply->retval = hv_translate(request->args[0]);
+            break;
 
         default:
             reply->status = S_BADCMD;

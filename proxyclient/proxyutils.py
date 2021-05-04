@@ -130,10 +130,13 @@ class ProxyUtils(object):
         self.iface.writemem(adt_base, self.adt_data)
 
     def print_exception(self, code, ctx):
-        print(f"  SPSR = {ctx.spsr}")
-        print(f"  ELR =  0x{ctx.elr:x}")
-        print(f"  ESR =  {ctx.esr}")
-        print(f"  FAR =  0x{ctx.far:x}")
+        print(f"  == Exception taken from {ctx.spsr.M.name} ==")
+        el = ctx.spsr.M >> 2
+        print(f"  SPSR   = {ctx.spsr}")
+        print(f"  ELR    = 0x{ctx.elr:x}" + (f" (0x{ctx.elr_phys:x})" if ctx.elr_phys else ""))
+        print(f"  ESR    = {ctx.esr}")
+        print(f"  FAR    = 0x{ctx.far:x}" + (f" (0x{ctx.far_phys:x})" if ctx.far_phys else ""))
+        print(f"  SP_EL{el} = 0x{ctx.sp[el]:x}" + (f" (0x{ctx.sp_phys:x})" if ctx.sp_phys else ""))
 
         for i in range(0, 31, 4):
             j = min(30, i + 3)
@@ -141,7 +144,7 @@ class ProxyUtils(object):
 
         if ctx.esr.EC == ESR_EC.MSR:
             print()
-            print("  == MSR fault decoding ==")
+            print("  == MRS/MSR fault decoding ==")
             iss = ESR_ISS_MSR(ctx.esr.ISS)
             enc = iss.Op0, iss.Op1, iss.CRn, iss.CRm, iss.Op2
             if enc in sysreg_rev:
@@ -152,6 +155,15 @@ class ProxyUtils(object):
                 print(f"  Instruction:   mrs x{iss.Rt}, {name}")
             else:
                 print(f"  Instruction:   msr x{iss.Rt}, {name}")
+
+        if ctx.esr.EC in (ESR_EC.DABORT, ESR_EC.DABORT_LOWER):
+            print()
+            print("  == Data abort decoding ==")
+            iss = ESR_ISS_DABORT(ctx.esr.ISS)
+            if iss.ISV:
+                print(f"  ISS: {iss!s}")
+            else:
+                print("  No instruction syndrome available")
 
         print()
 

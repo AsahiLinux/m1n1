@@ -11,6 +11,8 @@ void hv_exit_guest(void) __attribute__((noreturn));
 
 static void hv_exc_proxy(u64 *regs, uartproxy_exc_code_t type)
 {
+    int from_el = FIELD_GET(SPSR_M, mrs(SPSR_EL2)) >> 2;
+
     struct uartproxy_exc_info exc_info = {
         .spsr = mrs(SPSR_EL2),
         .elr = mrs(ELR_EL2),
@@ -18,6 +20,9 @@ static void hv_exc_proxy(u64 *regs, uartproxy_exc_code_t type)
         .far = mrs(FAR_EL2),
         .sp = {mrs(SP_EL0), mrs(SP_EL1), 0},
         .mpidr = mrs(MPIDR_EL1),
+        .elr_phys = hv_translate(mrs(ELR_EL2)),
+        .far_phys = hv_translate(mrs(FAR_EL2)),
+        .sp_phys = hv_translate(from_el == 0 ? mrs(SP_EL0) : mrs(SP_EL1)),
     };
     memcpy(exc_info.regs, regs, sizeof(exc_info.regs));
 

@@ -308,3 +308,22 @@ int hv_map_hook(u64 from, void *hook, u64 size)
 {
     return hv_map(from, ((u64)hook) | FIELD_PREP(SPTE_TYPE, SPTE_HOOK), size, 0);
 }
+
+u64 hv_translate(u64 addr)
+{
+    u64 el = FIELD_GET(SPSR_M, mrs(SPSR_EL2)) >> 2;
+    u64 save = mrs(PAR_EL1);
+
+    if (el == 0)
+        asm("at s12e0r, %0" : : "r"(addr));
+    else
+        asm("at s12e1r, %0" : : "r"(addr));
+
+    u64 par = mrs(PAR_EL1);
+    msr(PAR_EL1, save);
+
+    if (par & PAR_F)
+        return 0; // fault
+    else
+        return (par & PAR_PA) | (addr & 0xfff);
+}

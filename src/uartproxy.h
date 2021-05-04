@@ -34,6 +34,9 @@ struct uartproxy_exc_info {
     u64 regs[31];
     u64 sp[3];
     u64 mpidr;
+    u64 elr_phys;
+    u64 far_phys;
+    u64 sp_phys;
 };
 
 struct uartproxy_msg_start {
