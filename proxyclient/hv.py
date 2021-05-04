@@ -87,6 +87,8 @@ class HV:
         self.map_hw(0x2_00000000, 0x2_00000000, 0x5_00000000)
         self.map_hw(0x8_00000000, 0x8_00000000, 0x4_00000000)
 
+        self.p.hv_map_vuart(0x2_35200000)
+
         self.setup_adt()
 
     def setup_adt(self):

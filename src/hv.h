@@ -18,6 +18,9 @@ u64 hv_translate(u64 addr, bool s1only, bool w);
 u64 hv_pt_walk(u64 addr);
 bool hv_handle_dabort(u64 *regs);
 
+/* Virtual peripherals */
+void hv_map_vuart(u64 base);
+
 /* HV main */
 void hv_init(void);
 void hv_start(void *entry, u64 regs[4]);

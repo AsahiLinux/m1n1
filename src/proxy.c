@@ -396,6 +396,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_HV_PT_WALK:
             reply->retval = hv_pt_walk(request->args[0]);
             break;
+        case P_HV_MAP_VUART:
+            hv_map_vuart(request->args[0]);
+            break;
 
         default:
             reply->status = S_BADCMD;
