@@ -1,4 +1,5 @@
 import serial, os, struct, sys, time, json, os.path, lzma, functools
+from asm import ARMAsm
 from proxy import *
 from tgtypes import *
 from sysreg import *
@@ -41,52 +42,33 @@ class ProxyUtils(object):
         self.adt = LazyADT(self)
 
     def mrs(self, reg, silent=False, call=None):
-        if call is None:
-            call = self.proxy.call
         op0, op1, CRn, CRm, op2 = reg
 
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
                (CRm << 8) | (op2 << 5) | 0xd5300000)
 
-        func = struct.pack("<II", op, 0xd65f03c0)
-
-        self.iface.writemem(self.code_buffer, func)
-        self.proxy.dc_cvau(self.code_buffer, 8)
-        self.proxy.ic_ivau(self.code_buffer, 8)
-
-        self.proxy.set_exc_guard(GUARD.MARK | (GUARD.SILENT if silent else 0))
-        retval = call(self.code_buffer)
-        cnt = self.proxy.get_exc_count()
-        self.proxy.set_exc_guard(GUARD.OFF)
-        if cnt:
-            raise ProxyError("Exception occurred")
-        return retval
+        return self.exec(op, call=call)
 
     def msr(self, reg, val, silent=False, el0=False, call=None):
-        if call is None:
-            call = self.proxy.call
         op0, op1, CRn, CRm, op2 = reg
 
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
                (CRm << 8) | (op2 << 5) | 0xd5100000)
 
-        func = struct.pack("<II", op, 0xd65f03c0)
+        self.exec(op, val, call=call)
 
-        self.iface.writemem(self.code_buffer, func)
-        self.proxy.dc_cvau(self.code_buffer, 8)
-        self.proxy.ic_ivau(self.code_buffer, 8)
-
-        self.proxy.set_exc_guard(GUARD.SKIP | (GUARD.SILENT if silent else 0))
-        call(self.code_buffer, val)
-        cnt = self.proxy.get_exc_count()
-        self.proxy.set_exc_guard(GUARD.OFF)
-        if cnt:
-            raise ProxyError("Exception occurred")
-
-    def inst(self, op, r0=0, r1=0, r2=0, r3=0, silent=False, call=None):
+    def exec(self, op, r0=0, r1=0, r2=0, r3=0, silent=False, call=None):
         if call is None:
             call = self.proxy.call
-        func = struct.pack("<II", op, 0xd65f03c0)
+        if isinstance(op, int):
+            func = struct.pack("<I", op)
+        elif isinstance(op, str):
+            c = ARMAsm(op, self.code_buffer)
+            func = c.data
+        else:
+            raise ValueError()
+
+        func += struct.pack("<I", 0xd65f03c0) # ret
 
         self.iface.writemem(self.code_buffer, func)
         self.proxy.dc_cvau(self.code_buffer, 8)
@@ -99,6 +81,7 @@ class ProxyUtils(object):
         if cnt:
             raise ProxyError("Exception occurred")
         return ret
+    inst = exec
 
     def compressed_writemem(self, dest, data, progress):
         if not len(data):
