@@ -217,7 +217,10 @@ static void hv_pt_map_l4(u64 from, u64 to, u64 size, u64 incr)
     assert((from & MASK(VADDR_L4_OFFSET_BITS)) == 0);
     assert((size & MASK(VADDR_L4_OFFSET_BITS)) == 0);
 
-    assert(IS_SW(to));
+    assert(!IS_HW(to));
+
+    if (IS_SW(to))
+        to |= FIELD_PREP(PTE_TYPE, PTE_PAGE);
 
     for (; size; size -= BIT(VADDR_L4_OFFSET_BITS)) {
         u64 idx = (from >> VADDR_L4_OFFSET_BITS) & MASK(VADDR_L4_INDEX_BITS);
