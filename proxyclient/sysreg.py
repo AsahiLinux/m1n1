@@ -74,19 +74,17 @@ class SPSR(Register64):
     Z = 30
     C = 29
     V = 28
-    Q = 27
-    IT10 = 26, 25
+    TCO = 25
     DIT = 24
-    SSBS = 23
+    UAO = 23
     PAN = 22
     SS = 21
     IL = 20
-    GE = 19, 16
-    IT72 = 15, 10
-    E = 9
+    SSBS = 12
+    BTYPE = 11, 10
+    D = 9
     A = 8
     I = 7
     F = 6
-    T = 5
     M = 4, 0, SPSR_M
 
