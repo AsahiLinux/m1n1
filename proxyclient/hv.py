@@ -57,7 +57,7 @@ class HV:
         ret = shell.run_shell(locals, "Entering debug shell", "Returning from exception")
 
         if ret is None:
-            ret = EXC_RET.HANDLED
+            ret = EXC_RET.EXIT_GUEST
 
         self.iface.writemem(info, ExcInfo.build(self.ctx))
         self.p.exit(ret)
