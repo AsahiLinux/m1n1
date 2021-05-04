@@ -4,6 +4,7 @@
 from tgtypes import *
 from proxy import IODEV
 from utils import *
+from sysreg import *
 from macho import MachO
 
 class HV:

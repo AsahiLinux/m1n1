@@ -1,14 +1,8 @@
 import serial, os, struct, sys, time, json, os.path, lzma, functools
 from proxy import *
 from tgtypes import *
+from sysreg import *
 import malloc, adt
-
-def load_registers():
-    data = json.load(open(os.path.join(os.path.dirname(__file__), "..", "tools", "arm_regs.json")))
-    for reg in data:
-        yield reg["name"], reg["enc"]
-
-globals().update(dict(load_registers()))
 
 class ProxyUtils(object):
     def __init__(self, p, heap_size=1024 * 1024 * 1024):
