@@ -53,7 +53,7 @@ class ESR_ISS_MSR(Register32):
     Op1 = 16, 14
     CRn = 13, 10
     Rt = 9, 5
-    CRm = 3, 1
+    CRm = 4, 1
     DIR = 0, 0, MSR_DIR
 
 class ESR(Register64):
