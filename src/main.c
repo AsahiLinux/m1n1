@@ -60,7 +60,7 @@ void run_actions(void)
 
     printf("Running proxy...\n");
 
-    uartproxy_run();
+    uartproxy_run(NULL);
 }
 
 void m1n1_main(void)

@@ -5,6 +5,8 @@
 
 #include <stdint.h>
 
+#include "types.h"
+
 enum exc_guard_t {
     GUARD_OFF = 0,
     GUARD_SKIP,

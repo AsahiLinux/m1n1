@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "uartproxy.h"
+#include "assert.h"
 #include "exception.h"
 #include "iodev.h"
 #include "proxy.h"
@@ -34,9 +35,13 @@ typedef struct {
         struct {
             u32 dchecksum;
         } mreply;
+        struct uartproxy_msg_start start;
     };
     u32 checksum;
+    u32 _dummy; // Not transferred
 } UartReply;
+
+static_assert(sizeof(UartReply) == (REPLY_SIZE + 4), "Invalid UartReply size");
 
 #define REQ_NOP      0x00AA55FF
 #define REQ_PROXY    0x01AA55FF
@@ -69,8 +74,9 @@ static u64 __attribute__((noinline)) checksum(void *start, u32 length)
 
 iodev_id_t uartproxy_iodev;
 
-void uartproxy_run(void)
+int uartproxy_run(struct uartproxy_msg_start *start)
 {
+    int ret;
     int running = 1;
     size_t bytes;
     u64 checksum_val;
@@ -79,24 +85,46 @@ void uartproxy_run(void)
 
     UartRequest request;
     UartReply reply = {REQ_BOOT};
-    reply.checksum = checksum(&reply, REPLY_SIZE - 4);
-
-    // Startup notification only goes out via UART
-    iodev_write(IODEV_UART, &reply, REPLY_SIZE);
+    if (!start) {
+        // Startup notification only goes out via UART
+        reply.checksum = checksum(&reply, REPLY_SIZE - 4);
+        iodev_write(IODEV_UART, &reply, REPLY_SIZE);
+    } else {
+        // Exceptions / hooks keep the current iodev
+        iodev = uartproxy_iodev;
+        reply.start = *start;
+        reply.checksum = checksum(&reply, REPLY_SIZE - 4);
+        iodev_write(iodev, &reply, REPLY_SIZE);
+    }
 
     while (running) {
-        for (iodev = 0; iodev < IODEV_MAX;) {
-            u8 b;
-            iodev_handle_events(iodev);
-            if (iodev_can_read(iodev) && iodev_read(iodev, &b, 1) == 1) {
+        if (!start) {
+            // Look for commands from any iodev on startup
+            for (iodev = 0; iodev < IODEV_MAX;) {
+                u8 b;
+                iodev_handle_events(iodev);
+                if (iodev_can_read(iodev) && iodev_read(iodev, &b, 1) == 1) {
+                    iodev_proxy_buffer[iodev] >>= 8;
+                    iodev_proxy_buffer[iodev] |= b << 24;
+                    if ((iodev_proxy_buffer[iodev] & 0xffffff) == 0xAA55FF)
+                        break;
+                }
+                iodev++;
+                if (iodev == IODEV_MAX)
+                    iodev = 0;
+            }
+        } else {
+            // Stick to the current iodev for exceptions
+            do {
+                u8 b;
+                iodev_handle_events(iodev);
+                if (iodev_read(iodev, &b, 1) != 1) {
+                    printf("Proxy: iodev read failed, exiting.\n");
+                    return -1;
+                }
                 iodev_proxy_buffer[iodev] >>= 8;
                 iodev_proxy_buffer[iodev] |= b << 24;
-                if ((iodev_proxy_buffer[iodev] & 0xffffff) == 0xAA55FF)
-                    break;
-            }
-            iodev++;
-            if (iodev == IODEV_MAX)
-                iodev = 0;
+            } while ((iodev_proxy_buffer[iodev] & 0xffffff) != 0xAA55FF);
         }
 
         memset(&request, 0, sizeof(request));
@@ -124,7 +152,11 @@ void uartproxy_run(void)
             case REQ_NOP:
                 break;
             case REQ_PROXY:
-                running = proxy_process(&request.prequest, &reply.preply);
+                ret = proxy_process(&request.prequest, &reply.preply);
+                if (ret != 0)
+                    running = 0;
+                if (ret < 0)
+                    printf("Proxy req error: %d\n", ret);
                 break;
             case REQ_MEMREAD:
                 if (request.mrequest.size == 0)
@@ -172,4 +204,6 @@ void uartproxy_run(void)
             iodev_write(iodev, (void *)request.mrequest.addr, request.mrequest.size);
         }
     }
+
+    return ret;
 }

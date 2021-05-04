@@ -33,7 +33,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_NOP:
             break;
         case P_EXIT:
-            return 0;
+            if (request->args[0])
+                return request->args[0];
+            return 1;
         case P_CALL: {
             generic_func *f = (generic_func *)request->args[0];
             reply->retval =
@@ -80,7 +82,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_VECTOR:
             next_stage.entry = (generic_func *)request->args[0];
             memcpy(next_stage.args, &request->args[1], 4 * sizeof(u64));
-            return 0;
+            return 1;
 
         case P_WRITE64:
             exc_guard = GUARD_SKIP;
@@ -306,7 +308,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
 
         case P_KBOOT_BOOT:
             if (kboot_boot((void *)request->args[0]) == 0)
-                return 0;
+                return 1;
             break;
         case P_KBOOT_SET_BOOTARGS:
             kboot_set_bootargs((void *)request->args[0]);
@@ -391,5 +393,5 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
     }
     exc_guard = guard_save;
-    return 1;
+    return 0;
 }

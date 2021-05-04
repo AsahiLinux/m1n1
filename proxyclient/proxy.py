@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: MIT
 
 import os, sys, struct, serial, time
+from construct import *
+from utils import *
+from sysreg import *
 from enum import IntEnum, IntFlag
 from serial.tools.miniterm import Miniterm
 
@@ -65,6 +68,31 @@ class UartChecksumError(UartError):
 class UartRemoteError(UartError):
     pass
 
+class START(IntEnum):
+    BOOT = 0
+    EXCEPTION = 1
+    EXCEPTION_LOWER = 2
+
+class EXC(IntEnum):
+    SYNC = 0
+    IRQ = 1
+    FIQ = 2
+    SERROR = 3
+
+class EXC_RET(IntEnum):
+    UNHANDLED = 1
+    HANDLED = 2
+
+ExcInfo = Struct(
+    "spsr" / RegAdapter(SPSR),
+    "elr" / Int64ul,
+    "esr" / RegAdapter(ESR),
+    "far" / Int64ul,
+    "regs" / Array(31, Int64ul),
+    "sp" / Array(3, Int64ul),
+    "mpidr" / Int64ul,
+)
+
 class UartInterface:
     REQ_NOP = 0x00AA55FF
     REQ_PROXY = 0x01AA55FF
@@ -106,6 +134,7 @@ class UartInterface:
             #d = self.dev.read(1)
         self.dev.timeout = 3
         self.tty_enable = True
+        self.handlers = {}
 
     def checksum(self, data):
         sum = 0xDEADBEEF;
@@ -206,9 +235,9 @@ class UartInterface:
                 raise UartChecksumError()
 
             if cmdin != cmd:
-                if cmdin == self.REQ_BOOT:
-                    # Proxy rebooted in the meantime, try again
-                    return self.reply(cmd)
+                if cmdin == self.REQ_BOOT and status == self.ST_OK:
+                    self.handle_boot(data)
+                    continue
                 raise UartCMDError("Reply command mismatch: Expected 0x%08x, got 0x%08x"%(cmd, cmdin))
             if status != self.ST_OK:
                 if status == self.ST_BADCMD:
@@ -222,6 +251,20 @@ class UartInterface:
                 else:
                     raise UartRemoteError("Reply error: Unknown error (%d)"%status)
             return data
+
+    def handle_boot(self, data):
+        reason, code, info = struct.unpack("<IIQ", data[:16])
+        reason = START(reason)
+        info_type = None
+        if reason in (START.EXCEPTION, START.EXCEPTION_LOWER):
+            code = EXC(code)
+        if (reason, code) in self.handlers:
+            self.handlers[(reason, code)](reason, code, info)
+        elif reason != START.BOOT:
+            print(f"Proxy callback without handler: {reason}, {code}")
+
+    def set_handler(self, reason, code, handler):
+        self.handlers[(reason, code)] = handler
 
     def wait_boot(self):
         try:
@@ -481,8 +524,8 @@ class M1N1Proxy:
 
     def nop(self):
         self.request(self.P_NOP)
-    def exit(self):
-        self.request(self.P_EXIT)
+    def exit(self, retval=0):
+        self.request(self.P_EXIT, retval)
     def call(self, addr, *args):
         if len(args) > 4:
             raise ValueError("Too many arguments")
