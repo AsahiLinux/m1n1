@@ -1,0 +1,74 @@
+/* SPDX-License-Identifier: MIT */
+
+#include "hv.h"
+#include "assert.h"
+#include "cpu_regs.h"
+#include "exception.h"
+#include "string.h"
+#include "uartproxy.h"
+
+static void hv_exc_proxy(u64 *regs, uartproxy_exc_code_t type)
+{
+    struct uartproxy_exc_info exc_info = {
+        .spsr = mrs(SPSR_EL2),
+        .elr = mrs(ELR_EL2),
+        .esr = mrs(ESR_EL2),
+        .far = mrs(FAR_EL2),
+        .sp = {mrs(SP_EL0), mrs(SP_EL1), 0},
+        .mpidr = mrs(MPIDR_EL1),
+    };
+    memcpy(exc_info.regs, regs, sizeof(exc_info.regs));
+
+    struct uartproxy_msg_start start = {
+        .reason = START_EXCEPTION_LOWER,
+        .code = type,
+        .info = &exc_info,
+    };
+
+    int ret = uartproxy_run(&start);
+
+    if (ret == EXC_RET_HANDLED) {
+        memcpy(regs, exc_info.regs, sizeof(exc_info.regs));
+        msr(SPSR_EL2, exc_info.spsr);
+        msr(ELR_EL2, exc_info.elr);
+        msr(SP_EL0, exc_info.sp[0]);
+        msr(SP_EL1, exc_info.sp[1]);
+        return;
+    }
+
+    printf("Guest exception not handled, rebooting.\n");
+    print_regs(regs, 0);
+    reboot();
+}
+
+void hv_exc_sync(u64 *regs)
+{
+#if 0
+    u64 esr = mrs(ESR_EL2);
+    u32 ec = FIELD_GET(ESR_EC, esr);
+
+    switch (ec) {
+        case ESR_EC_DABORT_LOWER:
+            if (handle_dabort(regs))
+                return;
+            break;
+    }
+#endif
+
+    hv_exc_proxy(regs, EXC_SYNC);
+}
+
+void hv_exc_irq(u64 *regs)
+{
+    hv_exc_proxy(regs, EXC_IRQ);
+}
+
+void hv_exc_fiq(u64 *regs)
+{
+    hv_exc_proxy(regs, EXC_FIQ);
+}
+
+void hv_exc_serr(u64 *regs)
+{
+    hv_exc_proxy(regs, EXC_SERROR);
+}

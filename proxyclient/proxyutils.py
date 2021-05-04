@@ -129,6 +129,32 @@ class ProxyUtils(object):
         print(f"Pushing ADT ({adt_size} bytes)...")
         self.iface.writemem(adt_base, self.adt_data)
 
+    def print_exception(self, code, ctx):
+        print(f"  SPSR = {ctx.spsr}")
+        print(f"  ELR =  0x{ctx.elr:x}")
+        print(f"  ESR =  {ctx.esr}")
+        print(f"  FAR =  0x{ctx.far:x}")
+
+        for i in range(0, 31, 4):
+            j = min(30, i + 3)
+            print(f"  {f'x{i}-x{j}':>7} = {' '.join(f'{r:016x}' for r in ctx.regs[i:j + 1])}")
+
+        if ctx.esr.EC == ESR_EC.MSR:
+            print()
+            print("  == MSR fault decoding ==")
+            iss = ESR_ISS_MSR(ctx.esr.ISS)
+            enc = iss.Op0, iss.Op1, iss.CRn, iss.CRm, iss.Op2
+            if enc in sysreg_rev:
+                name = sysreg_rev[enc]
+            else:
+                name = f"s{iss.Op0}_{iss.Op1}_c{iss.CRn}_c{iss.CRm}_{iss.op2}"
+            if iss.DIR == MSR_DIR.READ:
+                print(f"  Instruction:   mrs x{iss.Rt}, {name}")
+            else:
+                print(f"  Instruction:   msr x{iss.Rt}, {name}")
+
+        print()
+
 class LazyADT:
     def __init__(self, utils):
         self.__dict__["_utils"] = utils

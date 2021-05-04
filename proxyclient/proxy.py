@@ -470,6 +470,7 @@ class M1N1Proxy:
 
     P_HV_INIT = 0xc00
     P_HV_MAP = 0xc01
+    P_HV_START = 0xc02
 
     def __init__(self, iface, debug=False):
         self.debug = debug
@@ -792,6 +793,9 @@ class M1N1Proxy:
         return self.request(self.P_HV_INIT)
     def hv_map(self, from_, to, size, incr):
         return self.request(self.P_HV_MAP, from_, to, size, incr)
+    def hv_start(self, entry, *args):
+        # does not return
+        return self.request(self.P_HV_START, entry, *args)
 
 if __name__ == "__main__":
     import serial

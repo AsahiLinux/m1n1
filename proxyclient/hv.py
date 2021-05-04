@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
+import sys
+
 from tgtypes import *
-from proxy import IODEV
+from proxy import IODEV, START, EXC, EXC_RET, ExcInfo
 from utils import *
 from sysreg import *
 from macho import MachO
+import shell
 
 class HV:
     PTE_VALID               = 1 << 0
@@ -34,11 +37,48 @@ class HV:
     def map_sw(self, ipa, pa, size):
         assert self.p.hv_map(ipa, pa | self.SPTE_MAP, size, 1) >= 0
 
+    def handle_exception(self, reason, code, info):
+        self.ctx = ctx = ExcInfo.parse(self.iface.readmem(info, ExcInfo.sizeof()))
+
+        print(f"Guest exception: {code.name}")
+
+        self.u.print_exception(code, ctx)
+
+        locals = {
+            "hv": self,
+            "iface": self.iface,
+            "p": self.p,
+            "u": self.u,
+        }
+
+        for attr in dir(self):
+            locals[attr] = getattr(self, attr)
+
+        shell.run_shell(locals, "Entering debug shell", "Returning from exception")
+
+        self.iface.writemem(info, ExcInfo.build(self.ctx))
+        self.p.exit(EXC_RET.HANDLED)
+
+    def skip(self):
+        self.ctx.elr += 4
+        raise shell.ExitConsole()
+
+    def cont(self):
+        raise shell.ExitConsole()
+
+    def exit(self):
+        sys.exit(0)
+
     def init(self):
         self.iodev = self.p.iodev_whoami()
 
         print("Initializing hypervisor over iodev %s" % self.iodev)
         self.p.hv_init()
+
+        self.iface.set_handler(START.EXCEPTION_LOWER, EXC.SYNC, self.handle_exception)
+        self.iface.set_handler(START.EXCEPTION_LOWER, EXC.IRQ, self.handle_exception)
+        self.iface.set_handler(START.EXCEPTION_LOWER, EXC.FIQ, self.handle_exception)
+        self.iface.set_handler(START.EXCEPTION_LOWER, EXC.SERROR, self.handle_exception)
 
         self.map_hw(0x2_00000000, 0x2_00000000, 0x5_00000000)
         self.map_hw(0x8_00000000, 0x8_00000000, 0x4_00000000)
@@ -117,5 +157,7 @@ class HV:
 
         print(f"Jumping to entrypoint at 0x{self.entry:x}")
 
-        self.p.reboot(self.entry, self.guest_base + self.bootargs_off, el1=True)
-        self.iface.ttymode()
+        self.iface.dev.timeout = None
+
+        # Does not return
+        self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)
