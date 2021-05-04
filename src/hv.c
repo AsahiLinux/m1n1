@@ -7,7 +7,7 @@
 void hv_init(void)
 {
     // Enable physical timer for EL1
-    msr(CNTHCTL_EL2, CNTHCTL_EL1PCTEN);
+    msr(CNTHCTL_EL2, CNTHCTL_EL1PTEN | CNTHCTL_EL1PCTEN);
 
     hv_pt_init();
 
