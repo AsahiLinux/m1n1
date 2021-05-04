@@ -37,6 +37,7 @@ ssize_t iodev_write(iodev_id_t id, const void *buf, size_t length);
 void iodev_handle_events(iodev_id_t id);
 
 void iodev_console_write(const void *buf, size_t length);
+void iodev_console_kick(void);
 static inline void iodev_console_flush(void)
 {
     iodev_console_write(NULL, 0);

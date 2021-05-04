@@ -2,6 +2,7 @@
 
 #include "exception.h"
 #include "cpu_regs.h"
+#include "iodev.h"
 #include "uart.h"
 #include "utils.h"
 
@@ -217,6 +218,10 @@ void exc_sync(u64 *regs)
             break;
         case GUARD_OFF:
         default:
+            for (int i = 0; i < 300; i++) {
+                iodev_console_kick();
+                udelay(1000);
+            }
             reboot();
     }
 

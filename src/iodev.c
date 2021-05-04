@@ -76,7 +76,7 @@ void iodev_console_write(const void *buf, size_t length)
     dprintf("  iodev_console_write() wp=%d\n", con_wp);
     for (iodev_id_t id = 0; id < IODEV_MAX; id++) {
         if (!iodevs[id])
-            return;
+            continue;
 
         if (!(iodevs[id]->usage & USAGE_CONSOLE)) {
             /* Drop buffer */
@@ -157,4 +157,16 @@ void iodev_handle_events(iodev_id_t id)
 
     if (iodev_can_write(id))
         iodev_console_flush();
+}
+
+void iodev_console_kick(void)
+{
+    for (iodev_id_t id = 0; id < IODEV_MAX; id++) {
+        if (!iodevs[id])
+            continue;
+        if (!(iodevs[id]->usage & USAGE_CONSOLE))
+            continue;
+
+        iodev_handle_events(id);
+    }
 }
