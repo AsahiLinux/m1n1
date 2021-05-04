@@ -6,11 +6,13 @@ import __main__
 import builtins
 from proxyutils import *
 from utils import *
+import sysreg
 
 class HistoryConsole(code.InteractiveConsole):
     def __init__(self, locals=None, filename="<console>",
                  histfile=os.path.expanduser("~/.m1n1-history")):
         code.InteractiveConsole.__init__(self, locals, filename)
+        self.histfile = histfile
         self.init_history(histfile)
 
     def init_history(self, histfile):
@@ -20,45 +22,70 @@ class HistoryConsole(code.InteractiveConsole):
                 readline.read_history_file(histfile)
             except FileNotFoundError:
                 pass
-            atexit.register(self.save_history, histfile)
 
-    def save_history(self, histfile):
-        readline.set_history_length(1000)
-        readline.write_history_file(histfile)
+    def save_history(self):
+        readline.set_history_length(10000)
+        readline.write_history_file(self.histfile)
 
     def showtraceback(self):
         type, value, tb = sys.exc_info()
         traceback.print_exception(type, value, tb)
 
-saved_display = sys.displayhook
+class ExitConsole(SystemExit):
+    pass
 
-def display(val):
-    global saved_display, mon
-    mon.poll()
-    if isinstance(val, int) or isinstance(val, int):
-        builtins._ = val
-        print(hex(val))
-    else:
-        saved_display(val)
+def run_shell(locals, msg=None, exitmsg=None):
+    saved_display = sys.displayhook
+    try:
+        def display(val):
+            try:
+                global mon
+                mon.poll()
+            except NameError:
+                pass
+            if isinstance(val, int):
+                builtins._ = val
+                print(hex(val))
+            elif callable(val):
+                val()
+            else:
+                saved_display(val)
 
-sys.displayhook = display
+        sys.displayhook = display
 
-# convenience
-h = hex
+        # convenience
+        locals["h"] = hex
+        locals["sysreg"] = sysreg
 
-from setup import *
+        if "proxy" in locals and "p" not in locals:
+            locals["p"] = locals["proxy"]
+        if "utils" in locals and "u" not in locals:
+            locals["u"] = locals["utils"]
 
-locals = __main__.__dict__
+        for obj in ("iface", "p", "u", "sysreg"):
+            if obj in locals:
+                for attr in dir(locals[obj]):
+                    if attr not in locals:
+                        locals[attr] = getattr(locals[obj], attr)
 
-for attr in dir(iface):
-    locals[attr] = getattr(iface,attr)
-for attr in dir(p):
-    locals[attr] = getattr(p,attr)
-for attr in dir(u):
-    locals[attr] = getattr(u,attr)
-del attr
+        try:
+            con = HistoryConsole(locals)
+            con.interact(msg, exitmsg)
+        except ExitConsole as e:
+            if len(e.args):
+                return e.args[0]
+            else:
+                return
+        finally:
+            con.save_history()
 
-from tgtypes import *
+    finally:
+        sys.displayhook = saved_display
 
-HistoryConsole(locals).interact("Have fun!")
+if __name__ == "__main__":
+    from setup import *
+    locals = __main__.__dict__
 
+    from tgtypes import *
+
+    run_shell(locals, msg="Have fun!")
