@@ -43,6 +43,15 @@ class BaseAsm(object):
     def objdump(self):
         subprocess.check_call("%sobjdump -rd %s" % (self.PREFIX, self.elffile), shell=True)
 
+    def disassemble(self):
+        output = subprocess.check_output("%sobjdump -zd %s" % (self.PREFIX, self.elffile), shell=True).decode("ascii")
+
+        disas = []
+        for line in output.split("\n"):
+            if not line or line[0] != " ":
+                continue
+            yield line
+
     def __del__(self):
         if self._tmp:
             shutil.rmtree(self._tmp)
@@ -72,8 +81,8 @@ test:
     b test
     ret
 """ % (" ".join(sys.argv[1:]))
-    c = ARMAsm(code, 0x1234)
+    c = ARMAsm(code, 0x1238)
     c.objdump()
-    assert c.start == 0x1234
+    assert c.start == 0x1238
     assert c.test == 0x1240
 

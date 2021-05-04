@@ -125,6 +125,19 @@ class ProxyUtils(object):
             j = min(30, i + 3)
             print(f"  {f'x{i}-x{j}':>7} = {' '.join(f'{r:016x}' for r in ctx.regs[i:j + 1])}")
 
+        if ctx.elr_phys:
+            print()
+            print("  == Faulting code ==")
+
+            start = ctx.elr_phys - 4 * 4
+            code = struct.unpack("<9I", self.iface.readmem(start, 9 * 4))
+
+            c = ARMAsm(".inst " + ",".join(str(i) for i in code), start)
+            lines = list(c.disassemble())
+            lines[4] = " *" + lines[4][2:]
+            for i in lines:
+                print(" " + i)
+
         if ctx.esr.EC == ESR_EC.MSR:
             print()
             print("  == MRS/MSR fault decoding ==")
