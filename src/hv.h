@@ -5,12 +5,16 @@
 
 #include "types.h"
 
-void hv_init(void);
+/* VM */
+void hv_pt_init(void);
 int hv_map(u64 from, u64 to, u64 size, u64 incr);
 int hv_unmap(u64 from, u64 size);
 int hv_map_hw(u64 from, u64 to, u64 size);
 int hv_map_sw(u64 from, u64 to, u64 size);
 int hv_map_hook(u64 from, void *hook, u64 size);
+
+/* HV main */
+void hv_init(void);
 void hv_start(void *entry, u64 regs[4]);
 
 #endif

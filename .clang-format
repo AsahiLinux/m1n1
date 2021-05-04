@@ -8,6 +8,7 @@ AlignConsecutiveMacros: true
 IndentCaseLabels: true
 ColumnLimit: 100
 IncludeBlocks: Regroup
+IncludeIsMainRegex: '(_.*)?$'
 
 # Include block order goes like this
 # - config.h style files, including ../config.h
