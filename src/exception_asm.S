@@ -1,4 +1,4 @@
-/* spDx-License-Identifier: MIT */
+/* SPDX-License-Identifier: MIT */
 
 .globl exc_sync
 .globl exc_irq
@@ -76,8 +76,10 @@ _exc_return:
     ldp x10, x11, [sp], #16
     ldp x12, x13, [sp], #16
     ldp x14, x15, [sp], #16
+    ldp x16, x17, [sp], #16
+    ldr x18, [sp], #8
 
-    add sp, sp, #112
+    add sp, sp, #88
 
     ldr x30, [sp], #16
     eret
