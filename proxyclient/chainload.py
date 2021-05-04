@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
-import argparse, pathlib
+import argparse, pathlib, time
 
 parser = argparse.ArgumentParser(description='Mach-O loader for m1n1')
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('-s', '--sepfw', action="store_true")
+parser.add_argument('-c', '--call', action="store_true")
 args = parser.parse_args()
 
 from setup import *
@@ -76,9 +77,19 @@ p.dc_cvau(stub.addr, stub.len)
 p.ic_ivau(stub.addr, stub.len)
 
 print(f"Entry point: 0x{entry:x}")
-print(f"Jumping to stub at 0x{stub.addr:x}")
 
-p.reboot(stub.addr, new_base + bootargs_off, image_addr, new_base, image_size)
+if args.call:
+    print(f"Shutting down MMU...")
+    try:
+        p.mmu_shutdown()
+    except ProxyCommandError:
+        pass
+    print(f"Jumping to stub at 0x{stub.addr:x}")
+    p.call(stub.addr, new_base + bootargs_off, image_addr, new_base, image_size, reboot=True)
+else:
+    print(f"Rebooting into stub at 0x{stub.addr:x}")
+    p.reboot(stub.addr, new_base + bootargs_off, image_addr, new_base, image_size)
 
+time.sleep(1)
 iface.nop()
 print("Proxy is alive again")

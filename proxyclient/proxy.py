@@ -53,6 +53,14 @@ def chexdump32(s, st=0, abbreviate=True):
             last = val
             skip = False
 
+# Hack to disable input buffer flushing
+class Serial(serial.Serial):
+    def _reset_input_buffer(self):
+        return
+
+    def reset_input_buffer(self):
+        super()._reset_input_buffer()
+
 class UartError(RuntimeError):
     pass
 
@@ -122,7 +130,7 @@ class UartInterface:
             self.devpath = device
             self.baudrate = baud
 
-            device = serial.Serial(self.devpath, baud)
+            device = Serial(self.devpath, baud)
 
         self.dev = device
         self.dev.timeout = 0
@@ -268,7 +276,7 @@ class UartInterface:
 
     def wait_boot(self):
         try:
-            self.reply(self.REQ_BOOT)
+            return self.reply(self.REQ_BOOT)
         except:
             # Over USB, reboots cause a reconnect
             self.dev.close()
@@ -296,7 +304,7 @@ class UartInterface:
         if no_reply:
             return
         elif reboot:
-            return self.reply(self.REQ_BOOT)
+            return self.wait_boot()
         else:
             return self.reply(self.REQ_PROXY)
 
@@ -485,7 +493,7 @@ class M1N1Proxy:
         if self.debug:
             print("<<<< %08x: %08x %08x %08x %08x %08x %08x"%tuple([opcode] + args))
         reply = self.iface.proxyreq(req, reboot=reboot, no_reply=no_reply, pre_reply=None)
-        if no_reply:
+        if no_reply or reboot and reply is None:
             return
         ret_fmt = "q" if signed else "Q"
         rop, status, retval = struct.unpack("<Qq" + ret_fmt, reply)
@@ -527,10 +535,10 @@ class M1N1Proxy:
         self.request(self.P_NOP)
     def exit(self, retval=0):
         self.request(self.P_EXIT, retval)
-    def call(self, addr, *args):
+    def call(self, addr, *args, reboot=False):
         if len(args) > 4:
             raise ValueError("Too many arguments")
-        return self.request(self.P_CALL, addr, *args)
+        return self.request(self.P_CALL, addr, *args, reboot=reboot)
     def reboot(self, addr, *args, el1=False):
         if len(args) > 4:
             raise ValueError("Too many arguments")
