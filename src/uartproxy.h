@@ -23,6 +23,7 @@ typedef enum _uartproxy_exc_code_t {
 typedef enum _uartproxy_exc_ret_t {
     EXC_RET_UNHANDLED = 1,
     EXC_RET_HANDLED = 2,
+    EXC_EXIT_GUEST = 3,
 } uartproxy_exc_ret_t;
 
 struct uartproxy_exc_info {

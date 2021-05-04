@@ -84,6 +84,17 @@ _v_hv_serr:
 .globl hv_enter_guest
 .type hv_enter_guest, @function
 hv_enter_guest:
+    stp x29, x30, [sp, #-16]!
+    stp x27, x28, [sp, #-16]!
+    stp x25, x26, [sp, #-16]!
+    stp x23, x24, [sp, #-16]!
+    stp x21, x22, [sp, #-16]!
+    stp x19, x20, [sp, #-16]!
+    str x18, [sp, #-16]!
+
+    mov x5, sp
+    msr tpidr_el2, x5
+
     mrs x5, daif
     msr daifclr, 3
     mov x6, #5
@@ -91,8 +102,24 @@ hv_enter_guest:
     msr spsr_el2, x5
 
     msr elr_el2, x4
-    msr spsel, #0
     mov x5, #0
-    mov sp, x5
+    msr sp_el0, x5
+    msr sp_el1, x5
 
     eret
+
+.globl hv_exit_guest
+.type hv_exit_guest, @function
+hv_exit_guest:
+    mrs x5, tpidr_el2
+    mov sp, x5
+
+    ldr x18, [sp], #16
+    ldp x19, x20, [sp], #16
+    ldp x21, x22, [sp], #16
+    ldp x23, x24, [sp], #16
+    ldp x25, x26, [sp], #16
+    ldp x27, x28, [sp], #16
+    ldp x29, x30, [sp], #16
+
+    ret

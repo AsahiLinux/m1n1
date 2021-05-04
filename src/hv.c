@@ -4,7 +4,7 @@
 #include "assert.h"
 #include "cpu_regs.h"
 
-void hv_enter_guest(u64 x0, u64 x1, u64 x2, u64 x3, void *entry) __attribute__((noreturn));
+void hv_enter_guest(u64 x0, u64 x1, u64 x2, u64 x3, void *entry);
 
 extern char _hv_vectors_start[0];
 
@@ -38,4 +38,6 @@ void hv_start(void *entry, u64 regs[4])
     msr(VBAR_EL1, _hv_vectors_start);
 
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
+
+    printf("Exiting hypervisor.\n");
 }

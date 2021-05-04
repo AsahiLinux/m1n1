@@ -7,6 +7,8 @@
 #include "string.h"
 #include "uartproxy.h"
 
+void hv_exit_guest(void) __attribute__((noreturn));
+
 static void hv_exc_proxy(u64 *regs, uartproxy_exc_code_t type)
 {
     struct uartproxy_exc_info exc_info = {
@@ -27,18 +29,25 @@ static void hv_exc_proxy(u64 *regs, uartproxy_exc_code_t type)
 
     int ret = uartproxy_run(&start);
 
-    if (ret == EXC_RET_HANDLED) {
-        memcpy(regs, exc_info.regs, sizeof(exc_info.regs));
-        msr(SPSR_EL2, exc_info.spsr);
-        msr(ELR_EL2, exc_info.elr);
-        msr(SP_EL0, exc_info.sp[0]);
-        msr(SP_EL1, exc_info.sp[1]);
-        return;
+    switch (ret) {
+        case EXC_RET_HANDLED:
+            memcpy(regs, exc_info.regs, sizeof(exc_info.regs));
+            msr(SPSR_EL2, exc_info.spsr);
+            msr(ELR_EL2, exc_info.elr);
+            msr(SP_EL0, exc_info.sp[0]);
+            msr(SP_EL1, exc_info.sp[1]);
+            return;
+        case EXC_EXIT_GUEST:
+            hv_exit_guest();
+        default:
+            printf("Guest exception not handled, rebooting.\n");
+            print_regs(regs, 0);
+            for (int i = 0; i < 300; i++) {
+                iodev_console_kick();
+                udelay(1000);
+            }
+            reboot();
     }
-
-    printf("Guest exception not handled, rebooting.\n");
-    print_regs(regs, 0);
-    reboot();
 }
 
 void hv_exc_sync(u64 *regs)

@@ -90,6 +90,7 @@ class EXC(IntEnum):
 class EXC_RET(IntEnum):
     UNHANDLED = 1
     HANDLED = 2
+    EXIT_GUEST = 3
 
 ExcInfo = Struct(
     "spsr" / RegAdapter(SPSR),
@@ -802,7 +803,6 @@ class M1N1Proxy:
     def hv_map(self, from_, to, size, incr):
         return self.request(self.P_HV_MAP, from_, to, size, incr)
     def hv_start(self, entry, *args):
-        # does not return
         return self.request(self.P_HV_START, entry, *args)
 
 if __name__ == "__main__":

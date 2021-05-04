@@ -54,20 +54,23 @@ class HV:
         for attr in dir(self):
             locals[attr] = getattr(self, attr)
 
-        shell.run_shell(locals, "Entering debug shell", "Returning from exception")
+        ret = shell.run_shell(locals, "Entering debug shell", "Returning from exception")
+
+        if ret is None:
+            ret = EXC_RET.HANDLED
 
         self.iface.writemem(info, ExcInfo.build(self.ctx))
-        self.p.exit(EXC_RET.HANDLED)
+        self.p.exit(ret)
 
     def skip(self):
         self.ctx.elr += 4
-        raise shell.ExitConsole()
+        raise shell.ExitConsole(EXC_RET.HANDLED)
 
     def cont(self):
-        raise shell.ExitConsole()
+        raise shell.ExitConsole(EXC_RET.HANDLED)
 
     def exit(self):
-        sys.exit(0)
+        raise shell.ExitConsole(EXC_RET.EXIT_GUEST)
 
     def init(self):
         self.adt = load_adt(self.u.get_adt())
