@@ -8,6 +8,7 @@ from proxy import IODEV, START, EXC, EXC_RET, ExcInfo
 from utils import *
 from sysreg import *
 from macho import MachO
+from adt import load_adt
 import shell
 
 class HV:
@@ -26,7 +27,6 @@ class HV:
         self.iface = iface
         self.p = proxy
         self.u = utils
-        self.adt = self.u.adt
 
     def unmap(self, ipa, size):
         assert self.p.hv_map(ipa, 0, size, 0) >= 0
@@ -70,6 +70,7 @@ class HV:
         sys.exit(0)
 
     def init(self):
+        self.adt = load_adt(self.u.get_adt())
         self.iodev = self.p.iodev_whoami()
 
         print("Initializing hypervisor over iodev %s" % self.iodev)
@@ -83,38 +84,9 @@ class HV:
         self.map_hw(0x2_00000000, 0x2_00000000, 0x5_00000000)
         self.map_hw(0x8_00000000, 0x8_00000000, 0x4_00000000)
 
-    def load_macho(self, data):
-        if isinstance(data, str):
-            data = open(data, "rb").read()
+        self.setup_adt()
 
-        macho = MachO(data)
-        image = macho.prepare_image()
-        sepfw_start, sepfw_length = self.u.adt["chosen"]["memory-map"].SEPFW
-
-        image_size = align(len(image))
-        sepfw_off = image_size
-        image_size += align(sepfw_length)
-        self.bootargs_off = image_size
-        image_size += 0x4000
-
-        print(f"Total region size: 0x{image_size:x} bytes")
-
-        self.guest_base = guest_base = self.u.heap_top
-        print(f"Guest region start: 0x{guest_base:x}")
-
-        self.entry = macho.entry - macho.vmin + guest_base
-
-        print(f"Loading kernel image (0x{len(image):x} bytes)...")
-        self.u.compressed_writemem(guest_base, image, True)
-        self.p.dc_cvau(guest_base, len(image))
-        self.p.ic_ivau(guest_base, len(image))
-
-        print(f"Copying SEPFW (0x{sepfw_length:x} bytes)...")
-        self.p.memcpy8(guest_base + sepfw_off, sepfw_start, sepfw_length)
-
-        print(f"Adjusting SEPFW address in ADT...")
-        self.adt["chosen"]["memory-map"].SEPFW = (guest_base + sepfw_off, sepfw_length)
-
+    def setup_adt(self):
         if self.iodev in (IODEV.USB0, IODEV.USB1):
             idx = str(self.iodev)[-1]
             for prefix in ("dart-usb", "atc-phy", "usb-drd"):
@@ -133,17 +105,63 @@ class HV:
                 except KeyError:
                     pass
 
-        self.u.push_adt()
+    def load_macho(self, data):
+        if isinstance(data, str):
+            data = open(data, "rb").read()
+
+        macho = MachO(data)
+        image = macho.prepare_image()
+        sepfw_start, sepfw_length = self.u.adt["chosen"]["memory-map"].SEPFW
+        tc_start, tc_size = self.u.adt["chosen"]["memory-map"].TrustCache
+
+        image_size = align(len(image))
+        sepfw_off = image_size
+        image_size += align(sepfw_length)
+        self.bootargs_off = image_size
+        image_size += 0x4000
+
+        print(f"Total region size: 0x{image_size:x} bytes")
+
+        self.phys_base = phys_base = guest_base = self.u.heap_top
+        adt_base = guest_base
+        guest_base += align(self.u.ba.devtree_size)
+        tc_base = guest_base
+        guest_base += align(tc_size)
+        self.guest_base = guest_base
+
+        print(f"Physical memory base: 0x{phys_base:x}")
+        print(f"Guest region start: 0x{guest_base:x}")
+
+        self.entry = macho.entry - macho.vmin + guest_base
+
+        print(f"Loading kernel image (0x{len(image):x} bytes)...")
+        self.u.compressed_writemem(guest_base, image, True)
+        self.p.dc_cvau(guest_base, len(image))
+        self.p.ic_ivau(guest_base, len(image))
+
+        print(f"Copying SEPFW (0x{sepfw_length:x} bytes)...")
+        self.p.memcpy8(guest_base + sepfw_off, sepfw_start, sepfw_length)
+
+        print(f"Copying TrustCache (0x{tc_size:x} bytes)...")
+        self.p.memcpy8(tc_base, tc_start, tc_size)
+
+        print(f"Adjusting addresses in ADT...")
+        self.adt["chosen"]["memory-map"].SEPFW = (guest_base + sepfw_off, sepfw_length)
+        self.adt["chosen"]["memory-map"].TrustCache = (tc_base, tc_size)
+        self.adt["chosen"]["memory-map"].DeviceTree = (adt_base, align(self.u.ba.devtree_size))
+
+        adt_blob = self.adt.build()
+        print(f"Uploading ADT (0x{len(adt_blob):x} bytes)...")
+        self.iface.writemem(adt_base, adt_blob)
 
         print(f"Setting up bootargs...")
         tba = self.u.ba.copy()
         mem_top = tba.phys_base + tba.mem_size
-        devtree = tba.devtree - tba.virt_base + tba.phys_base
 
-        tba.mem_size = mem_top - guest_base
-        tba.phys_base = guest_base
-        tba.virt_base = 0xfffffe0010000000 + (guest_base & (32 * 1024 * 1024 - 1))
-        tba.devtree = devtree - tba.phys_base + tba.virt_base
+        tba.mem_size = mem_top - phys_base
+        tba.phys_base = phys_base
+        tba.virt_base = 0xfffffe0010000000 + (phys_base & (32 * 1024 * 1024 - 1))
+        tba.devtree = adt_base - tba.phys_base + tba.virt_base
         tba.top_of_kdata = guest_base + image_size
 
         self.iface.writemem(guest_base + self.bootargs_off, BootArgs.build(tba))
