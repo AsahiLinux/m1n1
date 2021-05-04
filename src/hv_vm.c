@@ -8,6 +8,11 @@
 #include "types.h"
 #include "utils.h"
 
+//#define dprintf printf
+#define dprintf(...)                                                                               \
+    do {                                                                                           \
+    } while (0)
+
 #define PAGE_SIZE       0x4000
 #define CACHE_LINE_SIZE 64
 
@@ -312,21 +317,43 @@ int hv_map_hook(u64 from, void *hook, u64 size)
     return hv_map(from, ((u64)hook) | FIELD_PREP(SPTE_TYPE, SPTE_HOOK), size, 0);
 }
 
-u64 hv_translate(u64 addr)
+u64 hv_translate(u64 addr, bool s1, bool w)
 {
     u64 el = FIELD_GET(SPSR_M, mrs(SPSR_EL2)) >> 2;
     u64 save = mrs(PAR_EL1);
 
-    if (el == 0)
-        asm("at s12e0r, %0" : : "r"(addr));
-    else
-        asm("at s12e1r, %0" : : "r"(addr));
+    if (w) {
+        if (s1) {
+            if (el == 0)
+                asm("at s1e0w, %0" : : "r"(addr));
+            else
+                asm("at s1e1w, %0" : : "r"(addr));
+        } else {
+            if (el == 0)
+                asm("at s12e0w, %0" : : "r"(addr));
+            else
+                asm("at s12e1w, %0" : : "r"(addr));
+        }
+    } else {
+        if (s1) {
+            if (el == 0)
+                asm("at s1e0r, %0" : : "r"(addr));
+            else
+                asm("at s1e1r, %0" : : "r"(addr));
+        } else {
+            if (el == 0)
+                asm("at s12e0r, %0" : : "r"(addr));
+            else
+                asm("at s12e1r, %0" : : "r"(addr));
+        }
+    }
 
     u64 par = mrs(PAR_EL1);
     msr(PAR_EL1, save);
 
-    if (par & PAR_F)
+    if (par & PAR_F) {
+        dprintf("hv_translate(0x%lx, %d, %d): fault 0x%lx\n", addr, s1, w, par);
         return 0; // fault
-    else
+    } else {
         return (par & PAR_PA) | (addr & 0xfff);
-}
+    }

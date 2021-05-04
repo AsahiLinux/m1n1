@@ -20,9 +20,9 @@ static void hv_exc_proxy(u64 *regs, uartproxy_exc_code_t type)
         .far = mrs(FAR_EL2),
         .sp = {mrs(SP_EL0), mrs(SP_EL1), 0},
         .mpidr = mrs(MPIDR_EL1),
-        .elr_phys = hv_translate(mrs(ELR_EL2)),
-        .far_phys = hv_translate(mrs(FAR_EL2)),
-        .sp_phys = hv_translate(from_el == 0 ? mrs(SP_EL0) : mrs(SP_EL1)),
+        .elr_phys = hv_translate(mrs(ELR_EL2), false, false),
+        .far_phys = hv_translate(mrs(FAR_EL2), false, false),
+        .sp_phys = hv_translate(from_el == 0 ? mrs(SP_EL0) : mrs(SP_EL1), false, false),
     };
     memcpy(exc_info.regs, regs, sizeof(exc_info.regs));
 
