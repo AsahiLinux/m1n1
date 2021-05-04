@@ -5,21 +5,13 @@
 #include "uart.h"
 #include "iodev.h"
 #include "types.h"
+#include "uart_regs.h"
 #include "utils.h"
 #include "vsprintf.h"
 
 #define UART_CLOCK 24000000
 
 #define UART_BASE 0x235200000L
-
-#define ULCON    0x000
-#define UCON     0x004
-#define UFCON    0x008
-#define UTRSTAT  0x010
-#define UTXH     0x020
-#define URXH     0x024
-#define UBRDIV   0x028
-#define UFRACVAL 0x02c
 
 void *pxx = uart_init;
 
