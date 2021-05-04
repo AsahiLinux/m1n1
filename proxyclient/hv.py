@@ -80,12 +80,18 @@ class HV:
             for prefix in ("dart-usb", "atc-phy", "usb-drd"):
                 name = f"{prefix}{idx}"
                 print(f"Removing ADT node /arm-io/{name}")
-                del self.adt["arm-io"][name]
+                try:
+                    del self.adt["arm-io"][name]
+                except KeyError:
+                    pass
 
         for cpu in list(self.adt["cpus"]):
             if cpu.name != "cpu0":
                 print(f"Removing ADT node {cpu._path}")
-                del self.adt["cpus"][cpu.name]
+                try:
+                    del self.adt["cpus"][cpu.name]
+                except KeyError:
+                    pass
 
         self.u.push_adt()
 
