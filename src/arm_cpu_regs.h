@@ -55,6 +55,27 @@
 #define ESR_EC_WATCH        0b110101
 #define ESR_EC_BRK          0b111100
 
+#define ESR_ISS_DABORT_ISV   BIT(24)
+#define ESR_ISS_DABORT_SAS   GENMASK(23, 22)
+#define ESR_ISS_DABORT_SSE   BIT(21)
+#define ESR_ISS_DABORT_SRT   GENMASK(20, 16)
+#define ESR_ISS_DABORT_SF    BIT(15)
+#define ESR_ISS_DABORT_AR    BIT(14)
+#define ESR_ISS_DABORT_VNCR  BIT(13)
+#define ESR_ISS_DABORT_SET   GENMASK(12, 11)
+#define ESR_ISS_DABORT_LSR   GENMASK(12, 11)
+#define ESR_ISS_DABORT_FnV   BIT(10)
+#define ESR_ISS_DABORT_EA    BIT(9)
+#define ESR_ISS_DABORT_CM    BIT(8)
+#define ESR_ISS_DABORT_S1PTR BIT(7)
+#define ESR_ISS_DABORT_WnR   BIT(6)
+#define ESR_ISS_DABORT_DFSC  GENMASK(5, 0)
+
+#define SAS_8B  0
+#define SAS_16B 1
+#define SAS_32B 2
+#define SAS_64B 3
+
 #define SYS_HCR_EL2  sys_reg(3, 4, 1, 1, 0)
 #define HCR_TWEDEL   GENMASK(63, 60)
 #define HCR_TWEDEn   BIT(59)

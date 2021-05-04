@@ -108,6 +108,7 @@ typedef enum {
     P_HV_MAP,
     P_HV_START,
     P_HV_TRANSLATE,
+    P_HV_PT_WALK,
 
 } ProxyOp;
 

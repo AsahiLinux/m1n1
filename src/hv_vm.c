@@ -23,6 +23,8 @@
 
 #define PTE_ATTRIBUTES (PTE_ACCESS | PTE_SH_NS | PTE_S2AP_RW | PTE_MEMATTR_UNCHANGED)
 
+#define PTE_LOWER_ATTRIBUTES GENMASK(13, 2)
+
 #define PTE_VALID BIT(0)
 #define PTE_TYPE  BIT(1)
 #define PTE_BLOCK 0
@@ -38,7 +40,9 @@
 #define VADDR_L2_OFFSET_BITS 25
 
 #define VADDR_L2_ALIGN_MASK GENMASK(VADDR_L2_OFFSET_BITS - 1, VADDR_L3_OFFSET_BITS)
-#define PTE_TARGET_MASK     GENMASK(49, 14)
+#define VADDR_L3_ALIGN_MASK GENMASK(VADDR_L3_OFFSET_BITS - 1, VADDR_L4_OFFSET_BITS)
+#define PTE_TARGET_MASK     GENMASK(49, VADDR_L3_OFFSET_BITS)
+#define PTE_TARGET_MASK_L4  GENMASK(49, VADDR_L4_OFFSET_BITS)
 
 #define ENTRIES_PER_L2_TABLE BIT(VADDR_L2_INDEX_BITS)
 #define ENTRIES_PER_L3_TABLE BIT(VADDR_L3_INDEX_BITS)
@@ -48,13 +52,19 @@
 #define SPTE_MAP  0
 #define SPTE_HOOK 1
 
-#define IS_HW(pte) (pte && pte & PTE_VALID)
-#define IS_SW(pte) (pte && !(pte & PTE_VALID))
+#define IS_HW(pte) ((pte) && pte & PTE_VALID)
+#define IS_SW(pte) ((pte) && !(pte & PTE_VALID))
 
 #define L2_IS_TABLE(pte)     ((pte) && FIELD_GET(PTE_TYPE, pte) == PTE_TABLE)
 #define L2_IS_NOT_TABLE(pte) ((pte) && !L2_IS_TABLE(pte))
+#define L2_IS_HW_BLOCK(pte)  (IS_HW(pte) && FIELD_GET(PTE_TYPE, pte) == PTE_BLOCK)
+#define L2_IS_SW_BLOCK(pte)                                                                        \
+    (IS_SW(pte) && FIELD_GET(PTE_TYPE, pte) == PTE_BLOCK && FIELD_GET(SPTE_TYPE, pte) == SPTE_MAP)
 #define L3_IS_TABLE(pte)     (IS_SW(pte) && FIELD_GET(PTE_TYPE, pte) == PTE_TABLE)
 #define L3_IS_NOT_TABLE(pte) ((pte) && !L3_IS_TABLE(pte))
+#define L3_IS_HW_BLOCK(pte)  (IS_HW(pte) && FIELD_GET(PTE_TYPE, pte) == PTE_PAGE)
+#define L3_IS_SW_BLOCK(pte)                                                                        \
+    (IS_SW(pte) && FIELD_GET(PTE_TYPE, pte) == PTE_BLOCK && FIELD_GET(SPTE_TYPE, pte) == SPTE_MAP)
 
 /*
  * We use 16KB page tables for stage 2 translation, and a 64GB (36-bit) guest
@@ -312,7 +322,7 @@ int hv_map_sw(u64 from, u64 to, u64 size)
     return hv_map(from, to | FIELD_PREP(SPTE_TYPE, SPTE_MAP), size, 1);
 }
 
-int hv_map_hook(u64 from, void *hook, u64 size)
+int hv_map_hook(u64 from, hv_hook_t *hook, u64 size)
 {
     return hv_map(from, ((u64)hook) | FIELD_PREP(SPTE_TYPE, SPTE_HOOK), size, 0);
 }
@@ -357,3 +367,232 @@ u64 hv_translate(u64 addr, bool s1, bool w)
     } else {
         return (par & PAR_PA) | (addr & 0xfff);
     }
+}
+
+u64 hv_pt_walk(u64 addr)
+{
+    dprintf("hv_pt_walk(0x%lx)\n", addr);
+
+    u64 idx = addr >> VADDR_L2_OFFSET_BITS;
+    u64 l2d = hv_L2[idx];
+
+    dprintf("  l2d = 0x%lx\n", l2d);
+
+    if (!L2_IS_TABLE(l2d)) {
+        if (L2_IS_SW_BLOCK(l2d) || L2_IS_HW_BLOCK(l2d))
+            l2d |= addr & VADDR_L2_ALIGN_MASK;
+
+        dprintf("  result: 0x%lx\n", l2d);
+        return l2d;
+    }
+
+    idx = (addr >> VADDR_L3_OFFSET_BITS) & MASK(VADDR_L3_INDEX_BITS);
+    u64 l3d = ((u64 *)(l2d & PTE_TARGET_MASK))[idx];
+    dprintf("  l3d = 0x%lx\n", l3d);
+
+    if (!L3_IS_TABLE(l3d)) {
+        if (L3_IS_SW_BLOCK(l3d))
+            l3d |= addr & VADDR_L3_ALIGN_MASK;
+        if (L3_IS_HW_BLOCK(l3d)) {
+            l3d &= ~PTE_LOWER_ATTRIBUTES;
+            l3d |= addr & VADDR_L3_ALIGN_MASK;
+        }
+        dprintf("  result: 0x%lx\n", l3d);
+        return l3d;
+    }
+
+    idx = (addr >> VADDR_L4_OFFSET_BITS) & MASK(VADDR_L4_INDEX_BITS);
+    dprintf("  l4 idx = 0x%lx\n", idx);
+    u64 l4d = ((u64 *)(l3d & PTE_TARGET_MASK))[idx];
+    dprintf("  l4d = 0x%lx\n", l4d);
+    return l4d;
+}
+
+#define CHECK_WIDTH                                                                                \
+    if ((insn >> 30) != width)                                                                     \
+    goto bad_width
+#define CHECK_RN                                                                                   \
+    if (Rn == 31)                                                                                  \
+    goto bail
+#define EXT(n, b) (((s32)(((u32)(n)) << (32 - (b)))) >> (32 - (b)))
+
+static bool emulate_load(u64 *regs, u32 insn, u64 val, u64 width)
+{
+    u64 Rt = insn & 0x1f;
+    u64 Rn = (insn >> 5) & 0x1f;
+    // u64 Rm = (insn >> 16) & 0x1f;
+    u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
+
+    if ((insn & 0x3fe00400) == 0x38400400) {
+        // LDRx (immediate) Pre/Post-index
+        CHECK_WIDTH;
+        CHECK_RN;
+        regs[Rt] = val;
+        regs[Rn] += imm9;
+    } else if ((insn & 0x3fc00000) == 0x39400000) {
+        // LDRx (immediate) Unsigned offset
+        CHECK_WIDTH;
+        regs[Rt] = val;
+    } else if ((insn & 0x3fa00400) == 0x38800400) {
+        // LDRSx (immediate) Pre/Post-index
+        CHECK_WIDTH;
+        CHECK_RN;
+        regs[Rt] = EXT(val, 8 << width);
+        regs[Rn] += imm9;
+    } else if ((insn & 0x3fa00000) == 0x39800000) {
+        // LDRSx (immediate) Unsigned offset
+        CHECK_WIDTH;
+        regs[Rt] = EXT(val, 8 << width);
+    } else {
+        goto bail;
+    }
+    return true;
+
+bad_width:
+    printf("HV: width mismatch (expected %ld)\n", width);
+bail:
+    printf("HV: load not emulated: 0x%08x\n", insn);
+    return false;
+}
+
+static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 width)
+{
+    u64 Rt = insn & 0x1f;
+    u64 Rn = (insn >> 5) & 0x1f;
+    // u64 Rm = (insn >> 16) & 0x1f;
+    u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
+
+    if ((insn & 0x3fe00400) == 0x38000400) {
+        // STRx (immediate) Pre/Post-index
+        CHECK_WIDTH;
+        CHECK_RN;
+        *val = regs[Rt];
+        regs[Rn] += imm9;
+    } else if ((insn & 0x3fc00000) == 0x39000000) {
+        // STRx (immediate) Unsigned offset
+        CHECK_WIDTH;
+        *val = regs[Rt];
+    } else {
+        goto bail;
+    }
+    return true;
+
+bad_width:
+    printf("HV: width mismatch (expected %ld)\n", width);
+bail:
+    printf("HV: store not emulated: 0x%08x\n", insn);
+    return false;
+}
+
+bool hv_handle_dabort(u64 *regs)
+{
+    u64 esr = mrs(ESR_EL2);
+
+    if (!(esr & ESR_ISS_DABORT_ISV))
+        return false;
+
+    u64 far = mrs(FAR_EL2);
+    u64 ipa = hv_translate(far, true, esr & ESR_ISS_DABORT_WnR);
+
+    dprintf("hv_handle_abort(): stage 1 0x%0lx -> 0x%lx\n", far, ipa);
+
+    if (!ipa)
+        return false;
+
+    u64 pte = hv_pt_walk(ipa);
+
+    if (!pte)
+        return false;
+
+    if (IS_HW(pte)) {
+        printf("HV: Data abort on mapped page (0x%lx -> 0x%lx\n", far, pte);
+        return false;
+    }
+
+    assert(IS_SW(pte));
+    assert(FIELD_GET(PTE_TYPE, pte) == PTE_PAGE);
+
+    u64 target = pte & PTE_TARGET_MASK_L4;
+    u64 paddr = target | (far & MASK(VADDR_L4_OFFSET_BITS));
+
+    u64 width = FIELD_GET(ESR_ISS_DABORT_SAS, esr);
+
+    u64 elr = mrs(ELR_EL2);
+    u64 elr_pa = hv_translate(elr, false, false);
+    if (!elr_pa) {
+        printf("HV: Failed to fetch instruction for data abort at 0x%lx\n", elr);
+        return false;
+    }
+
+    u32 insn = read32(elr_pa);
+    u64 val;
+
+    if (esr & ESR_ISS_DABORT_WnR) {
+        if (!emulate_store(regs, insn, &val, width))
+            return false;
+
+        switch (FIELD_GET(SPTE_TYPE, pte)) {
+            case SPTE_MAP:
+                dprintf("HV: SPTE_MAP[W] 0x%lx -> 0x%lx (w=%d): 0x%lx\n", far, paddr, 1 << width,
+                        val);
+                switch (width) {
+                    case SAS_8B:
+                        write8(paddr, val);
+                        break;
+                    case SAS_16B:
+                        write16(paddr, val);
+                        break;
+                    case SAS_32B:
+                        write32(paddr, val);
+                        break;
+                    case SAS_64B:
+                        write64(paddr, val);
+                        break;
+                }
+                break;
+            case SPTE_HOOK: {
+                hv_hook_t *hook = (hv_hook_t *)target;
+                if (!hook(ipa, &val, true, width))
+                    return false;
+                dprintf("HV: SPTE_HOOK[W] 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", far, ipa, 1 << width,
+                        hook, val);
+                break;
+            }
+        }
+    } else {
+        switch (FIELD_GET(SPTE_TYPE, pte)) {
+            case SPTE_MAP:
+                switch (width) {
+                    case SAS_8B:
+                        val = read8(paddr);
+                        break;
+                    case SAS_16B:
+                        val = read16(paddr);
+                        break;
+                    case SAS_32B:
+                        val = read32(paddr);
+                        break;
+                    case SAS_64B:
+                        val = read64(paddr);
+                        break;
+                }
+                dprintf("HV: SPTE_MAP[R] 0x%lx -> 0x%lx (w=%d): 0x%lx\n", far, paddr, 1 << width,
+                        val);
+                break;
+            case SPTE_HOOK:
+                val = 0;
+                hv_hook_t *hook = (hv_hook_t *)target;
+                if (!hook(ipa, &val, false, width))
+                    return false;
+                dprintf("HV: SPTE_HOOK[R] 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", far, ipa, 1 << width,
+                        hook, val);
+                break;
+        }
+
+        if (!emulate_load(regs, insn, val, width))
+            return false;
+    }
+
+    msr(ELR_EL2, elr + 4);
+    return true;
+}

@@ -393,6 +393,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_HV_TRANSLATE:
             reply->retval = hv_translate(request->args[0], request->args[1], request->args[2]);
             break;
+        case P_HV_PT_WALK:
+            reply->retval = hv_pt_walk(request->args[0]);
+            break;
 
         default:
             reply->status = S_BADCMD;

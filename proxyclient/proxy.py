@@ -484,6 +484,7 @@ class M1N1Proxy:
     P_HV_MAP = 0xc01
     P_HV_START = 0xc02
     P_HV_TRANSLATE = 0xc03
+    P_HV_PT_WALK = 0xc04
 
     def __init__(self, iface, debug=False):
         self.debug = debug
@@ -810,6 +811,8 @@ class M1N1Proxy:
         return self.request(self.P_HV_START, entry, *args)
     def hv_translate(self, addr, s1, w):
         return self.request(self.P_HV_TRANSLATE, addr, s1, w)
+    def hv_pt_walk(self, addr):
+        return self.request(self.P_HV_PT_WALK, addr)
 
 if __name__ == "__main__":
     import serial

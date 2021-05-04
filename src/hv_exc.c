@@ -53,17 +53,15 @@ static void hv_exc_proxy(u64 *regs, uartproxy_exc_code_t type)
 
 void hv_exc_sync(u64 *regs)
 {
-#if 0
     u64 esr = mrs(ESR_EL2);
     u32 ec = FIELD_GET(ESR_EC, esr);
 
     switch (ec) {
         case ESR_EC_DABORT_LOWER:
-            if (handle_dabort(regs))
+            if (hv_handle_dabort(regs))
                 return;
             break;
     }
-#endif
 
     hv_exc_proxy(regs, EXC_SYNC);
 }
