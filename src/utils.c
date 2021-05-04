@@ -94,3 +94,12 @@ void udelay(u32 d)
     while ((read32(AIC_TIMER) - val) < delay)
         ;
 }
+
+void flush_and_reboot(void)
+{
+    for (int i = 0; i < 300; i++) {
+        iodev_console_kick();
+        udelay(1000);
+    }
+    reboot();
+}

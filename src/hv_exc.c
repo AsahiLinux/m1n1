@@ -47,11 +47,7 @@ static void hv_exc_proxy(u64 *regs, uartproxy_exc_code_t type)
         default:
             printf("Guest exception not handled, rebooting.\n");
             print_regs(regs, 0);
-            for (int i = 0; i < 300; i++) {
-                iodev_console_kick();
-                udelay(1000);
-            }
-            reboot();
+            flush_and_reboot();
     }
 }
 

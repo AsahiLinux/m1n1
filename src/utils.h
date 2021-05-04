@@ -322,13 +322,14 @@ int sprintf(char *str, const char *fmt, ...);
 int debug_printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void udelay(u32 d);
 void reboot(void) __attribute__((noreturn));
+void flush_and_reboot(void) __attribute__((noreturn));
 
 #define mdelay(m) udelay((m)*1000)
 
 #define panic(fmt, ...)                                                                            \
     do {                                                                                           \
         debug_printf(fmt, ##__VA_ARGS__);                                                          \
-        reboot();                                                                                  \
+        flush_and_reboot();                                                                        \
     } while (0)
 
 static inline int poll32(u64 addr, u32 mask, u32 target, u32 timeout)
