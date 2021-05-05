@@ -44,6 +44,9 @@ p.dc_cvau(image_addr, len(image))
 if args.sepfw:
     print(f"Copying SEPFW (0x{sepfw_length:x} bytes)...")
     p.memcpy8(image_addr + sepfw_off, sepfw_start, sepfw_length)
+    print(f"Adjusting addresses in ADT...")
+    u.adt["chosen"]["memory-map"].SEPFW = (new_base + sepfw_off, sepfw_length)
+    u.push_adt()
 
 print(f"Setting up bootargs...")
 tba = u.ba.copy()
