@@ -92,7 +92,12 @@ class ProxyUtils(object):
 
         with self.heap.guarded_malloc(compressed_size) as compressed_addr:
             self.iface.writemem(compressed_addr, payload, progress)
-            decompressed_size = self.proxy.xzdec(compressed_addr, compressed_size, dest, len(data))
+            timeout = self.iface.dev.timeout
+            self.iface.dev.timeout = None
+            try:
+                decompressed_size = self.proxy.xzdec(compressed_addr, compressed_size, dest, len(data))
+            finally:
+                self.iface.dev.timeout = timeout
 
             assert decompressed_size == len(data)
 
