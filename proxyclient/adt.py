@@ -101,7 +101,7 @@ class ADTNode:
 
     def __setitem__(self, item, value):
         if isinstance(item, str):
-            for i, c in enumeate(self._children):
+            for i, c in enumerate(self._children):
                 if c.name == item:
                     self._children[i] = value
                     break
