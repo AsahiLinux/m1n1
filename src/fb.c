@@ -3,6 +3,7 @@
 #include "fb.h"
 #include "assert.h"
 #include "iodev.h"
+#include "malloc.h"
 #include "string.h"
 #include "types.h"
 #include "utils.h"
@@ -13,11 +14,11 @@
 
 fb_t fb;
 
-static struct {
+struct image {
     u32 *ptr;
     u32 width;
     u32 height;
-} logo;
+};
 
 static struct {
     struct {
@@ -48,6 +49,21 @@ extern u8 _binary_build_bootlogo_256_bin_start[];
 extern u8 _binary_build_font_bin_start[];
 extern u8 _binary_build_font_retina_bin_start[];
 
+const struct image logo_128 = {
+    .ptr = (void *)_binary_build_bootlogo_128_bin_start,
+    .width = 128,
+    .height = 128,
+};
+
+const struct image logo_256 = {
+    .ptr = (void *)_binary_build_bootlogo_256_bin_start,
+    .width = 256,
+    .height = 256,
+};
+
+const struct image *logo;
+struct image orig_logo;
+
 static void fb_clear_font_row(u32 row)
 {
     const u32 row_size = (console.margin.cols + console.cursor.max_col) * console.font.width * 4;
@@ -72,50 +88,24 @@ static void fb_move_font_row(u32 dst, u32 src)
     fb_clear_font_row(src);
 }
 
-void fb_init(void)
+static inline u32 rgb2pixel_30(rgb_t c)
 {
-    fb.ptr = (void *)cur_boot_args.video.base;
-    fb.stride = cur_boot_args.video.stride / 4;
-    fb.width = cur_boot_args.video.width;
-    fb.height = cur_boot_args.video.height;
-    fb.depth = cur_boot_args.video.depth & FB_DEPTH_MASK;
-    printf("fb init: %dx%d (%d) [s=%d] @%p\n", fb.width, fb.height, fb.depth, fb.stride, fb.ptr);
-
-    if (cur_boot_args.video.depth & FB_DEPTH_FLAG_RETINA) {
-        logo.ptr = (void *)_binary_build_bootlogo_256_bin_start;
-        logo.width = logo.height = 256;
-        console.font.ptr = _binary_build_font_retina_bin_start;
-        console.font.width = 16;
-        console.font.height = 32;
-    } else {
-        logo.ptr = (void *)_binary_build_bootlogo_128_bin_start;
-        logo.width = logo.height = 128;
-        console.font.ptr = _binary_build_font_bin_start;
-        console.font.width = 8;
-        console.font.height = 16;
-    }
-
-    console.margin.rows = 2;
-    console.margin.cols = 4;
-    console.cursor.col = 0;
-    console.cursor.row = 0;
-
-    console.cursor.max_row = (fb.height / console.font.height) - 2 * console.margin.rows;
-    console.cursor.max_col =
-        ((fb.width - logo.width) / 2) / console.font.width - 2 * console.margin.cols;
-
-    console.initialized = 1;
-
-    for (u32 row = 0; row < console.cursor.max_row; ++row)
-        fb_clear_font_row(row);
-
-    printf("fb console: max rows %d, max cols %d\n", console.cursor.max_row,
-           console.cursor.max_col);
+    return (c.b << 2) | (c.g << 12) | (c.r << 22);
 }
 
-static void fb_set_pixel(u32 x, u32 y, rgb_t c)
+static inline rgb_t pixel2rgb_30(u32 c)
 {
-    fb.ptr[x + y * fb.stride] = (c.b << 2) | (c.g << 12) | (c.r << 22);
+    return (rgb_t){(c >> 22) & 0xff, (c >> 12) & 0xff, c >> 2};
+}
+
+static inline void fb_set_pixel(u32 x, u32 y, rgb_t c)
+{
+    fb.ptr[x + y * fb.stride] = rgb2pixel_30(c);
+}
+
+static inline rgb_t fb_get_pixel(u32 x, u32 y)
+{
+    return pixel2rgb_30(fb.ptr[x + y * fb.stride]);
 }
 
 void fb_blit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride)
@@ -132,21 +122,63 @@ void fb_blit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride)
     }
 }
 
+void fb_unblit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride)
+{
+    u8 *p = data;
+
+    for (u32 i = 0; i < h; i++) {
+        for (u32 j = 0; j < w; j++) {
+            rgb_t color = fb_get_pixel(x + j, y + i);
+            p[(j + i * stride) * 4] = color.r;
+            p[(j + i * stride) * 4 + 1] = color.g;
+            p[(j + i * stride) * 4 + 2] = color.b;
+            p[(j + i * stride) * 4 + 3] = 0xff;
+        }
+    }
+}
+
 void fb_fill(u32 x, u32 y, u32 w, u32 h, rgb_t color)
 {
+    u32 c = rgb2pixel_30(color);
     for (u32 i = 0; i < h; i++)
-        for (u32 j = 0; j < w; j++)
-            fb_set_pixel(x + j, y + i, color);
+        memset32(&fb.ptr[x + (y + i) * fb.stride], c, w * 4);
+}
+
+void fb_clear(rgb_t color)
+{
+    u32 c = rgb2pixel_30(color);
+    memset32(fb.ptr, c, fb.stride * fb.height * 4);
+}
+
+void fb_blit_image(u32 x, u32 y, const struct image *img)
+{
+    fb_blit(x, y, img->width, img->height, img->ptr, img->width);
+}
+
+void fb_unblit_image(u32 x, u32 y, struct image *img)
+{
+    fb_unblit(x, y, img->width, img->height, img->ptr, img->width);
+}
+
+void fb_blit_logo(const struct image *logo)
+{
+    fb_blit_image((fb.width - logo->width) / 2, (fb.height - logo->height) / 2, logo);
 }
 
 void fb_display_logo(void)
 {
     printf("fb: display logo\n");
-    fb_blit((fb.width - logo.width) / 2, (fb.height - logo.height) / 2, logo.width, logo.height,
-            logo.ptr, logo.width);
+    fb_blit_logo(logo);
 }
 
-static rgb_t font_get_pixel(u8 c, u32 x, u32 y)
+void fb_restore_logo(void)
+{
+    if (!orig_logo.ptr)
+        return;
+    fb_blit_logo(&orig_logo);
+}
+
+static inline rgb_t font_get_pixel(u8 c, u32 x, u32 y)
 {
     c -= 0x20;
     u8 v =
@@ -243,3 +275,59 @@ struct iodev iodev_fb = {
     .ops = &iodev_fb_ops,
     .usage = USAGE_CONSOLE,
 };
+
+void fb_init(void)
+{
+    fb.ptr = (void *)cur_boot_args.video.base;
+    fb.stride = cur_boot_args.video.stride / 4;
+    fb.width = cur_boot_args.video.width;
+    fb.height = cur_boot_args.video.height;
+    fb.depth = cur_boot_args.video.depth & FB_DEPTH_MASK;
+    printf("fb init: %dx%d (%d) [s=%d] @%p\n", fb.width, fb.height, fb.depth, fb.stride, fb.ptr);
+
+    if (cur_boot_args.video.depth & FB_DEPTH_FLAG_RETINA) {
+        logo = &logo_256;
+        console.font.ptr = _binary_build_font_retina_bin_start;
+        console.font.width = 16;
+        console.font.height = 32;
+    } else {
+        logo = &logo_128;
+        console.font.ptr = _binary_build_font_bin_start;
+        console.font.width = 8;
+        console.font.height = 16;
+    }
+
+    orig_logo = *logo;
+    orig_logo.ptr = malloc(orig_logo.width * orig_logo.height * 4);
+    fb_unblit_image((fb.width - orig_logo.width) / 2, (fb.height - orig_logo.height) / 2,
+                    &orig_logo);
+
+    console.margin.rows = 2;
+    console.margin.cols = 4;
+    console.cursor.col = 0;
+    console.cursor.row = 0;
+
+    console.cursor.max_row = (fb.height / console.font.height) - 2 * console.margin.rows;
+    console.cursor.max_col =
+        ((fb.width - logo->width) / 2) / console.font.width - 2 * console.margin.cols;
+
+    console.initialized = 1;
+
+    for (u32 row = 0; row < console.cursor.max_row; ++row)
+        fb_clear_font_row(row);
+
+    printf("fb console: max rows %d, max cols %d\n", console.cursor.max_row,
+           console.cursor.max_col);
+}
+
+void fb_shutdown(void)
+{
+    if (!console.initialized)
+        return;
+
+    console.initialized = 0;
+    fb_clear((rgb_t){0, 0, 0});
+    fb_restore_logo();
+    free(orig_logo.ptr);
+    orig_logo.ptr = NULL;
+}

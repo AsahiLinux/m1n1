@@ -22,6 +22,8 @@ typedef struct {
 extern fb_t fb;
 
 void fb_init(void);
+void fb_shutdown(void);
+
 void fb_blit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride);
 void fb_fill(u32 x, u32 y, u32 w, u32 h, rgb_t color);
 

@@ -74,7 +74,7 @@ void m1n1_main(void)
     mmu_init();
     heapblock_init();
 
-#ifdef SHOW_LOGO
+#ifdef USE_FB
     fb_init();
     fb_display_logo();
 #endif
@@ -93,9 +93,12 @@ void m1n1_main(void)
 
     printf("Preparing to run next stage at %p...\n", next_stage.entry);
 
-    mmu_shutdown();
     exception_shutdown();
     usb_shutdown();
+    mmu_shutdown();
+#ifdef USE_FB
+    fb_shutdown();
+#endif
 
     printf("Vectoring to next stage...\n");
 
