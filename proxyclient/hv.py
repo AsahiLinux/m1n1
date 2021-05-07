@@ -123,7 +123,8 @@ class HV:
         sepfw_off = image_size
         image_size += align(sepfw_length)
         self.bootargs_off = image_size
-        image_size += 0x4000
+        bootargs_size = 0x4000
+        image_size += bootargs_size
 
         print(f"Total region size: 0x{image_size:x} bytes")
 
@@ -154,6 +155,7 @@ class HV:
         self.adt["chosen"]["memory-map"].SEPFW = (guest_base + sepfw_off, sepfw_length)
         self.adt["chosen"]["memory-map"].TrustCache = (tc_base, tc_size)
         self.adt["chosen"]["memory-map"].DeviceTree = (adt_base, align(self.u.ba.devtree_size))
+        self.adt["chosen"]["memory-map"].BootArgs = (guest_base + self.bootargs_off, bootargs_size)
 
         adt_blob = self.adt.build()
         print(f"Uploading ADT (0x{len(adt_blob):x} bytes)...")
