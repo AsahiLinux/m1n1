@@ -3,9 +3,10 @@
 import argparse, pathlib, time
 
 parser = argparse.ArgumentParser(description='Mach-O loader for m1n1')
+parser.add_argument('-s', '--sepfw', action="store_true", help="Copy SEP firmware")
+parser.add_argument('-c', '--call', action="store_true", help="Use call mode")
 parser.add_argument('payload', type=pathlib.Path)
-parser.add_argument('-s', '--sepfw', action="store_true")
-parser.add_argument('-c', '--call', action="store_true")
+parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
 
 from setup import *
@@ -32,7 +33,8 @@ image_size = align(len(image))
 sepfw_off = image_size
 image_size += align(sepfw_length)
 bootargs_off = image_size
-image_size += 0x4000
+bootargs_size = 0x4000
+image_size += bootargs_size
 
 print(f"Total region size: 0x{image_size:x} bytes")
 image_addr = u.malloc(image_size)
@@ -46,9 +48,10 @@ if args.sepfw:
     p.memcpy8(image_addr + sepfw_off, sepfw_start, sepfw_length)
     print(f"Adjusting addresses in ADT...")
     u.adt["chosen"]["memory-map"].SEPFW = (new_base + sepfw_off, sepfw_length)
+    u.adt["chosen"]["memory-map"].BootArgs = (image_addr + bootargs_off, bootargs_size)
     u.push_adt()
 
-print(f"Setting up bootargs...")
+print("Setting up bootargs...")
 tba = u.ba.copy()
 
 if args.sepfw:
@@ -56,6 +59,15 @@ if args.sepfw:
 else:
     # SEP firmware is in here somewhere, keep top_of_kdata high so we hopefully don't clobber it
     tba.top_of_kernel_data = max(tba.top_of_kernel_data, new_base + image_size)
+
+if len(args.boot_args) > 0:
+    boot_args = " ".join(args.boot_args)
+    if "-v" in boot_args.split():
+        tba.video.display = 0
+    else:
+        tba.video.display = 1
+    print(f"Setting boot arguments to {boot_args!r}")
+    tba.cmdline = boot_args
 
 iface.writemem(image_addr + bootargs_off, BootArgs.build(tba))
 
