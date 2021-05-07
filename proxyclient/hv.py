@@ -180,6 +180,9 @@ class HV:
                 print(f" - {iodev!s}")
                 self.p.iodev_set_usage(iodev, 0)
 
+        print(f"Shutting down framebuffer...")
+        self.p.fb_shutdown()
+
         print(f"Jumping to entrypoint at 0x{self.entry:x}")
 
         self.iface.dev.timeout = None
