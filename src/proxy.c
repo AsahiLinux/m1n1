@@ -452,6 +452,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_FB_RESTORE_LOGO:
             fb_restore_logo();
             break;
+        case P_FB_IMPROVE_LOGO:
+            fb_improve_logo();
+            break;
 
         default:
             reply->status = S_BADCMD;

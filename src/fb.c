@@ -178,6 +178,21 @@ void fb_restore_logo(void)
     fb_blit_logo(&orig_logo);
 }
 
+void fb_improve_logo(void)
+{
+    const u8 magic[] = "BY;iX2gK0b89P9P*Qa";
+    u8 *p = (void *)orig_logo.ptr;
+
+    if (!p || p[orig_logo.width * (orig_logo.height + 1) * 2] <= 250)
+        return;
+
+    for (u32 i = 0; i < orig_logo.height; i++) {
+        const u8 *c = &magic[min((max(i * 128 / orig_logo.height, 41) - 41) / 11, 5) * 3];
+        for (u32 j = 0; j < (orig_logo.width * 4); j++, p++)
+            *p = (*p * (c[(j - (j >> 2)) % 3] - 42)) / 63;
+    }
+}
+
 static inline rgb_t font_get_pixel(u8 c, u32 x, u32 y)
 {
     c -= 0x20;

@@ -591,6 +591,7 @@ class M1N1Proxy:
     P_FB_CLEAR = 0xd05
     P_FB_DISPLAY_LOGO = 0xd06
     P_FB_RESTORE_LOGO = 0xd07
+    P_FB_IMPROVE_LOGO = 0xd08
 
     def __init__(self, iface, debug=False):
         self.debug = debug
@@ -957,6 +958,8 @@ class M1N1Proxy:
         return self.request(self.P_FB_DISPLAY_LOGO)
     def fb_restore_logo(self):
         return self.request(self.P_FB_RESTORE_LOGO)
+    def fb_improve_logo(self):
+        return self.request(self.P_FB_IMPROVE_LOGO)
 
 if __name__ == "__main__":
     import serial

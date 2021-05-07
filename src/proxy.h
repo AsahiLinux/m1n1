@@ -126,6 +126,7 @@ typedef enum {
     P_FB_CLEAR,
     P_FB_DISPLAY_LOGO,
     P_FB_RESTORE_LOGO,
+    P_FB_IMPROVE_LOGO,
 
 } ProxyOp;
 
