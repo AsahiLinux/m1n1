@@ -295,6 +295,8 @@ class UartInterface:
                     time.sleep(0.1)
                 else:
                     break
+            else:
+                raise UartTimeout("Reconnection timed out")
             print(" Connected")
 
     def nop(self):
