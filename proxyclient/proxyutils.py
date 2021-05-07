@@ -1,4 +1,4 @@
-import serial, os, struct, sys, time, json, os.path, lzma, functools
+import serial, os, struct, sys, time, json, os.path, gzip, functools
 from asm import ARMAsm
 from proxy import *
 from tgtypes import *
@@ -87,7 +87,7 @@ class ProxyUtils(object):
         if not len(data):
             return
 
-        payload = lzma.compress(data)
+        payload = gzip.compress(data)
         compressed_size = len(payload)
 
         with self.heap.guarded_malloc(compressed_size) as compressed_addr:
@@ -95,7 +95,7 @@ class ProxyUtils(object):
             timeout = self.iface.dev.timeout
             self.iface.dev.timeout = None
             try:
-                decompressed_size = self.proxy.xzdec(compressed_addr, compressed_size, dest, len(data))
+                decompressed_size = self.proxy.gzdec(compressed_addr, compressed_size, dest, len(data))
             finally:
                 self.iface.dev.timeout = timeout
 
