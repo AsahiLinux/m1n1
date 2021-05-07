@@ -21,13 +21,22 @@ typedef struct {
 
 extern fb_t fb;
 
+static inline rgb_t int2rgb(u32 c)
+{
+    return (rgb_t){c >> 16, c >> 8, c};
+}
+
 void fb_init(void);
 void fb_shutdown(void);
 
 void fb_blit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride);
+void fb_unblit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride);
 void fb_fill(u32 x, u32 y, u32 w, u32 h, rgb_t color);
+void fb_clear(rgb_t color);
 
 void fb_display_logo(void);
+void fb_restore_logo(void);
+void fb_improve_logo(void);
 
 void fb_console_scroll(u32 n);
 void fb_console_reserve_lines(u32 n);

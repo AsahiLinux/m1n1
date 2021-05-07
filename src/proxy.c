@@ -3,6 +3,7 @@
 #include "proxy.h"
 #include "dart.h"
 #include "exception.h"
+#include "fb.h"
 #include "heapblock.h"
 #include "hv.h"
 #include "iodev.h"
@@ -398,6 +399,34 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_HV_MAP_VUART:
             hv_map_vuart(request->args[0]);
+            break;
+
+        case P_FB_INIT:
+            fb_init();
+            break;
+        case P_FB_SHUTDOWN:
+            fb_shutdown();
+            break;
+        case P_FB_BLIT:
+            fb_blit(request->args[0], request->args[1], request->args[2], request->args[3],
+                    (void *)request->args[4], request->args[5]);
+            break;
+        case P_FB_UNBLIT:
+            fb_unblit(request->args[0], request->args[1], request->args[2], request->args[3],
+                      (void *)request->args[4], request->args[5]);
+            break;
+        case P_FB_FILL:
+            fb_fill(request->args[0], request->args[1], request->args[2], request->args[3],
+                    int2rgb(request->args[4]));
+            break;
+        case P_FB_CLEAR:
+            fb_clear(int2rgb(request->args[0]));
+            break;
+        case P_FB_DISPLAY_LOGO:
+            fb_display_logo();
+            break;
+        case P_FB_RESTORE_LOGO:
+            fb_restore_logo();
             break;
 
         default:

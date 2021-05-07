@@ -111,6 +111,15 @@ typedef enum {
     P_HV_PT_WALK,
     P_HV_MAP_VUART,
 
+    P_FB_INIT = 0xd00,
+    P_FB_SHUTDOWN,
+    P_FB_BLIT,
+    P_FB_UNBLIT,
+    P_FB_FILL,
+    P_FB_CLEAR,
+    P_FB_DISPLAY_LOGO,
+    P_FB_RESTORE_LOGO,
+
 } ProxyOp;
 
 #define S_OK     0

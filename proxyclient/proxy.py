@@ -819,6 +819,23 @@ class M1N1Proxy:
     def hv_map_vuart(self, base):
         return self.request(self.P_HV_MAP_VUART, base)
 
+    def fb_init(self):
+        return self.request(self.P_FB_INIT)
+    def fb_shutdown(self):
+        return self.request(self.P_FB_SHUTDOWN)
+    def fb_blit(self, x, y, w, h, ptr, stride):
+        return self.request(self.P_FB_BLIP, x, y, w, h, ptr, stride)
+    def fb_unblit(self, x, y, w, h, ptr, stride):
+        return self.request(self.P_FB_UNBLIP, x, y, w, h, ptr, stride)
+    def fb_fill(self, color):
+        return self.request(self.P_FB_FILL, x, y, w, h, color)
+    def fb_clear(self, color):
+        return self.request(self.P_FB_CLEAR, color)
+    def fb_display_logo(self):
+        return self.request(self.P_FB_DISPLAY_LOGO, color)
+    def fb_restore_logo(self):
+        return self.request(self.P_FB_RESTORE_LOGO, color)
+
 if __name__ == "__main__":
     import serial
     uartdev = os.environ.get("M1N1DEVICE", "/dev/ttyUSB0")
