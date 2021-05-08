@@ -132,13 +132,17 @@ el0_ret:
 el1_call:
     str x30, [sp, #-16]!
 
-    // Enable EL1
+    // Enable EL1, but only if not already done.
+    // this check is here because writes to hcr_el2 are only possible from GL2
+    // if that mode has been enabled
     mrs x5, hcr_el2
-    bic x5, x5, #(1 << 27)
-    msr hcr_el2, x5
+    bic x6, x5, #(1 << 27)
+    cmp x5, x6
+    beq 1f
+    msr hcr_el2, x6
     isb
 
-    mrs x5, daif
+    1: mrs x5, daif
     msr daifclr, 3
     mov x6, #5
     orr x5, x5, x6 // EL1h
