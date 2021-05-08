@@ -822,7 +822,7 @@ class M1N1Proxy:
         return self.request(self.P_HV_MAP, from_, to, size, incr)
     def hv_start(self, entry, *args):
         return self.request(self.P_HV_START, entry, *args)
-    def hv_translate(self, addr, s1, w):
+    def hv_translate(self, addr, s1=False, w=False):
         return self.request(self.P_HV_TRANSLATE, addr, s1, w)
     def hv_pt_walk(self, addr):
         return self.request(self.P_HV_PT_WALK, addr)
