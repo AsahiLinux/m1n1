@@ -145,37 +145,31 @@ class ProxyUtils(object):
             print()
             print("  == Faulting code ==")
 
-            start = ctx.elr_phys - 4 * 4
-            code = struct.unpack("<9I", self.iface.readmem(start, 9 * 4))
+            self.disassemble_at(ctx.elr_phys - 4 * 4, 9 * 4, ctx.elr_phys)
 
-            c = ARMAsm(".inst " + ",".join(str(i) for i in code), start)
-            lines = list(c.disassemble())
-            lines[4] = " *" + lines[4][2:]
-            for i in lines:
-                print(" " + i)
+        if code == EXC.SYNC:
+            if ctx.esr.EC == ESR_EC.MSR:
+                print()
+                print("  == MRS/MSR fault decoding ==")
+                iss = ESR_ISS_MSR(ctx.esr.ISS)
+                enc = iss.Op0, iss.Op1, iss.CRn, iss.CRm, iss.Op2
+                if enc in sysreg_rev:
+                    name = sysreg_rev[enc]
+                else:
+                    name = f"s{iss.Op0}_{iss.Op1}_c{iss.CRn}_c{iss.CRm}_{iss.Op2}"
+                if iss.DIR == MSR_DIR.READ:
+                    print(f"  Instruction:   mrs x{iss.Rt}, {name}")
+                else:
+                    print(f"  Instruction:   msr {name}, x{iss.Rt}")
 
-        if ctx.esr.EC == ESR_EC.MSR:
-            print()
-            print("  == MRS/MSR fault decoding ==")
-            iss = ESR_ISS_MSR(ctx.esr.ISS)
-            enc = iss.Op0, iss.Op1, iss.CRn, iss.CRm, iss.Op2
-            if enc in sysreg_rev:
-                name = sysreg_rev[enc]
-            else:
-                name = f"s{iss.Op0}_{iss.Op1}_c{iss.CRn}_c{iss.CRm}_{iss.op2}"
-            if iss.DIR == MSR_DIR.READ:
-                print(f"  Instruction:   mrs x{iss.Rt}, {name}")
-            else:
-                print(f"  Instruction:   msr x{iss.Rt}, {name}")
-
-        if ctx.esr.EC in (ESR_EC.DABORT, ESR_EC.DABORT_LOWER):
-            print()
-            print("  == Data abort decoding ==")
-            iss = ESR_ISS_DABORT(ctx.esr.ISS)
-            if iss.ISV:
-                print(f"  ISS: {iss!s}")
-            else:
-                print("  No instruction syndrome available")
+            if ctx.esr.EC in (ESR_EC.DABORT, ESR_EC.DABORT_LOWER):
+                print()
+                print("  == Data abort decoding ==")
+                iss = ESR_ISS_DABORT(ctx.esr.ISS)
+                if iss.ISV:
+                    print(f"  ISS: {iss!s}")
+                else:
+                    print("  No instruction syndrome available")
 
         print()
 
