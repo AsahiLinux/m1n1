@@ -281,7 +281,7 @@ int hv_map(u64 from, u64 to, u64 size, u64 incr)
     }
 
     // L2 mappings
-    chunk = ALIGN_DOWN(size, MASK(VADDR_L3_OFFSET_BITS));
+    chunk = ALIGN_DOWN(size, MASK(VADDR_L2_OFFSET_BITS));
     if (chunk && (!hw || (to & VADDR_L2_ALIGN_MASK) == 0)) {
         hv_pt_map_l2(from, to, chunk, incr);
         from += chunk;
