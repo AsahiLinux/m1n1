@@ -242,8 +242,6 @@ static inline u8 writeread8(u64 addr, u8 data)
     return read8(addr);
 }
 
-#define sys_reg(op0, op1, CRn, CRm, op2) s##op0##_##op1##_c##CRn##_c##CRm##_##op2
-
 #define _mrs(reg)                                                                                  \
     ({                                                                                             \
         u64 val;                                                                                   \

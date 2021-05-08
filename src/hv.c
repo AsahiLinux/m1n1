@@ -3,6 +3,7 @@
 #include "hv.h"
 #include "assert.h"
 #include "cpu_regs.h"
+#include "utils.h"
 
 void hv_enter_guest(u64 x0, u64 x1, u64 x2, u64 x3, void *entry);
 
