@@ -42,6 +42,7 @@ class ESR_EC(IntEnum):
     WATCH_LOWER    = 0b110100
     WATCH          = 0b110101
     BRK            = 0b111100
+    IMPDEF         = 0b111111
 
 class MSR_DIR(IntEnum):
     WRITE = 0
