@@ -329,6 +329,9 @@ int hv_map_hook(u64 from, hv_hook_t *hook, u64 size)
 
 u64 hv_translate(u64 addr, bool s1, bool w)
 {
+    if (!(mrs(SCTLR_EL12) & SCTLR_M))
+        return addr; // MMU off
+
     u64 el = FIELD_GET(SPSR_M, mrs(SPSR_EL2)) >> 2;
     u64 save = mrs(PAR_EL1);
 
