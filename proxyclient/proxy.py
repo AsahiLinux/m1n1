@@ -489,6 +489,15 @@ class M1N1Proxy:
     P_HV_PT_WALK = 0xc04
     P_HV_MAP_VUART = 0xc05
 
+    P_FB_INIT = 0xd00
+    P_FB_SHUTDOWN = 0xd01
+    P_FB_BLIT = 0xd02
+    P_FB_UNBLIT = 0xd03
+    P_FB_FILL = 0xd04
+    P_FB_CLEAR = 0xd05
+    P_FB_DISPLAY_LOGO = 0xd06
+    P_FB_RESTORE_LOGO = 0xd07
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
@@ -832,9 +841,9 @@ class M1N1Proxy:
     def fb_clear(self, color):
         return self.request(self.P_FB_CLEAR, color)
     def fb_display_logo(self):
-        return self.request(self.P_FB_DISPLAY_LOGO, color)
+        return self.request(self.P_FB_DISPLAY_LOGO)
     def fb_restore_logo(self):
-        return self.request(self.P_FB_RESTORE_LOGO, color)
+        return self.request(self.P_FB_RESTORE_LOGO)
 
 if __name__ == "__main__":
     import serial
