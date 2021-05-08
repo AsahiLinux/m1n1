@@ -35,12 +35,17 @@ static void hv_exc_proxy(u64 *regs, uartproxy_exc_code_t type)
     int ret = uartproxy_run(&start);
 
     switch (ret) {
+        case EXC_RET_STEP:
         case EXC_RET_HANDLED:
             memcpy(regs, exc_info.regs, sizeof(exc_info.regs));
             msr(SPSR_EL2, exc_info.spsr);
             msr(ELR_EL2, exc_info.elr);
             msr(SP_EL0, exc_info.sp[0]);
             msr(SP_EL1, exc_info.sp[1]);
+            if (ret == EXC_RET_STEP) {
+                msr(CNTV_TVAL_EL0, 256);
+                msr(CNTV_CTL_EL0, 1);
+            }
             return;
         case EXC_EXIT_GUEST:
             hv_exit_guest();

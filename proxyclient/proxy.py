@@ -91,6 +91,7 @@ class EXC_RET(IntEnum):
     UNHANDLED = 1
     HANDLED = 2
     EXIT_GUEST = 3
+    STEP = 4
 
 ExcInfo = Struct(
     "spsr" / RegAdapter(SPSR),
