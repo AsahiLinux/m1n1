@@ -2,6 +2,7 @@
 
 #include "exception.h"
 #include "cpu_regs.h"
+#include "gxf.h"
 #include "iodev.h"
 #include "uart.h"
 #include "utils.h"
@@ -26,6 +27,14 @@ static char *m_table[0x10] = {
     [0x05] = "EL1h", //
     [0x08] = "EL2t", //
     [0x09] = "EL2h", //
+};
+
+static char *gl_m_table[0x10] = {
+    [0x00] = "GL0t", //
+    [0x04] = "GL1t", //
+    [0x05] = "GL1h", //
+    [0x08] = "GL2t", //
+    [0x09] = "GL2h", //
 };
 
 static char *ec_table[0x40] = {
@@ -72,6 +81,42 @@ static char *ec_table[0x40] = {
     [0x3c] = "brk (a64)",
 };
 
+static const char *get_exception_source(int el12)
+{
+    u64 spsr = el12 ? mrs(SPSR_EL12) : mrs(SPSR_EL1);
+    u64 aspsr = in_gl12() ? mrs(SYS_IMP_APL_ASPSR_GL1) : 0;
+    const char *m_desc = NULL;
+
+    if (aspsr & 1)
+        m_desc = gl_m_table[spsr & 0xf];
+    else
+        m_desc = m_table[spsr & 0xf];
+
+    if (!m_desc)
+        m_desc = "?";
+
+    return m_desc;
+}
+
+static const char *get_exception_level(void)
+{
+    u64 lvl = mrs(CurrentEL);
+
+    if (in_gl12()) {
+        if (lvl == 0x04)
+            return "GL1";
+        else if (lvl == 0x08)
+            return "GL2";
+    } else {
+        if (lvl == 0x04)
+            return "EL1";
+        else if (lvl == 0x08)
+            return "EL2";
+    }
+
+    return "?";
+}
+
 void exception_initialize(void)
 {
     msr(VBAR_EL1, _vectors_start);
@@ -106,10 +151,8 @@ void print_regs(u64 *regs, int el12)
 
     u64 spsr = el12 ? mrs(SPSR_EL12) : mrs(SPSR_EL1);
 
-    const char *m_desc = m_table[spsr & 0xf];
-    printf("Exception taken from %s\n", m_desc ? m_desc : "?");
-
-    printf("Running in EL%lu\n", mrs(CurrentEL) >> 2);
+    printf("Exception taken from %s\n", get_exception_source(el12));
+    printf("Running in %s\n", get_exception_level());
     printf("MPIDR: 0x%lx\n", mrs(MPIDR_EL1));
     printf("Registers: (@%p)\n", regs);
     printf("  x0-x3: %016lx %016lx %016lx %016lx\n", regs[0], regs[1], regs[2], regs[3]);
@@ -127,6 +170,9 @@ void print_regs(u64 *regs, int el12)
     printf("PC:       0x%lx (rel: 0x%lx)\n", elr, elr - (u64)_base);
     printf("SP:       0x%lx\n", sp);
     printf("SPSR_EL1: 0x%lx\n", spsr);
+    if (in_gl12()) {
+        printf("ASPSR:    0x%lx\n", mrs(SYS_IMP_APL_ASPSR_GL1));
+    }
     printf("FAR_EL1:  0x%lx\n", el12 ? mrs(FAR_EL12) : mrs(FAR_EL1));
 
     const char *ec_desc = ec_table[(esr >> 26) & 0x3f];
@@ -168,7 +214,7 @@ void exc_sync(u64 *regs)
         return;
     }
 
-    if (in_el2() && (spsr & 0xf) == 5 && ((esr >> 26) & 0x3f) == 0x16) {
+    if (in_el2() && !in_gl12() && (spsr & 0xf) == 5 && ((esr >> 26) & 0x3f) == 0x16) {
         // Hypercall
         u32 imm = mrs(ESR_EL2) & 0xffff;
         switch (imm) {
@@ -241,7 +287,7 @@ void exc_irq(u64 *regs)
     ufstat = read32(0x235200018);
 #endif
 
-    uart_puts("Exception: IRQ");
+    printf("Exception: IRQ (from %s)\n", get_exception_source(0));
 
     u32 reason = read32(0x23b102004);
 
@@ -259,8 +305,7 @@ void exc_irq(u64 *regs)
 
 void exc_fiq(u64 *regs)
 {
-    const char *m_desc = m_table[mrs(SPSR_EL1) & 0xf];
-    printf("Exception: FIQ (from %s)\n", m_desc ? m_desc : "?");
+    printf("Exception: FIQ (from %s)\n", get_exception_source(0));
 
     u64 reg = mrs(CNTP_CTL_EL0);
     if (reg == 0x5) {

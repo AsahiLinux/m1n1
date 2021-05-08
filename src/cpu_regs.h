@@ -123,3 +123,36 @@
 
 #define SYS_IMP_APL_UPMSR sys_reg(3, 7, 15, 6, 4)
 #define UPMSR_IACT        (BIT(0))
+
+/* SPRR and GXF registers */
+#define SYS_IMP_APL_SPRR_CONFIG_EL1 sys_reg(3, 6, 15, 1, 0)
+#define SPRR_CONFIG_EN              BIT(0)
+#define SPRR_CONFIG_LOCK_CONFIG     BIT(1)
+#define SPRR_CONFIG_LOCK_PERM_EL0   BIT(4)
+#define SPRR_CONFIG_LOCK_PERM_EL1   BIT(5)
+
+#define SYS_IMP_APL_GXF_CONFIG_EL1 sys_reg(3, 6, 15, 1, 2)
+#define GXF_CONFIG_EN              BIT(0)
+
+#define SYS_IMP_APL_GXF_STATUS sys_reg(3, 6, 15, 8, 0)
+#define GXF_STATUS_GUARDED     BIT(0)
+
+#define SYS_IMP_APL_GXF_ABORT_EL1 sys_reg(3, 6, 15, 8, 2)
+#define SYS_IMP_APL_GXF_ENTER_EL1 sys_reg(3, 6, 15, 8, 1)
+
+#define SYS_IMP_APL_GXF_ABORT_EL12 sys_reg(3, 6, 15, 15, 3)
+#define SYS_IMP_APL_GXF_ENTER_EL12 sys_reg(3, 6, 15, 15, 2)
+
+#define SYS_IMP_APL_SPRR_PERM_EL0 sys_reg(3, 6, 15, 1, 5)
+#define SYS_IMP_APL_SPRR_PERM_EL1 sys_reg(3, 6, 15, 1, 6)
+
+#define SYS_IMP_APL_TPIDR_GL1 sys_reg(3, 6, 15, 10, 1)
+#define SYS_IMP_APL_VBAR_GL1  sys_reg(3, 6, 15, 10, 2)
+#define SYS_IMP_APL_SPSR_GL1  sys_reg(3, 6, 15, 10, 3)
+#define SYS_IMP_APL_ASPSR_GL1 sys_reg(3, 6, 15, 10, 4)
+#define SYS_IMP_APL_ESR_GL1   sys_reg(3, 6, 15, 10, 5)
+#define SYS_IMP_APL_ELR_GL1   sys_reg(3, 6, 15, 10, 6)
+#define SYS_IMP_APL_FAR_GL1   sys_reg(3, 6, 15, 10, 7)
+
+#define SYS_IMP_APL_VBAR_GL12 sys_reg(3, 6, 15, 9, 2)
+#define SYS_IMP_APL_SP_GL12   sys_reg(3, 6, 15, 10, 0)

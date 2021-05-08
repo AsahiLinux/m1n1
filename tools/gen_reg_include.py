@@ -1,10 +1,21 @@
 import json, sys
+import argparse
 
-data = json.load(open(sys.argv[1]))
+parser = argparse.ArgumentParser()
+parser.add_argument("--imp-apl-prefix", action="store_true")
+parser.add_argument("regfile")
+args = parser.parse_args()
+
+if args.imp_apl_prefix:
+    prefix = "IMP_APL_"
+else:
+    prefix = ""
+
+data = json.load(open(args.regfile))
 for reg in data:
     name = reg['name']
 
-    print(f"#define SYS_{name} sys_reg({', '.join(str(i) for i in reg['enc'])})")
+    print(f"#define SYS_{prefix}{name} sys_reg({', '.join(str(i) for i in reg['enc'])})")
 
     if name[-4:-1] == "_EL":
         name = name[:-4]

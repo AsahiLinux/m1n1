@@ -42,6 +42,7 @@ OBJECTS := \
 	dart.o \
 	exception.o exception_asm.o \
 	fb.o font.o font_retina.o \
+	gxf.o gxf_asm.o \
 	heapblock.o \
 	hv.o hv_vm.o hv_exc.o hv_vuart.o hv_asm.o \
 	iodev.o \
