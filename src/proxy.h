@@ -65,6 +65,9 @@ typedef enum {
     P_DC_CVAU,
     P_DC_CIVAC,
     P_MMU_SHUTDOWN,
+    P_MMU_INIT,
+    P_MMU_DISABLE,
+    P_MMU_RESTORE,
 
     P_XZDEC = 0x400, // Decompression and data processing ops
     P_GZDEC,
