@@ -257,9 +257,31 @@ static inline u8 writeread8(u64 addr, u8 data)
     })
 #define msr(reg, val) _msr(reg, val)
 
+#define msr_sync(reg, val)                                                                         \
+    ({                                                                                             \
+        _msr(reg, val);                                                                            \
+        sysop("isb");                                                                              \
+    })
+
 #define reg_clr(reg, bits)      msr(reg, mrs(reg) & ~(bits))
 #define reg_set(reg, bits)      msr(reg, mrs(reg) | bits)
 #define reg_mask(reg, clr, set) msr(reg, (mrs(reg) & ~(clr)) | set)
+
+#define reg_clr_sync(reg, bits)                                                                    \
+    ({                                                                                             \
+        reg_clr(reg, bits);                                                                        \
+        sysop("isb");                                                                              \
+    })
+#define reg_set_sync(reg, bits)                                                                    \
+    ({                                                                                             \
+        reg_set(reg, bits);                                                                        \
+        sysop("isb");                                                                              \
+    })
+#define reg_mask_sync(reg, clr, set)                                                               \
+    ({                                                                                             \
+        reg_mask(reg, clr, set);                                                                   \
+        sysop("isb");                                                                              \
+    })
 
 #define sysop(op) __asm__ volatile(op ::: "memory")
 
