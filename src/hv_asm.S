@@ -48,6 +48,7 @@ _hv_vectors_start:
 .globl _v_hv_sync
 .type _v_hv_sync, @function
 _v_hv_sync:
+    msr pan, #0
     str x30, [sp, #-16]!
     bl _exc_entry
     bl hv_exc_sync
@@ -57,6 +58,7 @@ _v_hv_sync:
 .globl _v_hv_irq
 .type _v_hv_irq, @function
 _v_hv_irq:
+    msr pan, #0
     str x30, [sp, #-16]!
     bl _exc_entry
     bl hv_exc_irq
@@ -66,6 +68,7 @@ _v_hv_irq:
 .globl _v_hv_fiq
 .type _v_hv_fiq, @function
 _v_hv_fiq:
+    msr pan, #0
     str x30, [sp, #-16]!
     bl _exc_entry
     bl hv_exc_fiq
@@ -75,6 +78,7 @@ _v_hv_fiq:
 .globl _v_hv_serr
 .type _v_hv_serr, @function
 _v_hv_serr:
+    msr pan, #0
     str x30, [sp, #-16]!
     bl _exc_entry
     bl hv_exc_serr
