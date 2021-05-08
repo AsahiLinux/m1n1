@@ -260,6 +260,39 @@ class RegMonitor(object):
                     print()
         self.last = cur
 
+class GuardedHeap:
+    def __init__(self, malloc, memalign, free):
+        self.ptrs = set()
+        self.malloc = malloc
+        self.memalign = memalign
+        self.free = free
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.free_all()
+        return False
+
+    def malloc(self, sz):
+        ptr = self.malloc(sz)
+        self.ptrs.add(ptr)
+        return ptr
+
+    def memalign(self, align, sz):
+        ptr = self.memalign(align, sz)
+        self.ptrs.add(ptr)
+        return ptr
+
+    def free(self, ptr):
+        self.ptrs.remove(ptr)
+        self.free(ptr)
+
+    def free_all(self):
+        for ptr in self.ptrs:
+            self.free(ptr)
+        self.ptrs = set()
+
 def bootstrap_port(iface, proxy):
     try:
         iface.dev.timeout = 0.15
