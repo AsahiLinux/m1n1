@@ -9,7 +9,7 @@ for reg in data:
     if name[-4:-1] == "_EL":
         name = name[:-4]
 
-    for fieldset in reg["fieldsets"]:
+    for fieldset in reg.get("fieldsets", []):
         if "instance" in fieldset:
             print(f"// {fieldset['instance']}")
         for f in fieldset["fields"]:

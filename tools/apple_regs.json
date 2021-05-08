@@ -1,0 +1,375 @@
+[
+  {
+    "index": 0,
+    "name": "SPRR_CONFIG_EL1",
+    "fullname": "SPRR Configuration Register (EL3)",
+    "enc": [
+      3,
+      6,
+      15,
+      1,
+      0
+    ],
+    "fieldsets": [
+      {
+        "fields": [
+          {
+            "name": "EN",
+            "msb": 0,
+            "lsb": 0
+          },
+          {
+            "name": "LOCK_CONFIG",
+            "msb": 1,
+            "lsb": 1
+          },
+          {
+            "name": "LOCK_PERM_EL0",
+            "msb": 4,
+            "lsb": 4
+          },
+          {
+            "name": "LOCK_PERM_EL1",
+            "msb": 5,
+            "lsb": 5
+          }
+        ]
+      }
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_CONFIG_EL1",
+    "fullname": "GXF Configuration Register (EL3)",
+    "enc": [
+      3,
+      6,
+      15,
+      1,
+      2
+    ],
+    "fieldsets": [
+      {
+        "fields": [
+          {
+            "name": "EN",
+            "msb": 0,
+            "lsb": 0
+          }
+        ]
+      }
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_STATUS",
+    "fullname": "GXF Status Register",
+    "enc": [
+      3,
+      6,
+      15,
+      8,
+      0
+    ],
+    "fieldsets": [
+      {
+        "fields": [
+          {
+            "name": "GUARDED",
+            "msb": 0,
+            "lsb": 0
+          }
+        ]
+      }
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_ABORT_EL1",
+    "fullname": "GXF Abort Vector Register (EL1)",
+    "enc": [
+      3,
+      6,
+      15,
+      8,
+      2
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_ENTER_EL1",
+    "fullname": "GXF genter Entry Vector Register (EL1)",
+    "enc": [
+      3,
+      6,
+      15,
+      8,
+      1
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_ABORT_EL12",
+    "fullname": "GXF Abort Vector Register (EL12)",
+    "enc": [
+      3,
+      6,
+      15,
+      15,
+      3
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_ENTER_EL12",
+    "fullname": "GXF genter Entry Vector Register (EL12)",
+    "enc": [
+      3,
+      6,
+      15,
+      15,
+      2
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PERM_EL0",
+    "fullname": "SPRR Permission Configuration Register (EL0)",
+    "enc": [
+      3,
+      6,
+      15,
+      1,
+      5
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PERM_EL1",
+    "fullname": "SPRR Permission Configuration Register (EL1)",
+    "enc": [
+      3,
+      6,
+      15,
+      1,
+      6
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "TPIDR_GL1",
+    "fullname": "Software Thread ID Register (GL1)",
+    "enc": [
+      3,
+      6,
+      15,
+      10,
+      1
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "VBAR_GL1",
+    "fullname": "Vector Base Address Register (GL1)",
+    "enc": [
+      3,
+      6,
+      15,
+      10,
+      2
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPSR_GL1",
+    "fullname": "Saved Program Status Register (GL1)",
+    "enc": [
+      3,
+      6,
+      15,
+      10,
+      3
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ASPSR_GL1",
+    "fullname": "ASPSR (GL1)",
+    "enc": [
+      3,
+      6,
+      15,
+      10,
+      4
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ESR_GL1",
+    "fullname": "Exception Syndrome Register (GL1)",
+    "enc": [
+      3,
+      6,
+      15,
+      10,
+      5
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ELR_GL1",
+    "fullname": "Exception Link Register (GL1)",
+    "enc": [
+      3,
+      6,
+      15,
+      10,
+      6
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "FAR_GL1",
+    "fullname": "Fault Address Register (GL1)",
+    "enc": [
+      3,
+      6,
+      15,
+      10,
+      7
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "TPIDR_GL2",
+    "fullname": "Software Thread ID Register (GL2)",
+    "enc": [
+      3,
+      6,
+      15,
+      11,
+      1
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "VBAR_GL2",
+    "fullname": "Vector Base Address Register (GL2)",
+    "enc": [
+      3,
+      6,
+      15,
+      11,
+      2
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPSR_GL2",
+    "fullname": "Saved Program Status Register (GL2)",
+    "enc": [
+      3,
+      6,
+      15,
+      11,
+      3
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ASPSR_GL2",
+    "fullname": "ASPSR (GL2)",
+    "enc": [
+      3,
+      6,
+      15,
+      11,
+      4
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ESR_GL2",
+    "fullname": "Exception Syndrome Register (GL2)",
+    "enc": [
+      3,
+      6,
+      15,
+      11,
+      5
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ELR_GL2",
+    "fullname": "Exception Link Register (GL2)",
+    "enc": [
+      3,
+      6,
+      15,
+      11,
+      6
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "FAR_GL2",
+    "fullname": "Fault Address Register (GL2)",
+    "enc": [
+      3,
+      6,
+      15,
+      11,
+      7
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "VBAR_GL12",
+    "fullname": "Vector Base Address Register (GL12)",
+    "enc": [
+      3,
+      6,
+      15,
+      9,
+      2
+    ],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SP_GL12",
+    "fullname": "Stack Pointer Register (GL12)",
+    "enc": [
+      3,
+      6,
+      15,
+      10,
+      0
+    ],
+    "width": 64
+  }
+]

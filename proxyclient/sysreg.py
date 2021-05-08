@@ -5,9 +5,10 @@ from enum import IntEnum
 from utils import Register64, Register32
 
 def load_registers():
-    data = json.load(open(os.path.join(os.path.dirname(__file__), "..", "tools", "arm_regs.json")))
-    for reg in data:
-        yield reg["name"], tuple(reg["enc"])
+    for fname in ["arm_regs.json", "apple_regs.json"]:
+        data = json.load(open(os.path.join(os.path.dirname(__file__), "..", "tools", fname)))
+        for reg in data:
+            yield reg["name"], tuple(reg["enc"])
 
 sysreg_fwd = dict(load_registers())
 sysreg_rev = {v: k for k, v in sysreg_fwd.items()}
