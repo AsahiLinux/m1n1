@@ -3,6 +3,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#ifndef __ASSEMBLER__
+
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -23,6 +25,8 @@ typedef s64 ptrdiff_t;
 
 typedef s64 ssize_t;
 
+#endif
+
 #define UNUSED(x)  (void)(x)
 #define ALIGNED(x) __attribute__((aligned(x)))
 #define PACKED     __attribute__((packed))
@@ -42,5 +46,7 @@ typedef s64 ssize_t;
 #define SZ_2K  (1 << 11)
 #define SZ_16K (1 << 14)
 #define SZ_1M  (1 << 20)
+
+#define sys_reg(op0, op1, CRn, CRm, op2) s##op0##_##op1##_c##CRn##_c##CRm##_##op2
 
 #endif

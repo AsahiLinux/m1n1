@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 
-#include "utils.h"
+#include "types.h"
 
 #define SYS_CNTHCTL_EL2 sys_reg(3, 4, 14, 1, 0)
 // HCR_EL2.E2H == 1
