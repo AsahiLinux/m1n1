@@ -19,4 +19,8 @@ void dcsw_op_all(u64 op_type);
 
 void mmu_init(void);
 void mmu_shutdown(void);
+
+u64 mmu_disable(void);
+void mmu_restore(u64 state);
+
 #endif

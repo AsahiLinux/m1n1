@@ -445,6 +445,9 @@ class M1N1Proxy:
     P_DC_CVAU = 0x309
     P_DC_CIVAC = 0x30a
     P_MMU_SHUTDOWN = 0x30b
+    P_MMU_INIT = 0x30c
+    P_MMU_DISABLE = 0x30d
+    P_MMU_RESTORE = 0x30e
 
     P_XZDEC = 0x400
     P_GZDEC = 0x401
@@ -738,6 +741,13 @@ class M1N1Proxy:
         self.request(self.P_DC_CIVAC, addr, size)
     def mmu_shutdown(self):
         self.request(self.P_MMU_SHUTDOWN)
+    def mmu_init(self):
+        self.request(self.P_MMU_INIT)
+    def mmu_disable(self):
+        return self.request(self.P_MMU_DISABLE)
+    def mmu_restore(self, flags):
+        self.request(self.P_MMU_RESTORE, flags)
+
 
     def xzdec(self, inbuf, insize, outbuf=0, outsize=0):
         return self.request(self.P_XZDEC, inbuf, insize, outbuf,

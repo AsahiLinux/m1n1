@@ -4,6 +4,7 @@ from proxy import *
 from tgtypes import *
 from sysreg import *
 import malloc, adt
+from contextlib import contextmanager
 
 class ProxyUtils(object):
     def __init__(self, p, heap_size=1024 * 1024 * 1024):
@@ -172,6 +173,14 @@ class ProxyUtils(object):
                     print("  No instruction syndrome available")
 
         print()
+
+    @contextmanager
+    def mmu_disabled(self):
+        flags = self.proxy.mmu_disable()
+        try:
+            yield
+        finally:
+            self.proxy.mmu_restore(flags)
 
 class LazyADT:
     def __init__(self, utils):

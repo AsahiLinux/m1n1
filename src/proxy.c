@@ -257,6 +257,15 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_MMU_SHUTDOWN:
             mmu_shutdown();
             break;
+        case P_MMU_INIT:
+            mmu_init();
+            break;
+        case P_MMU_DISABLE:
+            reply->retval = mmu_disable();
+            break;
+        case P_MMU_RESTORE:
+            mmu_restore(request->args[0]);
+            break;
 
         case P_XZDEC: {
             uint32_t destlen, srclen;

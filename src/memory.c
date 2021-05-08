@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "cpu_regs.h"
 #include "fb.h"
+#include "string.h"
 #include "utils.h"
 
 #define PAGE_SIZE       0x4000
@@ -142,6 +143,8 @@ static u64 mmu_make_table_pte(u64 *addr)
 
 static void mmu_init_pagetables(void)
 {
+    pagetable_L2_next = 0;
+
     memset64(pagetable_L0, 0, sizeof pagetable_L0);
     memset64(pagetable_L1, 0, sizeof pagetable_L1);
     memset64(pagetable_L2, 0, sizeof pagetable_L2);
@@ -297,6 +300,11 @@ void mmu_init(void)
 {
     printf("MMU: Initializing...\n");
 
+    if (read_sctlr() & SCTLR_M) {
+        printf("MMU: already intialized.\n");
+        return;
+    }
+
     mmu_init_pagetables();
     mmu_add_default_mappings();
     mmu_configure();
@@ -319,4 +327,21 @@ void mmu_shutdown(void)
     write_sctlr(read_sctlr() & ~(SCTLR_I | SCTLR_C | SCTLR_M));
     printf("MMU: shutdown successful, clearing caches\n");
     dcsw_op_all(DCSW_OP_DCCISW);
+}
+
+u64 mmu_disable(void)
+{
+    u64 sctlr_old = read_sctlr();
+    if (!(sctlr_old & SCTLR_M))
+        return sctlr_old;
+
+    write_sctlr(sctlr_old & ~(SCTLR_I | SCTLR_C | SCTLR_M));
+    dcsw_op_all(DCSW_OP_DCCISW);
+
+    return sctlr_old;
+}
+
+void mmu_restore(u64 state)
+{
+    write_sctlr(state);
 }
