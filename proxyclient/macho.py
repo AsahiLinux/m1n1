@@ -19,7 +19,7 @@ class MachO:
             elif cmd.cmd == MachOLoadCmdType.UNIXTHREAD:
                 self.entry = cmd.args[0].data.pc
 
-    def prepare_image(self):
+    def prepare_image(self, load_hook=None):
         memory_size = self.vmax - self.vmin
 
         image = bytearray(memory_size)
@@ -33,7 +33,10 @@ class MachO:
                 end = min(len(self.data), cmd.args.fileoff + cmd.args.filesize)
                 size = end - cmd.args.fileoff
                 print(f"LOAD: {cmd.args.segname} {size} bytes from {cmd.args.fileoff:x} to {dest:x}")
-                image[dest:dest + size] = self.data[cmd.args.fileoff:end]
+                data = self.data[cmd.args.fileoff:end]
+                if load_hook is not None:
+                    data = load_hook(data, cmd.args.segname, size, cmd.args.fileoff, dest)
+                image[dest:dest + size] = data
                 if cmd.args.vmsize > size:
                     clearsize = cmd.args.vmsize - size
                     if cmd.args.segname == "PYLD":
