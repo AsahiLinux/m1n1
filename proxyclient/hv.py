@@ -75,6 +75,7 @@ class HV:
     def init(self):
         self.adt = load_adt(self.u.get_adt())
         self.iodev = self.p.iodev_whoami()
+        self.tba = self.u.ba.copy()
 
         print("Initializing hypervisor over iodev %s" % self.iodev)
         self.p.hv_init()
@@ -109,6 +110,14 @@ class HV:
                     del self.adt["cpus"][cpu.name]
                 except KeyError:
                     pass
+
+    def set_bootargs(self, boot_args):
+        if "-v" in boot_args.split():
+            self.tba.video.display = 0
+        else:
+            self.tba.video.display = 1
+        print(f"Setting boot arguments to {boot_args!r}")
+        self.tba.cmdline = boot_args
 
     def load_macho(self, data):
         if isinstance(data, str):
@@ -161,17 +170,15 @@ class HV:
         print(f"Uploading ADT (0x{len(adt_blob):x} bytes)...")
         self.iface.writemem(adt_base, adt_blob)
 
-        print(f"Setting up bootargs...")
-        tba = self.u.ba.copy()
-        mem_top = tba.phys_base + tba.mem_size
+        print(f"Setting up bootargs at 0x{guest_base + self.bootargs_off:x}...")
 
-        tba.mem_size = mem_top - phys_base
-        tba.phys_base = phys_base
-        tba.virt_base = 0xfffffe0010000000 + (phys_base & (32 * 1024 * 1024 - 1))
-        tba.devtree = adt_base - tba.phys_base + tba.virt_base
-        tba.top_of_kdata = guest_base + image_size
+        self.tba.mem_size = mem_size
+        self.tba.phys_base = phys_base
+        self.tba.virt_base = 0xfffffe0010000000 + (phys_base & (32 * 1024 * 1024 - 1))
+        self.tba.devtree = adt_base - phys_base + self.tba.virt_base
+        self.tba.top_of_kdata = guest_base + image_size
 
-        self.iface.writemem(guest_base + self.bootargs_off, BootArgs.build(tba))
+        self.iface.writemem(guest_base + self.bootargs_off, BootArgs.build(self.tba))
 
     def start(self):
         print(f"Disabling other iodevs...")
