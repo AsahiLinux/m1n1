@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "memory.h"
+#include "cpu_regs.h"
 #include "fb.h"
 #include "utils.h"
 
@@ -60,41 +61,6 @@ static inline void write_sctlr(u64 val)
 #define PERM_RO  PTE_AP_RO | PTE_PXN | PTE_UXN
 #define PERM_RW  PTE_PXN | PTE_UXN
 #define PERM_RWX 0
-
-/*
- * https://developer.arm.com/docs/ddi0595/g/aarch64-system-registers/sctlr_el1
- * SCTLR_SPAN disables PAN getting enabled on exceptions.
- * SCTLR_I enables instruction caches.
- * SCTLR_C enables data caches.
- * SCTLR_M enables the MMU.
- */
-#define SCTLR_SPAN BIT(23)
-#define SCTLR_I    BIT(12)
-#define SCTLR_C    BIT(2)
-#define SCTLR_M    BIT(0)
-
-/*
- * https://developer.arm.com/docs/ddi0595/h/aarch64-system-registers/tcr_el1
- * TCR_IPS_1TB selects 40 bits/1TB intermediate physical address size
- * TCR_PS_1TB selects 40 bits/1TB physical address size
- * TCR_TG0_16K selects 16K pages
- * TCR_SH0_IS marks memory used during translation table walks as inner sharable
- * TCR_ORGN0_WBWA and TCR_IRGN0_WBWA set the cacheability atrributes for memory
- *                used during translation table walks to Inner/Outer
- *                Write-Back Read-Allocate Write-Allocate Cacheable
- * TCR_T0SZ_48BIT selects 48bit virtual addresses
- */
-#define TCR_IPS_1TB    ((0b010UL) << 32)
-#define TCR_TG1_16K    ((0b01UL) << 30)
-#define TCR_SH1_IS     ((0b11UL) << 28)
-#define TCR_ORGN1_WBWA ((0b01UL) << 26)
-#define TCR_IRGN1_WBWA ((0b01UL) << 24)
-#define TCR_T1SZ_48BIT ((16UL) << 16)
-#define TCR_TG0_16K    ((0b10UL) << 14)
-#define TCR_SH0_IS     ((0b11UL) << 12)
-#define TCR_ORGN0_WBWA ((0b01UL) << 10)
-#define TCR_IRGN0_WBWA ((0b01UL) << 8)
-#define TCR_T0SZ_48BIT ((16UL) << 0)
 
 /*
  * aarch64 allows to configure attribute sets for up to eight different memory
@@ -310,9 +276,13 @@ static void mmu_configure(void)
     msr(MAIR_EL1, (MAIR_ATTR_NORMAL_DEFAULT << MAIR_SHIFT_NORMAL) |
                       (MAIR_ATTR_DEVICE_nGnRnE << MAIR_SHIFT_DEVICE_nGnRnE) |
                       (MAIR_ATTR_DEVICE_nGnRE << MAIR_SHIFT_DEVICE_nGnRE));
-    msr(TCR_EL1, TCR_IPS_1TB | TCR_TG1_16K | TCR_SH1_IS | TCR_ORGN1_WBWA | TCR_IRGN1_WBWA |
-                     TCR_T1SZ_48BIT | TCR_TG0_16K | TCR_SH0_IS | TCR_ORGN0_WBWA | TCR_IRGN0_WBWA |
-                     TCR_T0SZ_48BIT);
+    msr(TCR_EL1, FIELD_PREP(TCR_IPS, TCR_IPS_1TB) | FIELD_PREP(TCR_TG1, TCR_TG1_16K) |
+                     FIELD_PREP(TCR_SH1, TCR_SH1_IS) | FIELD_PREP(TCR_ORGN1, TCR_ORGN1_WBWA) |
+                     FIELD_PREP(TCR_IRGN1, TCR_IRGN1_WBWA) | FIELD_PREP(TCR_T1SZ, TCR_T1SZ_48BIT) |
+                     FIELD_PREP(TCR_TG0, TCR_TG0_16K) | FIELD_PREP(TCR_SH0, TCR_SH0_IS) |
+                     FIELD_PREP(TCR_ORGN0, TCR_ORGN0_WBWA) | FIELD_PREP(TCR_IRGN0, TCR_IRGN0_WBWA) |
+                     FIELD_PREP(TCR_T0SZ, TCR_T0SZ_48BIT));
+
     msr(TTBR0_EL1, (uintptr_t)pagetable_L0);
     msr(TTBR1_EL1, (uintptr_t)pagetable_L0);
 
