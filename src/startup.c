@@ -2,6 +2,7 @@
 
 #include "chickens.h"
 #include "exception.h"
+#include "gxf.h"
 #include "smp.h"
 #include "string.h"
 #include "types.h"
@@ -91,6 +92,7 @@ void _start_c(void *boot_args, void *base)
         (void *)(((u64)cur_boot_args.devtree) - cur_boot_args.virt_base + cur_boot_args.phys_base);
 
     exception_initialize();
+    gxf_init();
     m1n1_main();
 }
 

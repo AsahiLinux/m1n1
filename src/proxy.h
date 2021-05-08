@@ -18,6 +18,8 @@ typedef enum {
     P_EL0_CALL,
     P_EL1_CALL,
     P_VECTOR,
+    P_GL1_CALL,
+    P_GL2_CALL,
 
     P_WRITE64 = 0x100, // Generic register functions
     P_WRITE32,

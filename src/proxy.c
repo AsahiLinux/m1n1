@@ -4,6 +4,7 @@
 #include "dart.h"
 #include "exception.h"
 #include "fb.h"
+#include "gxf.h"
 #include "heapblock.h"
 #include "hv.h"
 #include "iodev.h"
@@ -78,6 +79,14 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_EL1_CALL:
             reply->retval = el1_call((void *)request->args[0], request->args[1], request->args[2],
+                                     request->args[3], request->args[4]);
+            break;
+        case P_GL1_CALL:
+            reply->retval = gl1_call((void *)request->args[0], request->args[1], request->args[2],
+                                     request->args[3], request->args[4]);
+            break;
+        case P_GL2_CALL:
+            reply->retval = gl2_call((void *)request->args[0], request->args[1], request->args[2],
                                      request->args[3], request->args[4]);
             break;
         case P_VECTOR:
