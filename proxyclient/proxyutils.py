@@ -117,6 +117,17 @@ class ProxyUtils(object):
         print(f"Pushing ADT ({adt_size} bytes)...")
         self.iface.writemem(adt_base, self.adt_data)
 
+    def disassemble_at(self, start, size, pc=None):
+        code = struct.unpack(f"<{size // 4}I", self.iface.readmem(start, size))
+
+        c = ARMAsm(".inst " + ",".join(str(i) for i in code), start)
+        lines = list(c.disassemble())
+        if pc is not None:
+            idx = (pc - start) // 4
+            lines[idx] = " *" + lines[idx][2:]
+        for i in lines:
+            print(" " + i)
+
     def print_exception(self, code, ctx):
         print(f"  == Exception taken from {ctx.spsr.M.name} ==")
         el = ctx.spsr.M >> 2
