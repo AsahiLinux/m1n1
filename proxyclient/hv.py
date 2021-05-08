@@ -86,7 +86,6 @@ class HV:
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.SERROR, self.handle_exception)
 
         self.map_hw(0x2_00000000, 0x2_00000000, 0x5_00000000)
-        self.map_hw(0x8_00000000, 0x8_00000000, 0x4_00000000)
 
         self.p.hv_map_vuart(0x2_35200000)
 
@@ -143,11 +142,16 @@ class HV:
         tc_base = guest_base
         guest_base += align(tc_size)
         self.guest_base = guest_base
+        mem_top = self.u.ba.phys_base + self.u.ba.mem_size
+        mem_size = mem_top - phys_base
 
-        print(f"Physical memory base: 0x{phys_base:x}")
+        print(f"Physical memory: 0x{phys_base:x} .. 0x{mem_top:x}")
         print(f"Guest region start: 0x{guest_base:x}")
 
         self.entry = macho.entry - macho.vmin + guest_base
+
+        print(f"Mapping guest physical memory...")
+        self.map_hw(phys_base, phys_base, self.u.ba.mem_size_actual - phys_base + 0x800000000)
 
         print(f"Loading kernel image (0x{len(image):x} bytes)...")
         self.u.compressed_writemem(guest_base, image, True)
