@@ -149,8 +149,7 @@ el1_call:
 
     ldr x5, =el0_stack_base
     ldr x5, [x5]
-    msr spsel, #0
-    mov sp, x5
+    msr sp_el1, x5
 
     eret
 
