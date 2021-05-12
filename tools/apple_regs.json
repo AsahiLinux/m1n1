@@ -1,375 +1,197 @@
 [
-  {
-    "index": 0,
-    "name": "SPRR_CONFIG_EL1",
-    "fullname": "SPRR Configuration Register (EL3)",
-    "enc": [
-      3,
-      6,
-      15,
-      1,
-      0
-    ],
-    "fieldsets": [
-      {
-        "fields": [
-          {
-            "name": "EN",
-            "msb": 0,
-            "lsb": 0
-          },
-          {
-            "name": "LOCK_CONFIG",
-            "msb": 1,
-            "lsb": 1
-          },
-          {
-            "name": "LOCK_PERM_EL0",
-            "msb": 4,
-            "lsb": 4
-          },
-          {
-            "name": "LOCK_PERM_EL1",
-            "msb": 5,
-            "lsb": 5
-          }
-        ]
-      }
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "GXF_CONFIG_EL1",
-    "fullname": "GXF Configuration Register (EL3)",
-    "enc": [
-      3,
-      6,
-      15,
-      1,
-      2
-    ],
-    "fieldsets": [
-      {
-        "fields": [
-          {
-            "name": "EN",
-            "msb": 0,
-            "lsb": 0
-          }
-        ]
-      }
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "GXF_STATUS",
-    "fullname": "GXF Status Register",
-    "enc": [
-      3,
-      6,
-      15,
-      8,
-      0
-    ],
-    "fieldsets": [
-      {
-        "fields": [
-          {
-            "name": "GUARDED",
-            "msb": 0,
-            "lsb": 0
-          }
-        ]
-      }
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "GXF_ABORT_EL1",
-    "fullname": "GXF Abort Vector Register (EL1)",
-    "enc": [
-      3,
-      6,
-      15,
-      8,
-      2
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "GXF_ENTER_EL1",
-    "fullname": "GXF genter Entry Vector Register (EL1)",
-    "enc": [
-      3,
-      6,
-      15,
-      8,
-      1
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "GXF_ABORT_EL12",
-    "fullname": "GXF Abort Vector Register (EL12)",
-    "enc": [
-      3,
-      6,
-      15,
-      15,
-      3
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "GXF_ENTER_EL12",
-    "fullname": "GXF genter Entry Vector Register (EL12)",
-    "enc": [
-      3,
-      6,
-      15,
-      15,
-      2
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "SPRR_PERM_EL0",
-    "fullname": "SPRR Permission Configuration Register (EL0)",
-    "enc": [
-      3,
-      6,
-      15,
-      1,
-      5
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "SPRR_PERM_EL1",
-    "fullname": "SPRR Permission Configuration Register (EL1)",
-    "enc": [
-      3,
-      6,
-      15,
-      1,
-      6
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "TPIDR_GL1",
-    "fullname": "Software Thread ID Register (GL1)",
-    "enc": [
-      3,
-      6,
-      15,
-      10,
-      1
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "VBAR_GL1",
-    "fullname": "Vector Base Address Register (GL1)",
-    "enc": [
-      3,
-      6,
-      15,
-      10,
-      2
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "SPSR_GL1",
-    "fullname": "Saved Program Status Register (GL1)",
-    "enc": [
-      3,
-      6,
-      15,
-      10,
-      3
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "ASPSR_GL1",
-    "fullname": "ASPSR (GL1)",
-    "enc": [
-      3,
-      6,
-      15,
-      10,
-      4
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "ESR_GL1",
-    "fullname": "Exception Syndrome Register (GL1)",
-    "enc": [
-      3,
-      6,
-      15,
-      10,
-      5
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "ELR_GL1",
-    "fullname": "Exception Link Register (GL1)",
-    "enc": [
-      3,
-      6,
-      15,
-      10,
-      6
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "FAR_GL1",
-    "fullname": "Fault Address Register (GL1)",
-    "enc": [
-      3,
-      6,
-      15,
-      10,
-      7
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "TPIDR_GL2",
-    "fullname": "Software Thread ID Register (GL2)",
-    "enc": [
-      3,
-      6,
-      15,
-      11,
-      1
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "VBAR_GL2",
-    "fullname": "Vector Base Address Register (GL2)",
-    "enc": [
-      3,
-      6,
-      15,
-      11,
-      2
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "SPSR_GL2",
-    "fullname": "Saved Program Status Register (GL2)",
-    "enc": [
-      3,
-      6,
-      15,
-      11,
-      3
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "ASPSR_GL2",
-    "fullname": "ASPSR (GL2)",
-    "enc": [
-      3,
-      6,
-      15,
-      11,
-      4
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "ESR_GL2",
-    "fullname": "Exception Syndrome Register (GL2)",
-    "enc": [
-      3,
-      6,
-      15,
-      11,
-      5
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "ELR_GL2",
-    "fullname": "Exception Link Register (GL2)",
-    "enc": [
-      3,
-      6,
-      15,
-      11,
-      6
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "FAR_GL2",
-    "fullname": "Fault Address Register (GL2)",
-    "enc": [
-      3,
-      6,
-      15,
-      11,
-      7
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "VBAR_GL12",
-    "fullname": "Vector Base Address Register (GL12)",
-    "enc": [
-      3,
-      6,
-      15,
-      9,
-      2
-    ],
-    "width": 64
-  },
-  {
-    "index": 0,
-    "name": "SP_GL12",
-    "fullname": "Stack Pointer Register (GL12)",
-    "enc": [
-      3,
-      6,
-      15,
-      10,
-      0
-    ],
-    "width": 64
-  }
+    {"index": 0, "name": "HID0_EL1",                    "fullname": "Hardware Implementation-Dependent Register 0",                 "enc": [3, 0, 15, 0, 0  ], "width": 64},
+    {"index": 0, "name": "EHID0_EL1",                   "fullname": "Hardware Implementation-Dependent Register 0 (E-core)",        "enc": [3, 0, 15, 0, 1  ], "width": 64},
+    {"index": 0, "name": "HID1_EL1",                    "fullname": "Hardware Implementation-Dependent Register 1",                 "enc": [3, 0, 15, 1, 0  ], "width": 64},
+    {"index": 0, "name": "EHID1_EL1",                   "fullname": "Hardware Implementation-Dependent Register 1 (E-core)",        "enc": [3, 0, 15, 1, 1  ], "width": 64},
+    {"index": 0, "name": "HID2_EL1",                    "fullname": "Hardware Implementation-Dependent Register 2",                 "enc": [3, 0, 15, 2, 0  ], "width": 64},
+    {"index": 0, "name": "EHID2_EL1",                   "fullname": "Hardware Implementation-Dependent Register 2 (E-core)",        "enc": [3, 0, 15, 2, 1  ], "width": 64},
+    {"index": 0, "name": "HID3_EL1",                    "fullname": "Hardware Implementation-Dependent Register 3",                 "enc": [3, 0, 15, 3, 0  ], "width": 64},
+    {"index": 0, "name": "EHID3_EL1",                   "fullname": "Hardware Implementation-Dependent Register 3 (E-core)",        "enc": [3, 0, 15, 3, 1  ], "width": 64},
+    {"index": 0, "name": "HID4_EL1",                    "fullname": "Hardware Implementation-Dependent Register 4",                 "enc": [3, 0, 15, 4, 0  ], "width": 64},
+    {"index": 0, "name": "EHID4_EL1",                   "fullname": "Hardware Implementation-Dependent Register 4 (E-core)",        "enc": [3, 0, 15, 4, 1  ], "width": 64},
+    {"index": 0, "name": "HID5_EL1",                    "fullname": "Hardware Implementation-Dependent Register 5",                 "enc": [3, 0, 15, 5, 0  ], "width": 64},
+    {"index": 0, "name": "EHID5_EL1",                   "fullname": "Hardware Implementation-Dependent Register 5 (E-core)",        "enc": [3, 0, 15, 5, 1  ], "width": 64},
+    {"index": 0, "name": "HID6_EL1",                    "fullname": "Hardware Implementation-Dependent Register 6",                 "enc": [3, 0, 15, 6, 0  ], "width": 64},
+    {"index": 0, "name": "HID7_EL1",                    "fullname": "Hardware Implementation-Dependent Register 7",                 "enc": [3, 0, 15, 7, 0  ], "width": 64},
+    {"index": 0, "name": "EHID7_EL1",                   "fullname": "Hardware Implementation-Dependent Register 7 (E-core)",        "enc": [3, 0, 15, 7, 1  ], "width": 64},
+    {"index": 0, "name": "HID8_EL1",                    "fullname": "Hardware Implementation-Dependent Register 8",                 "enc": [3, 0, 15, 8, 0  ], "width": 64},
+    {"index": 0, "name": "HID9_EL1",                    "fullname": "Hardware Implementation-Dependent Register 9",                 "enc": [3, 0, 15, 9, 0  ], "width": 64},
+    {"index": 0, "name": "EHID9_EL1",                   "fullname": "Hardware Implementation-Dependent Register 9 (E-core)",        "enc": [3, 0, 15, 9, 1  ], "width": 64},
+    {"index": 0, "name": "HID10_EL1",                   "fullname": "Hardware Implementation-Dependent Register 10",                "enc": [3, 0, 15, 10, 0 ], "width": 64},
+    {"index": 0, "name": "EHID10_EL1",                  "fullname": "Hardware Implementation-Dependent Register 10 (E-core)",       "enc": [3, 0, 15, 10, 1 ], "width": 64},
+    {"index": 0, "name": "HID11_EL1",                   "fullname": "Hardware Implementation-Dependent Register 11",                "enc": [3, 0, 15, 11, 0 ], "width": 64},
+    {"index": 0, "name": "EHID11_EL1",                  "fullname": "Hardware Implementation-Dependent Register 11 (E-core)",       "enc": [3, 0, 15, 11, 1 ], "width": 64},
+    {"index": 0, "name": "HID13_EL1",                   "fullname": "Hardware Implementation-Dependent Register 13",                "enc": [3, 0, 15, 14, 0 ], "width": 64},
+    {"index": 0, "name": "HID14_EL1",                   "fullname": "Hardware Implementation-Dependent Register 14",                "enc": [3, 0, 15, 15, 0 ], "width": 64},
+    {"index": 0, "name": "HID16_EL1",                   "fullname": "Hardware Implementation-Dependent Register 16",                "enc": [3, 0, 15, 15, 2 ], "width": 64},
+    {"index": 0, "name": "HID17_EL1",                   "fullname": "Hardware Implementation-Dependent Register 17",                "enc": [3, 0, 15, 15, 5 ], "width": 64},
+    {"index": 0, "name": "HID18_EL1",                   "fullname": "Hardware Implementation-Dependent Register 18",                "enc": [3, 0, 15, 11, 2 ], "width": 64},
+    {"index": 0, "name": "EHID20_EL1",                  "fullname": "Hardware Implementation-Dependent Register 20 (E-core)",       "enc": [3, 0, 15, 1, 2  ], "width": 64},
+    {"index": 0, "name": "HID21_EL1",                   "fullname": "Hardware Implementation-Dependent Register 21",                "enc": [3, 0, 15, 1, 3  ], "width": 64},
+    {"index": 0, "name": "PMCR0_EL1",                   "fullname": "Performance Monitor Control Register 0",                       "enc": [3, 1, 15, 0, 0  ], "width": 64},
+    {"index": 0, "name": "PMCR1_EL1",                   "fullname": "Performance Monitor Control Register 1",                       "enc": [3, 1, 15, 1, 0  ], "width": 64},
+    {"index": 0, "name": "PMCR2_EL1",                   "fullname": "Performance Monitor Control Register 2",                       "enc": [3, 1, 15, 2, 0  ], "width": 64},
+    {"index": 0, "name": "PMCR3_EL1",                   "fullname": "Performance Monitor Control Register 3",                       "enc": [3, 1, 15, 3, 0  ], "width": 64},
+    {"index": 0, "name": "PMCR4_EL1",                   "fullname": "Performance Monitor Control Register 4",                       "enc": [3, 1, 15, 4, 0  ], "width": 64},
+    {"index": 0, "name": "PMESR0_EL1",                  "fullname": "Performance Monitor Event Selection Register 0",               "enc": [3, 1, 15, 5, 0  ], "width": 64},
+    {"index": 0, "name": "PMESR1_EL1",                  "fullname": "Performance Monitor Event Selection Register 1",               "enc": [3, 1, 15, 6, 0  ], "width": 64},
+    {"index": 0, "name": "PMSR_EL1",                    "fullname": "Performance Monitor Status Register",                          "enc": [3, 1, 15, 13, 0 ], "width": 64},
+    {"index": 0, "name": "PMC0_EL1",                    "fullname": "Performance Monitor Counter 0",                                "enc": [3, 2, 15, 0, 0  ], "width": 64},
+    {"index": 0, "name": "PMC1_EL1",                    "fullname": "Performance Monitor Counter 1",                                "enc": [3, 2, 15, 1, 0  ], "width": 64},
+    {"index": 0, "name": "PMC2_EL1",                    "fullname": "Performance Monitor Counter 2",                                "enc": [3, 2, 15, 2, 0  ], "width": 64},
+    {"index": 0, "name": "PMC3_EL1",                    "fullname": "Performance Monitor Counter 3",                                "enc": [3, 2, 15, 3, 0  ], "width": 64},
+    {"index": 0, "name": "PMC4_EL1",                    "fullname": "Performance Monitor Counter 4",                                "enc": [3, 2, 15, 4, 0  ], "width": 64},
+    {"index": 0, "name": "PMC5_EL1",                    "fullname": "Performance Monitor Counter 5",                                "enc": [3, 2, 15, 5, 0  ], "width": 64},
+    {"index": 0, "name": "PMC6_EL1",                    "fullname": "Performance Monitor Counter 6",                                "enc": [3, 2, 15, 6, 0  ], "width": 64},
+    {"index": 0, "name": "PMC7_EL1",                    "fullname": "Performance Monitor Counter 7",                                "enc": [3, 2, 15, 7, 0  ], "width": 64},
+    {"index": 0, "name": "PMC8_EL1",                    "fullname": "Performance Monitor Counter 8",                                "enc": [3, 2, 15, 9, 0  ], "width": 64},
+    {"index": 0, "name": "PMC9_EL1",                    "fullname": "Performance Monitor Counter 9",                                "enc": [3, 2, 15, 10, 0 ], "width": 64},
+    {"index": 0, "name": "LSU_ERR_STS_EL1",             "fullname": "Load-Store Unit Error Status",                                 "enc": [3, 3, 15, 0, 0  ], "width": 64},
+    {"index": 0, "name": "E_LSU_ERR_STS_EL1",           "fullname": "Load-Store Unit Error Status (E-core)",                        "enc": [3, 3, 15, 2, 0  ], "width": 64},
+    {"index": 0, "name": "LSU_ERR_CTL_EL1",             "fullname": "Load-Store Unit Error Control",                                "enc": [3, 3, 15, 1, 0  ], "width": 64},
+    {"index": 0, "name": "L2C_ERR_STS_EL1",             "fullname": "L2 Cache Error Status",                                        "enc": [3, 3, 15, 8, 0  ], "width": 64},
+    {"index": 0, "name": "L2C_ERR_ADR_EL1",             "fullname": "L2 Cache Address",                                             "enc": [3, 3, 15, 9, 0  ], "width": 64},
+    {"index": 0, "name": "L2C_ERR_INF_EL1",             "fullname": "L2 Cache Error Information",                                   "enc": [3, 3, 15, 10, 0 ], "width": 64},
+    {"index": 0, "name": "FED_ERR_STS_EL1",             "fullname": "FED Error Status",                                             "enc": [3, 4, 15, 0, 0  ], "width": 64},
+    {"index": 0, "name": "E_FED_ERR_STS_EL1",           "fullname": "FED Error Status (E-Core)",                                    "enc": [3, 4, 15, 0, 2  ], "width": 64},
+    {"index": 0, "name": "APCTL_EL1",                   "fullname": "Pointer Authentication Control",                               "enc": [3, 4, 15, 0, 4  ], "width": 64},
+    {"index": 0, "name": "KERNELKEYLO_EL1",             "fullname": "Pointer Authentication Kernel Key Low",                        "enc": [3, 4, 15, 1, 0  ], "width": 64},
+    {"index": 0, "name": "KERNELKEYHI_EL1",             "fullname": "Pointer Authentication Kernel Key High",                       "enc": [3, 4, 15, 1, 1  ], "width": 64},
+    {"index": 0, "name": "VMSA_LOCK_EL1",               "fullname": "Virtual Memory System Architecture Lock",                      "enc": [3, 4, 15, 1, 2  ], "width": 64},
+    {"index": 0, "name": "AMX_CTL_EL1",                 "fullname": "AMX Control (EL1)",                                            "enc": [3, 4, 15, 1, 4  ], "width": 64,
+        "fieldsets": [{"fields": [
+            {"name": "EN",                              "msb": 63, "lsb": 63}
+        ]}]},
+    {"index": 0, "name": "APRR_EL0",                    "fullname": "APRR EL0",                                                     "enc": [3, 4, 15, 2, 0  ], "width": 64},
+    {"index": 0, "name": "APRR_EL1",                    "fullname": "APRR EL1",                                                     "enc": [3, 4, 15, 2, 1  ], "width": 64},
+    {"index": 0, "name": "CTRR_LOCK_EL1",               "fullname": "CTRR Lock",                                                    "enc": [3, 4, 15, 2, 2  ], "width": 64},
+    {"index": 0, "name": "CTRR_A_LWR_EL1",              "fullname": "CTRR A Lower Address (EL1)",                                   "enc": [3, 4, 15, 2, 3  ], "width": 64},
+    {"index": 0, "name": "CTRR_A_UPR_EL1",              "fullname": "CTRR A Upper Address (EL1",                                    "enc": [3, 4, 15, 2, 4  ], "width": 64},
+    {"index": 0, "name": "CTRR_CTL_EL1",                "fullname": "CTRR Control (EL1)",                                           "enc": [3, 4, 15, 2, 5  ], "width": 64},
+    {"index": 0, "name": "APRR_JIT_ENABLE_EL2",         "fullname": "APRR JIT Enable",                                              "enc": [3, 4, 15, 2, 6  ], "width": 64},
+    {"index": 0, "name": "APRR_JIT_MASK_EL2",           "fullname": "APRR JIT Mask",                                                "enc": [3, 4, 15, 2, 7  ], "width": 64},
+    {"index": 0, "name": "AMX_CTL_EL12",                "fullname": "AMX Control (EL12)",                                           "enc": [3, 4, 15, 4, 6  ], "width": 64},
+    {"index": 0, "name": "AMX_CTL_EL2",                 "fullname": "AMX Control (EL2)",                                            "enc": [3, 4, 15, 4, 7  ], "width": 64,
+        "fieldsets": [{"fields": [
+            {"name": "EN",                              "msb": 63, "lsb": 63},
+            {"name": "EN_EL1",                          "msb": 62, "lsb": 62}
+        ]}]},
+    {"index": 0, "name": "SPRR_PERM_EL20_SILLY_THING",  "fullname": "SPRR Permission Configuration Register (EL20, useless)",       "enc": [3, 4, 15, 5, 1  ], "width": 64},
+    {"index": 0, "name": "SPRR_PERM_EL02",              "fullname": "SPRR Permission Configuration Register (EL02)",                "enc": [3, 4, 15, 5, 2  ], "width": 64},
+    {"index": 0, "name": "SPRR_UNK2_EL2",               "fullname": "SPRR Unknown 2 (EL2)",                                         "enc": [3, 4, 15, 7, 0  ], "width": 64},
+    {"index": 0, "name": "SPRR_UNK2_EL12",              "fullname": "SPRR Unknown 2 (EL12)",                                        "enc": [3, 4, 15, 8, 0  ], "width": 64},
+    {"index": 0, "name": "CNTVCT_ALIAS_EL0",            "fullname": "Physical timer counter register",                              "enc": [3, 4, 15, 10, 6 ], "width": 64},
+    {"index": 0, "name": "CTRR_A_LWR_EL2",              "fullname": "CTRR A Lower Address (EL2)",                                   "enc": [3, 4, 15, 11, 0 ], "width": 64},
+    {"index": 0, "name": "CTRR_A_UPR_EL2",              "fullname": "CTRR A Upper Address (EL2)",                                   "enc": [3, 4, 15, 11, 1 ], "width": 64},
+    {"index": 0, "name": "CTRR_CTL_EL2",                "fullname": "CTRR Control (EL2)",                                           "enc": [3, 4, 15, 11, 4 ], "width": 64},
+    {"index": 0, "name": "CTRR_LOCK_EL2",               "fullname": "CTRR Lock",                                                    "enc": [3, 4, 15, 11, 5 ], "width": 64},
+    {"index": 0, "name": "IPI_RR_LOCAL_EL1",            "fullname": "IPI Request Register (Local)",                                 "enc": [3, 5, 15, 0, 0  ], "width": 64},
+    {"index": 0, "name": "IPI_RR_GLOBAL_EL1",           "fullname": "IPI Request Register (Global",                                 "enc": [3, 5, 15, 0, 1  ], "width": 64},
+    {"index": 0, "name": "DPC_ERR_STS_EL1",             "fullname": "DPC Error Status",                                             "enc": [3, 5, 15, 0, 5  ], "width": 64},
+    {"index": 0, "name": "IPI_SR_EL1",                  "fullname": "IPI Status Register",                                          "enc": [3, 5, 15, 1, 1  ], "width": 64},
+    {"index": 0, "name": "VM_TMR_LR_EL2",               "fullname": "VM Timer Link Register",                                       "enc": [3, 5, 15, 1, 2  ], "width": 64},
+    {"index": 0, "name": "VM_TMR_FIQ_ENA_EL2",          "fullname": "VM Timer FIQ Enable",                                          "enc": [3, 5, 15, 1, 3  ], "width": 64},
+    {"index": 0, "name": "IPI_CR_EL1",                  "fullname": "IPI Control Register",                                         "enc": [3, 5, 15, 3, 1  ], "width": 64},
+    {"index": 0, "name": "ACC_CFG_EL1",                 "fullname": "Apple Core Cluster Configuration",                             "enc": [3, 5, 15, 4, 0  ], "width": 64},
+    {"index": 0, "name": "CYC_OVRD_EL1",                "fullname": "Cyclone Override",                                             "enc": [3, 5, 15, 5, 0  ], "width": 64},
+    {"index": 0, "name": "ACC_OVRD_EL1",                "fullname": "Apple Core Cluster Override",                                  "enc": [3, 5, 15, 6, 0  ], "width": 64},
+    {"index": 0, "name": "ACC_EBLK_OVRD_EL1",           "fullname": "Apple Core Cluster E-Block Override",                          "enc": [3, 5, 15, 6, 1  ], "width": 64},
+    {"index": 0, "name": "MMU_ERR_STS_EL1",             "fullname": "MMU Error Status",                                             "enc": [3, 6, 15, 0, 0  ], "width": 64},
+    {"index": 0, "name": "SPRR_CONFIG_EL1",             "fullname": "SPRR Configuration Register (EL1)",                            "enc": [3, 6, 15, 1, 0  ], "width": 64,
+        "fieldsets": [{"fields": [
+            {"name": "EN",                              "msb": 0, "lsb": 0},
+            {"name": "LOCK_CONFIG",                     "msb": 1, "lsb": 1},
+            {"name": "LOCK_PERM_EL0",                   "msb": 4, "lsb": 4},
+            {"name": "LOCK_PERM_EL1",                   "msb": 5, "lsb": 5}
+        ]}]},
+    {"index": 0, "name": "GXF_CONFIG_EL1",              "fullname": "GXF Configuration Register (EL3)",                             "enc": [3, 6, 15, 1, 2  ], "width": 64,
+        "fieldsets": [{"fields": [
+            {"name": "EN",                              "msb": 0, "lsb": 0}
+        ]}]},
+    {"index": 0, "name": "SPRR_UNK1_EL1",               "fullname": "SPRR Unknown (EL1)",                                           "enc": [3, 6, 15, 1, 3  ], "width": 64},
+    {"index": 0, "name": "SPRR_PERM_EL0",               "fullname": "SPRR Permission Configuration Register (EL0)",                 "enc": [3, 6, 15, 1, 5  ], "width": 64},
+    {"index": 0, "name": "SPRR_PERM_EL1",               "fullname": "SPRR Permission Configuration Register (EL1)",                 "enc": [3, 6, 15, 1, 6  ], "width": 64},
+    {"index": 0, "name": "SPRR_PERM_EL2",               "fullname": "SPRR Permission Configuration Register (EL2)",                 "enc": [3, 6, 15, 1, 7  ], "width": 64},
+    {"index": 0, "name": "E_MMU_ERR_STS_EL1",           "fullname": "MMU Error Status (E-Core)",                                    "enc": [3, 6, 15, 2, 0  ], "width": 64},
+    {"index": 0, "name": "AFPCR_EL0",                   "fullname": "Apple Floating-Point Control Register",                        "enc": [3, 6, 15, 2, 5  ], "width": 64},
+    {"index": 0, "name": "AIDR2_EL1",                   "fullname": "Apple ID Register 2",                                          "enc": [3, 6, 15, 2, 7  ], "width": 64},
+    {"index": 0, "name": "SPRR_UNK2_EL1",               "fullname": "SPRR Unknown 2 (EL1)",                                         "enc": [3, 6, 15, 3, 0  ], "width": 64},
+    {"index": 0, "name": "GXF_STATUS",                  "fullname": "GXF Status Register",                                          "enc": [3, 6, 15, 8, 0  ], "width": 64,
+        "fieldsets": [{"fields": [
+            {"name": "GUARDED",                         "msb": 0, "lsb": 0}
+        ]}]},
+    {"index": 0, "name": "GXF_ENTER_EL1",               "fullname": "GXF genter Entry Vector Register (EL1)",                       "enc": [3, 6, 15, 8, 1  ], "width": 64},
+    {"index": 0, "name": "GXF_ABORT_EL1",               "fullname": "GXF Abort Vector Register (EL1)",                              "enc": [3, 6, 15, 8, 2  ], "width": 64},
+    {"index": 0, "name": "VBAR_GL12",                   "fullname": "Vector Base Address Register (GL12)",                          "enc": [3, 6, 15, 9, 2  ], "width": 64},
+    {"index": 0, "name": "SP_GL12",                     "fullname": "Stack Pointer Register (GL12)",                                "enc": [3, 6, 15, 10, 0 ], "width": 64},
+    {"index": 0, "name": "TPIDR_GL1",                   "fullname": "Software Thread ID Register (GL1)",                            "enc": [3, 6, 15, 10, 1 ], "width": 64},
+    {"index": 0, "name": "VBAR_GL1",                    "fullname": "Vector Base Address Register (GL1)",                           "enc": [3, 6, 15, 10, 2 ], "width": 64},
+    {"index": 0, "name": "SPSR_GL1",                    "fullname": "Saved Program Status Register (GL1)",                          "enc": [3, 6, 15, 10, 3 ], "width": 64},
+    {"index": 0, "name": "ASPSR_GL1",                   "fullname": "ASPSR (GL1)",                                                  "enc": [3, 6, 15, 10, 4 ], "width": 64},
+    {"index": 0, "name": "ESR_GL1",                     "fullname": "Exception Syndrome Register (GL1)",                            "enc": [3, 6, 15, 10, 5 ], "width": 64},
+    {"index": 0, "name": "ELR_GL1",                     "fullname": "Exception Link Register (GL1)",                                "enc": [3, 6, 15, 10, 6 ], "width": 64},
+    {"index": 0, "name": "FAR_GL1",                     "fullname": "Fault Address Register (GL1)",                                 "enc": [3, 6, 15, 10, 7 ], "width": 64},
+    {"index": 0, "name": "TPIDR_GL2",                   "fullname": "Software Thread ID Register (GL2)",                            "enc": [3, 6, 15, 11, 1 ], "width": 64},
+    {"index": 0, "name": "VBAR_GL2",                    "fullname": "Vector Base Address Register (GL2)",                           "enc": [3, 6, 15, 11, 2 ], "width": 64},
+    {"index": 0, "name": "SPSR_GL2",                    "fullname": "Saved Program Status Register (GL2)",                          "enc": [3, 6, 15, 11, 3 ], "width": 64},
+    {"index": 0, "name": "ASPSR_GL2",                   "fullname": "ASPSR (GL2)",                                                  "enc": [3, 6, 15, 11, 4 ], "width": 64},
+    {"index": 0, "name": "ESR_GL2",                     "fullname": "Exception Syndrome Register (GL2)",                            "enc": [3, 6, 15, 11, 5 ], "width": 64},
+    {"index": 0, "name": "ELR_GL2",                     "fullname": "Exception Link Register (GL2)",                                "enc": [3, 6, 15, 11, 6 ], "width": 64},
+    {"index": 0, "name": "FAR_GL2",                     "fullname": "Fault Address Register (GL2)",                                 "enc": [3, 6, 15, 11, 7 ], "width": 64},
+    {"index": 0, "name": "APSTS_EL1",                   "fullname": "Pointer Authentication Status",                                "enc": [3, 6, 15, 12, 4 ], "width": 64},
+    {"index": 0, "name": "SPRR_CONFIG_EL2",             "fullname": "SPRR Configuration Register (EL2)",                            "enc": [3, 6, 15, 14, 2 ], "width": 64},
+    {"index": 0, "name": "SPRR_UNK1_EL2",               "fullname": "SPRR Unknown (EL2)",                                           "enc": [3, 6, 15, 14, 3 ], "width": 64},
+    {"index": 0, "name": "ACTLR_EL12",                  "fullname": "Auxiliary Control Register (EL12)",                            "enc": [3, 6, 15, 14, 6 ], "width": 64},
+    {"index": 0, "name": "GXF_ENTER_EL12",              "fullname": "GXF genter Entry Vector Register (EL12)",                      "enc": [3, 6, 15, 15, 2 ], "width": 64},
+    {"index": 0, "name": "GXF_ABORT_EL12",              "fullname": "GXF Abort Vector Register (EL12)",                             "enc": [3, 6, 15, 15, 3 ], "width": 64},
+    {"index": 0, "name": "SPRR_CONFIG_EL12",            "fullname": "SPRR Configuration Register (EL12)",                           "enc": [3, 6, 15, 15, 4 ], "width": 64},
+    {"index": 0, "name": "SPRR_UNK1_EL12",              "fullname": "SPRR Unknown (EL2)",                                           "enc": [3, 6, 15, 15, 5 ], "width": 64},
+    {"index": 0, "name": "SPRR_PERM_EL12",              "fullname": "SPRR Permission Configuration Register (EL12)",                "enc": [3, 6, 15, 15, 7 ], "width": 64},
+    {"index": 0, "name": "UPMCR0_EL1",                  "fullname": "Uncore Performance Monitor Control Register 0",                "enc": [3, 7, 15, 0, 4  ], "width": 64},
+    {"index": 0, "name": "UPMESR0_EL1",                 "fullname": "Uncore Performance Monitor Event Selection Register 0",        "enc": [3, 7, 15, 1, 4  ], "width": 64},
+    {"index": 0, "name": "UPMECM0_EL1",                 "fullname": "Uncore Performance Monitor Event Core Mask 0",                 "enc": [3, 7, 15, 3, 4  ], "width": 64},
+    {"index": 0, "name": "UPMECM1_EL1",                 "fullname": "Uncore Performance Monitor Event Core Mask 1",                 "enc": [3, 7, 15, 4, 4  ], "width": 64},
+    {"index": 0, "name": "UPMPCM_EL1",                  "fullname": "Uncore Performance Monitor PMI Core Mask",                     "enc": [3, 7, 15, 5, 4  ], "width": 64},
+    {"index": 0, "name": "UPMSR_EL1",                   "fullname": "Uncore Performance Monitor Status Register",                   "enc": [3, 7, 15, 6, 4  ], "width": 64},
+    {"index": 0, "name": "UPMECM2_EL1",                 "fullname": "Uncore Performance Monitor Event Core Mask 2",                 "enc": [3, 7, 15, 8, 5  ], "width": 64},
+    {"index": 0, "name": "UPMECM3_EL1",                 "fullname": "Uncore Performance Monitor Event Core Mask 3",                 "enc": [3, 7, 15, 9, 5  ], "width": 64},
+    {"index": 0, "name": "UPMESR1_EL1",                 "fullname": "Uncore Performance Monitor Event Selection Register 1",        "enc": [3, 7, 15, 11, 5 ], "width": 64},
+    {"index": 0, "name": "UPMC0_EL1",                   "fullname": "Uncore Performance Monitor Counter 0",                         "enc": [3, 7, 15, 7, 4  ], "width": 64},
+    {"index": 0, "name": "UPMC1_EL1",                   "fullname": "Uncore Performance Monitor Counter 1",                         "enc": [3, 7, 15, 8, 4  ], "width": 64},
+    {"index": 0, "name": "UPMC2_EL1",                   "fullname": "Uncore Performance Monitor Counter 2",                         "enc": [3, 7, 15, 9, 4  ], "width": 64},
+    {"index": 0, "name": "UPMC3_EL1",                   "fullname": "Uncore Performance Monitor Counter 3",                         "enc": [3, 7, 15, 10, 4 ], "width": 64},
+    {"index": 0, "name": "UPMC4_EL1",                   "fullname": "Uncore Performance Monitor Counter 4",                         "enc": [3, 7, 15, 11, 4 ], "width": 64},
+    {"index": 0, "name": "UPMC5_EL1",                   "fullname": "Uncore Performance Monitor Counter 5",                         "enc": [3, 7, 15, 12, 4 ], "width": 64},
+    {"index": 0, "name": "UPMC6_EL1",                   "fullname": "Uncore Performance Monitor Counter 6",                         "enc": [3, 7, 15, 13, 4 ], "width": 64},
+    {"index": 0, "name": "UPMC7_EL1",                   "fullname": "Uncore Performance Monitor Counter 7",                         "enc": [3, 7, 15, 14, 4 ], "width": 64},
+    {"index": 0, "name": "UPMC8_EL1",                   "fullname": "Uncore Performance Monitor Counter 8",                         "enc": [3, 7, 15, 0, 5  ], "width": 64},
+    {"index": 0, "name": "UPMC9_EL1",                   "fullname": "Uncore Performance Monitor Counter 9",                         "enc": [3, 7, 15, 1, 5  ], "width": 64},
+    {"index": 0, "name": "UPMC10_EL1",                  "fullname": "Uncore Performance Monitor Counter 10",                        "enc": [3, 7, 15, 2, 5  ], "width": 64},
+    {"index": 0, "name": "UPMC11_EL1",                  "fullname": "Uncore Performance Monitor Counter 11",                        "enc": [3, 7, 15, 3, 5  ], "width": 64},
+    {"index": 0, "name": "UPMC12_EL1",                  "fullname": "Uncore Performance Monitor Counter 12",                        "enc": [3, 7, 15, 4, 5  ], "width": 64},
+    {"index": 0, "name": "UPMC13_EL1",                  "fullname": "Uncore Performance Monitor Counter 13",                        "enc": [3, 7, 15, 5, 5  ], "width": 64},
+    {"index": 0, "name": "UPMC14_EL1",                  "fullname": "Uncore Performance Monitor Counter 14",                        "enc": [3, 7, 15, 6, 5  ], "width": 64},
+    {"index": 0, "name": "UPMC15_EL1",                  "fullname": "Uncore Performance Monitor Counter 15",                        "enc": [3, 7, 15, 7, 5  ], "width": 64},
+    {"index": 0, "name": "HACR_EL2",                    "fullname": "Hypervisor Auxiliary Control Register",                        "enc": [3, 4, 1, 1, 7   ], "width": 64,
+        "fieldsets": [{"fields": [
+            {"name": "TRAP_CPU_EXT",                    "msb": 0, "lsb": 0},
+            {"name": "TRAP_AIDR",                       "msb": 4, "lsb": 4},
+            {"name": "TRAP_AMX",                        "msb": 10, "lsb": 10},
+            {"name": "TRAP_SPRR",                       "msb": 11, "lsb": 11},
+            {"name": "TRAP_GXF",                        "msb": 13, "lsb": 13},
+            {"name": "TRAP_CTRR",                       "msb": 14, "lsb": 14},
+            {"name": "TRAP_IPI",                        "msb": 16, "lsb": 16},
+            {"name": "TRAP_s3_4_c15_c5z6_x",            "msb": 18, "lsb": 18},
+            {"name": "TRAP_s3_4_c15_c0z12_5",           "msb": 19, "lsb": 19},
+            {"name": "GIC_CNTV",                        "msb": 20, "lsb": 20},
+            {"name": "TRAP_s3_4_c15_c10_4",             "msb": 25, "lsb": 25},
+            {"name": "TRAP_SERROR_INFO",                "msb": 48, "lsb": 48},
+            {"name": "TRAP_EHID",                       "msb": 49, "lsb": 49},
+            {"name": "TRAP_HID",                        "msb": 50, "lsb": 50},
+            {"name": "TRAP_s3_0_c15_c12_1z2",           "msb": 51, "lsb": 51},
+            {"name": "TRAP_ACC",                        "msb": 52, "lsb": 52},
+            {"name": "TRAP_PM",                         "msb": 57, "lsb": 57},
+            {"name": "TRAP_UPM",                        "msb": 58, "lsb": 58},
+            {"name": "TRAP_s3_1z7_c15_cx_3",            "msb": 59, "lsb": 59}
+        ]}]}
 ]
