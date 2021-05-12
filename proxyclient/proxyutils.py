@@ -149,10 +149,13 @@ class ProxyUtils(object):
             self.disassemble_at(ctx.elr_phys - 4 * 4, 9 * 4, ctx.elr_phys)
 
         if code == EXC.SYNC:
-            if ctx.esr.EC == ESR_EC.MSR:
+            if ctx.esr.EC == ESR_EC.MSR or ctx.esr.EC == ESR_EC.IMPDEF and ctx.esr.ISS == 0x20:
                 print()
                 print("  == MRS/MSR fault decoding ==")
-                iss = ESR_ISS_MSR(ctx.esr.ISS)
+                if ctx.esr.EC == ESR_EC.MSR:
+                    iss = ESR_ISS_MSR(ctx.esr.ISS)
+                else:
+                    iss = ESR_ISS_MSR(self.mrs(AFSR1_EL2))
                 enc = iss.Op0, iss.Op1, iss.CRn, iss.CRm, iss.Op2
                 if enc in sysreg_rev:
                     name = sysreg_rev[enc]
