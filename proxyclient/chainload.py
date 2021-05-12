@@ -3,7 +3,7 @@
 import argparse, pathlib, time
 
 parser = argparse.ArgumentParser(description='Mach-O loader for m1n1')
-parser.add_argument('-s', '--sepfw', action="store_true", help="Copy SEP firmware")
+parser.add_argument('-x', '--xnu', action="store_true", help="Load XNU")
 parser.add_argument('-c', '--call', action="store_true", help="Use call mode")
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
@@ -24,7 +24,7 @@ entry = macho.entry
 entry -= macho.vmin
 entry += new_base
 
-if args.sepfw:
+if args.xnu:
     sepfw_start, sepfw_length = u.adt["chosen"]["memory-map"].SEPFW
 else:
     sepfw_start, sepfw_length = 0, 0
@@ -43,18 +43,27 @@ print(f"Loading kernel image (0x{len(image):x} bytes)...")
 u.compressed_writemem(image_addr, image, True)
 p.dc_cvau(image_addr, len(image))
 
-if args.sepfw:
+if args.xnu:
     print(f"Copying SEPFW (0x{sepfw_length:x} bytes)...")
     p.memcpy8(image_addr + sepfw_off, sepfw_start, sepfw_length)
     print(f"Adjusting addresses in ADT...")
     u.adt["chosen"]["memory-map"].SEPFW = (new_base + sepfw_off, sepfw_length)
     u.adt["chosen"]["memory-map"].BootArgs = (image_addr + bootargs_off, bootargs_size)
+
+    print("Setting secondary CPU RVBARs...")
+
+    rvbar = entry & ~0xfff
+    for cpu in u.adt["cpus"][1:]:
+        addr, size = cpu.cpu_impl_reg[0]
+        print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
+        p.write64(addr, rvbar)
+
     u.push_adt()
 
 print("Setting up bootargs...")
 tba = u.ba.copy()
 
-if args.sepfw:
+if args.xnu:
     tba.top_of_kernel_data = new_base + image_size
 else:
     # SEP firmware is in here somewhere, keep top_of_kdata high so we hopefully don't clobber it
