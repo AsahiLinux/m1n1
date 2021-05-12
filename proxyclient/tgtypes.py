@@ -28,6 +28,7 @@ BootArgs = Struct(
 )
 
 MachOLoadCmdType = "LoadCmdType" / Enum(Int32ul,
+    SYMTAB = 0x02,
     UNIXTHREAD = 0x05,
     SEGMENT_64 = 0x19,
     UUID = 0x1b,
@@ -57,6 +58,13 @@ MachOVmProt = FlagsEnum(Int32sl,
     PROT_EXECUTE = 0x04,
 )
 
+MachOCmdSymTab = Struct(
+    "symoff" / Hex(Int32ul),
+    "nsyms" / Int32ul,
+    "stroff" / Hex(Int32ul),
+    "strsize" / Hex(Int32ul),
+)
+
 MachOCmdUnixThread = GreedyRange(Struct(
     "flavor" / MachOArmThreadStateFlavor,
     "data" / Prefixed(ExprAdapter(Int32ul, obj_ * 4, obj_ / 4), Switch(this.flavor, {
@@ -72,6 +80,13 @@ MachOCmdUnixThread = GreedyRange(Struct(
     })),
 ))
 
+NList = Struct(
+    "n_strx" / Hex(Int32ul),
+    "n_type" / Hex(Int8ul),
+    "n_sect" / Hex(Int8ul),
+    "n_desc" / Hex(Int16sl),
+    "n_value" / Hex(Int64ul),
+)
 
 MachOCmdSegment64 = Struct(
     "segname" / PaddedString(16, "ascii"),
@@ -99,17 +114,26 @@ MachOCmdSegment64 = Struct(
     )),
 )
 
+MachOFilesetEntry = Struct(
+    "addr" / Hex(Int64ul),
+    "offset" / Hex(Int64ul),
+    "entryid" / Hex(Int32ul),
+    "reserved" / Hex(Int32ul),
+    "name" / CString("ascii"),
+)
+
 MachOCmd = Struct(
     "cmd" / Hex(MachOLoadCmdType),
     "args" / Prefixed(ExprAdapter(Int32ul, obj_ - 8, obj_ + 8), Switch(this.cmd, {
+        MachOLoadCmdType.SYMTAB: MachOCmdSymTab,
         MachOLoadCmdType.UNIXTHREAD: MachOCmdUnixThread,
         MachOLoadCmdType.SEGMENT_64: MachOCmdSegment64,
         MachOLoadCmdType.UUID: Hex(Bytes(16)),
+        MachOLoadCmdType.FILESET_ENTRY: MachOFilesetEntry,
     }, default=GreedyBytes)),
 )
 
 MachOFile = Struct(
     "header" / MachOHeader,
     "cmds" / Array(this.header.ncmds, MachOCmd),
-    "extradata" / GreedyBytes,
 )
