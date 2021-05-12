@@ -62,11 +62,16 @@ def run_shell(locals, msg=None, exitmsg=None):
         if "utils" in locals and "u" not in locals:
             locals["u"] = locals["utils"]
 
-        for obj in ("iface", "p", "u", "sysreg"):
+        for obj in ("iface", "p", "u"):
             if obj in locals:
                 for attr in dir(locals[obj]):
                     if attr not in locals:
-                        locals[attr] = getattr(locals[obj], attr)
+                        v = getattr(locals[obj], attr)
+                        if callable(v):
+                            locals[attr] = v
+
+        for attr in dir(sysreg):
+            locals[attr] = getattr(sysreg, attr)
 
         try:
             con = HistoryConsole(locals)
