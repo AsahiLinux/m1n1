@@ -17,9 +17,11 @@ ADTNodeStruct = Struct(
 
 ADTStringList = GreedyRange(CString("ascii"))
 
-ADT2Tuple = Array(2, Int64ul)
+ADT2Tuple = Array(2, Hex(Int64ul))
+ADT3Tuple = Array(3, Hex(Int64ul))
 
 STD_PROPERTIES = {
+    "cpu-impl-reg": GreedyRange(ADT2Tuple),
     "name": CString("ascii"),
     "compatible": ADTStringList,
     "model": CString("ascii"),
@@ -27,8 +29,38 @@ STD_PROPERTIES = {
     "#address-cells": Int32ul,
 }
 
-def parse_prop(path, name, v):
+def parse_prop(node, path, name, v):
     t = None
+
+    if name == "reg":
+        n = node._parent
+        while n is not None and n._parent is not None:
+            if "ranges" not in n._properties:
+                break
+            n = n._parent
+        else:
+            try:
+                ac, sc = node._parent.addr_cells, node._parent.size_cells
+                at = Int64ul if ac == 2 else Array(ac, Int32ul)
+                st = Int64ul if sc == 2 else Array(sc, Int32ul)
+                t = GreedyRange(Struct("addr" / at, "size" / st))
+            except:
+                return None, v
+
+    elif name == "ranges":
+        try:
+            ac, sc = node.addr_cells, node.size_cells
+            pac, _ = node._parent.addr_cells, node._parent.size_cells
+            at = Int64ul if ac == 2 else Array(ac, Int32ul)
+            pat = Int64ul if pac == 2 else Array(pac, Int32ul)
+            st = Int64ul if sc == 2 else Array(sc, Int32ul)
+            t = GreedyRange(Struct("bus_addr" / pat, "parent_addr" / at, "size" / st))
+        except:
+            return None, v
+
+    if t is not None:
+        v = t.parse(v)
+        return t, v
 
     if name in STD_PROPERTIES:
         t = STD_PROPERTIES[name]
@@ -65,11 +97,12 @@ def build_prop(path, name, v, t=None):
     return t.build(v)
 
 class ADTNode:
-    def __init__(self, val=None, path="/"):
+    def __init__(self, val=None, path="/", parent=None):
         self._children = []
         self._properties = {}
         self._types = {}
         self._parent_path = path
+        self._parent = parent
 
         if val is not None:
             for p in val.properties:
@@ -82,10 +115,16 @@ class ADTNode:
             path = self._parent_path + _name
 
             for p in val.properties:
-                self._types[p.name], self._properties[p.name] = parse_prop(path, p.name, p.value)
+                self._types[p.name], self._properties[p.name] = parse_prop(self, path, p.name, p.value)
+
+            # Second pass
+            for k, v in self._types.items():
+                if v is None:
+                    self._types[k], self._properties[k] = parse_prop(self, path, k, self._properties[k])
 
             for c in val.children:
-                self._children.append(ADTNode(c, f"{self._path}/"))
+                node = ADTNode(c, f"{self._path}/", parent=self)
+                self._children.append(node)
 
     @property
     def _path(self):
@@ -137,10 +176,24 @@ class ADTNode:
             return
         del self._properties[attr]
 
+    @property
+    def addr_cells(self):
+        return self._properties["#addr-cells"]
+
+    @property
+    def size_cells(self):
+        return self._properties["#size-cells"]
+
+    def _fmt_prop(self, v):
+        if isinstance(v, ListContainer):
+            return f"[{', '.join(self._fmt_prop(i) for i in v)}]"
+        else:
+            return str(v)
+
     def __str__(self, t=""):
         return "\n".join([
             t + f"{self.name} {{",
-            *(t + f"    {k} = {repr(v)}" for k, v in self._properties.items() if k != "name"),
+            *(t + f"    {k} = {self._fmt_prop(v)}" for k, v in self._properties.items() if k != "name"),
             "",
             *(i.__str__(t + "    ") for i in self._children),
             t + "}"
@@ -148,6 +201,23 @@ class ADTNode:
 
     def __iter__(self):
         return iter(self._children)
+
+    def get_reg(self, idx):
+        reg = self.reg[idx]
+        addr = reg.addr
+        size = reg.size
+
+        node = self._parent
+        while node is not None:
+            if "ranges" not in node._properties:
+                break
+            for r in node.ranges:
+                if r.bus_addr <= addr < (r.bus_addr + r.size):
+                    addr = addr - r.bus_addr + r.parent_addr
+                    break
+            node = node._parent
+
+        return addr, size
 
     def tostruct(self):
         properties = []
