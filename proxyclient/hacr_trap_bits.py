@@ -29,6 +29,18 @@ data = []
 
 BAD = 0xacce5515abad1dea
 
+AUX = [
+    ACTLR_EL1,
+    ACTLR_EL2,
+    AFSR0_EL1,
+    AFSR0_EL2,
+    AFSR1_EL1,
+    AFSR1_EL2,
+    AIDR_EL1,
+    AMAIR_EL1,
+    AMAIR_EL2,
+]
+
 def test():
     for op1 in range(1 << 3):
         for CRn in (0b1011, 0b1111):
@@ -53,8 +65,15 @@ def test():
                 for op2 in range(1 << 3):
                     v = d[i]
                     if v != BAD:
-                        yield (op1, CRn, CRm, op2)
+                        yield (3, op1, CRn, CRm, op2)
                     i += 1
+    for enc in AUX:
+        try:
+            v = u.mrs(enc, call=p.el1_call, silent=True)
+            if v != BAD:
+                yield enc
+        except:
+            continue
 
 baseline = set(test())
 
@@ -71,14 +90,12 @@ for bit in range(64):
 
     if added:
         print("Untraps:")
-        for op1, CRn, CRm, op2 in sorted(added):
-            print("s3_%d_c%d_c%d_%d (3, %d, %d, %d, %d)" % (
-                    op1, CRn, CRm, op2, op1, CRn, CRm, op2))
+        for enc in sorted(added):
+            print(f"{sysreg_name(enc)} ({', '.join(str(i) for i in enc)})")
 
     if removed:
         print("Traps:")
-        for op1, CRn, CRm, op2 in sorted(removed):
-            print("s3_%d_c%d_c%d_%d (3, %d, %d, %d, %d)" % (
-                    op1, CRn, CRm, op2, op1, CRn, CRm, op2))
+        for enc in sorted(removed):
+            print(f"{sysreg_name(enc)} ({', '.join(str(i) for i in enc)})")
 
 p.set_exc_guard(GUARD.OFF)
