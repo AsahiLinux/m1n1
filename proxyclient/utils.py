@@ -8,9 +8,8 @@ def align(v, a=16384):
     return (v + a - 1) & ~(a - 1)
 
 class Register:
-    def __init__(self, v=None, **kwargs):
-        if v is not None:
-            self.value = v
+    def __init__(self, v=0, **kwargs):
+        self.value = v
         for k,v in kwargs.items():
             setattr(self, k, v)
 
