@@ -48,15 +48,15 @@ class ProxyUtils(object):
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
                (CRm << 8) | (op2 << 5) | 0xd5300000)
 
-        return self.exec(op, call=call)
+        return self.exec(op, call=call, silent=silent)
 
-    def msr(self, reg, val, silent=False, el0=False, call=None):
+    def msr(self, reg, val, silent=False, call=None):
         op0, op1, CRn, CRm, op2 = reg
 
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
                (CRm << 8) | (op2 << 5) | 0xd5100000)
 
-        self.exec(op, val, call=call)
+        self.exec(op, val, call=call, silent=silent)
 
     def exec(self, op, r0=0, r1=0, r2=0, r3=0, silent=False, call=None):
         if call is None:
