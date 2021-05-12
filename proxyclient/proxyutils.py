@@ -129,13 +129,13 @@ class ProxyUtils(object):
         for i in lines:
             print(" " + i)
 
-    def print_exception(self, code, ctx):
+    def print_exception(self, code, ctx, addr=lambda a: f"0x{a:x}"):
         print(f"  == Exception taken from {ctx.spsr.M.name} ==")
         el = ctx.spsr.M >> 2
         print(f"  SPSR   = {ctx.spsr}")
-        print(f"  ELR    = 0x{ctx.elr:x}" + (f" (0x{ctx.elr_phys:x})" if ctx.elr_phys else ""))
+        print(f"  ELR    = {addr(ctx.elr)}" + (f" (0x{ctx.elr_phys:x})" if ctx.elr_phys else ""))
         print(f"  ESR    = {ctx.esr}")
-        print(f"  FAR    = 0x{ctx.far:x}" + (f" (0x{ctx.far_phys:x})" if ctx.far_phys else ""))
+        print(f"  FAR    = {addr(ctx.far)}" + (f" (0x{ctx.far_phys:x})" if ctx.far_phys else ""))
         print(f"  SP_EL{el} = 0x{ctx.sp[el]:x}" + (f" (0x{ctx.sp_phys:x})" if ctx.sp_phys else ""))
 
         for i in range(0, 31, 4):
