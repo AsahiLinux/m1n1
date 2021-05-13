@@ -42,24 +42,24 @@ class ProxyUtils(object):
         self.adt_data = None
         self.adt = LazyADT(self)
 
-    def mrs(self, reg, *, silent=False, call=None):
+    def mrs(self, reg, *, silent=False, call=None, region=REGION_RX_EL1):
 
         op0, op1, CRn, CRm, op2 = reg
 
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
                (CRm << 8) | (op2 << 5) | 0xd5300000)
 
-        return self.exec(op, call=call, silent=silent)
+        return self.exec(op, call=call, silent=silent, region=region)
 
-    def msr(self, reg, val, *, silent=False, call=None):
+    def msr(self, reg, val, *, silent=False, call=None, region=REGION_RX_EL1):
         op0, op1, CRn, CRm, op2 = reg
 
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
                (CRm << 8) | (op2 << 5) | 0xd5100000)
 
-        self.exec(op, val, call=call, silent=silent)
+        self.exec(op, val, call=call, silent=silent, region=region)
 
-    def exec(self, op, r0=0, r1=0, r2=0, r3=0, *, silent=False, call=None):
+    def exec(self, op, r0=0, r1=0, r2=0, r3=0, *, silent=False, call=None, region=REGION_RX_EL1):
         if call is None:
             call = self.proxy.call
         if isinstance(op, int):
@@ -75,7 +75,7 @@ class ProxyUtils(object):
         self.proxy.ic_ivau(self.code_buffer, 8)
 
         self.proxy.set_exc_guard(GUARD.SKIP | (GUARD.SILENT if silent else 0))
-        ret = call(self.code_buffer | REGION_RX_EL1, r0, r1, r2, r3)
+        ret = call(self.code_buffer | region, r0, r1, r2, r3)
         cnt = self.proxy.get_exc_count()
         self.proxy.set_exc_guard(GUARD.OFF)
         if cnt:

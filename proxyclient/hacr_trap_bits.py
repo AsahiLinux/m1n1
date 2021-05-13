@@ -37,8 +37,11 @@ AUX = [
     AFSR1_EL1,
     AFSR1_EL2,
     AIDR_EL1,
+    AIDR2_EL1,
     AMAIR_EL1,
     AMAIR_EL2,
+    APCTL_EL1,
+    APSTS_EL1,
 ]
 
 def test():
@@ -69,7 +72,7 @@ def test():
                     i += 1
     for enc in AUX:
         try:
-            v = u.mrs(enc, call=p.el1_call, silent=True)
+            v = u.mrs(enc, call=p.el1_call, silent=True, region=0)
             if v != BAD:
                 yield enc
         except:
