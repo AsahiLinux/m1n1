@@ -403,6 +403,14 @@ static void mmu_configure(void)
     sysop("isb");
 }
 
+static void mmu_init_sprr(void)
+{
+    msr_sync(SYS_IMP_APL_SPRR_CONFIG_EL1, 1);
+    msr_sync(SYS_IMP_APL_SPRR_PERM_EL0, SPRR_DEFAULT_PERM_EL0);
+    msr_sync(SYS_IMP_APL_SPRR_PERM_EL1, SPRR_DEFAULT_PERM_EL1);
+    msr_sync(SYS_IMP_APL_SPRR_CONFIG_EL1, 0);
+}
+
 void mmu_init(void)
 {
     printf("MMU: Initializing...\n");
@@ -415,6 +423,7 @@ void mmu_init(void)
     mmu_init_pagetables();
     mmu_add_default_mappings();
     mmu_configure();
+    mmu_init_sprr();
 
     // Enable EL0 memory access by EL1
     msr(PAN, 0);
