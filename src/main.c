@@ -71,8 +71,8 @@ void m1n1_main(void)
 
     printf("Running in EL%lu\n\n", mrs(CurrentEL) >> 2);
 
-    mmu_init();
     heapblock_init();
+    mmu_init();
 
 #ifdef USE_FB
     fb_init();
