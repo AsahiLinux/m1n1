@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
-import sys, traceback, struct, array, bisect
+import sys, traceback, struct, array, bisect, os
 
 from asm import ARMAsm
 from tgtypes import *
@@ -47,6 +47,7 @@ class HV:
         SPRR_UNK1_EL1: SPRR_UNK1_EL12,
         SPRR_UNK2_EL1: SPRR_UNK2_EL12,
         APCTL_EL1: APCTL_EL12,
+        APSTS_EL1: APSTS_EL12,
         KERNELKEYLO_EL12: KERNELKEYLO_EL12,
         KERNELKEYHI_EL12: KERNELKEYHI_EL12,
     }
@@ -421,8 +422,9 @@ class HV:
         hcr.IMO = 0
         self.u.msr(HCR_EL2, hcr.value)
 
+        # Trap dangerous things
         hacr = HACR(0)
-        hacr.TRAP_CPU_EXT = 1
+        #hacr.TRAP_CPU_EXT = 1
         #hacr.TRAP_SPRR = 1
         #hacr.TRAP_GXF = 1
         hacr.TRAP_CTRR = 1
@@ -431,9 +433,15 @@ class HV:
         hacr.TRAP_ACC = 1
         self.u.msr(HACR_EL2, hacr.value)
 
+        # Enable AMX
         amx_ctl = AMX_CTL(self.u.mrs(AMX_CTL_EL1))
         amx_ctl.EN_EL1 = 1
         self.u.msr(AMX_CTL_EL1, amx_ctl.value)
+
+        # Set guest AP keys
+        self.u.msr(APVMKEYLO_EL2, 0x4E7672476F6E6147)
+        self.u.msr(APVMKEYHI_EL2, 0x697665596F755570)
+        self.u.msr(APSTS_EL12, 1)
 
         #self.p.hv_map_vuart(0x2_35200000)
 
