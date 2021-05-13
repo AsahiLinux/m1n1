@@ -11,7 +11,7 @@
 #define EL0_STACK_SIZE 0x4000
 
 u8 el0_stack[EL0_STACK_SIZE] ALIGNED(64);
-void *el0_stack_base = (void *)((u64)(&el0_stack[EL0_STACK_SIZE]) + REGION_RW_EL0);
+void *el0_stack_base = (void *)(u64)(&el0_stack[EL0_STACK_SIZE]);
 
 extern char _vectors_start[0];
 extern char _el1_vectors_start[0];

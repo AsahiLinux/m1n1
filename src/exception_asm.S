@@ -109,6 +109,8 @@ el0_call:
 
     ldr x5, =el0_stack_base
     ldr x5, [x5]
+    mov x6, #REGION_RW_EL0
+    orr x5, x5, x6
     msr spsel, #0
     mov sp, x5
 
