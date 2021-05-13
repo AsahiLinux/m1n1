@@ -92,7 +92,6 @@
  */
 
 static u64 hv_L2[ENTRIES_PER_L2_TABLE] ALIGNED(PAGE_SIZE);
-;
 
 void hv_pt_init(void)
 {
