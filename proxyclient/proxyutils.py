@@ -76,7 +76,7 @@ class ProxyUtils(object):
         self.proxy.ic_ivau(self.code_buffer, 8)
 
         self.proxy.set_exc_guard(GUARD.SKIP | (GUARD.SILENT if silent else 0))
-        ret = call(self.code_buffer, r0, r1, r2, r3)
+        ret = call(self.code_buffer | REGION_RX_EL1, r0, r1, r2, r3)
         cnt = self.proxy.get_exc_count()
         self.proxy.set_exc_guard(GUARD.OFF)
         if cnt:

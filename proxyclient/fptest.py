@@ -47,7 +47,7 @@ def test_denormals():
     iface.writemem(data_buffer, struct.pack("<%dI" % len(data), *data))
 
     p.set_exc_guard(GUARD.SKIP)
-    ret = p.el0_call(code_buffer, data_buffer | EL0_REGION)
+    ret = p.el0_call(code_buffer, data_buffer | REGION_RW_EL0)
     p.set_exc_guard(GUARD.OFF)
 
     v1 = p.read32(data_buffer + 8)
