@@ -40,6 +40,7 @@ void *heapblock_alloc(size_t size)
 void *heapblock_alloc_aligned(size_t size, size_t align)
 {
     assert((align & (align - 1)) == 0);
+    assert(heap_base);
 
     uintptr_t block = (((uintptr_t)heap_base) + align - 1) & ~(align - 1);
     heap_base = (void *)(block + size);
