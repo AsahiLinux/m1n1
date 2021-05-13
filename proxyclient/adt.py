@@ -21,7 +21,7 @@ ADT2Tuple = Array(2, Hex(Int64ul))
 ADT3Tuple = Array(3, Hex(Int64ul))
 
 STD_PROPERTIES = {
-    "cpu-impl-reg": GreedyRange(ADT2Tuple),
+    "cpu-impl-reg": ADT2Tuple,
     "name": CString("ascii"),
     "compatible": ADTStringList,
     "model": CString("ascii"),
@@ -32,34 +32,34 @@ STD_PROPERTIES = {
 def parse_prop(node, path, name, v):
     t = None
 
-    if name == "reg":
+    if v == b'' or v is None:
+        return None, None
+
+    if name == "reg" and path != "/device-tree/memory":
         n = node._parent
         while n is not None and n._parent is not None:
             if "ranges" not in n._properties:
                 break
             n = n._parent
         else:
-            try:
-                ac, sc = node._parent.addr_cells, node._parent.size_cells
-                at = Int64ul if ac == 2 else Array(ac, Int32ul)
-                st = Int64ul if sc == 2 else Array(sc, Int32ul)
-                t = GreedyRange(Struct("addr" / at, "size" / st))
-            except:
-                return None, v
+            ac, sc = node._parent.address_cells, node._parent.size_cells
+            at = Hex(Int64ul) if ac == 2 else Array(ac, Hex(Int32ul))
+            st = Hex(Int64ul) if sc == 2 else Array(sc, Hex(Int32ul))
+            t = GreedyRange(Struct("addr" / at, "size" / st))
 
     elif name == "ranges":
         try:
-            ac, sc = node.addr_cells, node.size_cells
-            pac, _ = node._parent.addr_cells, node._parent.size_cells
-            at = Int64ul if ac == 2 else Array(ac, Int32ul)
-            pat = Int64ul if pac == 2 else Array(pac, Int32ul)
-            st = Int64ul if sc == 2 else Array(sc, Int32ul)
-            t = GreedyRange(Struct("bus_addr" / pat, "parent_addr" / at, "size" / st))
-        except:
+            ac, sc = node.address_cells, node.size_cells
+        except KeyError:
             return None, v
+        pac, _ = node._parent.address_cells, node._parent.size_cells
+        at = Hex(Int64ul) if ac == 2 else Array(ac, Hex(Int32ul))
+        pat = Hex(Int64ul) if pac == 2 else Array(pac, Hex(Int32ul))
+        st = Hex(Int64ul) if sc == 2 else Array(sc, Hex(Int32ul))
+        t = GreedyRange(Struct("bus_addr" / pat, "parent_addr" / at, "size" / st))
 
     if t is not None:
-        v = t.parse(v)
+        v = Sequence(t, Terminated).parse(v)[0]
         return t, v
 
     if name in STD_PROPERTIES:
@@ -74,11 +74,13 @@ def parse_prop(node, path, name, v):
         t = ADT2Tuple
 
     if t is not None:
-        v = t.parse(v)
+        v = Sequence(t, Terminated).parse(v)[0]
 
     return t, v
 
 def build_prop(path, name, v, t=None):
+    if v is None:
+        return b''
     if t is not None:
         return t.build(v)
 
@@ -115,7 +117,11 @@ class ADTNode:
             path = self._parent_path + _name
 
             for p in val.properties:
-                self._types[p.name], self._properties[p.name] = parse_prop(self, path, p.name, p.value)
+                try:
+                    self._types[p.name], self._properties[p.name] = parse_prop(self, path, p.name, p.value)
+                except Exception as e:
+                    print(f"Exception parsing {path}.{p.name} value {p.value.hex()}:")
+                    raise
 
             # Second pass
             for k, v in self._types.items():
@@ -177,8 +183,8 @@ class ADTNode:
         del self._properties[attr]
 
     @property
-    def addr_cells(self):
-        return self._properties["#addr-cells"]
+    def address_cells(self):
+        return self._properties["#address-cells"]
 
     @property
     def size_cells(self):
