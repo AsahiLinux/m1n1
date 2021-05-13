@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "memory.h"
+
 .globl exc_sync
 .globl exc_irq
 .globl exc_fiq
@@ -101,6 +103,9 @@ el0_call:
 
     ldr x5, =_el0_thunk
     msr elr_el1, x5
+
+    mov x5, #REGION_RWX_EL0
+    orr x0, x0, x5
 
     ldr x5, =el0_stack_base
     ldr x5, [x5]

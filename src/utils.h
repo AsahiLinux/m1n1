@@ -319,6 +319,7 @@ static inline int is_primary_core(void)
 }
 
 extern char _base[];
+extern char _rodata_end[];
 extern char _end[];
 extern char _payload_start[];
 extern char _payload_end[];

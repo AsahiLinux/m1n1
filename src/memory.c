@@ -57,10 +57,12 @@ static inline void write_sctlr(u64 val)
 
 #define PERM_RO_EL0  PTE_AP_EL0 | PTE_AP_RO | PTE_PXN | PTE_UXN
 #define PERM_RW_EL0  PTE_AP_EL0 | PTE_PXN | PTE_UXN
+#define PERM_RX_EL0  PTE_AP_EL0 | PTE_AP_RO
 #define PERM_RWX_EL0 PTE_AP_EL0
 
 #define PERM_RO  PTE_AP_RO | PTE_PXN | PTE_UXN
 #define PERM_RW  PTE_PXN | PTE_UXN
+#define PERM_RX  PTE_AP_RO | PTE_UXN
 #define PERM_RWX 0
 
 /*
@@ -245,7 +247,7 @@ static void mmu_add_mapping(uintptr_t from, uintptr_t to, size_t size, u8 attrib
 static void mmu_add_default_mappings(void)
 {
     /*
-     * create MMIO mappings. PCIe has to be mapped as nGnRE while MMIO needs nGnRnE.
+     * Create MMIO mappings. PCIe has to be mapped as nGnRE while MMIO needs nGnRnE.
      * see https://lore.kernel.org/linux-arm-kernel/c1bc2a087747c4d9@bloch.sibelius.xs4all.nl/
      */
     mmu_add_mapping(0x0200000000, 0x0200000000, 0x0200000000, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
@@ -256,19 +258,35 @@ static void mmu_add_default_mappings(void)
     mmu_add_mapping(0x06a0000000, 0x06a0000000, 0x0060000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
 
     /*
-     * create identity mapping for 16GB RAM from 0x08_0000_0000 to
-     * 0x0c_0000_0000
+     * Create identity mapping for 16GB RAM from 0x08_0000_0000 to 0x0c_0000_0000
+     * With SPRR enabled, this becomes RW.
      */
     mmu_add_mapping(0x0800000000, 0x0800000000, 0x0400000000, MAIR_IDX_NORMAL, PERM_RWX);
 
     /*
-     * create identity mapping for 16GB RAM from 0x88_0000_0000 to
-     * 0x8c_0000_0000, writable by EL0 (but not executable by EL1)
+     * Create mapping for 16GB RAM from 0x88_0000_0000 to 0x8c_0000_0000,
+     * read/writable/exec by EL0 (but not executable by EL1)
+     * With SPRR enabled, this becomes RX_EL0.
      */
-    mmu_add_mapping(0x8800000000, 0x0800000000, 0x0400000000, MAIR_IDX_NORMAL, PERM_RWX_EL0);
+    mmu_add_mapping(0x0800000000 | REGION_RWX_EL0, 0x0800000000, 0x0400000000, MAIR_IDX_NORMAL,
+                    PERM_RWX_EL0);
+    /*
+     * Create mapping for 16GB RAM from 0x98_0000_0000 to 0x9c_0000_0000,
+     * read/writable by EL0 (but not executable by EL1)
+     * With SPRR enabled, this becomes RW_EL0.
+     */
+    mmu_add_mapping(0x0800000000 | REGION_RW_EL0, 0x0800000000, 0x0400000000, MAIR_IDX_NORMAL,
+                    PERM_RW_EL0);
+    /*
+     * Create mapping for 16GB RAM from 0xa8_0000_0000 to 0xac_0000_0000,
+     * read/executable by EL1
+     * This allows executing from dynamic regions in EL1
+     */
+    mmu_add_mapping(0x0800000000 | REGION_RX_EL1, 0x0800000000, 0x0400000000, MAIR_IDX_NORMAL,
+                    PERM_RX);
 
     /*
-     * create two seperate nGnRnE and nGnRE full mappings of MMIO space
+     * Create two seperate nGnRnE and nGnRE full mappings of MMIO space
      */
     mmu_add_mapping(0xe000000000, 0x0000000000, 0x0800000000, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
     mmu_add_mapping(0xf000000000, 0x0000000000, 0x0800000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
