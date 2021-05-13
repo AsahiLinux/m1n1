@@ -32,18 +32,16 @@ static uint64_t gl_call(void *func, uint64_t a, uint64_t b, uint64_t c, uint64_t
 {
     // disable the MMU first since enabling SPRR will change the meaning of all
     // pagetable permission bits and also prevent us from having rwx pages
-    u64 mmu_state = mmu_disable();
-    u64 sprr_state = mrs(SYS_IMP_APL_SPRR_CONFIG_EL1) & SPRR_CONFIG_EN;
-    reg_set_sync(SYS_IMP_APL_SPRR_CONFIG_EL1, SPRR_CONFIG_EN);
+    u64 sprr_state = mrs(SYS_IMP_APL_SPRR_CONFIG_EL1);
+    reg_set_sync(SYS_IMP_APL_SPRR_CONFIG_EL1, sprr_state | SPRR_CONFIG_EN);
 
-    u64 gxf_state = mrs(SYS_IMP_APL_GXF_CONFIG_EL1) & GXF_CONFIG_EN;
-    reg_set_sync(SYS_IMP_APL_GXF_CONFIG_EL1, GXF_CONFIG_EN);
+    u64 gxf_state = mrs(SYS_IMP_APL_GXF_CONFIG_EL1);
+    reg_set_sync(SYS_IMP_APL_GXF_CONFIG_EL1, gxf_state | GXF_CONFIG_EN);
 
     uint64_t ret = gxf_enter(func, a, b, c, d);
 
     msr_sync(SYS_IMP_APL_GXF_CONFIG_EL1, gxf_state);
     msr_sync(SYS_IMP_APL_SPRR_CONFIG_EL1, sprr_state);
-    mmu_restore(mmu_state);
 
     return ret;
 }
@@ -78,9 +76,8 @@ uint64_t gl1_call(void *func, uint64_t a, uint64_t b, uint64_t c, uint64_t d)
     args.d = d;
 
     // enable EL1 here since once GXF has been enabled HCR_EL2 writes are only possible from GL2
-    reg_clr(HCR_EL2, BIT(27));
+    reg_clr(HCR_EL2, HCR_TGE);
 
-    u64 mmu_state = mmu_disable();
     u64 sprr_state = mrs(SYS_IMP_APL_SPRR_CONFIG_EL1) & SPRR_CONFIG_EN;
     reg_set_sync(SYS_IMP_APL_SPRR_CONFIG_EL1, SPRR_CONFIG_EN);
 
@@ -91,7 +88,6 @@ uint64_t gl1_call(void *func, uint64_t a, uint64_t b, uint64_t c, uint64_t d)
 
     msr_sync(SYS_IMP_APL_GXF_CONFIG_EL1, gxf_state);
     msr_sync(SYS_IMP_APL_SPRR_CONFIG_EL1, sprr_state);
-    mmu_restore(mmu_state);
 
     return ret;
 }
