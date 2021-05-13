@@ -46,6 +46,9 @@ class HV:
         SPRR_PERM_EL0: SPRR_PERM_EL02,
         SPRR_UNK1_EL1: SPRR_UNK1_EL12,
         SPRR_UNK2_EL1: SPRR_UNK2_EL12,
+        APCTL_EL1: APCTL_EL12,
+        KERNELKEYLO_EL12: KERNELKEYLO_EL12,
+        KERNELKEYHI_EL12: KERNELKEYHI_EL12,
     }
 
     def __init__(self, iface, proxy, utils):
