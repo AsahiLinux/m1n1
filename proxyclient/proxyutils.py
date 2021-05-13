@@ -62,14 +62,12 @@ class ProxyUtils(object):
         if call is None:
             call = self.proxy.call
         if isinstance(op, int):
-            func = struct.pack("<I", op)
+            func = struct.pack("<II", op, 0xd65f03c0) # ret
         elif isinstance(op, str):
-            c = ARMAsm(op, self.code_buffer)
+            c = ARMAsm(op + "; ret", self.code_buffer)
             func = c.data
         else:
             raise ValueError()
-
-        func += struct.pack("<I", 0xd65f03c0) # ret
 
         self.iface.writemem(self.code_buffer, func)
         self.proxy.dc_cvau(self.code_buffer, 8)
