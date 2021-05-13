@@ -3,6 +3,7 @@
 import argparse, pathlib
 
 parser = argparse.ArgumentParser(description='Run a Mach-O payload under the hypervisor')
+parser.add_argument('-s', '--symbols', type=pathlib.Path)
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
@@ -25,5 +26,8 @@ if len(args.boot_args) > 0:
     boot_args = " ".join(args.boot_args)
     hv.set_bootargs(boot_args)
 
-hv.load_macho(args.payload.read_bytes())
+symfile = None
+if args.symbols:
+    symfile = args.symbols.open("rb")
+hv.load_macho(args.payload.open("rb"), symfile=symfile)
 hv.start()
