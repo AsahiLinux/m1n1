@@ -39,6 +39,8 @@
 #define VADDR_L3_OFFSET_BITS 14
 #define VADDR_L2_OFFSET_BITS 25
 
+#define VADDR_BITS 36
+
 #define VADDR_L2_ALIGN_MASK GENMASK(VADDR_L2_OFFSET_BITS - 1, VADDR_L3_OFFSET_BITS)
 #define VADDR_L3_ALIGN_MASK GENMASK(VADDR_L3_OFFSET_BITS - 1, VADDR_L4_OFFSET_BITS)
 #define PTE_TARGET_MASK     GENMASK(49, VADDR_L3_OFFSET_BITS)
@@ -523,6 +525,10 @@ bool hv_handle_dabort(u64 *regs)
 
     if (!ipa)
         return false;
+    if (ipa >= BIT(VADDR_BITS)) {
+        printf("hv_handle_abort(): IPA out of bounds: 0x%0lx -> 0x%lx\n", far, ipa);
+        return false;
+    }
 
     u64 pte = hv_pt_walk(ipa);
 
