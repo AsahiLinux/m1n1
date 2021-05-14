@@ -370,6 +370,8 @@ class IODEV(IntEnum):
     FB = 1
     USB0 = 2
     USB1 = 3
+    USB0_SEC = 4
+    USB1_SEC = 5
 
 class USAGE(IntFlag):
     CONSOLE = (1 << 0)
@@ -850,8 +852,8 @@ class M1N1Proxy:
         return self.request(self.P_HV_TRANSLATE, addr, s1, w)
     def hv_pt_walk(self, addr):
         return self.request(self.P_HV_PT_WALK, addr)
-    def hv_map_vuart(self, base):
-        return self.request(self.P_HV_MAP_VUART, base)
+    def hv_map_vuart(self, base, iodev):
+        return self.request(self.P_HV_MAP_VUART, base, iodev)
 
     def fb_init(self):
         return self.request(self.P_FB_INIT)

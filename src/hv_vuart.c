@@ -1,26 +1,21 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "hv.h"
-#include "iodev.h"
 #include "uart_regs.h"
+
+static iodev_id_t vuart_iodev;
 
 bool handle_vuart(u64 addr, u64 *val, bool write, int width)
 {
     UNUSED(width);
-    static bool newline = true;
     addr &= 0xfff;
 
     if (write) {
         switch (addr) {
             case UTXH: {
                 uint8_t b = *val;
-                if (newline) {
-                    iodev_console_write("EL1> ", 5);
-                    newline = false;
-                }
-                if (b == '\n')
-                    newline = true;
-                iodev_console_write(&b, 1);
+                if (iodev_can_write(vuart_iodev))
+                    iodev_write(vuart_iodev, &b, 1);
                 break;
             }
         }
@@ -40,7 +35,8 @@ bool handle_vuart(u64 addr, u64 *val, bool write, int width)
     return true;
 }
 
-void hv_map_vuart(u64 base)
+void hv_map_vuart(u64 base, iodev_id_t iodev)
 {
     hv_map_hook(base, handle_vuart, 0x1000);
+    vuart_iodev = iodev;
 }
