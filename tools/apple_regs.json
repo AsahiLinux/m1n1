@@ -78,8 +78,9 @@
         ]}]},
     {"index": 0, "name": "SPRR_PERM_EL20_SILLY_THING",  "fullname": "SPRR Permission Configuration Register (EL20, useless)",       "enc": [3, 4, 15, 5, 1  ], "width": 64},
     {"index": 0, "name": "SPRR_PERM_EL02",              "fullname": "SPRR Permission Configuration Register (EL02)",                "enc": [3, 4, 15, 5, 2  ], "width": 64},
-    {"index": 0, "name": "SPRR_UNK2_EL2",               "fullname": "SPRR Unknown 2 (EL2)",                                         "enc": [3, 4, 15, 7, 0  ], "width": 64},
-    {"index": 0, "name": "SPRR_UNK2_EL12",              "fullname": "SPRR Unknown 2 (EL12)",                                        "enc": [3, 4, 15, 8, 0  ], "width": 64},
+    {"index": 0, "name": "SPRR_KMASK_EL12",             "fullname": "SPRR Kernel Permission Unlock Mask (EL12)",                    "enc": [3, 4, 15, 6, 0  ], "width": 32},
+    {"index": 0, "name": "SPRR_UMASK_EL2",              "fullname": "SPRR Permission Unlock Mask (EL2)",                            "enc": [3, 4, 15, 7, 0  ], "width": 32},
+    {"index": 0, "name": "SPRR_UMASK_EL12",             "fullname": "SPRR Permission Unlock Mask (EL12)",                           "enc": [3, 4, 15, 8, 0  ], "width": 32},
     {"index": 0, "name": "CNTVCT_ALIAS_EL0",            "fullname": "Physical timer counter register",                              "enc": [3, 4, 15, 10, 6 ], "width": 64},
     {"index": 0, "name": "CTRR_A_LWR_EL2",              "fullname": "CTRR A Lower Address (EL2)",                                   "enc": [3, 4, 15, 11, 0 ], "width": 64},
     {"index": 0, "name": "CTRR_A_UPR_EL2",              "fullname": "CTRR A Upper Address (EL2)",                                   "enc": [3, 4, 15, 11, 1 ], "width": 64},
@@ -101,8 +102,8 @@
         "fieldsets": [{"fields": [
             {"name": "EN",                              "msb": 0, "lsb": 0},
             {"name": "LOCK_CONFIG",                     "msb": 1, "lsb": 1},
-            {"name": "LOCK_PERM_EL0",                   "msb": 4, "lsb": 4},
-            {"name": "LOCK_PERM_EL1",                   "msb": 5, "lsb": 5}
+            {"name": "LOCK_PERM",                       "msb": 4, "lsb": 4},
+            {"name": "LOCK_KERNEL_PERM",                "msb": 5, "lsb": 5}
         ]}]},
     {"index": 0, "name": "GXF_CONFIG_EL1",              "fullname": "GXF Configuration Register (EL1)",                             "enc": [3, 6, 15, 1, 2  ], "width": 64,
         "fieldsets": [{"fields": [
@@ -119,7 +120,9 @@
     {"index": 0, "name": "KERNELKEYHI_EL12",            "fullname": "Pointer Authentication Kernel Key High (EL12)",                "enc": [3, 6, 15, 2, 4  ], "width": 64},
     {"index": 0, "name": "AFPCR_EL0",                   "fullname": "Apple Floating-Point Control Register",                        "enc": [3, 6, 15, 2, 5  ], "width": 64},
     {"index": 0, "name": "AIDR2_EL1",                   "fullname": "Apple ID Register 2",                                          "enc": [3, 6, 15, 2, 7  ], "width": 64},
-    {"index": 0, "name": "SPRR_UNK2_EL1",               "fullname": "SPRR Unknown 2 (EL1)",                                         "enc": [3, 6, 15, 3, 0  ], "width": 64},
+    {"index": 0, "name": "SPRR_UMASK_EL1",              "fullname": "SPRR Permission Unlock Mask (EL1)",                            "enc": [3, 6, 15, 3, 0  ], "width": 32},
+    {"index": 0, "name": "SPRR_KMASK_EL1",              "fullname": "SPRR Kernel Permission Unlock Mask (EL1)",                     "enc": [3, 6, 15, 3, 1  ], "width": 32},
+    {"index": 0, "name": "SPRR_KMASK_EL2",              "fullname": "SPRR Kernel Permission Unlock Mask (EL2)",                     "enc": [3, 6, 15, 3, 2  ], "width": 32},
     {"index": 0, "name": "APIAKeyLo_EL12",              "fullname": "Pointer Authentication Key A for Instruction Low (EL12)",      "enc": [3, 6, 15, 7, 0  ], "width": 64},
     {"index": 0, "name": "APIAKeyHi_EL12",              "fullname": "Pointer Authentication Key A for Instruction High (EL12)",     "enc": [3, 6, 15, 7, 1  ], "width": 64},
     {"index": 0, "name": "APIBKeyLo_EL12",              "fullname": "Pointer Authentication Key A for Instruction Low (EL12)",      "enc": [3, 6, 15, 7, 2  ], "width": 64},
