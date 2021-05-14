@@ -149,12 +149,49 @@ dwc3_dev_t *usb_bringup(u32 idx)
     return usb_dwc3_init(usb_regs.drd_regs, usb_dart);
 }
 
+#define USB_IODEV_WRAPPER(name, pipe)                                                              \
+    static bool usb_##name##_can_read(void *dev)                                                   \
+    {                                                                                              \
+        return usb_dwc3_can_read(dev, pipe);                                                       \
+    }                                                                                              \
+                                                                                                   \
+    static bool usb_##name##_can_write(void *dev)                                                  \
+    {                                                                                              \
+        return usb_dwc3_can_write(dev, pipe);                                                      \
+    }                                                                                              \
+                                                                                                   \
+    static ssize_t usb_##name##_read(void *dev, void *buf, size_t count)                           \
+    {                                                                                              \
+        return usb_dwc3_read(dev, pipe, buf, count);                                               \
+    }                                                                                              \
+                                                                                                   \
+    static ssize_t usb_##name##_write(void *dev, const void *buf, size_t count)                    \
+    {                                                                                              \
+        return usb_dwc3_write(dev, pipe, buf, count);                                              \
+    }                                                                                              \
+                                                                                                   \
+    static void usb_##name##_handle_events(void *dev)                                              \
+    {                                                                                              \
+        usb_dwc3_handle_events(dev);                                                               \
+    }
+
+USB_IODEV_WRAPPER(0, CDC_ACM_PIPE_0)
+USB_IODEV_WRAPPER(1, CDC_ACM_PIPE_1)
+
 static struct iodev_ops iodev_usb_ops = {
-    .can_read = (bool (*)(void *))usb_dwc3_can_read,
-    .can_write = (bool (*)(void *))usb_dwc3_can_write,
-    .read = (ssize_t(*)(void *, void *, size_t))usb_dwc3_read,
-    .write = (ssize_t(*)(void *, const void *, size_t))usb_dwc3_write,
-    .handle_events = (void (*)(void *))usb_dwc3_handle_events,
+    .can_read = usb_0_can_read,
+    .can_write = usb_0_can_write,
+    .read = usb_0_read,
+    .write = usb_0_write,
+    .handle_events = usb_0_handle_events,
+};
+
+static struct iodev_ops iodev_usb_sec_ops = {
+    .can_read = usb_1_can_read,
+    .can_write = usb_1_can_write,
+    .read = usb_1_read,
+    .write = usb_1_write,
+    .handle_events = usb_1_handle_events,
 };
 
 struct iodev iodev_usb[USB_INSTANCES] = {
@@ -168,12 +205,25 @@ struct iodev iodev_usb[USB_INSTANCES] = {
     },
 };
 
+struct iodev iodev_usb_sec[USB_INSTANCES] = {
+    {
+        .ops = &iodev_usb_sec_ops,
+        .usage = 0,
+    },
+    {
+        .ops = &iodev_usb_sec_ops,
+        .usage = 0,
+    },
+};
+
 void usb_init(void)
 {
     for (int i = 0; i < USB_INSTANCES; i++) {
         iodev_usb[i].opaque = usb_bringup(i);
         if (!iodev_usb[i].opaque)
             continue;
+
+        iodev_usb_sec[i].opaque = iodev_usb[i].opaque;
 
         printf("USB%d: initialized at %p\n", i, iodev_usb[i].opaque);
     }
@@ -187,5 +237,8 @@ void usb_shutdown(void)
 
         printf("USB%d: shutdown\n", i);
         usb_dwc3_shutdown(iodev_usb[i].opaque);
+
+        iodev_usb[i].opaque = NULL;
+        iodev_usb_sec[i].opaque = NULL;
     }
 }
