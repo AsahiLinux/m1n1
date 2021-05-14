@@ -157,6 +157,8 @@ static u64 *hv_pt_get_l3(u64 from)
             l3d &= ~PTE_TYPE;
             l3d |= FIELD_PREP(PTE_TYPE, PTE_PAGE);
             incr = BIT(VADDR_L3_OFFSET_BITS);
+        } else if (IS_SW(l2d) && FIELD_GET(SPTE_TYPE, l3d) == SPTE_MAP) {
+            incr = BIT(VADDR_L3_OFFSET_BITS);
         }
         for (u64 idx = 0; idx < ENTRIES_PER_L3_TABLE; idx++, l3d += incr)
             l3[idx] = l3d;
