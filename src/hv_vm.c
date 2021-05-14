@@ -122,7 +122,7 @@ static void hv_pt_free_l3(u64 *l3)
 static void hv_pt_map_l2(u64 from, u64 to, u64 size, u64 incr)
 {
     assert((from & MASK(VADDR_L2_OFFSET_BITS)) == 0);
-    assert((IS_SW(to) || to & PTE_TARGET_MASK & MASK(VADDR_L2_OFFSET_BITS)) == 0);
+    assert(IS_SW(to) || (to & PTE_TARGET_MASK & MASK(VADDR_L2_OFFSET_BITS)) == 0);
     assert((size & MASK(VADDR_L2_OFFSET_BITS)) == 0);
 
     to |= FIELD_PREP(PTE_TYPE, PTE_BLOCK);
@@ -512,7 +512,6 @@ bool hv_handle_dabort(u64 *regs)
     }
 
     assert(IS_SW(pte));
-    assert(FIELD_GET(PTE_TYPE, pte) == PTE_PAGE);
 
     u64 target = pte & PTE_TARGET_MASK_L4;
     u64 paddr = target | (far & MASK(VADDR_L4_OFFSET_BITS));
