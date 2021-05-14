@@ -382,7 +382,7 @@ u64 hv_pt_walk(u64 addr)
 
     if (!L2_IS_TABLE(l2d)) {
         if (L2_IS_SW_BLOCK(l2d) || L2_IS_HW_BLOCK(l2d))
-            l2d |= addr & VADDR_L2_ALIGN_MASK;
+            l2d |= addr & (VADDR_L2_ALIGN_MASK | VADDR_L3_ALIGN_MASK);
 
         dprintf("  result: 0x%lx\n", l2d);
         return l2d;
@@ -416,34 +416,51 @@ u64 hv_pt_walk(u64 addr)
 #define CHECK_RN                                                                                   \
     if (Rn == 31)                                                                                  \
     goto bail
+#define CHECK_RT                                                                                   \
+    if (Rt == 31)                                                                                  \
+    return true
+
 #define EXT(n, b) (((s32)(((u32)(n)) << (32 - (b)))) >> (32 - (b)))
 
 static bool emulate_load(u64 *regs, u32 insn, u64 val, u64 width)
 {
     u64 Rt = insn & 0x1f;
     u64 Rn = (insn >> 5) & 0x1f;
-    // u64 Rm = (insn >> 16) & 0x1f;
     u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
 
     if ((insn & 0x3fe00400) == 0x38400400) {
         // LDRx (immediate) Pre/Post-index
         CHECK_WIDTH;
         CHECK_RN;
-        regs[Rt] = val;
         regs[Rn] += imm9;
+        CHECK_RT;
+        regs[Rt] = val;
     } else if ((insn & 0x3fc00000) == 0x39400000) {
         // LDRx (immediate) Unsigned offset
         CHECK_WIDTH;
+        CHECK_RT;
         regs[Rt] = val;
     } else if ((insn & 0x3fa00400) == 0x38800400) {
         // LDRSx (immediate) Pre/Post-index
         CHECK_WIDTH;
         CHECK_RN;
-        regs[Rt] = EXT(val, 8 << width);
         regs[Rn] += imm9;
+        CHECK_RT;
+        regs[Rt] = EXT(val, 8 << width);
     } else if ((insn & 0x3fa00000) == 0x39800000) {
         // LDRSx (immediate) Unsigned offset
         CHECK_WIDTH;
+        CHECK_RT;
+        regs[Rt] = EXT(val, 8 << width);
+    } else if ((insn & 0x3fe04c00) == 0x38604800) {
+        // LDRx (register)
+        CHECK_WIDTH;
+        CHECK_RT;
+        regs[Rt] = val;
+    } else if ((insn & 0x3fa04c00) == 0x38a04800) {
+        // LDRSx (register)
+        CHECK_WIDTH;
+        CHECK_RT;
         regs[Rt] = EXT(val, 8 << width);
     } else {
         goto bail;
@@ -461,18 +478,24 @@ static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 width)
 {
     u64 Rt = insn & 0x1f;
     u64 Rn = (insn >> 5) & 0x1f;
-    // u64 Rm = (insn >> 16) & 0x1f;
     u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
 
     if ((insn & 0x3fe00400) == 0x38000400) {
         // STRx (immediate) Pre/Post-index
         CHECK_WIDTH;
         CHECK_RN;
-        *val = regs[Rt];
         regs[Rn] += imm9;
+        CHECK_RT;
+        *val = regs[Rt];
     } else if ((insn & 0x3fc00000) == 0x39000000) {
         // STRx (immediate) Unsigned offset
         CHECK_WIDTH;
+        CHECK_RT;
+        *val = regs[Rt];
+    } else if ((insn & 0x3fe04c00) == 0x38204800) {
+        // STRx (register)
+        CHECK_WIDTH;
+        CHECK_RT;
         *val = regs[Rt];
     } else {
         goto bail;
@@ -526,7 +549,7 @@ bool hv_handle_dabort(u64 *regs)
     }
 
     u32 insn = read32(elr_pa);
-    u64 val;
+    u64 val = 0;
 
     if (esr & ESR_ISS_DABORT_WnR) {
         if (!emulate_store(regs, insn, &val, width))
