@@ -453,9 +453,15 @@ class HV:
 
     def setup_adt(self):
         if self.iodev in (IODEV.USB0, IODEV.USB1):
-            idx = str(self.iodev)[-1]
-            for prefix in ("dart-usb", "atc-phy", "usb-drd"):
-                name = f"{prefix}{idx}"
+            idx = int(str(self.iodev)[-1])
+            for prefix in ("dart-usb%d",
+                           "atc-phy%d",
+                           "usb-drd%d",
+                           "acio%d",
+                           "apciec%d",
+                           "dart-apciec%d",
+                           "apciec%d-piodma"):
+                name = prefix % idx
                 print(f"Removing ADT node /arm-io/{name}")
                 try:
                     del self.adt["arm-io"][name]
