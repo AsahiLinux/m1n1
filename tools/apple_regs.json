@@ -104,7 +104,7 @@
             {"name": "LOCK_PERM_EL0",                   "msb": 4, "lsb": 4},
             {"name": "LOCK_PERM_EL1",                   "msb": 5, "lsb": 5}
         ]}]},
-    {"index": 0, "name": "GXF_CONFIG_EL1",              "fullname": "GXF Configuration Register (EL3)",                             "enc": [3, 6, 15, 1, 2  ], "width": 64,
+    {"index": 0, "name": "GXF_CONFIG_EL1",              "fullname": "GXF Configuration Register (EL1)",                             "enc": [3, 6, 15, 1, 2  ], "width": 64,
         "fieldsets": [{"fields": [
             {"name": "EN",                              "msb": 0, "lsb": 0}
         ]}]},
