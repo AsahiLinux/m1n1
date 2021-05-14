@@ -125,11 +125,11 @@
 #define UPMSR_IACT        (BIT(0))
 
 /* SPRR and GXF registers */
-#define SYS_IMP_APL_SPRR_CONFIG_EL1 sys_reg(3, 6, 15, 1, 0)
-#define SPRR_CONFIG_EN              BIT(0)
-#define SPRR_CONFIG_LOCK_CONFIG     BIT(1)
-#define SPRR_CONFIG_LOCK_PERM_EL0   BIT(4)
-#define SPRR_CONFIG_LOCK_PERM_EL1   BIT(5)
+#define SYS_IMP_APL_SPRR_CONFIG_EL1  sys_reg(3, 6, 15, 1, 0)
+#define SPRR_CONFIG_EN               BIT(0)
+#define SPRR_CONFIG_LOCK_CONFIG      BIT(1)
+#define SPRR_CONFIG_LOCK_PERM        BIT(4)
+#define SPRR_CONFIG_LOCK_KERNEL_PERM BIT(5)
 
 #define SYS_IMP_APL_GXF_CONFIG_EL1 sys_reg(3, 6, 15, 1, 2)
 #define GXF_CONFIG_EN              BIT(0)
