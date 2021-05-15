@@ -49,12 +49,15 @@
 #define ENTRIES_PER_L3_TABLE BIT(VADDR_L3_INDEX_BITS)
 #define ENTRIES_PER_L4_TABLE BIT(VADDR_L4_INDEX_BITS)
 
-#define SPTE_TRACE_READ  BIT(63)
-#define SPTE_TRACE_WRITE BIT(62)
-#define SPTE_SYNC_TRACE  BIT(61)
-#define SPTE_TYPE        BIT(50)
-#define SPTE_MAP         0
-#define SPTE_HOOK        1
+#define SPTE_TRACE_READ    BIT(63)
+#define SPTE_TRACE_WRITE   BIT(62)
+#define SPTE_SYNC_TRACE    BIT(61)
+#define SPTE_TYPE          GENMASK(52, 50)
+#define SPTE_MAP           0
+#define SPTE_HOOK          1
+#define SPTE_PROXY_HOOK_R  2
+#define SPTE_PROXY_HOOK_W  3
+#define SPTE_PROXY_HOOK_RW 4
 
 #define IS_HW(pte) ((pte) && pte & PTE_VALID)
 #define IS_SW(pte) ((pte) && !(pte & PTE_VALID))
@@ -332,6 +335,12 @@ int hv_map_hook(u64 from, hv_hook_t *hook, u64 size)
     return hv_map(from, ((u64)hook) | FIELD_PREP(SPTE_TYPE, SPTE_HOOK), size, 0);
 }
 
+int hv_map_proxy_hook(u64 from, u64 id, u64 size)
+{
+    return hv_map(from, FIELD_PREP(PTE_TARGET_MASK_L4, id) | FIELD_PREP(SPTE_TYPE, SPTE_HOOK), size,
+                  0);
+}
+
 u64 hv_translate(u64 addr, bool s1, bool w)
 {
     if (!(mrs(SCTLR_EL12) & SCTLR_M))
@@ -585,6 +594,9 @@ bool hv_handle_dabort(u64 *regs)
         }
 
         switch (FIELD_GET(SPTE_TYPE, pte)) {
+            case SPTE_PROXY_HOOK_R:
+                paddr = ipa;
+                // fallthrough
             case SPTE_MAP:
                 dprintf("HV: SPTE_MAP[W] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr_pa, far, paddr,
                         1 << width, val);
@@ -611,11 +623,26 @@ bool hv_handle_dabort(u64 *regs)
                         ipa, 1 << width, hook, val);
                 break;
             }
+            case SPTE_PROXY_HOOK_RW:
+            case SPTE_PROXY_HOOK_W: {
+                struct hv_vm_proxy_hook_data hook = {
+                    .flags = FIELD_PREP(MMIO_EVT_WIDTH, width) | MMIO_EVT_WRITE,
+                    .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
+                    .addr = ipa,
+                    .data = val,
+                };
+                hv_exc_proxy(regs, START_HV_HOOK, HV_HOOK_VM, &hook);
+                break;
+            }
             default:
+                printf("HV: invalid SPTE 0x%016lx for IPA 0x%lx\n", pte, ipa);
                 return false;
         }
     } else {
         switch (FIELD_GET(SPTE_TYPE, pte)) {
+            case SPTE_PROXY_HOOK_W:
+                paddr = ipa;
+                // fallthrough
             case SPTE_MAP:
                 switch (width) {
                     case SAS_8B:
@@ -642,7 +669,19 @@ bool hv_handle_dabort(u64 *regs)
                 dprintf("HV: SPTE_HOOK[R] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr_pa, far,
                         ipa, 1 << width, hook, val);
                 break;
+            case SPTE_PROXY_HOOK_RW:
+            case SPTE_PROXY_HOOK_R: {
+                struct hv_vm_proxy_hook_data hook = {
+                    .flags = FIELD_PREP(MMIO_EVT_WIDTH, width),
+                    .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
+                    .addr = ipa,
+                };
+                hv_exc_proxy(regs, START_HV_HOOK, HV_HOOK_VM, &hook);
+                val = hook.data;
+                break;
+            }
             default:
+                printf("HV: invalid SPTE 0x%016lx for IPA 0x%lx\n", pte, ipa);
                 return false;
         }
 

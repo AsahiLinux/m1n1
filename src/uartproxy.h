@@ -11,6 +11,7 @@ typedef enum _uartproxy_start_reason_t {
     START_BOOT,
     START_EXCEPTION,
     START_EXCEPTION_LOWER,
+    START_HV_HOOK,
 } uartproxy_boot_reason_t;
 
 typedef enum _uartproxy_exc_code_t {
@@ -42,6 +43,7 @@ struct uartproxy_exc_info {
     u64 elr_phys;
     u64 far_phys;
     u64 sp_phys;
+    void *extra;
 };
 
 struct uartproxy_msg_start {

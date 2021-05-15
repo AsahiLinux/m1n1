@@ -29,6 +29,16 @@ EvtMMIOTrace = Struct(
     "data" / Hex(Int64ul),
 )
 
+class HOOK(IntEnum):
+    VM = 1
+
+VMProxyHookData = Struct(
+    "flags" / RegAdapter(MMIOTraceFlags),
+    "id" / Int32ul,
+    "addr" / Hex(Int64ul),
+    "data" / Hex(Int64ul),
+)
+
 class HV:
     PTE_VALID               = 1 << 0
 
@@ -43,6 +53,9 @@ class HV:
     SPTE_SYNC_TRACE         = 1 << 61
     SPTE_MAP                = 0 << 50
     SPTE_HOOK               = 1 << 50
+    SPTE_PROXY_HOOK_R       = 2 << 50
+    SPTE_PROXY_HOOK_W       = 3 << 50
+    SPTE_PROXY_HOOK_RW      = 4 << 50
 
     MSR_REDIRECTS = {
         SCTLR_EL1: SCTLR_EL12,
@@ -80,6 +93,7 @@ class HV:
         self.sym_offset = 0
         self.symbols = []
         self.sysreg = {}
+        self.vm_hooks = []
 
     def unmap(self, ipa, size):
         assert self.p.hv_map(ipa, 0, size, 0) >= 0
@@ -89,6 +103,21 @@ class HV:
 
     def map_sw(self, ipa, pa, size):
         assert self.p.hv_map(ipa, pa | self.SPTE_MAP, size, 1) >= 0
+
+    def map_hook(self, ipa, size, read=None, write=None, **kwargs):
+        if read is not None:
+            if write is not None:
+                t = self.SPTE_PROXY_HOOK_RW
+            else:
+                t = self.SPTE_PROXY_HOOK_R
+        elif write is not None:
+            t = self.SPTE_PROXY_HOOK_W
+        else:
+            assert False
+
+        index = len(self.vm_hooks)
+        self.vm_hooks.append((read, write, ipa, kwargs))
+        assert self.p.hv_map(ipa, (index << 2) | t, size, 1) >= 0
 
     def addr(self, addr):
         unslid_addr = addr + self.sym_offset
@@ -123,6 +152,19 @@ class HV:
             t = "R"
 
         print(f"[0x{evt.pc:016x}] MMIO: {t} 0x{evt.addr:x} = 0x{evt.data:x}")
+
+    def handle_vm_hook(self, ctx):
+        data = self.iface.readstruct(ctx.data, VMProxyHookData)
+
+        rfunc, wfunc, base, kwargs = self.vm_hooks[data.id]
+
+        if data.flags.WRITE:
+            wfunc(base, data.addr - base, data.data, 1 << data.flags.WIDTH, **kwargs)
+        else:
+            val = rfunc(base, data.addr - base, 1 << data.flags.WIDTH, **kwargs)
+            self.p.write64(ctx.data + 16, val)
+
+        return True
 
     def handle_msr(self, ctx, iss=None):
         if iss is None:
@@ -282,17 +324,23 @@ class HV:
             return self.handle_hvc(ctx)
 
     def handle_exception(self, reason, code, info):
-        self.ctx = ctx = ExcInfo.parse(self.iface.readmem(info, ExcInfo.sizeof()))
+        info_data = self.iface.readmem(info, ExcInfo.sizeof())
+        self.ctx = ctx = ExcInfo.parse(info_data)
 
         handled = False
 
         try:
-            if code == EXC.SYNC:
-                handled = self.handle_sync(ctx)
-            elif code == EXC.FIQ:
-                self.u.msr(CNTV_CTL_EL0, 0)
-                self.u.print_exception(code, ctx)
-                handled = True
+            if reason == START.EXCEPTION_LOWER:
+                if code == EXC.SYNC:
+                    handled = self.handle_sync(ctx)
+                elif code == EXC.FIQ:
+                    self.u.msr(CNTV_CTL_EL0, 0)
+                    self.u.print_exception(code, ctx)
+                    handled = True
+            elif reason == START.HV_HOOK:
+                code = HOOK(code)
+                if code == HOOK.VM:
+                    handled = self.handle_vm_hook(ctx)
         except Exception as e:
             print(f"Python exception while handling guest exception:")
             traceback.print_exc()
@@ -300,7 +348,7 @@ class HV:
         if handled:
             ret = EXC_RET.HANDLED
         else:
-            print(f"Guest exception: {code.name}")
+            print(f"Guest exception: {reason.name}/{code.name}")
 
             self.u.print_exception(code, ctx)
 
@@ -321,7 +369,9 @@ class HV:
             if ret is None:
                 ret = EXC_RET.EXIT_GUEST
 
-        self.iface.writemem(info, ExcInfo.build(self.ctx))
+        new_info = ExcInfo.build(self.ctx)
+        if new_info != info_data:
+            self.iface.writemem(info, new_info)
 
         if ret == EXC_RET.HANDLED and self.step:
             ret = EXC_RET.STEP
@@ -437,6 +487,7 @@ class HV:
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.IRQ, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.FIQ, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.SERROR, self.handle_exception)
+        self.iface.set_handler(START.HV_HOOK, HOOK.VM, self.handle_exception)
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
 
         self.map_hw(0x2_00000000, 0x2_00000000, 0x5_00000000)

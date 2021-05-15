@@ -9,7 +9,7 @@
 
 void hv_exit_guest(void) __attribute__((noreturn));
 
-static void hv_exc_proxy(u64 *regs, uartproxy_exc_code_t type)
+void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_t type, void *extra)
 {
     int from_el = FIELD_GET(SPSR_M, mrs(SPSR_EL2)) >> 2;
 
@@ -23,11 +23,12 @@ static void hv_exc_proxy(u64 *regs, uartproxy_exc_code_t type)
         .elr_phys = hv_translate(mrs(ELR_EL2), false, false),
         .far_phys = hv_translate(mrs(FAR_EL2), false, false),
         .sp_phys = hv_translate(from_el == 0 ? mrs(SP_EL0) : mrs(SP_EL1), false, false),
+        .extra = extra,
     };
     memcpy(exc_info.regs, regs, sizeof(exc_info.regs));
 
     struct uartproxy_msg_start start = {
-        .reason = START_EXCEPTION_LOWER,
+        .reason = reason,
         .code = type,
         .info = &exc_info,
     };
@@ -68,20 +69,20 @@ void hv_exc_sync(u64 *regs)
             break;
     }
 
-    hv_exc_proxy(regs, EXC_SYNC);
+    hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_SYNC, NULL);
 }
 
 void hv_exc_irq(u64 *regs)
 {
-    hv_exc_proxy(regs, EXC_IRQ);
+    hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_IRQ, NULL);
 }
 
 void hv_exc_fiq(u64 *regs)
 {
-    hv_exc_proxy(regs, EXC_FIQ);
+    hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_FIQ, NULL);
 }
 
 void hv_exc_serr(u64 *regs)
 {
-    hv_exc_proxy(regs, EXC_SERROR);
+    hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_SERROR, NULL);
 }
