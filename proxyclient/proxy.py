@@ -87,6 +87,9 @@ class EXC(IntEnum):
     FIQ = 2
     SERROR = 3
 
+class EVENT(IntEnum):
+    MMIOTRACE = 1
+
 class EXC_RET(IntEnum):
     UNHANDLED = 1
     HANDLED = 2
@@ -112,6 +115,7 @@ class UartInterface:
     REQ_MEMREAD = 0x02AA55FF
     REQ_MEMWRITE = 0x03AA55FF
     REQ_BOOT = 0x04AA55FF
+    REQ_EVENT = 0x05AA55FF
 
     ST_OK = 0
     ST_BADCMD = -1
@@ -121,6 +125,7 @@ class UartInterface:
 
     CMD_LEN = 56
     REPLY_LEN = 36
+    EVENT_HDR_LEN = 8
 
     def __init__(self, device=None, debug=False):
         self.debug = debug
@@ -148,6 +153,7 @@ class UartInterface:
         self.dev.timeout = 3
         self.tty_enable = True
         self.handlers = {}
+        self.evt_handlers = {}
 
     def checksum(self, data):
         sum = 0xDEADBEEF;
@@ -238,10 +244,24 @@ class UartInterface:
             if reply != b"\xff\x55\xaa":
                 self.unkhandler(reply)
                 continue
-            reply += self.readfull(self.REPLY_LEN - 3)
+            reply += self.readfull(1)
+            cmdin = struct.unpack("<I", reply)[0]
+            if cmdin == self.REQ_EVENT:
+                reply += self.readfull(self.EVENT_HDR_LEN - 4)
+                data_len, event_type = struct.unpack("<HH", reply[4:])
+                reply += self.readfull(data_len + 4)
+                checksum = struct.unpack("<I", reply[-4:])[0]
+                ccsum = self.checksum(reply[:-4])
+                if checksum != ccsum:
+                    print("Event checksum error: Expected 0x%08x, got 0x%08x"%(checksum, ccsum))
+                    raise UartChecksumError()
+                self.handle_event(EVENT(event_type), reply[self.EVENT_HDR_LEN:-4])
+                continue
+
+            reply += self.readfull(self.REPLY_LEN - 4)
             if self.debug:
                 print(">>", hexdump(reply))
-            cmdin, status, data, checksum = struct.unpack("<Ii24sI", reply)
+            status, data, checksum = struct.unpack("<i24sI", reply[4:])
             ccsum = self.checksum(reply[:-4])
             if checksum != ccsum:
                 print("Reply checksum error: Expected 0x%08x, got 0x%08x"%(checksum, ccsum))
@@ -278,6 +298,13 @@ class UartInterface:
 
     def set_handler(self, reason, code, handler):
         self.handlers[(reason, code)] = handler
+
+    def handle_event(self, event_id, data):
+        if event_id in self.evt_handlers:
+            self.evt_handlers[event_id](data)
+
+    def set_event_handler(self, event_id, handler):
+        self.evt_handlers[event_id] = handler
 
     def wait_boot(self):
         try:

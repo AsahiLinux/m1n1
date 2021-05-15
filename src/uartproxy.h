@@ -27,6 +27,10 @@ typedef enum _uartproxy_exc_ret_t {
     EXC_RET_STEP = 4,
 } uartproxy_exc_ret_t;
 
+typedef enum _uartproxy_event_type_t {
+    EVT_MMIOTRACE = 1,
+} uartproxy_event_type_t;
+
 struct uartproxy_exc_info {
     u64 spsr;
     u64 elr;
@@ -48,5 +52,6 @@ struct uartproxy_msg_start {
 };
 
 int uartproxy_run(struct uartproxy_msg_start *start);
+void uartproxy_send_event(u16 event_type, void *data, u16 length);
 
 #endif

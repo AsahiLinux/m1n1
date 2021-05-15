@@ -8,6 +8,17 @@
 
 typedef bool(hv_hook_t)(u64 addr, u64 *val, bool write, int width);
 
+#define MMIO_EVT_WIDTH GENMASK(2, 0)
+#define MMIO_EVT_WRITE BIT(3)
+
+struct hv_evt_mmiotrace {
+    u32 flags;
+    u32 reserved;
+    u64 pc;
+    u64 addr;
+    u64 data;
+};
+
 /* VM */
 void hv_pt_init(void);
 int hv_map(u64 from, u64 to, u64 size, u64 incr);

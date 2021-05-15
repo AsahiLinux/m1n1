@@ -3,9 +3,11 @@
 
 import sys, traceback, struct, array, bisect, os
 
+from construct import *
+
 from asm import ARMAsm
 from tgtypes import *
-from proxy import IODEV, START, EXC, EXC_RET, ExcInfo
+from proxy import IODEV, START, EVENT, EXC, EXC_RET, ExcInfo
 from utils import *
 from sysreg import *
 from macho import MachO
@@ -14,6 +16,18 @@ import xnutools
 import shell
 
 PAC_MASK = 0xfffff00000000000
+
+class MMIOTraceFlags(Register32):
+    WIDTH = 2, 0
+    WRITE = 3
+
+EvtMMIOTrace = Struct(
+    "flags" / RegAdapter(MMIOTraceFlags),
+    "reserved" / Int32ul,
+    "pc" / Hex(Int64ul),
+    "addr" / Hex(Int64ul),
+    "data" / Hex(Int64ul),
+)
 
 class HV:
     PTE_VALID               = 1 << 0
@@ -24,6 +38,9 @@ class HV:
     PTE_ACCESS              = 1 << 10
     PTE_ATTRIBUTES          = PTE_ACCESS | PTE_SH_NS | PTE_S2AP_RW | PTE_MEMATTR_UNCHANGED
 
+    SPTE_TRACE_READ         = 1 << 63
+    SPTE_TRACE_WRITE        = 1 << 62
+    SPTE_SYNC_TRACE         = 1 << 61
     SPTE_MAP                = 0 << 50
     SPTE_HOOK               = 1 << 50
 
@@ -97,6 +114,15 @@ class HV:
             return f"0x{addr:x} (0x{unslid_addr:x})"
 
         return self.symbols[idx]
+
+    def handle_mmiotrace(self, data):
+        evt = EvtMMIOTrace.parse(data)
+        if evt.flags.WRITE:
+            t = "W"
+        else:
+            t = "R"
+
+        print(f"[0x{evt.pc:016x}] MMIO: {t} 0x{evt.addr:x} = 0x{evt.data:x}")
 
     def handle_msr(self, ctx, iss=None):
         if iss is None:
@@ -411,6 +437,7 @@ class HV:
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.IRQ, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.FIQ, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.SERROR, self.handle_exception)
+        self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
 
         self.map_hw(0x2_00000000, 0x2_00000000, 0x5_00000000)
 

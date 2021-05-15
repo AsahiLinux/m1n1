@@ -41,6 +41,12 @@ typedef struct {
     u32 _dummy; // Not transferred
 } UartReply;
 
+typedef struct {
+    u32 type;
+    u16 len;
+    u16 event_type;
+} UartEventHdr;
+
 static_assert(sizeof(UartReply) == (REPLY_SIZE + 4), "Invalid UartReply size");
 
 #define REQ_NOP      0x00AA55FF
@@ -48,6 +54,7 @@ static_assert(sizeof(UartReply) == (REPLY_SIZE + 4), "Invalid UartReply size");
 #define REQ_MEMREAD  0x02AA55FF
 #define REQ_MEMWRITE 0x03AA55FF
 #define REQ_BOOT     0x04AA55FF
+#define REQ_EVENT    0x05AA55FF
 
 #define ST_OK      0
 #define ST_BADCMD  -1
@@ -206,4 +213,22 @@ int uartproxy_run(struct uartproxy_msg_start *start)
     }
 
     return ret;
+}
+
+void uartproxy_send_event(u16 event_type, void *data, u16 length)
+{
+    struct {
+        UartEventHdr hdr;
+        u8 data[(1 << 16) + 4];
+    } evt;
+    u32 csum;
+
+    evt.hdr.type = REQ_EVENT;
+    evt.hdr.len = length;
+    evt.hdr.event_type = event_type;
+    memcpy(evt.data, data, length);
+
+    csum = checksum(&evt, sizeof(UartEventHdr) + length);
+    memcpy(&evt.data[length], &csum, sizeof(csum));
+    iodev_write(uartproxy_iodev, &evt, sizeof(UartEventHdr) + length + 4);
 }

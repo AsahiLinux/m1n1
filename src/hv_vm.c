@@ -5,9 +5,11 @@
 #include "hv.h"
 #include "assert.h"
 #include "cpu_regs.h"
+#include "iodev.h"
 #include "malloc.h"
 #include "string.h"
 #include "types.h"
+#include "uartproxy.h"
 #include "utils.h"
 
 #define PAGE_SIZE       0x4000
@@ -47,9 +49,12 @@
 #define ENTRIES_PER_L3_TABLE BIT(VADDR_L3_INDEX_BITS)
 #define ENTRIES_PER_L4_TABLE BIT(VADDR_L4_INDEX_BITS)
 
-#define SPTE_TYPE BIT(50)
-#define SPTE_MAP  0
-#define SPTE_HOOK 1
+#define SPTE_TRACE_READ  BIT(63)
+#define SPTE_TRACE_WRITE BIT(62)
+#define SPTE_SYNC_TRACE  BIT(61)
+#define SPTE_TYPE        BIT(50)
+#define SPTE_MAP         0
+#define SPTE_HOOK        1
 
 #define IS_HW(pte) ((pte) && pte & PTE_VALID)
 #define IS_SW(pte) ((pte) && !(pte & PTE_VALID))
@@ -171,7 +176,7 @@ static u64 *hv_pt_get_l3(u64 from)
 static void hv_pt_map_l3(u64 from, u64 to, u64 size, u64 incr)
 {
     assert((from & MASK(VADDR_L3_OFFSET_BITS)) == 0);
-    assert((IS_SW(to) || to & PTE_TARGET_MASK & MASK(VADDR_L3_OFFSET_BITS)) == 0);
+    assert(IS_SW(to) || (to & PTE_TARGET_MASK & MASK(VADDR_L3_OFFSET_BITS)) == 0);
     assert((size & MASK(VADDR_L3_OFFSET_BITS)) == 0);
 
     if (IS_HW(to))
@@ -567,6 +572,18 @@ bool hv_handle_dabort(u64 *regs)
         if (!emulate_store(regs, insn, &val, width))
             return false;
 
+        if (pte & SPTE_TRACE_WRITE) {
+            struct hv_evt_mmiotrace evt = {
+                .flags = FIELD_PREP(MMIO_EVT_WIDTH, width) | MMIO_EVT_WRITE,
+                .pc = elr,
+                .addr = ipa,
+                .data = val,
+            };
+            uartproxy_send_event(EVT_MMIOTRACE, &evt, sizeof(evt));
+            if (pte & SPTE_SYNC_TRACE)
+                iodev_flush(uartproxy_iodev);
+        }
+
         switch (FIELD_GET(SPTE_TYPE, pte)) {
             case SPTE_MAP:
                 dprintf("HV: SPTE_MAP[W] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr_pa, far, paddr,
@@ -627,6 +644,18 @@ bool hv_handle_dabort(u64 *regs)
                 break;
             default:
                 return false;
+        }
+
+        if (pte & SPTE_TRACE_READ) {
+            struct hv_evt_mmiotrace evt = {
+                .flags = FIELD_PREP(MMIO_EVT_WIDTH, width),
+                .pc = elr,
+                .addr = ipa,
+                .data = val,
+            };
+            uartproxy_send_event(EVT_MMIOTRACE, &evt, sizeof(evt));
+            if (pte & SPTE_SYNC_TRACE)
+                iodev_flush(uartproxy_iodev);
         }
 
         if (!emulate_load(regs, insn, val, width))
