@@ -161,7 +161,9 @@ class HV:
         else:
             t = "R"
 
-        print(f"[0x{evt.pc:016x}] MMIO: {t} 0x{evt.addr:x} = 0x{evt.data:x}")
+        dev, zone = self.device_addr_tbl.lookup(evt.addr)
+
+        print(f"[0x{evt.pc:016x}] MMIO: {t} 0x{evt.addr:x} ({dev}, offset {evt.addr - zone.start:#04x}) = 0x{evt.data:x}")
 
     def handle_vm_hook(self, ctx):
         data = self.iface.readstruct(ctx.data, VMProxyHookData)
@@ -541,6 +543,7 @@ class HV:
         self.adt = load_adt(self.u.get_adt())
         self.iodev = self.p.iodev_whoami()
         self.tba = self.u.ba.copy()
+        self.device_addr_tbl = self.adt.build_addr_lookup()
 
         print("Initializing hypervisor over iodev %s" % self.iodev)
         self.p.hv_init()
