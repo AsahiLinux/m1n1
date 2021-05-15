@@ -82,7 +82,7 @@ int debug_printf(const char *fmt, ...)
 void __assert_fail(const char *assertion, const char *file, unsigned int line, const char *function)
 {
     printf("Assertion failed: '%s' on %s:%d:%s\n", assertion, file, line, function);
-    reboot();
+    flush_and_reboot();
 }
 
 #define AIC_TIMER 0x23b108020

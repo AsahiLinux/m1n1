@@ -166,6 +166,11 @@ debug_putc:
 .globl reboot
 .type reboot, @function
 reboot:
+    mrs x0, CurrentEL
+    cmp x0, #8
+    beq 1f
+    hvc #0
+1:
     ldr x1, =WDT_BASE
     mov w0, #0x100000
     str w0, [x1, #WDT_ALARM]
