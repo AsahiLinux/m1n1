@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 import itertools
 from construct import *
+from utils import AddrLookup
 
 ADTPropertyStruct = Struct(
     "name" / PaddedString(32, "ascii"),
@@ -264,6 +265,29 @@ class ADTNode:
 
     def build(self):
         return ADTNodeStruct.build(self.tostruct())
+
+    def walk_tree(self):
+        yield self
+        for child in self:
+            yield from child
+
+    def build_addr_lookup(self):
+        lookup = AddrLookup()
+        for node in self.walk_tree():
+            reg = getattr(node, 'reg', None)
+            if not isinstance(reg, list):
+                continue
+
+            for index in range(len(reg)):
+                try:
+                    addr, size = node.get_reg(index)
+                except AttributeError:
+                    continue
+                if size == 0:
+                    continue
+                lookup.add(range(addr, addr + size), node.name + f"[{index}]")
+
+        return lookup
 
 def load_adt(data):
     return ADTNode(ADTNodeStruct.parse(data))
