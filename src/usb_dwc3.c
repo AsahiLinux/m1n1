@@ -108,6 +108,7 @@ typedef struct dwc3_dev {
 
     struct {
         bool xfer_in_progress;
+        bool zlp_pending;
 
         void *xfer_buffer;
         uintptr_t xfer_buffer_iova;
@@ -882,7 +883,7 @@ static void usb_dwc3_cdc_start_bulk_in_xfer(dwc3_dev_t *dev, u8 endpoint_number)
 
     size_t len = ringbuffer_read(dev->endpoints[endpoint_number].xfer_buffer, 512, device2host);
 
-    if (!len)
+    if (!len && !dev->endpoints[endpoint_number].zlp_pending)
         return;
 
     trb_iova = usb_dwc3_init_trb(dev, endpoint_number, &trb);
@@ -891,6 +892,7 @@ static void usb_dwc3_cdc_start_bulk_in_xfer(dwc3_dev_t *dev, u8 endpoint_number)
 
     usb_dwc3_ep_start_transfer(dev, endpoint_number, trb_iova);
     dev->endpoints[endpoint_number].xfer_in_progress = true;
+    dev->endpoints[endpoint_number].zlp_pending = len == 512;
 }
 
 static void usb_dwc3_cdc_handle_bulk_out_xfer_done(dwc3_dev_t *dev,
