@@ -269,13 +269,29 @@ def load_adt(data):
     return ADTNode(ADTNodeStruct.parse(data))
 
 if __name__ == "__main__":
-    import sys
-    adt_data = open(sys.argv[1], "rb").read()
+    import sys, argparse, pathlib
+
+    parser = argparse.ArgumentParser(description='ADT test for m1n1')
+    parser.add_argument('input', type=pathlib.Path)
+    parser.add_argument('output', nargs='?', type=pathlib.Path)
+    parser.add_argument('-r', '--retrieve', help='retieve and store the adt from m1n1', action='store_true')
+    args = parser.parse_args()
+
+    if args.retrieve:
+        if args.input.exists():
+            print('Error "{}" exists!'.format(args.input))
+            sys.exit()
+
+        from setup import *
+        adt_data = u.get_adt()
+        args.input.write_bytes(adt_data)
+    else:
+        adt_data = args.input.read_bytes()
+
     adt = load_adt(adt_data)
     print(adt)
     new_data = adt.build()
-    if len(sys.argv) > 2:
-        with open(sys.argv[2], "wb") as fd:
-            fd.write(new_data)
+    if args.output is not None:
+        args.output.write_bytes(new_data)
     assert new_data == adt_data[:len(new_data)]
     assert adt_data[len(new_data):] == bytes(len(adt_data) - len(new_data))
