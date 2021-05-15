@@ -28,7 +28,7 @@ if args.tty is not None:
     tty_dev.reset_input_buffer()
     tty_dev.baudrate = 1500000
 else:
-    tty_dev = uart
+    tty_dev = None
 
 payload = args.payload.read_bytes()
 dtb = args.dtb.read_bytes()
