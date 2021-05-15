@@ -258,6 +258,7 @@ class UartInterface:
                     print("Event checksum error: Expected 0x%08x, got 0x%08x"%(checksum, ccsum))
                     raise UartChecksumError()
                 self.handle_event(EVENT(event_type), reply[self.EVENT_HDR_LEN:-4])
+                reply = b''
                 continue
 
             reply += self.readfull(self.REPLY_LEN - 4)
@@ -272,6 +273,7 @@ class UartInterface:
             if cmdin != cmd:
                 if cmdin == self.REQ_BOOT and status == self.ST_OK:
                     self.handle_boot(data)
+                    reply = b''
                     continue
                 raise UartCMDError("Reply command mismatch: Expected 0x%08x, got 0x%08x"%(cmd, cmdin))
             if status != self.ST_OK:
