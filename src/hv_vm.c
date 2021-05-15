@@ -425,107 +425,105 @@ u64 hv_pt_walk(u64 addr)
     return l4d;
 }
 
-#define CHECK_WIDTH                                                                                \
-    if ((insn >> 30) != width)                                                                     \
-    goto bad_width
 #define CHECK_RN                                                                                   \
     if (Rn == 31)                                                                                  \
     goto bail
 #define CHECK_RT                                                                                   \
     if (Rt == 31)                                                                                  \
     return true
+#define DECODE_OK                                                                                  \
+    if (!val)                                                                                      \
+    return true
 
 #define EXT(n, b) (((s32)(((u32)(n)) << (32 - (b)))) >> (32 - (b)))
 
-static bool emulate_load(u64 *regs, u32 insn, u64 val, u64 width)
+static bool emulate_load(u64 *regs, u32 insn, u64 *val, u64 *width)
 {
     u64 Rt = insn & 0x1f;
     u64 Rn = (insn >> 5) & 0x1f;
     u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
 
-    dprintf("emulate_load(%p, 0x%08x, 0x%08lx, %ld\n", regs, insn, val, width);
+    *width = insn >> 30;
+
+    if (val)
+        dprintf("emulate_load(%p, 0x%08x, 0x%08lx, %ld\n", regs, insn, *val, *width);
 
     if ((insn & 0x3fe00400) == 0x38400400) {
         // LDRx (immediate) Pre/Post-index
-        CHECK_WIDTH;
         CHECK_RN;
+        DECODE_OK;
         regs[Rn] += imm9;
         CHECK_RT;
-        regs[Rt] = val;
+        regs[Rt] = *val;
     } else if ((insn & 0x3fc00000) == 0x39400000) {
         // LDRx (immediate) Unsigned offset
-        CHECK_WIDTH;
+        DECODE_OK;
         CHECK_RT;
-        regs[Rt] = val;
+        regs[Rt] = *val;
     } else if ((insn & 0x3fa00400) == 0x38800400) {
         // LDRSx (immediate) Pre/Post-index
-        CHECK_WIDTH;
         CHECK_RN;
+        DECODE_OK;
         regs[Rn] += imm9;
         CHECK_RT;
-        regs[Rt] = EXT(val, 8 << width);
+        regs[Rt] = EXT(*val, 8 << *width);
     } else if ((insn & 0x3fa00000) == 0x39800000) {
         // LDRSx (immediate) Unsigned offset
-        CHECK_WIDTH;
+        DECODE_OK;
         CHECK_RT;
-        regs[Rt] = EXT(val, 8 << width);
+        regs[Rt] = EXT(*val, 8 << *width);
     } else if ((insn & 0x3fe04c00) == 0x38604800) {
         // LDRx (register)
-        CHECK_WIDTH;
+        DECODE_OK;
         CHECK_RT;
-        regs[Rt] = val;
+        regs[Rt] = *val;
     } else if ((insn & 0x3fa04c00) == 0x38a04800) {
         // LDRSx (register)
-        CHECK_WIDTH;
+        DECODE_OK;
         CHECK_RT;
-        regs[Rt] = EXT(val, 8 << width);
+        regs[Rt] = EXT(*val, 8 << *width);
     } else {
         goto bail;
     }
     return true;
 
-bad_width:
-    printf("HV: width mismatch (expected %ld)\n", width);
 bail:
     printf("HV: load not emulated: 0x%08x\n", insn);
     return false;
 }
 
-static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 width)
+static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 *width)
 {
     u64 Rt = insn & 0x1f;
     u64 Rn = (insn >> 5) & 0x1f;
     u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
 
-    dprintf("emulate_store(%p, 0x%08x, ..., %ld) = ", regs, insn, val, width);
+    *width = insn >> 30;
+
+    dprintf("emulate_store(%p, 0x%08x, ..., %ld) = ", regs, insn, *width);
 
     if ((insn & 0x3fe00400) == 0x38000400) {
         // STRx (immediate) Pre/Post-index
-        CHECK_WIDTH;
         CHECK_RN;
         regs[Rn] += imm9;
         CHECK_RT;
         *val = regs[Rt];
     } else if ((insn & 0x3fc00000) == 0x39000000) {
         // STRx (immediate) Unsigned offset
-        CHECK_WIDTH;
         CHECK_RT;
         *val = regs[Rt];
     } else if ((insn & 0x3fe04c00) == 0x38204800) {
         // STRx (register)
-        CHECK_WIDTH;
         CHECK_RT;
         *val = regs[Rt];
     } else {
         goto bail;
     }
 
-    dprintf("0x%lx\n", *val);
+    dprintf("0x%lx\n", *width);
 
     return true;
 
-bad_width:
-    printf("HV: width mismatch (expected %ld)\n", width);
 bail:
     printf("HV: store not emulated: 0x%08x\n", insn);
     return false;
@@ -535,16 +533,16 @@ bool hv_handle_dabort(u64 *regs)
 {
     u64 esr = mrs(ESR_EL2);
 
-    if (!(esr & ESR_ISS_DABORT_ISV))
-        return false;
-
     u64 far = mrs(FAR_EL2);
     u64 ipa = hv_translate(far, true, esr & ESR_ISS_DABORT_WnR);
 
     dprintf("hv_handle_abort(): stage 1 0x%0lx -> 0x%lx\n", far, ipa);
 
-    if (!ipa)
+    if (!ipa) {
+        printf("HV: stage 1 translation failed at VA 0x%0lx\n", far);
         return false;
+    }
+
     if (ipa >= BIT(VADDR_BITS)) {
         printf("hv_handle_abort(): IPA out of bounds: 0x%0lx -> 0x%lx\n", far, ipa);
         return false;
@@ -552,11 +550,13 @@ bool hv_handle_dabort(u64 *regs)
 
     u64 pte = hv_pt_walk(ipa);
 
-    if (!pte)
+    if (!pte) {
+        printf("HV: Unmapped IPA 0x%lx\n", ipa);
         return false;
+    }
 
     if (IS_HW(pte)) {
-        printf("HV: Data abort on mapped page (0x%lx -> 0x%lx\n", far, pte);
+        printf("HV: Data abort on mapped page (0x%lx -> 0x%lx)\n", far, pte);
         return false;
     }
 
@@ -564,8 +564,6 @@ bool hv_handle_dabort(u64 *regs)
 
     u64 target = pte & PTE_TARGET_MASK_L4;
     u64 paddr = target | (far & MASK(VADDR_L4_OFFSET_BITS));
-
-    u64 width = FIELD_GET(ESR_ISS_DABORT_SAS, esr);
 
     u64 elr = mrs(ELR_EL2);
     u64 elr_pa = hv_translate(elr, false, false);
@@ -576,9 +574,10 @@ bool hv_handle_dabort(u64 *regs)
 
     u32 insn = read32(elr_pa);
     u64 val = 0;
+    u64 width;
 
     if (esr & ESR_ISS_DABORT_WnR) {
-        if (!emulate_store(regs, insn, &val, width))
+        if (!emulate_store(regs, insn, &val, &width))
             return false;
 
         if (pte & SPTE_TRACE_WRITE) {
@@ -639,6 +638,9 @@ bool hv_handle_dabort(u64 *regs)
                 return false;
         }
     } else {
+        if (!emulate_load(regs, insn, NULL, &width))
+            return false;
+
         switch (FIELD_GET(SPTE_TYPE, pte)) {
             case SPTE_PROXY_HOOK_W:
                 paddr = ipa;
@@ -697,7 +699,7 @@ bool hv_handle_dabort(u64 *regs)
                 iodev_flush(uartproxy_iodev);
         }
 
-        if (!emulate_load(regs, insn, val, width))
+        if (!emulate_load(regs, insn, &val, &width))
             return false;
     }
 
