@@ -97,9 +97,6 @@ void udelay(u32 d)
 
 void flush_and_reboot(void)
 {
-    for (int i = 0; i < 300; i++) {
-        iodev_console_kick();
-        udelay(1000);
-    }
+    iodev_console_flush();
     reboot();
 }

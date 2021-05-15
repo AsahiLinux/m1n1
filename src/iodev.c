@@ -62,6 +62,14 @@ ssize_t iodev_write(iodev_id_t id, const void *buf, size_t length)
     return iodevs[id]->ops->write(iodevs[id]->opaque, buf, length);
 }
 
+void iodev_flush(iodev_id_t id)
+{
+    if (!iodevs[id]->ops->flush)
+        return;
+
+    iodevs[id]->ops->flush(iodevs[id]->opaque);
+}
+
 int in_iodev = 0;
 
 void iodev_console_write(const void *buf, size_t length)
@@ -156,11 +164,13 @@ void iodev_handle_events(iodev_id_t id)
     in_iodev--;
 
     if (iodev_can_write(id))
-        iodev_console_flush();
+        iodev_console_write(NULL, 0);
 }
 
 void iodev_console_kick(void)
 {
+    iodev_console_write(NULL, 0);
+
     for (iodev_id_t id = 0; id < IODEV_MAX; id++) {
         if (!iodevs[id])
             continue;
@@ -168,5 +178,17 @@ void iodev_console_kick(void)
             continue;
 
         iodev_handle_events(id);
+    }
+}
+
+void iodev_console_flush(void)
+{
+    for (iodev_id_t id = 0; id < IODEV_MAX; id++) {
+        if (!iodevs[id])
+            continue;
+        if (!(iodevs[id]->usage & USAGE_CONSOLE))
+            continue;
+
+        iodev_flush(id);
     }
 }

@@ -1345,3 +1345,19 @@ bool usb_dwc3_can_write(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe)
 
     return dev->ready;
 }
+
+void usb_dwc3_flush(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe)
+{
+    if (!dev || !dev->ready)
+        return;
+
+    ringbuffer_t *device2host = dev->pipe[pipe].device2host;
+    if (!device2host)
+        return;
+
+    u8 ep = dev->pipe[pipe].ep_in;
+
+    while (ringbuffer_get_used(device2host) != 0 || dev->endpoints[ep].xfer_in_progress) {
+        usb_dwc3_handle_events(dev);
+    }
+}

@@ -173,6 +173,11 @@ dwc3_dev_t *usb_bringup(u32 idx)
     static void usb_##name##_handle_events(void *dev)                                              \
     {                                                                                              \
         usb_dwc3_handle_events(dev);                                                               \
+    }                                                                                              \
+                                                                                                   \
+    static void usb_##name##_flush(void *dev)                                                      \
+    {                                                                                              \
+        usb_dwc3_flush(dev, pipe);                                                                 \
     }
 
 USB_IODEV_WRAPPER(0, CDC_ACM_PIPE_0)
@@ -183,6 +188,7 @@ static struct iodev_ops iodev_usb_ops = {
     .can_write = usb_0_can_write,
     .read = usb_0_read,
     .write = usb_0_write,
+    .flush = usb_0_flush,
     .handle_events = usb_0_handle_events,
 };
 
@@ -191,6 +197,7 @@ static struct iodev_ops iodev_usb_sec_ops = {
     .can_write = usb_1_can_write,
     .read = usb_1_read,
     .write = usb_1_write,
+    .flush = usb_1_flush,
     .handle_events = usb_1_handle_events,
 };
 
