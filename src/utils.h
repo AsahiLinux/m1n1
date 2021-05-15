@@ -7,6 +7,14 @@
 
 #define printf(...) debug_printf(__VA_ARGS__)
 
+#ifdef DEBUG
+#define dprintf(...) debug_printf(__VA_ARGS__)
+#else
+#define dprintf(...)                                                                               \
+    do {                                                                                           \
+    } while (0)
+#endif
+
 #define BIT(x)                 (1L << (x))
 #define MASK(x)                (BIT(x) - 1)
 #define GENMASK(msb, lsb)      ((BIT((msb + 1) - (lsb)) - 1) << (lsb))

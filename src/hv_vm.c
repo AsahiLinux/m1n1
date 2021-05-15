@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
+// #define DEBUG
+
 #include "hv.h"
 #include "assert.h"
 #include "cpu_regs.h"
@@ -7,11 +9,6 @@
 #include "string.h"
 #include "types.h"
 #include "utils.h"
-
-//#define dprintf printf
-#define dprintf(...)                                                                               \
-    do {                                                                                           \
-    } while (0)
 
 #define PAGE_SIZE       0x4000
 #define CACHE_LINE_SIZE 64
@@ -432,6 +429,8 @@ static bool emulate_load(u64 *regs, u32 insn, u64 val, u64 width)
     u64 Rn = (insn >> 5) & 0x1f;
     u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
 
+    dprintf("emulate_load(%p, 0x%08x, 0x%08lx, %ld\n", regs, insn, val, width);
+
     if ((insn & 0x3fe00400) == 0x38400400) {
         // LDRx (immediate) Pre/Post-index
         CHECK_WIDTH;
@@ -484,6 +483,8 @@ static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 width)
     u64 Rn = (insn >> 5) & 0x1f;
     u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
 
+    dprintf("emulate_store(%p, 0x%08x, ..., %ld) = ", regs, insn, val, width);
+
     if ((insn & 0x3fe00400) == 0x38000400) {
         // STRx (immediate) Pre/Post-index
         CHECK_WIDTH;
@@ -504,6 +505,9 @@ static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 width)
     } else {
         goto bail;
     }
+
+    dprintf("0x%lx\n", *val);
+
     return true;
 
 bad_width:
@@ -565,8 +569,8 @@ bool hv_handle_dabort(u64 *regs)
 
         switch (FIELD_GET(SPTE_TYPE, pte)) {
             case SPTE_MAP:
-                dprintf("HV: SPTE_MAP[W] 0x%lx -> 0x%lx (w=%d): 0x%lx\n", far, paddr, 1 << width,
-                        val);
+                dprintf("HV: SPTE_MAP[W] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr_pa, far, paddr,
+                        1 << width, val);
                 switch (width) {
                     case SAS_8B:
                         write8(paddr, val);
@@ -586,10 +590,12 @@ bool hv_handle_dabort(u64 *regs)
                 hv_hook_t *hook = (hv_hook_t *)target;
                 if (!hook(ipa, &val, true, width))
                     return false;
-                dprintf("HV: SPTE_HOOK[W] 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", far, ipa, 1 << width,
-                        hook, val);
+                dprintf("HV: SPTE_HOOK[W] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr_pa, far,
+                        ipa, 1 << width, hook, val);
                 break;
             }
+            default:
+                return false;
         }
     } else {
         switch (FIELD_GET(SPTE_TYPE, pte)) {
@@ -608,17 +614,19 @@ bool hv_handle_dabort(u64 *regs)
                         val = read64(paddr);
                         break;
                 }
-                dprintf("HV: SPTE_MAP[R] 0x%lx -> 0x%lx (w=%d): 0x%lx\n", far, paddr, 1 << width,
-                        val);
+                dprintf("HV: SPTE_MAP[R] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr_pa, far, paddr,
+                        1 << width, val);
                 break;
             case SPTE_HOOK:
                 val = 0;
                 hv_hook_t *hook = (hv_hook_t *)target;
                 if (!hook(ipa, &val, false, width))
                     return false;
-                dprintf("HV: SPTE_HOOK[R] 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", far, ipa, 1 << width,
-                        hook, val);
+                dprintf("HV: SPTE_HOOK[R] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr_pa, far,
+                        ipa, 1 << width, hook, val);
                 break;
+            default:
+                return false;
         }
 
         if (!emulate_load(regs, insn, val, width))
