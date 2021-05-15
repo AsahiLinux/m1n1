@@ -107,7 +107,7 @@ typedef struct dwc3_dev {
     struct dwc3_trb *trbs;
 
     struct {
-        u32 xfer_in_progress;
+        bool xfer_in_progress;
 
         void *xfer_buffer;
         uintptr_t xfer_buffer_iova;
@@ -433,7 +433,7 @@ static int usb_dwc3_ep_start_transfer(dwc3_dev_t *dev, u8 ep, uintptr_t trb_iova
         return ret;
     }
 
-    dev->endpoints[ep].xfer_in_progress = 1;
+    dev->endpoints[ep].xfer_in_progress = true;
     return 0;
 }
 
@@ -865,7 +865,7 @@ static void usb_dwc3_cdc_start_bulk_out_xfer(dwc3_dev_t *dev, u8 endpoint_number
     trb->size = DWC3_TRB_SIZE_LENGTH(512);
 
     usb_dwc3_ep_start_transfer(dev, endpoint_number, trb_iova);
-    dev->endpoints[endpoint_number].xfer_in_progress = 1;
+    dev->endpoints[endpoint_number].xfer_in_progress = true;
 }
 
 static void usb_dwc3_cdc_start_bulk_in_xfer(dwc3_dev_t *dev, u8 endpoint_number)
@@ -890,7 +890,7 @@ static void usb_dwc3_cdc_start_bulk_in_xfer(dwc3_dev_t *dev, u8 endpoint_number)
     trb->size = DWC3_TRB_SIZE_LENGTH(len);
 
     usb_dwc3_ep_start_transfer(dev, endpoint_number, trb_iova);
-    dev->endpoints[endpoint_number].xfer_in_progress = 1;
+    dev->endpoints[endpoint_number].xfer_in_progress = true;
 }
 
 static void usb_dwc3_cdc_handle_bulk_out_xfer_done(dwc3_dev_t *dev,
@@ -907,7 +907,7 @@ static void usb_dwc3_cdc_handle_bulk_out_xfer_done(dwc3_dev_t *dev,
 static void usb_dwc3_handle_event_ep(dwc3_dev_t *dev, const struct dwc3_event_depevt event)
 {
     if (event.endpoint_event == DWC3_DEPEVT_XFERCOMPLETE) {
-        dev->endpoints[event.endpoint_number].xfer_in_progress = 0;
+        dev->endpoints[event.endpoint_number].xfer_in_progress = false;
 
         switch (event.endpoint_number) {
             case USB_LEP_CTRL_IN:
@@ -956,9 +956,9 @@ static void usb_dwc3_handle_event_ep(dwc3_dev_t *dev, const struct dwc3_event_de
 static void usb_dwc3_handle_event_usbrst(dwc3_dev_t *dev)
 {
     /* clear STALL mode for all endpoints */
-    dev->endpoints[0].xfer_in_progress = 0;
+    dev->endpoints[0].xfer_in_progress = false;
     for (int i = 1; i < MAX_ENDPOINTS; ++i) {
-        dev->endpoints[i].xfer_in_progress = 0;
+        dev->endpoints[i].xfer_in_progress = false;
         memset(dev->endpoints[i].xfer_buffer, 0, XFER_BUFFER_BYTES_PER_EP);
         memset(dev->endpoints[i].trb, 0, TRBS_PER_EP * sizeof(struct dwc3_trb));
         usb_dwc3_ep_set_stall(dev, i, 0);
