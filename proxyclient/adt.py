@@ -184,7 +184,9 @@ class ADTNode:
 
     def __getattr__(self, attr):
         attr = attr.replace("_", "-")
-        return self._properties[attr]
+        if attr in self._properties:
+            return self._properties[attr]
+        raise AttributeError(attr)
 
     def __setattr__(self, attr, value):
         if attr[0] == "_":
