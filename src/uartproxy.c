@@ -64,19 +64,42 @@ static_assert(sizeof(UartReply) == (REPLY_SIZE + 4), "Invalid UartReply size");
 
 static u32 iodev_proxy_buffer[IODEV_MAX];
 
+#define CHECKSUM_INIT  0xDEADBEEF
+#define CHECKSUM_FINAL 0xADDEDBAD
+
 // I just totally pulled this out of my arse
 // Noinline so that this can be bailed out by exc_guard = EXC_RETURN
 // We assume this function does not use the stack
-static u64 __attribute__((noinline)) checksum(void *start, u32 length)
+static u32 __attribute__((noinline)) checksum_block(void *start, u32 length, u32 init)
 {
-    u32 sum = 0xDEADBEEF;
+    u32 sum = init;
     u8 *d = (u8 *)start;
 
     while (length--) {
         sum *= 31337;
         sum += (*d++) ^ 0x5A;
     }
-    return sum ^ 0xADDEDBAD;
+    return sum;
+}
+
+static inline u32 checksum_start(void *start, u32 length)
+{
+    return checksum_block(start, length, CHECKSUM_INIT);
+}
+
+static inline u32 checksum_add(void *start, u32 length, u32 sum)
+{
+    return checksum_block(start, length, sum);
+}
+
+static inline u32 checksum_finish(u32 sum)
+{
+    return sum ^ CHECKSUM_FINAL;
+}
+
+static inline u32 checksum(void *start, u32 length)
+{
+    return checksum_finish(checksum_start(start, length));
 }
 
 iodev_id_t uartproxy_iodev;
@@ -217,18 +240,16 @@ int uartproxy_run(struct uartproxy_msg_start *start)
 
 void uartproxy_send_event(u16 event_type, void *data, u16 length)
 {
-    struct {
-        UartEventHdr hdr;
-        u8 data[(1 << 16) + 4];
-    } evt;
+    UartEventHdr hdr;
     u32 csum;
 
-    evt.hdr.type = REQ_EVENT;
-    evt.hdr.len = length;
-    evt.hdr.event_type = event_type;
-    memcpy(evt.data, data, length);
+    hdr.type = REQ_EVENT;
+    hdr.len = length;
+    hdr.event_type = event_type;
 
-    csum = checksum(&evt, sizeof(UartEventHdr) + length);
-    memcpy(&evt.data[length], &csum, sizeof(csum));
-    iodev_write(uartproxy_iodev, &evt, sizeof(UartEventHdr) + length + 4);
+    csum = checksum_start(&hdr, sizeof(UartEventHdr));
+    csum = checksum_finish(checksum_add(data, length, csum));
+    iodev_queue(uartproxy_iodev, &hdr, sizeof(UartEventHdr));
+    iodev_queue(uartproxy_iodev, data, length);
+    iodev_write(uartproxy_iodev, &csum, sizeof(csum));
 }
