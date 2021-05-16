@@ -8,6 +8,35 @@ from sysreg import *
 from enum import IntEnum, IntFlag
 from serial.tools.miniterm import Miniterm
 
+try:
+    import numpy
+    from functools import lru_cache
+
+    numpy.seterr(over='ignore')
+
+    @lru_cache
+    def calc_checksum_powers(size):
+        powers = numpy.power(31337, numpy.arange(size-1, -1, -1, dtype=numpy.uint32))
+        base = (0xDEADBEEF * numpy.power(31337, size)) & 0xFFFFFFFF
+        return powers, base
+
+    def calc_checksum(data):
+        data = numpy.frombuffer(data, dtype=numpy.uint8) ^ 0x5a
+        powers, base = calc_checksum_powers(len(data))
+        csum = base + numpy.dot(data, powers)
+        return (csum ^ 0xADDEDBAD) & 0xFFFFFFFF
+
+except ImportError:
+    def calc_checksum(data):
+        sum = 0xDEADBEEF;
+        for c in data:
+            sum *= 31337
+            sum += c ^ 0x5a
+            sum &= 0xFFFFFFFF
+
+        return (sum ^ 0xADDEDBAD) & 0xFFFFFFFF
+
+
 def hexdump(s, sep=" "):
     return sep.join(["%02x"%x for x in s])
 
@@ -157,15 +186,6 @@ class UartInterface:
         self.handlers = {}
         self.evt_handlers = {}
 
-    def checksum(self, data):
-        sum = 0xDEADBEEF;
-        for c in data:
-            sum *= 31337
-            sum += c ^ 0x5a
-            sum &= 0xFFFFFFFF
-
-        return (sum ^ 0xADDEDBAD) & 0xFFFFFFFF
-
     def readfull(self, size):
         d = b''
         while len(d) < size:
@@ -181,7 +201,7 @@ class UartInterface:
 
         payload = payload.ljust(self.CMD_LEN, b"\x00")
         command = struct.pack("<I", cmd) + payload
-        command += struct.pack("<I", self.checksum(command))
+        command += struct.pack("<I", calc_checksum(command))
         if self.debug:
             print("<<", hexdump(command))
         self.dev.write(command)
@@ -255,7 +275,7 @@ class UartInterface:
                 if self.debug:
                     print(">>", hexdump(reply))
                 checksum = struct.unpack("<I", reply[-4:])[0]
-                ccsum = self.checksum(reply[:-4])
+                ccsum = calc_checksum(reply[:-4])
                 if checksum != ccsum:
                     print("Event checksum error: Expected 0x%08x, got 0x%08x"%(checksum, ccsum))
                     raise UartChecksumError()
@@ -267,7 +287,7 @@ class UartInterface:
             if self.debug:
                 print(">>", hexdump(reply))
             status, data, checksum = struct.unpack("<i24sI", reply[4:])
-            ccsum = self.checksum(reply[:-4])
+            ccsum = calc_checksum(reply[:-4])
             if checksum != ccsum:
                 print("Reply checksum error: Expected 0x%08x, got 0x%08x"%(checksum, ccsum))
                 raise UartChecksumError()
@@ -349,7 +369,7 @@ class UartInterface:
             return self.reply(self.REQ_PROXY)
 
     def writemem(self, addr, data, progress=False):
-        checksum = self.checksum(data)
+        checksum = calc_checksum(data)
         size = len(data)
         req = struct.pack("<QQI", addr, size, checksum)
         self.cmd(self.REQ_MEMWRITE, req)
@@ -375,7 +395,7 @@ class UartInterface:
         if self.debug:
             print(">> DATA:")
             chexdump(data)
-        ccsum = self.checksum(data)
+        ccsum = calc_checksum(data)
         if checksum != ccsum:
             raise UartChecksumError("Reply data checksum error: Expected 0x%08x, got 0x%08x"%(checksum, ccsum))
         return data
