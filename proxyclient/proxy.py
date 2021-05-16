@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
-import os, sys, struct, serial, time
+import os, sys, struct, serial, time, zlib
 from construct import *
 from utils import *
 from sysreg import *
@@ -75,6 +75,18 @@ class UartChecksumError(UartError):
 
 class UartRemoteError(UartError):
     pass
+
+class Feature(IntFlag):
+    DATA_CSUM_ADLER32 = 0x01  # Memory transfers use Adler-32 checksum
+
+    @classmethod
+    def get_all(cls):
+        return cls.DATA_CSUM_ADLER32
+
+    def __str__(self):
+        return ", ".join(feature.name for feature in self.__class__
+            if feature & self) or "<none>"
+
 
 class START(IntEnum):
     BOOT = 0
@@ -156,6 +168,7 @@ class UartInterface:
         self.tty_enable = True
         self.handlers = {}
         self.evt_handlers = {}
+        self.enabled_features = Feature(0)
 
     def checksum(self, data):
         sum = 0xDEADBEEF;
@@ -165,6 +178,12 @@ class UartInterface:
             sum &= 0xFFFFFFFF
 
         return (sum ^ 0xADDEDBAD) & 0xFFFFFFFF
+
+    def data_checksum(self, data):
+        if self.enabled_features & Feature.DATA_CSUM_ADLER32:
+            return zlib.adler32(data)
+
+        return self.checksum(data)
 
     def readfull(self, size):
         d = b''
@@ -334,8 +353,19 @@ class UartInterface:
             print(" Connected")
 
     def nop(self):
-        self.cmd(self.REQ_NOP)
-        self.reply(self.REQ_NOP)
+        # Send the supported feature flags in the NOP message (has no effect
+        # if the target does not support it)
+        self.cmd(self.REQ_NOP, struct.pack("<Q", Feature.get_all().value))
+        result = self.reply(self.REQ_NOP)
+
+        # Get the enabled feature flags from the message response (returns
+        # 0 if the target does not support it)
+        features = Feature(struct.unpack("<QQQ", result)[0])
+
+        if self.debug:
+            print(f"Available features: {features}")
+
+        self.enabled_features = features
 
     def proxyreq(self, req, reboot=False, no_reply=False, pre_reply=None):
         self.cmd(self.REQ_PROXY, req)
@@ -349,7 +379,7 @@ class UartInterface:
             return self.reply(self.REQ_PROXY)
 
     def writemem(self, addr, data, progress=False):
-        checksum = self.checksum(data)
+        checksum = self.data_checksum(data)
         size = len(data)
         req = struct.pack("<QQI", addr, size, checksum)
         self.cmd(self.REQ_MEMWRITE, req)
@@ -375,7 +405,7 @@ class UartInterface:
         if self.debug:
             print(">> DATA:")
             chexdump(data)
-        ccsum = self.checksum(data)
+        ccsum = self.data_checksum(data)
         if checksum != ccsum:
             raise UartChecksumError("Reply data checksum error: Expected 0x%08x, got 0x%08x"%(checksum, ccsum))
         return data

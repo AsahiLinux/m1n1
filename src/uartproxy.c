@@ -9,6 +9,8 @@
 #include "types.h"
 #include "utils.h"
 
+#include "tinf/tinf.h"
+
 #define REQ_SIZE 64
 
 typedef struct {
@@ -62,6 +64,9 @@ static_assert(sizeof(UartReply) == (REPLY_SIZE + 4), "Invalid UartReply size");
 #define ST_XFRERR  -3
 #define ST_CSUMERR -4
 
+#define PROXY_FEAT_DATA_CSUM_ADLER32 0x01
+#define PROXY_FEAT_ALL               (PROXY_FEAT_DATA_CSUM_ADLER32)
+
 static u32 iodev_proxy_buffer[IODEV_MAX];
 
 #define CHECKSUM_INIT  0xDEADBEEF
@@ -102,6 +107,15 @@ static inline u32 checksum(void *start, u32 length)
     return checksum_finish(checksum_start(start, length));
 }
 
+static u64 data_checksum(void *start, u32 length, bool use_adler32)
+{
+    if (use_adler32) {
+        return tinf_adler32(start, length);
+    }
+
+    return checksum(start, length);
+}
+
 iodev_id_t uartproxy_iodev;
 
 int uartproxy_run(struct uartproxy_msg_start *start)
@@ -110,6 +124,8 @@ int uartproxy_run(struct uartproxy_msg_start *start)
     int running = 1;
     size_t bytes;
     u64 checksum_val;
+    u64 enabled_features = 0;
+    bool use_adler32 = false;
 
     iodev_id_t iodev = IODEV_MAX;
 
@@ -180,6 +196,9 @@ int uartproxy_run(struct uartproxy_msg_start *start)
 
         switch (request.type) {
             case REQ_NOP:
+                enabled_features = request.prequest.opcode & PROXY_FEAT_ALL;
+                use_adler32 = enabled_features & PROXY_FEAT_DATA_CSUM_ADLER32;
+                reply.preply.opcode = enabled_features;
                 break;
             case REQ_PROXY:
                 ret = proxy_process(&request.prequest, &reply.preply);
@@ -193,7 +212,8 @@ int uartproxy_run(struct uartproxy_msg_start *start)
                     break;
                 exc_count = 0;
                 exc_guard = GUARD_RETURN;
-                checksum_val = checksum((void *)request.mrequest.addr, request.mrequest.size);
+                checksum_val = data_checksum((void *)request.mrequest.addr, request.mrequest.size,
+                                             use_adler32);
                 exc_guard = GUARD_OFF;
                 if (exc_count)
                     reply.status = ST_XFRERR;
@@ -218,7 +238,8 @@ int uartproxy_run(struct uartproxy_msg_start *start)
                     reply.status = ST_XFRERR;
                     break;
                 }
-                checksum_val = checksum((void *)request.mrequest.addr, request.mrequest.size);
+                checksum_val = data_checksum((void *)request.mrequest.addr, request.mrequest.size,
+                                             use_adler32);
                 reply.mreply.dchecksum = checksum_val;
                 if (reply.mreply.dchecksum != request.mrequest.dchecksum)
                     reply.status = ST_XFRERR;
