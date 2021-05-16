@@ -62,6 +62,14 @@ ssize_t iodev_write(iodev_id_t id, const void *buf, size_t length)
     return iodevs[id]->ops->write(iodevs[id]->opaque, buf, length);
 }
 
+ssize_t iodev_queue(iodev_id_t id, const void *buf, size_t length)
+{
+    if (!iodevs[id]->ops->queue)
+        return iodev_write(id, buf, length);
+
+    return iodevs[id]->ops->queue(iodevs[id]->opaque, buf, length);
+}
+
 void iodev_flush(iodev_id_t id)
 {
     if (!iodevs[id]->ops->flush)

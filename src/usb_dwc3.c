@@ -1275,7 +1275,7 @@ void usb_dwc3_putbyte(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe, u8 byte)
     }
 }
 
-size_t usb_dwc3_write(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe, const void *buf, size_t count)
+size_t usb_dwc3_queue(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe, const void *buf, size_t count)
 {
     const u8 *p = buf;
     size_t wrote, sent = 0;
@@ -1294,11 +1294,23 @@ size_t usb_dwc3_write(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe, const void *buf, 
         count -= wrote;
         p += wrote;
         sent += wrote;
-        usb_dwc3_handle_events(dev);
-        usb_dwc3_cdc_start_bulk_in_xfer(dev, ep);
+        if (count) {
+            usb_dwc3_handle_events(dev);
+            usb_dwc3_cdc_start_bulk_in_xfer(dev, ep);
+        }
     }
 
     return sent;
+}
+
+size_t usb_dwc3_write(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe, const void *buf, size_t count)
+{
+    u8 ep = dev->pipe[pipe].ep_in;
+    size_t ret = usb_dwc3_queue(dev, pipe, buf, count);
+
+    usb_dwc3_cdc_start_bulk_in_xfer(dev, ep);
+
+    return ret;
 }
 
 size_t usb_dwc3_read(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe, void *buf, size_t count)
