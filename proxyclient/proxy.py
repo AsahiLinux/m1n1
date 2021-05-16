@@ -252,6 +252,8 @@ class UartInterface:
                 reply += self.readfull(self.EVENT_HDR_LEN - 4)
                 data_len, event_type = struct.unpack("<HH", reply[4:])
                 reply += self.readfull(data_len + 4)
+                if self.debug:
+                    print(">>", hexdump(reply))
                 checksum = struct.unpack("<I", reply[-4:])[0]
                 ccsum = self.checksum(reply[:-4])
                 if checksum != ccsum:
