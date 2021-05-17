@@ -21,6 +21,7 @@ typedef struct {
             u64 size;
             u32 dchecksum;
         } mrequest;
+        u64 features;
     };
     u32 checksum;
 } UartRequest;
@@ -36,6 +37,7 @@ typedef struct {
             u32 dchecksum;
         } mreply;
         struct uartproxy_msg_start start;
+        u64 features;
     };
     u32 checksum;
     u32 _dummy; // Not transferred
@@ -62,10 +64,17 @@ static_assert(sizeof(UartReply) == (REPLY_SIZE + 4), "Invalid UartReply size");
 #define ST_XFRERR  -3
 #define ST_CSUMERR -4
 
+#define PROXY_FEAT_DISABLE_DATA_CSUMS 0x01
+#define PROXY_FEAT_ALL                (PROXY_FEAT_DISABLE_DATA_CSUMS)
+
 static u32 iodev_proxy_buffer[IODEV_MAX];
 
-#define CHECKSUM_INIT  0xDEADBEEF
-#define CHECKSUM_FINAL 0xADDEDBAD
+#define CHECKSUM_INIT     0xDEADBEEF
+#define CHECKSUM_FINAL    0xADDEDBAD
+#define CHECKSUM_SENTINEL 0xD0DECADE
+#define DATA_END_SENTINEL 0xB0CACC10
+
+static bool disable_data_csums = false;
 
 // I just totally pulled this out of my arse
 // Noinline so that this can be bailed out by exc_guard = EXC_RETURN
@@ -102,6 +111,15 @@ static inline u32 checksum(void *start, u32 length)
     return checksum_finish(checksum_start(start, length));
 }
 
+static u64 data_checksum(void *start, u32 length)
+{
+    if (disable_data_csums) {
+        return CHECKSUM_SENTINEL;
+    }
+
+    return checksum(start, length);
+}
+
 iodev_id_t uartproxy_iodev;
 
 int uartproxy_run(struct uartproxy_msg_start *start)
@@ -110,6 +128,7 @@ int uartproxy_run(struct uartproxy_msg_start *start)
     int running = 1;
     size_t bytes;
     u64 checksum_val;
+    u64 enabled_features = 0;
 
     iodev_id_t iodev = IODEV_MAX;
 
@@ -180,6 +199,14 @@ int uartproxy_run(struct uartproxy_msg_start *start)
 
         switch (request.type) {
             case REQ_NOP:
+                enabled_features = request.features & PROXY_FEAT_ALL;
+                if (iodev == IODEV_UART) {
+                    // Don't allow disabling checksums on UART
+                    enabled_features &= ~PROXY_FEAT_DISABLE_DATA_CSUMS;
+                }
+
+                disable_data_csums = enabled_features & PROXY_FEAT_DISABLE_DATA_CSUMS;
+                reply.features = enabled_features;
                 break;
             case REQ_PROXY:
                 ret = proxy_process(&request.prequest, &reply.preply);
@@ -193,7 +220,7 @@ int uartproxy_run(struct uartproxy_msg_start *start)
                     break;
                 exc_count = 0;
                 exc_guard = GUARD_RETURN;
-                checksum_val = checksum((void *)request.mrequest.addr, request.mrequest.size);
+                checksum_val = data_checksum((void *)request.mrequest.addr, request.mrequest.size);
                 exc_guard = GUARD_OFF;
                 if (exc_count)
                     reply.status = ST_XFRERR;
@@ -218,21 +245,43 @@ int uartproxy_run(struct uartproxy_msg_start *start)
                     reply.status = ST_XFRERR;
                     break;
                 }
-                checksum_val = checksum((void *)request.mrequest.addr, request.mrequest.size);
+                checksum_val = data_checksum((void *)request.mrequest.addr, request.mrequest.size);
                 reply.mreply.dchecksum = checksum_val;
-                if (reply.mreply.dchecksum != request.mrequest.dchecksum)
+                if (reply.mreply.dchecksum != request.mrequest.dchecksum) {
                     reply.status = ST_XFRERR;
+                    break;
+                }
+                if (disable_data_csums) {
+                    // Check the sentinel that should be present after the data
+                    u32 sentinel = 0;
+                    bytes = iodev_read(iodev, &sentinel, sizeof(sentinel));
+                    if (bytes != sizeof(sentinel) || sentinel != DATA_END_SENTINEL) {
+                        reply.status = ST_XFRERR;
+                        break;
+                    }
+                }
                 break;
             default:
                 reply.status = ST_BADCMD;
                 break;
         }
         reply.checksum = checksum(&reply, REPLY_SIZE - 4);
-        iodev_write(iodev, &reply, REPLY_SIZE);
+        iodev_queue(iodev, &reply, REPLY_SIZE);
 
         if ((request.type == REQ_MEMREAD) && (reply.status == ST_OK)) {
-            iodev_write(iodev, (void *)request.mrequest.addr, request.mrequest.size);
+            iodev_queue(iodev, (void *)request.mrequest.addr, request.mrequest.size);
+
+            if (disable_data_csums) {
+                // Since there is no checksum, put a sentinel after the data so the receiver
+                // can check that no packets were lost.
+                u32 sentinel = DATA_END_SENTINEL;
+
+                iodev_queue(iodev, &sentinel, sizeof(sentinel));
+            }
         }
+
+        // Flush all queued data
+        iodev_write(iodev, NULL, 0);
     }
 
     return ret;
@@ -247,8 +296,12 @@ void uartproxy_send_event(u16 event_type, void *data, u16 length)
     hdr.len = length;
     hdr.event_type = event_type;
 
-    csum = checksum_start(&hdr, sizeof(UartEventHdr));
-    csum = checksum_finish(checksum_add(data, length, csum));
+    if (disable_data_csums) {
+        csum = CHECKSUM_SENTINEL;
+    } else {
+        csum = checksum_start(&hdr, sizeof(UartEventHdr));
+        csum = checksum_finish(checksum_add(data, length, csum));
+    }
     iodev_queue(uartproxy_iodev, &hdr, sizeof(UartEventHdr));
     iodev_queue(uartproxy_iodev, data, length);
     iodev_write(uartproxy_iodev, &csum, sizeof(csum));

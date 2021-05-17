@@ -76,6 +76,18 @@ class UartChecksumError(UartError):
 class UartRemoteError(UartError):
     pass
 
+class Feature(IntFlag):
+    DISABLE_DATA_CSUMS = 0x01  # Data transfers don't use checksums
+
+    @classmethod
+    def get_all(cls):
+        return cls.DISABLE_DATA_CSUMS
+
+    def __str__(self):
+        return ", ".join(feature.name for feature in self.__class__
+            if feature & self) or "<none>"
+
+
 class START(IntEnum):
     BOOT = 0
     EXCEPTION = 1
@@ -119,6 +131,9 @@ class UartInterface:
     REQ_BOOT = 0x04AA55FF
     REQ_EVENT = 0x05AA55FF
 
+    CHECKSUM_SENTINEL = 0xD0DECADE
+    DATA_END_SENTINEL = 0xB0CACC10
+
     ST_OK = 0
     ST_BADCMD = -1
     ST_INVAL = -2
@@ -156,6 +171,7 @@ class UartInterface:
         self.tty_enable = True
         self.handlers = {}
         self.evt_handlers = {}
+        self.enabled_features = Feature(0)
 
     def checksum(self, data):
         sum = 0xDEADBEEF;
@@ -165,6 +181,12 @@ class UartInterface:
             sum &= 0xFFFFFFFF
 
         return (sum ^ 0xADDEDBAD) & 0xFFFFFFFF
+
+    def data_checksum(self, data):
+        if self.enabled_features & Feature.DISABLE_DATA_CSUMS:
+            return self.CHECKSUM_SENTINEL
+
+        return self.checksum(data)
 
     def readfull(self, size):
         d = b''
@@ -255,7 +277,7 @@ class UartInterface:
                 if self.debug:
                     print(">>", hexdump(reply))
                 checksum = struct.unpack("<I", reply[-4:])[0]
-                ccsum = self.checksum(reply[:-4])
+                ccsum = self.data_checksum(reply[:-4])
                 if checksum != ccsum:
                     print("Event checksum error: Expected 0x%08x, got 0x%08x"%(checksum, ccsum))
                     raise UartChecksumError()
@@ -334,8 +356,21 @@ class UartInterface:
             print(" Connected")
 
     def nop(self):
-        self.cmd(self.REQ_NOP)
-        self.reply(self.REQ_NOP)
+        features = Feature.get_all()
+
+        # Send the supported feature flags in the NOP message (has no effect
+        # if the target does not support it)
+        self.cmd(self.REQ_NOP, struct.pack("<Q", features.value))
+        result = self.reply(self.REQ_NOP)
+
+        # Get the enabled feature flags from the message response (returns
+        # 0 if the target does not support it)
+        features = Feature(struct.unpack("<QQQ", result)[0])
+
+        if self.debug:
+            print(f"Enabled features: {features}")
+
+        self.enabled_features = features
 
     def proxyreq(self, req, reboot=False, no_reply=False, pre_reply=None):
         self.cmd(self.REQ_PROXY, req)
@@ -349,7 +384,7 @@ class UartInterface:
             return self.reply(self.REQ_PROXY)
 
     def writemem(self, addr, data, progress=False):
-        checksum = self.checksum(data)
+        checksum = self.data_checksum(data)
         size = len(data)
         req = struct.pack("<QQI", addr, size, checksum)
         self.cmd(self.REQ_MEMWRITE, req)
@@ -363,6 +398,10 @@ class UartInterface:
                 sys.stdout.flush()
         if progress:
             print()
+        if self.enabled_features & Feature.DISABLE_DATA_CSUMS:
+            # Extra sentinel after the data to make sure no data is lost
+            self.dev.write(struct.pack("<I", self.DATA_END_SENTINEL))
+
         # should automatically report a CRC failure
         self.reply(self.REQ_MEMWRITE)
 
@@ -375,9 +414,17 @@ class UartInterface:
         if self.debug:
             print(">> DATA:")
             chexdump(data)
-        ccsum = self.checksum(data)
+        ccsum = self.data_checksum(data)
         if checksum != ccsum:
             raise UartChecksumError("Reply data checksum error: Expected 0x%08x, got 0x%08x"%(checksum, ccsum))
+
+        if self.enabled_features & Feature.DISABLE_DATA_CSUMS:
+            # Extra sentinel after the data to make sure no data was lost
+            sentinel = struct.unpack("<I", self.readfull(4))[0]
+            if sentinel != self.DATA_END_SENTINEL:
+                raise UartChecksumError(f"Reply data sentinel error: Expected "
+                    f"{self.DATA_END_SENTINEL:#x}, got {sentinel:#x}")
+
         return data
 
     def readstruct(self, addr, stype):
