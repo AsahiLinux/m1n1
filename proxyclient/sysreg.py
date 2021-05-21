@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-import json, os
+import json, os, re
 from enum import IntEnum
 from utils import Register64, Register32
 
@@ -18,6 +18,21 @@ def sysreg_name(enc):
     if enc in sysreg_rev:
         return sysreg_rev[enc]
     return f"s{enc[0]}_{enc[1]}_c{enc[2]}_c{enc[3]}_{enc[4]}"
+
+def sysreg_parse(s):
+    if isinstance(s, tuple) or isinstance(s, list):
+        return tuple(s)
+    s = s.strip()
+    for r in (r"s(\d+)_(\d+)_c(\d+)_c(\d+)_(\d+)", r"(\d+), *(\d+), *(\d+), *(\d+), *(\d+)"):
+        if m := re.match(r, s):
+            enc = tuple(map(int, m.groups()))
+            break
+    else:
+        try:
+            enc = sysreg_fwd[s]
+        except KeyError:
+            raise Exception(f"Unknown sysreg name {s}")
+    return enc
 
 class ESR_EC(IntEnum):
     UNKNOWN        = 0b000000
