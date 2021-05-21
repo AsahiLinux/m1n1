@@ -8,6 +8,7 @@ import adt
 from contextlib import contextmanager
 
 class ProxyUtils(object):
+    CODE_BUFFER_SIZE = 0x10000
     def __init__(self, p, heap_size=1024 * 1024 * 1024):
         self.iface = p.iface
         self.proxy = p
@@ -38,7 +39,7 @@ class ProxyUtils(object):
         self.memalign = self.heap.memalign
         self.free = self.heap.free
 
-        self.code_buffer = self.malloc(0x10000)
+        self.code_buffer = self.malloc(self.CODE_BUFFER_SIZE)
 
         self.adt_data = None
         self.adt = LazyADT(self)
@@ -87,9 +88,10 @@ class ProxyUtils(object):
         else:
             raise ValueError()
 
+        assert len(func) < self.CODE_BUFFER_SIZE
         self.iface.writemem(self.code_buffer, func)
-        self.proxy.dc_cvau(self.code_buffer, 8)
-        self.proxy.ic_ivau(self.code_buffer, 8)
+        self.proxy.dc_cvau(self.code_buffer, len(func))
+        self.proxy.ic_ivau(self.code_buffer, len(func))
 
         self.proxy.set_exc_guard(GUARD.SKIP | (GUARD.SILENT if silent else 0))
         ret = call(self.code_buffer | region, r0, r1, r2, r3)
