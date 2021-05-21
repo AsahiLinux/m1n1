@@ -134,8 +134,8 @@
 #define SYS_IMP_APL_GXF_CONFIG_EL1 sys_reg(3, 6, 15, 1, 2)
 #define GXF_CONFIG_EN              BIT(0)
 
-#define SYS_IMP_APL_GXF_STATUS sys_reg(3, 6, 15, 8, 0)
-#define GXF_STATUS_GUARDED     BIT(0)
+#define SYS_IMP_APL_GXF_STATUS_EL1 sys_reg(3, 6, 15, 8, 0)
+#define GXF_STATUS_GUARDED         BIT(0)
 
 #define SYS_IMP_APL_GXF_ABORT_EL1 sys_reg(3, 6, 15, 8, 2)
 #define SYS_IMP_APL_GXF_ENTER_EL1 sys_reg(3, 6, 15, 8, 1)

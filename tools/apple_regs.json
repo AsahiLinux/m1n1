@@ -133,7 +133,7 @@
     {"index": 0, "name": "APDAKeyHi_EL12",              "fullname": "Pointer Authentication Key A for Data High (EL12)",            "enc": [3, 6, 15, 7, 5  ], "width": 64},
     {"index": 0, "name": "APDBKeyLo_EL12",              "fullname": "Pointer Authentication Key A for Data Low (EL12)",             "enc": [3, 6, 15, 7, 6  ], "width": 64},
     {"index": 0, "name": "APDBKeyHi_EL12",              "fullname": "Pointer Authentication Key A for Data High (EL12)",            "enc": [3, 6, 15, 7, 7  ], "width": 64},
-    {"index": 0, "name": "GXF_STATUS",                  "fullname": "GXF Status Register",                                          "enc": [3, 6, 15, 8, 0  ], "width": 64,
+    {"index": 0, "name": "GXF_STATUS_EL1",              "fullname": "GXF Status Register",                                          "enc": [3, 6, 15, 8, 0  ], "width": 64,
         "fieldsets": [{"fields": [
             {"name": "GUARDED",                         "msb": 0, "lsb": 0}
         ]}]},

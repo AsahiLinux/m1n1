@@ -23,7 +23,7 @@ bool in_gl12(void)
         return false;
     if (!(mrs(SYS_IMP_APL_GXF_CONFIG_EL1) & GXF_CONFIG_EN))
         return false;
-    if (!(mrs(SYS_IMP_APL_GXF_STATUS) & GXF_STATUS_GUARDED))
+    if (!(mrs(SYS_IMP_APL_GXF_STATUS_EL1) & GXF_STATUS_GUARDED))
         return false;
     return true;
 }
