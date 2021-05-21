@@ -76,7 +76,8 @@ uint64_t gl1_call(void *func, uint64_t a, uint64_t b, uint64_t c, uint64_t d)
     args.d = d;
 
     // enable EL1 here since once GXF has been enabled HCR_EL2 writes are only possible from GL2
-    reg_clr(HCR_EL2, HCR_TGE);
+    if (mrs(HCR_EL2) & HCR_TGE)
+        reg_clr(HCR_EL2, HCR_TGE);
 
     u64 sprr_state = mrs(SYS_IMP_APL_SPRR_CONFIG_EL1) & SPRR_CONFIG_EN;
     reg_set_sync(SYS_IMP_APL_SPRR_CONFIG_EL1, SPRR_CONFIG_EN);
