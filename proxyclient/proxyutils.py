@@ -3,7 +3,8 @@ from asm import ARMAsm
 from proxy import *
 from tgtypes import *
 from sysreg import *
-import malloc, adt
+from malloc import Heap
+import adt
 from contextlib import contextmanager
 
 class ProxyUtils(object):
@@ -30,7 +31,7 @@ class ProxyUtils(object):
                               self.ba.phys_base)
         self.heap_base += 128 * 1024 * 1024 # We leave 128MB for m1n1 heap
         self.heap_top = self.heap_base + self.heap_size
-        self.heap = malloc.Heap(self.heap_base, self.heap_top)
+        self.heap = Heap(self.heap_base, self.heap_top)
         self.proxy.heap = self.heap
 
         self.malloc = self.heap.malloc
@@ -263,7 +264,10 @@ class RegMonitor(object):
         self.last = cur
 
 class GuardedHeap:
-    def __init__(self, malloc, memalign, free):
+    def __init__(self, malloc, memalign=None, free=None):
+        if isinstance(malloc, Heap):
+            malloc, memalign, free = malloc.malloc, malloc.memalign, malloc.free
+
         self.ptrs = set()
         self.malloc = malloc
         self.memalign = memalign
