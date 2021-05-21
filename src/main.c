@@ -58,6 +58,7 @@ void run_actions(void)
     printf("No valid payload found\n");
 
     usb_init();
+    usb_iodev_init();
 
     printf("Running proxy...\n");
 
@@ -95,7 +96,7 @@ void m1n1_main(void)
     printf("Preparing to run next stage at %p...\n", next_stage.entry);
 
     exception_shutdown();
-    usb_shutdown();
+    usb_iodev_shutdown();
     mmu_shutdown();
 #ifdef USE_FB
     fb_shutdown();
