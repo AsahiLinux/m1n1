@@ -3,9 +3,11 @@
 #include "usb.h"
 #include "adt.h"
 #include "dart.h"
+#include "i2c.h"
 #include "iodev.h"
 #include "malloc.h"
 #include "pmgr.h"
+#include "tps6598x.h"
 #include "types.h"
 #include "usb_dwc3.h"
 #include "usb_dwc3_regs.h"
@@ -24,18 +26,21 @@ static const struct {
     const char *dart_mapper_path;
     const char *atc_path;
     const char *drd_path;
+    const char *hpm_path;
 } usb_drd_paths[2] = {
     {
         .dart_path = "/arm-io/dart-usb0",
         .dart_mapper_path = "/arm-io/dart-usb0/mapper-usb0",
         .atc_path = "/arm-io/atc-phy0",
         .drd_path = "/arm-io/usb-drd0",
+        .hpm_path = "/arm-io/i2c0/hpmBusManager/hpm0",
     },
     {
         .dart_path = "/arm-io/dart-usb1",
         .dart_mapper_path = "/arm-io/dart-usb1/mapper-usb1",
         .atc_path = "/arm-io/atc-phy1",
         .drd_path = "/arm-io/usb-drd1",
+        .hpm_path = "/arm-io/i2c0/hpmBusManager/hpm1",
     },
 };
 
@@ -107,34 +112,40 @@ static int usb_drd_get_regs(const char *phy_path, const char *drd_path, struct u
     return 0;
 }
 
-static void usb_phy_bringup(struct usb_drd_regs *usb_regs)
-{
-    write32(usb_regs->atc + 0x08, 0x01c1000f);
-    write32(usb_regs->atc + 0x04, 0x00000003);
-    write32(usb_regs->atc + 0x04, 0x00000000);
-    write32(usb_regs->atc + 0x1c, 0x008c0813);
-    write32(usb_regs->atc + 0x00, 0x00000002);
-
-    write32(usb_regs->drd_regs_unk3 + 0x0c, 0x00000002);
-    write32(usb_regs->drd_regs_unk3 + 0x0c, 0x00000022);
-    write32(usb_regs->drd_regs_unk3 + 0x1c, 0x00000021);
-    write32(usb_regs->drd_regs_unk3 + 0x20, 0x00009332);
-}
-
-dwc3_dev_t *usb_bringup(u32 idx)
+int usb_phy_bringup(u32 idx)
 {
     if (idx >= 2)
-        return NULL;
+        return -1;
 
     if (pmgr_adt_clocks_enable(usb_drd_paths[idx].atc_path) < 0)
-        return NULL;
+        return -1;
 
     if (pmgr_adt_clocks_enable(usb_drd_paths[idx].dart_path) < 0)
-        return NULL;
+        return -1;
 
     if (pmgr_adt_clocks_enable(usb_drd_paths[idx].drd_path) < 0)
-        return NULL;
+        return -1;
 
+    struct usb_drd_regs usb_regs;
+    if (usb_drd_get_regs(usb_drd_paths[idx].atc_path, usb_drd_paths[idx].drd_path, &usb_regs) < 0)
+        return -1;
+
+    write32(usb_regs.atc + 0x08, 0x01c1000f);
+    write32(usb_regs.atc + 0x04, 0x00000003);
+    write32(usb_regs.atc + 0x04, 0x00000000);
+    write32(usb_regs.atc + 0x1c, 0x008c0813);
+    write32(usb_regs.atc + 0x00, 0x00000002);
+
+    write32(usb_regs.drd_regs_unk3 + 0x0c, 0x00000002);
+    write32(usb_regs.drd_regs_unk3 + 0x0c, 0x00000022);
+    write32(usb_regs.drd_regs_unk3 + 0x1c, 0x00000021);
+    write32(usb_regs.drd_regs_unk3 + 0x20, 0x00009332);
+
+    return 0;
+}
+
+dwc3_dev_t *usb_iodev_bringup(u32 idx)
+{
     dart_dev_t *usb_dart =
         usb_dart_init(usb_drd_paths[idx].dart_path, usb_drd_paths[idx].dart_mapper_path);
     if (!usb_dart)
@@ -143,8 +154,6 @@ dwc3_dev_t *usb_bringup(u32 idx)
     struct usb_drd_regs usb_regs;
     if (usb_drd_get_regs(usb_drd_paths[idx].atc_path, usb_drd_paths[idx].drd_path, &usb_regs) < 0)
         return NULL;
-
-    usb_phy_bringup(&usb_regs);
 
     return usb_dwc3_init(usb_regs.drd_regs, usb_dart);
 }
@@ -230,10 +239,49 @@ struct iodev iodev_usb_sec[USB_INSTANCES] = {
     },
 };
 
+static void hpm_init(void)
+{
+    int i;
+
+    i2c_dev_t *i2c = i2c_init("/arm-io/i2c0");
+    if (!i2c) {
+        printf("usb: i2c init failed.\n");
+        return;
+    }
+
+    for (i = 0; i < USB_INSTANCES; ++i) {
+        const char *hpm_path = usb_drd_paths[i].hpm_path;
+        tps6598x_dev_t *tps = tps6598x_init(hpm_path, i2c);
+        if (!tps) {
+            printf("usb: tps6598x_init failed for %s.\n", hpm_path);
+            continue;
+        }
+
+        if (tps6598x_powerup(tps) < 0) {
+            printf("usb: tps6598x_powerup failed for %s.\n", hpm_path);
+            continue;
+        }
+
+        tps6598x_shutdown(tps);
+    }
+
+    i2c_shutdown(i2c);
+}
+
 void usb_init(void)
 {
+    hpm_init();
+
+    for (int idx = 0; idx < 2; ++idx) {
+        if (usb_phy_bringup(idx) < 0)
+            printf("usb: unable to bringup the phy with index %d\n", idx);
+    }
+}
+
+void usb_iodev_init(void)
+{
     for (int i = 0; i < USB_INSTANCES; i++) {
-        iodev_usb[i].opaque = usb_bringup(i);
+        iodev_usb[i].opaque = usb_iodev_bringup(i);
         if (!iodev_usb[i].opaque)
             continue;
 
@@ -243,7 +291,7 @@ void usb_init(void)
     }
 }
 
-void usb_shutdown(void)
+void usb_iodev_shutdown(void)
 {
     for (int i = 0; i < USB_INSTANCES; i++) {
         if (!iodev_usb[i].opaque)

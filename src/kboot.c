@@ -9,6 +9,7 @@
 #include "pcie.h"
 #include "smp.h"
 #include "types.h"
+#include "usb.h"
 #include "utils.h"
 #include "xnuboot.h"
 
@@ -302,6 +303,7 @@ int kboot_prepare_dt(void *fdt)
 
 int kboot_boot(void *kernel)
 {
+    usb_init();
     pcie_init();
 
     printf("Preparing to boot kernel at %p with fdt at %p\n", kernel, dt);
