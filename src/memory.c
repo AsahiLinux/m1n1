@@ -147,13 +147,13 @@ enum SPRR_val_t {
 
 #define SPRR_DEFAULT_PERM_EL1                                                                      \
     SPRR_PERM(PERM_RO_EL0, ELrw_GLrw) | SPRR_PERM(PERM_RW_EL0, ELrw_GLrw) |                        \
-        SPRR_PERM(PERM_RX_EL0, ELrw_GLrw) | SPRR_PERM(PERM_RWX_EL0, ELrw_GLrw) |                   \
+        SPRR_PERM(PERM_RX_EL0, ELrx_GLrx) | SPRR_PERM(PERM_RWX_EL0, ELrw_GLrw) |                   \
         SPRR_PERM(PERM_RO, ELr_GLr) | SPRR_PERM(PERM_RW, ELrw_GLrw) |                              \
         SPRR_PERM(PERM_RX, ELrx_GLrx) | SPRR_PERM(PERM_RWX, ELrw_GLrw)
 
 #define SPRR_DEFAULT_PERM_EL0                                                                      \
     SPRR_PERM(PERM_RO_EL0, ELr_GLr) | SPRR_PERM(PERM_RW_EL0, ELrw_GLrw) |                          \
-        SPRR_PERM(PERM_RX_EL0, ELrx_GLrx) | SPRR_PERM(PERM_RWX_EL0, ELrw_GLrw) |                   \
+        SPRR_PERM(PERM_RX_EL0, ELrx_GLrx) | SPRR_PERM(PERM_RWX_EL0, ELrx_GLrx) |                   \
         SPRR_PERM(PERM_RO, ELr_GLr) | SPRR_PERM(PERM_RW, ELrw_GLrw) |                              \
         SPRR_PERM(PERM_RX, ELrx_GLrx) | SPRR_PERM(PERM_RWX, ELrw_GLrw)
 
@@ -350,7 +350,7 @@ static void mmu_add_default_mappings(void)
      * Remap m1n1 executable code as RX.
      */
     mmu_add_mapping((u64)_base, (u64)_base, (u64)_rodata_end - (u64)_base, MAIR_IDX_NORMAL,
-                    PERM_RX);
+                    PERM_RX_EL0);
 
     /*
      * Create mapping for 16GB RAM from 0x88_0000_0000 to 0x8c_0000_0000,
@@ -372,7 +372,7 @@ static void mmu_add_default_mappings(void)
      * This allows executing from dynamic regions in EL1
      */
     mmu_add_mapping(0x0800000000 | REGION_RX_EL1, 0x0800000000, 0x0400000000, MAIR_IDX_NORMAL,
-                    PERM_RX);
+                    PERM_RX_EL0);
 
     /*
      * Create two seperate nGnRnE and nGnRE full mappings of MMIO space
