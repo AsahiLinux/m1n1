@@ -53,7 +53,7 @@ class ProxyUtils(object):
         }
 
     def mrs(self, reg, *, silent=False, call=None):
-        op0, op1, CRn, CRm, op2 = reg
+        op0, op1, CRn, CRm, op2 = sysreg_parse(reg)
 
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
                (CRm << 8) | (op2 << 5) | 0xd5300000)
@@ -61,7 +61,7 @@ class ProxyUtils(object):
         return self.exec(op, call=call, silent=silent)
 
     def msr(self, reg, val, *, silent=False, call=None):
-        op0, op1, CRn, CRm, op2 = reg
+        op0, op1, CRn, CRm, op2 = sysreg_parse(reg)
 
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
                (CRm << 8) | (op2 << 5) | 0xd5100000)
