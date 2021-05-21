@@ -111,6 +111,7 @@
             {"name": "EN",                              "msb": 0, "lsb": 0}
         ]}]},
     {"index": 0, "name": "SPRR_UNK1_EL1",               "fullname": "SPRR Unknown (EL1)",                                           "enc": [3, 6, 15, 1, 3  ], "width": 64},
+    {"index": 0, "name": "GXF_CONFIG_EL2",              "fullname": "GXF Configuration Register (EL2)",                             "enc": [3, 6, 15, 1, 4  ], "width": 64},
     {"index": 0, "name": "SPRR_PERM_EL0",               "fullname": "SPRR Permission Configuration Register (EL0)",                 "enc": [3, 6, 15, 1, 5  ], "width": 64},
     {"index": 0, "name": "SPRR_PERM_EL1",               "fullname": "SPRR Permission Configuration Register (EL1)",                 "enc": [3, 6, 15, 1, 6  ], "width": 64},
     {"index": 0, "name": "SPRR_PERM_EL2",               "fullname": "SPRR Permission Configuration Register (EL2)",                 "enc": [3, 6, 15, 1, 7  ], "width": 64},
@@ -164,6 +165,7 @@
     {"index": 0, "name": "ACTLR_EL12",                  "fullname": "Auxiliary Control Register (EL12)",                            "enc": [3, 6, 15, 14, 6 ], "width": 64},
     {"index": 0, "name": "APSTS_EL12",                  "fullname": "Pointer Authentication Status (EL12)",                         "enc": [3, 6, 15, 14, 7 ], "width": 64},
     {"index": 0, "name": "APCTL_EL12",                  "fullname": "Pointer Authentication Control (EL12)",                        "enc": [3, 6, 15, 15, 0 ], "width": 64},
+    {"index": 0, "name": "GXF_CONFIG_EL12",             "fullname": "GXF Configuration Register (EL12)",                            "enc": [3, 6, 15, 15, 1 ], "width": 64},
     {"index": 0, "name": "GXF_ENTER_EL12",              "fullname": "GXF genter Entry Vector Register (EL12)",                      "enc": [3, 6, 15, 15, 2 ], "width": 64},
     {"index": 0, "name": "GXF_ABORT_EL12",              "fullname": "GXF Abort Vector Register (EL12)",                             "enc": [3, 6, 15, 15, 3 ], "width": 64},
     {"index": 0, "name": "SPRR_CONFIG_EL12",            "fullname": "SPRR Configuration Register (EL12)",                           "enc": [3, 6, 15, 15, 4 ], "width": 64},
