@@ -72,7 +72,7 @@ def test():
                     i += 1
     for enc in AUX:
         try:
-            v = u.mrs(enc, call=p.el1_call, silent=True, region=0)
+            v = u.mrs(enc, call="el1", silent=True)
             if v != BAD:
                 yield enc
         except:

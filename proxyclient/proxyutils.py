@@ -43,31 +43,47 @@ class ProxyUtils(object):
         self.adt_data = None
         self.adt = LazyADT(self)
 
-    def mrs(self, reg, *, silent=False, call=None, region=REGION_RX_EL1):
+        self.exec_modes = {
+            None: (self.proxy.call, REGION_RX_EL1),
+            "el2": (self.proxy.call, REGION_RX_EL1),
+            "el1": (self.proxy.el1_call, 0),
+            "el0": (self.proxy.el0_call, REGION_RWX_EL0),
+            "gl2": (self.proxy.gl2_call, REGION_RX_EL1),
+            "gl1": (self.proxy.gl1_call, 0),
+        }
 
+    def mrs(self, reg, *, silent=False, call=None):
         op0, op1, CRn, CRm, op2 = reg
 
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
                (CRm << 8) | (op2 << 5) | 0xd5300000)
 
-        return self.exec(op, call=call, silent=silent, region=region)
+        return self.exec(op, call=call, silent=silent)
 
-    def msr(self, reg, val, *, silent=False, call=None, region=REGION_RX_EL1):
+    def msr(self, reg, val, *, silent=False, call=None):
         op0, op1, CRn, CRm, op2 = reg
 
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
                (CRm << 8) | (op2 << 5) | 0xd5100000)
 
-        self.exec(op, val, call=call, silent=silent, region=region)
+        self.exec(op, val, call=call, silent=silent)
 
-    def exec(self, op, r0=0, r1=0, r2=0, r3=0, *, silent=False, call=None, region=REGION_RX_EL1):
-        if call is None:
-            call = self.proxy.call
-        if isinstance(op, int):
+    def exec(self, op, r0=0, r1=0, r2=0, r3=0, *, silent=False, call=None, ignore_exceptions=False):
+        if callable(call):
+            region = REGION_RX_EL1
+        elif isinstance(call, tuple):
+            call, region = call
+        else:
+            call, region = self.exec_modes[call]
+        if isinstance(op, tuple) or isinstance(op, list):
+            func = struct.pack(f"<{len(op)}II", *op, 0xd65f03c0) # ret
+        elif isinstance(op, int):
             func = struct.pack("<II", op, 0xd65f03c0) # ret
         elif isinstance(op, str):
             c = ARMAsm(op + "; ret", self.code_buffer)
             func = c.data
+        elif isinstance(op, bytes):
+            func = op
         else:
             raise ValueError()
 
@@ -77,11 +93,16 @@ class ProxyUtils(object):
 
         self.proxy.set_exc_guard(GUARD.SKIP | (GUARD.SILENT if silent else 0))
         ret = call(self.code_buffer | region, r0, r1, r2, r3)
-        cnt = self.proxy.get_exc_count()
-        self.proxy.set_exc_guard(GUARD.OFF)
-        if cnt:
-            raise ProxyError("Exception occurred")
+        if not ignore_exceptions:
+            cnt = self.proxy.get_exc_count()
+            self.proxy.set_exc_guard(GUARD.OFF)
+            if cnt:
+                raise ProxyError("Exception occurred")
+        else:
+            self.proxy.set_exc_guard(GUARD.OFF)
+
         return ret
+
     inst = exec
 
     def compressed_writemem(self, dest, data, progress):
