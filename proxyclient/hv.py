@@ -96,6 +96,7 @@ class HV:
         self.sym_offset = 0
         self.symbols = []
         self.sysreg = {}
+        self.novm = False
         self.vm_hooks = []
 
     def unmap(self, ipa, size):
@@ -175,10 +176,7 @@ class HV:
         iss = ESR_ISS_MSR(iss)
         enc = iss.Op0, iss.Op1, iss.CRn, iss.CRm, iss.Op2
 
-        if enc in sysreg_rev:
-            name = sysreg_rev[enc]
-        else:
-            name = f"s{iss.Op0}_{iss.Op1}_c{iss.CRn}_c{iss.CRm}_{iss.Op2}"
+        name = sysreg_name(enc)
 
         skip = set()
         shadow = {
@@ -218,17 +216,19 @@ class HV:
             if iss.DIR == MSR_DIR.READ:
                 print(f"Pass: mrs x{iss.Rt}, {name}", end=" ")
                 sys.stdout.flush()
-                value = self.u.mrs(self.MSR_REDIRECTS.get(enc, enc))
-                print(f"= {value:x}")
+                enc2 = self.MSR_REDIRECTS.get(enc, enc)
+                value = self.u.mrs(enc2)
+                print(f"= {value:x} ({sysreg_name(enc2)})")
                 if iss.Rt != 31:
                     ctx.regs[iss.Rt] = value
             else:
                 if iss.Rt != 31:
                     value = ctx.regs[iss.Rt]
                 print(f"Pass: msr {name}, x{iss.Rt} = {value:x}", end=" ")
+                enc2 = self.MSR_REDIRECTS.get(enc, enc)
                 sys.stdout.flush()
-                self.u.msr(self.MSR_REDIRECTS.get(enc, enc), value, call=self.p.gl2_call)
-                print("(OK)")
+                self.u.msr(enc2, value, call=self.p.gl2_call)
+                print(f"(OK) ({sysreg_name(enc2)})")
 
         ctx.elr += 4
 
@@ -496,7 +496,11 @@ class HV:
         self.map_hw(0x2_00000000, 0x2_00000000, 0x5_00000000)
 
         hcr = HCR(self.u.mrs(HCR_EL2))
-        hcr.TACR = 1
+        if self.novm:
+            hcr.VM = 0
+            hcr.AMO = 0
+        else:
+            hcr.TACR = 1
         hcr.TIDCP = 0
         hcr.TVM = 0
         hcr.FMO = 0
@@ -505,13 +509,14 @@ class HV:
 
         # Trap dangerous things
         hacr = HACR(0)
-        #hacr.TRAP_CPU_EXT = 1
-        #hacr.TRAP_SPRR = 1
-        #hacr.TRAP_GXF = 1
-        hacr.TRAP_CTRR = 1
-        hacr.TRAP_EHID = 1
-        hacr.TRAP_HID = 1
-        hacr.TRAP_ACC = 1
+        if not self.novm:
+            #hacr.TRAP_CPU_EXT = 1
+            #hacr.TRAP_SPRR = 1
+            #hacr.TRAP_GXF = 1
+            hacr.TRAP_CTRR = 1
+            hacr.TRAP_EHID = 1
+            hacr.TRAP_HID = 1
+            hacr.TRAP_ACC = 1
         self.u.msr(HACR_EL2, hacr.value)
 
         # Enable AMX
