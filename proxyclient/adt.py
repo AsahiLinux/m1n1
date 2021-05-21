@@ -138,6 +138,11 @@ class ADTNode:
 
     def __getitem__(self, item):
         if isinstance(item, str):
+            while item.startswith("/"):
+                item = item[1:]
+            if "/" in item:
+                a, b = item.split("/", 1)
+                return self[a][b]
             for i in self._children:
                 if i.name == item:
                     return i
@@ -146,6 +151,12 @@ class ADTNode:
 
     def __setitem__(self, item, value):
         if isinstance(item, str):
+            while item.startswith("/"):
+                item = item[1:]
+            if "/" in item:
+                a, b = item.split("/", 1)
+                self[a][b] = value
+                return
             for i, c in enumerate(self._children):
                 if c.name == item:
                     self._children[i] = value
@@ -157,6 +168,12 @@ class ADTNode:
 
     def __delitem__(self, item):
         if isinstance(item, str):
+            while item.startswith("/"):
+                item = item[1:]
+            if "/" in item:
+                a, b = item.split("/", 1)
+                del self[a][b]
+                return
             for i, c in enumerate(self._children):
                 if c.name == item:
                     del self._children[i]
