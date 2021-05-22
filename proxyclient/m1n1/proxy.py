@@ -80,6 +80,20 @@ ExcInfo = Struct(
     "sp_phys" / Int64ul,
     "data" / Int64ul,
 )
+# Sends 56+ byte Commands and Expects 36 Byte Responses
+# Commands are format <I48sI
+#   4 byte command, 48 byte null padded data + 4 byte checksum 
+# Responses are of the format: struct format <Ii24sI
+#   4byte Response , 4 byte status, 24 byte string,  4 byte Checksum
+#    Response must start 0xff55aaXX where XX distiguishes between them
+#    In little endian mode these numbers as listed as REQ_* constants
+# defined under UartInterface
+#
+#  Event Response REQ_EVENT passed to registered Event Handler
+#  Boot Response REQ_BOOT passed to handle_boot() which may
+#       pass to a matching registered handler based on reason, code values
+#  If the status is ST_OK returns the data field to caller
+#     Otherwise reports a remote Error
 
 class UartInterface(Reloadable):
     REQ_NOP = 0x00AA55FF
@@ -426,6 +440,8 @@ REGION_RWX_EL0 = 0x8000000000
 REGION_RW_EL0 = 0x9000000000
 REGION_RX_EL1 = 0xa000000000
 
+# Uses UartInterface.proxyreq() to send requests to M1N1 and process
+# reponses sent back.
 class M1N1Proxy(Reloadable):
     S_OK = 0
     S_BADCMD = -1
