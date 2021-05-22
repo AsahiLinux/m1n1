@@ -46,7 +46,9 @@ class HistoryConsole(code.InteractiveConsole):
 
 class ExitConsole(SystemExit):
     pass
-
+# locals is a dictionary for constructing the
+# InteractiveConsole with. It adds in the callables
+# in proxy utils iface and sysreg into locals
 def run_shell(locals, msg=None, exitmsg=None):
     saved_display = sys.displayhook
     try:
