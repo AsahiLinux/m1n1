@@ -47,6 +47,14 @@ typedef s64 ssize_t;
 #define SZ_16K (1 << 14)
 #define SZ_1M  (1 << 20)
 
+#ifdef __ASSEMBLER__
+
 #define sys_reg(op0, op1, CRn, CRm, op2) s##op0##_##op1##_c##CRn##_c##CRm##_##op2
+
+#else
+
+#define sys_reg(op0, op1, CRn, CRm, op2) , _S, op0, op1, CRn, CRm, op2
+
+#endif
 
 #endif

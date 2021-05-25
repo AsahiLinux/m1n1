@@ -250,44 +250,54 @@ static inline u8 writeread8(u64 addr, u8 data)
     return read8(addr);
 }
 
-#define _mrs(reg)                                                                                  \
+#define _concat(a, _1, b, ...) a##b
+
+#define _sr_tkn_S(_0, _1, op0, op1, CRn, CRm, op2) s##op0##_##op1##_c##CRn##_c##CRm##_##op2
+
+#define _sr_tkn(a) a
+
+#define sr_tkn(...) _concat(_sr_tkn, __VA_ARGS__, )(__VA_ARGS__)
+
+#define __mrs(reg)                                                                                 \
     ({                                                                                             \
         u64 val;                                                                                   \
         __asm__ volatile("mrs\t%0, " #reg : "=r"(val));                                            \
         val;                                                                                       \
     })
-#define mrs(reg) _mrs(reg)
+#define _mrs(reg) __mrs(reg)
 
-#define _msr(reg, val)                                                                             \
+#define __msr(reg, val)                                                                            \
     ({                                                                                             \
         u64 __val = (u64)val;                                                                      \
         __asm__ volatile("msr\t" #reg ", %0" : : "r"(__val));                                      \
     })
-#define msr(reg, val) _msr(reg, val)
+#define _msr(reg, val) __msr(reg, val)
 
+#define mrs(reg)      _mrs(sr_tkn(reg))
+#define msr(reg, val) _msr(sr_tkn(reg), val)
 #define msr_sync(reg, val)                                                                         \
     ({                                                                                             \
-        _msr(reg, val);                                                                            \
+        _msr(sr_tkn(reg), val);                                                                    \
         sysop("isb");                                                                              \
     })
 
-#define reg_clr(reg, bits)      msr(reg, mrs(reg) & ~(bits))
-#define reg_set(reg, bits)      msr(reg, mrs(reg) | bits)
-#define reg_mask(reg, clr, set) msr(reg, (mrs(reg) & ~(clr)) | set)
+#define reg_clr(reg, bits)      _msr(sr_tkn(reg), _mrs(sr_tkn(reg)) & ~(bits))
+#define reg_set(reg, bits)      _msr(sr_tkn(reg), _mrs(sr_tkn(reg)) | bits)
+#define reg_mask(reg, clr, set) _msr(sr_tkn(reg), (_mrs(sr_tkn(reg)) & ~(clr)) | set)
 
 #define reg_clr_sync(reg, bits)                                                                    \
     ({                                                                                             \
-        reg_clr(reg, bits);                                                                        \
+        reg_clr(sr_tkn(reg), bits);                                                                \
         sysop("isb");                                                                              \
     })
 #define reg_set_sync(reg, bits)                                                                    \
     ({                                                                                             \
-        reg_set(reg, bits);                                                                        \
+        reg_set(sr_tkn(reg), bits);                                                                \
         sysop("isb");                                                                              \
     })
 #define reg_mask_sync(reg, clr, set)                                                               \
     ({                                                                                             \
-        reg_mask(reg, clr, set);                                                                   \
+        reg_mask(sr_tkn(reg), clr, set);                                                           \
         sysop("isb");                                                                              \
     })
 
