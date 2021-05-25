@@ -578,8 +578,10 @@ bool hv_handle_dabort(u64 *regs)
                 .data = val,
             };
             uartproxy_send_event(EVT_MMIOTRACE, &evt, sizeof(evt));
-            if (pte & SPTE_SYNC_TRACE)
+            if (pte & SPTE_SYNC_TRACE) {
                 iodev_flush(uartproxy_iodev);
+                udelay(1500);
+            }
         }
 
         switch (FIELD_GET(SPTE_TYPE, pte)) {
