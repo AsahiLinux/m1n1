@@ -3,6 +3,10 @@
 #include "arm_cpu_regs.h"
 #include "types.h"
 
+/* ARM extensions */
+#define ESR_EC_IMPDEF      0b111111
+#define ESR_ISS_IMPDEF_MSR 0x20
+
 /* HID registers */
 #define SYS_IMP_APL_HID0                sys_reg(3, 0, 15, 0, 0)
 #define HID0_FETCH_WIDTH_DISABLE        (1UL << 28)
