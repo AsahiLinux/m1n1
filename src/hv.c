@@ -3,6 +3,7 @@
 #include "hv.h"
 #include "assert.h"
 #include "cpu_regs.h"
+#include "gxf.h"
 #include "utils.h"
 
 #define HV_TICK_RATE 1000
@@ -49,6 +50,14 @@ void hv_start(void *entry, u64 regs[4])
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
 
     printf("Exiting hypervisor.\n");
+}
+
+void hv_write_hcr(u64 val)
+{
+    if (gxf_enabled() && !in_gl12())
+        gl2_call(hv_write_hcr, val, 0, 0, 0);
+    else
+        msr(HCR_EL2, val);
 }
 
 void hv_arm_tick(void)

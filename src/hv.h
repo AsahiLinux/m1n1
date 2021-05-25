@@ -51,6 +51,9 @@ void hv_map_vuart(u64 base, iodev_id_t iodev);
 void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_t type,
                   void *extra);
 
+/* Config */
+void hv_write_hcr(u64 val);
+
 /* HV main */
 void hv_init(void);
 void hv_start(void *entry, u64 regs[4]);
