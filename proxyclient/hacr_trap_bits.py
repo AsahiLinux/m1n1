@@ -4,9 +4,18 @@ import asm
 code_len = 12 * 16 * 8 + 4
 data_len = 8 * 16 * 8
 
+if u.mrs(SPRR_CONFIG_EL1):
+    u.msr(GXF_CONFIG_EL12, 0)
+    u.msr(SPRR_CONFIG_EL12, 0)
+    u.msr(GXF_CONFIG_EL1, 0)
+    u.msr(SPRR_CONFIG_EL1, 0)
+
 u.msr(HACR_EL2, 0)
 
-u.msr(HCR_EL2, u.mrs(HCR_EL2) & ~(1<<20))
+hcr = HCR(u.mrs(HCR_EL2))
+hcr.TIDCP = 0
+hcr.TGE = 0
+u.msr(HCR_EL2, hcr.value)
 u.inst(0xd5033fdf) # isb
 
 ACTLR_DEFAULT = 0xc00
@@ -45,6 +54,11 @@ AUX = [
 ]
 
 def test():
+    u.msr(SPRR_CONFIG_EL1, 1)
+    u.msr(GXF_CONFIG_EL1, 1)
+    u.msr(SPRR_CONFIG_EL12, 1)
+    u.msr(GXF_CONFIG_EL12, 1)
+
     for op1 in range(1 << 3):
         for CRn in (0b1011, 0b1111):
             mrs0 = mrs | (op1 << 16) | (CRn << 12)
@@ -77,6 +91,11 @@ def test():
                 yield enc
         except:
             continue
+
+    u.msr(GXF_CONFIG_EL12, 0)
+    u.msr(SPRR_CONFIG_EL12, 0)
+    u.msr(GXF_CONFIG_EL1, 0)
+    u.msr(SPRR_CONFIG_EL1, 0)
 
 baseline = set(test())
 
