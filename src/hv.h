@@ -27,9 +27,9 @@ struct hv_vm_proxy_hook_data {
     u64 data;
 };
 
-typedef enum _hv_hook_type {
+typedef enum _hv_entry_type {
     HV_HOOK_VM = 1,
-} hv_hook_type;
+} hv_entry_type;
 
 /* VM */
 void hv_pt_init(void);

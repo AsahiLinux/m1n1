@@ -29,8 +29,8 @@ EvtMMIOTrace = Struct(
     "data" / Hex(Int64ul),
 )
 
-class HOOK(IntEnum):
-    VM = 1
+class HV_EVENT(IntEnum):
+    HOOK_VM = 1
 
 VMProxyHookData = Struct(
     "flags" / RegAdapter(MMIOTraceFlags),
@@ -340,9 +340,9 @@ class HV:
                     self.u.msr(CNTV_CTL_EL0, 0)
                     self.u.print_exception(code, ctx)
                     handled = True
-            elif reason == START.HV_HOOK:
-                code = HOOK(code)
-                if code == HOOK.VM:
+            elif reason == START.HV:
+                code = HV_EVENT(code)
+                if code == HV_EVENT.HOOK_VM:
                     handled = self.handle_vm_hook(ctx)
         except Exception as e:
             print(f"Python exception while handling guest exception:")
@@ -490,7 +490,7 @@ class HV:
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.IRQ, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.FIQ, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.SERROR, self.handle_exception)
-        self.iface.set_handler(START.HV_HOOK, HOOK.VM, self.handle_exception)
+        self.iface.set_handler(START.HV, HV_EVENT.HOOK_VM, self.handle_exception)
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
 
         self.map_hw(0x2_00000000, 0x2_00000000, 0x5_00000000)

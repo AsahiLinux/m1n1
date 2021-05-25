@@ -80,7 +80,7 @@ class START(IntEnum):
     BOOT = 0
     EXCEPTION = 1
     EXCEPTION_LOWER = 2
-    HV_HOOK = 3
+    HV = 3
 
 class EXC(IntEnum):
     SYNC = 0

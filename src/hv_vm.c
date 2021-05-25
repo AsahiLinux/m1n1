@@ -630,7 +630,7 @@ bool hv_handle_dabort(u64 *regs)
                     .addr = ipa,
                     .data = val,
                 };
-                hv_exc_proxy(regs, START_HV_HOOK, HV_HOOK_VM, &hook);
+                hv_exc_proxy(regs, START_HV, HV_HOOK_VM, &hook);
                 break;
             }
             default:
@@ -678,7 +678,7 @@ bool hv_handle_dabort(u64 *regs)
                     .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
                     .addr = ipa,
                 };
-                hv_exc_proxy(regs, START_HV_HOOK, HV_HOOK_VM, &hook);
+                hv_exc_proxy(regs, START_HV, HV_HOOK_VM, &hook);
                 val = hook.data;
                 break;
             }
