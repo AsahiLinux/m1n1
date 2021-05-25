@@ -673,6 +673,7 @@ class HV:
         self.entry = macho.entry - macho.vmin + guest_base
 
         print(f"Mapping guest physical memory...")
+        self.map_hw(0x800000000, 0x800000000, self.u.ba.phys_base - 0x800000000)
         self.map_hw(phys_base, phys_base, self.u.ba.mem_size_actual - phys_base + 0x800000000)
 
         print(f"Loading kernel image (0x{len(image):x} bytes)...")
