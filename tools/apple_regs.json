@@ -96,9 +96,16 @@
     {"index": 0, "name": "IPI_RR_LOCAL_EL1",            "fullname": "IPI Request Register (Local)",                                 "enc": [3, 5, 15, 0, 0  ], "width": 64},
     {"index": 0, "name": "IPI_RR_GLOBAL_EL1",           "fullname": "IPI Request Register (Global)",                                "enc": [3, 5, 15, 0, 1  ], "width": 64},
     {"index": 0, "name": "DPC_ERR_STS_EL1",             "fullname": "DPC Error Status",                                             "enc": [3, 5, 15, 0, 5  ], "width": 64},
-    {"index": 0, "name": "IPI_SR_EL1",                  "fullname": "IPI Status Register",                                          "enc": [3, 5, 15, 1, 1  ], "width": 64},
+    {"index": 0, "name": "IPI_SR_EL1",                  "fullname": "IPI Status Register",                                          "enc": [3, 5, 15, 1, 1  ], "width": 64,
+        "fieldsets": [{"fields": [
+            {"name": "PENDING",                         "msb": 0, "lsb": 0}
+        ]}]},
     {"index": 0, "name": "VM_TMR_LR_EL2",               "fullname": "VM Timer Link Register",                                       "enc": [3, 5, 15, 1, 2  ], "width": 64},
-    {"index": 0, "name": "VM_TMR_FIQ_ENA_EL2",          "fullname": "VM Timer FIQ Enable",                                          "enc": [3, 5, 15, 1, 3  ], "width": 64},
+    {"index": 0, "name": "VM_TMR_FIQ_ENA_EL2",          "fullname": "VM Timer FIQ Enable",                                          "enc": [3, 5, 15, 1, 3  ], "width": 64,
+        "fieldsets": [{"fields": [
+            {"name": "ENA_V",                           "msb": 0, "lsb": 0},
+            {"name": "ENA_P",                           "msb": 1, "lsb": 1}
+        ]}]},
     {"index": 0, "name": "IPI_CR_EL1",                  "fullname": "IPI Control Register",                                         "enc": [3, 5, 15, 3, 1  ], "width": 64},
     {"index": 0, "name": "ACC_CFG_EL1",                 "fullname": "Apple Core Cluster Configuration",                             "enc": [3, 5, 15, 4, 0  ], "width": 64},
     {"index": 0, "name": "CYC_OVRD_EL1",                "fullname": "Cyclone Override",                                             "enc": [3, 5, 15, 5, 0  ], "width": 64},
