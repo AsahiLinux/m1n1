@@ -30,6 +30,7 @@ struct hv_vm_proxy_hook_data {
 typedef enum _hv_entry_type {
     HV_HOOK_VM = 1,
     HV_VTIMER,
+    HV_USER_INTERRUPT,
 } hv_entry_type;
 
 /* VM */

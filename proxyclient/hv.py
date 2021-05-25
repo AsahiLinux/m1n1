@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
-import sys, traceback, struct, array, bisect, os
+import sys, traceback, struct, array, bisect, os, signal
 
 from construct import *
 
@@ -32,6 +32,7 @@ EvtMMIOTrace = Struct(
 class HV_EVENT(IntEnum):
     HOOK_VM = 1
     VTIMER = 2
+    USER_INTERRUPT = 3
 
 VMProxyHookData = Struct(
     "flags" / RegAdapter(MMIOTraceFlags),
@@ -98,6 +99,8 @@ class HV:
         self.symbols = []
         self.sysreg = {}
         self.novm = False
+        self._in_handler = False
+        self._sigint_pending = False
         self.vm_hooks = []
 
     def unmap(self, ipa, size):
@@ -328,6 +331,8 @@ class HV:
             return self.handle_hvc(ctx)
 
     def handle_exception(self, reason, code, info):
+        self._in_handler = True
+
         info_data = self.iface.readmem(info, ExcInfo.sizeof())
         self.ctx = ctx = ExcInfo.parse(info_data)
 
@@ -348,18 +353,23 @@ class HV:
                 elif code == HV_EVENT.VTIMER:
                     print("Step")
                     handled = True
+                elif code == HV_EVENT.USER_INTERRUPT:
+                    handled = True
         except Exception as e:
             print(f"Python exception while handling guest exception:")
             traceback.print_exc()
 
         if handled:
             ret = EXC_RET.HANDLED
+            if self._sigint_pending:
+                print("User interrupt")
         else:
             print(f"Guest exception: {reason.name}/{code.name}")
-
             self.u.print_exception(code, ctx)
 
-        if self._stepping or not handled:
+        if self._sigint_pending or self._stepping or not handled:
+
+            self._sigint_pending = False
             self._stepping = False
 
             locals = {
@@ -374,7 +384,9 @@ class HV:
                 if callable(a):
                     locals[attr] = getattr(self, attr)
 
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
             ret = shell.run_shell(locals, "Entering debug shell", "Returning from exception")
+            signal.signal(signal.SIGINT, self._handle_sigint)
 
             if ret is None:
                 ret = EXC_RET.EXIT_GUEST
@@ -386,6 +398,10 @@ class HV:
         if ret == EXC_RET.HANDLED and self._stepping:
             ret = EXC_RET.STEP
         self.p.exit(ret)
+
+        self._in_handler = False
+        if self._sigint_pending:
+            self._handle_sigint()
 
     def skip(self):
         self.ctx.elr += 4
@@ -502,6 +518,7 @@ class HV:
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.FIQ, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.SERROR, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION, EXC.FIQ, self.handle_exception)
+        self.iface.set_handler(START.HV, HV_EVENT.USER_INTERRUPT, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.HOOK_VM, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.VTIMER, self.handle_exception)
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
@@ -690,6 +707,15 @@ class HV:
 
         self.iface.writemem(guest_base + self.bootargs_off, BootArgs.build(self.tba))
 
+    def _handle_sigint(self, signal=None, stack=None):
+        self._sigint_pending = True
+
+        if self._in_handler:
+            return
+
+        # Kick the proxy to break out of the hypervisor
+        self.iface.dev.write(b"!")
+
     def start(self):
         print(f"Disabling other iodevs...")
         for iodev in IODEV:
@@ -709,6 +735,7 @@ class HV:
         print(f"Jumping to entrypoint at 0x{self.entry:x}")
 
         self.iface.dev.timeout = None
+        signal.signal(signal.SIGINT, self._handle_sigint)
 
         # Does not return
         self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)

@@ -57,6 +57,12 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
     }
 }
 
+static void hv_exc_exit(u64 *regs)
+{
+    if (iodev_can_read(uartproxy_iodev))
+        hv_exc_proxy(regs, START_HV, HV_USER_INTERRUPT, NULL);
+}
+
 void hv_exc_sync(u64 *regs)
 {
     bool handled = false;
@@ -73,11 +79,14 @@ void hv_exc_sync(u64 *regs)
         msr(ELR_EL2, mrs(ELR_EL2) + 4);
     else
         hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_SYNC, NULL);
+
+    hv_exc_exit(regs);
 }
 
 void hv_exc_irq(u64 *regs)
 {
     hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_IRQ, NULL);
+    hv_exc_exit(regs);
 }
 
 void hv_exc_fiq(u64 *regs)
@@ -106,9 +115,11 @@ void hv_exc_fiq(u64 *regs)
         reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
         hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_FIQ, NULL);
     }
+    hv_exc_exit(regs);
 }
 
 void hv_exc_serr(u64 *regs)
 {
     hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_SERROR, NULL);
+    hv_exc_exit(regs);
 }
