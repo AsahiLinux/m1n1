@@ -571,17 +571,49 @@ class HV:
     def setup_adt(self):
         if self.iodev in (IODEV.USB0, IODEV.USB1):
             idx = int(str(self.iodev)[-1])
-            for prefix in ("dart-usb%d",
-                           "atc-phy%d",
-                           "usb-drd%d",
-                           "acio%d",
-                           "apciec%d",
-                           "dart-apciec%d",
-                           "apciec%d-piodma"):
-                name = prefix % idx
-                print(f"Removing ADT node /arm-io/{name}")
+            for idx in (0, 1):
+                for prefix in ("/arm-io/dart-usb%d",
+                            "/arm-io/atc-phy%d",
+                            "/arm-io/usb-drd%d",
+                            "/arm-io/acio%d",
+                            "/arm-io/acio-cpu%d",
+                            "/arm-io/dart-acio%d",
+                            "/arm-io/apciec%d",
+                            "/arm-io/dart-apciec%d",
+                            "/arm-io/apciec%d-piodma",
+                            "/arm-io/i2c0/hpmBusManager/hpm%d",
+                            "/arm-io/atc%d-dpxbar",
+                            "/arm-io/atc%d-dpphy",
+                            "/arm-io/atc%d-dpin0",
+                            "/arm-io/atc%d-dpin1",
+                            "/arm-io/atc-phy%d",
+                            ):
+                    name = prefix % idx
+                    print(f"Removing ADT node {name}")
+                    try:
+                        del self.adt[name]
+                    except KeyError:
+                        pass
+            for name in ("/arm-io/smc",
+                         "/arm-io/ans",
+                         "/arm-io/apcie",
+                         "/arm-io/gfx-asc",
+                         "/arm-io/sgx",
+                         "/arm-io/aop",
+                         "/arm-io/sio",
+                         "/arm-io/pmp",
+                         "/cpus/cpu1",
+                         "/cpus/cpu2",
+                         "/cpus/cpu3",
+                         "/cpus/cpu4",
+                         "/cpus/cpu5",
+                         "/cpus/cpu6",
+                         "/cpus/cpu7",
+                         "/arm-io/bluetooth",
+                           ):
+                print(f"Removing ADT node {name}")
                 try:
-                    del self.adt["arm-io"][name]
+                    del self.adt[name]
                 except KeyError:
                     pass
 
