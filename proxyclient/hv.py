@@ -547,6 +547,7 @@ class HV:
             hacr.TRAP_EHID = 1
             hacr.TRAP_HID = 1
             hacr.TRAP_ACC = 1
+            hacr.TRAP_IPI = 1
         self.u.msr(HACR_EL2, hacr.value)
 
         # Enable AMX
