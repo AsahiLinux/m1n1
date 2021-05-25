@@ -20,6 +20,14 @@
 #define CNTHCTL_EL0VCTEN BIT(1)
 #define CNTHCTL_EL0PCTEN BIT(0)
 
+#define SYS_CNTV_CTL_EL0  sys_reg(3, 3, 14, 3, 1)
+#define SYS_CNTP_CTL_EL0  sys_reg(3, 3, 14, 2, 1)
+#define SYS_CNTHV_CTL_EL2 sys_reg(3, 4, 14, 3, 1)
+#define SYS_CNTHP_CTL_EL2 sys_reg(3, 4, 14, 2, 1)
+#define CNTx_CTL_ISTATUS  BIT(2)
+#define CNTx_CTL_IMASK    BIT(1)
+#define CNTx_CTL_ENABLE   BIT(0)
+
 #define SYS_ESR_EL2 sys_reg(3, 4, 5, 2, 0)
 #define ESR_ISS2    GENMASK(36, 32)
 #define ESR_EC      GENMASK(31, 26)
