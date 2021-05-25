@@ -523,7 +523,47 @@ class HV:
         self.iface.set_handler(START.HV, HV_EVENT.VTIMER, self.handle_exception)
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
 
-        self.map_hw(0x2_00000000, 0x2_00000000, 0x5_00000000)
+        self.map_sw(0x2_00000000,
+                    0x2_00000000 | self.SPTE_TRACE_READ | self.SPTE_TRACE_WRITE | self.SPTE_SYNC_TRACE,
+                    0x5_00000000)
+
+        ## Map UART directly so it doesn't spam
+        #self.map_hw(0x2_35200000, 0x2_35200000, 0x4000)
+
+        ## Map DWC directly so it doesn't spam
+        #self.map_hw(0x5_02280000, 0x5_02280000, 0x10000)
+
+        # This also gets the syslog...
+        #self.map_hw(0x2_3d12c000, 0x2_3d12c000, 0x4000)
+
+        # SIMD loads lurk here...
+        self.map_hw(0x2_10e70000, 0x2_10e70000, 0x4000)
+        self.map_hw(0x2_11e70000, 0x2_11e70000, 0x4000)
+        self.map_hw(0x2_3e408000, 0x2_3e408000, 0x4000)
+        self.map_hw(0x2_3d2b8000, 0x2_3d2b8000, 0x4000)
+
+        # AIC Timer is noisy
+        self.map_hw(0x2_3b108000, 0x2_3b108000, 0x4000)
+
+        # Sync PMGR stuff
+        self.map_sw(0x2_3b700000,
+                    0x2_3b700000 | self.SPTE_TRACE_READ | self.SPTE_TRACE_WRITE | self.SPTE_SYNC_TRACE,
+                    0x8000)
+
+        _pmu = {}
+
+        def wh(base, off, data, width):
+            print(f"W {base:x}+{off:x}:{width} = 0x{data:x}: Dangerous write")
+            _pmu[base + off] = (data & 0xff0f) | ((data & 0xf) << 4)
+
+        def rh(base, off, width):
+            data = self.p.read32(base + off)
+            ret = _pmu.setdefault(base + off, data)
+            print(f"R {base:x}+{off:x}:{width} = 0x{data:x} -> 0x{ret:x}")
+            return ret
+
+        for addr in (0x23b700420, 0x23d280098, 0x23d280088, 0x23d280090):
+            self.map_hook(addr, 4, write=wh, read=rh)
 
         hcr = HCR(self.u.mrs(HCR_EL2))
         if self.novm:
