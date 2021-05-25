@@ -160,3 +160,17 @@
 
 #define SYS_IMP_APL_VBAR_GL12 sys_reg(3, 6, 15, 9, 2)
 #define SYS_IMP_APL_SP_GL12   sys_reg(3, 6, 15, 10, 0)
+
+/* VM registers */
+#define SYS_VM_TMR_FIQ_ENA_EL2 sys_reg(3, 5, 15, 1, 3)
+#define VM_TMR_FIQ_ENA_ENA_V   BIT(0)
+#define VM_TMR_FIQ_ENA_ENA_P   BIT(1)
+
+/* IPI registers */
+#define SYS_IPI_RR_LOCAL_EL1  sys_reg(3, 5, 15, 0, 0)
+#define SYS_IPI_RR_GLOBAL_EL1 sys_reg(3, 5, 15, 0, 1)
+
+#define SYS_IPI_SR_EL1 sys_reg(3, 5, 15, 1, 1)
+#define IPI_SR_PENDING BIT(0)
+
+#define SYS_IPI_CR_EL1 sys_reg(3, 5, 15, 3, 1)
