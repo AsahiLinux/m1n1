@@ -84,6 +84,19 @@
 #define SAS_32B 2
 #define SAS_64B 3
 
+#define ESR_ISS_MSR_OP0       GENMASK(21, 20)
+#define ESR_ISS_MSR_OP0_SHIFT 20
+#define ESR_ISS_MSR_OP2       GENMASK(19, 17)
+#define ESR_ISS_MSR_OP2_SHIFT 17
+#define ESR_ISS_MSR_OP1       GENMASK(16, 14)
+#define ESR_ISS_MSR_OP1_SHIFT 14
+#define ESR_ISS_MSR_CRn       GENMASK(13, 10)
+#define ESR_ISS_MSR_CRn_SHIFT 10
+#define ESR_ISS_MSR_Rt        GENMASK(9, 5)
+#define ESR_ISS_MSR_CRm       GENMASK(4, 1)
+#define ESR_ISS_MSR_CRm_SHIFT 1
+#define ESR_ISS_MSR_DIR       BIT(0)
+
 #define SYS_HCR_EL2  sys_reg(3, 4, 1, 1, 0)
 #define HCR_TWEDEL   GENMASK(63, 60)
 #define HCR_TWEDEn   BIT(59)
