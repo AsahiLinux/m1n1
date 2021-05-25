@@ -428,9 +428,6 @@ u64 hv_pt_walk(u64 addr)
 #define CHECK_RN                                                                                   \
     if (Rn == 31)                                                                                  \
     goto bail
-#define CHECK_RT                                                                                   \
-    if (Rt == 31)                                                                                  \
-    return true
 #define DECODE_OK                                                                                  \
     if (!val)                                                                                      \
     return true
@@ -453,34 +450,28 @@ static bool emulate_load(u64 *regs, u32 insn, u64 *val, u64 *width)
         CHECK_RN;
         DECODE_OK;
         regs[Rn] += imm9;
-        CHECK_RT;
         regs[Rt] = *val;
     } else if ((insn & 0x3fc00000) == 0x39400000) {
         // LDRx (immediate) Unsigned offset
         DECODE_OK;
-        CHECK_RT;
         regs[Rt] = *val;
     } else if ((insn & 0x3fa00400) == 0x38800400) {
         // LDRSx (immediate) Pre/Post-index
         CHECK_RN;
         DECODE_OK;
         regs[Rn] += imm9;
-        CHECK_RT;
         regs[Rt] = EXT(*val, 8 << *width);
     } else if ((insn & 0x3fa00000) == 0x39800000) {
         // LDRSx (immediate) Unsigned offset
         DECODE_OK;
-        CHECK_RT;
         regs[Rt] = EXT(*val, 8 << *width);
     } else if ((insn & 0x3fe04c00) == 0x38604800) {
         // LDRx (register)
         DECODE_OK;
-        CHECK_RT;
         regs[Rt] = *val;
     } else if ((insn & 0x3fa04c00) == 0x38a04800) {
         // LDRSx (register)
         DECODE_OK;
-        CHECK_RT;
         regs[Rt] = EXT(*val, 8 << *width);
     } else {
         goto bail;
@@ -502,19 +493,18 @@ static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 *width)
 
     dprintf("emulate_store(%p, 0x%08x, ..., %ld) = ", regs, insn, *width);
 
+    regs[31] = 0;
+
     if ((insn & 0x3fe00400) == 0x38000400) {
         // STRx (immediate) Pre/Post-index
         CHECK_RN;
         regs[Rn] += imm9;
-        CHECK_RT;
         *val = regs[Rt];
     } else if ((insn & 0x3fc00000) == 0x39000000) {
         // STRx (immediate) Unsigned offset
-        CHECK_RT;
         *val = regs[Rt];
     } else if ((insn & 0x3fe04c00) == 0x38204800) {
         // STRx (register)
-        CHECK_RT;
         *val = regs[Rt];
     } else {
         goto bail;
@@ -703,6 +693,5 @@ bool hv_handle_dabort(u64 *regs)
             return false;
     }
 
-    msr(ELR_EL2, elr + 4);
     return true;
 }

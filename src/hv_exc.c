@@ -59,17 +59,20 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
 
 void hv_exc_sync(u64 *regs)
 {
+    bool handled = false;
     u64 esr = mrs(ESR_EL2);
     u32 ec = FIELD_GET(ESR_EC, esr);
 
     switch (ec) {
         case ESR_EC_DABORT_LOWER:
-            if (hv_handle_dabort(regs))
-                return;
+            handled = hv_handle_dabort(regs);
             break;
     }
 
-    hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_SYNC, NULL);
+    if (handled)
+        msr(ELR_EL2, mrs(ELR_EL2) + 4);
+    else
+        hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_SYNC, NULL);
 }
 
 void hv_exc_irq(u64 *regs)
