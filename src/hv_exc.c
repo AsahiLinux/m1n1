@@ -52,8 +52,8 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
             msr(SP_EL0, exc_info.sp[0]);
             msr(SP_EL1, exc_info.sp[1]);
             if (ret == EXC_RET_STEP) {
-                msr(CNTV_TVAL_EL0, 256);
-                msr(CNTV_CTL_EL0, 1);
+                msr(CNTV_TVAL_EL0, 100);
+                msr(CNTV_CTL_EL0, CNTx_CTL_ENABLE);
             }
             return;
         case EXC_EXIT_GUEST:
