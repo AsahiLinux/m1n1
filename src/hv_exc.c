@@ -82,7 +82,30 @@ void hv_exc_irq(u64 *regs)
 
 void hv_exc_fiq(u64 *regs)
 {
-    hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_FIQ, NULL);
+    if (mrs(CNTP_CTL_EL0) == (CNTx_CTL_ISTATUS | CNTx_CTL_ENABLE)) {
+        msr(CNTP_CTL_EL0, CNTx_CTL_ISTATUS | CNTx_CTL_IMASK | CNTx_CTL_ENABLE);
+        hv_tick();
+        hv_arm_tick();
+    }
+
+    if (mrs(CNTV_CTL_EL0) == (CNTx_CTL_ISTATUS | CNTx_CTL_ENABLE)) {
+        msr(CNTV_CTL_EL0, CNTx_CTL_ISTATUS | CNTx_CTL_IMASK | CNTx_CTL_ENABLE);
+        hv_exc_proxy(regs, START_HV, HV_VTIMER, NULL);
+    }
+
+    u64 reg = mrs(SYS_IMP_APL_PMCR0);
+    if ((reg & (PMCR0_IMODE_MASK | PMCR0_IACT)) == (PMCR0_IMODE_FIQ | PMCR0_IACT)) {
+        printf("[FIQ] PMC IRQ, masking");
+        reg_clr(SYS_IMP_APL_PMCR0, PMCR0_IACT | PMCR0_IMODE_MASK);
+        hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_FIQ, NULL);
+    }
+
+    reg = mrs(SYS_IMP_APL_UPMCR0);
+    if ((reg & UPMCR0_IMODE_MASK) == UPMCR0_IMODE_FIQ && (mrs(SYS_IMP_APL_UPMSR) & UPMSR_IACT)) {
+        printf("[FIQ] UPMC IRQ, masking");
+        reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
+        hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_FIQ, NULL);
+    }
 }
 
 void hv_exc_serr(u64 *regs)

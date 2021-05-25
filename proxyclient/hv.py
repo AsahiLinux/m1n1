@@ -31,6 +31,7 @@ EvtMMIOTrace = Struct(
 
 class HV_EVENT(IntEnum):
     HOOK_VM = 1
+    VTIMER = 2
 
 VMProxyHookData = Struct(
     "flags" / RegAdapter(MMIOTraceFlags),
@@ -92,7 +93,7 @@ class HV:
         self.vbar_el1 = None
         self.want_vbar = None
         self.vectors = [None]
-        self.step = False
+        self._stepping = False
         self.sym_offset = 0
         self.symbols = []
         self.sysreg = {}
@@ -344,6 +345,9 @@ class HV:
                 code = HV_EVENT(code)
                 if code == HV_EVENT.HOOK_VM:
                     handled = self.handle_vm_hook(ctx)
+                elif code == HV_EVENT.VTIMER:
+                    print("Step")
+                    handled = True
         except Exception as e:
             print(f"Python exception while handling guest exception:")
             traceback.print_exc()
@@ -354,6 +358,9 @@ class HV:
             print(f"Guest exception: {reason.name}/{code.name}")
 
             self.u.print_exception(code, ctx)
+
+        if self._stepping or not handled:
+            self._stepping = False
 
             locals = {
                 "hv": self,
@@ -376,7 +383,7 @@ class HV:
         if new_info != info_data:
             self.iface.writemem(info, new_info)
 
-        if ret == EXC_RET.HANDLED and self.step:
+        if ret == EXC_RET.HANDLED and self._stepping:
             ret = EXC_RET.STEP
         self.p.exit(ret)
 
@@ -386,6 +393,10 @@ class HV:
 
     def cont(self):
         raise shell.ExitConsole(EXC_RET.HANDLED)
+
+    def step(self):
+        self._stepping = True
+        raise shell.ExitConsole(EXC_RET.STEP)
 
     def exit(self):
         raise shell.ExitConsole(EXC_RET.EXIT_GUEST)
@@ -490,7 +501,9 @@ class HV:
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.IRQ, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.FIQ, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.SERROR, self.handle_exception)
+        self.iface.set_handler(START.EXCEPTION, EXC.FIQ, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.HOOK_VM, self.handle_exception)
+        self.iface.set_handler(START.HV, HV_EVENT.VTIMER, self.handle_exception)
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
 
         self.map_hw(0x2_00000000, 0x2_00000000, 0x5_00000000)

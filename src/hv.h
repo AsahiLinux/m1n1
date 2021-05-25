@@ -29,6 +29,7 @@ struct hv_vm_proxy_hook_data {
 
 typedef enum _hv_entry_type {
     HV_HOOK_VM = 1,
+    HV_VTIMER,
 } hv_entry_type;
 
 /* VM */
@@ -53,5 +54,7 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
 /* HV main */
 void hv_init(void);
 void hv_start(void *entry, u64 regs[4]);
+void hv_arm_tick(void);
+void hv_tick(void);
 
 #endif

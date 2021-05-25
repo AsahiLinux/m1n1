@@ -5,9 +5,13 @@
 #include "cpu_regs.h"
 #include "utils.h"
 
+#define HV_TICK_RATE 1000
+
 void hv_enter_guest(u64 x0, u64 x1, u64 x2, u64 x3, void *entry);
 
 extern char _hv_vectors_start[0];
+
+u64 hv_tick_interval;
 
 void hv_init(void)
 {
@@ -28,6 +32,9 @@ void hv_init(void)
     // No guest vectors initially
     msr(VBAR_EL12, 0);
 
+    // Compute tick interval
+    hv_tick_interval = mrs(CNTFRQ_EL0) / HV_TICK_RATE;
+
     sysop("dsb ishst");
     sysop("tlbi alle1is");
     sysop("dsb ish");
@@ -38,7 +45,19 @@ void hv_start(void *entry, u64 regs[4])
 {
     msr(VBAR_EL1, _hv_vectors_start);
 
+    hv_arm_tick();
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
 
     printf("Exiting hypervisor.\n");
+}
+
+void hv_arm_tick(void)
+{
+    msr(CNTP_TVAL_EL0, hv_tick_interval);
+    msr(CNTP_CTL_EL0, CNTx_CTL_ENABLE);
+}
+
+void hv_tick(void)
+{
+    //     printf("HV tick!\n");
 }
