@@ -17,15 +17,20 @@ void *gl1_stack_base = &gl1_stack[GL_STACK_SIZE];
 u8 gl2_stack[GL_STACK_SIZE] ALIGNED(64);
 void *gl2_stack_base = &gl2_stack[GL_STACK_SIZE];
 
-bool in_gl12(void)
+bool gxf_enabled(void)
 {
     if (!(mrs(SYS_IMP_APL_SPRR_CONFIG_EL1) & SPRR_CONFIG_EN))
         return false;
-    if (!(mrs(SYS_IMP_APL_GXF_CONFIG_EL1) & GXF_CONFIG_EN))
+
+    return (mrs(SYS_IMP_APL_GXF_CONFIG_EL1) & GXF_CONFIG_EN);
+}
+
+bool in_gl12(void)
+{
+    if (!gxf_enabled())
         return false;
-    if (!(mrs(SYS_IMP_APL_GXF_STATUS_EL1) & GXF_STATUS_GUARDED))
-        return false;
-    return true;
+
+    return (mrs(SYS_IMP_APL_GXF_STATUS_EL1) & GXF_STATUS_GUARDED);
 }
 
 static uint64_t gl_call(void *func, uint64_t a, uint64_t b, uint64_t c, uint64_t d)
