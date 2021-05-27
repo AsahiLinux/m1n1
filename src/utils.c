@@ -71,10 +71,10 @@ int debug_printf(const char *fmt, ...)
     int i;
 
     va_start(args, fmt);
-    i = vsprintf(buffer, fmt, args);
+    i = vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
 
-    iodev_console_write(buffer, i);
+    iodev_console_write(buffer, min(i, (int)(sizeof(buffer) - 1)));
 
     return i;
 }
