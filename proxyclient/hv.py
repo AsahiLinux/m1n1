@@ -199,7 +199,9 @@ class HV:
 
         name = sysreg_name(enc)
 
-        skip = set()
+        skip = set((
+            (3, 5, 15, 10, 1), # M1RACLES mitigation
+        ))
         shadow = {
             #SPRR_CONFIG_EL1,
             #SPRR_PERM_EL0,
@@ -646,6 +648,7 @@ class HV:
             hacr.TRAP_HID = 1
             hacr.TRAP_ACC = 1
             hacr.TRAP_IPI = 1
+            hacr.TRAP_SERROR_INFO = 1 # M1RACLES mitigation
         self.u.msr(HACR_EL2, hacr.value)
 
         # Enable AMX
