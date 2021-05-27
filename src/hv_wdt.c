@@ -2,7 +2,6 @@
 
 #include "hv.h"
 #include "adt.h"
-#include "cpu_dbg_regs.h"
 #include "smp.h"
 #include "uart.h"
 #include "utils.h"
