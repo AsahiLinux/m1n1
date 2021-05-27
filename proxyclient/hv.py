@@ -667,23 +667,14 @@ class HV:
                         del self.adt[name]
                     except KeyError:
                         pass
-            for name in ("/arm-io/smc",
-                         "/arm-io/ans",
-                         "/arm-io/apcie",
-                         "/arm-io/gfx-asc",
-                         "/arm-io/sgx",
-                         "/arm-io/aop",
-                         "/arm-io/sio",
-                         "/arm-io/pmp",
-                         "/cpus/cpu1",
+            for name in ("/cpus/cpu1",
                          "/cpus/cpu2",
                          "/cpus/cpu3",
                          "/cpus/cpu4",
                          "/cpus/cpu5",
                          "/cpus/cpu6",
                          "/cpus/cpu7",
-                         "/arm-io/bluetooth",
-                           ):
+                        ):
                 print(f"Removing ADT node {name}")
                 try:
                     del self.adt[name]
