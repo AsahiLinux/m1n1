@@ -486,6 +486,8 @@ class M1N1Proxy:
     P_VECTOR = 0x00b
     P_GL1_CALL = 0x00c
     P_GL2_CALL = 0x00d
+    P_GET_SIMD_STATE = 0x00e
+    P_PUT_SIMD_STATE = 0x00f
 
     P_WRITE64 = 0x100
     P_WRITE32 = 0x101
@@ -698,6 +700,10 @@ class M1N1Proxy:
         if len(args) > 4:
             raise ValueError("Too many arguments")
         return self.request(self.P_GL2_CALL, addr, *args)
+    def get_simd_state(self, buf):
+        self.request(self.P_GET_SIMD_STATE, buf)
+    def put_simd_state(self, buf):
+        self.request(self.P_PUT_SIMD_STATE, buf)
 
     def write64(self, addr, data):
         if addr & 7:

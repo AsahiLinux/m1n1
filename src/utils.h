@@ -355,6 +355,9 @@ void memcpy16(void *dst, void *src, size_t size);
 void memset8(void *dst, u8 value, size_t size);
 void memcpy8(void *dst, void *src, size_t size);
 
+void get_simd_state(void *state);
+void put_simd_state(void *state);
+
 void hexdump(const void *d, size_t len);
 void regdump(u64 addr, size_t len);
 int sprintf(char *str, const char *fmt, ...);

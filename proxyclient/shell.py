@@ -31,6 +31,14 @@ class HistoryConsole(code.InteractiveConsole):
         type, value, tb = sys.exc_info()
         traceback.print_exception(type, value, tb)
 
+    def runcode(self, code):
+        super().runcode(code)
+        if "mon" in self.locals:
+            self.locals["mon"].poll()
+        if "u" in self.locals:
+            self.locals["u"].push_simd()
+
+
 class ExitConsole(SystemExit):
     pass
 
@@ -38,11 +46,6 @@ def run_shell(locals, msg=None, exitmsg=None):
     saved_display = sys.displayhook
     try:
         def display(val):
-            try:
-                global mon
-                mon.poll()
-            except NameError:
-                pass
             if isinstance(val, int):
                 builtins._ = val
                 print(hex(val))
@@ -89,7 +92,7 @@ def run_shell(locals, msg=None, exitmsg=None):
 
 if __name__ == "__main__":
     from setup import *
-    locals = __main__.__dict__
+    locals = dict(__main__.__dict__)
 
     from tgtypes import *
 

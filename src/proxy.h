@@ -20,6 +20,8 @@ typedef enum {
     P_VECTOR,
     P_GL1_CALL,
     P_GL2_CALL,
+    P_GET_SIMD_STATE,
+    P_PUT_SIMD_STATE,
 
     P_WRITE64 = 0x100, // Generic register functions
     P_WRITE32,

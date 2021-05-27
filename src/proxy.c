@@ -81,6 +81,10 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->retval = el1_call((void *)request->args[0], request->args[1], request->args[2],
                                      request->args[3], request->args[4]);
             break;
+        case P_VECTOR:
+            next_stage.entry = (generic_func *)request->args[0];
+            memcpy(next_stage.args, &request->args[1], 4 * sizeof(u64));
+            return 1;
         case P_GL1_CALL:
             reply->retval = gl1_call((void *)request->args[0], request->args[1], request->args[2],
                                      request->args[3], request->args[4]);
@@ -89,10 +93,12 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->retval = gl2_call((void *)request->args[0], request->args[1], request->args[2],
                                      request->args[3], request->args[4]);
             break;
-        case P_VECTOR:
-            next_stage.entry = (generic_func *)request->args[0];
-            memcpy(next_stage.args, &request->args[1], 4 * sizeof(u64));
-            return 1;
+        case P_GET_SIMD_STATE:
+            get_simd_state((void *)request->args[0]);
+            break;
+        case P_PUT_SIMD_STATE:
+            put_simd_state((void *)request->args[0]);
+            break;
 
         case P_WRITE64:
             exc_guard = GUARD_SKIP;

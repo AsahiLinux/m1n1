@@ -7,6 +7,12 @@ from malloc import Heap
 import adt
 from contextlib import contextmanager
 
+SIMD_B = Array(32, Array(16, Int8ul))
+SIMD_H = Array(32, Array(8, Int16ul))
+SIMD_S = Array(32, Array(4, Int32ul))
+SIMD_D = Array(32, Array(2, Int64ul))
+SIMD_Q = Array(32, BytesInteger(16, swapped=True))
+
 class ProxyUtils(object):
     CODE_BUFFER_SIZE = 0x10000
     def __init__(self, p, heap_size=1024 * 1024 * 1024):
@@ -43,6 +49,10 @@ class ProxyUtils(object):
 
         self.adt_data = None
         self.adt = LazyADT(self)
+
+        self.simd_buf = self.malloc(32 * 16)
+        self.simd_type = None
+        self.simd = None
 
         self.exec_modes = {
             None: (self.proxy.call, REGION_RX_EL1),
@@ -207,6 +217,42 @@ class ProxyUtils(object):
             yield
         finally:
             self.proxy.mmu_restore(flags)
+
+    def push_simd(self):
+        if self.simd is not None:
+            data = self.simd_type.build(self.simd)
+            self.iface.writemem(self.simd_buf, data)
+            self.proxy.put_simd_state(self.simd_buf)
+            self.simd = self.simd_type = None
+
+    def get_simd(self, simd_type):
+        if self.simd is not None and self.simd_type is not simd_type:
+            data = self.simd_type.build(self.simd)
+            self.simd = simd_type.parse(data)
+            self.simd_type = simd_type
+        elif self.simd is None:
+            self.proxy.get_simd_state(self.simd_buf)
+            data = self.iface.readmem(self.simd_buf, 32 * 16)
+            self.simd = simd_type.parse(data)
+            self.simd_type = simd_type
+
+        return self.simd
+
+    @property
+    def b(self):
+        return self.get_simd(SIMD_B)
+    @property
+    def h(self):
+        return self.get_simd(SIMD_H)
+    @property
+    def s(self):
+        return self.get_simd(SIMD_S)
+    @property
+    def d(self):
+        return self.get_simd(SIMD_D)
+    @property
+    def q(self):
+        return self.get_simd(SIMD_Q)
 
 class LazyADT:
     def __init__(self, utils):
