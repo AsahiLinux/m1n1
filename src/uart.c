@@ -90,6 +90,21 @@ void uart_flush(void)
         ;
 }
 
+int uart_printf(const char *fmt, ...)
+{
+    va_list args;
+    char buffer[512];
+    int i;
+
+    va_start(args, fmt);
+    i = vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+
+    uart_write(buffer, min(i, (int)(sizeof(buffer) - 1)));
+
+    return i;
+}
+
 static bool uart_iodev_can_write(void *opaque)
 {
     UNUSED(opaque);
