@@ -29,7 +29,7 @@ gxf_init:
 .type gxf_enter, @function
 gxf_enter:
     genter
-    ret  
+    ret
 
 _gxf_setup:
     ldr x0, =gl2_stack_base
@@ -141,12 +141,14 @@ _gxf_vectors:
     .align 7
 
 _gxf_exc_sync:
+    msr pan, #0
     str x30, [sp, #-16]!
     bl _gxf_exc_entry
     bl exc_sync
     b _gxf_exc_return
 
 _gxf_serr:
+    msr pan, #0
     str x30, [sp, #-16]!
     bl _gxf_exc_entry
     bl exc_serr
@@ -209,6 +211,7 @@ _gxf_exc_return:
     gexit
 
 _gxf_exc_unk:
+    msr pan, #0
     mov w0, 0xd /* '\r', clang compat */
     bl debug_putc
     mov w0, '\n'

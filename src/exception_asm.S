@@ -12,6 +12,7 @@
 .globl _v_sp0_sync
 .type _v_sp0_sync, @function
 _v_sp0_sync:
+    msr pan, #0
     str x30, [sp, #-16]!
     bl _exc_entry
     bl exc_sync
@@ -21,6 +22,7 @@ _v_sp0_sync:
 .globl _v_sp0_irq
 .type _v_sp0_irq, @function
 _v_sp0_irq:
+    msr pan, #0
     str x30, [sp, #-16]!
     bl _exc_entry
     bl exc_irq
@@ -30,6 +32,7 @@ _v_sp0_irq:
 .globl _v_sp0_fiq
 .type _v_sp0_fiq, @function
 _v_sp0_fiq:
+    msr pan, #0
     str x30, [sp, #-16]!
     bl _exc_entry
     bl exc_fiq
@@ -39,6 +42,7 @@ _v_sp0_fiq:
 .globl _v_sp0_serr
 .type _v_sp0_serr, @function
 _v_sp0_serr:
+    msr pan, #0
     str x30, [sp, #-16]!
     bl _exc_entry
     bl exc_serr
