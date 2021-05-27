@@ -130,7 +130,10 @@ void hv_arm_tick(void)
     msr(CNTP_CTL_EL0, CNTx_CTL_ENABLE);
 }
 
-void hv_tick(void)
+void hv_tick(u64 *regs)
 {
     hv_wdt_pet();
+    iodev_handle_events(uartproxy_iodev);
+    if (iodev_can_read(uartproxy_iodev))
+        hv_exc_proxy(regs, START_HV, HV_USER_INTERRUPT, NULL);
 }

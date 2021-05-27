@@ -156,9 +156,8 @@ static void hv_exc_entry(u64 *regs)
 
 static void hv_exc_exit(u64 *regs)
 {
+    UNUSED(regs);
     hv_wdt_breadcrumb('x');
-    if (iodev_can_read(uartproxy_iodev))
-        hv_exc_proxy(regs, START_HV, HV_USER_INTERRUPT, NULL);
     hv_update_fiq();
     stolen_time += mrs(CNTPCT_EL0) - exc_entry_time;
     msr(CNTVOFF_EL2, stolen_time);
@@ -218,7 +217,7 @@ void hv_exc_fiq(u64 *regs)
     hv_exc_entry(regs);
     if (mrs(CNTP_CTL_EL0) == (CNTx_CTL_ISTATUS | CNTx_CTL_ENABLE)) {
         msr(CNTP_CTL_EL0, CNTx_CTL_ISTATUS | CNTx_CTL_IMASK | CNTx_CTL_ENABLE);
-        hv_tick();
+        hv_tick(regs);
         hv_arm_tick();
     }
 
