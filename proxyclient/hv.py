@@ -557,7 +557,7 @@ class HV:
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
 
         self.map_sw(0x2_00000000,
-                    0x2_00000000 | self.SPTE_TRACE_READ | self.SPTE_TRACE_WRITE | self.SPTE_SYNC_TRACE,
+                    0x2_00000000 | self.SPTE_TRACE_READ | self.SPTE_TRACE_WRITE,
                     0x5_00000000)
 
         ## Map UART directly so it doesn't spam
