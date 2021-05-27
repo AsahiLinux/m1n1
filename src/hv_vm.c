@@ -577,6 +577,7 @@ static void emit_mmiotrace(u64 pc, u64 addr, u64 *data, u64 width, u64 flags, bo
 
 bool hv_handle_dabort(u64 *regs)
 {
+    hv_wdt_breadcrumb('0');
     u64 esr = hv_get_esr();
 
     u64 far = hv_get_far();
@@ -606,6 +607,8 @@ bool hv_handle_dabort(u64 *regs)
         return false;
     }
 
+    hv_wdt_breadcrumb('1');
+
     assert(IS_SW(pte));
 
     u64 target = pte & PTE_TARGET_MASK_L4;
@@ -622,18 +625,27 @@ bool hv_handle_dabort(u64 *regs)
     u64 val[2] = {0, 0};
     u64 width;
 
+    hv_wdt_breadcrumb('2');
+
     if (esr & ESR_ISS_DABORT_WnR) {
+        hv_wdt_breadcrumb('W');
+
         if (!emulate_store(regs, insn, val, &width))
             return false;
 
+        hv_wdt_breadcrumb('3');
+
         if (pte & SPTE_TRACE_WRITE)
             emit_mmiotrace(elr, ipa, val, width, MMIO_EVT_WRITE, pte & SPTE_SYNC_TRACE);
+
+        hv_wdt_breadcrumb('4');
 
         switch (FIELD_GET(SPTE_TYPE, pte)) {
             case SPTE_PROXY_HOOK_R:
                 paddr = ipa;
                 // fallthrough
             case SPTE_MAP:
+                hv_wdt_breadcrumb('5');
                 dprintf("HV: SPTE_MAP[W] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr_pa, far, paddr,
                         1 << width, val[0]);
                 switch (width) {
@@ -659,6 +671,7 @@ bool hv_handle_dabort(u64 *regs)
                 }
                 break;
             case SPTE_HOOK: {
+                hv_wdt_breadcrumb('6');
                 hv_hook_t *hook = (hv_hook_t *)target;
                 if (!hook(ipa, val, true, width))
                     return false;
@@ -668,6 +681,7 @@ bool hv_handle_dabort(u64 *regs)
             }
             case SPTE_PROXY_HOOK_RW:
             case SPTE_PROXY_HOOK_W: {
+                hv_wdt_breadcrumb('7');
                 struct hv_vm_proxy_hook_data hook = {
                     .flags = FIELD_PREP(MMIO_EVT_WIDTH, width) | MMIO_EVT_WRITE,
                     .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
@@ -682,14 +696,18 @@ bool hv_handle_dabort(u64 *regs)
                 return false;
         }
     } else {
+        hv_wdt_breadcrumb('R');
+
         if (!emulate_load(regs, insn, NULL, &width))
             return false;
 
+        hv_wdt_breadcrumb('3');
         switch (FIELD_GET(SPTE_TYPE, pte)) {
             case SPTE_PROXY_HOOK_W:
                 paddr = ipa;
                 // fallthrough
             case SPTE_MAP:
+                hv_wdt_breadcrumb('4');
                 switch (width) {
                     case 0:
                         val[0] = read8(paddr);
@@ -715,6 +733,7 @@ bool hv_handle_dabort(u64 *regs)
                         1 << width, val[0]);
                 break;
             case SPTE_HOOK: {
+                hv_wdt_breadcrumb('5');
                 hv_hook_t *hook = (hv_hook_t *)target;
                 if (!hook(ipa, val, false, width))
                     return false;
@@ -724,6 +743,7 @@ bool hv_handle_dabort(u64 *regs)
             }
             case SPTE_PROXY_HOOK_RW:
             case SPTE_PROXY_HOOK_R: {
+                hv_wdt_breadcrumb('6');
                 struct hv_vm_proxy_hook_data hook = {
                     .flags = FIELD_PREP(MMIO_EVT_WIDTH, width),
                     .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
@@ -738,12 +758,18 @@ bool hv_handle_dabort(u64 *regs)
                 return false;
         }
 
+        hv_wdt_breadcrumb('7');
         if (pte & SPTE_TRACE_READ)
             emit_mmiotrace(elr, ipa, val, width, 0, pte & SPTE_SYNC_TRACE);
 
+        hv_wdt_breadcrumb('8');
         if (!emulate_load(regs, insn, val, &width))
             return false;
+
+        hv_wdt_breadcrumb('9');
     }
+
+    hv_wdt_breadcrumb('*');
 
     return true;
 }
