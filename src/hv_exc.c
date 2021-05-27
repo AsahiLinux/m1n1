@@ -78,16 +78,16 @@ static void hv_update_fiq(void)
 
     if (mrs(CNTP_CTL_EL02) == (CNTx_CTL_ISTATUS | CNTx_CTL_ENABLE)) {
         fiq_pending = true;
-        reg_clr(SYS_VM_TMR_FIQ_ENA_EL2, VM_TMR_FIQ_ENA_ENA_P);
+        reg_clr(SYS_IMP_APL_VM_TMR_FIQ_ENA_EL2, VM_TMR_FIQ_ENA_ENA_P);
     } else {
-        reg_set(SYS_VM_TMR_FIQ_ENA_EL2, VM_TMR_FIQ_ENA_ENA_P);
+        reg_set(SYS_IMP_APL_VM_TMR_FIQ_ENA_EL2, VM_TMR_FIQ_ENA_ENA_P);
     }
 
     if (mrs(CNTV_CTL_EL02) == (CNTx_CTL_ISTATUS | CNTx_CTL_ENABLE)) {
         fiq_pending = true;
-        reg_clr(SYS_VM_TMR_FIQ_ENA_EL2, VM_TMR_FIQ_ENA_ENA_V);
+        reg_clr(SYS_IMP_APL_VM_TMR_FIQ_ENA_EL2, VM_TMR_FIQ_ENA_ENA_V);
     } else {
-        reg_set(SYS_VM_TMR_FIQ_ENA_EL2, VM_TMR_FIQ_ENA_ENA_V);
+        reg_set(SYS_IMP_APL_VM_TMR_FIQ_ENA_EL2, VM_TMR_FIQ_ENA_ENA_V);
     }
 
     fiq_pending |= ipi_pending;
@@ -130,10 +130,10 @@ static bool hv_handle_msr(u64 *regs, u64 iss)
         /* Noisy traps */
         SYSREG_MAP(SYS_ACTLR_EL1, SYS_IMP_APL_ACTLR_EL12)
         /* IPI handling */
-        SYSREG_PASS(SYS_IPI_RR_LOCAL_EL1)
-        SYSREG_PASS(SYS_IPI_RR_GLOBAL_EL1)
-        SYSREG_PASS(SYS_IPI_CR_EL1)
-        case SYSREG_ISS(SYS_IPI_SR_EL1):
+        SYSREG_PASS(SYS_IMP_APL_IPI_RR_LOCAL_EL1)
+        SYSREG_PASS(SYS_IMP_APL_IPI_RR_GLOBAL_EL1)
+        SYSREG_PASS(SYS_IMP_APL_IPI_CR_EL1)
+        case SYSREG_ISS(SYS_IMP_APL_IPI_SR_EL1):
             if (is_read)
                 regs[rt] = ipi_pending ? IPI_SR_PENDING : 0;
             else if (regs[rt] & IPI_SR_PENDING)
@@ -226,9 +226,9 @@ void hv_exc_fiq(u64 *regs)
         hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_FIQ, NULL);
     }
 
-    if (mrs(SYS_IPI_SR_EL1) & IPI_SR_PENDING) {
+    if (mrs(SYS_IMP_APL_IPI_SR_EL1) & IPI_SR_PENDING) {
         ipi_pending = true;
-        msr(SYS_IPI_SR_EL1, IPI_SR_PENDING);
+        msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
         sysop("isb");
     }
 
