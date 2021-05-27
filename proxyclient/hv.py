@@ -830,6 +830,9 @@ class HV:
                 print(f" - {iodev!s}")
                 self.p.iodev_set_usage(iodev, 0)
 
+        print(f"Improving logo...")
+        self.p.fb_improve_logo()
+
         print(f"Shutting down framebuffer...")
         self.p.fb_shutdown()
 
