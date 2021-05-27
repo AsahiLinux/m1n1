@@ -190,6 +190,7 @@ class AddrLookup:
             self.__ranges.insert(pos, [(zone, [value])])
 
     def lookup(self, addr):
+        addr = int(addr)
         pos = bisect.bisect(self.__addr, addr)
         if pos == 0 or self.__end[pos - 1] < addr:
             return ('unknown', range(0, 1 << 64))
@@ -200,6 +201,7 @@ class AddrLookup:
         return ('unexpected', range(0, 0))
 
     def lookup_all(self, addr):
+        addr = int(addr)
         pos = bisect.bisect(self.__addr, addr)
         if pos == 0 or self.__end[pos - 1] < addr:
             return []
