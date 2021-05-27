@@ -4,6 +4,7 @@
 #include "assert.h"
 #include "cpu_regs.h"
 #include "gxf.h"
+#include "pcie.h"
 #include "smp.h"
 #include "utils.h"
 
@@ -17,6 +18,7 @@ u64 hv_tick_interval;
 
 void hv_init(void)
 {
+    pcie_shutdown();
     smp_start_secondaries();
     hv_wdt_init();
 

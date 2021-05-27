@@ -68,11 +68,21 @@ struct fuse_bits pcie_fuse_bits[] = {
     {0x0418, 0x52a4, 21, 17, 2}, {0x0418, 0x522c, 23, 16, 5}, {0x0418, 0x5278, 23, 20, 3},
     {0x0418, 0x5018, 31, 2, 1},  {0x041c, 0x1204, 0, 2, 5},   {}};
 
+static bool pcie_initialized = false;
+static u64 rc_base;
+static u64 phy_base;
+static u64 phy_ip_base;
+static u64 fuse_base;
+static u64 port_base[3];
+
 int pcie_init(void)
 {
     const char *path = "/arm-io/apcie";
     int adt_path[8];
     int adt_offset;
+
+    if (pcie_initialized)
+        return 0;
 
     adt_offset = adt_path_offset_trace(adt, path, adt_path);
     if (adt_offset < 0) {
@@ -86,25 +96,21 @@ int pcie_init(void)
         return -1;
     }
 
-    u64 rc_base;
     if (adt_get_reg(adt, adt_path, "reg", 1, &rc_base, NULL)) {
         printf("pcie: Error getting reg with index %d for %s\n", 1, path);
         return -1;
     }
 
-    u64 phy_base;
     if (adt_get_reg(adt, adt_path, "reg", 2, &phy_base, NULL)) {
         printf("pcie: Error getting reg with index %d for %s\n", 2, path);
         return -1;
     }
 
-    u64 phy_ip_base;
     if (adt_get_reg(adt, adt_path, "reg", 3, &phy_ip_base, NULL)) {
         printf("pcie: Error getting reg with index %d for %s\n", 3, path);
         return -1;
     }
 
-    u64 fuse_base;
     if (adt_get_reg(adt, adt_path, "reg", 5, &fuse_base, NULL)) {
         printf("pcie: Error getting reg with index %d for %s\n", 5, path);
         return -1;
@@ -179,24 +185,23 @@ int pcie_init(void)
 
         sprintf(bridge, "/arm-io/apcie/pci-bridge%d", port);
 
-        u64 port_base;
-        if (adt_get_reg(adt, adt_path, "reg", port * 4 + 6, &port_base, NULL)) {
+        if (adt_get_reg(adt, adt_path, "reg", port * 4 + 6, &port_base[port], NULL)) {
             printf("pcie: Error getting reg with index %d for %s\n", port * 4 + 6, path);
             return -1;
         }
 
-        if (tunables_apply_local_addr(bridge, "apcie-config-tunables", port_base)) {
+        if (tunables_apply_local_addr(bridge, "apcie-config-tunables", port_base[port])) {
             printf("pcie: Error applying %s for %s\n", "apcie-config-tunables", bridge);
             return -1;
         }
 
-        set32(port_base + APCIE_PORT_APPCLK, APCIE_PORT_APPCLK_EN);
+        set32(port_base[port] + APCIE_PORT_APPCLK, APCIE_PORT_APPCLK_EN);
 
         /* PERSTN */
-        set32(port_base + APCIE_PORT_RESET, APCIE_PORT_RESET_DIS);
+        set32(port_base[port] + APCIE_PORT_RESET, APCIE_PORT_RESET_DIS);
 
-        if (poll32(port_base + APCIE_PORT_STATUS, APCIE_PORT_STATUS_RUN, APCIE_PORT_STATUS_RUN,
-                   250000))
+        if (poll32(port_base[port] + APCIE_PORT_STATUS, APCIE_PORT_STATUS_RUN,
+                   APCIE_PORT_STATUS_RUN, 250000))
             return -1;
 
         /* Make Designware PCIe Core registers writable. */
@@ -222,7 +227,28 @@ int pcie_init(void)
         config_base += (1 << 15);
     }
 
+    pcie_initialized = true;
     printf("pcie: initialized.\n");
+
+    return 0;
+}
+
+int pcie_shutdown(void)
+{
+    if (!pcie_initialized)
+        return 0;
+
+    for (int port = 0; port < 3; port++) {
+        clear32(port_base[port] + APCIE_PORT_RESET, APCIE_PORT_RESET_DIS);
+        clear32(port_base[port] + APCIE_PORT_APPCLK, APCIE_PORT_APPCLK_EN);
+    }
+
+    clear32(phy_base + APCIE_PHY_CTRL, APCIE_PHY_CTRL_RESET);
+    clear32(phy_base + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK1REQ);
+    clear32(phy_base + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0REQ);
+
+    pcie_initialized = false;
+    printf("pcie: shutdown.\n");
 
     return 0;
 }
