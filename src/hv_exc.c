@@ -159,7 +159,9 @@ static void hv_exc_exit(u64 *regs)
     UNUSED(regs);
     hv_wdt_breadcrumb('x');
     hv_update_fiq();
-    stolen_time += mrs(CNTPCT_EL0) - exc_entry_time;
+    u64 lost = mrs(CNTPCT_EL0) - exc_entry_time;
+    if (lost > 8)
+        stolen_time += lost - 8;
     msr(CNTVOFF_EL2, stolen_time);
 }
 
