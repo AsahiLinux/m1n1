@@ -83,9 +83,11 @@ int in_iodev = 0;
 void iodev_console_write(const void *buf, size_t length)
 {
     if (in_iodev || !is_primary_core()) {
-        iodev_write(IODEV_UART, "*", 1);
-        iodev_write(IODEV_UART, buf, length);
-        return;
+        if (length) {
+            iodev_write(IODEV_UART, "*", 1);
+            iodev_write(IODEV_UART, buf, length);
+            return;
+        }
     }
     in_iodev++;
 
