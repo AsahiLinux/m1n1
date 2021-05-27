@@ -163,7 +163,13 @@ class HV:
 
         dev, zone = self.device_addr_tbl.lookup(evt.addr)
 
-        print(f"[0x{evt.pc:016x}] MMIO: {t} 0x{evt.addr:x} ({dev}, offset {evt.addr - zone.start:#04x}) = 0x{evt.data:x}")
+        if evt.flags.MULTI:
+            m = "+"
+        else:
+            m = " "
+
+        print(f"[0x{evt.pc:016x}] MMIO: {t}.{1<<evt.flags.WIDTH:<2}{m} " +
+              f"0x{evt.addr:x} ({dev}, offset {evt.addr - zone.start:#04x}) = 0x{evt.data:x}")
 
     def handle_vm_hook(self, ctx):
         data = self.iface.readstruct(ctx.data, VMProxyHookData)
