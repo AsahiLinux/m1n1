@@ -565,10 +565,12 @@ static void emit_mmiotrace(u64 pc, u64 addr, u64 *data, u64 width, u64 flags, bo
 
     for (int i = 0; i < (1 << width); i += 8) {
         evt.data = *data++;
+        hv_wdt_suspend();
         uartproxy_send_event(EVT_MMIOTRACE, &evt, sizeof(evt));
         if (sync) {
             iodev_flush(uartproxy_iodev);
         }
+        hv_wdt_resume();
         evt.addr += 8;
     }
 }
