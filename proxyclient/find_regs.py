@@ -83,7 +83,7 @@ if __name__ == "__main__":
         print(f"{sysreg_name(reg)} ({', '.join(map(str, reg))}) = 0x{val:x}")
 
         try:
-            u.msr(reg, v, silent=True)
+            u.msr(reg, val, silent=True)
         except:
             print(" - READONLY")
         try:
