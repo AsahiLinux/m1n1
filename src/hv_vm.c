@@ -346,7 +346,7 @@ u64 hv_translate(u64 addr, bool s1, bool w)
     if (!(mrs(SCTLR_EL12) & SCTLR_M))
         return addr; // MMU off
 
-    u64 el = FIELD_GET(SPSR_M, mrs(SPSR_EL2)) >> 2;
+    u64 el = FIELD_GET(SPSR_M, hv_get_spsr()) >> 2;
     u64 save = mrs(PAR_EL1);
 
     if (w) {
@@ -521,9 +521,9 @@ bail:
 
 bool hv_handle_dabort(u64 *regs)
 {
-    u64 esr = mrs(ESR_EL2);
+    u64 esr = hv_get_esr();
 
-    u64 far = mrs(FAR_EL2);
+    u64 far = hv_get_far();
     u64 ipa = hv_translate(far, true, esr & ESR_ISS_DABORT_WnR);
 
     dprintf("hv_handle_abort(): stage 1 0x%0lx -> 0x%lx\n", far, ipa);
@@ -555,7 +555,7 @@ bool hv_handle_dabort(u64 *regs)
     u64 target = pte & PTE_TARGET_MASK_L4;
     u64 paddr = target | (far & MASK(VADDR_L4_OFFSET_BITS));
 
-    u64 elr = mrs(ELR_EL2);
+    u64 elr = hv_get_elr();
     u64 elr_pa = hv_translate(elr, false, false);
     if (!elr_pa) {
         printf("HV: Failed to fetch instruction for data abort at 0x%lx\n", elr);

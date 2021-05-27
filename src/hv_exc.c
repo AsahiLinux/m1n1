@@ -19,17 +19,17 @@ void hv_exit_guest(void) __attribute__((noreturn));
 
 void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_t type, void *extra)
 {
-    int from_el = FIELD_GET(SPSR_M, mrs(SPSR_EL2)) >> 2;
+    int from_el = FIELD_GET(SPSR_M, hv_get_spsr()) >> 2;
 
     struct uartproxy_exc_info exc_info = {
-        .spsr = mrs(SPSR_EL2),
-        .elr = mrs(ELR_EL2),
-        .esr = mrs(ESR_EL2),
-        .far = mrs(FAR_EL2),
+        .spsr = hv_get_spsr(),
+        .elr = hv_get_elr(),
+        .esr = hv_get_esr(),
+        .far = hv_get_far(),
         .sp = {mrs(SP_EL0), mrs(SP_EL1), 0},
         .mpidr = mrs(MPIDR_EL1),
-        .elr_phys = hv_translate(mrs(ELR_EL2), false, false),
-        .far_phys = hv_translate(mrs(FAR_EL2), false, false),
+        .elr_phys = hv_translate(hv_get_elr(), false, false),
+        .far_phys = hv_translate(hv_get_far(), false, false),
         .sp_phys = hv_translate(from_el == 0 ? mrs(SP_EL0) : mrs(SP_EL1), false, false),
         .extra = extra,
     };
@@ -47,8 +47,8 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
         case EXC_RET_STEP:
         case EXC_RET_HANDLED:
             memcpy(regs, exc_info.regs, sizeof(exc_info.regs));
-            msr(SPSR_EL2, exc_info.spsr);
-            msr(ELR_EL2, exc_info.elr);
+            hv_set_spsr(exc_info.spsr);
+            hv_set_elr(exc_info.elr);
             msr(SP_EL0, exc_info.sp[0]);
             msr(SP_EL1, exc_info.sp[1]);
             if (ret == EXC_RET_STEP) {
@@ -138,7 +138,7 @@ static void hv_exc_exit(u64 *regs)
 void hv_exc_sync(u64 *regs)
 {
     bool handled = false;
-    u64 esr = mrs(ESR_EL2);
+    u64 esr = hv_get_esr();
     u32 ec = FIELD_GET(ESR_EC, esr);
 
     switch (ec) {
@@ -158,7 +158,7 @@ void hv_exc_sync(u64 *regs)
     }
 
     if (handled)
-        msr(ELR_EL2, mrs(ELR_EL2) + 4);
+        hv_set_elr(hv_get_elr() + 4);
     else
         hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_SYNC, NULL);
 

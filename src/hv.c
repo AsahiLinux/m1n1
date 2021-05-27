@@ -42,9 +42,17 @@ void hv_init(void)
     sysop("isb");
 }
 
+static void hv_set_gxf_vbar(void)
+{
+    msr(SYS_IMP_APL_VBAR_GL1, _hv_vectors_start);
+}
+
 void hv_start(void *entry, u64 regs[4])
 {
     msr(VBAR_EL1, _hv_vectors_start);
+
+    if (gxf_enabled())
+        gl2_call(hv_set_gxf_vbar, 0, 0, 0, 0);
 
     hv_arm_tick();
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
@@ -58,6 +66,54 @@ void hv_write_hcr(u64 val)
         gl2_call(hv_write_hcr, val, 0, 0, 0);
     else
         msr(HCR_EL2, val);
+}
+
+u64 hv_get_spsr(void)
+{
+    if (in_gl12())
+        return mrs(SYS_IMP_APL_SPSR_GL1);
+    else
+        return mrs(SPSR_EL2);
+}
+
+void hv_set_spsr(u64 val)
+{
+    if (in_gl12())
+        return msr(SYS_IMP_APL_SPSR_GL1, val);
+    else
+        return msr(SPSR_EL2, val);
+}
+
+u64 hv_get_esr(void)
+{
+    if (in_gl12())
+        return mrs(SYS_IMP_APL_ESR_GL1);
+    else
+        return mrs(ESR_EL2);
+}
+
+u64 hv_get_far(void)
+{
+    if (in_gl12())
+        return mrs(SYS_IMP_APL_FAR_GL1);
+    else
+        return mrs(FAR_EL2);
+}
+
+u64 hv_get_elr(void)
+{
+    if (in_gl12())
+        return mrs(SYS_IMP_APL_ELR_GL1);
+    else
+        return mrs(ELR_EL2);
+}
+
+void hv_set_elr(u64 val)
+{
+    if (in_gl12())
+        return msr(SYS_IMP_APL_ELR_GL1, val);
+    else
+        return msr(ELR_EL2, val);
 }
 
 void hv_arm_tick(void)
