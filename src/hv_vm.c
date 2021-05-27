@@ -427,18 +427,27 @@ u64 hv_pt_walk(u64 addr)
 
 #define CHECK_RN                                                                                   \
     if (Rn == 31)                                                                                  \
-    goto bail
+    return false
 #define DECODE_OK                                                                                  \
     if (!val)                                                                                      \
     return true
 
 #define EXT(n, b) (((s32)(((u32)(n)) << (32 - (b)))) >> (32 - (b)))
 
+union simd_reg {
+    u64 d[2];
+    u32 s[4];
+    u16 h[8];
+    u8 b[16];
+};
+
 static bool emulate_load(u64 *regs, u32 insn, u64 *val, u64 *width)
 {
     u64 Rt = insn & 0x1f;
     u64 Rn = (insn >> 5) & 0x1f;
     u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
+
+    union simd_reg simd[32];
 
     *width = insn >> 30;
 
@@ -497,14 +506,67 @@ static bool emulate_load(u64 *regs, u32 insn, u64 *val, u64 *width)
         u64 Rt2 = (insn >> 10) & 0x1f;
         regs[Rt] = val[0];
         regs[Rt2] = val[1];
+    } else if ((insn & 0x3fc00000) == 0x3d400000) {
+        // LDR (immediate, SIMD&FP) Unsigned offset
+        DECODE_OK;
+        get_simd_state(simd);
+        simd[Rt].d[0] = val[0];
+        simd[Rt].d[1] = 0;
+        put_simd_state(simd);
+    } else if ((insn & 0xffc00000) == 0x3dc00000) {
+        // LDR (immediate, SIMD&FP) Unsigned offset, 128-bit
+        *width = 4;
+        DECODE_OK;
+        get_simd_state(simd);
+        simd[Rt].d[0] = val[0];
+        simd[Rt].d[1] = val[1];
+        put_simd_state(simd);
+    } else if ((insn & 0x3fe00400) == 0x3c400400) {
+        // LDR (immediate, SIMD&FP) Pre/Post-index
+        CHECK_RN;
+        DECODE_OK;
+        regs[Rn] += imm9;
+        get_simd_state(simd);
+        simd[Rt].d[0] = val[0];
+        simd[Rt].d[1] = 0;
+        put_simd_state(simd);
+    } else if ((insn & 0xffe00400) == 0x3cc00400) {
+        // LDR (immediate, SIMD&FP) Pre/Post-index, 128-bit
+        *width = 4;
+        CHECK_RN;
+        DECODE_OK;
+        regs[Rn] += imm9;
+        get_simd_state(simd);
+        simd[Rt].d[0] = val[0];
+        simd[Rt].d[1] = val[1];
+        put_simd_state(simd);
+    } else if ((insn & 0x3fe04c00) == 0x3c604800) {
+        // LDR (register, SIMD&FP)
+        DECODE_OK;
+        get_simd_state(simd);
+        simd[Rt].d[0] = val[0];
+        simd[Rt].d[1] = 0;
+        put_simd_state(simd);
+    } else if ((insn & 0xffe04c00) == 0x3ce04800) {
+        // LDR (register, SIMD&FP), 128-bit
+        *width = 4;
+        DECODE_OK;
+        get_simd_state(simd);
+        simd[Rt].d[0] = val[0];
+        simd[Rt].d[1] = val[1];
+        put_simd_state(simd);
+    } else if ((insn & 0xbffffc00) == 0x0d408400) {
+        // LD1 (single structure) No offset, 64-bit
+        *width = 3;
+        DECODE_OK;
+        u64 index = (insn >> 30) & 1;
+        get_simd_state(simd);
+        simd[Rt].d[index] = val[0];
+        put_simd_state(simd);
     } else {
-        goto bail;
+        return false;
     }
     return true;
-
-bail:
-    printf("HV: load not emulated: 0x%08x\n", insn);
-    return false;
 }
 
 static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 *width)
@@ -537,17 +599,16 @@ static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 *width)
         val[0] = regs[Rt];
         val[1] = regs[Rt2];
         *width = 4;
+    } else if ((insn & 0x3fe00c00) == 0x38000000) {
+        // STURx (unscaled)
+        *val = regs[Rt];
     } else {
-        goto bail;
+        return false;
     }
 
     dprintf("0x%lx\n", *width);
 
     return true;
-
-bail:
-    printf("HV: store not emulated: 0x%08x\n", insn);
-    return false;
 }
 
 static void emit_mmiotrace(u64 pc, u64 addr, u64 *data, u64 width, u64 flags, bool sync)
@@ -630,8 +691,10 @@ bool hv_handle_dabort(u64 *regs)
     if (esr & ESR_ISS_DABORT_WnR) {
         hv_wdt_breadcrumb('W');
 
-        if (!emulate_store(regs, insn, val, &width))
+        if (!emulate_store(regs, insn, val, &width)) {
+            printf("HV: store not emulated: 0x%08x at 0x%lx\n", insn, ipa);
             return false;
+        }
 
         hv_wdt_breadcrumb('3');
 
@@ -698,8 +761,10 @@ bool hv_handle_dabort(u64 *regs)
     } else {
         hv_wdt_breadcrumb('R');
 
-        if (!emulate_load(regs, insn, NULL, &width))
+        if (!emulate_load(regs, insn, NULL, &width)) {
+            printf("HV: load not emulated: 0x%08x at 0x%lx\n", insn, ipa);
             return false;
+        }
 
         hv_wdt_breadcrumb('3');
         switch (FIELD_GET(SPTE_TYPE, pte)) {
