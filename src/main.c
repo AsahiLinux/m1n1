@@ -83,7 +83,6 @@ void m1n1_main(void)
     print_info();
     wdt_disable();
     pmgr_init();
-    pcie_init();
 
     printf("Initialization complete.\n");
 

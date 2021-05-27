@@ -6,6 +6,7 @@
 #include "exception.h"
 #include "malloc.h"
 #include "memory.h"
+#include "pcie.h"
 #include "smp.h"
 #include "types.h"
 #include "utils.h"
@@ -301,6 +302,8 @@ int kboot_prepare_dt(void *fdt)
 
 int kboot_boot(void *kernel)
 {
+    pcie_init();
+
     printf("Preparing to boot kernel at %p with fdt at %p\n", kernel, dt);
 
     next_stage.entry = kernel;
