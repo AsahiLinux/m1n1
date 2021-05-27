@@ -18,6 +18,9 @@ bool ipi_pending = false;
 
 void hv_exit_guest(void) __attribute__((noreturn));
 
+static u64 stolen_time = 0;
+static u64 exc_entry_time;
+
 void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_t type, void *extra)
 {
     int from_el = FIELD_GET(SPSR_M, hv_get_spsr()) >> 2;
@@ -144,17 +147,27 @@ static bool hv_handle_msr(u64 *regs, u64 iss)
     return false;
 }
 
+static void hv_exc_entry(u64 *regs)
+{
+    UNUSED(regs);
+    hv_wdt_breadcrumb('X');
+    exc_entry_time = mrs(CNTPCT_EL0);
+}
+
 static void hv_exc_exit(u64 *regs)
 {
     hv_wdt_breadcrumb('x');
     if (iodev_can_read(uartproxy_iodev))
         hv_exc_proxy(regs, START_HV, HV_USER_INTERRUPT, NULL);
     hv_update_fiq();
+    stolen_time += mrs(CNTPCT_EL0) - exc_entry_time;
+    msr(CNTVOFF_EL2, stolen_time);
 }
 
 void hv_exc_sync(u64 *regs)
 {
     hv_wdt_breadcrumb('S');
+    hv_exc_entry(regs);
     bool handled = false;
     u64 esr = hv_get_esr();
     u32 ec = FIELD_GET(ESR_EC, esr);
@@ -193,6 +206,7 @@ void hv_exc_sync(u64 *regs)
 void hv_exc_irq(u64 *regs)
 {
     hv_wdt_breadcrumb('I');
+    hv_exc_entry(regs);
     hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_IRQ, NULL);
     hv_exc_exit(regs);
     hv_wdt_breadcrumb('i');
@@ -201,6 +215,7 @@ void hv_exc_irq(u64 *regs)
 void hv_exc_fiq(u64 *regs)
 {
     hv_wdt_breadcrumb('F');
+    hv_exc_entry(regs);
     if (mrs(CNTP_CTL_EL0) == (CNTx_CTL_ISTATUS | CNTx_CTL_ENABLE)) {
         msr(CNTP_CTL_EL0, CNTx_CTL_ISTATUS | CNTx_CTL_IMASK | CNTx_CTL_ENABLE);
         hv_tick();
@@ -240,6 +255,7 @@ void hv_exc_fiq(u64 *regs)
 void hv_exc_serr(u64 *regs)
 {
     hv_wdt_breadcrumb('E');
+    hv_exc_entry(regs);
     hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_SERROR, NULL);
     hv_exc_exit(regs);
     hv_wdt_breadcrumb('e');
