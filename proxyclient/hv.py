@@ -253,7 +253,7 @@ class HV:
 
         ctx.elr += 4
 
-        self.patch_exception_handling()
+        #self.patch_exception_handling()
 
         return True
 
