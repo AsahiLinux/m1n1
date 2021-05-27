@@ -561,13 +561,13 @@ class HV:
                     0x5_00000000)
 
         ## Map UART directly so it doesn't spam
-        #self.map_hw(0x2_35200000, 0x2_35200000, 0x4000)
+        self.map_hw(0x2_35200000, 0x2_35200000, 0x4000)
 
         ## Map DWC directly so it doesn't spam
         #self.map_hw(0x5_02280000, 0x5_02280000, 0x10000)
 
         # This also gets the syslog...
-        #self.map_hw(0x2_3d12c000, 0x2_3d12c000, 0x4000)
+        self.map_hw(0x2_3d12c000, 0x2_3d12c000, 0x4000)
 
         # SIMD loads lurk here...
         self.map_hw(0x2_10e70000, 0x2_10e70000, 0x4000)
