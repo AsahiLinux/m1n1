@@ -38,15 +38,19 @@ static uint64_t gl_call(void *func, uint64_t a, uint64_t b, uint64_t c, uint64_t
     // disable the MMU first since enabling SPRR will change the meaning of all
     // pagetable permission bits and also prevent us from having rwx pages
     u64 sprr_state = mrs(SYS_IMP_APL_SPRR_CONFIG_EL1);
-    reg_set_sync(SYS_IMP_APL_SPRR_CONFIG_EL1, sprr_state | SPRR_CONFIG_EN);
+    if (!(sprr_state & SPRR_CONFIG_EN))
+        reg_set_sync(SYS_IMP_APL_SPRR_CONFIG_EL1, sprr_state | SPRR_CONFIG_EN);
 
     u64 gxf_state = mrs(SYS_IMP_APL_GXF_CONFIG_EL1);
-    reg_set_sync(SYS_IMP_APL_GXF_CONFIG_EL1, gxf_state | GXF_CONFIG_EN);
+    if (!(gxf_state & GXF_CONFIG_EN))
+        reg_set_sync(SYS_IMP_APL_GXF_CONFIG_EL1, gxf_state | GXF_CONFIG_EN);
 
     uint64_t ret = gxf_enter(func, a, b, c, d);
 
-    msr_sync(SYS_IMP_APL_GXF_CONFIG_EL1, gxf_state);
-    msr_sync(SYS_IMP_APL_SPRR_CONFIG_EL1, sprr_state);
+    if (!(gxf_state & GXF_CONFIG_EN))
+        msr_sync(SYS_IMP_APL_GXF_CONFIG_EL1, gxf_state);
+    if (!(sprr_state & SPRR_CONFIG_EN))
+        msr_sync(SYS_IMP_APL_SPRR_CONFIG_EL1, sprr_state);
 
     return ret;
 }
