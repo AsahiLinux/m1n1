@@ -667,6 +667,11 @@ class HV:
         self.setup_adt()
 
     def setup_adt(self):
+        self.adt["product"].product_name += " on m1n1 hypervisor"
+        self.adt["product"].product_description += " on m1n1 hypervisor"
+        soc_name = "Virtual " + self.adt["product"].product_soc_name + " on m1n1 hypervisor"
+        self.adt["product"].product_soc_name = soc_name
+
         if self.iodev in (IODEV.USB0, IODEV.USB1):
             idx = int(str(self.iodev)[-1])
             for idx in (0, 1):
