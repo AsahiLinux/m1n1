@@ -121,7 +121,9 @@ static const char *get_exception_level(void)
 void exception_initialize(void)
 {
     msr(VBAR_EL1, _vectors_start);
-    msr(DAIF, 0 << 6); // Enable SError, IRQ and FIQ
+
+    if (is_primary_core())
+        msr(DAIF, 0 << 6); // Enable SError, IRQ and FIQ
 
     if (in_el2()) {
         // Set up a sane HCR_EL2
