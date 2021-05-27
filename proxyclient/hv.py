@@ -33,6 +33,7 @@ class HV_EVENT(IntEnum):
     HOOK_VM = 1
     VTIMER = 2
     USER_INTERRUPT = 3
+    WDT_BARK = 4
 
 VMProxyHookData = Struct(
     "flags" / RegAdapter(MMIOTraceFlags),
@@ -403,6 +404,29 @@ class HV:
         if self._sigint_pending:
             self._handle_sigint()
 
+    def handle_bark(self, reason, code, info):
+        self._in_handler = True
+        self._sigint_pending = False
+        self._stepping = False
+
+        locals = {
+            "hv": self,
+            "iface": self.iface,
+            "p": self.p,
+            "u": self.u,
+        }
+
+        for attr in dir(self):
+            a = getattr(self, attr)
+            if callable(a):
+                locals[attr] = getattr(self, attr)
+
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        ret = shell.run_shell(locals, "Entering panic shell", "Returning from exception")
+        signal.signal(signal.SIGINT, self._handle_sigint)
+
+        self.p.exit(0)
+
     def skip(self):
         self.ctx.elr += 4
         raise shell.ExitConsole(EXC_RET.HANDLED)
@@ -521,6 +545,7 @@ class HV:
         self.iface.set_handler(START.HV, HV_EVENT.USER_INTERRUPT, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.HOOK_VM, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.VTIMER, self.handle_exception)
+        self.iface.set_handler(START.HV, HV_EVENT.WDT_BARK, self.handle_bark)
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
 
         self.map_sw(0x2_00000000,

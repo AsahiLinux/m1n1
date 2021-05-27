@@ -31,6 +31,7 @@ typedef enum _hv_entry_type {
     HV_HOOK_VM = 1,
     HV_VTIMER,
     HV_USER_INTERRUPT,
+    HV_WDT_BARK,
 } hv_entry_type;
 
 /* VM */
@@ -51,6 +52,15 @@ void hv_map_vuart(u64 base, iodev_id_t iodev);
 /* Exceptions */
 void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_t type,
                   void *extra);
+
+/* WDT */
+void hv_wdt_pet(void);
+void hv_wdt_suspend(void);
+void hv_wdt_resume(void);
+void hv_wdt_init(void);
+void hv_wdt_start(void);
+void hv_wdt_stop(void);
+void hv_wdt_breadcrumb(char c);
 
 /* Utilities */
 void hv_write_hcr(u64 val);

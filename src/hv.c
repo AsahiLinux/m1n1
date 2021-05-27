@@ -4,6 +4,7 @@
 #include "assert.h"
 #include "cpu_regs.h"
 #include "gxf.h"
+#include "smp.h"
 #include "utils.h"
 
 #define HV_TICK_RATE 1000
@@ -16,6 +17,9 @@ u64 hv_tick_interval;
 
 void hv_init(void)
 {
+    smp_start_secondaries();
+    hv_wdt_init();
+
     // Enable physical timer for EL1
     msr(CNTHCTL_EL2, CNTHCTL_EL1PTEN | CNTHCTL_EL1PCTEN);
 
@@ -54,8 +58,10 @@ void hv_start(void *entry, u64 regs[4])
     if (gxf_enabled())
         gl2_call(hv_set_gxf_vbar, 0, 0, 0, 0);
 
+    hv_wdt_start();
     hv_arm_tick();
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
+    hv_wdt_stop();
 
     printf("Exiting hypervisor.\n");
 }
@@ -124,5 +130,5 @@ void hv_arm_tick(void)
 
 void hv_tick(void)
 {
-    //     printf("HV tick!\n");
+    hv_wdt_pet();
 }

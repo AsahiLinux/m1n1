@@ -5,6 +5,7 @@
 #include "cpu_regs.h"
 #include "exception.h"
 #include "string.h"
+#include "uart.h"
 #include "uartproxy.h"
 
 #define _SYSREG_ISS(_1, _2, op0, op1, CRn, CRm, op2)                                               \
@@ -20,6 +21,8 @@ void hv_exit_guest(void) __attribute__((noreturn));
 void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_t type, void *extra)
 {
     int from_el = FIELD_GET(SPSR_M, hv_get_spsr()) >> 2;
+
+    hv_wdt_breadcrumb('P');
 
     struct uartproxy_exc_info exc_info = {
         .spsr = hv_get_spsr(),
@@ -41,7 +44,9 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
         .info = &exc_info,
     };
 
+    hv_wdt_suspend();
     int ret = uartproxy_run(&start);
+    hv_wdt_resume();
 
     switch (ret) {
         case EXC_RET_STEP:
@@ -55,6 +60,7 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
                 msr(CNTV_TVAL_EL0, 100);
                 msr(CNTV_CTL_EL0, CNTx_CTL_ENABLE);
             }
+            hv_wdt_breadcrumb('p');
             return;
         case EXC_EXIT_GUEST:
             hv_exit_guest();
@@ -130,6 +136,7 @@ static bool hv_handle_msr(u64 *regs, u64 iss)
 
 static void hv_exc_exit(u64 *regs)
 {
+    hv_wdt_breadcrumb('x');
     if (iodev_can_read(uartproxy_iodev))
         hv_exc_proxy(regs, START_HV, HV_USER_INTERRUPT, NULL);
     hv_update_fiq();
@@ -137,18 +144,22 @@ static void hv_exc_exit(u64 *regs)
 
 void hv_exc_sync(u64 *regs)
 {
+    hv_wdt_breadcrumb('S');
     bool handled = false;
     u64 esr = hv_get_esr();
     u32 ec = FIELD_GET(ESR_EC, esr);
 
     switch (ec) {
         case ESR_EC_DABORT_LOWER:
+            hv_wdt_breadcrumb('D');
             handled = hv_handle_dabort(regs);
             break;
         case ESR_EC_MSR:
+            hv_wdt_breadcrumb('M');
             handled = hv_handle_msr(regs, FIELD_GET(ESR_ISS, esr));
             break;
         case ESR_EC_IMPDEF:
+            hv_wdt_breadcrumb('A');
             switch (FIELD_GET(ESR_ISS, esr)) {
                 case ESR_ISS_IMPDEF_MSR:
                     handled = hv_handle_msr(regs, mrs(AFSR1_EL1));
@@ -157,22 +168,29 @@ void hv_exc_sync(u64 *regs)
             break;
     }
 
-    if (handled)
+    if (handled) {
+        hv_wdt_breadcrumb('+');
         hv_set_elr(hv_get_elr() + 4);
-    else
+    } else {
+        hv_wdt_breadcrumb('-');
         hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_SYNC, NULL);
+    }
 
     hv_exc_exit(regs);
+    hv_wdt_breadcrumb('s');
 }
 
 void hv_exc_irq(u64 *regs)
 {
+    hv_wdt_breadcrumb('I');
     hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_IRQ, NULL);
     hv_exc_exit(regs);
+    hv_wdt_breadcrumb('i');
 }
 
 void hv_exc_fiq(u64 *regs)
 {
+    hv_wdt_breadcrumb('F');
     if (mrs(CNTP_CTL_EL0) == (CNTx_CTL_ISTATUS | CNTx_CTL_ENABLE)) {
         msr(CNTP_CTL_EL0, CNTx_CTL_ISTATUS | CNTx_CTL_IMASK | CNTx_CTL_ENABLE);
         hv_tick();
@@ -206,10 +224,13 @@ void hv_exc_fiq(u64 *regs)
 
     // Handles guest timers
     hv_exc_exit(regs);
+    hv_wdt_breadcrumb('f');
 }
 
 void hv_exc_serr(u64 *regs)
 {
+    hv_wdt_breadcrumb('E');
     hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_SERROR, NULL);
     hv_exc_exit(regs);
+    hv_wdt_breadcrumb('e');
 }
