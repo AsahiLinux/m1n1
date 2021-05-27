@@ -7,6 +7,8 @@
 #define ESR_EC_IMPDEF      0b111111
 #define ESR_ISS_IMPDEF_MSR 0x20
 
+#define SYS_IMP_APL_ACTLR_EL12 sys_reg(3, 6, 15, 14, 6)
+
 /* HID registers */
 #define SYS_IMP_APL_HID0                sys_reg(3, 0, 15, 0, 0)
 #define HID0_FETCH_WIDTH_DISABLE        (1UL << 28)

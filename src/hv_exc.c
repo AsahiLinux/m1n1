@@ -101,6 +101,14 @@ static void hv_update_fiq(void)
     }
 }
 
+#define SYSREG_MAP(sr, to)                                                                         \
+    case SYSREG_ISS(sr):                                                                           \
+        if (is_read)                                                                               \
+            regs[rt] = _mrs(sr_tkn(to));                                                           \
+        else                                                                                       \
+            _msr(sr_tkn(to), regs[rt]);                                                            \
+        return true;
+
 #define SYSREG_PASS(sr)                                                                            \
     case SYSREG_ISS(sr):                                                                           \
         if (is_read)                                                                               \
@@ -119,6 +127,8 @@ static bool hv_handle_msr(u64 *regs, u64 iss)
     regs[31] = 0;
 
     switch (reg) {
+        /* Noisy traps */
+        SYSREG_MAP(SYS_ACTLR_EL1, SYS_IMP_APL_ACTLR_EL12)
         /* IPI handling */
         SYSREG_PASS(SYS_IPI_RR_LOCAL_EL1)
         SYSREG_PASS(SYS_IPI_RR_GLOBAL_EL1)
