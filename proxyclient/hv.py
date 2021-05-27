@@ -18,8 +18,9 @@ import shell
 PAC_MASK = 0xfffff00000000000
 
 class MMIOTraceFlags(Register32):
-    WIDTH = 2, 0
-    WRITE = 3
+    WIDTH = 4, 0
+    WRITE = 5
+    MULTI = 6
 
 EvtMMIOTrace = Struct(
     "flags" / RegAdapter(MMIOTraceFlags),
@@ -39,7 +40,7 @@ VMProxyHookData = Struct(
     "flags" / RegAdapter(MMIOTraceFlags),
     "id" / Int32ul,
     "addr" / Hex(Int64ul),
-    "data" / Hex(Int64ul),
+    "data" / Array(2, Hex(Int64ul)),
 )
 
 class HV:
@@ -167,11 +168,18 @@ class HV:
 
         rfunc, wfunc, base, kwargs = self.vm_hooks[data.id]
 
+        d = data.data
+        if data.flags.WIDTH < 3:
+            d = d[0]
+
         if data.flags.WRITE:
-            wfunc(base, data.addr - base, data.data, 1 << data.flags.WIDTH, **kwargs)
+            wfunc(base, data.addr - base, d, 1 << data.flags.WIDTH, **kwargs)
         else:
             val = rfunc(base, data.addr - base, 1 << data.flags.WIDTH, **kwargs)
-            self.p.write64(ctx.data + 16, val)
+            if not isinstance(val, list) and not isinstance(val, tuple):
+                val = [val]
+            for i in range(1 << max(0, data.flags.WIDTH - 3)):
+                self.p.write64(ctx.data + 16 * 8 * i, val[i])
 
         return True
 

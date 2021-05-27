@@ -460,11 +460,15 @@ static bool emulate_load(u64 *regs, u32 insn, u64 *val, u64 *width)
         CHECK_RN;
         DECODE_OK;
         regs[Rn] += imm9;
-        regs[Rt] = EXT(*val, 8 << *width);
+        regs[Rt] = (s64)EXT(*val, 8 << *width);
+        if (insn & (1 << 22))
+            regs[Rt] &= 0xffffffff;
     } else if ((insn & 0x3fa00000) == 0x39800000) {
         // LDRSx (immediate) Unsigned offset
         DECODE_OK;
-        regs[Rt] = EXT(*val, 8 << *width);
+        regs[Rt] = (s64)EXT(*val, 8 << *width);
+        if (insn & (1 << 22))
+            regs[Rt] &= 0xffffffff;
     } else if ((insn & 0x3fe04c00) == 0x38604800) {
         // LDRx (register)
         DECODE_OK;
@@ -472,7 +476,27 @@ static bool emulate_load(u64 *regs, u32 insn, u64 *val, u64 *width)
     } else if ((insn & 0x3fa04c00) == 0x38a04800) {
         // LDRSx (register)
         DECODE_OK;
-        regs[Rt] = EXT(*val, 8 << *width);
+        regs[Rt] = (s64)EXT(*val, 8 << *width);
+        if (insn & (1 << 22))
+            regs[Rt] &= 0xffffffff;
+    } else if ((insn & 0x3fe00c00) == 0x38400000) {
+        // LDURx (unscaled)
+        DECODE_OK;
+        regs[Rt] = *val;
+    } else if ((insn & 0x3fa00c00) == 0x38a00000) {
+        // LDURSx (unscaled)
+        DECODE_OK;
+        regs[Rt] = (s64)EXT(*val, (8 << *width));
+        if (insn & (1 << 22))
+            regs[Rt] &= 0xffffffff;
+    } else if ((insn & 0xffc00000) == 0xa9400000) {
+        // LDP (Signed offset, 64-bit)
+        *width = 4;
+        DECODE_OK;
+        CHECK_RN;
+        u64 Rt2 = (insn >> 10) & 0x1f;
+        regs[Rt] = val[0];
+        regs[Rt2] = val[1];
     } else {
         goto bail;
     }
@@ -506,6 +530,13 @@ static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 *width)
     } else if ((insn & 0x3fe04c00) == 0x38204800) {
         // STRx (register)
         *val = regs[Rt];
+    } else if ((insn & 0xffc00000) == 0xa9000000) {
+        // STP (Signed offset, 64-bit)
+        CHECK_RN;
+        u64 Rt2 = (insn >> 10) & 0x1f;
+        val[0] = regs[Rt];
+        val[1] = regs[Rt2];
+        *width = 4;
     } else {
         goto bail;
     }
@@ -517,6 +548,29 @@ static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 *width)
 bail:
     printf("HV: store not emulated: 0x%08x\n", insn);
     return false;
+}
+
+static void emit_mmiotrace(u64 pc, u64 addr, u64 *data, u64 width, u64 flags, bool sync)
+{
+    struct hv_evt_mmiotrace evt = {
+        .flags = flags,
+        .pc = pc,
+        .addr = addr,
+    };
+
+    if (width > 3)
+        evt.flags |= FIELD_PREP(MMIO_EVT_WIDTH, 3) | MMIO_EVT_MULTI;
+    else
+        evt.flags |= FIELD_PREP(MMIO_EVT_WIDTH, width);
+
+    for (int i = 0; i < (1 << width); i += 8) {
+        evt.data = *data++;
+        uartproxy_send_event(EVT_MMIOTRACE, &evt, sizeof(evt));
+        if (sync) {
+            iodev_flush(uartproxy_iodev);
+        }
+        evt.addr += 8;
+    }
 }
 
 bool hv_handle_dabort(u64 *regs)
@@ -563,26 +617,15 @@ bool hv_handle_dabort(u64 *regs)
     }
 
     u32 insn = read32(elr_pa);
-    u64 val = 0;
+    u64 val[2] = {0, 0};
     u64 width;
 
     if (esr & ESR_ISS_DABORT_WnR) {
-        if (!emulate_store(regs, insn, &val, &width))
+        if (!emulate_store(regs, insn, val, &width))
             return false;
 
-        if (pte & SPTE_TRACE_WRITE) {
-            struct hv_evt_mmiotrace evt = {
-                .flags = FIELD_PREP(MMIO_EVT_WIDTH, width) | MMIO_EVT_WRITE,
-                .pc = elr,
-                .addr = ipa,
-                .data = val,
-            };
-            uartproxy_send_event(EVT_MMIOTRACE, &evt, sizeof(evt));
-            if (pte & SPTE_SYNC_TRACE) {
-                iodev_flush(uartproxy_iodev);
-                udelay(1500);
-            }
-        }
+        if (pte & SPTE_TRACE_WRITE)
+            emit_mmiotrace(elr, ipa, val, width, MMIO_EVT_WRITE, pte & SPTE_SYNC_TRACE);
 
         switch (FIELD_GET(SPTE_TYPE, pte)) {
             case SPTE_PROXY_HOOK_R:
@@ -590,25 +633,32 @@ bool hv_handle_dabort(u64 *regs)
                 // fallthrough
             case SPTE_MAP:
                 dprintf("HV: SPTE_MAP[W] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr_pa, far, paddr,
-                        1 << width, val);
+                        1 << width, val[0]);
                 switch (width) {
-                    case SAS_8B:
-                        write8(paddr, val);
+                    case 0:
+                        write8(paddr, val[0]);
                         break;
-                    case SAS_16B:
-                        write16(paddr, val);
+                    case 1:
+                        write16(paddr, val[0]);
                         break;
-                    case SAS_32B:
-                        write32(paddr, val);
+                    case 2:
+                        write32(paddr, val[0]);
                         break;
-                    case SAS_64B:
-                        write64(paddr, val);
+                    case 3:
+                        write64(paddr, val[0]);
                         break;
+                    case 4:
+                        write64(paddr, val[0]);
+                        write64(paddr + 8, val[1]);
+                        break;
+                    default:
+                        dprintf("HV: unsupported width %ld\n", width);
+                        return false;
                 }
                 break;
             case SPTE_HOOK: {
                 hv_hook_t *hook = (hv_hook_t *)target;
-                if (!hook(ipa, &val, true, width))
+                if (!hook(ipa, val, true, width))
                     return false;
                 dprintf("HV: SPTE_HOOK[W] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr_pa, far,
                         ipa, 1 << width, hook, val);
@@ -620,7 +670,7 @@ bool hv_handle_dabort(u64 *regs)
                     .flags = FIELD_PREP(MMIO_EVT_WIDTH, width) | MMIO_EVT_WRITE,
                     .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
                     .addr = ipa,
-                    .data = val,
+                    .data = {val[0], val[1]},
                 };
                 hv_exc_proxy(regs, START_HV, HV_HOOK_VM, &hook);
                 break;
@@ -639,30 +689,37 @@ bool hv_handle_dabort(u64 *regs)
                 // fallthrough
             case SPTE_MAP:
                 switch (width) {
-                    case SAS_8B:
-                        val = read8(paddr);
+                    case 0:
+                        val[0] = read8(paddr);
                         break;
-                    case SAS_16B:
-                        val = read16(paddr);
+                    case 1:
+                        val[0] = read16(paddr);
                         break;
-                    case SAS_32B:
-                        val = read32(paddr);
+                    case 2:
+                        val[0] = read32(paddr);
                         break;
-                    case SAS_64B:
-                        val = read64(paddr);
+                    case 3:
+                        val[0] = read64(paddr);
                         break;
+                    case 4:
+                        val[0] = read64(paddr);
+                        val[1] = read64(paddr + 8);
+                        break;
+                    default:
+                        dprintf("HV: unsupported width %ld\n", width);
+                        return false;
                 }
                 dprintf("HV: SPTE_MAP[R] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr_pa, far, paddr,
-                        1 << width, val);
+                        1 << width, val[0]);
                 break;
-            case SPTE_HOOK:
-                val = 0;
+            case SPTE_HOOK: {
                 hv_hook_t *hook = (hv_hook_t *)target;
-                if (!hook(ipa, &val, false, width))
+                if (!hook(ipa, val, false, width))
                     return false;
                 dprintf("HV: SPTE_HOOK[R] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr_pa, far,
                         ipa, 1 << width, hook, val);
                 break;
+            }
             case SPTE_PROXY_HOOK_RW:
             case SPTE_PROXY_HOOK_R: {
                 struct hv_vm_proxy_hook_data hook = {
@@ -671,7 +728,7 @@ bool hv_handle_dabort(u64 *regs)
                     .addr = ipa,
                 };
                 hv_exc_proxy(regs, START_HV, HV_HOOK_VM, &hook);
-                val = hook.data;
+                memcpy(val, hook.data, sizeof(val));
                 break;
             }
             default:
@@ -679,19 +736,10 @@ bool hv_handle_dabort(u64 *regs)
                 return false;
         }
 
-        if (pte & SPTE_TRACE_READ) {
-            struct hv_evt_mmiotrace evt = {
-                .flags = FIELD_PREP(MMIO_EVT_WIDTH, width),
-                .pc = elr,
-                .addr = ipa,
-                .data = val,
-            };
-            uartproxy_send_event(EVT_MMIOTRACE, &evt, sizeof(evt));
-            if (pte & SPTE_SYNC_TRACE)
-                iodev_flush(uartproxy_iodev);
-        }
+        if (pte & SPTE_TRACE_READ)
+            emit_mmiotrace(elr, ipa, val, width, 0, pte & SPTE_SYNC_TRACE);
 
-        if (!emulate_load(regs, insn, &val, &width))
+        if (!emulate_load(regs, insn, val, &width))
             return false;
     }
 

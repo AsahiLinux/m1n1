@@ -9,8 +9,9 @@
 
 typedef bool(hv_hook_t)(u64 addr, u64 *val, bool write, int width);
 
-#define MMIO_EVT_WIDTH GENMASK(2, 0)
-#define MMIO_EVT_WRITE BIT(3)
+#define MMIO_EVT_WIDTH GENMASK(4, 0)
+#define MMIO_EVT_WRITE BIT(5)
+#define MMIO_EVT_MULTI BIT(6)
 
 struct hv_evt_mmiotrace {
     u32 flags;
@@ -24,7 +25,7 @@ struct hv_vm_proxy_hook_data {
     u32 flags;
     u32 id;
     u64 addr;
-    u64 data;
+    u64 data[2];
 };
 
 typedef enum _hv_entry_type {
