@@ -366,6 +366,11 @@ static const char *ep0_state_names[] = {
     "STATE_DATA_SEND_STATUS_DONE",
 };
 
+static u8 ep_to_num(u8 epno)
+{
+    return (epno << 1) | (epno >> 7);
+}
+
 static int usb_dwc3_command(dwc3_dev_t *dev, u32 command, u32 par)
 {
     write32(dev->regs + DWC3_DGCMDPAR, par);
@@ -675,6 +680,23 @@ static void usb_dwc3_ep0_handle_standard_endpoint(dwc3_dev_t *dev,
             dev->ep0_state = USB_DWC3_EP0_STATE_DATA_SEND;
             break;
         }
+        case USB_REQUEST_CLEAR_FEATURE: {
+            switch (setup->feature.wFeatureSelector) {
+                case USB_FEATURE_ENDPOINT_HALT:
+                    usb_debug_printf("Host cleared EP 0x%x stall\n", setup->feature.wEndpoint);
+                    usb_dwc3_ep_set_stall(dev, ep_to_num(setup->feature.wEndpoint), 0);
+                    usb_dwc3_start_status_phase(dev, USB_LEP_CTRL_IN);
+                    dev->ep0_state = USB_DWC3_EP0_STATE_DATA_SEND_STATUS_DONE;
+                    break;
+                default:
+                    usb_dwc3_ep_set_stall(dev, 0, 1);
+                    dev->ep0_state = USB_DWC3_EP0_STATE_IDLE;
+                    usb_debug_printf("unsupported CLEAR FEATURE: 0x%x\n",
+                                     setup->feature.wFeatureSelector);
+                    break;
+            }
+            break;
+        }
         default:
             usb_dwc3_ep_set_stall(dev, 0, 1);
             dev->ep0_state = USB_DWC3_EP0_STATE_IDLE;
@@ -722,7 +744,8 @@ static void usb_dwc3_ep0_handle_class(dwc3_dev_t *dev, const union usb_setup_pac
                 dev->ready = false;
                 usb_debug_printf("ACM device closed\n");
             }
-            dev->ep0_state = USB_DWC3_EP0_STATE_DATA_SEND_STATUS;
+            usb_dwc3_start_status_phase(dev, USB_LEP_CTRL_IN);
+            dev->ep0_state = USB_DWC3_EP0_STATE_DATA_SEND_STATUS_DONE;
             break;
 
         case USB_REQUEST_CDC_SET_LINE_CODING:

@@ -35,6 +35,8 @@
 #define USB_EP_REQUEST_CLEAR_FEATURE 0x01
 #define USB_EP_REQUEST_SET_FEATURE   0x03
 
+#define USB_FEATURE_ENDPOINT_HALT 0x00
+
 #define USB_REQUEST_CDC_SET_LINE_CODING     0x20
 #define USB_REQUEST_CDC_GET_LINE_CODING     0x21
 #define USB_REQUEST_CDC_SET_CTRL_LINE_STATE 0x22
@@ -72,11 +74,20 @@ struct usb_set_packet_set_configuration {
     u16 zero1;
 } PACKED;
 
+struct usb_setup_packet_feature {
+    u8 bmRequestType;
+    u8 bRequest;
+    u16 wFeatureSelector;
+    u16 wEndpoint;
+    u16 wLength;
+} PACKED;
+
 union usb_setup_packet {
     struct usb_setup_packet_raw raw;
     struct usb_setup_packet_get_descriptor get_descriptor;
     struct usb_set_packet_set_address set_address;
     struct usb_set_packet_set_configuration set_configuration;
+    struct usb_setup_packet_feature feature;
 };
 
 #define USB_DEVICE_DESCRIPTOR                    0x01
