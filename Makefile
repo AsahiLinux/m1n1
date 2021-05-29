@@ -60,6 +60,7 @@ OBJECTS := \
 	startup.o \
 	string.o \
 	tunables.o \
+	tps6598x.o \
 	uart.o \
 	uartproxy.o \
 	usb.o usb_dwc3.o \
