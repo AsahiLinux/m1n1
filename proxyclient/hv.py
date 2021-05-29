@@ -661,7 +661,7 @@ class HV:
         self.u.msr(APVMKEYHI_EL2, 0x697665596F755570)
         self.u.msr(APSTS_EL12, 1)
 
-        #self.p.hv_map_vuart(0x2_35200000, getattr(IODEV, self.iodev.name + "_SEC"))
+        self.p.hv_map_vuart(0x2_35200000, getattr(IODEV, self.iodev.name + "_SEC"))
 
         actlr = ACTLR(self.u.mrs(ACTLR_EL12))
         actlr.EnMDSB = 1

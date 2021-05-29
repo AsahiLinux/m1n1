@@ -22,7 +22,7 @@ bool handle_vuart(u64 addr, u64 *val, bool write, int width)
     } else {
         switch (addr) {
             case UTRSTAT:
-                *val = 0x02;
+                *val = 0x06;
                 break;
             default:
                 *val = 0;
