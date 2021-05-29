@@ -45,6 +45,7 @@ OBJECTS := \
 	gxf.o gxf_asm.o \
 	heapblock.o \
 	hv.o hv_vm.o hv_exc.o hv_vuart.o hv_wdt.o hv_asm.o \
+	i2c.o \
 	iodev.o \
 	kboot.o \
 	main.o \
