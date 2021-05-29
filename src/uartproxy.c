@@ -151,12 +151,14 @@ int uartproxy_run(struct uartproxy_msg_start *start)
             // Look for commands from any iodev on startup
             for (iodev = 0; iodev < IODEV_MAX;) {
                 u8 b;
-                iodev_handle_events(iodev);
-                if (iodev_can_read(iodev) && iodev_read(iodev, &b, 1) == 1) {
-                    iodev_proxy_buffer[iodev] >>= 8;
-                    iodev_proxy_buffer[iodev] |= b << 24;
-                    if ((iodev_proxy_buffer[iodev] & 0xffffff) == 0xAA55FF)
-                        break;
+                if ((iodevs[iodev]->usage & USAGE_UARTPROXY)) {
+                    iodev_handle_events(iodev);
+                    if (iodev_can_read(iodev) && iodev_read(iodev, &b, 1) == 1) {
+                        iodev_proxy_buffer[iodev] >>= 8;
+                        iodev_proxy_buffer[iodev] |= b << 24;
+                        if ((iodev_proxy_buffer[iodev] & 0xffffff) == 0xAA55FF)
+                            break;
+                    }
                 }
                 iodev++;
                 if (iodev == IODEV_MAX)
