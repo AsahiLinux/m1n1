@@ -59,7 +59,7 @@ class Serial(serial.Serial):
         return
 
     def reset_input_buffer(self):
-        super()._reset_input_buffer()
+        return
 
 class UartError(RuntimeError):
     pass
