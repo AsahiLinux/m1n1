@@ -108,6 +108,14 @@ u64 hv_get_far(void)
         return mrs(FAR_EL2);
 }
 
+u64 hv_get_afsr1(void)
+{
+    if (in_gl12())
+        return mrs(SYS_IMP_APL_AFSR1_GL1);
+    else
+        return mrs(AFSR1_EL2);
+}
+
 u64 hv_get_elr(void)
 {
     if (in_gl12())

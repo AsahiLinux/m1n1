@@ -114,6 +114,7 @@ ExcInfo = Struct(
     "elr" / Int64ul,
     "esr" / RegAdapter(ESR),
     "far" / Int64ul,
+    "afsr1" / Int64ul,
     "regs" / Array(31, Int64ul),
     "sp" / Array(3, Int64ul),
     "mpidr" / Int64ul,

@@ -32,6 +32,7 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
         .elr = hv_get_elr(),
         .esr = hv_get_esr(),
         .far = hv_get_far(),
+        .afsr1 = hv_get_afsr1(),
         .sp = {mrs(SP_EL0), mrs(SP_EL1), 0},
         .mpidr = mrs(MPIDR_EL1),
         .elr_phys = hv_translate(hv_get_elr(), false, false),
@@ -188,7 +189,7 @@ void hv_exc_sync(u64 *regs)
             hv_wdt_breadcrumb('A');
             switch (FIELD_GET(ESR_ISS, esr)) {
                 case ESR_ISS_IMPDEF_MSR:
-                    handled = hv_handle_msr(regs, mrs(AFSR1_EL1));
+                    handled = hv_handle_msr(regs, hv_get_afsr1());
                     break;
             }
             break;

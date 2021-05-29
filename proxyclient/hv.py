@@ -261,7 +261,7 @@ class HV:
 
     def handle_impdef(self, ctx):
         if ctx.esr.ISS == 0x20:
-            return self.handle_msr(ctx, self.u.mrs(AFSR1_EL1))
+            return self.handle_msr(ctx, ctx.afsr1)
 
         start = ctx.elr_phys
         code = struct.unpack("<I", self.iface.readmem(ctx.elr_phys, 4))

@@ -70,6 +70,7 @@ void hv_set_spsr(u64 val);
 u64 hv_get_esr(void);
 u64 hv_get_far(void);
 u64 hv_get_elr(void);
+u64 hv_get_afsr1(void);
 void hv_set_elr(u64 val);
 
 /* HV main */

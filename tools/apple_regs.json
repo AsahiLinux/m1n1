@@ -112,6 +112,9 @@
     {"index": 0, "name": "ACC_OVRD_EL1",                "fullname": "Apple Core Cluster Override",                                  "enc": [3, 5, 15, 6, 0  ], "width": 64},
     {"index": 0, "name": "ACC_EBLK_OVRD_EL1",           "fullname": "Apple Core Cluster E-Block Override",                          "enc": [3, 5, 15, 6, 1  ], "width": 64},
     {"index": 0, "name": "MMU_ERR_STS_EL1",             "fullname": "MMU Error Status",                                             "enc": [3, 6, 15, 0, 0  ], "width": 64},
+    {"index": 0, "name": "AFSR1_GL1",                   "fullname": "Auxiliary Fault Status Register 1 (GL1)",                      "enc": [3, 6, 15, 0, 1  ], "width": 64},
+    {"index": 0, "name": "AFSR1_GL2",                   "fullname": "Auxiliary Fault Status Register 1 (GL2)",                      "enc": [3, 6, 15, 0, 2  ], "width": 64},
+    {"index": 0, "name": "AFSR1_GL12",                  "fullname": "Auxiliary Fault Status Register 1 (GL12)",                     "enc": [3, 6, 15, 0, 3  ], "width": 64},
     {"index": 0, "name": "SPRR_CONFIG_EL1",             "fullname": "SPRR Configuration Register (EL1)",                            "enc": [3, 6, 15, 1, 0  ], "width": 64,
         "fieldsets": [{"fields": [
             {"name": "EN",                              "msb": 0, "lsb": 0},

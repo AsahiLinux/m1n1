@@ -37,6 +37,7 @@ struct uartproxy_exc_info {
     u64 elr;
     u64 esr;
     u64 far;
+    u64 afsr1;
     u64 regs[31];
     u64 sp[3];
     u64 mpidr;
