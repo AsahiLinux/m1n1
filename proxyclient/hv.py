@@ -654,6 +654,7 @@ class HV:
             hacr.TRAP_ACC = 1
             hacr.TRAP_IPI = 1
             hacr.TRAP_SERROR_INFO = 1 # M1RACLES mitigation
+            hacr.TRAP_PM = 1
         self.u.msr(HACR_EL2, hacr.value)
 
         # Enable AMX
