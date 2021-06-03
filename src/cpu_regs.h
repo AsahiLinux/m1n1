@@ -89,6 +89,27 @@
 #define PMCR0_IMODE_MASK  (7 << 8)
 #define PMCR0_IACT        (BIT(11))
 
+#define SYS_IMP_APL_PMCR1 sys_reg(3, 1, 15, 1, 0)
+#define SYS_IMP_APL_PMCR2 sys_reg(3, 1, 15, 2, 0)
+#define SYS_IMP_APL_PMCR3 sys_reg(3, 1, 15, 3, 0)
+#define SYS_IMP_APL_PMCR4 sys_reg(3, 1, 15, 4, 0)
+
+#define SYS_IMP_APL_PMESR0 sys_reg(3, 1, 15, 5, 0)
+#define SYS_IMP_APL_PMESR1 sys_reg(3, 1, 15, 6, 0)
+
+#define SYS_IMP_APL_PMSR sys_reg(3, 1, 15, 13, 0)
+
+#define SYS_IMP_APL_PMC0 sys_reg(3, 2, 15, 0, 0)
+#define SYS_IMP_APL_PMC1 sys_reg(3, 2, 15, 1, 0)
+#define SYS_IMP_APL_PMC2 sys_reg(3, 2, 15, 2, 0)
+#define SYS_IMP_APL_PMC3 sys_reg(3, 2, 15, 3, 0)
+#define SYS_IMP_APL_PMC4 sys_reg(3, 2, 15, 4, 0)
+#define SYS_IMP_APL_PMC5 sys_reg(3, 2, 15, 5, 0)
+#define SYS_IMP_APL_PMC6 sys_reg(3, 2, 15, 6, 0)
+#define SYS_IMP_APL_PMC7 sys_reg(3, 2, 15, 7, 0)
+#define SYS_IMP_APL_PMC8 sys_reg(3, 2, 15, 9, 0)
+#define SYS_IMP_APL_PMC9 sys_reg(3, 2, 15, 10, 0)
+
 #define SYS_IMP_APL_LSU_ERR_STS   sys_reg(3, 3, 15, 0, 0)
 #define SYS_IMP_APL_E_LSU_ERR_STS sys_reg(3, 3, 15, 2, 0)
 
