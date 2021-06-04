@@ -111,8 +111,8 @@ if args.call:
     print(f"Jumping to stub at 0x{stub.addr:x}")
     p.call(stub.addr, new_base + bootargs_off, image_addr, new_base, image_size, reboot=True)
 else:
-    print(f"Rebooting into stub at 0x{stub.addr:x}")
-    p.reboot(stub.addr, new_base + bootargs_off, image_addr, new_base, image_size)
+    print(f"Reloading into stub at 0x{stub.addr:x}")
+    p.reload(stub.addr, new_base + bootargs_off, image_addr, new_base, image_size)
 
 time.sleep(1)
 iface.nop()

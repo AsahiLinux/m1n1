@@ -653,7 +653,7 @@ class M1N1Proxy:
         if len(args) > 4:
             raise ValueError("Too many arguments")
         return self.request(self.P_CALL, addr, *args, reboot=reboot)
-    def reboot(self, addr, *args, el1=False):
+    def reload(self, addr, *args, el1=False):
         if len(args) > 4:
             raise ValueError("Too many arguments")
         if el1:
