@@ -489,6 +489,7 @@ class M1N1Proxy:
     P_GL2_CALL = 0x00d
     P_GET_SIMD_STATE = 0x00e
     P_PUT_SIMD_STATE = 0x00f
+    P_REBOOT = 0x010
 
     P_WRITE64 = 0x100
     P_WRITE32 = 0x101
@@ -706,6 +707,8 @@ class M1N1Proxy:
         self.request(self.P_GET_SIMD_STATE, buf)
     def put_simd_state(self, buf):
         self.request(self.P_PUT_SIMD_STATE, buf)
+    def reboot(self):
+        self.request(self.P_REBOOT, no_reply=True)
 
     def write64(self, addr, data):
         if addr & 7:

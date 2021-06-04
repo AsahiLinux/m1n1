@@ -99,6 +99,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_PUT_SIMD_STATE:
             put_simd_state((void *)request->args[0]);
             break;
+        case P_REBOOT:
+            reboot();
+            break;
 
         case P_WRITE64:
             exc_guard = GUARD_SKIP;
