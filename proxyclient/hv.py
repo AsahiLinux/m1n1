@@ -459,6 +459,11 @@ class HV:
     def exit(self):
         raise shell.ExitConsole(EXC_RET.EXIT_GUEST)
 
+    def reboot(self):
+        print("Hard rebooting the system")
+        self.p.reboot()
+        sys.exit(0)
+
     def hvc(self, arg):
         assert 0 <= arg <= 0xffff
         return 0xd4000002 | (arg << 5)
