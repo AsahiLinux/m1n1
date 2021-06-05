@@ -59,6 +59,12 @@ def parse_prop(node, path, name, v):
         st = Hex(Int64ul) if sc == 2 else Array(sc, Hex(Int32ul))
         t = GreedyRange(Struct("bus_addr" / pat, "parent_addr" / at, "size" / st))
 
+    elif name == "interrupts":
+        # parse "interrupts" as Array of Int32ul, wrong for nodes whose
+        # "interrupt-parent" has "interrupt-cells" = 2
+        # parsing this correctly would require a second pass
+        t = Array(len(v) // 4, Int32ul)
+
     if t is not None:
         v = Sequence(t, Terminated).parse(v)[0]
         return t, v
@@ -209,6 +215,10 @@ class ADTNode:
     @property
     def size_cells(self):
         return self._properties["#size-cells"]
+
+    @property
+    def interrupt_cells(self):
+        return self._properties["#interrupt-cells"]
 
     def _fmt_prop(self, v):
         if isinstance(v, ListContainer):
