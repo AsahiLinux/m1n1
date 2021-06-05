@@ -81,6 +81,7 @@
 #define HID21_ENABLE_LDREX_FILL_REPLY (1UL << 19)
 
 #define SYS_IMP_APL_PMCR0 sys_reg(3, 1, 15, 0, 0)
+#define PMCR0_CNT_EN_MASK (MASK(8) | GENMASK(33, 32))
 #define PMCR0_IMODE_OFF   (0 << 8)
 #define PMCR0_IMODE_PMI   (1 << 8)
 #define PMCR0_IMODE_AIC   (2 << 8)
@@ -88,6 +89,8 @@
 #define PMCR0_IMODE_FIQ   (4 << 8)
 #define PMCR0_IMODE_MASK  (7 << 8)
 #define PMCR0_IACT        (BIT(11))
+#define PMCR0_PMI_SHIFT   12
+#define PMCR0_CNT_MASK    (PMCR0_CNT_EN_MASK | (PMCR0_CNT_EN_MASK << PMCR0_PMI_SHIFT))
 
 #define SYS_IMP_APL_PMCR1 sys_reg(3, 1, 15, 1, 0)
 #define SYS_IMP_APL_PMCR2 sys_reg(3, 1, 15, 2, 0)

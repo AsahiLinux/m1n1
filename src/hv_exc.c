@@ -17,6 +17,7 @@
 bool ipi_pending = false;
 bool pmc_pending = false;
 u64 pmc_irq_mode = 0;
+static u64 exc_entry_pmcr0_cnt;
 
 void hv_exit_guest(void) __attribute__((noreturn));
 
@@ -172,12 +173,13 @@ static bool hv_handle_msr(u64 *regs, u64 iss)
         /* shadow the interrupt mode and state flag */
         case SYSREG_ISS(SYS_IMP_APL_PMCR0):
             if (is_read) {
-                u64 val = mrs(SYS_IMP_APL_PMCR0) & ~PMCR0_IMODE_MASK;
-                regs[rt] = val | pmc_irq_mode | (pmc_pending ? PMCR0_IACT : 0);
+                u64 val = (mrs(SYS_IMP_APL_PMCR0) & ~PMCR0_IMODE_MASK) | pmc_irq_mode;
+                regs[rt] = val | (pmc_pending ? PMCR0_IACT : 0) | exc_entry_pmcr0_cnt;
             } else {
                 pmc_pending = !!(regs[rt] & PMCR0_IACT);
                 pmc_irq_mode = regs[rt] & PMCR0_IMODE_MASK;
-                msr(SYS_IMP_APL_PMCR0, regs[rt]);
+                exc_entry_pmcr0_cnt = regs[rt] & PMCR0_CNT_MASK;
+                msr(SYS_IMP_APL_PMCR0, regs[rt] & ~exc_entry_pmcr0_cnt);
             }
             return true;
 #ifdef DEBUG_PMU_IRQ
@@ -201,6 +203,10 @@ static void hv_exc_entry(u64 *regs)
     UNUSED(regs);
     hv_wdt_breadcrumb('X');
     exc_entry_time = mrs(CNTPCT_EL0);
+    /* disable PMU counters in the hypervisor */
+    u64 pmcr0 = mrs(SYS_IMP_APL_PMCR0);
+    exc_entry_pmcr0_cnt = pmcr0 & PMCR0_CNT_MASK;
+    msr(SYS_IMP_APL_PMCR0, pmcr0 & ~PMCR0_CNT_MASK);
 }
 
 static void hv_exc_exit(u64 *regs)
@@ -208,6 +214,8 @@ static void hv_exc_exit(u64 *regs)
     UNUSED(regs);
     hv_wdt_breadcrumb('x');
     hv_update_fiq();
+    /* reenabale PMU counters */
+    reg_set(SYS_IMP_APL_PMCR0, exc_entry_pmcr0_cnt);
     u64 lost = mrs(CNTPCT_EL0) - exc_entry_time;
     if (lost > 8)
         stolen_time += lost - 8;
