@@ -102,6 +102,7 @@ class EXC(IntEnum):
 
 class EVENT(IntEnum):
     MMIOTRACE = 1
+    IRQTRACE = 2
 
 class EXC_RET(IntEnum):
     UNHANDLED = 1
@@ -584,6 +585,7 @@ class M1N1Proxy:
     P_HV_TRANSLATE = 0xc03
     P_HV_PT_WALK = 0xc04
     P_HV_MAP_VUART = 0xc05
+    P_HV_TRACE_IRQ = 0xc06
 
     P_FB_INIT = 0xd00
     P_FB_SHUTDOWN = 0xd01
@@ -945,6 +947,8 @@ class M1N1Proxy:
         return self.request(self.P_HV_PT_WALK, addr)
     def hv_map_vuart(self, base, iodev):
         return self.request(self.P_HV_MAP_VUART, base, iodev)
+    def hv_trace_irq(self, evt_type, num, count, flags):
+        return self.request(self.P_HV_TRACE_IRQ, evt_type, num, count, flags)
 
     def fb_init(self):
         return self.request(self.P_FB_INIT)

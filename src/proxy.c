@@ -427,6 +427,10 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_HV_MAP_VUART:
             hv_map_vuart(request->args[0], request->args[1]);
             break;
+        case P_HV_TRACE_IRQ:
+            reply->retval = hv_trace_irq(request->args[0], request->args[1], request->args[2],
+                                         request->args[3]);
+            break;
 
         case P_FB_INIT:
             fb_init();
