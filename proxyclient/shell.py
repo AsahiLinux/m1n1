@@ -65,13 +65,19 @@ def run_shell(locals, msg=None, exitmsg=None):
         if "utils" in locals and "u" not in locals:
             locals["u"] = locals["utils"]
 
-        for obj in ("iface", "p", "u"):
-            if obj in locals:
-                for attr in dir(locals[obj]):
-                    if attr not in locals:
-                        v = getattr(locals[obj], attr)
-                        if callable(v):
-                            locals[attr] = v
+        for obj_name in ("iface", "p", "u"):
+            obj = locals.get(obj_name)
+            obj_class = type(obj)
+            if obj is None:
+                continue
+
+            for attr in dir(obj_class):
+                if attr in locals or attr.startswith('_'):
+                    continue
+
+                member = getattr(obj_class, attr)
+                if callable(member) and not isinstance(member, property):
+                    locals[attr] = getattr(obj, attr)
 
         for attr in dir(sysreg):
             locals[attr] = getattr(sysreg, attr)
