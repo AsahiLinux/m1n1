@@ -30,6 +30,12 @@ EvtMMIOTrace = Struct(
     "data" / Hex(Int64ul),
 )
 
+EvtIRQTrace = Struct(
+    "flags" / Int32ul,
+    "type" / Hex(Int16ul),
+    "num" / Int16ul,
+)
+
 class HV_EVENT(IntEnum):
     HOOK_VM = 1
     VTIMER = 2
@@ -89,6 +95,9 @@ class HV:
         GXF_ENTER_EL1: GXF_ENTER_EL12,
     }
 
+    AIC_EVT_TYPE_HW = 1
+    IRQTRACE_IRQ = 1
+
     def __init__(self, iface, proxy, utils):
         self.iface = iface
         self.p = proxy
@@ -104,6 +113,7 @@ class HV:
         self._in_handler = False
         self._sigint_pending = False
         self.vm_hooks = []
+        self.interrupt_map = {}
 
     def unmap(self, ipa, size):
         assert self.p.hv_map(ipa, 0, size, 0) >= 0
@@ -128,6 +138,14 @@ class HV:
         index = len(self.vm_hooks)
         self.vm_hooks.append((read, write, ipa, kwargs))
         assert self.p.hv_map(ipa, (index << 2) | t, size, 1) >= 0
+
+    def trace_irq(self, device, num, count, flags):
+        for n in range(num, num + count):
+            if flags & self.IRQTRACE_IRQ:
+                self.interrupt_map[n] = device
+            else:
+                self.interrupt_map.pop(n, None)
+        assert self.p.hv_trace_irq(self.AIC_EVT_TYPE_HW, num, count, flags) > 0
 
     def addr(self, addr):
         unslid_addr = addr + self.sym_offset
@@ -170,6 +188,13 @@ class HV:
 
         print(f"[0x{evt.pc:016x}] MMIO: {t}.{1<<evt.flags.WIDTH:<2}{m} " +
               f"0x{evt.addr:x} ({dev}, offset {evt.addr - zone.start:#04x}) = 0x{evt.data:x}")
+
+    def handle_irqtrace(self, data):
+        evt = EvtIRQTrace.parse(data)
+
+        if evt.type == self.AIC_EVT_TYPE_HW and evt.flags & self.IRQTRACE_IRQ:
+            dev = self.interrupt_map[int(evt.num)]
+            print(f"IRQ: {dev}: {evt.num}")
 
     def handle_vm_hook(self, ctx):
         data = self.iface.readstruct(ctx.data, VMProxyHookData)
@@ -571,6 +596,7 @@ class HV:
         self.iface.set_handler(START.HV, HV_EVENT.VTIMER, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.WDT_BARK, self.handle_bark)
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
+        self.iface.set_event_handler(EVENT.IRQTRACE, self.handle_irqtrace)
 
         #self.map_sw(0x2_00000000,
                     #0x2_00000000 | self.SPTE_TRACE_READ | self.SPTE_TRACE_WRITE,
@@ -609,6 +635,20 @@ class HV:
                 else:
                     print(f"Pass:  0x{addr:x} [0x{size:x}] ({path})")
                     self.map_hw(addr, addr, size)
+
+        # trace IRQs
+        aic_phandle = getattr(self.adt["/arm-io/aic"], "AAPL,phandle")
+        for path in (
+            "/arm-io/usb-drd1",
+            "/arm-io/gpio",
+        ):
+            node = self.adt[path]
+            if getattr(node, "interrupt-parent") != aic_phandle:
+                print(f"{path} has no direct AIC interrupts.")
+                continue
+            for irq in getattr(node, "interrupts"):
+                #self.trace_irq(node.name, irq, 1, self.IRQTRACE_IRQ)
+                pass
 
         # Sync PMGR stuff
         #self.map_sw(0x2_3b700000,

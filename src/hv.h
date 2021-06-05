@@ -21,6 +21,12 @@ struct hv_evt_mmiotrace {
     u64 data;
 };
 
+struct hv_evt_irqtrace {
+    u32 flags;
+    u16 type;
+    u16 num;
+};
+
 struct hv_vm_proxy_hook_data {
     u32 flags;
     u32 id;
@@ -46,6 +52,12 @@ int hv_map_proxy_hook(u64 from, u64 id, u64 size);
 u64 hv_translate(u64 addr, bool s1only, bool w);
 u64 hv_pt_walk(u64 addr);
 bool hv_handle_dabort(u64 *regs);
+bool hv_pa_write(u64 addr, u64 *val, int width);
+bool hv_pa_read(u64 addr, u64 *val, int width);
+bool hv_pa_rw(u64 addr, u64 *val, bool write, int width);
+
+/* AIC events through tracing the MMIO event address */
+bool hv_trace_irq(u32 type, u32 num, u32 count, u32 flags);
 
 /* Virtual peripherals */
 void hv_map_vuart(u64 base, iodev_id_t iodev);

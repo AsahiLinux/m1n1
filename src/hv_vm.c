@@ -636,6 +636,64 @@ static void emit_mmiotrace(u64 pc, u64 addr, u64 *data, u64 width, u64 flags, bo
     }
 }
 
+bool hv_pa_write(u64 addr, u64 *val, int width)
+{
+    switch (width) {
+        case 0:
+            write8(addr, val[0]);
+            return true;
+        case 1:
+            write16(addr, val[0]);
+            return true;
+        case 2:
+            write32(addr, val[0]);
+            return true;
+        case 3:
+            write64(addr, val[0]);
+            return true;
+        case 4:
+            write64(addr, val[0]);
+            write64(addr + 8, val[1]);
+            return true;
+        default:
+            dprintf("HV: unsupported write width %ld\n", width);
+            return false;
+    }
+}
+
+bool hv_pa_read(u64 addr, u64 *val, int width)
+{
+    switch (width) {
+        case 0:
+            val[0] = read8(addr);
+            return true;
+        case 1:
+            val[0] = read16(addr);
+            return true;
+        case 2:
+            val[0] = read32(addr);
+            return true;
+        case 3:
+            val[0] = read64(addr);
+            return true;
+        case 4:
+            val[0] = read64(addr);
+            val[1] = read64(addr + 8);
+            return true;
+        default:
+            dprintf("HV: unsupported read width %ld\n", width);
+            return false;
+    }
+}
+
+bool hv_pa_rw(u64 addr, u64 *val, bool write, int width)
+{
+    if (write)
+        return hv_pa_write(addr, val, width);
+    else
+        return hv_pa_read(addr, val, width);
+}
+
 bool hv_handle_dabort(u64 *regs)
 {
     hv_wdt_breadcrumb('0');
@@ -711,27 +769,8 @@ bool hv_handle_dabort(u64 *regs)
                 hv_wdt_breadcrumb('5');
                 dprintf("HV: SPTE_MAP[W] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr_pa, far, paddr,
                         1 << width, val[0]);
-                switch (width) {
-                    case 0:
-                        write8(paddr, val[0]);
-                        break;
-                    case 1:
-                        write16(paddr, val[0]);
-                        break;
-                    case 2:
-                        write32(paddr, val[0]);
-                        break;
-                    case 3:
-                        write64(paddr, val[0]);
-                        break;
-                    case 4:
-                        write64(paddr, val[0]);
-                        write64(paddr + 8, val[1]);
-                        break;
-                    default:
-                        dprintf("HV: unsupported width %ld\n", width);
-                        return false;
-                }
+                if (!hv_pa_write(paddr, val, width))
+                    return false;
                 break;
             case SPTE_HOOK: {
                 hv_wdt_breadcrumb('6');
@@ -773,27 +812,8 @@ bool hv_handle_dabort(u64 *regs)
                 // fallthrough
             case SPTE_MAP:
                 hv_wdt_breadcrumb('4');
-                switch (width) {
-                    case 0:
-                        val[0] = read8(paddr);
-                        break;
-                    case 1:
-                        val[0] = read16(paddr);
-                        break;
-                    case 2:
-                        val[0] = read32(paddr);
-                        break;
-                    case 3:
-                        val[0] = read64(paddr);
-                        break;
-                    case 4:
-                        val[0] = read64(paddr);
-                        val[1] = read64(paddr + 8);
-                        break;
-                    default:
-                        dprintf("HV: unsupported width %ld\n", width);
-                        return false;
-                }
+                if (!hv_pa_read(paddr, val, width))
+                    return false;
                 dprintf("HV: SPTE_MAP[R] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr_pa, far, paddr,
                         1 << width, val[0]);
                 break;
