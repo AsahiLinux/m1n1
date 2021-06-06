@@ -36,8 +36,8 @@
 
 #define DART_TCR(sid)             (0x100 + 4 * (sid))
 #define DART_TCR_TRANSLATE_ENABLE BIT(7)
-#define DART_TCR_BYPASS0_ENABLE   BIT(8)
-#define DART_TCR_BYPASS1_ENABLE   BIT(12)
+#define DART_TCR_BYPASS_DART      BIT(8)
+#define DART_TCR_BYPASS_DAPF      BIT(12)
 
 #define DART_TTBR(sid, idx) (0x200 + 16 * (sid) + 4 * (idx))
 #define DART_TTBR_VALID     BIT(31)
@@ -197,7 +197,7 @@ void dart_unmap(dart_dev_t *dart, uintptr_t iova, size_t len)
 
 void dart_shutdown(dart_dev_t *dart)
 {
-    write32(dart->regs + DART_TCR(dart->device), 0);
+    write32(dart->regs + DART_TCR(dart->device), DART_TCR_BYPASS_DART | DART_TCR_BYPASS_DAPF);
     for (int i = 0; i < 4; ++i)
         write32(dart->regs + DART_TTBR(dart->device, i), 0);
     dart_tlb_invalidate(dart);
