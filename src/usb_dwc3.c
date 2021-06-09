@@ -1265,6 +1265,9 @@ void usb_dwc3_shutdown(dwc3_dev_t *dev)
         ringbuffer_free(dev->pipe[i].device2host);
         ringbuffer_free(dev->pipe[i].host2device);
     }
+
+    if (dev->dart)
+        dart_shutdown(dev->dart);
     free(dev);
 }
 
