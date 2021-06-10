@@ -38,11 +38,14 @@ if args.symbols:
     symfile = args.symbols.open("rb")
 hv.load_macho(args.payload.open("rb"), symfile=symfile)
 
-for i in args.script:
-    hv.run_script(i)
+if args.script is not None:
+    for i in args.script:
+        hv.run_script(i)
 
-for i in args.command:
-    hv.run_code(i)
+
+if args.command is not None:
+    for i in args.command:
+        hv.run_code(i)
 
 if args.shell:
     run_shell(hv.shell_locals, "Entering hypervisor shell. Type `start` to start the guest.")
