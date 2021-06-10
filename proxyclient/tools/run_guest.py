@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+import sys, pathlib
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 import argparse, pathlib
 
@@ -8,10 +11,10 @@ parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
 
-from proxy import *
-from proxyutils import *
-from utils import *
-from hv import HV
+from m1n1.proxy import *
+from m1n1.proxyutils import *
+from m1n1.utils import *
+from m1n1.hv import HV
 
 iface = UartInterface()
 p = M1N1Proxy(iface, debug=False)

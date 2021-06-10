@@ -1,5 +1,10 @@
-from setup import *
-import asm
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+import sys, pathlib
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+
+from m1n1.setup import *
+from m1n1 import asm
 
 FPCR_FZ = 1 << 24
 

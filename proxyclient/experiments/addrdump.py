@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+import sys, pathlib
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
-import serial, os
-from proxy import *
-
-iface = UartInterface()
-proxy = M1N1Proxy(iface, debug=False)
-
-SCRATCH = 0x24F00000
+from m1n1.setup import *
 
 blacklist = []
 
@@ -21,7 +18,7 @@ for i in range(0x0000, 0x10000):
 		v = "%08x: SKIPPED"%(i<<16)
 	else:
 		a = (i<<16) + 0x1000
-		d = proxy.read32(a)
+		d = p.read32(a)
 		v = "%08x: %08x"%(a, d)
 	print(v)
 	if of:

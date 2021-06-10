@@ -1,12 +1,14 @@
-#!/usr/bin/env python3
-
-import atexit, serial, os, struct, code, traceback, readline, rlcompleter
-from proxy import *
+# SPDX-License-Identifier: MIT
+import atexit, serial, os, struct, code, traceback, readline, rlcompleter, sys
 import __main__
 import builtins
-from proxyutils import *
-from utils import *
-import sysreg
+
+from .proxy import *
+from .proxyutils import *
+from .utils import *
+from . import sysreg
+
+__all__ = ["ExitConsole", "run_shell"]
 
 class HistoryConsole(code.InteractiveConsole):
     def __init__(self, locals=None, filename="<console>",
@@ -97,9 +99,7 @@ def run_shell(locals, msg=None, exitmsg=None):
         sys.displayhook = saved_display
 
 if __name__ == "__main__":
-    from setup import *
+    from .setup import *
     locals = dict(__main__.__dict__)
-
-    from tgtypes import *
 
     run_shell(locals, msg="Have fun!")

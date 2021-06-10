@@ -2,6 +2,8 @@
 import re
 from construct import *
 
+__all__ = []
+
 DebuggerState = Struct(
     "panic_options"             / Hex(Int64ul),
     "current_op"                / Hex(Int32ul),
@@ -110,3 +112,6 @@ def decode_panic(u, p_string, p_args):
     string = re.sub('%([-#0 +]*)([1-9][0-9]*)?(hh|h|l|ll|q|L|j|z|Z|t)?([diouxXeEfFgGaAcsCSpnm%])',
                     format_arg, string)
     print(string + "\n", end="")
+
+__all__.extend(k for k, v in globals().items()
+               if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

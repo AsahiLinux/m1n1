@@ -1,4 +1,7 @@
+# SPDX-License-Identifier: MIT
 from contextlib import contextmanager
+
+__all__ = ["Heap"]
 
 class Heap(object):
     def __init__(self, start, end, block=64):

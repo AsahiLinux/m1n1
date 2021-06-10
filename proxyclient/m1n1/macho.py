@@ -1,9 +1,122 @@
-#!/usr/bin/env python3
-
+# SPDX-License-Identifier: MIT
 from io import BytesIO, SEEK_END, SEEK_SET
 import bisect
-from tgtypes import *
-from utils import *
+from construct import *
+
+from .utils import *
+
+__all__ = ["MachO"]
+
+MachOLoadCmdType = "LoadCmdType" / Enum(Int32ul,
+    SYMTAB = 0x02,
+    UNIXTHREAD = 0x05,
+    SEGMENT_64 = 0x19,
+    UUID = 0x1b,
+    BUILD_VERSION = 0x32,
+    DYLD_CHAINED_FIXUPS = 0x80000034,
+    FILESET_ENTRY = 0x80000035,
+)
+
+MachOArmThreadStateFlavor = "ThreadStateFlavor" / Enum(Int32ul,
+    THREAD64 = 6,
+)
+
+MachOHeader = Struct(
+    "magic" / Hex(Int32ul),
+    "cputype" / Hex(Int32ul),
+    "cpusubtype" / Hex(Int32ul),
+    "filetype" / Hex(Int32ul),
+    "ncmds" / Hex(Int32ul),
+    "sizeofcmds" / Hex(Int32ul),
+    "flags" / Hex(Int32ul),
+    "reserved" / Hex(Int32ul),
+)
+
+MachOVmProt = FlagsEnum(Int32sl,
+    PROT_READ = 0x01,
+    PROT_WRITE = 0x02,
+    PROT_EXECUTE = 0x04,
+)
+
+MachOCmdSymTab = Struct(
+    "symoff" / Hex(Int32ul),
+    "nsyms" / Int32ul,
+    "stroff" / Hex(Int32ul),
+    "strsize" / Hex(Int32ul),
+)
+
+MachOCmdUnixThread = GreedyRange(Struct(
+    "flavor" / MachOArmThreadStateFlavor,
+    "data" / Prefixed(ExprAdapter(Int32ul, obj_ * 4, obj_ / 4), Switch(this.flavor, {
+        MachOArmThreadStateFlavor.THREAD64: Struct(
+            "x" / Array(29, Hex(Int64ul)),
+            "fp" / Hex(Int64ul),
+            "lr" / Hex(Int64ul),
+            "sp" / Hex(Int64ul),
+            "pc" / Hex(Int64ul),
+            "cpsr" / Hex(Int32ul),
+            "flags" / Hex(Int32ul),
+        )
+    })),
+))
+
+NList = Struct(
+    "n_strx" / Hex(Int32ul),
+    "n_type" / Hex(Int8ul),
+    "n_sect" / Hex(Int8ul),
+    "n_desc" / Hex(Int16sl),
+    "n_value" / Hex(Int64ul),
+)
+
+MachOCmdSegment64 = Struct(
+    "segname" / PaddedString(16, "ascii"),
+    "vmaddr" / Hex(Int64ul),
+    "vmsize" / Hex(Int64ul),
+    "fileoff" / Hex(Int64ul),
+    "filesize" / Hex(Int64ul),
+    "maxprot" / MachOVmProt,
+    "initprot" / MachOVmProt,
+    "nsects" / Int32ul,
+    "flags" / Hex(Int32ul),
+    "sections" / GreedyRange(Struct(
+        "sectname" / PaddedString(16, "ascii"),
+        "segname" / PaddedString(16, "ascii"),
+        "addr" / Hex(Int64ul),
+        "size" / Hex(Int64ul),
+        "offset" / Hex(Int32ul),
+        "align" / Hex(Int32ul),
+        "reloff" / Hex(Int32ul),
+        "nreloc" / Hex(Int32ul),
+        "flags" / Hex(Int32ul),
+        "reserved1" / Hex(Int32ul),
+        "reserved2" / Hex(Int32ul),
+        "reserved3" / Hex(Int32ul),
+    )),
+)
+
+MachOFilesetEntry = Struct(
+    "addr" / Hex(Int64ul),
+    "offset" / Hex(Int64ul),
+    "entryid" / Hex(Int32ul),
+    "reserved" / Hex(Int32ul),
+    "name" / CString("ascii"),
+)
+
+MachOCmd = Struct(
+    "cmd" / Hex(MachOLoadCmdType),
+    "args" / Prefixed(ExprAdapter(Int32ul, obj_ - 8, obj_ + 8), Switch(this.cmd, {
+        MachOLoadCmdType.SYMTAB: MachOCmdSymTab,
+        MachOLoadCmdType.UNIXTHREAD: MachOCmdUnixThread,
+        MachOLoadCmdType.SEGMENT_64: MachOCmdSegment64,
+        MachOLoadCmdType.UUID: Hex(Bytes(16)),
+        MachOLoadCmdType.FILESET_ENTRY: MachOFilesetEntry,
+    }, default=GreedyBytes)),
+)
+
+MachOFile = Struct(
+    "header" / MachOHeader,
+    "cmds" / Array(this.header.ncmds, MachOCmd),
+)
 
 class MachO:
     def __init__(self, data):

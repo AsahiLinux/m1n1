@@ -1,18 +1,21 @@
-#!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 import json, os, re
-from enum import IntEnum
-from utils import Register64, Register32
+from enum import Enum, IntEnum
+from .utils import Register, Register64, Register32
 
-def load_registers():
+__all__ = ["sysreg_fwd", "sysreg_rev"]
+
+def _load_registers():
     for fname in ["arm_regs.json", "apple_regs.json"]:
-        data = json.load(open(os.path.join(os.path.dirname(__file__), "..", "tools", fname)))
+        data = json.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "tools", fname)))
         for reg in data:
             yield reg["name"], tuple(reg["enc"])
 
-sysreg_fwd = dict(load_registers())
+sysreg_fwd = dict(_load_registers())
 sysreg_rev = {v: k for k, v in sysreg_fwd.items()}
+
 globals().update(sysreg_fwd)
+__all__.extend(sysreg_fwd.keys())
 
 def sysreg_name(enc):
     if enc in sysreg_rev:
@@ -260,3 +263,6 @@ class HACR(Register64):
 class AMX_CTL(Register64):
     EN = 63
     EN_EL1 = 62
+
+__all__.extend(k for k, v in globals().items()
+               if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

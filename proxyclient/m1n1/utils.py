@@ -1,12 +1,52 @@
-#!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-
 from enum import Enum
 import bisect
 from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul
 
+__all__ = []
+
 def align(v, a=16384):
     return (v + a - 1) & ~(a - 1)
+
+def hexdump(s, sep=" "):
+    return sep.join(["%02x"%x for x in s])
+
+def hexdump32(s, sep=" "):
+    vals = struct.unpack("<%dI" % (len(s)//4), s)
+    return sep.join(["%08x"%x for x in vals])
+
+def _ascii(s):
+    s2 = ""
+    for c in s:
+        if c < 0x20 or c > 0x7e:
+            s2 += "."
+        else:
+            s2 += chr(c)
+    return s2
+
+def chexdump(s,st=0):
+    for i in range(0,len(s),16):
+        print("%08x  %s  %s  |%s|" % (
+            i + st,
+            hexdump(s[i:i+8], ' ').rjust(23),
+            hexdump(s[i+8:i+16], ' ').rjust(23),
+            _ascii(s[i:i+16]).rjust(16)))
+
+def chexdump32(s, st=0, abbreviate=True):
+    last = None
+    skip = False
+    for i in range(0,len(s),32):
+        val = s[i:i+32]
+        if val == last and abbreviate:
+            if not skip:
+                print("%08x  *" % (i + st))
+                skip = True
+        else:
+            print("%08x  %s" % (
+                i + st,
+                hexdump32(val, ' ')))
+            last = val
+            skip = False
 
 class Register:
     def __init__(self, v=0, **kwargs):
@@ -206,3 +246,6 @@ class AddrLookup:
         if pos == 0 or self.__end[pos - 1] < addr:
             return []
         return [(value, r) for r, value in self.__ranges[pos - 1] if addr in r]
+
+__all__.extend(k for k, v in globals().items()
+               if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

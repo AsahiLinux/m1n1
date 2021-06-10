@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+import sys, pathlib
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
-from setup import *
-import asm
+from m1n1.setup import *
+from m1n1 import asm
 
 ULCON = 0x235200000
 UCON = 0x235200004
@@ -337,6 +340,8 @@ UCON    UTRSTAT
 
 
 def test_smp_ipi():
+    p.smp_start_secondaries()
+
     code = u.malloc(0x1000)
 
     c = asm.ARMAsm("""

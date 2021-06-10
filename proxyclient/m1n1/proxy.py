@@ -1,57 +1,13 @@
-#!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-
 import os, sys, struct, serial, time
 from construct import *
-from utils import *
-from sysreg import *
 from enum import IntEnum, IntFlag
 from serial.tools.miniterm import Miniterm
 
-def hexdump(s, sep=" "):
-    return sep.join(["%02x"%x for x in s])
+from .utils import *
+from .sysreg import *
 
-def hexdump32(s, sep=" "):
-    vals = struct.unpack("<%dI" % (len(s)//4), s)
-    return sep.join(["%08x"%x for x in vals])
-
-def ascii(s):
-    s2 = ""
-    for c in s:
-        if c < 0x20 or c > 0x7e:
-            s2 += "."
-        else:
-            s2 += chr(c)
-    return s2
-
-def pad(s,c,l):
-    if len(s) < l:
-        s += c * (l - len(s))
-    return s
-
-def chexdump(s,st=0):
-    for i in range(0,len(s),16):
-        print("%08x  %s  %s  |%s|" % (
-            i + st,
-            hexdump(s[i:i+8], ' ').rjust(23),
-            hexdump(s[i+8:i+16], ' ').rjust(23),
-            ascii(s[i:i+16]).rjust(16)))
-
-def chexdump32(s, st=0, abbreviate=True):
-    last = None
-    skip = False
-    for i in range(0,len(s),32):
-        val = s[i:i+32]
-        if val == last and abbreviate:
-            if not skip:
-                print("%08x  *" % (i + st))
-                skip = True
-        else:
-            print("%08x  %s" % (
-                i + st,
-                hexdump32(val, ' ')))
-            last = val
-            skip = False
+__all__ = ["REGION_RWX_EL0", "REGION_RW_EL0", "REGION_RX_EL1"]
 
 # Hack to disable input buffer flushing
 class Serial(serial.Serial):
@@ -968,6 +924,9 @@ class M1N1Proxy:
         return self.request(self.P_FB_RESTORE_LOGO)
     def fb_improve_logo(self):
         return self.request(self.P_FB_IMPROVE_LOGO)
+
+__all__.extend(k for k, v in globals().items()
+               if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
 
 if __name__ == "__main__":
     import serial

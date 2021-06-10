@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+import sys, pathlib
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 import argparse, pathlib
 
@@ -12,7 +15,7 @@ parser.add_argument('-t', '--tty', type=str)
 parser.add_argument('-u', '--u-boot', type=pathlib.Path, help="load u-boot before linux")
 args = parser.parse_args()
 
-from setup import *
+from m1n1.setup import *
 
 if args.compression == 'auto':
     suffix = args.payload.suffix

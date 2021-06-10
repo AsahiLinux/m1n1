@@ -1,6 +1,12 @@
-from setup import *
-import asm
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+import sys, pathlib
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+
 import struct
+
+from m1n1.setup import *
+from m1n1 import asm
 
 class DART:
     def __init__(self, base):
@@ -32,12 +38,12 @@ class DART:
     def dump_ttbr(self, idx, ttbr):
         if not ttbr & (1<<31):
             return
-        
+
         l1_addr = (ttbr & ~(1<<31)) << 12
         print("  TTBR%d: %09x" % (idx, l1_addr))
 
         self.dump_table(0, l1_addr)
- 
+
 
     def dump_device(self, idx):
         tcr = p.read32(self.base + 0x100 + 4*idx)

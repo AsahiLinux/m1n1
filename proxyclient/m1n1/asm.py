@@ -1,6 +1,7 @@
-#!/usr/bin/env python3
-
+# SPDX-License-Identifier: MIT
 import os, tempfile, shutil, subprocess
+
+__all__ = ["AsmException", "ARMAsm"]
 
 class AsmException(Exception):
     pass

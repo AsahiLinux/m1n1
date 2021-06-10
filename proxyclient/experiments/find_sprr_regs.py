@@ -1,6 +1,11 @@
-from setup import *
-from find_regs import find_regs, static_regs
-import asm
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+import sys, pathlib
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+
+from m1n1.setup import *
+from m1n1.find_regs import *
+from m1n1 import asm
 
 p.iodev_set_usage(IODEV.FB, 0)
 

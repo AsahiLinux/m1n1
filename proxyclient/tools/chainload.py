@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+import sys, pathlib
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 import argparse, pathlib, time
 
@@ -9,10 +12,10 @@ parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
 
-from setup import *
-from tgtypes import BootArgs
-from macho import MachO
-import asm
+from m1n1.setup import *
+from m1n1.tgtypes import BootArgs
+from m1n1.macho import MachO
+from m1n1 import asm
 
 macho = MachO(args.payload.read_bytes())
 

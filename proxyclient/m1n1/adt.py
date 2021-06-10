@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: MIT
 import itertools
 from construct import *
-from utils import AddrLookup
+
+from .utils import AddrLookup
+
+__all__ = ["load_adt"]
 
 ADTPropertyStruct = Struct(
     "name" / PaddedString(32, "ascii"),
@@ -316,7 +319,7 @@ if __name__ == "__main__":
             print('Error "{}" exists!'.format(args.input))
             sys.exit()
 
-        from setup import *
+        from .setup import *
         adt_data = u.get_adt()
         args.input.write_bytes(adt_data)
     else:

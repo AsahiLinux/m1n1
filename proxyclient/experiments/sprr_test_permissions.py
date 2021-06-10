@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+import sys, pathlib
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
-from setup import *
-import asm
 from contextlib import contextmanager
 
+from m1n1.setup import *
+from m1n1.find_regs import *
+from m1n1 import asm
+
 p.smp_start_secondaries()
-
-
 
 class ARMPageTable:
     PAGESIZE = 0x4000

@@ -1,7 +1,10 @@
-#!/usr/bin/python3
-import asm, struct
-import sysreg
-from proxyutils import GuardedHeap
+# SPDX-License-Identifier: MIT
+import struct
+
+from . import asm, sysreg
+from .proxyutils import GuardedHeap
+
+__all__ = ["dynamic_regs", "impdef_regs", "static_regs", "find_regs"]
 
 def _all():
     for op1 in range(1 << 3):
