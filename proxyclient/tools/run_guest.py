@@ -7,6 +7,9 @@ import argparse, pathlib
 
 parser = argparse.ArgumentParser(description='Run a Mach-O payload under the hypervisor')
 parser.add_argument('-s', '--symbols', type=pathlib.Path)
+parser.add_argument('-m', '--script', type=pathlib.Path, action='append')
+parser.add_argument('-c', '--command', action="append")
+parser.add_argument('-S', '--shell', action="store_true")
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
@@ -14,6 +17,7 @@ args = parser.parse_args()
 from m1n1.proxy import *
 from m1n1.proxyutils import *
 from m1n1.utils import *
+from m1n1.shell import run_shell
 from m1n1.hv import HV
 
 iface = UartInterface()
@@ -33,4 +37,14 @@ symfile = None
 if args.symbols:
     symfile = args.symbols.open("rb")
 hv.load_macho(args.payload.open("rb"), symfile=symfile)
-hv.start()
+
+for i in args.script:
+    hv.run_script(i)
+
+for i in args.command:
+    hv.run_code(i)
+
+if args.shell:
+    run_shell(hv.shell_locals, "Entering hypervisor shell. Type `start` to start the guest.")
+else:
+    hv.start()

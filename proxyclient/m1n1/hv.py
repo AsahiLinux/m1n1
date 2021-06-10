@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-import sys, traceback, struct, array, bisect, os, signal
+import sys, traceback, struct, array, bisect, os, signal, runpy
 from construct import *
 from enum import IntEnum, IntFlag
 
@@ -113,6 +113,17 @@ class HV:
         self._sigint_pending = False
         self.vm_hooks = []
         self.interrupt_map = {}
+        self.shell_locals = {
+            "hv": self,
+            "iface": self.iface,
+            "p": self.p,
+            "u": self.u,
+        }
+
+        for attr in dir(self):
+            a = getattr(self, attr)
+            if callable(a):
+                self.shell_locals[attr] = getattr(self, attr)
 
     def unmap(self, ipa, size):
         assert self.p.hv_map(ipa, 0, size, 0) >= 0
@@ -415,20 +426,8 @@ class HV:
             self._sigint_pending = False
             self._stepping = False
 
-            locals = {
-                "hv": self,
-                "iface": self.iface,
-                "p": self.p,
-                "u": self.u,
-            }
-
-            for attr in dir(self):
-                a = getattr(self, attr)
-                if callable(a):
-                    locals[attr] = getattr(self, attr)
-
             signal.signal(signal.SIGINT, signal.SIG_DFL)
-            ret = shell.run_shell(locals, "Entering debug shell", "Returning from exception")
+            ret = shell.run_shell(self.shell_locals, "Entering debug shell", "Returning from exception")
             signal.signal(signal.SIGINT, self._handle_sigint)
 
             if ret is None:
@@ -451,20 +450,8 @@ class HV:
         self._sigint_pending = False
         self._stepping = False
 
-        locals = {
-            "hv": self,
-            "iface": self.iface,
-            "p": self.p,
-            "u": self.u,
-        }
-
-        for attr in dir(self):
-            a = getattr(self, attr)
-            if callable(a):
-                locals[attr] = getattr(self, attr)
-
         signal.signal(signal.SIGINT, signal.SIG_DFL)
-        ret = shell.run_shell(locals, "Entering panic shell", "Returning from exception")
+        ret = shell.run_shell(self.shell_locals, "Entering panic shell", "Returning from exception")
         signal.signal(signal.SIGINT, self._handle_sigint)
 
         self.p.exit(0)
@@ -576,6 +563,21 @@ class HV:
 
         self.vbar_el1 = vbar
 
+    def trace_device(self, path, trace=True):
+        node = self.adt[path]
+        for index in range(len(node.reg)):
+            addr, size = node.get_reg(index)
+            if trace:
+                print(f"Trace: 0x{addr:x} [0x{size:x}] ({path})")
+                self.map_sw(addr, addr | self.SPTE_TRACE_READ | self.SPTE_TRACE_WRITE, size)
+            else:
+                print(f"Pass:  0x{addr:x} [0x{size:x}] ({path})")
+                if addr & 0x3fff or size & 0x3fff:
+                    print(f"Note: unaligned, using software passthrough")
+                    self.map_sw(addr, addr, size)
+                else:
+                    self.map_hw(addr, addr, size)
+
     def init(self):
         self.adt = load_adt(self.u.get_adt())
         self.iodev = self.p.iodev_whoami()
@@ -597,43 +599,7 @@ class HV:
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
         self.iface.set_event_handler(EVENT.IRQTRACE, self.handle_irqtrace)
 
-        #self.map_sw(0x2_00000000,
-                    #0x2_00000000 | self.SPTE_TRACE_READ | self.SPTE_TRACE_WRITE,
-                    #0x5_00000000)
-
         self.map_hw(0x2_00000000, 0x2_00000000, 0x5_00000000)
-
-        for path, log in (
-            ("/arm-io/usb-drd0", False),
-            ("/arm-io/usb-drd1", False),
-            ("/arm-io/uart2", False),
-            ("/arm-io/error-handler", False),
-            ("/arm-io/aic", False),
-            ("/arm-io/spi1", False),
-            ("/arm-io/pmgr", False),
-            ("/arm-io/gfx-asc", True),
-            ("/arm-io/sgx", True),
-        ):
-            node = self.adt[path]
-            for index in range(len(node.reg)):
-                addr, size = node.get_reg(index)
-                if addr & 0x3fff:
-                    new_addr = addr & ~0x3fff
-                    print(f"WARNING: aligning address 0x{addr:x} -> 0x{new_addr:x}")
-                    size += addr - new_addr
-                    addr = new_addr
-
-                if size & 0x3fff:
-                    new_size = (size + 0x3fff) & ~0x3fff
-                    print(f"WARNING: aligning size 0x{size:x} -> 0x{new_size:x}")
-                    size = new_size
-
-                if log:
-                    print(f"Trace: 0x{addr:x} [0x{size:x}] ({path})")
-                    self.map_sw(addr, addr | self.SPTE_TRACE_READ | self.SPTE_TRACE_WRITE, size)
-                else:
-                    print(f"Pass:  0x{addr:x} [0x{size:x}] ({path})")
-                    self.map_hw(addr, addr, size)
 
         # trace IRQs
         aic_phandle = getattr(self.adt["/arm-io/aic"], "AAPL,phandle")
@@ -648,26 +614,6 @@ class HV:
             for irq in getattr(node, "interrupts"):
                 #self.trace_irq(node.name, irq, 1, self.IRQTRACE_IRQ)
                 pass
-
-        # Sync PMGR stuff
-        #self.map_sw(0x2_3b700000,
-                    #0x2_3b700000 | self.SPTE_TRACE_READ | self.SPTE_TRACE_WRITE | self.SPTE_SYNC_TRACE,
-                    #0x8000)
-
-        _pmu = {}
-
-        def wh(base, off, data, width):
-            print(f"W {base:x}+{off:x}:{width} = 0x{data:x}: Dangerous write")
-            _pmu[base + off] = (data & 0xff0f) | ((data & 0xf) << 4)
-
-        def rh(base, off, width):
-            data = self.p.read32(base + off)
-            ret = _pmu.setdefault(base + off, data)
-            print(f"R {base:x}+{off:x}:{width} = 0x{data:x} -> 0x{ret:x}")
-            return ret
-
-        for addr in (0x23b700420, 0x23d280098, 0x23d280088, 0x23d280090):
-            self.map_hook(addr, 4, write=wh, read=rh)
 
         hcr = HCR(self.u.mrs(HCR_EL2))
         if self.novm:
@@ -706,13 +652,33 @@ class HV:
         self.u.msr(APVMKEYHI_EL2, 0x697665596F755570)
         self.u.msr(APSTS_EL12, 1)
 
-        self.p.hv_map_vuart(0x2_35200000, getattr(IODEV, self.iodev.name + "_SEC"))
+        self.map_vuart()
 
         actlr = ACTLR(self.u.mrs(ACTLR_EL12))
         actlr.EnMDSB = 1
         self.u.msr(ACTLR_EL12, actlr.value)
 
         self.setup_adt()
+
+    def map_vuart(self):
+        self.p.hv_map_vuart(0x2_35200000, getattr(IODEV, self.iodev.name + "_SEC"))
+
+    def map_essential(self):
+        # Things we always map/take over, for the hypervisor to work
+        _pmu = {}
+
+        def wh(base, off, data, width):
+            print(f"W {base:x}+{off:x}:{width} = 0x{data:x}: Dangerous write")
+            _pmu[base + off] = (data & 0xff0f) | ((data & 0xf) << 4)
+
+        def rh(base, off, width):
+            data = self.p.read32(base + off)
+            ret = _pmu.setdefault(base + off, data)
+            print(f"R {base:x}+{off:x}:{width} = 0x{data:x} -> 0x{ret:x}")
+            return ret
+
+        for addr in (0x23b700420, 0x23d280098, 0x23d280088, 0x23d280090):
+            self.map_hook(addr, 4, write=wh, read=rh)
 
     def setup_adt(self):
         self.adt["product"].product_name += " on m1n1 hypervisor"
@@ -892,23 +858,32 @@ class HV:
         # Kick the proxy to break out of the hypervisor
         self.iface.dev.write(b"!")
 
+    def run_script(self, path):
+        self.shell_locals = runpy.run_path(path, init_globals=self.shell_locals, run_name="<hv_script>")
+
+    def run_code(self, code):
+        exec(code, self.shell_locals)
+
     def start(self):
-        print(f"Disabling other iodevs...")
+        print("Disabling other iodevs...")
         for iodev in IODEV:
             if iodev != self.iodev:
                 print(f" - {iodev!s}")
                 self.p.iodev_set_usage(iodev, 0)
 
-        print(f"Improving logo...")
+        print("Doing essential MMIO remaps...")
+        self.map_essential()
+
+        print("Improving logo...")
         self.p.fb_improve_logo()
 
-        print(f"Shutting down framebuffer...")
+        print("Shutting down framebuffer...")
         self.p.fb_shutdown()
 
-        print(f"Enabling SPRR...")
+        print("Enabling SPRR...")
         self.u.msr(SPRR_CONFIG_EL1, 1)
 
-        print(f"Enabling GXF...")
+        print("Enabling GXF...")
         self.u.msr(GXF_CONFIG_EL1, 1)
 
         print(f"Jumping to entrypoint at 0x{self.entry:x}")
