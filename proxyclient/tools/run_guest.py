@@ -7,8 +7,8 @@ import argparse, pathlib
 
 parser = argparse.ArgumentParser(description='Run a Mach-O payload under the hypervisor')
 parser.add_argument('-s', '--symbols', type=pathlib.Path)
-parser.add_argument('-m', '--script', type=pathlib.Path, action='append')
-parser.add_argument('-c', '--command', action="append")
+parser.add_argument('-m', '--script', type=pathlib.Path, action='append', default=[])
+parser.add_argument('-c', '--command', action="append", default=[])
 parser.add_argument('-S', '--shell', action="store_true")
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
