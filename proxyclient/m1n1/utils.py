@@ -203,9 +203,6 @@ class AddrLookup:
         start = bisect.bisect_left(sizes, len(zone))
         for subpos in range(start, len(self.__ranges[pos])):
             e_zone, e_value = self.__ranges[pos][subpos]
-            if zone == e_zone:
-                self.__ranges[pos][subpos] = (e_zone, e_value + [value])
-                break
             if len(zone) < len(e_zone):
                 self.__ranges[pos].insert(subpos, (zone, [value]))
                 break
@@ -229,16 +226,16 @@ class AddrLookup:
             self.__end.insert(pos, zone.stop - 1)
             self.__ranges.insert(pos, [(zone, [value])])
 
-    def lookup(self, addr):
+    def lookup(self, addr, default='unknown'):
         addr = int(addr)
         pos = bisect.bisect(self.__addr, addr)
         if pos == 0 or self.__end[pos - 1] < addr:
-            return ('unknown', range(0, 1 << 64))
+            return (default, range(0, 1 << 64))
 
         for r, value in self.__ranges[pos - 1]:
             if addr in r:
                 return (value[0], r)
-        return ('unexpected', range(0, 0))
+        return (None, range(0, 0))
 
     def lookup_all(self, addr):
         addr = int(addr)
