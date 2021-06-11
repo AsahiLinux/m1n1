@@ -244,6 +244,41 @@ static int dt_set_cpus(void)
     return 0;
 }
 
+static const char *aliases[] = {
+    "bluetooth0",
+    "ethernet0",
+    "wifi0",
+};
+
+static int dt_set_mac_addresses(void)
+{
+    int anode = adt_path_offset(adt, "/chosen");
+
+    if (anode < 0)
+        bail("ADT: /chosen not found\n");
+
+    for (size_t i = 0; i < sizeof(aliases) / sizeof(*aliases); i++) {
+        char propname[32];
+        sprintf(propname, "mac-address-%s", aliases[i]);
+
+        uint8_t addr[6];
+        if (ADT_GETPROP_ARRAY(adt, anode, propname, addr) < 0)
+            continue;
+
+        const char *path = fdt_get_alias(dt, aliases[i]);
+        if (path == NULL)
+            continue;
+
+        int node = fdt_path_offset(dt, path);
+        if (node < 0)
+            continue;
+
+        fdt_setprop(dt, node, "local-mac-address", addr, sizeof(addr));
+    }
+
+    return 0;
+}
+
 void kboot_set_initrd(void *start, size_t size)
 {
     initrd_start = start;
@@ -291,6 +326,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_memory())
         return -1;
     if (dt_set_cpus())
+        return -1;
+    if (dt_set_mac_addresses())
         return -1;
 
     if (fdt_pack(dt))
