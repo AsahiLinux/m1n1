@@ -113,6 +113,7 @@ class HV:
         self._sigint_pending = False
         self.vm_hooks = []
         self.interrupt_map = {}
+        self.mmio_handlers = AddrLookup()
         self.shell_locals = {
             "hv": self,
             "iface": self.iface,
@@ -184,6 +185,11 @@ class HV:
 
     def handle_mmiotrace(self, data):
         evt = EvtMMIOTrace.parse(data)
+
+        obj, zone = self.mmio_handlers.lookup(evt.addr, None)
+        if obj is not None:
+            obj.handle_mmiotrace(evt, zone)
+            return
 
         dev, zone = self.device_addr_tbl.lookup(evt.addr)
         t = "W" if evt.flags.WRITE else "R"
@@ -555,13 +561,15 @@ class HV:
 
         self.vbar_el1 = vbar
 
-    def trace_device(self, path, trace=True):
+    def trace_device(self, path, trace=True, handler=None):
         node = self.adt[path]
         for index in range(len(node.reg)):
             addr, size = node.get_reg(index)
             if trace:
                 print(f"Trace: 0x{addr:x} [0x{size:x}] ({path})")
                 self.map_sw(addr, addr | self.SPTE_TRACE_READ | self.SPTE_TRACE_WRITE, size)
+                if handler is not None:
+                    self.mmio_handlers.add(range(addr, addr + size), handler)
             else:
                 print(f"Pass:  0x{addr:x} [0x{size:x}] ({path})")
                 if addr & 0x3fff or size & 0x3fff:
