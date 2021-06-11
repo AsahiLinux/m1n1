@@ -184,18 +184,10 @@ class HV:
 
     def handle_mmiotrace(self, data):
         evt = EvtMMIOTrace.parse(data)
-        if evt.flags.WRITE:
-            t = "W"
-        else:
-            t = "R"
 
         dev, zone = self.device_addr_tbl.lookup(evt.addr)
-
-        if evt.flags.MULTI:
-            m = "+"
-        else:
-            m = " "
-
+        t = "W" if evt.flags.WRITE else "R"
+        m = "+" if evt.flags.MULTI else " "
         print(f"[0x{evt.pc:016x}] MMIO: {t}.{1<<evt.flags.WIDTH:<2}{m} " +
               f"0x{evt.addr:x} ({dev}, offset {evt.addr - zone.start:#04x}) = 0x{evt.data:x}")
 
