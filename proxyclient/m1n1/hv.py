@@ -584,6 +584,12 @@ class HV:
         self.tba = self.u.ba.copy()
         self.device_addr_tbl = self.adt.build_addr_lookup()
 
+        # disable unused USB iodev early so interrupts can be reenabled in hv_init()
+        for iodev in (IODEV.USB0, IODEV.USB1):
+            if iodev != self.iodev:
+                print(f"Disable iodev {iodev!s}")
+                self.p.iodev_set_usage(iodev, 0)
+
         print("Initializing hypervisor over iodev %s" % self.iodev)
         self.p.hv_init()
 

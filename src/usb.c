@@ -44,6 +44,8 @@ static const struct {
     },
 };
 
+static tps6598x_irq_state_t tps6598x_irq_state[USB_INSTANCES];
+
 static dart_dev_t *usb_dart_init(const char *path, const char *mapper_path)
 {
     int dart_path[8];
@@ -239,43 +241,78 @@ struct iodev iodev_usb_sec[USB_INSTANCES] = {
     },
 };
 
-static void hpm_init(void)
+static tps6598x_dev_t *hpm_init(i2c_dev_t *i2c, int idx)
 {
-    int i;
+    const char *hpm_path = usb_drd_paths[idx].hpm_path;
+    tps6598x_dev_t *tps = tps6598x_init(hpm_path, i2c);
+    if (!tps) {
+        printf("usb: tps6598x_init failed for %s.\n", hpm_path);
+        return NULL;
+    }
 
+    if (tps6598x_powerup(tps) < 0) {
+        printf("usb: tps6598x_powerup failed for %s.\n", hpm_path);
+        tps6598x_shutdown(tps);
+        return NULL;
+    }
+
+    return tps;
+}
+
+void usb_init(void)
+{
     i2c_dev_t *i2c = i2c_init("/arm-io/i2c0");
     if (!i2c) {
         printf("usb: i2c init failed.\n");
         return;
     }
 
-    for (i = 0; i < USB_INSTANCES; ++i) {
-        const char *hpm_path = usb_drd_paths[i].hpm_path;
-        tps6598x_dev_t *tps = tps6598x_init(hpm_path, i2c);
+    for (int idx = 0; idx < USB_INSTANCES; ++idx) {
+        tps6598x_dev_t *tps = hpm_init(i2c, idx);
         if (!tps) {
-            printf("usb: tps6598x_init failed for %s.\n", hpm_path);
+            printf("usb: failed to init hpm%d\n", idx);
             continue;
         }
 
-        if (tps6598x_powerup(tps) < 0) {
-            printf("usb: tps6598x_powerup failed for %s.\n", hpm_path);
-            continue;
-        }
+        if (tps6598x_disable_irqs(tps, &tps6598x_irq_state[idx]))
+            printf("usb: unable to disable IRQ masks for hpm%d\n", idx);
 
         tps6598x_shutdown(tps);
     }
 
     i2c_shutdown(i2c);
-}
-
-void usb_init(void)
-{
-    hpm_init();
 
     for (int idx = 0; idx < 2; ++idx) {
         if (usb_phy_bringup(idx) < 0)
             printf("usb: unable to bringup the phy with index %d\n", idx);
     }
+}
+
+void usb_hpm_restore_irqs(bool force)
+{
+    i2c_dev_t *i2c = i2c_init("/arm-io/i2c0");
+    if (!i2c) {
+        printf("usb: i2c init failed.\n");
+        return;
+    }
+
+    for (int idx = 0; idx < USB_INSTANCES; ++idx) {
+        if (iodev_usb[idx].usage && !force)
+            continue;
+
+        if (tps6598x_irq_state[idx].valid) {
+            tps6598x_dev_t *tps = hpm_init(i2c, idx);
+            if (!tps)
+                continue;
+
+            if (tps6598x_restore_irqs(tps, &tps6598x_irq_state[idx]))
+                printf("usb: unable to restore IRQ masks for hpm%d\n", idx);
+
+            tps6598x_shutdown(tps);
+        }
+    }
+
+    i2c_shutdown(i2c);
 }
 
 void usb_iodev_init(void)

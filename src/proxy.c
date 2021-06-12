@@ -18,6 +18,7 @@
 #include "types.h"
 #include "uart.h"
 #include "uartproxy.h"
+#include "usb.h"
 #include "utils.h"
 #include "xnuboot.h"
 
@@ -82,6 +83,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
                                      request->args[3], request->args[4]);
             break;
         case P_VECTOR:
+            // forcefully restore tps6598x IRQs
+            usb_hpm_restore_irqs(1);
+            iodev_console_flush();
             next_stage.entry = (generic_func *)request->args[0];
             memcpy(next_stage.args, &request->args[1], 4 * sizeof(u64));
             return 1;
