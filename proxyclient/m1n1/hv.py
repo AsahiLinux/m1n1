@@ -717,19 +717,19 @@ class HV:
                         del self.adt[name]
                     except KeyError:
                         pass
-            for name in ("/cpus/cpu1",
-                         "/cpus/cpu2",
-                         "/cpus/cpu3",
-                         "/cpus/cpu4",
-                         "/cpus/cpu5",
-                         "/cpus/cpu6",
-                         "/cpus/cpu7",
-                        ):
-                print(f"Removing ADT node {name}")
-                try:
-                    del self.adt[name]
-                except KeyError:
-                    pass
+        for name in ("/cpus/cpu1",
+                     "/cpus/cpu2",
+                     "/cpus/cpu3",
+                     "/cpus/cpu4",
+                     "/cpus/cpu5",
+                     "/cpus/cpu6",
+                     "/cpus/cpu7",
+                    ):
+            print(f"Removing ADT node {name}")
+            try:
+                del self.adt[name]
+            except KeyError:
+                pass
 
         #for cpu in list(self.adt["cpus"]):
             #if cpu.name != "cpu0":
