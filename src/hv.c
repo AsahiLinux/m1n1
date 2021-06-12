@@ -6,6 +6,7 @@
 #include "gxf.h"
 #include "pcie.h"
 #include "smp.h"
+#include "usb.h"
 #include "utils.h"
 
 #define HV_TICK_RATE 1000
@@ -19,6 +20,8 @@ u64 hv_tick_interval;
 void hv_init(void)
 {
     pcie_shutdown();
+    // reenable hpm interrupts for the guest for unused iodevs
+    usb_hpm_restore_irqs(0);
     smp_start_secondaries();
     hv_wdt_init();
 

@@ -15,4 +15,14 @@ int tps6598x_command(tps6598x_dev_t *dev, const char *cmd, const u8 *data_in, si
                      u8 *data_out, size_t len_out);
 int tps6598x_powerup(tps6598x_dev_t *dev);
 
+#define CD3218B12_IRQ_WIDTH 9
+
+typedef struct tps6598x_irq_state {
+    u8 int_mask1[CD3218B12_IRQ_WIDTH];
+    bool valid;
+} tps6598x_irq_state_t;
+
+int tps6598x_disable_irqs(tps6598x_dev_t *dev, tps6598x_irq_state_t *state);
+int tps6598x_restore_irqs(tps6598x_dev_t *dev, tps6598x_irq_state_t *state);
+
 #endif
