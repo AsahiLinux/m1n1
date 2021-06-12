@@ -894,29 +894,28 @@ class HV(Reloadable):
 
         if self.iodev in (IODEV.USB0, IODEV.USB1):
             idx = int(str(self.iodev)[-1])
-            for idx in (0, 1):
-                for prefix in ("/arm-io/dart-usb%d",
-                            "/arm-io/atc-phy%d",
-                            "/arm-io/usb-drd%d",
-                            "/arm-io/acio%d",
-                            "/arm-io/acio-cpu%d",
-                            "/arm-io/dart-acio%d",
-                            "/arm-io/apciec%d",
-                            "/arm-io/dart-apciec%d",
-                            "/arm-io/apciec%d-piodma",
-                            "/arm-io/i2c0/hpmBusManager/hpm%d",
-                            "/arm-io/atc%d-dpxbar",
-                            "/arm-io/atc%d-dpphy",
-                            "/arm-io/atc%d-dpin0",
-                            "/arm-io/atc%d-dpin1",
-                            "/arm-io/atc-phy%d",
-                            ):
-                    name = prefix % idx
-                    print(f"Removing ADT node {name}")
-                    try:
-                        del self.adt[name]
-                    except KeyError:
-                        pass
+            for prefix in ("/arm-io/dart-usb%d",
+                           "/arm-io/atc-phy%d",
+                           "/arm-io/usb-drd%d",
+                           "/arm-io/acio%d",
+                           "/arm-io/acio-cpu%d",
+                           "/arm-io/dart-acio%d",
+                           "/arm-io/apciec%d",
+                           "/arm-io/dart-apciec%d",
+                           "/arm-io/apciec%d-piodma",
+                           "/arm-io/i2c0/hpmBusManager/hpm%d",
+                           "/arm-io/atc%d-dpxbar",
+                           "/arm-io/atc%d-dpphy",
+                           "/arm-io/atc%d-dpin0",
+                           "/arm-io/atc%d-dpin1",
+                           "/arm-io/atc-phy%d",
+                          ):
+                name = prefix % idx
+                print(f"Removing ADT node {name}")
+                try:
+                    del self.adt[name]
+                except KeyError:
+                    pass
         for name in ("/cpus/cpu1",
                      "/cpus/cpu2",
                      "/cpus/cpu3",
