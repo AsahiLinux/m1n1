@@ -683,7 +683,12 @@ class HV:
             print(f"R {base:x}+{off:x}:{width} = 0x{data:x} -> 0x{ret:x}")
             return ret
 
-        for addr in (0x23b700420, 0x23d280098, 0x23d280088, 0x23d280090):
+        if self.iodev == IODEV.USB0:
+            pmgr_hooks = (0x23b700420, 0x23d280098, 0x23d280088)
+        elif self.iodev == IODEV.USB1:
+            pmgr_hooks = (0x23b700448, 0x23d2800a0, 0x23d280090)
+
+        for addr in pmgr_hooks:
             self.map_hook(addr, 4, write=wh, read=rh)
 
     def setup_adt(self):
