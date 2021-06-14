@@ -2,6 +2,7 @@
 import atexit, serial, os, struct, code, traceback, readline, rlcompleter, sys
 import __main__
 import builtins
+import re
 
 from .proxy import *
 from .proxyutils import *
@@ -46,7 +47,17 @@ class HistoryConsole(code.InteractiveConsole):
 
 class ExitConsole(SystemExit):
     pass
-# locals is a dictionary for constructing the
+cmd_list = {}
+
+def help_cmd():
+    print("List of Commands:")
+    for cmd in cmd_list.keys():
+        hinfo = cmd_list[cmd]
+        if not hinfo:
+            print("%s ?" % cmd)
+        else:
+            print("%-10s : %s" % (cmd, hinfo))
+#locals is a dictionary for constructing the
 # InteractiveConsole with. It adds in the callables
 # in proxy utils iface and sysreg into locals
 def run_shell(locals, msg=None, exitmsg=None):
@@ -84,10 +95,22 @@ def run_shell(locals, msg=None, exitmsg=None):
 
                 member = getattr(obj_class, attr)
                 if callable(member) and not isinstance(member, property):
-                    locals[attr] = getattr(obj, attr)
+                    cmd = getattr(obj, attr)
+                    locals[attr] = cmd
+                    desc = locals[attr].__doc__
+                    if not desc:
+                        desc = repr(locals[attr])
+                        desc = re.sub("<bound method ", "", desc)
+                        desc = re.sub(" object at 0x[0-9a-fA-F]*>>", "", desc)
+                        desc = re.sub('<', '', desc)
+                        b = re.split(' ', desc)
+                        if len(b) == 3:
+                            desc = ".".join([b[2], re.split('\.', b[0])[-1]])
+                    cmd_list[attr] = desc
 
         for attr in dir(sysreg):
             locals[attr] = getattr(sysreg, attr)
+        locals['help'] = help_cmd
 
         try:
             con = HistoryConsole(locals)
