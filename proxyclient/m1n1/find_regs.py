@@ -78,7 +78,7 @@ def find_regs(u, regs=None, block=1024, call=None, values=True):
                         yield reg
 
 if __name__ == "__main__":
-    from setup import *
+    from m1n1.setup import *
 
     p.iodev_set_usage(IODEV.FB, 0)
 
