@@ -51,7 +51,8 @@ def chexdump32(s, st=0, abbreviate=True):
 class Register:
     def __init__(self, v=0, **kwargs):
         self._value = v
-        self._fields = set(k for k in self.__class__.__dict__ if not k.startswith("_"))
+        self._fields_list = [k for k in self.__class__.__dict__ if not k.startswith("_")]
+        self._fields = set(self._fields_list)
         for k,v in kwargs.items():
             setattr(self, k, v)
 
@@ -123,10 +124,10 @@ class Register:
 
     def __str__(self):
         d = '.'
-        return f"0x{self._value:x} ({', '.join(f'{k}={self._field_val(k)}' for k in self._fields)})"
+        return f"0x{self._value:x} ({', '.join(f'{k}={self._field_val(k)}' for k in self._fields_list)})"
 
     def __repr__(self):
-        return f"{type(self).__name__}({', '.join(f'{k}={self._field_val(k, True)}' for k in self._fields)})"
+        return f"{type(self).__name__}({', '.join(f'{k}={self._field_val(k, True)}' for k in self._fields_list)})"
 
     @property
     def value(self):
