@@ -385,13 +385,19 @@ u64 hv_pt_walk(u64 addr)
     dprintf("hv_pt_walk(0x%lx)\n", addr);
 
     u64 idx = addr >> VADDR_L2_OFFSET_BITS;
+    assert(idx < ENTRIES_PER_L2_TABLE);
+
     u64 l2d = hv_L2[idx];
 
     dprintf("  l2d = 0x%lx\n", l2d);
 
     if (!L2_IS_TABLE(l2d)) {
-        if (L2_IS_SW_BLOCK(l2d) || L2_IS_HW_BLOCK(l2d))
+        if (L2_IS_SW_BLOCK(l2d))
+            l2d += addr & (VADDR_L2_ALIGN_MASK | VADDR_L3_ALIGN_MASK);
+        if (L2_IS_HW_BLOCK(l2d)) {
+            l2d &= ~PTE_LOWER_ATTRIBUTES;
             l2d |= addr & (VADDR_L2_ALIGN_MASK | VADDR_L3_ALIGN_MASK);
+        }
 
         dprintf("  result: 0x%lx\n", l2d);
         return l2d;
@@ -403,7 +409,7 @@ u64 hv_pt_walk(u64 addr)
 
     if (!L3_IS_TABLE(l3d)) {
         if (L3_IS_SW_BLOCK(l3d))
-            l3d |= addr & VADDR_L3_ALIGN_MASK;
+            l3d += addr & VADDR_L3_ALIGN_MASK;
         if (L3_IS_HW_BLOCK(l3d)) {
             l3d &= ~PTE_LOWER_ATTRIBUTES;
             l3d |= addr & VADDR_L3_ALIGN_MASK;
