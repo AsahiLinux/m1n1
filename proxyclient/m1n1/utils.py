@@ -50,7 +50,8 @@ def chexdump32(s, st=0, abbreviate=True):
 
 class Register:
     def __init__(self, v=0, **kwargs):
-        self.value = v
+        self._value = v
+        self._fields = set(k for k in self.__class__.__dict__ if not k.startswith("_"))
         for k,v in kwargs.items():
             setattr(self, k, v)
 
@@ -59,7 +60,7 @@ class Register:
             return object.__getattribute__(self, attr)
 
         field = getattr(self.__class__, attr)
-        value = self.value
+        value = self._value
 
         if isinstance(field, int):
             return (value >> field) & 1
@@ -74,29 +75,28 @@ class Register:
             raise AttributeError(f"Invalid field definition {attr} = {field!r}")
 
     def __setattr__(self, attr, fvalue):
-        if attr not in self._fields:
+        if attr.startswith("_"):
             self.__dict__[attr] = fvalue
             return
 
         field = getattr(self.__class__, attr)
 
-        value = self.value
+        value = self._value
 
         if isinstance(field, int):
-            self.value = (value & ~(1 << field)) | ((fvalue & 1) << field)
+            self._value = (value & ~(1 << field)) | ((fvalue & 1) << field)
         elif isinstance(field, tuple):
             if len(field) == 2:
                 msb, lsb = field
             else:
                 msb, lsb, ftype = field
             mask = ((1 << ((msb + 1) - lsb)) - 1)
-            self.value = (value & ~(mask << lsb)) | ((fvalue & mask) << lsb)
+            self._value = (value & ~(mask << lsb)) | ((fvalue & mask) << lsb)
         else:
             raise AttributeError(f"Invalid field definition {attr} = {field!r}")
 
-    @property
-    def _fields(self):
-        return (k for k in self.__class__.__dict__ if k != "value" and not k.startswith("_"))
+    def __int__(self):
+        return self._value
 
     def _field_val(self, field_name, as_repr=False):
         field = getattr(self.__class__, field_name)
@@ -123,10 +123,17 @@ class Register:
 
     def __str__(self):
         d = '.'
-        return f"0x{self.value:x} ({', '.join(f'{k}={self._field_val(k)}' for k in self._fields)})"
+        return f"0x{self._value:x} ({', '.join(f'{k}={self._field_val(k)}' for k in self._fields)})"
 
     def __repr__(self):
         return f"{type(self).__name__}({', '.join(f'{k}={self._field_val(k, True)}' for k in self._fields)})"
+
+    @property
+    def value(self):
+        return self._value
+    @value.setter
+    def value(self, val):
+        self._value = val
 
 class Register8(Register):
     __WIDTH__ = 8
