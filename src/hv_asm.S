@@ -4,6 +4,7 @@
 .globl _hv_vectors_start
 _hv_vectors_start:
 
+    /* EL2 with SP_EL0 */
     mov x9, '0'
     b cpu_reset
     .align 7
@@ -16,6 +17,8 @@ _hv_vectors_start:
     mov x9, '3'
     b exc_unk
     .align 7
+
+    /* EL2 with SP_EL2 */
     b _v_sp0_sync
     .align 7
     b _v_sp0_irq
@@ -24,6 +27,8 @@ _hv_vectors_start:
     .align 7
     b _v_sp0_serr
     .align 7
+
+    /* EL1/0 64-bit */
     b _v_hv_sync
     .align 7
     b _v_hv_irq
@@ -32,6 +37,8 @@ _hv_vectors_start:
     .align 7
     b _v_hv_serr
     .align 7
+
+    /* EL1/0 32-bit */
     mov x9, 'p'
     b exc_unk
     .align 7
