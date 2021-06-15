@@ -117,6 +117,5 @@ else:
     print(f"Reloading into stub at 0x{stub.addr:x}")
     p.reload(stub.addr, new_base + bootargs_off, image_addr, new_base, image_size)
 
-time.sleep(1)
 iface.nop()
 print("Proxy is alive again")
