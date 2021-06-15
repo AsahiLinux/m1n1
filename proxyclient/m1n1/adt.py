@@ -311,7 +311,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ADT test for m1n1')
     parser.add_argument('input', type=pathlib.Path)
     parser.add_argument('output', nargs='?', type=pathlib.Path)
-    parser.add_argument('-r', '--retrieve', help='retieve and store the adt from m1n1', action='store_true')
+    parser.add_argument('-r', '--retrieve', help='retrieve and store the adt from m1n1', action='store_true')
+    parser.add_argument('-a', '--dump-addr', help='dump address lookup table', action='store_true')
     args = parser.parse_args()
 
     if args.retrieve:
@@ -332,3 +333,7 @@ if __name__ == "__main__":
         args.output.write_bytes(new_data)
     assert new_data == adt_data[:len(new_data)]
     assert adt_data[len(new_data):] == bytes(len(adt_data) - len(new_data))
+
+    if args.dump_addr:
+        print("Address lookup table:")
+        print(adt.build_addr_lookup())
