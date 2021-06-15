@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 from enum import Enum
-import bisect, copy
+import bisect, copy, heapq
 from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul
 
 __all__ = []
@@ -431,6 +431,144 @@ class SetRangeMap(RangeMap):
     def __getitem__(self, addr):
         values = super().lookup(addr)
         return frozenset(values) if values else frozenset()
+
+class RegMeta(type):
+    def __new__(cls, name, bases, dct):
+        m = super().__new__(cls, name, bases, dct)
+        m._addrmap = {}
+        m._rngmap = SetRangeMap()
+        m._namemap = {}
+
+        for k, v in dct.items():
+            if k.startswith("_") or not isinstance(v, tuple):
+                continue
+            addr, rtype = v
+
+            if isinstance(addr, range):
+                if addr.step == 1:
+                    addr = range(addr.start, addr.stop, rtype.__WIDTH__ // 8)
+                else:
+                    assert addr.step >= rtype.__WIDTH__ // 8
+                m._rngmap.add(addr, (addr, k, rtype))
+            else:
+                m._addrmap[addr] = k, rtype
+
+            m._namemap[k] = addr, rtype
+
+            def prop(k):
+                def getter(self):
+                    return self._accessor[k]
+                def setter(self, val):
+                    self._accessor[k].val = val
+                return property(getter, setter)
+
+            setattr(m, k, prop(k))
+
+        return m
+
+class RegAccessor:
+    def __init__(self, cls, rd, wr, addr):
+        self.cls = cls
+        self.rd = rd
+        self.wr = wr
+        self.addr = addr
+
+    def __int__(self):
+        return self.rd(self.addr)
+
+    @property
+    def val(self):
+        return self.rd(self.addr)
+
+    @val.setter
+    def val(self, value):
+        self.wr(self.addr, int(value))
+
+    @property
+    def reg(self):
+        return self.cls(self.val)
+
+    @reg.setter
+    def reg(self, value):
+        self.wr(self.addr, int(value))
+
+    def set(self, **kwargs):
+        r = self.reg
+        for k, v in kwargs:
+            setattr(r, k, v)
+        self.wr(self.addr, int(r))
+
+    def __str__(self):
+        return str(self.reg)
+
+class RegArrayAccessor:
+    def __init__(self, range, cls, rd, wr, addr):
+        self.range = range
+        self.cls = cls
+        self.rd = rd
+        self.wr = wr
+        self.addr = addr
+
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            return RegAccessor(self.cls, self.rd, self.wr, self.addr + self.range[item])
+        else:
+            return [self.rd(self.addr + i) for i in self.range[item]]
+
+class RegMap(metaclass=RegMeta):
+    def __init__(self, backend, base):
+        self._base = base
+        self._backend = backend
+        self._accessor = {}
+
+        for name, (addr, rcls) in self._namemap.items():
+            width = rcls.__WIDTH__
+            rd = getattr(backend, f"read{width}")
+            wr = getattr(backend, f"write{width}")
+            if isinstance(addr, range):
+                self._accessor[name] = RegArrayAccessor(addr, rcls, rd, wr, base)
+            else:
+                self._accessor[name] = RegAccessor(rcls, rd, wr, base + addr)
+
+    @classmethod
+    def lookup_addr(cls, reg):
+        reg = cls._addrmap.get(reg, None)
+        if reg is not None:
+            return reg
+        ret = self._rngmap.get(reg, None)
+        if ret:
+            for rng, name, rcls in ret:
+                if reg in rng:
+                    return f"{name}[{rng.index(reg)}]", rcls
+        return None, None
+
+    def get_name(self, addr):
+        return self.lookup_addr(addr - self._base)[0]
+
+    @classmethod
+    def lookup_name(cls, name):
+        return cls._namemap.get(name, None)
+
+    def _scalar_regs(self):
+        for addr, (name, rtype) in self._addrmap.items():
+            yield addr, name, self._accessor[name], rtype
+
+    def _array_reg(self, zone, map):
+        addrs, name, rtype = map
+        reg = ((addr, f"{name}[{addrs.index(addr)}]", self._accessor[name][addrs.index(addr)], rtype)
+                     for addr in zone if addr in addrs)
+        return reg
+
+    def _array_regs(self):
+        for zone, maps in self._rngmap.items():
+            yield from heapq.merge(*(self._array_reg(zone, map) for map in maps))
+
+    def dump_regs(self):
+        for addr, name, acc, rtype in heapq.merge(sorted(self._scalar_regs()), self._array_regs()):
+            print(f"{self._base:#x}+{addr:06x} {name} = {acc.reg}")
+
+def irange(start, count, step=1):
+    return range(start, start + count * step, step)
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
