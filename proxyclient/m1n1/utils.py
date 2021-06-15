@@ -189,6 +189,14 @@ class RangeMap:
         self.__end.insert(pos, addr - 1)
         self.__value.insert(pos + 1, copy.copy(self.__value[pos]))
 
+    def __zone(self, zone):
+        if isinstance(zone, slice):
+            zone = range(zone.start, zone.stop)
+        elif isinstance(zone, int):
+            zone = range(zone, zone + 1)
+
+        return zone
+
     def lookup(self, addr, default=None):
         addr = int(addr)
 
@@ -198,21 +206,34 @@ class RangeMap:
         else:
             return default
 
-    def ranges(self):
+    def items(self):
         return ((range(s, e + 1), v) for s, e, v in zip(self.__start, self.__end, self.__value))
 
-    def overlaps(self, zone):
+    def _overlap_range(self, zone, split=False):
+        zone = self.__zone(zone)
         if len(zone) == 0:
-            return
+            return 0, 0
 
         start = bisect.bisect_left(self.__end, zone.start)
 
+        if split:
+            # Handle left-side overlap
+            if self.__contains(start, zone.start) and self.__start[start] != zone.start:
+                self.__split(start, zone.start)
+                start += 1
+                assert self.__start[start] == zone.start
+
         for pos in range(start, len(self.__start)):
             if self.__start[pos] >= zone.stop:
-                break
-            yield range(self.__start[pos], self.__end[pos] + 1), self.__value[pos]
+                return start, pos
+            if split and (self.__end[pos] + 1) > zone.stop:
+                self.__split(pos, zone.stop)
+                return start, pos + 1
+
+        return start, len(self.__start)
 
     def populate(self, zone, default=[]):
+        zone = self.__zone(zone)
         if len(zone) == 0:
             return
 
@@ -262,6 +283,23 @@ class RangeMap:
         else:
             assert start == stop
 
+    def overlaps(self, zone, split=False):
+        start, stop = self._overlap_range(zone, split)
+        for pos in range(start, stop):
+            yield range(self.__start[pos], self.__end[pos] + 1), self.__value[pos]
+
+    def replace(self, zone, val):
+        start, stop = self._overlap_range(zone, True)
+        self.__start = self.__start[:start] + [zone.start] + self.__start[stop:]
+        self.__end = self.__end[:start] + [zone.stop - 1] + self.__end[stop:]
+        self.__value = self.__value[:start] + [val] + self.__value[stop:]
+
+    def clear(self, zone):
+        start, stop = self._overlap_range(zone, True)
+        self.__start = self.__start[:start] + self.__start[stop:]
+        self.__end = self.__end[:start] + self.__end[stop:]
+        self.__value = self.__value[:start] + self.__value[stop:]
+
     def compact(self, equal=lambda a, b: a == b, empty=lambda a: not a):
         if len(self) == 0:
             return
@@ -293,7 +331,7 @@ class RangeMap:
 class AddrLookup(RangeMap):
     def __str__(self):
         b = [""]
-        for zone, values in self.ranges():
+        for zone, values in self.items():
             b.append(f"{zone.start:#11x} - {zone.stop - 1:#11x}")
             if len(values) == 0:
                 b.append(f" (empty range)")
@@ -326,6 +364,73 @@ class AddrLookup(RangeMap):
 
     def _assert(self, expect, val=lambda a:a):
         super()._assert(expect, lambda v: [i[0] for i in v])
+
+class ScalarRangeMap(RangeMap):
+    def get(self, addr, default=None):
+        value = self.lookup(addr)
+        if not value:
+            return default
+        return value[0]
+
+    def __setitem__(self, zone, value):
+        for r, v in self.populate(zone, [None]):
+            v[0] = value
+
+    def __delitem__(self, zone):
+        self.clear(zone)
+
+    def __getitem__(self, addr):
+        value = self.lookup(addr)
+        if not value:
+            raise KeyError(f"Address {addr:#x} has no value")
+        return value[0]
+
+class DictRangeMap(RangeMap):
+    def __setitem__(self, k, value):
+        if not isinstance(k, tuple):
+            self.replace(k, dict(value))
+        else:
+            zone, key = k
+            for r, values in self.populate(zone, {}):
+                values[key] = value
+
+    def __delitem__(self, k):
+        if not isinstance(k, tuple):
+            self.clear(k)
+        else:
+            zone, key = key
+            for r, values in self.overlaps(zone, True):
+                values.pop(key, None)
+
+    def __getitem__(self, k):
+        if isinstance(k, tuple):
+            addr, k = k
+            values = self.lookup(addr)
+            return values.get(k, None) if values else None
+        else:
+            values = self.lookup(k)
+            return values or {}
+
+class SetRangeMap(RangeMap):
+    def add(self, zone, key):
+        for r, values in self.populate(zone, set()):
+            values.add(key)
+
+    def discard(self, zone, key):
+        for r, values in self.overlaps(zone, split=True):
+            if values:
+                values.discard(key)
+    remove = discard
+
+    def __setitem__(self, k, value):
+        self.replace(k, set(value))
+
+    def __delitem__(self, k):
+        self.clear(k)
+
+    def __getitem__(self, addr):
+        values = super().lookup(addr)
+        return frozenset(values) if values else frozenset()
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
@@ -395,3 +500,50 @@ if __name__ == "__main__":
         (0, 9, [0, 4, 5]), (10, 14, [1, 4, 5]), (15, 19, [1]), (20, 24, [2]), (30, 39, [3]),
         (70, 79, [7])
     ])
+    a.clear(range(12, 21))
+    a._assert([
+        (0, 9, [0, 4, 5]), (10, 11, [1, 4, 5]), (21, 24, [2]), (30, 39, [3]),
+        (70, 79, [7])
+    ])
+
+    # ScalarRangeMap test
+    a = ScalarRangeMap()
+    a[0:5] = 1
+    a[5:10] = 2
+    a[4:8] = 3
+    del a[2:4]
+    expect = [1, 1, None, None, 3, 3, 3, 3, 2, 2, None]
+    for i,j in enumerate(expect):
+        assert a.get(i) == j
+        if j is not None:
+            assert a[i] == j
+    try:
+        a[10]
+    except KeyError:
+        pass
+    else:
+        assert False
+
+    # DictRangeMap test
+    a = DictRangeMap()
+    a[0:5, 0] = 10
+    a[5:8, 1] = 11
+    a[4:6, 2] = 12
+    del a[2:4]
+    expect = [{0: 10}, {0: 10}, {}, {}, {0: 10, 2: 12}, {1: 11, 2: 12}, {1: 11}, {1: 11}, {}]
+    for i,j in enumerate(expect):
+        assert a[i] == j
+        for k, v in j.items():
+            assert a[i, k] == v
+
+    # SetRangeMap test
+    a = SetRangeMap()
+    a[0:2] = {1,}
+    a[2:7] = {2,}
+    a.add(range(1, 4), 3)
+    a.discard(0, -1)
+    a.discard(3, 2)
+    del a[4]
+    expect = [{1,}, {1,3}, {2,3}, {3,}, set(), {2,}, {2,}, set()]
+    for i,j in enumerate(expect):
+        assert a[i] == j
