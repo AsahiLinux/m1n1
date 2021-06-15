@@ -48,7 +48,6 @@ int hv_unmap(u64 from, u64 size);
 int hv_map_hw(u64 from, u64 to, u64 size);
 int hv_map_sw(u64 from, u64 to, u64 size);
 int hv_map_hook(u64 from, hv_hook_t *hook, u64 size);
-int hv_map_proxy_hook(u64 from, u64 id, u64 size);
 u64 hv_translate(u64 addr, bool s1only, bool w);
 u64 hv_pt_walk(u64 addr);
 bool hv_handle_dabort(u64 *regs);

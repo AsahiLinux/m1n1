@@ -335,12 +335,6 @@ int hv_map_hook(u64 from, hv_hook_t *hook, u64 size)
     return hv_map(from, ((u64)hook) | FIELD_PREP(SPTE_TYPE, SPTE_HOOK), size, 0);
 }
 
-int hv_map_proxy_hook(u64 from, u64 id, u64 size)
-{
-    return hv_map(from, FIELD_PREP(PTE_TARGET_MASK_L4, id) | FIELD_PREP(SPTE_TYPE, SPTE_HOOK), size,
-                  0);
-}
-
 u64 hv_translate(u64 addr, bool s1, bool w)
 {
     if (!(mrs(SCTLR_EL12) & SCTLR_M))
