@@ -51,7 +51,7 @@
 
 #define SPTE_TRACE_READ    BIT(63)
 #define SPTE_TRACE_WRITE   BIT(62)
-#define SPTE_SYNC_TRACE    BIT(61)
+#define SPTE_TRACE_UNBUF   BIT(61)
 #define SPTE_TYPE          GENMASK(52, 50)
 #define SPTE_MAP           0
 #define SPTE_HOOK          1
@@ -757,7 +757,7 @@ bool hv_handle_dabort(u64 *regs)
         hv_wdt_breadcrumb('3');
 
         if (pte & SPTE_TRACE_WRITE)
-            emit_mmiotrace(elr, ipa, val, width, MMIO_EVT_WRITE, pte & SPTE_SYNC_TRACE);
+            emit_mmiotrace(elr, ipa, val, width, MMIO_EVT_WRITE, pte & SPTE_TRACE_UNBUF);
 
         hv_wdt_breadcrumb('4');
 
@@ -845,7 +845,7 @@ bool hv_handle_dabort(u64 *regs)
 
         hv_wdt_breadcrumb('7');
         if (pte & SPTE_TRACE_READ)
-            emit_mmiotrace(elr, ipa, val, width, 0, pte & SPTE_SYNC_TRACE);
+            emit_mmiotrace(elr, ipa, val, width, 0, pte & SPTE_TRACE_UNBUF);
 
         hv_wdt_breadcrumb('8');
         if (!emulate_load(regs, insn, val, &width))

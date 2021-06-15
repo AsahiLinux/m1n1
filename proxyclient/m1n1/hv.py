@@ -59,7 +59,7 @@ class HV:
 
     SPTE_TRACE_READ         = 1 << 63
     SPTE_TRACE_WRITE        = 1 << 62
-    SPTE_SYNC_TRACE         = 1 << 61
+    SPTE_TRACE_UNBUF        = 1 << 61
     SPTE_MAP                = 0 << 50
     SPTE_HOOK               = 1 << 50
     SPTE_PROXY_HOOK_R       = 2 << 50
