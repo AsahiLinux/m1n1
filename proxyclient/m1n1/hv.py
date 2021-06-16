@@ -130,9 +130,30 @@ class HV:
         assert self.p.hv_map(ipa, 0, size, 0) >= 0
 
     def map_hw(self, ipa, pa, size):
-        assert self.p.hv_map(ipa, pa | self.PTE_ATTRIBUTES | self.PTE_VALID, size, 1) >= 0
+        #print(f"map_hw {ipa:#x} -> {pa:#x} [{size:#x}]")
+        if (ipa & 0x3fff) != (pa & 0x3fff):
+            self.map_sw(ipa, pa, size)
+            return
+
+        ipa_p = align_up(ipa)
+        if ipa_p != ipa:
+            self.map_sw(ipa, pa, min(ipa_p - ipa, size))
+            pa += ipa_p - ipa
+            size -= ipa_p - ipa
+
+        if size <= 0:
+            return
+
+        size_p = align_down(size)
+        if size_p > 0:
+            #print(f"map_hw real {ipa_p:#x} -> {pa:#x} [{size_p:#x}]")
+            assert self.p.hv_map(ipa_p, pa | self.PTE_ATTRIBUTES | self.PTE_VALID, size_p, 1) >= 0
+
+        if size_p != size:
+            self.map_sw(ipa_p + size_p, pa + size_p, size - size_p)
 
     def map_sw(self, ipa, pa, size):
+        #print(f"map_sw {ipa:#x} -> {pa:#x} [{size:#x}]")
         assert self.p.hv_map(ipa, pa | self.SPTE_MAP, size, 1) >= 0
 
     def map_hook(self, ipa, size, read=None, write=None, **kwargs):
