@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 import sys, traceback, struct, array, bisect, os, signal, runpy
 from construct import *
-from enum import IntEnum, IntFlag
+from enum import Enum, IntEnum, IntFlag
 
 from .asm import ARMAsm
 from .tgtypes import *
@@ -11,6 +11,7 @@ from .sysreg import *
 from .macho import MachO
 from .adt import load_adt
 from . import xnutools, shell
+from . import trace
 
 __all__ = ["HV"]
 
@@ -47,6 +48,14 @@ VMProxyHookData = Struct(
     "addr" / Hex(Int64ul),
     "data" / Array(2, Hex(Int64ul)),
 )
+
+class TraceMode(IntEnum):
+    OFF = 0
+    ASYNC = 1
+    UNBUF = 2
+    SYNC = 3
+    HOOK = 4
+    RESERVED = 5
 
 class HV:
     PTE_VALID               = 1 << 0
@@ -113,7 +122,8 @@ class HV:
         self._sigint_pending = False
         self.vm_hooks = []
         self.interrupt_map = {}
-        self.mmio_handlers = AddrLookup()
+        self.mmio_maps = DictRangeMap()
+        self.dirty_maps = BoolRangeMap()
         self.shell_locals = {
             "hv": self,
             "iface": self.iface,
@@ -179,6 +189,113 @@ class HV:
                 self.interrupt_map.pop(n, None)
         assert self.p.hv_trace_irq(self.AIC_EVT_TYPE_HW, num, count, flags) > 0
 
+    def add_tracer(self, zone, ident, mode=TraceMode.ASYNC, read=None, write=None, **kwargs):
+        assert mode in (TraceMode.RESERVED, TraceMode.OFF) or read or write
+        self.mmio_maps[zone, ident] = (mode, ident, read, write, kwargs)
+        self.dirty_maps.set(zone)
+
+    def del_tracer(self, zone, ident):
+        del self.mmio_maps[zone, ident]
+        self.dirty_maps.set(zone)
+
+    def clear_tracers(self, ident):
+        for r, v in self.mmio_maps.items():
+            if ident in v:
+                v.pop(ident)
+                self.dirty_maps.set(r)
+
+    def trace_device(self, path, trace=True):
+        node = self.adt[path]
+        for index in range(len(node.reg)):
+            addr, size = node.get_reg(index)
+            self.trace_range(irange(addr, size), trace)
+
+    def trace_range(self, zone, trace=True):
+        if trace:
+            self.add_tracer(zone, "PrintTracer", TraceMode.ASYNC, self.print_tracer.event_mmio, self.print_tracer.event_mmio)
+        else:
+            self.del_tracer(zone, "PrintTracer")
+
+    def pt_update(self):
+        if not self.dirty_maps:
+            return
+
+        self.dirty_maps.compact()
+        self.mmio_maps.compact()
+
+        top = 0
+
+        for zone in self.dirty_maps:
+            if zone.stop <= top:
+                continue
+            for mzone, maps in self.mmio_maps.overlaps(zone):
+                if mzone.stop <= top:
+                    continue
+                top = mzone.stop
+                if not maps:
+                    continue
+                maps = sorted(maps.values(), reverse=True)
+                mode, ident, read, write, kwargs = maps[0]
+
+                need_read = any(m[2] for m in maps)
+                need_write = any(m[3] for m in maps)
+
+                if mode == TraceMode.RESERVED:
+                    print(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> RESERVED")
+                    continue
+                elif mode == TraceMode.HOOK:
+                    if need_read and not read:
+                        read = self._mmio_read
+                    if need_write and not write:
+                        write = self._mmio_write
+                    self.map_hook(mzone.start, mzone.stop - mzone.start, read, write, kwargs)
+                    for m2, i2, r2, w2, k2 in maps[1:]:
+                        if m2 == TraceMode.HOOK:
+                            print(f"!! Conflict: HOOK {i2}")
+                elif mode == TraceMode.SYNC:
+                    read = self._mmio_read if need_read else None
+                    write = self._mmio_write if need_write else None
+                    self.map_hook(mzone.start, mzone.stop - mzone.start, read, write)
+                elif mode in (TraceMode.UNBUF, TraceMode.ASYNC):
+                    pa = mzone.start
+                    if mode == TraceMode.UNBUF:
+                        pa |= self.SPTE_TRACE_UNBUF
+                    if need_read:
+                        pa |= self.SPTE_TRACE_READ
+                    if need_write:
+                        pa |= self.SPTE_TRACE_WRITE
+                    self.map_sw(mzone.start, pa, mzone.stop - mzone.start)
+                elif mode == TraceMode.OFF:
+                    self.map_hw(mzone.start, mzone.start, mzone.stop - mzone.start)
+                    print(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> HW")
+                    continue
+
+                rest = [m[1] for m in maps[1:] if m[0] != TraceMode.OFF]
+                if rest:
+                    rest = " (+ " + ", ".join(rest) + ")"
+                else:
+                    rest = ""
+
+                print(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> {mode.name}.{'R' if read else ''}{'W' if read else ''} {ident}{rest}")
+
+        self.u.inst(0xd50c879f) # tlbi alle1
+        self.dirty_maps.clear()
+
+    def handle_mmiotrace(self, data):
+        evt = EvtMMIOTrace.parse(data)
+
+        maps = sorted(self.mmio_maps[evt.addr].values(), reverse=True)
+        for mode, ident, read, write, kwargs in maps:
+            if mode > TraceMode.UNBUF:
+                print(f"ERROR: mmiotrace event but expected {mode.name} mapping")
+                continue
+            if mode == TraceMode.OFF:
+                continue
+            if evt.flags.WRITE:
+                write(evt, **kwargs)
+            else:
+                read(evt, **kwargs)
+
     def addr(self, addr):
         unslid_addr = addr + self.sym_offset
         if addr < self.tba.virt_base or unslid_addr < self.macho.vmin:
@@ -204,19 +321,6 @@ class HV:
 
         return self.symbols[idx]
 
-    def handle_mmiotrace(self, data):
-        evt = EvtMMIOTrace.parse(data)
-
-        obj, zone = self.mmio_handlers.lookup(evt.addr, None)
-        if obj is not None:
-            obj.handle_mmiotrace(evt, zone)
-            return
-
-        dev, zone = self.device_addr_tbl.lookup(evt.addr)
-        t = "W" if evt.flags.WRITE else "R"
-        m = "+" if evt.flags.MULTI else " "
-        print(f"[0x{evt.pc:016x}] MMIO: {t}.{1<<evt.flags.WIDTH:<2}{m} " +
-              f"0x{evt.addr:x} ({dev}, offset {evt.addr - zone.start:#04x}) = 0x{evt.data:x}")
 
     def handle_irqtrace(self, data):
         evt = EvtIRQTrace.parse(data)
@@ -452,6 +556,8 @@ class HV:
             if ret is None:
                 ret = EXC_RET.EXIT_GUEST
 
+        self.pt_update()
+
         new_info = ExcInfo.build(self.ctx)
         if new_info != info_data:
             self.iface.writemem(info, new_info)
@@ -582,28 +688,13 @@ class HV:
 
         self.vbar_el1 = vbar
 
-    def trace_device(self, path, trace=True, handler=None):
-        node = self.adt[path]
-        for index in range(len(node.reg)):
-            addr, size = node.get_reg(index)
-            if trace:
-                print(f"Trace: 0x{addr:x} [0x{size:x}] ({path})")
-                self.map_sw(addr, addr | self.SPTE_TRACE_READ | self.SPTE_TRACE_WRITE, size)
-                if handler is not None:
-                    self.mmio_handlers.add(range(addr, addr + size), handler)
-            else:
-                print(f"Pass:  0x{addr:x} [0x{size:x}] ({path})")
-                if addr & 0x3fff or size & 0x3fff:
-                    print(f"Note: unaligned, using software passthrough")
-                    self.map_sw(addr, addr, size)
-                else:
-                    self.map_hw(addr, addr, size)
 
     def init(self):
         self.adt = load_adt(self.u.get_adt())
         self.iodev = self.p.iodev_whoami()
         self.tba = self.u.ba.copy()
         self.device_addr_tbl = self.adt.build_addr_lookup()
+        self.print_tracer = trace.PrintTracer(self, self.device_addr_tbl)
 
         print("Initializing hypervisor over iodev %s" % self.iodev)
         self.p.hv_init()
@@ -620,7 +711,8 @@ class HV:
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
         self.iface.set_event_handler(EVENT.IRQTRACE, self.handle_irqtrace)
 
-        self.map_hw(0x2_00000000, 0x2_00000000, 0x5_00000000)
+        # Map MMIO range as HW by default)
+        self.add_tracer(range(0x2_00000000, 0x7_00000000), "HW", TraceMode.OFF)
 
         # trace IRQs
         aic_phandle = getattr(self.adt["/arm-io/aic"], "AAPL,phandle")
@@ -682,7 +774,9 @@ class HV:
         self.setup_adt()
 
     def map_vuart(self):
+        zone = irange(0x2_35200000, 0x4000)
         self.p.hv_map_vuart(0x2_35200000, getattr(IODEV, self.iodev.name + "_SEC"))
+        self.add_tracer(zone, "VUART", TraceMode.RESERVED)
 
     def map_essential(self):
         # Things we always map/take over, for the hypervisor to work
@@ -700,6 +794,8 @@ class HV:
 
         for addr in (0x23b700420, 0x23d280098, 0x23d280088, 0x23d280090):
             self.map_hook(addr, 4, write=wh, read=rh)
+            # TODO: turn into a real tracer
+            self.add_tracer(irange(addr, 4), "PMU HACK", TraceMode.RESERVED)
 
     def setup_adt(self):
         self.adt["product"].product_name += " on m1n1 hypervisor"
@@ -894,6 +990,9 @@ class HV:
 
         print("Doing essential MMIO remaps...")
         self.map_essential()
+
+        print("Updating page tables...")
+        self.pt_update()
 
         print("Improving logo...")
         self.p.fb_improve_logo()
