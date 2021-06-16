@@ -5,8 +5,13 @@ from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul
 
 __all__ = []
 
-def align(v, a=16384):
+def align_up(v, a=16384):
     return (v + a - 1) & ~(a - 1)
+
+align = align_up
+
+def align_down(v, a=16384):
+    return v & ~(a - 1)
 
 def hexdump(s, sep=" "):
     return sep.join(["%02x"%x for x in s])
