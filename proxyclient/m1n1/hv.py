@@ -241,7 +241,7 @@ class HV:
                 need_write = any(m[3] for m in maps)
 
                 if mode == TraceMode.RESERVED:
-                    print(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> RESERVED")
+                    print(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> RESERVED {ident}")
                     continue
                 elif mode == TraceMode.HOOK:
                     if need_read and not read:
