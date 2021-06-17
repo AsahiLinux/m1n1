@@ -81,7 +81,7 @@ ExcInfo = Struct(
     "data" / Int64ul,
 )
 
-class UartInterface:
+class UartInterface(Reloadable):
     REQ_NOP = 0x00AA55FF
     REQ_PROXY = 0x01AA55FF
     REQ_MEMREAD = 0x02AA55FF
@@ -426,7 +426,7 @@ REGION_RWX_EL0 = 0x8000000000
 REGION_RW_EL0 = 0x9000000000
 REGION_RX_EL1 = 0xa000000000
 
-class M1N1Proxy:
+class M1N1Proxy(Reloadable):
     S_OK = 0
     S_BADCMD = -1
 

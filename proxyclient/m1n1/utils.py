@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 from enum import Enum
-import bisect, copy, heapq
+import bisect, copy, heapq, importlib, sys
 from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul
 
 __all__ = []
@@ -53,7 +53,12 @@ def chexdump32(s, st=0, abbreviate=True):
             last = val
             skip = False
 
-class Register:
+class Reloadable:
+    def _reloadme(self):
+        mod = importlib.reload(sys.modules[self.__class__.__module__])
+        self.__class__ = getattr(mod, self.__class__.__name__)
+
+class Register(Reloadable):
     def __init__(self, v=0, **kwargs):
         self._value = v
         self._fields_list = [k for k in self.__class__.__dict__ if not k.startswith("_")]
@@ -175,7 +180,7 @@ class RegAdapter(Adapter):
     def _encode(self, obj, context, path):
         return obj.value
 
-class RangeMap:
+class RangeMap(Reloadable):
     def __init__(self):
         self.__start = []
         self.__end = []
@@ -542,7 +547,7 @@ class RegArrayAccessor:
         else:
             return [self.rd(self.addr + i) for i in self.range[item]]
 
-class RegMap(metaclass=RegMeta):
+class RegMap(Reloadable, metaclass=RegMeta):
     def __init__(self, backend, base):
         self._base = base
         self._backend = backend

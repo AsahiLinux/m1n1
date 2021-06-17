@@ -5,6 +5,7 @@ from construct import *
 
 from .asm import ARMAsm
 from .proxy import *
+from .utils import Reloadable
 from .tgtypes import *
 from .sysreg import *
 from .malloc import Heap
@@ -18,7 +19,7 @@ SIMD_S = Array(32, Array(4, Int32ul))
 SIMD_D = Array(32, Array(2, Int64ul))
 SIMD_Q = Array(32, BytesInteger(16, swapped=True))
 
-class ProxyUtils(object):
+class ProxyUtils(Reloadable):
     CODE_BUFFER_SIZE = 0x10000
     def __init__(self, p, heap_size=1024 * 1024 * 1024):
         self.iface = p.iface

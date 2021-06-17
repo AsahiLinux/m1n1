@@ -57,7 +57,7 @@ class TraceMode(IntEnum):
     HOOK = 4
     RESERVED = 5
 
-class HV:
+class HV(Reloadable):
     PTE_VALID               = 1 << 0
 
     PTE_MEMATTR_UNCHANGED   = 0b1111 << 2
