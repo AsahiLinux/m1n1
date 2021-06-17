@@ -139,6 +139,9 @@ class Register(Reloadable):
     def __repr__(self):
         return f"{type(self).__name__}({', '.join(f'{k}={self._field_val(k, True)}' for k in self._fields_list)})"
 
+    def copy(self):
+        return type(self)(self._value)
+
     @property
     def value(self):
         return self._value
