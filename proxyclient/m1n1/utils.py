@@ -586,8 +586,8 @@ class RegMap(Reloadable, metaclass=RegMeta):
         ret = cls._rngmap[offset]
         if ret:
             for rng, name, rcls in ret:
-                if reg in rng:
-                    return name, rng.index(reg), rcls
+                if offset in rng:
+                    return name, rng.index(offset), rcls
         return None, None, None
 
     def lookup_addr(self, addr):
