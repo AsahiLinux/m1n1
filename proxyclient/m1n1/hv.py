@@ -124,11 +124,20 @@ class HV(Reloadable):
         self.interrupt_map = {}
         self.mmio_maps = DictRangeMap()
         self.dirty_maps = BoolRangeMap()
-        self.shell_locals = {
+        self.shell_locals = {}
+        self._update_shell_locals()
+
+    def _reloadme(self):
+        super()._reloadme()
+        self._update_shell_locals()
+
+    def _update_shell_locals(self):
+        self.shell_locals.update({
             "hv": self,
             "iface": self.iface,
             "p": self.p,
             "u": self.u,
+            "trace": trace,
             "TraceMode": TraceMode,
         })
 
