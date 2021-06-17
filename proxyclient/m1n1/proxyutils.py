@@ -68,6 +68,33 @@ class ProxyUtils(Reloadable):
             "gl2": (self.proxy.gl2_call, REGION_RX_EL1),
             "gl1": (self.proxy.gl1_call, 0),
         }
+        self._read = {
+            8: lambda addr: self.proxy.read8(addr),
+            16: lambda addr: self.proxy.read16(addr),
+            32: lambda addr: self.proxy.read32(addr),
+            64: lambda addr: self.proxy.read64(addr),
+            128: lambda addr: [self.proxy.read64(addr),
+                               self.proxy.read64(addr + 8)],
+        }
+        self._write = {
+            8: lambda addr, data: self.proxy.write8(addr, data),
+            16: lambda addr, data: self.proxy.write16(addr, data),
+            32: lambda addr, data: self.proxy.write32(addr, data),
+            64: lambda addr, data: self.proxy.write64(addr, data),
+            128: lambda addr, data: (self.proxy.write64(addr, data[0]),
+                                     self.proxy.write64(addr + 8, data[1])),
+        }
+
+    def read(self, addr, width):
+        val = self._read[width](addr)
+        if self.proxy.get_exc_count():
+            raise ProxyError("Exception occurred")
+        return val
+
+    def write(self, addr, data, width):
+        self._write[width](addr, data)
+        if self.proxy.get_exc_count():
+            raise ProxyError("Exception occurred")
 
     def mrs(self, reg, *, silent=False, call=None):
         op0, op1, CRn, CRm, op2 = sysreg_parse(reg)

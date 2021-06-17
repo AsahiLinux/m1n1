@@ -52,7 +52,7 @@ class DART(RegMap):
     TTBR3           = irange(0x20c, 16, 16), R_TTBR
 
     def __init__(self, base):
-        super().__init__(p, base)
+        super().__init__(u, base)
         self.base = base
 
     def dump_table2(self, base, l1_addr):

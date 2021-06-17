@@ -130,21 +130,7 @@ class HV(Reloadable):
             "p": self.p,
             "u": self.u,
             "TraceMode": TraceMode,
-        }
-        self.mmio_rd = [
-            lambda addr: [proxy.read8(addr)],
-            lambda addr: [proxy.read16(addr)],
-            lambda addr: [proxy.read32(addr)],
-            lambda addr: [proxy.read64(addr)],
-            lambda addr: [proxy.read64(addr), proxy.read64(addr + 8)],
-        ]
-        self.mmio_wr = [
-            lambda addr, data: proxy.write8(addr, data),
-            lambda addr, data: proxy.write16(addr, data),
-            lambda addr, data: proxy.write32(addr, data),
-            lambda addr, data: proxy.write64(addr, data),
-            lambda addr, data: (proxy.write64(addr, data[0]), proxy.write64(addr + 8, data[1])),
-        ]
+        })
 
         for attr in dir(self):
             a = getattr(self, attr)
@@ -336,9 +322,11 @@ class HV(Reloadable):
             first += 1
         elif mode == TraceMode.SYNC:
             if data.flags.WRITE:
-                self.mmio_wr[data.flags.WIDTH](data.addr, wval)
+                self.u.write(data.addr, wval, 8 << data.flags.WIDTH)
             else:
-                val = self.mmio_rd[data.flags.WIDTH](data.addr)
+                val = self.u.read(data.addr, 8 << data.flags.WIDTH)
+                if not isinstance(val, list) and not isinstance(val, tuple):
+                    val = [val]
         else:
             raise Exception(f"VM hook with unexpected mapping at {data.addr:#x}: {maps[0][0].name}")
 

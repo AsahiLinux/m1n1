@@ -558,8 +558,8 @@ class RegMap(Reloadable, metaclass=RegMeta):
 
         for name, (addr, rcls) in self._namemap.items():
             width = rcls.__WIDTH__
-            rd = getattr(backend, f"read{width}")
-            wr = getattr(backend, f"write{width}")
+            rd = lambda addr: backend.read(addr, width)
+            wr = lambda addr, data: backend.write(addr, data, width)
             if isinstance(addr, range):
                 self._accessor[name] = RegArrayAccessor(addr, rcls, rd, wr, base)
             else:
