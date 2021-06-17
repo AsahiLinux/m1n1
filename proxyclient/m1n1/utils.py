@@ -578,19 +578,27 @@ class RegMap(Reloadable, metaclass=RegMeta):
                 self._accessor[name] = RegAccessor(rcls, rd, wr, base + addr)
 
     @classmethod
-    def lookup_addr(cls, reg):
-        reg = cls._addrmap.get(reg, None)
+    def lookup_offset(cls, offset):
+        reg = cls._addrmap.get(offset, None)
         if reg is not None:
-            return reg
-        ret = self._rngmap.get(reg, None)
+            name, rcls = reg
+            return name, None, rcls
+        ret = cls._rngmap[offset]
         if ret:
             for rng, name, rcls in ret:
                 if reg in rng:
-                    return f"{name}[{rng.index(reg)}]", rcls
-        return None, None
+                    return name, rng.index(reg), rcls
+        return None, None, None
+
+    def lookup_addr(self, addr):
+        return self.lookup_offset(addr - self._base)
 
     def get_name(self, addr):
-        return self.lookup_addr(addr - self._base)[0]
+        name, index, rcls = self.lookup_addr(addr)
+        if index is not None:
+            return f"{name}[{index}]"
+        else:
+            return name
 
     @classmethod
     def lookup_name(cls, name):
