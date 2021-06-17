@@ -11,7 +11,6 @@ from .sysreg import *
 from .macho import MachO
 from .adt import load_adt
 from . import xnutools, shell
-from . import trace
 
 __all__ = ["HV"]
 
@@ -124,6 +123,7 @@ class HV(Reloadable):
         self.interrupt_map = {}
         self.mmio_maps = DictRangeMap()
         self.dirty_maps = BoolRangeMap()
+        self.tracer_caches = {}
         self.shell_locals = {}
         self._update_shell_locals()
 
@@ -217,9 +217,11 @@ class HV(Reloadable):
                 v.pop(ident)
                 self.dirty_maps.set(r)
 
-    def trace_device(self, path, mode=TraceMode.ASYNC):
+    def trace_device(self, path, mode=TraceMode.ASYNC, ranges=None):
         node = self.adt[path]
         for index in range(len(node.reg)):
+            if ranges is not None and index not in ranges:
+                continue
             addr, size = node.get_reg(index)
             self.trace_range(irange(addr, size), mode)
 
@@ -1089,3 +1091,5 @@ class HV(Reloadable):
 
         # Does not return
         self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)
+
+from . import trace
