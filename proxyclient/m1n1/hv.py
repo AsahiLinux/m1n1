@@ -323,9 +323,9 @@ class HV(Reloadable):
 
         if mode == TraceMode.HOOK:
             if data.flags.WRITE:
-                wfunc(data.addr, wval, 1 << data.flags.WIDTH, **kwargs)
+                wfunc(data.addr, wval, 8 << data.flags.WIDTH, **kwargs)
             else:
-                val = rfunc(data.addr, 1 << data.flags.WIDTH, **kwargs)
+                val = rfunc(data.addr, 8 << data.flags.WIDTH, **kwargs)
                 if not isinstance(val, list) and not isinstance(val, tuple):
                     val = [val]
             first += 1
@@ -355,7 +355,7 @@ class HV(Reloadable):
                 flags = flags,
                 reserved = 0,
                 pc = ctx.elr,
-                addr = data.addr,
+                addr = data.addr + 8 * i,
                 data = val[i]
             )
 
@@ -382,9 +382,9 @@ class HV(Reloadable):
             d = d[0]
 
         if data.flags.WRITE:
-            wfunc(base, data.addr - base, d, 1 << data.flags.WIDTH, **kwargs)
+            wfunc(base, data.addr - base, d, 8 << data.flags.WIDTH, **kwargs)
         else:
-            val = rfunc(base, data.addr - base, 1 << data.flags.WIDTH, **kwargs)
+            val = rfunc(base, data.addr - base, 8 << data.flags.WIDTH, **kwargs)
             if not isinstance(val, list) and not isinstance(val, tuple):
                 val = [val]
             for i in range(1 << max(0, data.flags.WIDTH - 3)):
