@@ -54,9 +54,21 @@ def chexdump32(s, st=0, abbreviate=True):
             skip = False
 
 class Reloadable:
+    @classmethod
+    def _reloadcls(cls):
+        mods = []
+        for c in cls.mro():
+            mods.append(sys.modules[c.__module__])
+            if c.__name__ == "Reloadable":
+                break
+
+        for mod in mods[::-1]:
+            mod = importlib.reload(mod)
+
+        return getattr(mod, cls.__name__)
+
     def _reloadme(self):
-        mod = importlib.reload(sys.modules[self.__class__.__module__])
-        self.__class__ = getattr(mod, self.__class__.__name__)
+        self.__class__ = self._reloadcls()
 
 class Register(Reloadable):
     def __init__(self, v=0, **kwargs):
