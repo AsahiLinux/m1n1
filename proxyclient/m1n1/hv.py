@@ -120,7 +120,7 @@ class HV(Reloadable):
         self.novm = False
         self._in_handler = False
         self._sigint_pending = False
-        self.vm_hooks = []
+        self.vm_hooks = [None]
         self.interrupt_map = {}
         self.mmio_maps = DictRangeMap()
         self.dirty_maps = BoolRangeMap()
@@ -129,7 +129,22 @@ class HV(Reloadable):
             "iface": self.iface,
             "p": self.p,
             "u": self.u,
+            "TraceMode": TraceMode,
         }
+        self.mmio_rd = [
+            lambda addr: [proxy.read8(addr)],
+            lambda addr: [proxy.read16(addr)],
+            lambda addr: [proxy.read32(addr)],
+            lambda addr: [proxy.read64(addr)],
+            lambda addr: [proxy.read64(addr), proxy.read64(addr + 8)],
+        ]
+        self.mmio_wr = [
+            lambda addr, data: proxy.write8(addr, data),
+            lambda addr, data: proxy.write16(addr, data),
+            lambda addr, data: proxy.write32(addr, data),
+            lambda addr, data: proxy.write64(addr, data),
+            lambda addr, data: (proxy.write64(addr, data[0]), proxy.write64(addr + 8, data[1])),
+        ]
 
         for attr in dir(self):
             a = getattr(self, attr)
@@ -167,6 +182,11 @@ class HV(Reloadable):
         assert self.p.hv_map(ipa, pa | self.SPTE_MAP, size, 1) >= 0
 
     def map_hook(self, ipa, size, read=None, write=None, **kwargs):
+        index = len(self.vm_hooks)
+        self.vm_hooks.append((read, write, ipa, kwargs))
+        self.map_hook_idx(ipa, size, index, read is not None, write is not None, kwargs)
+
+    def map_hook_idx(self, ipa, size, index, read=False, write=False, kwargs={}):
         if read is not None:
             if write is not None:
                 t = self.SPTE_PROXY_HOOK_RW
@@ -177,9 +197,7 @@ class HV(Reloadable):
         else:
             assert False
 
-        index = len(self.vm_hooks)
-        self.vm_hooks.append((read, write, ipa, kwargs))
-        assert self.p.hv_map(ipa, (index << 2) | t, size, 1) >= 0
+        assert self.p.hv_map(ipa, (index << 2) | t, size, 0) >= 0
 
     def trace_irq(self, device, num, count, flags):
         for n in range(num, num + count):
@@ -204,15 +222,17 @@ class HV(Reloadable):
                 v.pop(ident)
                 self.dirty_maps.set(r)
 
-    def trace_device(self, path, trace=True):
+    def trace_device(self, path, mode=TraceMode.ASYNC):
         node = self.adt[path]
         for index in range(len(node.reg)):
             addr, size = node.get_reg(index)
-            self.trace_range(irange(addr, size), trace)
+            self.trace_range(irange(addr, size), mode)
 
-    def trace_range(self, zone, trace=True):
-        if trace:
-            self.add_tracer(zone, "PrintTracer", TraceMode.ASYNC, self.print_tracer.event_mmio, self.print_tracer.event_mmio)
+    def trace_range(self, zone, mode=TraceMode.ASYNC):
+        if mode is True:
+            mode = TraceMode.ASYNC
+        if mode and mode != TraceMode.OFF:
+            self.add_tracer(zone, "PrintTracer", mode, self.print_tracer.event_mmio, self.print_tracer.event_mmio)
         else:
             self.del_tracer(zone, "PrintTracer")
 
@@ -243,19 +263,12 @@ class HV(Reloadable):
                 if mode == TraceMode.RESERVED:
                     print(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> RESERVED {ident}")
                     continue
-                elif mode == TraceMode.HOOK:
-                    if need_read and not read:
-                        read = self._mmio_read
-                    if need_write and not write:
-                        write = self._mmio_write
-                    self.map_hook(mzone.start, mzone.stop - mzone.start, read, write, kwargs)
-                    for m2, i2, r2, w2, k2 in maps[1:]:
-                        if m2 == TraceMode.HOOK:
-                            print(f"!! Conflict: HOOK {i2}")
-                elif mode == TraceMode.SYNC:
-                    read = self._mmio_read if need_read else None
-                    write = self._mmio_write if need_write else None
-                    self.map_hook(mzone.start, mzone.stop - mzone.start, read, write)
+                elif mode in (TraceMode.HOOK, TraceMode.SYNC):
+                    self.map_hook_idx(mzone.start, mzone.stop - mzone.start, 0, need_read, need_write)
+                    if mode == TraceMode.HOOK:
+                        for m2, i2, r2, w2, k2 in maps[1:]:
+                            if m2 == TraceMode.HOOK:
+                                print(f"!! Conflict: HOOK {i2}")
                 elif mode in (TraceMode.UNBUF, TraceMode.ASYNC):
                     pa = mzone.start
                     if mode == TraceMode.UNBUF:
@@ -296,6 +309,99 @@ class HV(Reloadable):
             else:
                 read(evt, **kwargs)
 
+    def handle_vm_hook_mapped(self, ctx, data):
+        maps = sorted(self.mmio_maps[data.addr].values(), reverse=True)
+
+        if not maps:
+            raise Exception(f"VM hook without a mapping at {data.addr:#x}")
+
+        mode, ident, read, write, kwargs = maps[0]
+
+        first = 0
+
+        val = data.data
+        if data.flags.WRITE:
+            if data.flags.WIDTH < 3:
+                wval = val[0]
+            else:
+                wval = val
+
+        if mode == TraceMode.HOOK:
+            if data.flags.WRITE:
+                wfunc(data.addr, wval, 1 << data.flags.WIDTH, **kwargs)
+            else:
+                val = rfunc(data.addr, 1 << data.flags.WIDTH, **kwargs)
+                if not isinstance(val, list) and not isinstance(val, tuple):
+                    val = [val]
+            first += 1
+        elif mode == TraceMode.SYNC:
+            if data.flags.WRITE:
+                self.mmio_wr[data.flags.WIDTH](data.addr, wval)
+            else:
+                val = self.mmio_rd[data.flags.WIDTH](data.addr)
+        else:
+            raise Exception(f"VM hook with unexpected mapping at {data.addr:#x}: {maps[0][0].name}")
+
+        if not data.flags.WRITE:
+            for i in range(1 << max(0, data.flags.WIDTH - 3)):
+                self.p.write64(ctx.data + 16 + 8 * i, val[i])
+
+        flags = data.flags.copy()
+        width = data.flags.WIDTH
+
+        if width > 3:
+            flags.WIDTH = 3
+            flags.MULTI = 1
+
+        for i in range(1 << max(0, width - 3)):
+            evt = Container(
+                flags = flags,
+                reserved = 0,
+                pc = ctx.elr,
+                addr = data.addr,
+                data = val[i]
+            )
+
+            for mode, ident, read, write, kwargs in maps[first:]:
+                if flags.WRITE:
+                    if write:
+                        write(evt, **kwargs)
+                else:
+                    if read:
+                        read(evt, **kwargs)
+
+        return True
+
+    def handle_vm_hook(self, ctx):
+        data = self.iface.readstruct(ctx.data, VMProxyHookData)
+
+        if data.id == 0:
+            return self.handle_vm_hook_mapped(ctx, data)
+
+        rfunc, wfunc, base, kwargs = self.vm_hooks[data.id]
+
+        d = data.data
+        if data.flags.WIDTH < 3:
+            d = d[0]
+
+        if data.flags.WRITE:
+            wfunc(base, data.addr - base, d, 1 << data.flags.WIDTH, **kwargs)
+        else:
+            val = rfunc(base, data.addr - base, 1 << data.flags.WIDTH, **kwargs)
+            if not isinstance(val, list) and not isinstance(val, tuple):
+                val = [val]
+            for i in range(1 << max(0, data.flags.WIDTH - 3)):
+                self.p.write64(ctx.data + 16 + 8 * i, val[i])
+
+        return True
+
+    def handle_irqtrace(self, data):
+        evt = EvtIRQTrace.parse(data)
+
+        if evt.type == self.AIC_EVT_TYPE_HW and evt.flags & self.IRQTRACE_IRQ:
+            dev = self.interrupt_map[int(evt.num)]
+            print(f"IRQ: {dev}: {evt.num}")
+
     def addr(self, addr):
         unslid_addr = addr + self.sym_offset
         if addr < self.tba.virt_base or unslid_addr < self.macho.vmin:
@@ -320,34 +426,6 @@ class HV(Reloadable):
             return f"0x{addr:x} (0x{unslid_addr:x})"
 
         return self.symbols[idx]
-
-
-    def handle_irqtrace(self, data):
-        evt = EvtIRQTrace.parse(data)
-
-        if evt.type == self.AIC_EVT_TYPE_HW and evt.flags & self.IRQTRACE_IRQ:
-            dev = self.interrupt_map[int(evt.num)]
-            print(f"IRQ: {dev}: {evt.num}")
-
-    def handle_vm_hook(self, ctx):
-        data = self.iface.readstruct(ctx.data, VMProxyHookData)
-
-        rfunc, wfunc, base, kwargs = self.vm_hooks[data.id]
-
-        d = data.data
-        if data.flags.WIDTH < 3:
-            d = d[0]
-
-        if data.flags.WRITE:
-            wfunc(base, data.addr - base, d, 1 << data.flags.WIDTH, **kwargs)
-        else:
-            val = rfunc(base, data.addr - base, 1 << data.flags.WIDTH, **kwargs)
-            if not isinstance(val, list) and not isinstance(val, tuple):
-                val = [val]
-            for i in range(1 << max(0, data.flags.WIDTH - 3)):
-                self.p.write64(ctx.data + 16 * 8 * i, val[i])
-
-        return True
 
     def handle_msr(self, ctx, iss=None):
         if iss is None:
@@ -564,6 +642,7 @@ class HV(Reloadable):
 
         if ret == EXC_RET.HANDLED and self._stepping:
             ret = EXC_RET.STEP
+        self.ctx = None
         self.p.exit(ret)
 
         self._in_handler = False
