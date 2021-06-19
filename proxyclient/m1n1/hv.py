@@ -14,8 +14,6 @@ from . import xnutools, shell
 
 __all__ = ["HV"]
 
-PAC_MASK = 0xfffff00000000000
-
 class MMIOTraceFlags(Register32):
     WIDTH = 4, 0
     WRITE = 5
@@ -57,6 +55,8 @@ class TraceMode(IntEnum):
     RESERVED = 5
 
 class HV(Reloadable):
+    PAC_MASK = 0xfffff00000000000
+
     PTE_VALID               = 1 << 0
 
     PTE_MEMATTR_UNCHANGED   = 0b1111 << 2
@@ -109,6 +109,7 @@ class HV(Reloadable):
         self.iface = iface
         self.p = proxy
         self.u = utils
+        self.pac_mask = self.PAC_MASK
         self.vbar_el1 = None
         self.want_vbar = None
         self.vectors = [None]
@@ -692,7 +693,7 @@ class HV(Reloadable):
         if frame is None:
             frame = self.ctx.regs[29]
         if lr is None:
-            lr = self.ctx.regs[30] | PAC_MASK
+            lr = self.ctx.regs[30] | self.pac_mask
 
         print("Stack trace:")
         while frame:
@@ -701,7 +702,7 @@ class HV(Reloadable):
             fpp = self.p.hv_translate(frame)
             if not fpp:
                 break
-            lr = self.p.read64(lrp) | PAC_MASK
+            lr = self.p.read64(lrp) | self.pac_mask
             frame = self.p.read64(fpp)
 
     def patch_exception_handling(self):
@@ -1053,6 +1054,16 @@ class HV(Reloadable):
         self.sym_offset = macho.vmin - guest_base + self.tba.phys_base - self.tba.virt_base
 
         self.iface.writemem(guest_base + self.bootargs_off, BootArgs.build(self.tba))
+
+    def load_system_map(self, path):
+        # Assume Linux, no pac_mask
+        self.pac_mask = 0
+        self.symbols = []
+        with open(path) as fd:
+            for line in fd.readlines():
+                addr, t, name = line.split()
+                self.symbols.append((int(addr, 16), name))
+        self.symbols.sort()
 
     def _handle_sigint(self, signal=None, stack=None):
         self._sigint_pending = True
