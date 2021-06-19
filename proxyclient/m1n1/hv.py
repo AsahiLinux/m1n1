@@ -126,6 +126,7 @@ class HV(Reloadable):
         self.dirty_maps = BoolRangeMap()
         self.tracer_caches = {}
         self.shell_locals = {}
+        self.xnu_mode = False
         self._update_shell_locals()
 
     def _reloadme(self):
@@ -404,7 +405,7 @@ class HV(Reloadable):
 
     def addr(self, addr):
         unslid_addr = addr + self.sym_offset
-        if addr < self.tba.virt_base or unslid_addr < self.macho.vmin:
+        if self.xnu_mode and (addr < self.tba.virt_base or unslid_addr < self.macho.vmin):
             return f"0x{addr:x}"
 
         saddr, name = self.sym(addr)
@@ -418,12 +419,12 @@ class HV(Reloadable):
     def sym(self, addr):
         unslid_addr = addr + self.sym_offset
 
-        if addr < self.tba.virt_base or unslid_addr < self.macho.vmin:
+        if self.xnu_mode and (addr < self.tba.virt_base or unslid_addr < self.macho.vmin):
             return None, None
 
         idx = bisect.bisect_left(self.symbols, (unslid_addr + 1, "")) - 1
         if idx < 0 or idx >= len(self.symbols):
-            return f"0x{addr:x} (0x{unslid_addr:x})"
+            return None, None
 
         return self.symbols[idx]
 
@@ -958,6 +959,7 @@ class HV(Reloadable):
                 symfile = open(symfile, "rb")
             syms = MachO(symfile)
             macho.add_symbols("com.apple.kernel", syms)
+            self.xnu_mode = True
 
         self.symbols = [(v, k) for k, v in macho.symbols.items()]
         self.symbols.sort()
@@ -1058,6 +1060,8 @@ class HV(Reloadable):
     def load_system_map(self, path):
         # Assume Linux, no pac_mask
         self.pac_mask = 0
+        self.sym_offset = 0
+        self.xnu_mode = False
         self.symbols = []
         with open(path) as fd:
             for line in fd.readlines():
