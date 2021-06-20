@@ -293,8 +293,51 @@ class HV(Reloadable):
         self.u.inst(0xd50c879f) # tlbi alle1
         self.dirty_maps.clear()
 
+    def shellwrap(self, func, description, update=None, needs_ret=False):
+
+        while True:
+            try:
+                return func()
+            except:
+                print(f"Exception in {description}")
+                traceback.print_exc()
+
+            if not self.ctx:
+                print("Running in asynchronous context. Target operations are not available.")
+
+            def do_exit(i):
+                raise shell.ExitConsole(i)
+
+            self.shell_locals["skip"] = lambda: do_exit(1)
+            self.shell_locals["cont"] = lambda: do_exit(0)
+            ret = shell.run_shell(self.shell_locals, "Entering debug shell", "Returning from exception")
+            self.shell_locals["skip"] = self.skip
+            self.shell_locals["cont"] = self.cont
+
+            if ret == 1:
+                if needs_ret:
+                    print("Cannot skip, return value required.")
+                else:
+                    return
+
+            if update:
+                update()
+
     def handle_mmiotrace(self, data):
         evt = EvtMMIOTrace.parse(data)
+
+        def do_update():
+            nonlocal mode, ident, read, write, kwargs
+            read = lambda *args, **kwargs: None
+            write = lambda *args, **kwargs: None
+
+            m = self.mmio_maps[evt.addr].get(ident, None)
+            if not m:
+                return
+
+            mode, ident, read_, write_, kwargs = m
+            read = read_ or read
+            write = write_ or write
 
         maps = sorted(self.mmio_maps[evt.addr].values(), reverse=True)
         for mode, ident, read, write, kwargs in maps:
@@ -304,15 +347,32 @@ class HV(Reloadable):
             if mode == TraceMode.OFF:
                 continue
             if evt.flags.WRITE:
-                write(evt, **kwargs)
+                if write:
+                    self.shellwrap(lambda: write(evt, **kwargs),
+                                   f"Tracer {ident}:write ({mode.name})", update=do_update)
             else:
-                read(evt, **kwargs)
+                if read:
+                    self.shellwrap(lambda: read(evt, **kwargs),
+                                   f"Tracer {ident}:read ({mode.name})", update=do_update)
 
     def handle_vm_hook_mapped(self, ctx, data):
         maps = sorted(self.mmio_maps[data.addr].values(), reverse=True)
 
         if not maps:
             raise Exception(f"VM hook without a mapping at {data.addr:#x}")
+
+        def do_update():
+            nonlocal mode, ident, read, write, kwargs
+            read = lambda *args, **kwargs: None
+            write = lambda *args, **kwargs: None
+
+            m = self.mmio_maps[data.addr].get(ident, None)
+            if not m:
+                return
+
+            mode, ident, read_, write_, kwargs = m
+            read = read_ or read
+            write = write_ or write
 
         mode, ident, read, write, kwargs = maps[0]
 
@@ -327,9 +387,13 @@ class HV(Reloadable):
 
         if mode == TraceMode.HOOK:
             if data.flags.WRITE:
-                wfunc(data.addr, wval, 8 << data.flags.WIDTH, **kwargs)
+                self.shellwrap(lambda: write(data.addr, wval, 8 << data.flags.WIDTH, **kwargs),
+                               f"Tracer {ident}:write (HOOK)", update=do_update)
+
             else:
-                val = rfunc(data.addr, 8 << data.flags.WIDTH, **kwargs)
+                val = self.shellwrap(lambda: read(data.addr, 8 << data.flags.WIDTH, **kwargs),
+                                     f"Tracer {ident}:read (HOOK)", update=do_update, needs_ret=True)
+
                 if not isinstance(val, list) and not isinstance(val, tuple):
                     val = [val]
             first += 1
@@ -366,10 +430,12 @@ class HV(Reloadable):
             for mode, ident, read, write, kwargs in maps[first:]:
                 if flags.WRITE:
                     if write:
-                        write(evt, **kwargs)
+                        self.shellwrap(lambda: write(evt, **kwargs),
+                                       f"Tracer {ident}:write ({mode.name})", update=do_update)
                 else:
                     if read:
-                        read(evt, **kwargs)
+                        self.shellwrap(lambda: read(evt, **kwargs),
+                                       f"Tracer {ident}:read ({mode.name})", update=do_update)
 
         return True
 
@@ -629,11 +695,11 @@ class HV(Reloadable):
             self._stepping = False
 
             signal.signal(signal.SIGINT, signal.SIG_DFL)
-            ret = shell.run_shell(self.shell_locals, "Entering debug shell", "Returning from exception")
+            ret = shell.run_shell(self.shell_locals, "Entering hypervisor shell", "Returning from exception")
             signal.signal(signal.SIGINT, self._handle_sigint)
 
             if ret is None:
-                ret = EXC_RET.EXIT_GUEST
+                ret = EXC_RET.HANDLED
 
         self.pt_update()
 
