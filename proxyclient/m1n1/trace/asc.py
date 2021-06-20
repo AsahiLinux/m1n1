@@ -62,7 +62,7 @@ def msg(channel, message, direction=None, regtype=None, name=None):
 
 def msg_log(*args, **kwargs):
     def x(self, r0, r1):
-        pass
+        return False
     return msg(*args, **kwargs)(x)
 
 class ASCTracer(ADTDevTracer):
@@ -123,8 +123,8 @@ class ASCTracer(ADTDevTracer):
             name = handler.name
 
         d = ">" if direction == DIR.TX else "<"
-        self.log(f" {d}{r1.EP:02x}:{r0.TYPE:02x} {name} {r0.value:016x} ({r0.str_fields()})")
-        handler(r0, r1)
+        if not handler(r0, r1):
+            self.log(f" {d}{r1.EP:02x}:{r0.TYPE:02x} {name} {r0.value:016x} ({r0.str_fields()})")
 
     def start(self):
         super().start()
