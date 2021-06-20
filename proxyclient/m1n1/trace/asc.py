@@ -71,7 +71,11 @@ class ASCTracer(ADTDevTracer):
     REGMAPS = [ASCRegs, None]
     NAMES = ["asc", None]
 
-    EP_SYS = 0
+    EP_MGMT = 0
+    EP_CRASHLOG = 1
+    EP_SYSLOG = 2
+    EP_KDEBUG = 3
+    EP_IOREPORTING = 4
 
     def w_OUTBOX_CTRL(self, val):
         self.log(f"OUTBOX_CTRL = {val!s}")
@@ -133,11 +137,11 @@ class ASCTracer(ADTDevTracer):
 
     unknown =   msg_log(None, None, None, name="<unknown>")
 
-    INIT =      msg_log(EP_SYS, 6, DIR.TX)
-    HELLO =     msg_log(EP_SYS, 1, DIR.RX)
-    HELLO_ACK = msg_log(EP_SYS, 2, DIR.TX)
+    INIT =      msg_log(EP_MGMT, 6, DIR.TX)
+    HELLO =     msg_log(EP_MGMT, 1, DIR.RX)
+    HELLO_ACK = msg_log(EP_MGMT, 2, DIR.TX)
 
-    @msg(EP_SYS, 8, DIR.RX, MSG_EP_MAP)
+    @msg(EP_MGMT, 8, DIR.RX, MSG_EP_MAP)
     def EP_MAP(self, r0, r1):
         for i in range(32):
             if r0.BITMAP & (1 << i):
@@ -145,5 +149,5 @@ class ASCTracer(ADTDevTracer):
                 self.log(f"  Registering endpoint #{ep:#02x}")
                 self.state.endpoints.add(ep)
 
-    EP_ACK =    msg_log(EP_SYS, 8, DIR.TX, MSG_EP_ACK)
-    EP_START =  msg_log(EP_SYS, 5, DIR.TX, MSG_EP_START)
+    EP_ACK =    msg_log(EP_MGMT, 8, DIR.TX, MSG_EP_ACK)
+    EP_START =  msg_log(EP_MGMT, 5, DIR.TX, MSG_EP_START)
