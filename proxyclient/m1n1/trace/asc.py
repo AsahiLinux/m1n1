@@ -125,7 +125,8 @@ class ASCTracer(ADTDevTracer):
     def start(self):
         super().start()
         self.msgmap = {}
-        for name, i in self.__class__.__dict__.items():
+        for name in dir(self):
+            i = getattr(self, name)
             if not callable(i) or not getattr(i, "is_message", False):
                 continue
             self.msgmap[i.direction, i.channel, i.message] = getattr(self, name), name, i.regtype
