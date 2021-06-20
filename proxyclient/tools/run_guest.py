@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-import sys, pathlib
+import sys, pathlib, traceback
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 import argparse, pathlib
@@ -39,10 +39,18 @@ if args.symbols:
 hv.load_macho(args.payload.open("rb"), symfile=symfile)
 
 for i in args.script:
-    hv.run_script(i)
+    try:
+        hv.run_script(i)
+    except:
+        traceback.print_exc()
+        args.shell = True
 
 for i in args.command:
-    hv.run_code(i)
+    try:
+        hv.run_code(i)
+    except:
+        traceback.print_exc()
+        args.shell = True
 
 if args.shell:
     run_shell(hv.shell_locals, "Entering hypervisor shell. Type `start` to start the guest.")
