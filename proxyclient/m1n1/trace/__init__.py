@@ -44,6 +44,9 @@ class RegCache(Reloadable):
         else:
             raise Exception("Cannot write register in asynchronous context")
 
+class TracerState:
+    pass
+
 class Tracer(Reloadable):
     DEFAULT_MODE = TraceMode.ASYNC
 
@@ -53,10 +56,20 @@ class Tracer(Reloadable):
         self.ident = type(self).__name__
         self.regmaps = {}
         self.verbose = verbose
+        self.state = TracerState()
+        self.init_state()
         self._cache = RegCache(hv)
-        if self.ident in hv.tracer_caches:
-            self._cache.cache = dict(hv.tracer_caches[self.ident])
-        hv.tracer_caches[self.ident] = self._cache.cache
+        cache = hv.tracer_caches.get(self.ident, None)
+        if cache is not None:
+            self._cache.cache.update(cache.get("regcache", {}))
+            self.state.__dict__.update(cache.get("state", {}))
+        hv.tracer_caches[self.ident] = {
+            "regcache": self._cache.cache,
+            "state": self.state.__dict__
+        }
+
+    def init_state(self):
+        pass
 
     def evt_rw(self, evt, regmap=None, prefix=None):
         self._cache.update(evt.addr, evt.data)
