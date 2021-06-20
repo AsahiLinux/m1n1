@@ -184,12 +184,12 @@ class HV(Reloadable):
         self.map_hook_idx(ipa, size, index, read is not None, write is not None, kwargs)
 
     def map_hook_idx(self, ipa, size, index, read=False, write=False, kwargs={}):
-        if read is not None:
-            if write is not None:
+        if read:
+            if write:
                 t = self.SPTE_PROXY_HOOK_RW
             else:
                 t = self.SPTE_PROXY_HOOK_R
-        elif write is not None:
+        elif write:
             t = self.SPTE_PROXY_HOOK_W
         else:
             assert False
