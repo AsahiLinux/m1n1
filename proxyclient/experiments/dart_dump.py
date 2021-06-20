@@ -46,10 +46,7 @@ class DART(RegMap):
     REMAP           = irange(0x80, 4, 4), R_REMAP
 
     TCR             = irange(0x100, 16, 4), R_TCR
-    TTBR0           = irange(0x200, 16, 16), R_TTBR
-    TTBR1           = irange(0x204, 16, 16), R_TTBR
-    TTBR2           = irange(0x208, 16, 16), R_TTBR
-    TTBR3           = irange(0x20c, 16, 16), R_TTBR
+    TTBR            = (irange(0x200, 16, 16), range(0, 16, 4)), R_TTBR
 
     def __init__(self, base):
         super().__init__(u, base)
@@ -87,10 +84,9 @@ class DART(RegMap):
 
         self.dump_table(0, l1_addr)
 
-
     def dump_device(self, idx):
         tcr = self.TCR[idx].reg
-        ttbrs = self.TTBR0[idx], self.TTBR1[idx], self.TTBR2[idx], self.TTBR3[idx]
+        ttbrs = self.TTBR[idx, :]
         print(f"dev {idx:02x}: TCR={tcr!s} TTBRs = [{', '.join(map(str, ttbrs))}]")
 
         if tcr.TRANSLATE_ENABLE and tcr.BYPASS_DART:
