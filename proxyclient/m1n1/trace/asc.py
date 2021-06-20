@@ -37,12 +37,12 @@ class ASCRegs(RegMap):
     OUTBOX1     = 0x8838, R_OUTBOX1
 
 class MSG_EP_MAP(R_MESSAGE):
-    LAST    = 48
+    LAST    = 51
     BASE    = 34, 32
     BITMAP  = 31, 0
 
 class MSG_EP_ACK(R_MESSAGE):
-    LAST    = 48
+    LAST    = 51
     EP      = 34, 32
     FLAG    = 0
 
