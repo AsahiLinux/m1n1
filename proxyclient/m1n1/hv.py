@@ -694,7 +694,7 @@ class HV(Reloadable):
             self._sigint_pending = False
             self._stepping = False
 
-            signal.signal(signal.SIGINT, signal.SIG_DFL)
+            signal.signal(signal.SIGINT, self.default_sigint)
             ret = shell.run_shell(self.shell_locals, "Entering hypervisor shell", "Returning from exception")
             signal.signal(signal.SIGINT, self._handle_sigint)
 
@@ -721,7 +721,7 @@ class HV(Reloadable):
         self._sigint_pending = False
         self._stepping = False
 
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        signal.signal(signal.SIGINT, self.default_sigint)
         ret = shell.run_shell(self.shell_locals, "Entering panic shell", "Returning from exception")
         signal.signal(signal.SIGINT, self._handle_sigint)
 
@@ -1178,7 +1178,7 @@ class HV(Reloadable):
         print(f"Jumping to entrypoint at 0x{self.entry:x}")
 
         self.iface.dev.timeout = None
-        signal.signal(signal.SIGINT, self._handle_sigint)
+        self.default_sigint = signal.signal(signal.SIGINT, self._handle_sigint)
 
         # Does not return
         self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)
