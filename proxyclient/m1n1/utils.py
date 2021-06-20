@@ -70,11 +70,31 @@ class Reloadable:
     def _reloadme(self):
         self.__class__ = self._reloadcls()
 
-class Register(Reloadable):
+class RegisterMeta(type):
+    def __new__(cls, name, bases, dct):
+        m = super().__new__(cls, name, bases, dct)
+
+        f = {}
+
+        if bases and bases[0] is not Reloadable:
+            for cls in bases[0].mro():
+                if cls is Reloadable:
+                    break
+                f.update({k: None for k,v in cls.__dict__.items()
+                          if not k.startswith("_") and isinstance(v, (int, tuple))})
+
+        f.update({k: None for k, v in dct.items()
+                 if not k.startswith("_") and isinstance(v, (int, tuple))})
+
+        m._fields_list = list(f.keys())
+        m._fields = set(f.keys())
+
+        return m
+
+class Register(Reloadable, metaclass=RegisterMeta):
     def __init__(self, v=0, **kwargs):
         self._value = v
-        self._fields_list = [k for k in self.__class__.__dict__ if not k.startswith("_")]
-        self._fields = set(self._fields_list)
+
         for k,v in kwargs.items():
             setattr(self, k, v)
 
@@ -144,9 +164,11 @@ class Register(Reloadable):
 
         return val
 
+    def str_fields(self):
+        return f"{', '.join(f'{k}={self._field_val(k)}' for k in self._fields_list)}"
+
     def __str__(self):
-        d = '.'
-        return f"0x{self._value:x} ({', '.join(f'{k}={self._field_val(k)}' for k in self._fields_list)})"
+        return f"0x{self._value:x} ({self.str_fields()})"
 
     def __repr__(self):
         return f"{type(self).__name__}({', '.join(f'{k}={self._field_val(k, True)}' for k in self._fields_list)})"
@@ -479,7 +501,7 @@ class SetRangeMap(RangeMap):
         values = super().lookup(addr)
         return frozenset(values) if values else frozenset()
 
-class RegMeta(type):
+class RegMapMeta(type):
     def __new__(cls, name, bases, dct):
         m = super().__new__(cls, name, bases, dct)
         m._addrmap = {}
@@ -562,7 +584,7 @@ class RegArrayAccessor:
         else:
             return [self.rd(self.addr + i) for i in self.range[item]]
 
-class RegMap(Reloadable, metaclass=RegMeta):
+class RegMap(Reloadable, metaclass=RegMapMeta):
     def __init__(self, backend, base):
         self._base = base
         self._backend = backend
