@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 from enum import Enum
-import bisect, copy, heapq, importlib, sys
+import bisect, copy, heapq, importlib, sys, itertools
 from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul
 
 __all__ = []
@@ -501,6 +501,51 @@ class SetRangeMap(RangeMap):
         values = super().lookup(addr)
         return frozenset(values) if values else frozenset()
 
+class NdRange:
+    def __init__(self, rng, min_step=1):
+        if isinstance(rng, range):
+            self.ranges = [rng]
+        else:
+            self.ranges = list(rng)
+        least_step = self.ranges[0].step
+        for i, rng in enumerate(self.ranges):
+            if rng.step == 1:
+                self.ranges[i] = range(rng.start, rng.stop, min_step)
+                least_step = min_step
+            else:
+                assert rng.step >= min_step
+                least_step = min(least_step, rng.step)
+        self.start = sum(rng[0] for rng in self.ranges)
+        self.stop = sum(rng[-1] for rng in self.ranges) + least_step
+        self.rev = {}
+        for i in itertools.product(*map(enumerate, self.ranges)):
+            index = tuple(j[0] for j in i)
+            addr = sum(j[1] for j in i)
+            if len(self.ranges) == 1:
+                index = index[0]
+            self.rev[addr] = index
+
+    def index(self, item):
+        return self.rev[item]
+
+    def __len__(self):
+        return self.stop - self.start
+
+    def __contains__(self, item):
+        return item in self.rev
+
+    def __getitem__(self, item):
+        if not isinstance(item, tuple):
+            assert len(self.ranges) == 1
+            return self.ranges[0][item]
+
+        assert len(self.ranges) == len(item)
+        if all(isinstance(i, int) for i in item):
+            return sum((i[j] for i, j in zip(self.ranges, item)))
+        else:
+            iters = (i[j] for i, j in zip(self.ranges, item))
+            return map(sum, itertools.product(*(([i] if isinstance(i, int) else i) for i in iters)))
+
 class RegMapMeta(type):
     def __new__(cls, name, bases, dct):
         m = super().__new__(cls, name, bases, dct)
@@ -513,14 +558,11 @@ class RegMapMeta(type):
                 continue
             addr, rtype = v
 
-            if isinstance(addr, range):
-                if addr.step == 1:
-                    addr = range(addr.start, addr.stop, rtype.__WIDTH__ // 8)
-                else:
-                    assert addr.step >= rtype.__WIDTH__ // 8
-                m._rngmap.add(addr, (addr, k, rtype))
-            else:
+            if isinstance(addr, int):
                 m._addrmap[addr] = k, rtype
+            else:
+                addr = NdRange(addr, rtype.__WIDTH__ // 8)
+                m._rngmap.add(addr, (addr, k, rtype))
 
             m._namemap[k] = addr, rtype
 
@@ -535,7 +577,7 @@ class RegMapMeta(type):
 
         return m
 
-class RegAccessor:
+class RegAccessor(Reloadable):
     def __init__(self, cls, rd, wr, addr):
         self.cls = cls
         self.rd = rd
@@ -570,7 +612,7 @@ class RegAccessor:
     def __str__(self):
         return str(self.reg)
 
-class RegArrayAccessor:
+class RegArrayAccessor(Reloadable):
     def __init__(self, range, cls, rd, wr, addr):
         self.range = range
         self.cls = cls
@@ -579,10 +621,11 @@ class RegArrayAccessor:
         self.addr = addr
 
     def __getitem__(self, item):
-        if isinstance(item, int):
-            return RegAccessor(self.cls, self.rd, self.wr, self.addr + self.range[item])
+        off = self.range[item]
+        if isinstance(off, int):
+            return RegAccessor(self.cls, self.rd, self.wr, self.addr + off)
         else:
-            return [self.rd(self.addr + i) for i in self.range[item]]
+            return [RegAccessor(self.cls, self.rd, self.wr, self.addr + i) for i in off]
 
 class RegMap(Reloadable, metaclass=RegMapMeta):
     def __init__(self, backend, base):
@@ -594,7 +637,7 @@ class RegMap(Reloadable, metaclass=RegMapMeta):
             width = rcls.__WIDTH__
             rd = lambda addr: backend.read(addr, width)
             wr = lambda addr, data: backend.write(addr, data, width)
-            if isinstance(addr, range):
+            if isinstance(addr, NdRange):
                 self._accessor[name] = RegArrayAccessor(addr, rcls, rd, wr, base)
             else:
                 self._accessor[name] = RegAccessor(rcls, rd, wr, base + addr)
@@ -632,7 +675,12 @@ class RegMap(Reloadable, metaclass=RegMapMeta):
 
     def _array_reg(self, zone, map):
         addrs, name, rtype = map
-        reg = ((addr, f"{name}[{addrs.index(addr)}]", self._accessor[name][addrs.index(addr)], rtype)
+        def index(addr):
+            idx = addrs.index(addr)
+            if isinstance(idx, tuple):
+                idx = str(idx)[1:-1]
+            return idx
+        reg = ((addr, f"{name}[{index(addr)}]", self._accessor[name][addrs.index(addr)], rtype)
                      for addr in zone if addr in addrs)
         return reg
 
