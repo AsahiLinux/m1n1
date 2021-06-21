@@ -202,6 +202,14 @@ class HV(Reloadable):
                 self.interrupt_map[n] = device
             else:
                 self.interrupt_map.pop(n, None)
+
+        start, size = self.adt["/arm-io/aic"].get_reg(0)
+        zone = irange(start, 0x4000)
+        if len(self.interrupt_map):
+            self.add_tracer(zone, "AIC_IRQ", TraceMode.RESERVED)
+        else:
+            self.del_tracer(zone, "AIC_IRQ", TraceMode.RESERVED)
+
         assert self.p.hv_trace_irq(self.AIC_EVT_TYPE_HW, num, count, flags) > 0
 
     def add_tracer(self, zone, ident, mode=TraceMode.ASYNC, read=None, write=None, **kwargs):
@@ -873,20 +881,6 @@ class HV(Reloadable):
 
         # Map MMIO range as HW by default)
         self.add_tracer(range(0x2_00000000, 0x7_00000000), "HW", TraceMode.OFF)
-
-        # trace IRQs
-        aic_phandle = getattr(self.adt["/arm-io/aic"], "AAPL,phandle")
-        for path in (
-            "/arm-io/usb-drd1",
-            "/arm-io/gpio",
-        ):
-            node = self.adt[path]
-            if getattr(node, "interrupt-parent") != aic_phandle:
-                print(f"{path} has no direct AIC interrupts.")
-                continue
-            for irq in getattr(node, "interrupts"):
-                #self.trace_irq(node.name, irq, 1, self.IRQTRACE_IRQ)
-                pass
 
         hcr = HCR(self.u.mrs(HCR_EL2))
         if self.novm:
