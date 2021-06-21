@@ -310,7 +310,7 @@ class HV(Reloadable):
 
             self.shell_locals["skip"] = lambda: do_exit(1)
             self.shell_locals["cont"] = lambda: do_exit(0)
-            ret = shell.run_shell(self.shell_locals, "Entering debug shell", "Returning from exception")
+            ret = shell.run_shell(self.shell_locals, "Entering debug shell", "Returning to tracer")
             self.shell_locals["skip"] = self.skip
             self.shell_locals["cont"] = self.cont
 
@@ -322,6 +322,9 @@ class HV(Reloadable):
 
             if update:
                 update()
+
+    def run_shell(self, entry_msg="Entering shell", exit_msg="Continuing"):
+        return shell.run_shell(self.shell_locals, entry_msg, exit_msg)
 
     def handle_mmiotrace(self, data):
         evt = EvtMMIOTrace.parse(data)
@@ -722,7 +725,7 @@ class HV(Reloadable):
         self._stepping = False
 
         signal.signal(signal.SIGINT, self.default_sigint)
-        ret = shell.run_shell(self.shell_locals, "Entering panic shell", "Returning from exception")
+        ret = shell.run_shell(self.shell_locals, "Entering panic shell", "Exiting")
         signal.signal(signal.SIGINT, self._handle_sigint)
 
         self.p.exit(0)
