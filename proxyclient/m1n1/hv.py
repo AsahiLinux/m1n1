@@ -382,37 +382,28 @@ class HV(Reloadable):
         first = 0
 
         val = data.data
-        if data.flags.WRITE:
-            if data.flags.WIDTH < 3:
-                wval = val[0]
-            else:
-                wval = val
 
-        if mode == TraceMode.HOOK:
-            if data.flags.WRITE:
-                self.shellwrap(lambda: write(data.addr, wval, 8 << data.flags.WIDTH, **kwargs),
-                               f"Tracer {ident}:write (HOOK)", update=do_update)
+        if mode not in (TraceMode.HOOK, TraceMode.SYNC):
+            raise Exception(f"VM hook with unexpected mapping at {data.addr:#x}: {maps[0][0].name}")
 
-            else:
+        if not data.flags.WRITE:
+            if mode == TraceMode.HOOK:
                 val = self.shellwrap(lambda: read(data.addr, 8 << data.flags.WIDTH, **kwargs),
                                      f"Tracer {ident}:read (HOOK)", update=do_update, needs_ret=True)
 
                 if not isinstance(val, list) and not isinstance(val, tuple):
                     val = [val]
-            first += 1
-        elif mode == TraceMode.SYNC:
-            if data.flags.WRITE:
-                self.u.write(data.addr, wval, 8 << data.flags.WIDTH)
-            else:
+                first += 1
+            elif mode == TraceMode.SYNC:
                 val = self.u.read(data.addr, 8 << data.flags.WIDTH)
                 if not isinstance(val, list) and not isinstance(val, tuple):
                     val = [val]
-        else:
-            raise Exception(f"VM hook with unexpected mapping at {data.addr:#x}: {maps[0][0].name}")
 
-        if not data.flags.WRITE:
             for i in range(1 << max(0, data.flags.WIDTH - 3)):
                 self.p.write64(ctx.data + 16 + 8 * i, val[i])
+
+        elif mode == TraceMode.HOOK:
+            first += 1
 
         flags = data.flags.copy()
         width = data.flags.WIDTH
@@ -439,6 +430,20 @@ class HV(Reloadable):
                     if read:
                         self.shellwrap(lambda: read(evt, **kwargs),
                                        f"Tracer {ident}:read ({mode.name})", update=do_update)
+
+        if data.flags.WRITE:
+            mode, ident, read, write, kwargs = maps[0]
+
+            if data.flags.WIDTH < 3:
+                wval = val[0]
+            else:
+                wval = val
+
+            if mode == TraceMode.HOOK:
+                self.shellwrap(lambda: write(data.addr, wval, 8 << data.flags.WIDTH, **kwargs),
+                            f"Tracer {ident}:write (HOOK)", update=do_update)
+            elif mode == TraceMode.SYNC:
+                self.u.write(data.addr, wval, 8 << data.flags.WIDTH)
 
         return True
 
