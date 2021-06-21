@@ -12,6 +12,9 @@ class RegCacheAlwaysCached(Reloadable):
     def read(self, addr, width):
         return self.parent.read_cached(addr, width)
 
+    def write(self, addr, data, width):
+        raise Exception("Trying to write a register to the cache")
+
 class RegCache(Reloadable):
     def __init__(self, hv):
         self.hv = hv

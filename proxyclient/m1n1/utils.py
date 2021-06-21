@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 from enum import Enum
-import bisect, copy, heapq, importlib, sys, itertools, time, os
+import bisect, copy, heapq, importlib, sys, itertools, time, os, functools
 from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul
 
 __all__ = []
@@ -651,8 +651,8 @@ class RegMap(Reloadable, metaclass=RegMapMeta):
 
         for name, (addr, rcls) in self._namemap.items():
             width = rcls.__WIDTH__
-            rd = lambda addr: backend.read(addr, width)
-            wr = lambda addr, data: backend.write(addr, data, width)
+            rd = functools.partial(backend.read, width=width)
+            wr = functools.partial(backend.write, width=width)
             if isinstance(addr, NdRange):
                 self._accessor[name] = RegArrayAccessor(addr, rcls, rd, wr, base)
             else:
