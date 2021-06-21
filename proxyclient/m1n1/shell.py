@@ -36,7 +36,10 @@ class HistoryConsole(code.InteractiveConsole):
     def runcode(self, code):
         super().runcode(code)
         if "mon" in self.locals:
-            self.locals["mon"].poll()
+            try:
+                self.locals["mon"].poll()
+            except Exception as e:
+                print(f"mon.poll() failed: {e!r}")
         if "u" in self.locals:
             self.locals["u"].push_simd()
 
