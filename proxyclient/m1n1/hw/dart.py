@@ -1,0 +1,219 @@
+# SPDX-License-Identifier: MIT
+
+import struct
+
+from ..utils import *
+
+__all__ = ["DARTRegs", "DART"]
+
+class R_ERROR(Register32):
+    FLAG = 31
+    STREAM = 27, 24
+    CODE = 23, 0
+    READ_FAULT = 4
+    WRITE_FAULT = 3
+    NO_PTE = 2
+    NO_PMD = 1
+    NO_TTBR = 0
+
+class R_STREAM_COMMAND(Register32):
+    INVALIDATE = 20
+    BUSY = 2
+
+class R_TCR(Register32):
+    BYPASS_DAPF = 12
+    BYPASS_DART = 8
+    TRANSLATE_ENABLE = 7
+
+class R_TTBR(Register32):
+    VALID = 31
+    ADDR = 30, 0
+
+class R_REMAP(Register32):
+    MAP3 = 31, 24
+    MAP2 = 23, 16
+    MAP1 = 15, 8
+    MAP0 = 7, 0
+
+class PTE(Register64):
+    OFFSET = 36, 14
+    VALID = 0
+
+class DARTRegs(RegMap):
+    STREAM_COMMAND  = 0x20, R_STREAM_COMMAND
+    STREAM_SELECT   = 0x34, Register32
+    ERROR           = 0x40, R_ERROR
+    ERROR_ADDR_LO   = 0x50, Register32
+    ERROR_ADDR_HI   = 0x54, Register32
+    REMAP           = irange(0x80, 4, 4), R_REMAP
+
+    TCR             = irange(0x100, 16, 4), R_TCR
+    TTBR            = (irange(0x200, 16, 16), range(0, 16, 4)), R_TTBR
+
+class DART(Reloadable):
+    PAGE_BITS = 14
+    PAGE_SIZE = 1 << PAGE_BITS
+
+    L0_SIZE = 4 # TTBR count
+    L0_OFF = 36
+    L1_OFF = 25
+    L2_OFF = 14
+
+    IDX_BITS = 11
+    Lx_SIZE = (1 << IDX_BITS)
+    IDX_MASK = Lx_SIZE - 1
+
+    def __init__(self, iface, regs):
+        self.iface = iface
+        self.regs = regs
+        self.pt_cache = {}
+
+    def ioread(self, stream, base, size):
+        if size == 0:
+            return b""
+
+        ranges = self.iotranslate(stream, base, size)
+
+        iova = base
+        data = []
+        for addr, size in ranges:
+            if addr is None:
+                raise Exception(f"Unmapped page at iova {iova:#x}")
+            data.append(self.iface.readmem(addr, size))
+            iova += size
+
+        return b"".join(data)
+
+    def iotranslate(self, stream, start, size):
+        if size == 0:
+            return []
+
+        tcr = self.regs.TCR[stream].reg
+
+        if tcr.BYPASS_DART and not tcr.TRANSLATE_ENABLE:
+            return [(start, size)]
+
+        if tcr.BYPASS_DART or not tcr.TRANSLATE_ENABLE:
+            raise Exception(f"Unknown DART mode {tcr}")
+
+        start_page = align_down(start, self.PAGE_SIZE)
+        start_off = start - start_page
+        end = start + size
+        end_page = align_up(end, self.PAGE_SIZE)
+        end_size = end - (end_page - self.PAGE_SIZE)
+
+        pages = []
+
+        for page in range(start_page, end_page, self.PAGE_SIZE):
+            l0 = page >> self.L0_OFF
+            assert l0 < self.L0_SIZE
+            ttbr = self.regs.TTBR[stream, l0].reg
+            if not ttbr.VALID:
+                pages.append(None)
+                continue
+
+            l1 = self.get_pt(ttbr.ADDR << 12)
+            l1pte = PTE(l1[(page >> self.L1_OFF) & self.IDX_MASK])
+            if not l1pte.VALID:
+                pages.append(None)
+                continue
+
+            l2 = self.get_pt(l1pte.OFFSET << self.PAGE_BITS)
+            l2pte = PTE(l2[(page >> self.L2_OFF) & self.IDX_MASK])
+            if not l2pte.VALID:
+                pages.append(None)
+                continue
+
+            pages.append(l2pte.OFFSET << self.PAGE_BITS)
+
+        ranges = []
+
+        for page in pages:
+            if not ranges:
+                ranges.append((page, self.PAGE_SIZE))
+                continue
+            laddr, lsize = ranges[-1]
+            if ((page is None and laddr is None) or
+                (page is not None and laddr == (page - lsize))):
+                ranges[-1] = laddr, lsize + self.PAGE_SIZE
+            else:
+                ranges.append((page, self.PAGE_SIZE))
+
+        ranges[-1] = (ranges[-1][0], ranges[-1][1] - self.PAGE_SIZE + end_size)
+
+        if start_off:
+            ranges[0] = (ranges[0][0] + start_off if ranges[0][0] else None,
+                         ranges[0][1] - start_off)
+
+        return ranges
+
+    def get_pt(self, addr):
+        if addr not in self.pt_cache:
+            self.pt_cache[addr] = struct.unpack(f"<{self.Lx_SIZE}Q",
+                                                self.iface.readmem(addr, self.PAGE_SIZE))
+
+        return self.pt_cache[addr]
+
+    def invalidate_cache(self):
+        self.pt_cache = {}
+
+    def dump_table2(self, base, l1_addr):
+        tbl = self.get_pt(l1_addr)
+
+        unmapped = False
+        for i, pte in enumerate(tbl):
+            if not (pte & 0b01):
+                if not unmapped:
+                    print("  ...")
+                    unmapped = True
+                continue
+
+            unmapped = False
+
+            print("    page (%d): %08x ... %08x -> %016x [%s]" % (i, base + i*0x4000, base + (i+1)*0x4000, pte&~0b11, bin(pte&0b11)))
+
+    def dump_table(self, base, l1_addr):
+        tbl = self.get_pt(l1_addr)
+
+        unmapped = False
+        for i, pte in enumerate(tbl):
+            if not (pte & 0b01):
+                if not unmapped:
+                    print("  ...")
+                    unmapped = True
+                continue
+
+            unmapped = False
+
+            print("  table (%d): %08x ... %08x -> %016x [%s]" % (i, base + i*0x2000000, base + (i+1)*0x2000000, pte&~0b11, bin(pte&0b11)))
+            self.dump_table2(base + i*0x2000000, pte & ~0b11)
+
+    def dump_ttbr(self, idx, ttbr):
+        if not ttbr.VALID:
+            return
+
+        l1_addr = (ttbr.ADDR) << 12
+        print("  TTBR%d: %09x" % (idx, l1_addr))
+
+        self.dump_table(0, l1_addr)
+
+    def dump_device(self, idx):
+        tcr = self.regs.TCR[idx].reg
+        ttbrs = self.regs.TTBR[idx, :]
+        print(f"dev {idx:02x}: TCR={tcr!s} TTBRs = [{', '.join(map(str, ttbrs))}]")
+
+        if tcr.TRANSLATE_ENABLE and tcr.BYPASS_DART:
+            print("  mode: INVALID")
+        elif tcr.TRANSLATE_ENABLE:
+            print("  mode: TRANSLATE")
+
+            for idx, ttbr in enumerate(ttbrs):
+                self.dump_ttbr(idx, ttbr.reg)
+        elif tcr.BYPASS_DART:
+            print("  mode: BYPASS")
+        else:
+            print("  mode: UNKNOWN")
+
+    def dump_all(self):
+        for i in range(16):
+            self.dump_device(i)
