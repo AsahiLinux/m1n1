@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 from enum import Enum
-import bisect, copy, heapq, importlib, sys, itertools
+import bisect, copy, heapq, importlib, sys, itertools, time, os
 from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul
 
 __all__ = []
@@ -53,24 +53,40 @@ def chexdump32(s, st=0, abbreviate=True):
             last = val
             skip = False
 
-class Reloadable:
+class ReloadableMeta(type):
+    def __new__(cls, name, bases, dct):
+        m = super().__new__(cls, name, bases, dct)
+        m._load_time = time.time()
+        return m
+
+class Reloadable(metaclass=ReloadableMeta):
     @classmethod
     def _reloadcls(cls):
         mods = []
         for c in cls.mro():
-            mods.append(sys.modules[c.__module__])
+            mod = sys.modules[c.__module__]
+            cur_cls = getattr(mod, c.__name__)
+            mods.append((cur_cls, mod))
             if c.__name__ == "Reloadable":
                 break
 
-        for mod in mods[::-1]:
-            mod = importlib.reload(mod)
+        reloaded = set()
+        newest = 0
+        for pcls, mod in mods[::-1]:
+            source = getattr(mod, "__file__", None)
+            if not source:
+                continue
+            newest = max(newest, os.stat(source).st_mtime, pcls._load_time)
+            if (reloaded or pcls._load_time < newest) and mod.__name__ not in reloaded:
+                mod = importlib.reload(mod)
+                reloaded.add(mod.__name__)
 
-        return getattr(mod, cls.__name__)
+        return getattr(mods[0][1], cls.__name__)
 
     def _reloadme(self):
         self.__class__ = self._reloadcls()
 
-class RegisterMeta(type):
+class RegisterMeta(ReloadableMeta):
     def __new__(cls, name, bases, dct):
         m = super().__new__(cls, name, bases, dct)
 
@@ -546,7 +562,7 @@ class NdRange:
             iters = (i[j] for i, j in zip(self.ranges, item))
             return map(sum, itertools.product(*(([i] if isinstance(i, int) else i) for i in iters)))
 
-class RegMapMeta(type):
+class RegMapMeta(ReloadableMeta):
     def __new__(cls, name, bases, dct):
         m = super().__new__(cls, name, bases, dct)
         m._addrmap = {}
