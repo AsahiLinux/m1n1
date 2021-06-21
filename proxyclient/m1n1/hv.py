@@ -1145,7 +1145,9 @@ class HV(Reloadable):
         self.iface.dev.write(b"!")
 
     def run_script(self, path):
-        self.shell_locals = runpy.run_path(path, init_globals=self.shell_locals, run_name="<hv_script>")
+        new_locals = runpy.run_path(path, init_globals=self.shell_locals, run_name="<hv_script>")
+        self.shell_locals.clear()
+        self.shell_locals.update(new_locals)
 
     def run_code(self, code):
         exec(code, self.shell_locals)
