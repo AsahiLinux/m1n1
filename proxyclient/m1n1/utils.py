@@ -78,6 +78,7 @@ class Reloadable(metaclass=ReloadableMeta):
                 continue
             newest = max(newest, os.stat(source).st_mtime, pcls._load_time)
             if (reloaded or pcls._load_time < newest) and mod.__name__ not in reloaded:
+                print(f"Reload: {mod.__name__}")
                 mod = importlib.reload(mod)
                 reloaded.add(mod.__name__)
 
