@@ -614,7 +614,10 @@ class RegAccessor(Reloadable):
 
     @property
     def reg(self):
-        return self.cls(self.val)
+        val = self.val
+        if val is None:
+            return None
+        return self.cls(val)
 
     @reg.setter
     def reg(self, value):
