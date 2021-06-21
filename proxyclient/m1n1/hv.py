@@ -1081,7 +1081,7 @@ class HV(Reloadable):
 
         self.phys_base = phys_base = guest_base = self.u.heap_top
         guest_base += 16 << 20 # ensure guest starts within a 16MB aligned region of mapped RAM
-        adt_base = guest_base
+        self.adt_base = guest_base
         guest_base += align(self.u.ba.devtree_size)
         tc_base = guest_base
         guest_base += align(tc_size)
@@ -1112,19 +1112,15 @@ class HV(Reloadable):
         print(f"Adjusting addresses in ADT...")
         self.adt["chosen"]["memory-map"].SEPFW = (guest_base + sepfw_off, sepfw_length)
         self.adt["chosen"]["memory-map"].TrustCache = (tc_base, tc_size)
-        self.adt["chosen"]["memory-map"].DeviceTree = (adt_base, align(self.u.ba.devtree_size))
+        self.adt["chosen"]["memory-map"].DeviceTree = (self.adt_base, align(self.u.ba.devtree_size))
         self.adt["chosen"]["memory-map"].BootArgs = (guest_base + self.bootargs_off, bootargs_size)
-
-        adt_blob = self.adt.build()
-        print(f"Uploading ADT (0x{len(adt_blob):x} bytes)...")
-        self.iface.writemem(adt_base, adt_blob)
 
         print(f"Setting up bootargs at 0x{guest_base + self.bootargs_off:x}...")
 
         self.tba.mem_size = mem_size
         self.tba.phys_base = phys_base
         self.tba.virt_base = 0xfffffe0010000000 + (phys_base & (32 * 1024 * 1024 - 1))
-        self.tba.devtree = adt_base - phys_base + self.tba.virt_base
+        self.tba.devtree = self.adt_base - phys_base + self.tba.virt_base
         self.tba.top_of_kernel_data = guest_base + image_size
 
         self.sym_offset = macho.vmin - guest_base + self.tba.phys_base - self.tba.virt_base
@@ -1172,6 +1168,10 @@ class HV(Reloadable):
 
         print("Updating page tables...")
         self.pt_update()
+
+        adt_blob = self.adt.build()
+        print(f"Uploading ADT (0x{len(adt_blob):x} bytes)...")
+        self.iface.writemem(self.adt_base, adt_blob)
 
         print("Improving logo...")
         self.p.fb_improve_logo()
