@@ -33,9 +33,9 @@ def chexdump(s,st=0):
     for i in range(0,len(s),16):
         print("%08x  %s  %s  |%s|" % (
             i + st,
-            hexdump(s[i:i+8], ' ').rjust(23),
-            hexdump(s[i+8:i+16], ' ').rjust(23),
-            _ascii(s[i:i+16]).rjust(16)))
+            hexdump(s[i:i+8], ' ').ljust(23),
+            hexdump(s[i+8:i+16], ' ').ljust(23),
+            _ascii(s[i:i+16]).ljust(16)))
 
 def chexdump32(s, st=0, abbreviate=True):
     last = None
