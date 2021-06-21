@@ -158,7 +158,7 @@ class ADTDevTracer(Tracer):
     @classmethod
     def _reloadcls(cls):
         cls.REGMAPS = [i._reloadcls() if i else None for i in cls.REGMAPS]
-        return super(ADTDevTracer, cls)._reloadcls()
+        return super()._reloadcls()
 
     def start(self):
         for i in range(len(self.dev.reg)):
