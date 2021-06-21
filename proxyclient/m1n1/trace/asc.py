@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: MIT
 
-from enum import Enum
+import struct
+from enum import IntEnum
 from ..hv import TraceMode
 from ..utils import *
 from . import ADTDevTracer
 
-class DIR(Enum):
+class DIR(IntEnum):
     RX = 0
     TX = 1
 
@@ -36,18 +37,36 @@ class ASCRegs(RegMap):
     OUTBOX0     = 0x8830, R_MESSAGE
     OUTBOX1     = 0x8838, R_OUTBOX1
 
+# Management messages
+
 class MSG_EP_MAP(R_MESSAGE):
     LAST    = 51
     BASE    = 34, 32
     BITMAP  = 31, 0
 
-class MSG_EP_ACK(R_MESSAGE):
+class MSG_EP_MAP_ACK(R_MESSAGE):
     LAST    = 51
-    EP      = 34, 32
-    FLAG    = 0
+    BASE    = 34, 32
+    MORE    = 0
 
-class MSG_EP_START(R_MESSAGE):
+class MSG_START_EP(R_MESSAGE):
     EP      = 39, 32
+
+class MSG_START_SYSLOG(R_MESSAGE):
+    UNK1 = 15, 0
+
+# Syslog messages
+
+class MSG_SYSLOG_INIT(R_MESSAGE):
+    BUFSIZE = 7, 0
+
+class MSG_SYSLOG_GET_BUF(R_MESSAGE):
+    UNK1 = 51, 44
+    UNK2 = 39, 32
+    IOVA = 31, 0
+
+class MSG_SYSLOG_LOG(R_MESSAGE):
+    INDEX = 7, 0
 
 def msg(channel, message, direction=None, regtype=None, name=None):
     def f(x):
@@ -64,6 +83,17 @@ def msg_log(*args, **kwargs):
     def x(self, r0, r1):
         return False
     return msg(*args, **kwargs)(x)
+
+def msg_ign(*args, **kwargs):
+    def x(self, r0, r1):
+        return True
+    return msg(*args, **kwargs)(x)
+
+class EP(object):
+    def __init__(self, tracer, epid):
+        self.tracer = tracer
+        self.epid = epid
+        self.started = False
 
 class ASCTracer(ADTDevTracer):
     DEFAULT_MODE = TraceMode.SYNC
@@ -95,8 +125,7 @@ class ASCTracer(ADTDevTracer):
         self.handle_msg(DIR.RX, outbox0, outbox1)
 
     def init_state(self):
-        self.state.endpoints = set()
-        self.state.mbox = {}
+        self.state.ep = {}
 
     def handle_msg(self, direction, r0, r1):
         msgids = [
@@ -126,8 +155,9 @@ class ASCTracer(ADTDevTracer):
         if not handler(r0, r1):
             self.log(f" {d}{r1.EP:02x}:{r0.TYPE:02x} {name} {r0.value:016x} ({r0.str_fields()})")
 
-    def start(self):
+    def start(self, dart=None):
         super().start()
+        self.dart = dart
         self.msgmap = {}
         for name in dir(self):
             i = getattr(self, name)
@@ -135,11 +165,18 @@ class ASCTracer(ADTDevTracer):
                 continue
             self.msgmap[i.direction, i.channel, i.message] = getattr(self, name), name, i.regtype
 
-    unknown =   msg_log(None, None, None, name="<unknown>")
+    unknown = msg_log(None, None, None, name="<unknown>")
 
-    INIT =      msg_log(EP_MGMT, 6, DIR.TX)
+    # Management operations
+
     HELLO =     msg_log(EP_MGMT, 1, DIR.RX)
     HELLO_ACK = msg_log(EP_MGMT, 2, DIR.TX)
+
+    @msg(EP_MGMT, 5, DIR.TX, MSG_START_EP)
+    def START_EP(self, r0, r1):
+        self.state.ep[r0.EP].started = True
+
+    INIT = msg_log(EP_MGMT, 6, DIR.TX)
 
     @msg(EP_MGMT, 8, DIR.RX, MSG_EP_MAP)
     def EP_MAP(self, r0, r1):
@@ -147,7 +184,31 @@ class ASCTracer(ADTDevTracer):
             if r0.BITMAP & (1 << i):
                 ep = 32 * r0.BASE + i
                 self.log(f"  Registering endpoint #{ep:#02x}")
-                self.state.endpoints.add(ep)
+                if ep not in self.state.ep:
+                    self.state.ep[ep] = EP(self, ep)
 
-    EP_ACK =    msg_log(EP_MGMT, 8, DIR.TX, MSG_EP_ACK)
-    EP_START =  msg_log(EP_MGMT, 5, DIR.TX, MSG_EP_START)
+    EP_MAP_ACK = msg_log(EP_MGMT, 8, DIR.TX, MSG_EP_MAP_ACK)
+
+    START_SYSLOG = msg_log(EP_MGMT, 0x0b, DIR.TX, MSG_START_SYSLOG)
+    START_SYSLOG_ACK = msg_log(EP_MGMT, 0x0b, DIR.RX, MSG_START_SYSLOG)
+
+    SYSLOG_INIT = msg_log(EP_SYSLOG, 8, DIR.RX)
+    SYSLOG_GET_BUF_REQ = msg_log(EP_SYSLOG, 1, DIR.RX, MSG_SYSLOG_GET_BUF)
+
+    @msg(EP_SYSLOG, 1, DIR.TX, MSG_SYSLOG_GET_BUF)
+    def SYSLOG_GET_BUF_ACK(self, r0, r1):
+        self.state.ep[r1.EP].syslog_buf = r0.IOVA
+
+    @msg(EP_SYSLOG, 5, DIR.RX, MSG_SYSLOG_LOG)
+    def SYSLOG_LOG(self, r0, r1):
+        if self.dart is None:
+            return False
+        buf = self.state.ep[r1.EP].syslog_buf
+        log = self.dart.ioread(0, buf + r0.INDEX * 0xa0, 0xa0)
+        hdr, unk, context, msg = struct.unpack("<II24s128s", log)
+        context = context.rstrip(b"\x00").decode("ascii")
+        msg = msg.rstrip(b"\x00").decode("ascii").rstrip("\n")
+        self.log(f"syslog: [{context}]{msg}")
+        return True
+
+    SYSLOG_LOG_ACK = msg_ign(EP_SYSLOG, 5, DIR.TX, MSG_SYSLOG_LOG)
