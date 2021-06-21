@@ -50,10 +50,10 @@ class TracerState:
 class Tracer(Reloadable):
     DEFAULT_MODE = TraceMode.ASYNC
 
-    def __init__(self, hv, verbose=False):
+    def __init__(self, hv, verbose=False, ident=None):
         super().__init__()
         self.hv = hv
-        self.ident = type(self).__name__
+        self.ident = ident or type(self).__name__
         self.regmaps = {}
         self.verbose = verbose
         self.state = TracerState()
@@ -149,13 +149,17 @@ class ADTDevTracer(Tracer):
     PREFIXES = []
 
     def __init__(self, hv, devpath, verbose=False):
-        super().__init__(hv, verbose=verbose)
+        super().__init__(hv, verbose=verbose, ident=type(self).__name__ + "@" + devpath)
         self.dev = hv.adt[devpath]
-        self.ident = self.ident + "@" + devpath
+
+    @classmethod
+    def _reloadcls(cls):
+        cls.REGMAPS = [i._reloadcls() if i else None for i in cls.REGMAPS]
+        return super(ADTDevTracer, cls)._reloadcls()
 
     def start(self):
         for i in range(len(self.dev.reg)):
-            if i > len(self.REGMAPS) or (regmap := self.REGMAPS[i]) is None:
+            if i >= len(self.REGMAPS) or (regmap := self.REGMAPS[i]) is None:
                 continue
             prefix = name = None
             if i < len(self.NAMES):
