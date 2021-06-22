@@ -185,6 +185,8 @@ class ProxyUtils(Reloadable):
         self.iface.writemem(adt_base, self.adt_data)
 
     def disassemble_at(self, start, size, pc=None):
+        '''Start, len, [pc] - disassemble len bytes of memory from start
+         optional pc address will mark that line with a '*' '''
         code = struct.unpack(f"<{size // 4}I", self.iface.readmem(start, size))
 
         c = ARMAsm(".inst " + ",".join(str(i) for i in code), start)
