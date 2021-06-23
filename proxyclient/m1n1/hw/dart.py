@@ -112,14 +112,20 @@ class DART(Reloadable):
                 pages.append(None)
                 continue
 
-            l1 = self.get_pt(ttbr.ADDR << 12)
+            cached, l1 = self.get_pt(ttbr.ADDR << 12)
             l1pte = PTE(l1[(page >> self.L1_OFF) & self.IDX_MASK])
+            if not l1pte.VALID and cached:
+                cached, l1 = self.get_pt(ttbr.ADDR << 12, uncached=True)
+                l1pte = PTE(l1[(page >> self.L1_OFF) & self.IDX_MASK])
             if not l1pte.VALID:
                 pages.append(None)
                 continue
 
-            l2 = self.get_pt(l1pte.OFFSET << self.PAGE_BITS)
+            cached, l2 = self.get_pt(l1pte.OFFSET << self.PAGE_BITS)
             l2pte = PTE(l2[(page >> self.L2_OFF) & self.IDX_MASK])
+            if not l2pte.VALID and cached:
+                cached, l2 = self.get_pt(l1pte.OFFSET << self.PAGE_BITS, uncached=True)
+                l2pte = PTE(l2[(page >> self.L2_OFF) & self.IDX_MASK])
             if not l2pte.VALID:
                 pages.append(None)
                 continue
@@ -147,18 +153,20 @@ class DART(Reloadable):
 
         return ranges
 
-    def get_pt(self, addr):
-        if addr not in self.pt_cache:
+    def get_pt(self, addr, uncached=False):
+        cached = True
+        if addr not in self.pt_cache or uncached:
+            cached = False
             self.pt_cache[addr] = struct.unpack(f"<{self.Lx_SIZE}Q",
                                                 self.iface.readmem(addr, self.PAGE_SIZE))
 
-        return self.pt_cache[addr]
+        return cached, self.pt_cache[addr]
 
     def invalidate_cache(self):
         self.pt_cache = {}
 
     def dump_table2(self, base, l1_addr):
-        tbl = self.get_pt(l1_addr)
+        cached, tbl = self.get_pt(l1_addr)
 
         unmapped = False
         for i, pte in enumerate(tbl):
@@ -173,7 +181,7 @@ class DART(Reloadable):
             print("    page (%d): %08x ... %08x -> %016x [%s]" % (i, base + i*0x4000, base + (i+1)*0x4000, pte&~0b11, bin(pte&0b11)))
 
     def dump_table(self, base, l1_addr):
-        tbl = self.get_pt(l1_addr)
+        cached, tbl = self.get_pt(l1_addr)
 
         unmapped = False
         for i, pte in enumerate(tbl):
