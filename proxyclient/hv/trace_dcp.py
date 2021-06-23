@@ -2,12 +2,14 @@
 
 import struct
 
-trace_device("/arm-io/dcp", True, ranges=[1])
+from enum import IntEnum
 
 from m1n1.proxyutils import RegMonitor
 from m1n1.utils import *
 from m1n1.trace.dart import DARTTracer
 from m1n1.trace.asc import ASCTracer, EP, EPState, msg, msg_log, DIR
+
+trace_device("/arm-io/dcp", True, ranges=[1])
 
 DARTTracer = DARTTracer._reloadcls()
 ASCTracer = ASCTracer._reloadcls()
@@ -133,16 +135,16 @@ class DCPEp_SetShmem(DCPMessage):
     IOVA        = 47, 16
 
 class TxOp(IntEnum):
-    ACK_REPLY = 0
-    CMD =       2
-    ACK_ASYNC = 3
-    CMD_ALT   = 6
+    ACK_REPLY   = 0
+    CMD         = 2
+    ACK_ASYNC   = 3
+    CMD_ALT     = 6
 
 class RxOp(IntEnum):
-    REPLY =     0
-    ACK_CMD =   2
-    ASYNC =     3
-    ACK_ALT =   6
+    REPLY       = 0
+    ACK_CMD     = 2
+    ASYNC       = 3
+    ACK_ALT     = 6
 
 class DCPEp_Tx(DCPMessage):
     LEN         = 63, 32
@@ -170,8 +172,16 @@ class DCPEp(EP):
         self.state.show_globals = True
         self.state.show_acks = True
         self.state.max_len = 1024 * 1024
-        self.state.verbosity = 2
+        self.state.verbosity = 3
         self.state.op_verb = {}
+        self.state.req_info = None
+        self.state.cmd_info = None
+        self.state.alt_info = None
+        self.state.async_info = None
+        self.state.req_len = None
+        self.state.cmd_len = None
+        self.state.alt_len = None
+        self.state.async_len = None
 
     def start(self):
         self.add_mon()
@@ -192,8 +202,29 @@ class DCPEp(EP):
 
     @msg(2, DIR.TX, DCPEp_Tx)
     def Tx(self, msg):
+        #self.log(f">{msg.OP.name} ({msg})")
+        if msg.OP in (TxOp.ACK_REPLY, TxOp.CMD, TxOp.ACK_ASYNC):
+            if msg.OP == TxOp.ACK_ASYNC:
+                addr = self.state.shmem_iova + 0x40000
+                size = self.state.async_len
+                info = self.state.async_info
+            else:
+                addr = self.state.shmem_iova + 0x60000
+                size = self.state.req_len
+                info = self.state.req_info
+            if size is not None:
+                tag, din, dout = info
+                verb = self.get_verbosity(tag)
+                if verb >= 3 and len(dout) > 0:
+                    dout2 = self.dart.ioread(0, addr + 12 + len(din), len(dout))
+                    print(f"< Output buffer ({len(dout2):#x} bytes):")
+                    chexdump(dout2[:self.state.max_len])
+                if msg.OP == TxOp.ACK_ASYNC:
+                    self.state.async_len = None
+                else:
+                    self.state.req_len = None
         if msg.LEN > 0:
-            assert msg.OP in (TxOp.CMD, TxOp.CMD_ALT)
+            assert msg.OP in (TxOp.CMD, TxOp.CMD_ALT, TxOp.ACK_REPLY)
             addr = self.state.shmem_iova
             if msg.OP == TxOp.CMD_ALT:
                 addr += 0x8000
@@ -219,20 +250,27 @@ class DCPEp(EP):
 
     @msg(2, DIR.RX, DCPEp_Rx)
     def Rx(self, msg):
+        #self.log(f"<{msg.OP.name} ({msg})")
         if msg.OP in (RxOp.ACK_CMD, RxOp.ACK_ALT, RxOp.REPLY):
-            if msg.OP in(RxOp.ACK_CMD, RxOp.REPLY):
-                addr = self.state.shmem_iova
-                size = self.state.cmd_len
-                tag, din, dout = self.state.cmd_info
-            elif msg.OP == RxOp.ACK_ALT:
+            if msg.OP == RxOp.ACK_ALT:
                 addr = self.state.shmem_iova + 0x8000
                 size = self.state.alt_len
-                tag, din, dout = self.state.alt_info
-            verb = self.get_verbosity(tag)
-            if verb >= 3 and len(dout) > 0:
-                dout2 = self.dart.ioread(0, addr + 12 + len(din), len(dout))
-                print(f"< Output buffer ({len(dout2):#x} bytes):")
-                chexdump(dout2[:self.state.max_len])
+                info = self.state.alt_info
+            else:
+                addr = self.state.shmem_iova
+                size = self.state.cmd_len
+                info = self.state.cmd_info
+            if size is not None:
+                tag, din, dout = info
+                verb = self.get_verbosity(tag)
+                if verb >= 3 and len(dout) > 0:
+                    dout2 = self.dart.ioread(0, addr + 12 + len(din), len(dout))
+                    print(f"< Output buffer ({len(dout2):#x} bytes):")
+                    chexdump(dout2[:self.state.max_len])
+                if msg.OP == RxOp.ACK_ALT:
+                    self.state.alt_len = None
+                else:
+                    self.state.cmd_len = None
         if msg.LEN > 0:
             addr = self.state.shmem_iova
             if msg.OP == RxOp.ASYNC:
@@ -241,11 +279,20 @@ class DCPEp(EP):
                 addr += 0x60000
             data = self.dart.ioread(0, addr, msg.LEN)
             tag, din, dout = self.dec_msg(data)
+            if msg.OP == RxOp.ASYNC:
+                self.state.async_info = tag, din, dout
+                self.state.async_len = msg.LEN
+            else:
+                self.state.req_info = tag, din, dout
+                self.state.req_len = msg.LEN
             verb = self.get_verbosity(tag)
             if verb >= 1:
                 self.log(f"<{msg.OP.name} {tag}:{KNOWN_MSGS.get(tag, 'unk')} ({msg})")
             if verb >= 2:
                 self.show_msg(tag, din, dout)
+        else:
+            if self.state.show_acks:
+                self.log(f"<{msg.OP.name} ({msg})")
 
         if self.state.show_globals:
             iomon.poll()
@@ -262,11 +309,14 @@ class DCPEp(EP):
                 self.state.op_verb[i] = verb
 
     def dec_msg(self, data):
+        #chexdump(data)
         tag = data[:4][::-1].decode("ascii")
         size_in, size_out = struct.unpack("<II", data[4:12])
         data_in = data[12:12+size_in]
         data_out = data[12+size_in:12+size_in+size_out]
-        assert len(data) == (size_in + size_out + 12)
+        assert len(data_in) == size_in
+        if len(data_out) < size_out:
+            data_out += bytes(size_out)
         return tag, data_in, data_out
 
     def show_msg(self, tag, data_in, data_out):
