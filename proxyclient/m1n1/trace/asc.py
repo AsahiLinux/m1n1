@@ -79,6 +79,9 @@ class EP(object):
     def log(self, msg):
         self.tracer.log(f"[{self.name}] {msg}")
 
+    def start(self):
+        pass
+
     def handle_msg(self, direction, r0, r1):
         msgtype = None
         if self.BASE_MESSAGE:
@@ -181,6 +184,7 @@ class BaseASCTracer(ADTDevTracer):
                 if getattr(self.ep, ep.name, None):
                     ep.name = f"{ep.name}{k:02x}"
                 setattr(self.ep, ep.name, ep)
+                ep.start()
 
 # System endpoints
 
