@@ -274,8 +274,8 @@ class Syslog(EP):
         buf = self.state.syslog_buf
         log = self.tracer.dart.ioread(0, buf + msg.INDEX * 0xa0, 0xa0)
         hdr, unk, context, logmsg = struct.unpack("<II24s128s", log)
-        context = context.rstrip(b"\x00").decode("ascii")
-        logmsg = logmsg.rstrip(b"\x00").decode("ascii").rstrip("\n")
+        context = context.split(b"\x00")[0].decode("ascii")
+        logmsg = logmsg.split(b"\x00")[0].decode("ascii").rstrip("\n")
         self.log(f"* [{context}]{logmsg}")
         return True
 
