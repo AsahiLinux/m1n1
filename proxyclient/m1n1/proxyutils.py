@@ -5,7 +5,7 @@ from construct import *
 
 from .asm import ARMAsm
 from .proxy import *
-from .utils import Reloadable
+from .utils import Reloadable, _ascii
 from .tgtypes import *
 from .sysreg import *
 from .malloc import Heap
@@ -311,43 +311,72 @@ class LazyADT:
     def __iter__(self):
         return iter(self._adt)
 
-class RegMonitor(object):
-    def __init__(self, utils):
+class RegMonitor(Reloadable):
+    def __init__(self, utils, bufsize=0x100000, ascii=False):
         self.utils = utils
         self.proxy = utils.proxy
         self.iface = self.proxy.iface
         self.ranges = []
-        self.last = None
+        self.last = []
+        self.bufsize = bufsize
+        self.ascii = ascii
 
         base = utils.base
-        self.scratch = utils.malloc(0x100000)
+        if bufsize:
+            self.scratch = utils.malloc(bufsize)
+        else:
+            self.scratch = None
 
-    def add(self, start, size):
-        self.ranges.append((start, size))
-        self.last = [None] * len(self.ranges)
+    def readmem(self, start, size):
+        if self.scratch:
+            assert size < self.bufsize
+            self.proxy.memcpy32(self.scratch, start, size)
+            start = self.scratch
+        return self.proxy.iface.readmem(start, size)
+
+    def add(self, start, size, name=None, offset=None):
+        if offset is None:
+            offset = start
+        self.ranges.append((start, size, name, offset))
+        self.last.append(None)
 
     def poll(self):
         if not self.ranges:
             return
         cur = []
-        for (start, size), last in zip(self.ranges, self.last):
-            self.proxy.memcpy32(self.scratch, start, size)
-            block = self.proxy.iface.readmem(self.scratch, size)
+        for (start, size, name, offset), last in zip(self.ranges, self.last):
             count = size // 4
+            block = self.readmem(start, size)
+            if block is None:
+                if last is not None:
+                    print(f"# Lost: {name} ({start:#x}..{start + size - 1:#x})")
+                cur.append(None)
+                continue
 
             words = struct.unpack("<%dI" % count, block)
             cur.append(words)
             if last == words:
                 continue
+            if name:
+                print(f"# {name} ({start:#x}..{start + size - 1:#x})")
             row = 8
+            skipping = False
             for i in range(0, count, row):
                 if not last:
-                    print("%016x" % (start + i * 4), end=" ")
-                    for new in words[i:i+row]:
-                        print("%08x" % new, end=" ")
-                    print()
+                    if i != 0 and words[i:i+row] == words[i-row:i]:
+                        if not skipping:
+                            print("%016x *" % (offset + i * 4))
+                        skipping = True
+                    else:
+                        print("%016x" % (offset + i * 4), end=" ")
+                        for new in words[i:i+row]:
+                            print("%08x" % new, end=" ")
+                        if self.ascii:
+                            print("| " + _ascii(block[4*i:4*(i+row)]), end="")
+                        print()
+                        skipping = False
                 elif last[i:i+row] != words[i:i+row]:
-                    print("%016x" % (start + i * 4), end=" ")
+                    print("%016x" % (offset + i * 4), end=" ")
                     for old, new in zip(last[i:i+row], words[i:i+row]):
                         so = "%08x" % old
                         sn = s = "%08x" % new
@@ -362,6 +391,8 @@ class RegMonitor(object):
                                 s += b
                             s += "\x1b[m"
                         print(s, end=" ")
+                    if self.ascii:
+                        print("| " + _ascii(block[4*i:4*(i+row)]), end="")
                     print()
         self.last = cur
 
