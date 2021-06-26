@@ -86,17 +86,22 @@ class ProxyUtils(Reloadable):
         }
 
     def read(self, addr, width):
+        '''read(addr, width) - do a width read from addr and return it
+        width can be 8,16,21,64 or 132'''
         val = self._read[width](addr)
         if self.proxy.get_exc_count():
             raise ProxyError("Exception occurred")
         return val
 
     def write(self, addr, data, width):
+        '''write(addr, data, width) - do a width write of data to addr
+        width can be 8,16,21,64 or 132'''
         self._write[width](addr, data)
         if self.proxy.get_exc_count():
             raise ProxyError("Exception occurred")
 
     def mrs(self, reg, *, silent=False, call=None):
+        '''mrs(reg) - read system register reg'''
         op0, op1, CRn, CRm, op2 = sysreg_parse(reg)
 
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
@@ -105,6 +110,7 @@ class ProxyUtils(Reloadable):
         return self.exec(op, call=call, silent=silent)
 
     def msr(self, reg, val, *, silent=False, call=None):
+        '''msr(reg, val) - Write val to system register reg'''
         op0, op1, CRn, CRm, op2 = sysreg_parse(reg)
 
         op =  (((op0 & 1) << 19) | (op1 << 16) | (CRn << 12) |
