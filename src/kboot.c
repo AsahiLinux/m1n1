@@ -3,6 +3,7 @@
 #include "kboot.h"
 #include "adt.h"
 #include "assert.h"
+#include "cpio.h"
 #include "exception.h"
 #include "malloc.h"
 #include "memory.h"
@@ -21,7 +22,8 @@ static char *bootargs = NULL;
 static void *initrd_start = NULL;
 static size_t initrd_size = 0;
 
-#define DT_ALIGN 16384
+#define DT_ALIGN     16384
+#define INITRD_ALIGN 65536
 
 #define bail(...)                                                                                  \
     do {                                                                                           \
@@ -306,6 +308,9 @@ int kboot_prepare_dt(void *fdt)
         dt = NULL;
     }
 
+    if (kboot_prepare_fw() < 0)
+        bail("FDT: couldn't prepare firmware.");
+
     dt_bufsize = fdt_totalsize(fdt);
     assert(dt_bufsize);
 
@@ -336,6 +341,78 @@ int kboot_prepare_dt(void *fdt)
     printf("FDT prepared at %p\n", dt);
 
     return 0;
+}
+
+static int kboot_prepare_sepfw(struct cpio *c)
+{
+    int adt_path[8];
+    int adt_offset;
+    adt_offset = adt_path_offset_trace(adt, "/chosen/memory-map", adt_path);
+    if (adt_offset < 0) {
+        printf("kboot: Error getting /chosen/memory-map node\n");
+        return -1;
+    }
+
+    u64 base;
+    u64 sz;
+    if (adt_get_reg(adt, adt_path, "SEPFW", 0, &base, &sz) < 0) {
+        printf("kboot: Error getting SEPFW\n");
+        return -1;
+    }
+
+    if (cpio_add_file(c, "lib/firmware/apple/sepfw.bin", (const u8 *)base, sz) < 0) {
+        printf("kboot: unable to add lib/firmware/apple/sepfw.bin\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+int kboot_prepare_fw(void)
+{
+    struct cpio *c = cpio_init();
+    u8 *cpio_start = NULL;
+    u8 *new_initrd_start = NULL;
+    size_t cpio_size = 0;
+    u32 new_initrd_size = 0;
+
+    if (cpio_add_dir(c, "lib") < 0)
+        goto err;
+    if (cpio_add_dir(c, "lib/firmware") < 0)
+        goto err;
+    if (cpio_add_dir(c, "lib/firmware/apple") < 0)
+        goto err;
+
+    if (kboot_prepare_sepfw(c) < 0)
+        printf("kboot: no SEPFW found.\n");
+
+    cpio_size = cpio_get_size(c);
+    new_initrd_size = cpio_size + ALIGN_UP(initrd_size, 4);
+    new_initrd_start = memalign(INITRD_ALIGN, new_initrd_size);
+    if (!new_initrd_start) {
+        printf("kboot: couldn't allocate initrd buffer\n");
+        goto err;
+    }
+
+    memcpy(new_initrd_start, initrd_start, initrd_size);
+
+    cpio_start = new_initrd_start + ALIGN_UP(initrd_size, 4);
+    size_t res = cpio_finalize(c, cpio_start, cpio_size);
+    if (res != cpio_size) {
+        printf("kboot: unexpected cpio_finalize size: %lu should be %lu\n", res, cpio_size);
+        goto err;
+    }
+
+    initrd_start = new_initrd_start;
+    initrd_size = new_initrd_size;
+    cpio_free(c);
+
+    return 0;
+
+err:
+    free(new_initrd_start);
+    cpio_free(c);
+    return -1;
 }
 
 int kboot_boot(void *kernel)
