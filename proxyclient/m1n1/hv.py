@@ -113,6 +113,8 @@ class HV(Reloadable):
         self.vbar_el1 = None
         self.want_vbar = None
         self.vectors = [None]
+        self._stepping = False
+        self._bps = [None, None, None, None, None]
         self.sym_offset = 0
         self.symbols = []
         self.sysreg = {}
@@ -663,6 +665,25 @@ class HV(Reloadable):
         # and instead a debug exception is generated again
         self.u.msr(MDSCR_EL1, MDSCR(MDE=1).value)
 
+        # enable all breakpoints again
+        for i, vaddr in enumerate(self._bps):
+            if vaddr is None:
+                continue
+            self.u.msr(DBGBCRn_EL1(i), DBGBCR(E=1, PMC=0b11, BAS=0xf).value)
+
+        if not self._stepping:
+            return True
+        self._stepping = False
+
+    def handle_break(self, ctx):
+        # disable all breakpoints so that we don't get stuck
+        for i in range(5):
+            self.u.msr(DBGBCRn_EL1(i), 0)
+
+        # we'll need to single step to enable these breakpoints again
+        self.u.msr(MDSCR_EL1, MDSCR(SS=1, MDE=1).value)
+        self.ctx.spsr.SS = 1
+
     def handle_sync(self, ctx):
         if ctx.esr.EC == ESR_EC.MSR:
             return self.handle_msr(ctx)
@@ -675,6 +696,9 @@ class HV(Reloadable):
 
         if ctx.esr.EC == ESR_EC.SSTEP_LOWER:
             return self.handle_step(ctx)
+
+        if ctx.esr.EC == ESR_EC.BKPT_LOWER:
+            return self.handle_break(ctx)
 
     def handle_exception(self, reason, code, info):
         self._in_handler = True
@@ -752,9 +776,25 @@ class HV(Reloadable):
         raise shell.ExitConsole(EXC_RET.HANDLED)
 
     def step(self):
-        self.u.msr(MDSCR_EL1, MDSCR(SS=1).value)
+        self.u.msr(MDSCR_EL1, MDSCR(SS=1, MDE=1).value)
         self.ctx.spsr.SS = 1
+        self._stepping = True
         raise shell.ExitConsole(EXC_RET.HANDLED)
+
+    def add_hw_bp(self, vaddr):
+        for i, i_vaddr in enumerate(self._bps):
+            if i_vaddr is None:
+                self.u.msr(DBGBCRn_EL1(i), DBGBCR(E=1, PMC=0b11, BAS=0xf).value)
+                self.u.msr(DBGBVRn_EL1(i), vaddr)
+                self._bps[i] = vaddr
+                return
+        raise ValueError("Cannot add more HW breakpoints")
+
+    def remove_hw_bp(self, vaddr):
+        idx = self._bps.index(vaddr)
+        self._bps[idx] = None
+        self.u.msr(DBGBCRn_EL1(idx), 0)
+        self.u.msr(DBGBVRn_EL1(idx), 0)
 
     def exit(self):
         raise shell.ExitConsole(EXC_RET.EXIT_GUEST)
@@ -918,6 +958,7 @@ class HV(Reloadable):
         mdcr.TDOSA = 1
         mdcr.TDRA = 1
         self.u.msr(MDCR_EL2, mdcr.value)
+        self.u.msr(MDSCR_EL1, MDSCR(MDE=1).value)
 
         # Enable AMX
         amx_ctl = AMX_CTL(self.u.mrs(AMX_CTL_EL1))

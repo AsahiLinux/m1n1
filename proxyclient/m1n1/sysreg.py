@@ -37,6 +37,12 @@ def sysreg_parse(s):
             raise Exception(f"Unknown sysreg name {s}")
     return enc
 
+def DBGBCRn_EL1(n):
+    return (2,0,0,n,5)
+
+def DBGBVRn_EL1(n):
+    return (2,0,0,n,4)
+
 class ESR_EC(IntEnum):
     UNKNOWN        = 0b000000
     WFI            = 0b000001
@@ -273,6 +279,15 @@ class MDCR(Register64):
 class MDSCR(Register64):
     SS = 0
     MDE = 15
+
+class DBGBCR(Register32):
+    BT = 23, 20
+    LBN = 16, 16
+    SSC = 15, 14
+    HMC = 13
+    BAS = 8,5
+    PMC = 2,1
+    E = 0
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
