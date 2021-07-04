@@ -56,17 +56,12 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
     hv_wdt_resume();
 
     switch (ret) {
-        case EXC_RET_STEP:
         case EXC_RET_HANDLED:
             memcpy(regs, exc_info.regs, sizeof(exc_info.regs));
             hv_set_spsr(exc_info.spsr);
             hv_set_elr(exc_info.elr);
             msr(SP_EL0, exc_info.sp[0]);
             msr(SP_EL1, exc_info.sp[1]);
-            if (ret == EXC_RET_STEP) {
-                msr(CNTV_TVAL_EL0, 100);
-                msr(CNTV_CTL_EL0, CNTx_CTL_ENABLE);
-            }
             hv_wdt_breadcrumb('p');
             return;
         case EXC_EXIT_GUEST:
