@@ -264,5 +264,15 @@ class AMX_CTL(Register64):
     EN = 63
     EN_EL1 = 62
 
+class MDCR(Register64):
+    TDE = 8
+    TDA = 9
+    TDOSA = 10
+    TDRA = 11
+
+class MDSCR(Register64):
+    SS = 0
+    MDE = 15
+
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

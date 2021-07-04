@@ -113,7 +113,6 @@ class HV(Reloadable):
         self.vbar_el1 = None
         self.want_vbar = None
         self.vectors = [None]
-        self._stepping = False
         self.sym_offset = 0
         self.symbols = []
         self.sysreg = {}
@@ -658,6 +657,12 @@ class HV(Reloadable):
 
         return ok
 
+    def handle_step(self, ctx):
+        # not sure why MDSCR_EL1.SS needs to be disabled here but otherwise
+        # if also SPSR.SS=0 no instruction will be executed after eret
+        # and instead a debug exception is generated again
+        self.u.msr(MDSCR_EL1, MDSCR(MDE=1).value)
+
     def handle_sync(self, ctx):
         if ctx.esr.EC == ESR_EC.MSR:
             return self.handle_msr(ctx)
@@ -667,6 +672,9 @@ class HV(Reloadable):
 
         if ctx.esr.EC == ESR_EC.HVC:
             return self.handle_hvc(ctx)
+
+        if ctx.esr.EC == ESR_EC.SSTEP_LOWER:
+            return self.handle_step(ctx)
 
     def handle_exception(self, reason, code, info):
         self._in_handler = True
@@ -688,9 +696,6 @@ class HV(Reloadable):
                 code = HV_EVENT(code)
                 if code == HV_EVENT.HOOK_VM:
                     handled = self.handle_vm_hook(ctx)
-                elif code == HV_EVENT.VTIMER:
-                    print("Step")
-                    handled = True
                 elif code == HV_EVENT.USER_INTERRUPT:
                     handled = True
         except Exception as e:
@@ -705,10 +710,9 @@ class HV(Reloadable):
             print(f"Guest exception: {reason.name}/{code.name}")
             self.u.print_exception(code, ctx)
 
-        if self._sigint_pending or self._stepping or not handled:
+        if self._sigint_pending or not handled:
 
             self._sigint_pending = False
-            self._stepping = False
 
             signal.signal(signal.SIGINT, self.default_sigint)
             ret = shell.run_shell(self.shell_locals, "Entering hypervisor shell", "Returning from exception")
@@ -723,8 +727,6 @@ class HV(Reloadable):
         if new_info != info_data:
             self.iface.writemem(info, new_info)
 
-        if ret == EXC_RET.HANDLED and self._stepping:
-            ret = EXC_RET.STEP
         self.ctx = None
         self.p.exit(ret)
 
@@ -735,7 +737,6 @@ class HV(Reloadable):
     def handle_bark(self, reason, code, info):
         self._in_handler = True
         self._sigint_pending = False
-        self._stepping = False
 
         signal.signal(signal.SIGINT, self.default_sigint)
         ret = shell.run_shell(self.shell_locals, "Entering panic shell", "Exiting")
@@ -751,8 +752,9 @@ class HV(Reloadable):
         raise shell.ExitConsole(EXC_RET.HANDLED)
 
     def step(self):
-        self._stepping = True
-        raise shell.ExitConsole(EXC_RET.STEP)
+        self.u.msr(MDSCR_EL1, MDSCR(SS=1).value)
+        self.ctx.spsr.SS = 1
+        raise shell.ExitConsole(EXC_RET.HANDLED)
 
     def exit(self):
         raise shell.ExitConsole(EXC_RET.EXIT_GUEST)
@@ -908,6 +910,14 @@ class HV(Reloadable):
             hacr.TRAP_SERROR_INFO = 1 # M1RACLES mitigation
             hacr.TRAP_PM = 1
         self.u.msr(HACR_EL2, hacr.value)
+
+        # enable and route debug exceptions to EL2
+        mdcr = MDCR(0)
+        mdcr.TDE = 1
+        mdcr.TDA = 1
+        mdcr.TDOSA = 1
+        mdcr.TDRA = 1
+        self.u.msr(MDCR_EL2, mdcr.value)
 
         # Enable AMX
         amx_ctl = AMX_CTL(self.u.mrs(AMX_CTL_EL1))
