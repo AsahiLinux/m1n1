@@ -45,6 +45,7 @@ static const struct {
 };
 
 static tps6598x_irq_state_t tps6598x_irq_state[USB_INSTANCES];
+static bool usb_is_initialized = false;
 
 static dart_dev_t *usb_dart_init(const char *path, const char *mapper_path)
 {
@@ -261,6 +262,9 @@ static tps6598x_dev_t *hpm_init(i2c_dev_t *i2c, int idx)
 
 void usb_init(void)
 {
+    if (usb_is_initialized)
+        return;
+
     i2c_dev_t *i2c = i2c_init("/arm-io/i2c0");
     if (!i2c) {
         printf("usb: i2c init failed.\n");
@@ -286,6 +290,8 @@ void usb_init(void)
         if (usb_phy_bringup(idx) < 0)
             printf("usb: unable to bringup the phy with index %d\n", idx);
     }
+
+    usb_is_initialized = true;
 }
 
 void usb_hpm_restore_irqs(bool force)
