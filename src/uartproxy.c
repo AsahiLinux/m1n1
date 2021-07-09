@@ -284,6 +284,7 @@ int uartproxy_run(struct uartproxy_msg_start *start)
 
         // Flush all queued data
         iodev_write(iodev, NULL, 0);
+        iodev_flush(iodev);
     }
 
     return ret;
