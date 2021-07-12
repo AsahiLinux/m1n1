@@ -87,7 +87,7 @@ class ProxyUtils(Reloadable):
 
     def read(self, addr, width):
         '''read(addr, width) - do a width read from addr and return it
-        width can be 8,16,21,64 or 132'''
+        width can be 8, 16, 21, 64 or 132'''
         val = self._read[width](addr)
         if self.proxy.get_exc_count():
             raise ProxyError("Exception occurred")
@@ -95,7 +95,7 @@ class ProxyUtils(Reloadable):
 
     def write(self, addr, data, width):
         '''write(addr, data, width) - do a width write of data to addr
-        width can be 8,16,21,64 or 132'''
+        width can be 8, 16, 21, 64 or 132'''
         self._write[width](addr, data)
         if self.proxy.get_exc_count():
             raise ProxyError("Exception occurred")
@@ -191,7 +191,7 @@ class ProxyUtils(Reloadable):
         self.iface.writemem(adt_base, self.adt_data)
 
     def disassemble_at(self, start, size, pc=None):
-        '''Start, len, [pc] - disassemble len bytes of memory from start
+        '''disassemble_at(start, len, [pc]) - disassemble len bytes of memory from start
          optional pc address will mark that line with a '*' '''
         code = struct.unpack(f"<{size // 4}I", self.iface.readmem(start, size))
 
