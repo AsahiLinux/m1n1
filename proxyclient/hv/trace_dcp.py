@@ -127,41 +127,440 @@ class IOEp(EP):
         self.txbuf.init()
         self.rxbuf.init()
 
+KNOWN_MSGS = {
+    "A000": "IOMFB::UPPipeAP_H13P::late_init_signal()",
+    "A001": "IOMFB::UPPipeAP_H13P::init_ipa(unsigned long long, unsigned long)",
+    "A002": "IOMFB::UPPipeAP_H13P::alss_supported()",
+    "A003": "IOMFB::UPPipeAP_H13P::reset_dsc()",
+    "A004": "IOMFB::UPPipeAP_H13P::display_edr_factor_changed(float)",
+    "A005": "IOMFB::UPPipeAP_H13P::set_contrast(float)",
+    "A006": "IOMFB::UPPipeAP_H13P::set_csc_mode(IOMFB_CSCMode)",
+    "A007": "IOMFB::UPPipeAP_H13P::set_op_mode(IOMFB_CSCMode)",
+    "A008": "IOMFB::UPPipeAP_H13P::set_op_gamma_mode(IOMFB_TFMode)",
+    "A009": "IOMFB::UPPipeAP_H13P::set_video_out_mode(IOMFB_Output_Mode)",
+    "A010": "IOMFB::UPPipeAP_H13P::set_meta_allowed(bool)",
+    "A011": "IOMFB::UPPipeAP_H13P::set_tunneled_color_mode(bool)",
+    "A012": "IOMFB::UPPipeAP_H13P::set_bwr_line_time_us(double)",
+    "A013": "IOMFB::UPPipeAP_H13P::performance_feedback(double)",
+    "A014": "IOMFB::UPPipeAP_H13P::notify_swap_complete(unsigned int)",
+    "A015": "IOMFB::UPPipeAP_H13P::is_run_mode_change_pending() const",
+    "A016": "IOMFB::UPPipeAP_H13P::ready_for_run_mode_change(IOMFB::AppleRegisterStream*)",
+    "A017": "IOMFB::UPPipeAP_H13P::set_thermal_throttle_cap(unsigned int)",
+    "A018": "IOMFB::UPPipeAP_H13P::emergency_shutdown_normal_mode(IOMFB::AppleRegisterStream*)",
+    "A019": "IOMFB::UPPipeAP_H13P::set_target_run_mode(IOMFB::AppleRegisterStream*)",
+    "A020": "IOMFB::UPPipeAP_H13P::rt_bandwidth_setup()",
+    "A021": "IOMFB::UPPipeAP_H13P::rt_bandwidth_update(IOMFB::AppleRegisterStream*, float, float, bool, bool)",
+    "A022": "IOMFB::UPPipeAP_H13P::rt_bandwidth_update_downgrade(IOMFB::AppleRegisterStream*)",
+    "A023": "IOMFB::UPPipeAP_H13P::rt_bandwidth_write_update(IOMFB::AppleRegisterStream*, RealtimeBandwithWritebackBlock, bool)",
+    "A024": "IOMFB::UPPipeAP_H13P::cif_blending_eco_present()",
+    "A025": "IOMFB::UPPipeAP_H13P::request_bic_update()",
+    "A026": "IOMFB::UPPipeAP_H13P::early_power_off_warning(IOMFB::AppleRegisterStream*)",
+    "A027": "IOMFB::UPPipeAP_H13P::get_max_frame_size(unsigned int*, unsigned int*)",
+    "A028": "IOMFB::UPPipeAP_H13P::shadow_FIFO_empty(IOMFB::AppleRegisterStream*) const",
+    "A029": "IOMFB::UPPipeAP_H13P::setup_video_limits()",
+    "A030": "IOMFB::UPPipeAP_H13P::can_program_swap() const",
+    "A031": "IOMFB::UPPipeAP_H13P::in_auto_mode() const",
+    "A032": "IOMFB::UPPipeAP_H13P::push_black_frame(IOMFB::AppleRegisterStream*)",
+    "A033": "IOMFB::UPPipeAP_H13P::read_crc(Notify_Info_Index, unsigned int)",
+    "A034": "IOMFB::UPPipeAP_H13P::update_notify_clients_dcp(unsigned int const*)",
+    "A035": "IOMFB::UPPipeAP_H13P::is_hilo() const",
+    "A036": "IOMFB::UPPipeAP_H13P::apt_supported() const",
+    "A037": "IOMFB::UPPipeAP_H13P::get_dfb_info(unsigned int*, unsigned long long*, unsigned int*)",
+    "A038": "IOMFB::UPPipeAP_H13P::get_dfb_compression_info(unsigned int*)",
+    "A039": "IOMFB::UPPipeAP_H13P::get_frame_done_time() const",
+    "A040": "IOMFB::UPPipeAP_H13P::get_performance_headroom() const",
+    "A041": "IOMFB::UPPipeAP_H13P::are_stats_active() const",
+    "A042": "IOMFB::UPPipeAP_H13P::supports_odd_h_blanking() const",
+    "A043": "IOMFB::UPPipeAP_H13P::is_first_hw_version() const",
+    "A044": "IOMFB::UPPipeAP_H13P::set_blendout_CSC_mode()",
+
+    "A100": "IOMFB::UPPipe2::get_gamma_table_gated(IOMFBGammaTable*)",
+    "A101": "IOMFB::UPPipe2::set_gamma_table_gated(IOMFBGammaTable const*)",
+    "A102": "IOMFB::UPPipe2::did_black_frame(IOMFB::AppleRegisterStream*)",
+    "A103": "IOMFB::UPPipe2::test_control(IOMFB_TC_Cmd, unsigned int)",
+    "A104": "IOMFB::UPPipe2::get_config_frame_size(unsigned int*, unsigned int*) const",
+    "A105": "IOMFB::UPPipe2::set_config_frame_size(unsigned int, unsigned int) const",
+    "A106": "IOMFB::UPPipe2::program_config_frame_size() const",
+    "A107": "IOMFB::UPPipe2::read_blend_crc() const",
+    "A108": "IOMFB::UPPipe2::read_config_crc() const",
+    "A109": "IOMFB::UPPipe2::disable_wpc_calibration(bool)",
+    "A110": "IOMFB::UPPipe2::vftg_is_running(IOMFB::AppleRegisterStream*) const",
+    "A111": "IOMFB::UPPipe2::vftg_debug(IOMFB::AppleRegisterStream*, unsigned int) const",
+    "A112": "IOMFB::UPPipe2::vftg_set_color_channels(unsigned int, unsigned int, unsigned int)",
+    "A113": "IOMFB::UPPipe2::set_color_filter_scale(int)",
+    "A114": "IOMFB::UPPipe2::set_corner_temps(int const*)",
+    "A115": "IOMFB::UPPipe2::reset_aot_enabled() const",
+    "A116": "IOMFB::UPPipe2::aot_enabled() const",
+    "A117": "IOMFB::UPPipe2::aot_active() const",
+    "A118": "IOMFB::UPPipe2::set_timings_enabled(IOMFB::AppleRegisterStream*, bool)",
+    "A119": "IOMFB::UPPipe2::get_frame_size(IOMFB::AppleRegisterStream*, unsigned int*, unsigned int*)",
+    "A122": "IOMFB::UPPipe2::get_matrix(IOMFB_MatrixLocation, IOMFBColorFixedMatrix*) const",
+    "A123": "IOMFB::UPPipe2::set_matrix(IOMFB_MatrixLocation, IOMFBColorFixedMatrix const*)",
+    "A124": "IOMFB::UPPipe2::get_internal_timing_attributes_gated(IOMFB::RefreshTimingAttributes*) const",
+    "A125": "IOMFB::UPPipe2::display_edr_factor_changed(float)",
+    "A126": "IOMFB::UPPipe2::set_contrast(float)",
+    "A127": "IOMFB::UPPipe2::p3_to_disp_cs(float const*, float const (*) [2])",
+    "A128": "IOMFB::UPPipe2::max_panel_brightness() const",
+    "A129": "IOMFB::UPPipe2::swap_flush_stream_replay(IOMFB::AppleRegisterStream*)",
+    "A130": "IOMFB::UPPipe2::init_ca_pmu()",
+    "A131": "IOMFB::UPPipe2::pmu_service_matched()",
+    "A132": "IOMFB::UPPipe2::backlight_service_matched()",
+
+    "A200": "IOMFB::PropRelay::setBool(IOMFB::RuntimeProperty, bool)",
+    "A201": "IOMFB::PropRelay::setInt(IOMFB::RuntimeProperty, unsigned int)",
+    "A202": "IOMFB::PropRelay::setFx(IOMFB::RuntimeProperty, int)",
+    "A203": "IOMFB::PropRelay::setPropDynamic(IOMFB::RuntimeProperty, unsigned int)",
+    "A204": "IOMFB::PropRelay::getBool(IOMFB::RuntimeProperty)",
+    "A205": "IOMFB::PropRelay::getInt(IOMFB::RuntimeProperty)",
+    "A206": "IOMFB::PropRelay::getFx(IOMFB::RuntimeProperty)",
+
+    "A350": "UnifiedPipeline2::displayHeight()",
+    "A351": "UnifiedPipeline2::displayWidth()",
+    "A352": "UnifiedPipeline2::applyProperty(unsigned int, unsigned int)",
+    "A353": "UnifiedPipeline2::get_system_type() const",
+    "A354": "UnifiedPipeline2::headless() const",
+    "A355": "UnifiedPipeline2::export_idle_method(unsigned int)",
+    "A357": "UnifiedPipeline2::set_create_DFB()",
+    "A358": "UnifiedPipeline2::vi_set_temperature_hint()",
+
+    "A400": "IOMobileFramebufferAP::free_signal()",
+    "A401": "IOMobileFramebufferAP::start_signal()",
+    "A402": "IOMobileFramebufferAP::stop_signal()",
+    "A403": "IOMobileFramebufferAP::systemWillShutdown()",
+    "A404": "IOMobileFramebufferAP::swap_begin()",
+    "A405": "IOMobileFramebufferAP::rotate_surface(unsigned int, unsigned int, unsigned int)",
+    "A406": "IOMobileFramebufferAP::get_framebuffer_id()",
+    "A407": "IOMobileFramebufferAP::swap_start(unsigned int*, IOUserClient*)",
+    "A408": "IOMobileFramebufferAP::swap_submit_dcp(IOMFBSwapRec const*, IOSurface**, unsigned int const*, bool, double, unsigned int, bool*)",
+    "A409": "IOMobileFramebufferAP::swap_signal(unsigned int, unsigned int)",
+    "A410": "IOMobileFramebufferAP::set_display_device(unsigned int)",
+    "A411": "IOMobileFramebufferAP::is_main_display() const",
+    "A412": "IOMobileFramebufferAP::set_digital_out_mode(unsigned int, unsigned int)",
+    "A413": "IOMobileFramebufferAP::get_digital_out_state(unsigned int*)",
+    "A414": "IOMobileFramebufferAP::get_display_area(DisplayArea*)",
+    "A415": "IOMobileFramebufferAP::set_tvout_mode(unsigned int)",
+    "A416": "IOMobileFramebufferAP::set_tvout_signaltype(unsigned int)",
+    "A417": "IOMobileFramebufferAP::set_wss_info(unsigned int, unsigned int)",
+    "A418": "IOMobileFramebufferAP::set_content_flags(unsigned int)",
+    "A419": "IOMobileFramebufferAP::get_gamma_table(IOMFBGammaTable*)",
+    "A420": "IOMobileFramebufferAP::set_gamma_table(IOMFBGammaTable*)",
+    "A421": "IOMobileFramebufferAP::get_matrix(unsigned int, unsigned long long (*) [3][3]) const",
+    "A422": "IOMobileFramebufferAP::set_matrix(unsigned int, unsigned long long const (*) [3][3])",
+    "A423": "IOMobileFramebufferAP::set_contrast(float*)",
+    "A424": "IOMobileFramebufferAP::set_white_on_black_mode(unsigned int)",
+    "A425": "IOMobileFramebufferAP::set_color_remap_mode(DisplayColorRemapMode)",
+    "A426": "IOMobileFramebufferAP::get_color_remap_mode(DisplayColorRemapMode*) const",
+    "A427": "IOMobileFramebufferAP::setBrightnessCorrection(unsigned int)",
+    "A428": "IOMobileFramebufferAP::temp_queue_swap_cancel(unsigned int)",
+    "A429": "IOMobileFramebufferAP::swap_cancel(unsigned int)",
+    "A430": "IOMobileFramebufferAP::swap_cancel_all_dcp(unsigned long long)",
+    "A431": "IOMobileFramebufferAP::surface_is_replaceable(unsigned int, bool*)",
+    "A432": "IOMobileFramebufferAP::kernel_tests(IOMFBKernelTestsArguments*)",
+    "A433": "IOMobileFramebufferAP::alss_set_rgb_coeffs(unsigned int, unsigned int, unsigned int)",
+    "A434": "IOMobileFramebufferAP::alss_get_rgb_coeffs(unsigned int*, unsigned int*, unsigned int*)",
+    "A435": "IOMobileFramebufferAP::alss_set_window(IOMFBALSSWindow, IOMFBRect const*, bool)",
+    "A436": "IOMobileFramebufferAP::alss_enable_window(IOMFBALSSWindow, bool)",
+    "A437": "IOMobileFramebufferAP::alss_is_window_enabled(IOMFBALSSWindow, bool*)",
+    "A438": "IOMobileFramebufferAP::alss_get_window_rect(IOMFBALSSWindow, IOMFBRect*)",
+    "A439": "IOMobileFramebufferAP::alss_get_window_sum(IOMFBALSSWindow, unsigned int*)",
+    "A440": "IOMobileFramebufferAP::splc_set_brightness(unsigned int)",
+    "A441": "IOMobileFramebufferAP::splc_get_brightness(unsigned int*)",
+    "A442": "IOMobileFramebufferAP::set_block_dcp(task*, unsigned int, unsigned int, unsigned long long const*, unsigned int, unsigned char const*, unsigned long)",
+    "A444": "IOMobileFramebufferAP::swap_set_color_matrix(IOMFBColorFixedMatrix*, IOMFBColorMatrixFunction, unsigned int)",
+    "A445": "IOMobileFramebufferAP::set_parameter_dcp(IOMFBParameterName, unsigned long long const*, unsigned int)",
+    "A446": "IOMobileFramebufferAP::display_width() const",
+    "A447": "IOMobileFramebufferAP::display_height() const",
+    "A448": "IOMobileFramebufferAP::get_display_size(unsigned int*, unsigned int*) const",
+    "A449": "IOMobileFramebufferAP::do_create_default_frame_buffer() const",
+    "A450": "IOMobileFramebufferAP::printRegs()",
+    "A451": "IOMobileFramebufferAP::enable_disable_dithering(unsigned int)",
+    "A452": "IOMobileFramebufferAP::set_underrun_color(unsigned int)",
+    "A453": "IOMobileFramebufferAP::enable_disable_video_power_savings(unsigned int)",
+    "A454": "IOMobileFramebufferAP::set_video_dac_gain(unsigned int)",
+    "A455": "IOMobileFramebufferAP::set_line21_data(unsigned int)",
+    "A456": "IOMobileFramebufferAP::enableInternalToExternalMirroring(bool)",
+    "A457": "IOMobileFramebufferAP::getExternalMirroringCapability(IOMFBMirroringCapability*)",
+    "A458": "IOMobileFramebufferAP::setRenderingAngle(float*)",
+    "A459": "IOMobileFramebufferAP::setOverscanSafeRegion(IOMFBOverscanSafeRect*)",
+    "A460": "IOMobileFramebufferAP::first_client_open()",
+    "A461": "IOMobileFramebufferAP::last_client_close_dcp(unsigned int*)",
+    "A462": "IOMobileFramebufferAP::writeDebugInfo(unsigned long)",
+    "A463": "IOMobileFramebufferAP::flush_debug_flags(unsigned int)",
+    "A464": "IOMobileFramebufferAP::io_fence_notify(unsigned int, unsigned int, unsigned long long, IOMFBStatus)",
+    "A465": "IOMobileFramebufferAP::swap_wait_dcp(bool, unsigned int, unsigned int, unsigned int)",
+    "A466": "IOMobileFramebufferAP::setDisplayRefreshProperties()",
+    "A467": "IOMobileFramebufferAP::exportProperty(unsigned int, unsigned int)",
+    "A468": "IOMobileFramebufferAP::applyProperty(unsigned int, unsigned int)",
+    "A469": "IOMobileFramebufferAP::flush_supportsPower(bool)",
+    "A470": "IOMobileFramebufferAP::abort_swaps_dcp(IOMobileFramebufferUserClient*)",
+    "A471": "IOMobileFramebufferAP::swap_signal_gated(unsigned int, unsigned int)",
+    "A472": "IOMobileFramebufferAP::update_dfb(IOSurface*, unsigned int, unsigned int, unsigned long long)",
+    "A473": "IOMobileFramebufferAP::update_dfb(IOSurface*)",
+    "A474": "IOMobileFramebufferAP::setPowerState(unsigned long, bool, unsigned int*)",
+    "A475": "IOMobileFramebufferAP::isKeepOnScreen() const",
+    "A476": "IOMobileFramebufferAP::resetStats()",
+    "A477": "IOMobileFramebufferAP::set_has_frame_swap_function(bool)",
+    "A478": "IOMobileFramebufferAP::getPerformanceStats(unsigned int*, unsigned int*)",
+
+    "D000": "bool IOMFB::UPPipeAP_H13P::did_boot_signal()",
+    "D001": "bool IOMFB::UPPipeAP_H13P::did_power_on_signal()",
+    "D002": "void IOMFB::UPPipeAP_H13P::will_power_off_signal()",
+    "D003": "void IOMFB::UPPipeAP_H13P::rt_bandwidth_setup_ap(inout rt_bw_config_t*)",
+    "D004": "void IOMFB::UPPipeAP_H13P::mcc_report_replay(bool, unsigned int)",
+    "D005": "void IOMFB::UPPipeAP_H13P::mcc_report_bics(bool, unsigned int)",
+
+    "D100": "void UnifiedPipeline2::match_pmu_service()",
+    #"D101": "", # get some uint32_t, inlined
+    "D102": "void UnifiedPipeline2::set_number_property(char const*, unsigned int)",
+    "D103": "void UnifiedPipeline2::set_boolean_property(char const*, bool)",
+    "D104": "void UnifiedPipeline2::set_string_property(char const*, char const*)",
+    "D105": "IOReturn IOService::acknowledgeSetPowerState()",
+    "D106": "void IORegistryEntry::removeProperty(char const*)",
+    "D107": "bool UnifiedPipeline2::create_provider_service",
+    "D108": "bool UnifiedPipeline2::create_product_service()",
+    "D109": "bool UnifiedPipeline2::create_PMU_service()",
+    "D110": "bool UnifiedPipeline2::create_iomfb_service()",
+    "D111": "bool UnifiedPipeline2::create_backlight_service()",
+    "D112": "void UnifiedPipeline2::set_idle_caching_state_ap(IdleCachingState, unsigned int)",
+    "D113": "bool UnifiedPipeline2::upload_trace_start(IOMFB::FrameInfoBuffer::FrameInfoConstants const*)",
+    "D114": "bool UnifiedPipeline2::upload_trace_chunk(IOMFB::FrameInfoBuffer::FrameInfoData const*, unsigned int, unsigned int)",
+    "D115": "bool UnifiedPipeline2::upload_trace_end(char const*)",
+    "D116": "bool UnifiedPipeline2::start_hardware_boot()",
+    "D117": "bool UnifiedPipeline2::is_dark_boot()",
+    "D118": "bool UnifiedPipeline2::detect_fastsim()",
+    "D119": "bool UnifiedPipeline2::read_edt_data(char const*, unsigned int, unsigned int*) const",
+    "D120": "bool UnifiedPipeline2::read_edt_string(char const*, char*, unsigned int*) const",
+    "D121": "bool UnifiedPipeline2::setDCPAVPropStart(unsigned int)",
+    "D122": "bool UnifiedPipeline2::setDCPAVPropChunk(unsigned char const*, unsigned int, unsigned int)",
+    "D123": "bool UnifiedPipeline2::setDCPAVPropEnd(char const*)",
+
+    "D200": "uint64_t IOMFB::UPPipe2::get_default_idle_caching_method()",
+    "D201": "IOMFBStatus IOMFB::UPPipe2::map_buf(IOMFB::BufferDescriptor*, unsigned long*, unsigned long long*, bool)",
+    "D202": "void IOMFB::UPPipe2::unmap_buf(IOMFB::BufferDescriptor*, unsigned long, unsigned long long, bool)",
+    "D203": "bool IOMFB::UPPipe2::aot_supported_peek()",
+    "D204": "uint64_t IOMFB::UPPipe2::get_ideal_screen_space()",
+    "D205": "bool IOMFB::UPPipe2::read_carveout(unsigned char*, unsigned int, unsigned int) const",
+    "D206": "bool IOMFB::UPPipe2::match_pmu_service()",
+    "D207": "bool IOMFB::UPPipe2::match_backlight_service()",
+    "D208": "uint64_ IOMFB::UPPipe2::get_calendar_time_ms()",
+    "D209": "void IOMFB::UPPipe2::plc_enable(bool)",
+    "D210": "void IOMFB::UPPipe2::plc_init()",
+    "D211": "void IOMFB::UPPipe2::update_backlight_factor_prop(int)",
+
+    "D300": "void IOMFB::PropRelay::publish(IOMFB::RuntimeProperty, unsigned int)",
+
+    "D400": "void IOMFB::ServiceRelay::get_property(unsigned int, in char const[0x40], out unsigned char[0x200], inout unsigned int*)",
+    "D401": "bool IOMFB::ServiceRelay::get_uint_prop(unsigned int, in char const[0x40], inout unsigned long long*)",
+    "D402": "void IOMFB::ServiceRelay::set_uint_prop(unsigned int, in char const[0x40], unsigned long long)",
+    "D403": "bool IOMFB::ServiceRelay::get_uint_prop(unsigned int, in char const[0x40], inout unsigned int*)",
+    "D404": "void IOMFB::ServiceRelay::set_uint_prop(unsigned int, in char const[0x40], unsigned int)",
+    "D405": "bool IOMFB::ServiceRelay::get_fx_prop(unsigned int, in char const[0x40], inout int*)",
+    "D406": "void IOMFB::ServiceRelay::set_fx_prop(unsigned int, in char const[0x40], int)",
+    "D407": "void IOMFB::ServiceRelay::set_bool_prop(unsigned int, in char const[0x40], bool)",
+    "D408": "unsigned long long IOMFB::ServiceRelay::getClockFrequency(unsigned int, unsigned int)",
+    "D409": "IOMFBStatus IOMFB::ServiceRelay::enableDeviceClock(unsigned int, unsigned int, unsigned int)",
+    "D410": "IOMFBStatus IOMFB::ServiceRelay::enableDevicePower(unsigned int, unsigned int, inout unsigned int*, unsigned int)",
+    "D411": "IOMFBStatus IOMFB::ServiceRelay::mapDeviceMemoryWithIndex(unsigned int, unsigned int, unsigned int, inout unsigned long*, inout unsigned long long*)",
+    "D412": "bool IOMFB::ServiceRelay::setProperty(unsigned int, OSString<0x40> const*, OSArray const*)",
+    "D413": "bool IOMFB::ServiceRelay::setProperty(unsigned int, OSString<0x40> const*, OSDictionary const*)",
+    "D414": "bool IOMFB::ServiceRelay::setProperty(unsigned int, OSString<0x40> const*, OSNumber const*)",
+    "D415": "bool IOMFB::ServiceRelay::setProperty(unsigned int, OSString<0x40> const*, OSBoolean const*)",
+    "D416": "bool IOMFB::ServiceRelay::setProperty(unsigned int, OSString<0x40> const*, OSString const*)",
+    "D417": "bool IOMFB::ServiceRelay::setProperty(unsigned int, char const[0x40], OSArray const*)",
+    "D418": "bool IOMFB::ServiceRelay::setProperty(unsigned int, char const[0x40], OSDictionary const*)",
+    "D419": "bool IOMFB::ServiceRelay::setProperty(unsigned int, char const[0x40], OSNumber const*)",
+    "D420": "bool IOMFB::ServiceRelay::setProperty(unsigned int, char const[0x40], OSBoolean const*)",
+    "D421": "bool IOMFB::ServiceRelay::setProperty(unsigned int, char const[0x40], OSString const*)",
+    "D422": "bool IOMFB::ServiceRelay::setProperty(unsigned int, char const[0x40], bool)",
+    "D423": "void IOMFB::ServiceRelay::removeProperty(unsigned int, char const[0x40])",
+    "D424": "void IOMFB::ServiceRelay::removeProperty(unsigned int, OSString<0x40> const*)",
+
+    "D450": "bool IOMFB::MemDescRelay::from_id(unsigned int, unsigned long*, unsigned long*, unsigned long long*)",
+    "D451": "unsigned int IOMFB::MemDescRelay::allocate_buffer(unsigned int, unsigned long long, unsigned int, unsigned long*, unsigned long*, unsigned long long*)",
+    "D452": "unsigned int IOMFB::MemDescRelay::map_physical(unsigned long long, unsigned long long, unsigned int, unsigned long*, unsigned long long*)",
+    "D453": "unsigned int IOMFB::MemDescRelay::withAddressRange(unsigned long long, unsigned long long, unsigned int, task*, unsigned long*, unsigned long long*)",
+    "D454": "IOMFBStatus IOMFB::MemDescRelay::prepare(unsigned int, unsigned int)",
+    "D455": "IOMFBStatus IOMFB::MemDescRelay::complete(unsigned int, unsigned int)",
+    "D456": "bool IOMFB::MemDescRelay::release_descriptor(unsigned int)",
+
+    "D500": "IOMFBStatus IOMFB::PlatformFunctionRelay::allocate_record(unsigned int, char const*, unsigned int, bool)",
+    "D501": "IOMFBStatus IOMFB::PlatformFunctionRelay::release_record(unsigned int)",
+    "D502": "IOMFBStatus IOMFB::PlatformFunctionRelay::callFunctionLink(unsigned int, unsigned long, unsigned long, unsigned long)",
+
+    "D550": "bool IORegistryEntry::setProperty(OSString *, OSArray *)",
+    "D551": "bool IORegistryEntry::setProperty(OSString *, IOMFB::AFKArray *)",
+    "D552": "bool IORegistryEntry::setProperty(OSString *, OSDictionary *)",
+    "D553": "bool IORegistryEntry::setProperty(OSString *, IOMFB::AFKDictionary *)",
+    "D554": "bool IORegistryEntry::setProperty(OSString *, OSNumber *)",
+    "D555": "bool IORegistryEntry::setProperty(OSString *, IOMFB::AFKNumber *)",
+    "D556": "bool IORegistryEntry::setProperty(OSString *, OSBoolean *)",
+    "D557": "bool IORegistryEntry::setProperty(OSString *, OSString *)",
+    "D558": "bool IORegistryEntry::setProperty(OSString *, IOMFB::AFKString *)",
+    "D559": "bool IORegistryEntry::setProperty(char const*, OSArray *)",
+    "D560": "bool IORegistryEntry::setProperty(char const*, IOMFB::AFKArray *)",
+    "D561": "bool IORegistryEntry::setProperty(char const*, OSDictionary *)",
+    "D562": "bool IORegistryEntry::setProperty(char const*, IOMFB::AFKDictionary *)",
+    "D563": "bool IORegistryEntry::setProperty(char const*, OSNumber *)",
+    "D564": "bool IORegistryEntry::setProperty(char const*, IOMFB::AFKNumber *)",
+    "D565": "bool IORegistryEntry::setProperty(char const*, OSBoolean *)",
+    "D566": "bool IORegistryEntry::setProperty(char const*, OSString *)",
+    "D567": "bool IORegistryEntry::setProperty(char const*, IOMFB::AFKString *)",
+    "D568": "bool IORegistryEntry::setProperty(char const*, char const*)",
+    "D569": "bool IORegistryEntry::setProperty(char const*, bool)",
+    "D570": "IOMFBStatus IOMobileFramebufferAP::setProperties(OSDictionary*)",
+    "D571": "void IOMobileFramebufferAP::swapping_client_did_start(IOMobileFramebufferUserClient*)",
+    "D572": "void IOMobileFramebufferAP::swapping_client_will_stop(IOMobileFramebufferUserClient*)",
+    "D573": "IOMFBStatus IOMobileFramebufferAP::set_canvas_size(unsigned int, unsigned int)",
+    "D574": "IOMFBStatus IOMobileFramebufferAP::powerUpDART(bool)",
+    "D575": "IOMFBStatus IOMobileFramebufferAP::get_dot_pitch(unsigned int*)",
+    "D576": "void IOMobileFramebufferAP::hotPlug_notify_gated(unsigned long long)",
+    "D577": "void IOMobileFramebufferAP::powerstate_notify(bool, bool)",
+    "D578": "bool IOMobileFramebufferAP::idle_fence_create(IdleCachingState)",
+    "D579": "void IOMobileFramebufferAP::idle_fence_complete()",
+    "D580": "void IOMobileFramebufferAP::idle_surface_release_ap()",
+    "D581": "void IOMobileFramebufferAP::swap_complete_head_of_line(unsigned int, bool, unsigned int, bool)",
+    "D582": "bool IOMobileFramebufferAP::create_default_fb_surface(unsigned int, unsigned int)",
+    "D583": "bool IOMobileFramebufferAP::serializeDebugInfoCb(unsigned long, IOMFB::BufferDescriptor const*, unsigned int)",
+    "D584": "void IOMobileFramebufferAP::clear_default_surface()",
+    "D585": "void IOMobileFramebufferAP::swap_notify_gated(unsigned long long, unsigned long long, unsigned long long)",
+    "D586": "void IOMobileFramebufferAP::swap_info_notify_dispatch(SwapInfoBlob const*)",
+    "D587": "void IOMFBStatus IOMobileFramebufferAP::updateBufferMappingCount_gated(bool)",
+    "D588": "void IOMobileFramebufferAP::resize_default_fb_surface_gated()",
+    "D589": "void IOMobileFramebufferAP::swap_complete_ap_gated(unsigned int, bool, SwapCompleteData const*, SwapInfoBlob const*, unsigned int)",
+    "D590": "void IOMobileFramebufferAP::batched_swap_complete_ap_gated(unsigned int*, unsigned int, bool, bool const*, SwapCompleteData const*)",
+    "D591": "void IOMobileFramebufferAP::swap_complete_intent_gated(unsigned int, bool, IOMFBSwapRequestIntent, unsigned int, unsigned int)",
+    "D592": "void IOMobileFramebufferAP::abort_swap_ap_gated(unsigned int)",
+    "D593": "void IOMobileFramebufferAP::enable_backlight_message_ap_gated(bool)",
+    "D594": "void IOMobileFramebufferAP::setSystemConsoleMode_gated(bool)",
+    "D595": "bool IOMobileFramebufferAP::isDFBAllocated()",
+    "D596": "bool IOMobileFramebufferAP::preserveContents()",
+    "D597": "void IOMobileFramebufferAP::find_swap_function_gated()",
+
+    "D700": "int IOMFB::DCPPowerManager::set_kernel_power_assert(bool, bool)",
+}
+
+# iboot interface
+"""
+0: setResource
+1: setSurface
+2: setPower
+3: getHpdStatus
+4: getTimingModes
+5: getColorModes
+6: setMode
+7: setBrightness
+8: rwBCONRegsRequest
+9: setParameter
+10: setMatrix
+11: setProperty
+12: getProperty
+13: setBlock
+14: getBlock
+15: swapBegin
+16: setSwapLayer
+17: setSwapTimestamp
+18: setSwapEnd
+19: setSwapWait
+20: setBrightnessCfg
+21: setNamedProperty
+22: getNamedProperty
+"""
+
 class DCPMessage(Register64):
     TYPE        = 3, 0
-    CMD_EMPTY   = 6
 
 class DCPEp_SetShmem(DCPMessage):
     IOVA        = 47, 16
 
-class TxOp(IntEnum):
-    ACK_REPLY   = 0
+class CallContext(IntEnum):
+    CALLBACK    = 0
     CMD         = 2
-    ACK_ASYNC   = 3
-    CMD_ALT     = 6
-
-class RxOp(IntEnum):
-    REPLY       = 0
-    ACK_CMD     = 2
     ASYNC       = 3
-    ACK_ALT     = 6
+    OOB         = 6
 
-class DCPEp_Tx(DCPMessage):
+class DCPEp_Msg(DCPMessage):
     LEN         = 63, 32
-    OP          = 11, 8, TxOp
+    OFF         = 31, 16
+    CTX         = 11, 8, CallContext
+    ACK         = 6
 
-class DCPEp_Rx(DCPMessage):
-    LEN         = 63, 32
-    OP          = 11, 8, RxOp
+class DCPCallState:
+    pass
 
-KNOWN_MSGS = {
-    "D581": "Cursor updated",
-    "D589": "Frame presented",
-    "A407": "Pre present",
-    "A408": "Present",
-    "A435": "Set Processing",
-    "A422": "Set Night Shift",
-}
+class DCPCallChannel(Reloadable):
+    def __init__(self, dcpep, name, buf, bufsize):
+        self.dcpep = dcpep
+        self.name = name
+        self.buf = buf
+        self.bufsize = bufsize
+        self.log = self.dcpep.log
+        self.state = self.dcpep.state
+
+    def call(self, msg, dir):
+        ident = f"{self.name}.{msg.OFF:x}"
+
+        if any(msg.OFF == s.off for s in self.state.ch.get(self.name, [])):
+            self.log(f"{dir}{self.name}.{msg.OFF:x} !!! Overlapping call ({msg})")
+            assert False
+
+        state = DCPCallState()
+
+        data = self.dcpep.dart.ioread(0, self.state.shmem_iova + self.buf + msg.OFF, msg.LEN)
+        tag = data[:4][::-1].decode("ascii")
+        in_len, out_len = struct.unpack("<II", data[4:12])
+        data_in = data[12:12 + in_len]
+
+        state.off = msg.OFF
+        state.tag = tag
+        state.in_len = in_len
+        state.out_addr = self.buf + msg.OFF + 12 + in_len
+        state.out_len = out_len
+
+        verb = self.dcpep.get_verbosity(tag)
+        if verb >= 1:
+            self.log(f"{dir}{self.name}.{msg.OFF:x} {tag}:{KNOWN_MSGS.get(tag, 'unk')} ({msg})")
+        if verb >= 2:
+            print(f"Message: {tag} ({KNOWN_MSGS.get(tag, 'unk')}): (in {in_len:#x}, out {out_len:#x})")
+            if data_in:
+                print(f"{dir} Input ({len(data_in):#x} bytes):")
+                chexdump(data_in[:self.state.max_len])
+
+        #if tag not in KNOWN_MSGS:
+            #hv.run_shell()
+
+        if self.state.dumpfile:
+            dump = f"CALL {dir} {msg.value:#018x} {self.name} {state.off} {state.tag} {in_len:#x} {out_len:#x} {data_in.hex()}\n"
+            self.state.dumpfile.write(dump)
+            self.state.dumpfile.flush()
+
+        self.state.ch.setdefault(self.name, []).append(state)
+
+    def ack(self, msg, dir):
+        assert msg.LEN == 0
+
+        states = self.state.ch.get(self.name, None)
+        if not states:
+            self.log(f"{dir}ACK {self.name}.{msg.OFF:x} !!! ACK without call ({msg})")
+            return
+
+        state = states[-1]
+
+        if self.state.show_acks:
+            self.log(f"{dir}ACK {self.name}.{msg.OFF:x} ({msg})")
+
+        data_out = self.dcpep.dart.ioread(0, self.state.shmem_iova + state.out_addr, state.out_len)
+
+        verb = self.dcpep.get_verbosity(state.tag)
+        if verb >= 3 and state.out_len > 0:
+            print(f"{dir}{self.name}.{msg.OFF:x} Output buffer ({len(data_out):#x} bytes):")
+            chexdump(data_out[:self.state.max_len])
+
+        if self.state.dumpfile:
+            dump = f"ACK {dir} {msg.value:#018x} {self.name} {state.off} {data_out.hex()}\n"
+            self.state.dumpfile.write(dump)
+            self.state.dumpfile.flush()
+
+        states.pop()
 
 class DCPEp(EP):
     BASE_MESSAGE = DCPMessage
@@ -174,14 +573,27 @@ class DCPEp(EP):
         self.state.max_len = 1024 * 1024
         self.state.verbosity = 3
         self.state.op_verb = {}
-        self.state.req_info = None
-        self.state.cmd_info = None
-        self.state.alt_info = None
-        self.state.async_info = None
-        self.state.req_len = None
-        self.state.cmd_len = None
-        self.state.alt_len = None
-        self.state.async_len = None
+        self.state.ch = {}
+        self.state.dumpfile = None
+
+        self.ch_cb = DCPCallChannel(self, "CB", 0x60000, 0x20000)
+        self.ch_cmd = DCPCallChannel(self, "CMD", 0, 0x8000)
+        self.ch_async = DCPCallChannel(self, "ASYNC", 0x40000, 0x20000)
+        self.ch_oob = DCPCallChannel(self, "OOB", 0x8000, 0x8000)
+
+        self.cmd_ch = {
+            CallContext.CALLBACK: self.ch_cmd,
+            CallContext.CMD: self.ch_cmd,
+            CallContext.ASYNC: self.ch_oob, # guess?
+            CallContext.OOB: self.ch_oob,
+        }
+
+        self.cb_ch = {
+            CallContext.CALLBACK: self.ch_cb,
+            CallContext.CMD: None,
+            CallContext.ASYNC: self.ch_async,
+            CallContext.OOB: None,
+        }
 
     def start(self):
         self.add_mon()
@@ -192,6 +604,10 @@ class DCPEp(EP):
             iomon.add(addr, 128,
                       name=f"{self.name}.shmem@{addr:08x}", offset=addr)
 
+            #addr = self.state.shmem_iova
+            #iomon.add(addr, 0x80080,
+                      #name=f"{self.name}.shmem@{addr:08x}", offset=addr)
+
     InitComplete = msg_log(1, DIR.RX)
 
     @msg(0, DIR.TX, DCPEp_SetShmem)
@@ -200,102 +616,28 @@ class DCPEp(EP):
         self.state.shmem_iova = msg.IOVA
         self.add_mon()
 
-    @msg(2, DIR.TX, DCPEp_Tx)
+    @msg(2, DIR.TX, DCPEp_Msg)
     def Tx(self, msg):
-        #self.log(f">{msg.OP.name} ({msg})")
-        if msg.OP in (TxOp.ACK_REPLY, TxOp.CMD, TxOp.ACK_ASYNC):
-            if msg.OP == TxOp.ACK_ASYNC:
-                addr = self.state.shmem_iova + 0x40000
-                size = self.state.async_len
-                info = self.state.async_info
-            else:
-                addr = self.state.shmem_iova + 0x60000
-                size = self.state.req_len
-                info = self.state.req_info
-            if size is not None:
-                tag, din, dout = info
-                verb = self.get_verbosity(tag)
-                if verb >= 3 and len(dout) > 0:
-                    dout2 = self.dart.ioread(0, addr + 12 + len(din), len(dout))
-                    print(f"< Output buffer ({len(dout2):#x} bytes):")
-                    chexdump(dout2[:self.state.max_len])
-                if msg.OP == TxOp.ACK_ASYNC:
-                    self.state.async_len = None
-                else:
-                    self.state.req_len = None
-        if msg.LEN > 0:
-            assert msg.OP in (TxOp.CMD, TxOp.CMD_ALT, TxOp.ACK_REPLY)
-            addr = self.state.shmem_iova
-            if msg.OP == TxOp.CMD_ALT:
-                addr += 0x8000
-            data = self.dart.ioread(0, addr, msg.LEN)
-            tag, din, dout = self.dec_msg(data)
-            if msg.OP == TxOp.CMD_ALT:
-                self.state.alt_info = tag, din, dout
-                self.state.alt_len = msg.LEN
-            else:
-                self.state.cmd_info = tag, din, dout
-                self.state.cmd_len = msg.LEN
-
-            verb = self.get_verbosity(tag)
-            if verb >= 1:
-                self.log(f">{msg.OP.name} {tag}:{KNOWN_MSGS.get(tag, 'unk')} ({msg})")
-            if verb >= 2:
-                self.show_msg(tag, din, dout)
+        if msg.ACK:
+            self.cb_ch[msg.CTX].ack(msg, ">")
         else:
-            if self.state.show_acks:
-                self.log(f">{msg.OP.name} ({msg})")
-
-        return True
-
-    @msg(2, DIR.RX, DCPEp_Rx)
-    def Rx(self, msg):
-        #self.log(f"<{msg.OP.name} ({msg})")
-        if msg.OP in (RxOp.ACK_CMD, RxOp.ACK_ALT, RxOp.REPLY):
-            if msg.OP == RxOp.ACK_ALT:
-                addr = self.state.shmem_iova + 0x8000
-                size = self.state.alt_len
-                info = self.state.alt_info
-            else:
-                addr = self.state.shmem_iova
-                size = self.state.cmd_len
-                info = self.state.cmd_info
-            if size is not None:
-                tag, din, dout = info
-                verb = self.get_verbosity(tag)
-                if verb >= 3 and len(dout) > 0:
-                    dout2 = self.dart.ioread(0, addr + 12 + len(din), len(dout))
-                    print(f"< Output buffer ({len(dout2):#x} bytes):")
-                    chexdump(dout2[:self.state.max_len])
-                if msg.OP == RxOp.ACK_ALT:
-                    self.state.alt_len = None
-                else:
-                    self.state.cmd_len = None
-        if msg.LEN > 0:
-            addr = self.state.shmem_iova
-            if msg.OP == RxOp.ASYNC:
-                addr += 0x40000
-            else:
-                addr += 0x60000
-            data = self.dart.ioread(0, addr, msg.LEN)
-            tag, din, dout = self.dec_msg(data)
-            if msg.OP == RxOp.ASYNC:
-                self.state.async_info = tag, din, dout
-                self.state.async_len = msg.LEN
-            else:
-                self.state.req_info = tag, din, dout
-                self.state.req_len = msg.LEN
-            verb = self.get_verbosity(tag)
-            if verb >= 1:
-                self.log(f"<{msg.OP.name} {tag}:{KNOWN_MSGS.get(tag, 'unk')} ({msg})")
-            if verb >= 2:
-                self.show_msg(tag, din, dout)
-        else:
-            if self.state.show_acks:
-                self.log(f"<{msg.OP.name} ({msg})")
+            self.cmd_ch[msg.CTX].call(msg, ">")
 
         if self.state.show_globals:
             iomon.poll()
+
+        return True
+
+    @msg(2, DIR.RX, DCPEp_Msg)
+    def Rx(self, msg):
+        if msg.ACK:
+            self.cmd_ch[msg.CTX].ack(msg, "<")
+        else:
+            self.cb_ch[msg.CTX].call(msg, "<")
+
+        if self.state.show_globals:
+            iomon.poll()
+
         return True
 
     def get_verbosity(self, tag):
@@ -307,26 +649,6 @@ class DCPEp(EP):
                 self.state.op_verb.pop(i, None)
             else:
                 self.state.op_verb[i] = verb
-
-    def dec_msg(self, data):
-        #chexdump(data)
-        tag = data[:4][::-1].decode("ascii")
-        size_in, size_out = struct.unpack("<II", data[4:12])
-        data_in = data[12:12+size_in]
-        data_out = data[12+size_in:12+size_in+size_out]
-        assert len(data_in) == size_in
-        if len(data_out) < size_out:
-            data_out += bytes(size_out)
-        return tag, data_in, data_out
-
-    def show_msg(self, tag, data_in, data_out):
-        print(f"Message: {tag} ({KNOWN_MSGS.get(tag, 'unk')}): (in {len(data_in):#x}, out {len(data_out):#x})")
-        if data_in:
-            print(f"> Input ({len(data_in):#x} bytes):")
-            chexdump(data_in[:self.state.max_len])
-        #if data_out:
-            #print(f"> Output buffer ({len(data_out):#x} bytes):")
-            #chexdump(data_out[:self.state.max_len])
 
 class SystemService(IOEp):
     NAME = "system"
@@ -368,16 +690,16 @@ class DCPTracer(ASCTracer):
         0x22: DCPExpertService,
         0x23: Disp0Service,
         0x24: DPTXService,
-        0x25: IOEp,
+        0x25: IOEp, # dcpav-power-ep
         0x26: DPSACService,
         0x27: DPDevService,
         0x28: MDCP29XXService,
         0x29: AVService,
-        0x2a: IOEp,
+        0x2a: IOEp, # dcpdptx-port-ep
         0x2b: HDCPService,
-        0x2c: IOEp,
+        0x2c: IOEp, # cb-ap-to-dcp-service-ep
         0x2d: RemoteAllocService,
-        0x37: DCPEp,
+        0x37: DCPEp, # iomfb-link
     }
 
     def handle_msg(self, direction, r0, r1):
@@ -398,3 +720,5 @@ iomon.readmem = readmem_iova
 
 dcp_tracer = DCPTracer(hv, "/arm-io/dcp", verbose=1)
 dcp_tracer.start(dart_dcp_tracer.dart)
+
+#dcp_tracer.ep.dcpep.state.dumpfile = open("dcp.log", "a")
