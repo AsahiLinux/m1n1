@@ -29,17 +29,17 @@ def _ascii(s):
             s2 += chr(c)
     return s2
 
-def chexdump(s, st=0, abbreviate=True):
+def chexdump(s, st=0, abbreviate=True, indent=""):
     last = None
     skip = False
     for i in range(0,len(s),16):
         val = s[i:i+16]
         if val == last and abbreviate:
             if not skip:
-                print("%08x  *" % (i + st))
+                print(indent+"%08x  *" % (i + st))
                 skip = True
         else:
-            print("%08x  %s  %s  |%s|" % (
+            print(indent+"%08x  %s  %s  |%s|" % (
                   i + st,
                   hexdump(val[:8], ' ').ljust(23),
                   hexdump(val[8:], ' ').ljust(23),
