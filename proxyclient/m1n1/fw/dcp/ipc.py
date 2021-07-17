@@ -132,6 +132,8 @@ class Method:
             if out_vals and name in out_vals:
                 if self.is_long(out_vals[name]):
                     s.append(f"{name}=...")
+                elif isinstance(out_vals[name], ListContainer):
+                    s.append(f"{name}={list(out_vals[name])!r}")
                 else:
                     s.append(f"{name}={out_vals[name]!r}")
             elif dir == "out":
@@ -139,6 +141,8 @@ class Method:
             elif name in in_vals:
                 if self.is_long(in_vals[name]):
                     s.append(f"{name}=...")
+                elif isinstance(in_vals[name], ListContainer):
+                    s.append(f"{name}={list(in_vals[name])!r}")
                 else:
                     s.append(f"{name}={in_vals[name]!r}")
             else:
@@ -179,7 +183,25 @@ class Method:
                     print(hdr + pprint.pformat(val, sort_dicts=False).replace("\n", "\n" + dindent))
 
     def is_long(self, arg):
+        if isinstance(arg, (list, bytes)):
+            return len(arg) > 4
+
         return isinstance(arg, (dict, list, bytes))
+
+    def parse_input(self, data):
+        vals = self.in_struct.parse(data)
+
+        return Container({ k: v() if callable(v) else v for k,v in vals.items() })
+
+    def parse_output(self, data, in_vals):
+        context = dict(in_vals)
+
+        if "data" in context:
+            del context["data"]
+
+        vals = self.out_struct.parse(data, **context)
+
+        return Container({ k: v() if callable(v) else v for k,v in vals.items() })
 
 def dump_fields(fields):
     off = 0
@@ -210,6 +232,12 @@ long_ = int64_t
 
 def Bool(c):
     return ExprAdapter(c, lambda d, ctx: bool(d & 1), lambda d, ctx: int(d))
+
+def SizedArray(count, svar, subcon):
+    return Lazy(Padded(subcon.sizeof() * count, Array(lambda ctx: ctx.get(svar) or ctx._.get(svar), subcon)))
+
+def SizedBytes(count, svar):
+    return Lazy(Padded(count, Bytes(lambda ctx: ctx.get(svar) or ctx._.get(svar))))
 
 bool_ = Bool(int8_t)
 
@@ -313,10 +341,10 @@ class UnifiedPipeline2(IPCObject):
     D110 = Callback(bool_, "create_iomfb_service")
     D111 = Callback(bool_, "create_backlight_service")
     D116 = Callback(bool_, "start_hardware_boot")
-    D119 = Callback(bool_, "read_edt_data", key=string(0x40), count=uint, value=InOut(Array(8, uint32_t)))
+    D119 = Callback(bool_, "read_edt_data", key=string(0x40), count=uint, value=InOut(SizedArray(8, "count", uint32_t)))
 
     D121 = Callback(bool_, "setDCPAVPropStart", length=uint)
-    D122 = Callback(bool_, "setDCPAVPropChunk", data=HexDump(Bytes(0x1000)), offset=uint, length=uint)
+    D122 = Callback(bool_, "setDCPAVPropChunk", data=HexDump(SizedBytes(0x1000, "length")), offset=uint, length=uint)
     D123 = Callback(bool_, "setDCPAVPropEnd", key=string(0x40))
 
 class UPPipe2(IPCObject):
@@ -354,8 +382,8 @@ class IOMobileFramebufferAP(IPCObject):
     A426 = Call(uint32_t, "get_color_remap_mode", InOutPtr(uint32_t))
     A427 = Call(uint32_t, "setBrightnessCorrection", uint)
 
-    A435 = Call(uint32_t, "set_block_dcp", uint64_t, uint, uint, Array(8, ulong), uint, Bytes(0x1000), ulong)
-    A438 = Call(uint32_t, "set_parameter_dcp", IOMFBParameterName, Array(4, ulong), uint)
+    A435 = Call(uint32_t, "set_block_dcp", arg1=uint64_t, arg2=uint, arg3=uint, arg4=Array(8, ulong), arg5=uint, data=SizedBytes(0x1000, "length"), length=ulong)
+    A438 = Call(uint32_t, "set_parameter_dcp", param=IOMFBParameterName, value=SizedArray(4, "count", ulong), count=uint)
 
     A441 = Call(void, "get_display_size", OutPtr(uint), OutPtr(uint))
     A442 = Call(int_, "do_create_default_frame_buffer")
@@ -456,7 +484,7 @@ class Call:
             self.in_vals = {}
             return
 
-        self.in_vals = method.in_struct.parse(self.in_data)
+        self.in_vals = method.parse_input(self.in_data)
 
         log += f"{method.fmt_args(self.in_vals)})"
 
@@ -484,7 +512,7 @@ class Call:
             chexdump(self.out_data)
             return
 
-        self.out_vals = method.out_struct.parse(self.out_data)
+        self.out_vals = method.parse_output(self.out_data, self.in_vals)
 
         log += f"{method.fmt_args(self.in_vals, self.out_vals)})"
 
