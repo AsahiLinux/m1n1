@@ -318,7 +318,7 @@ IOMFBSwapRec = Bytes(0x274)
 IOSurface = Bytes(0x204)
 
 class UPPipeAP_H13P(IPCObject):
-    A000 = Call(uint32_t, "late_init_signal")
+    A000 = Call(bool_, "late_init_signal")
     A029 = Call(void, "setup_video_limits")
     A034 = Call(void, "update_notify_clients_dcp", Array(11, uint))
     A036 = Call(bool_, "apt_supported")
