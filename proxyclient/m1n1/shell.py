@@ -2,6 +2,7 @@
 import atexit, serial, os, struct, code, traceback, readline, rlcompleter, sys
 import __main__
 import builtins
+import re
 
 from .proxy import *
 from .proxyutils import *
@@ -46,7 +47,34 @@ class HistoryConsole(code.InteractiveConsole):
 
 class ExitConsole(SystemExit):
     pass
+cmd_list = {}
 
+def help_cmd(arg=None):
+    if arg:
+        if not callable(arg):
+            print("Unknown command: %s" % repr(arg))
+            return
+        cmd = arg.__name__
+        if cmd not in cmd_list:
+            print("Undocumented command %s" % cmd)
+            return
+        hinfo = cmd_list[cmd]
+        print("%-10s : %s" % (cmd, hinfo))
+        return
+    print("List of Commands:")
+    for cmd in cmd_list.keys():
+        hinfo = cmd_list[cmd]
+        if not hinfo:
+            print("%s ?" % cmd)
+        else:
+            msg = hinfo.strip().split('\n', 1)[0]
+            if len(cmd) <= 10:
+                print("%-10s : %s" % (cmd, msg))
+            else:
+                print("%s:\n             %s" % (cmd, msg))
+#locals is a dictionary for constructing the
+# InteractiveConsole with. It adds in the callables
+# in proxy utils iface and sysreg into locals
 def run_shell(locals, msg=None, exitmsg=None):
     saved_display = sys.displayhook
     try:
@@ -82,10 +110,28 @@ def run_shell(locals, msg=None, exitmsg=None):
 
                 member = getattr(obj_class, attr)
                 if callable(member) and not isinstance(member, property):
-                    locals[attr] = getattr(obj, attr)
+                    cmd = getattr(obj, attr)
+                    locals[attr] = cmd
 
         for attr in dir(sysreg):
             locals[attr] = getattr(sysreg, attr)
+
+        for obj_name in locals.keys():
+            obj = locals.get(obj_name)
+            if obj is None:
+                continue
+            if callable(obj) and not isinstance(obj, property):
+                desc = locals[obj_name].__doc__
+                if not desc:
+                    desc = repr(locals[obj_name])
+                    desc = re.sub("<bound method ", "", desc)
+                    desc = re.sub(" object at 0x[0-9a-fA-F]*>>", "", desc)
+                    desc = re.sub('<', '', desc)
+                    b = re.split(' ', desc)
+                    if len(b) == 3:
+                        desc = ".".join([b[2], re.split('\.', b[0])[-1]])
+                cmd_list[obj_name] = desc
+        locals['help'] = help_cmd
 
         try:
             con = HistoryConsole(locals)

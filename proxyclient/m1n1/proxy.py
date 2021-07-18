@@ -80,6 +80,20 @@ ExcInfo = Struct(
     "sp_phys" / Int64ul,
     "data" / Int64ul,
 )
+# Sends 56+ byte Commands and Expects 36 Byte Responses
+# Commands are format <I48sI
+#   4 byte command, 48 byte null padded data + 4 byte checksum 
+# Responses are of the format: struct format <Ii24sI
+#   4byte Response , 4 byte status, 24 byte string,  4 byte Checksum
+#    Response must start 0xff55aaXX where XX distiguishes between them
+#    In little endian mode these numbers as listed as REQ_* constants
+# defined under UartInterface
+#
+#  Event Response REQ_EVENT passed to registered Event Handler
+#  Boot Response REQ_BOOT passed to handle_boot() which may
+#       pass to a matching registered handler based on reason, code values
+#  If the status is ST_OK returns the data field to caller
+#     Otherwise reports a remote Error
 
 class UartInterface(Reloadable):
     REQ_NOP = 0x00AA55FF
@@ -426,6 +440,8 @@ REGION_RWX_EL0 = 0x8000000000
 REGION_RW_EL0 = 0x9000000000
 REGION_RX_EL1 = 0xa000000000
 
+# Uses UartInterface.proxyreq() to send requests to M1N1 and process
+# reponses sent back.
 class M1N1Proxy(Reloadable):
     S_OK = 0
     S_BADCMD = -1
@@ -669,78 +685,102 @@ class M1N1Proxy(Reloadable):
         self.request(self.P_REBOOT, no_reply=True)
 
     def write64(self, addr, data):
+        '''write64(addr, data) - write 8 byte value to given address'''
         if addr & 7:
             raise AlignmentError()
         self.request(self.P_WRITE64, addr, data)
     def write32(self, addr, data):
+        '''write32(addr, data)  - write 4 byte value to given address'''
         if addr & 3:
             raise AlignmentError()
         self.request(self.P_WRITE32, addr, data)
     def write16(self, addr, data):
+        '''write16(addr, data) - write 2 byte value to given address'''
         if addr & 1:
             raise AlignmentError()
         self.request(self.P_WRITE16, addr, data)
     def write8(self, addr, data):
+        '''write8(addr, data) - write 1 byte value to given address'''
         self.request(self.P_WRITE8, addr, data)
 
     def read64(self, addr):
+        '''read64(addr) - return 8 byte value from given address'''
         if addr & 7:
             raise AlignmentError()
         return self.request(self.P_READ64, addr)
     def read32(self, addr):
+        '''read32(addr) - return 4 byte value given address'''
         if addr & 3:
             raise AlignmentError()
         return self.request(self.P_READ32, addr)
     def read16(self, addr):
+        '''read16(addr) - return 2 byte value from given address'''
         if addr & 1:
             raise AlignmentError()
         return self.request(self.P_READ16, addr)
     def read8(self, addr):
+        '''read8(addr) - return 1 byte value from given address'''
         return self.request(self.P_READ8, addr)
 
     def set64(self, addr, data):
+        '''set64(addr, data) - Or 64 bit value of data into memory at addr and return result'''
         if addr & 7:
             raise AlignmentError()
         self.request(self.P_SET64, addr, data)
     def set32(self, addr, data):
+        '''set32(addr, data) - Or 32 bit value of data into memory at addr and return result'''
         if addr & 3:
             raise AlignmentError()
         self.request(self.P_SET32, addr, data)
     def set16(self, addr, data):
+        '''set16(addr, data) - Or 16 bit value of data into memory at addr and return result'''
         if addr & 1:
             raise AlignmentError()
         self.request(self.P_SET16, addr, data)
     def set8(self, addr, data):
+        '''set8(addr, data) - Or byte value of data into memory at addr and return result'''
         self.request(self.P_SET8, addr, data)
 
     def clear64(self, addr, data):
+        '''clear64(Addr, Data) - Clear bits in 64 bit memory at address addr that are set in data and return result'''
         if addr & 7:
             raise AlignmentError()
         self.request(self.P_CLEAR64, addr, data)
     def clear32(self, addr, data):
+        '''clear32(addr, data) - Clear bits in 32 bit memory at address addr that are set in data and return result'''
         if addr & 3:
             raise AlignmentError()
         self.request(self.P_CLEAR32, addr, data)
     def clear16(self, addr, data):
+        '''clear16(addr, data) - Clear bits in 32 bit memory at address addr that are set in data and return result'''
         if addr & 1:
             raise AlignmentError()
         self.request(self.P_CLEAR16, addr, data)
     def clear8(self, addr, data):
+        '''clear8(addr, data - Clear bits in 32 bit memory at address addr that are set in data and return result'''
         self.request(self.P_CLEAR8, addr, data)
 
     def mask64(self, addr, clear, set):
+        '''mask64(addr, clear, set) - Clear bits in 64 bit memory at address addr that are
+ set in clear, then set the bits in set and return result'''
         if addr & 7:
             raise AlignmentError()
         self.request(self.P_MASK64, addr, clear, set)
     def mask32(self, addr, clear, set):
+        '''mask32(addr, clear, set) - Clear bits in 32 bit memory at address addr that are
+ set in clear, then set the bits in set and return result'''
         if addr & 3:
             raise AlignmentError()
         self.request(self.P_MASK32, addr, clear, set)
-    def mask16(self, addr, clear, set):
+    def mset64ask16(self, addr, clear, set):
+        '''mask16(addr, clear, set) - Clear bits in 16 bit memory at address addr that are
+ set in clear, then set the bits in set and return result'''
         if addr & 1:
             raise AlignmentError()
         self.request(self.P_MASK16, addr, clear, set)
     def mask8(self, addr, clear, set):
+        '''mask8(addr, clear, set) - Clear bits in 1 byte memory at address addr that are
+ set in clear, then set the bits in set and return result'''
         self.request(self.P_MASK8, addr, clear, set)
 
     def writeread64(self, addr, data):
@@ -898,6 +938,7 @@ class M1N1Proxy(Reloadable):
     def hv_start(self, entry, *args):
         return self.request(self.P_HV_START, entry, *args)
     def hv_translate(self, addr, s1=False, w=False):
+        '(addr, s1=False, w=False) - Translate address, stage 1 only if s1, for write if w'
         return self.request(self.P_HV_TRANSLATE, addr, s1, w)
     def hv_pt_walk(self, addr):
         return self.request(self.P_HV_PT_WALK, addr)
