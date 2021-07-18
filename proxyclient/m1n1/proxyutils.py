@@ -340,6 +340,18 @@ class RegMonitor(Reloadable):
         self.ranges.append((start, size, name, offset))
         self.last.append(None)
 
+    def remove(self, name):
+        found_idx = None
+        for idx, (_, _, i_name, _) in enumerate(self.ranges):
+            if i_name == name:
+                found_idx = idx
+
+        if not found_idx:
+            raise KeyError(f"entry {name} not found")
+
+        del self.ranges[found_idx]
+        del self.last[found_idx]
+
     def poll(self):
         if not self.ranges:
             return
