@@ -4,6 +4,7 @@
 #include "assert.h"
 #include "heapblock.h"
 #include "kboot.h"
+#include "malloc.h"
 #include "smp.h"
 #include "utils.h"
 
@@ -102,6 +103,16 @@ static void *load_cpio(void *p, size_t size)
         // We could handle this, but who uses uncompressed initramfs?
         printf("Uncompressed cpio archives not supported\n");
         return NULL;
+    }
+
+    size_t fw_size;
+    void *fw = kboot_prepare_fw(&fw_size);
+
+    if (fw) {
+        memmove((void *)(fw_size + (u64)p), p, size);
+        memcpy(p, fw, fw_size);
+        free(fw);
+        size += fw_size;
     }
 
     kboot_set_initrd(p, size);

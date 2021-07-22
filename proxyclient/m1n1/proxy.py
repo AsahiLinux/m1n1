@@ -514,6 +514,7 @@ class M1N1Proxy(Reloadable):
     P_KBOOT_SET_BOOTARGS = 0x701
     P_KBOOT_SET_INITRD = 0x702
     P_KBOOT_PREPARE_DT = 0x703
+    P_KBOOT_PREPARE_FW = 0x704
 
     P_PMGR_CLOCK_ENABLE = 0x800
     P_PMGR_CLOCK_DISABLE = 0x801
@@ -852,6 +853,8 @@ class M1N1Proxy(Reloadable):
         self.request(self.P_KBOOT_SET_INITRD, base, size)
     def kboot_prepare_dt(self, dt_addr):
         return self.request(self.P_KBOOT_PREPARE_DT, dt_addr)
+    def kboot_prepare_fw(self, p_size):
+        return self.request(self.P_KBOOT_PREPARE_FW, p_size)
 
     def pmgr_clock_enable(self, clkid):
         return self.request(self.P_PMGR_CLOCK_ENABLE, clkid)

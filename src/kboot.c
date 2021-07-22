@@ -308,8 +308,8 @@ int kboot_prepare_dt(void *fdt)
         dt = NULL;
     }
 
-    if (kboot_prepare_fw() < 0)
-        bail("FDT: couldn't prepare firmware.");
+    if (!initrd_start)
+        initrd_start = kboot_prepare_fw(&initrd_size);
 
     dt_bufsize = fdt_totalsize(fdt);
     assert(dt_bufsize);
@@ -368,13 +368,11 @@ static int kboot_prepare_sepfw(struct cpio *c)
     return 0;
 }
 
-int kboot_prepare_fw(void)
+void *kboot_prepare_fw(size_t *size)
 {
     struct cpio *c = cpio_init();
     u8 *cpio_start = NULL;
-    u8 *new_initrd_start = NULL;
     size_t cpio_size = 0;
-    u32 new_initrd_size = 0;
 
     if (cpio_add_dir(c, "lib") < 0)
         goto err;
@@ -386,33 +384,26 @@ int kboot_prepare_fw(void)
     if (kboot_prepare_sepfw(c) < 0)
         printf("kboot: no SEPFW found.\n");
 
+    if (cpio_add_file(c, "TRAILER!!!", NULL, 0) < 0)
+        goto err;
+
     cpio_size = cpio_get_size(c);
-    new_initrd_size = cpio_size + ALIGN_UP(initrd_size, 4);
-    new_initrd_start = memalign(INITRD_ALIGN, new_initrd_size);
-    if (!new_initrd_start) {
-        printf("kboot: couldn't allocate initrd buffer\n");
+    cpio_start = memalign(INITRD_ALIGN, cpio_size);
+    int res = cpio_finalize(c, cpio_start, cpio_size);
+    if (res != (int)cpio_size) {
+        printf("kboot: unexpected cpio_finalize size: %d should be %lu\n", res, cpio_size);
         goto err;
     }
 
-    memcpy(new_initrd_start, initrd_start, initrd_size);
+    if (size)
+        *size = cpio_size;
 
-    cpio_start = new_initrd_start + ALIGN_UP(initrd_size, 4);
-    size_t res = cpio_finalize(c, cpio_start, cpio_size);
-    if (res != cpio_size) {
-        printf("kboot: unexpected cpio_finalize size: %lu should be %lu\n", res, cpio_size);
-        goto err;
-    }
-
-    initrd_start = new_initrd_start;
-    initrd_size = new_initrd_size;
     cpio_free(c);
-
-    return 0;
+    return cpio_start;
 
 err:
-    free(new_initrd_start);
     cpio_free(c);
-    return -1;
+    return NULL;
 }
 
 int kboot_boot(void *kernel)

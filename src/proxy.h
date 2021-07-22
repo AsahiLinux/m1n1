@@ -90,6 +90,7 @@ typedef enum {
     P_KBOOT_SET_BOOTARGS,
     P_KBOOT_SET_INITRD,
     P_KBOOT_PREPARE_DT,
+    P_KBOOT_PREPARE_FW,
 
     P_PMGR_CLOCK_ENABLE = 0x800, // power/clock management ops
     P_PMGR_CLOCK_DISABLE,

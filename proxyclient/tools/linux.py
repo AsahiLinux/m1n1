@@ -68,11 +68,24 @@ print("Kernel_base: 0x%x" % kernel_base)
 assert not (kernel_base & 0xffff)
 
 if initramfs is not None:
-    initramfs_base = u.memalign(65536, initramfs_size)
-    print("Loading %d initramfs bytes to 0x%x..." % (initramfs_size, initramfs_base))
-    iface.writemem(initramfs_base, initramfs, True)
-    p.kboot_set_initrd(initramfs_base, initramfs_size)
+    psize = u.malloc(8)
+    fw = proxy.kboot_prepare_fw(psize)
+    if fw:
+        fw_size = p.read64(psize)
+    else:
+        fw_size = 0
 
+    initramfs_base = initramfs_load = u.memalign(65536, initramfs_size + fw_size)
+    if fw_size:
+        print("Copying %d firmware bytes to 0x%x..." % (fw_size, initramfs_base + fw_size))
+        p.memcpy(initramfs_base, fw, fw_size)
+
+    print("Loading %d initramfs bytes to 0x%x..." % (initramfs_size, initramfs_base + fw_size))
+    iface.writemem(initramfs_base + fw_size, initramfs, True)
+    p.kboot_set_initrd(initramfs_base, initramfs_size + fw_size)
+
+    if fw:
+        p.free(fw)
 
 if args.u_boot:
     uboot = bytearray(args.u_boot.read_bytes())

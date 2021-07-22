@@ -118,12 +118,12 @@ size_t cpio_get_size(struct cpio *c)
     return sz;
 }
 
-size_t cpio_finalize(struct cpio *c, u8 *bfr, size_t bfr_size)
+int cpio_finalize(struct cpio *c, u8 *bfr, size_t bfr_size)
 {
     size_t off = 0;
 
     if (cpio_get_size(c) > bfr_size)
-        return 0;
+        return -1;
 
     for (u32 i = 0; i < c->n_files; ++i) {
         memcpy(bfr + off, &c->files[i].hdr, sizeof(struct cpio_header));
