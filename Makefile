@@ -47,6 +47,7 @@ OBJECTS := \
 	heapblock.o \
 	hv.o hv_vm.o hv_exc.o hv_vuart.o hv_wdt.o hv_asm.o hv_aic.o \
 	i2c.o \
+	iop.o \
 	iodev.o \
 	kboot.o \
 	main.o \
