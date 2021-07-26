@@ -28,6 +28,15 @@
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 
+#define DECLARE_BITFIELD(name, n_bits) u64 name[(ALIGN_UP(n_bits, 64) / 64)];
+#define BIT_TEST(bitfield, idx)        !!(bitfield[(idx) / 64] & BIT((idx)&0x3f))
+#define BIT_SET(bitfield, idx)         bitfield[(idx) / 64] |= BIT((idx)&0x3f)
+#define BIT_CLEAR(bitfield, idx)       bitfield[(idx) / 64] &= ~BIT((idx)&0x3f)
+
+#define for_each_set_bit(loopvar, bitfield, size)                                                  \
+    for (int loopvar = 0; loopvar < size; ++loopvar)                                               \
+        if (BIT_TEST(bitfield, loopvar))
+
 static inline u64 read64(u64 addr)
 {
     u64 data;
