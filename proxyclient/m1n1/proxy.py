@@ -685,102 +685,107 @@ class M1N1Proxy(Reloadable):
         self.request(self.P_REBOOT, no_reply=True)
 
     def write64(self, addr, data):
-        '''write64(addr, data) - write 8 byte value to given address'''
+        '''write 8 byte value to given address'''
         if addr & 7:
             raise AlignmentError()
         self.request(self.P_WRITE64, addr, data)
     def write32(self, addr, data):
-        '''write32(addr, data)  - write 4 byte value to given address'''
+        '''write 4 byte value to given address'''
         if addr & 3:
             raise AlignmentError()
         self.request(self.P_WRITE32, addr, data)
     def write16(self, addr, data):
-        '''write16(addr, data) - write 2 byte value to given address'''
+        '''write 2 byte value to given address'''
         if addr & 1:
             raise AlignmentError()
         self.request(self.P_WRITE16, addr, data)
     def write8(self, addr, data):
-        '''write8(addr, data) - write 1 byte value to given address'''
+        '''write 1 byte value to given address'''
         self.request(self.P_WRITE8, addr, data)
 
     def read64(self, addr):
-        '''read64(addr) - return 8 byte value from given address'''
+        '''return 8 byte value from given address'''
         if addr & 7:
             raise AlignmentError()
         return self.request(self.P_READ64, addr)
     def read32(self, addr):
-        '''read32(addr) - return 4 byte value given address'''
+        '''return 4 byte value given address'''
         if addr & 3:
             raise AlignmentError()
         return self.request(self.P_READ32, addr)
     def read16(self, addr):
-        '''read16(addr) - return 2 byte value from given address'''
+        '''return 2 byte value from given address'''
         if addr & 1:
             raise AlignmentError()
         return self.request(self.P_READ16, addr)
     def read8(self, addr):
-        '''read8(addr) - return 1 byte value from given address'''
+        '''return 1 byte value from given address'''
         return self.request(self.P_READ8, addr)
 
     def set64(self, addr, data):
-        '''set64(addr, data) - Or 64 bit value of data into memory at addr and return result'''
+        '''Or 64 bit value of data into memory at addr and return result'''
         if addr & 7:
             raise AlignmentError()
         self.request(self.P_SET64, addr, data)
     def set32(self, addr, data):
-        '''set32(addr, data) - Or 32 bit value of data into memory at addr and return result'''
+        '''Or 32 bit value of data into memory at addr and return result'''
         if addr & 3:
             raise AlignmentError()
         self.request(self.P_SET32, addr, data)
     def set16(self, addr, data):
-        '''set16(addr, data) - Or 16 bit value of data into memory at addr and return result'''
+        '''Or 16 bit value of data into memory at addr and return result'''
         if addr & 1:
             raise AlignmentError()
         self.request(self.P_SET16, addr, data)
     def set8(self, addr, data):
-        '''set8(addr, data) - Or byte value of data into memory at addr and return result'''
+        '''Or byte value of data into memory at addr and return result'''
         self.request(self.P_SET8, addr, data)
 
     def clear64(self, addr, data):
-        '''clear64(Addr, Data) - Clear bits in 64 bit memory at address addr that are set in data and return result'''
+        '''Clear bits in 64 bit memory at address addr that are set
+    in parameter data and return result'''
         if addr & 7:
             raise AlignmentError()
         self.request(self.P_CLEAR64, addr, data)
     def clear32(self, addr, data):
-        '''clear32(addr, data) - Clear bits in 32 bit memory at address addr that are set in data and return result'''
+        '''Clear bits in 32 bit memory at address addr that are set
+    in parameter data and return result'''
         if addr & 3:
             raise AlignmentError()
         self.request(self.P_CLEAR32, addr, data)
     def clear16(self, addr, data):
-        '''clear16(addr, data) - Clear bits in 32 bit memory at address addr that are set in data and return result'''
+        '''Clear bits in 16 bit memory at address addr that are set
+    in parameter data and return result'''
         if addr & 1:
             raise AlignmentError()
         self.request(self.P_CLEAR16, addr, data)
     def clear8(self, addr, data):
-        '''clear8(addr, data - Clear bits in 32 bit memory at address addr that are set in data and return result'''
+        '''Clear bits in 8 bit memory at addr that are set in data
+    and return result'''
         self.request(self.P_CLEAR8, addr, data)
 
     def mask64(self, addr, clear, set):
-        '''mask64(addr, clear, set) - Clear bits in 64 bit memory at address addr that are
+        '''Clear bits in 64 bit memory at address addr that are
  set in clear, then set the bits in set and return result'''
         if addr & 7:
             raise AlignmentError()
         self.request(self.P_MASK64, addr, clear, set)
     def mask32(self, addr, clear, set):
-        '''mask32(addr, clear, set) - Clear bits in 32 bit memory at address addr that are
+        '''Clear bits in 32 bit memory at address addr that are
  set in clear, then set the bits in set and return result'''
         if addr & 3:
             raise AlignmentError()
         self.request(self.P_MASK32, addr, clear, set)
     def mset64ask16(self, addr, clear, set):
-        '''mask16(addr, clear, set) - Clear bits in 16 bit memory at address addr that are
- set in clear, then set the bits in set and return result'''
+        '''Clear select bits in 16 bit memory addr that are set
+ in clear parameter, then set the bits in set parameter and return result'''
         if addr & 1:
             raise AlignmentError()
         self.request(self.P_MASK16, addr, clear, set)
     def mask8(self, addr, clear, set):
-        '''mask8(addr, clear, set) - Clear bits in 1 byte memory at address addr that are
- set in clear, then set the bits in set and return result'''
+        '''Clear bits in 1 byte memory at addr that are set
+ in clear parameter, then set the bits in set parameter
+ and return the result'''
         self.request(self.P_MASK8, addr, clear, set)
 
     def writeread64(self, addr, data):
@@ -938,7 +943,8 @@ class M1N1Proxy(Reloadable):
     def hv_start(self, entry, *args):
         return self.request(self.P_HV_START, entry, *args)
     def hv_translate(self, addr, s1=False, w=False):
-        '(addr, s1=False, w=False) - Translate address, stage 1 only if s1, for write if w'
+        '''Translate virtual address
+ stage 1 only if s1, for write if w'''
         return self.request(self.P_HV_TRANSLATE, addr, s1, w)
     def hv_pt_walk(self, addr):
         return self.request(self.P_HV_PT_WALK, addr)

@@ -8,6 +8,7 @@ from .proxy import *
 from .proxyutils import *
 from .utils import *
 from . import sysreg
+from inspect import isfunction, signature
 
 __all__ = ["ExitConsole", "run_shell"]
 
@@ -48,30 +49,72 @@ class HistoryConsole(code.InteractiveConsole):
 class ExitConsole(SystemExit):
     pass
 cmd_list = {}
+subcmd_list = {}
+# Debug levels
+DBL_NONE = 0
+DBL_INFO = 1
+DBL_TRACE = 2
+DBL_DEBUG = 3
+DBL_EDEBUG = 4
+
+db_level = DBL_NONE
+
+def debug_cmd(db=None):
+    '''Set debug level to integer %d(none)...%d(extreme debug)''' % (DBL_NONE, DBL_EDEBUG)
+    global db_level
+    if db:
+        db_level = db
+    print("debug level=%d" % db_level)
 
 def help_cmd(arg=None):
+    if db_level >= DBL_DEBUG:
+        print("arg=%s" % repr(arg))
     if arg:
-        if not callable(arg):
+        #cmd = arg.__qualname__
+        if callable(arg):
+            cmd = arg.__name__
+        elif isinstance(arg, str):
+            cmd = arg
+        else:
             print("Unknown command: %s" % repr(arg))
             return
-        cmd = arg.__name__
+        if db_level >= DBL_DEBUG:
+            print("cmd=%s" % repr(cmd))
         if cmd not in cmd_list:
             print("Undocumented command %s" % cmd)
             return
         hinfo = cmd_list[cmd]
-        print("%-10s : %s" % (cmd, hinfo))
-        return
-    print("List of Commands:")
-    for cmd in cmd_list.keys():
-        hinfo = cmd_list[cmd]
-        if not hinfo:
-            print("%s ?" % cmd)
+        if isinstance(hinfo, str):
+            print("%-10s : %s" % (cmd, hinfo))
+            return
+        if cmd in subcmd_list:
+            clist = subcmd_list[cmd]
+            aname = cmd
+            if db_level >= DBL_DEBUG:
+                print("subcmd_list[%s] = %s" %
+                    (repr(cmd), repr(clist)))
         else:
+            print("command %s is not documented" % cmd)
+            return
+    else:
+        clist = cmd_list
+        aname = 'top level'
+        print("Note: To display a category's commands quote the name e.g. help('HV')")
+    print("List of %s commands:" % aname)
+    for cmd in clist.keys():
+        hinfo = clist[cmd]
+        if isinstance(hinfo, str):
             msg = hinfo.strip().split('\n', 1)[0]
-            if len(cmd) <= 10:
-                print("%-10s : %s" % (cmd, msg))
-            else:
-                print("%s:\n             %s" % (cmd, msg))
+        elif isinstance(hinfo, int):
+            msg = "%s category - %d subcommands" % (cmd, hinfo)
+        else:
+            print("%s ?" % cmd)
+            continue
+        if len(cmd) <= 10:
+            print("%-10s : %s" % (cmd, msg))
+        else:
+            print("%s:\n             %s" % (cmd, msg))
+
 #locals is a dictionary for constructing the
 # InteractiveConsole with. It adds in the callables
 # in proxy utils iface and sysreg into locals
@@ -116,22 +159,31 @@ def run_shell(locals, msg=None, exitmsg=None):
         for attr in dir(sysreg):
             locals[attr] = getattr(sysreg, attr)
 
+        locals['help'] = help_cmd
+        locals['debug'] = debug_cmd
         for obj_name in locals.keys():
             obj = locals.get(obj_name)
-            if obj is None:
+            if obj is None or obj_name.startswith('_'):
                 continue
             if callable(obj) and not isinstance(obj, property):
-                desc = locals[obj_name].__doc__
-                if not desc:
-                    desc = repr(locals[obj_name])
-                    desc = re.sub("<bound method ", "", desc)
-                    desc = re.sub(" object at 0x[0-9a-fA-F]*>>", "", desc)
-                    desc = re.sub('<', '', desc)
-                    b = re.split(' ', desc)
-                    if len(b) == 3:
-                        desc = ".".join([b[2], re.split('\.', b[0])[-1]])
-                cmd_list[obj_name] = desc
-        locals['help'] = help_cmd
+                qn = obj.__qualname__
+                if qn.find('.') > 0:
+                    a = qn.split('.')
+                    if a[0] not in subcmd_list:
+                        subcmd_list[a[0]] = {}
+                    if a[0] not in cmd_list:
+                        cmd_list[a[0]] = 1
+                    else:
+                        cmd_list[a[0]] += 1
+                    clist = subcmd_list[a[0]] 
+                else:
+                    clist = None
+                desc = obj_name + str(signature(obj))
+                if locals[obj_name].__doc__:
+                    desc += " - " + locals[obj_name].__doc__
+                    cmd_list[obj_name] = desc
+                if isinstance(clist, dict):
+                    clist[obj_name] = desc
 
         try:
             con = HistoryConsole(locals)
