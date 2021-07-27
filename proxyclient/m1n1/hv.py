@@ -47,6 +47,9 @@ VMProxyHookData = Struct(
 )
 
 class TraceMode(IntEnum):
+    '''
+Different types of Tracing '''
+
     OFF = 0
     ASYNC = 1
     UNBUF = 2
@@ -153,7 +156,7 @@ class HV(Reloadable):
         assert self.p.hv_map(ipa, 0, size, 0) >= 0
 
     def map_hw(self, ipa, pa, size):
-        '''map_hw(ipa, pa, size) : map intermediate PA (Physical Address) to actual PA'''
+        '''map IPA (Intermediate Physical Address) to actual PA'''
         #print(f"map_hw {ipa:#x} -> {pa:#x} [{size:#x}]")
         if (ipa & 0x3fff) != (pa & 0x3fff):
             self.map_sw(ipa, pa, size)
