@@ -400,7 +400,7 @@ class RangeMap(Reloadable):
             s, e, v = self.__start[pos], self.__end[pos], self.__value[pos]
             if empty(v):
                 continue
-            if new_v and equal(last, v):
+            if new_v and equal(last, v) and s == new_e[-1] + 1:
                 new_e[-1] = e
             else:
                 new_s.append(s)
