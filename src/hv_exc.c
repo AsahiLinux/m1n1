@@ -131,6 +131,8 @@ static bool hv_handle_msr(u64 *regs, u64 iss)
     switch (reg) {
         /* Some kind of timer */
         SYSREG_PASS(sys_reg(3, 7, 15, 1, 1));
+        /* Unknown, spammy */
+        SYSREG_PASS(sys_reg(3, 5, 15, 10, 1));
         /* Noisy traps */
         SYSREG_MAP(SYS_ACTLR_EL1, SYS_IMP_APL_ACTLR_EL12)
         SYSREG_PASS(SYS_IMP_APL_HID4)

@@ -238,6 +238,9 @@ class ADTNode:
             t + "}"
         ])
 
+    def __repr__(self):
+        return f"<ADTNode {self.name}>"
+
     def __iter__(self):
         return iter(self._children)
 

@@ -553,8 +553,9 @@ class HV(Reloadable):
                 if iss.Rt != 31:
                     ctx.regs[iss.Rt] = 0
             else:
-                value = ctx.regs[iss.Rt]
-                print(f"Skip: msr {name}, x{iss.Rt} = {value:x}")
+                if iss.Rt != 31:
+                    value = ctx.regs[iss.Rt]
+                #print(f"Skip: msr {name}, x{iss.Rt} = {value:x}")
         else:
             if iss.DIR == MSR_DIR.READ:
                 print(f"Pass: mrs x{iss.Rt}, {name}", end=" ")
