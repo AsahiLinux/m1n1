@@ -166,6 +166,10 @@ def run_shell(locals, msg=None, exitmsg=None):
             if obj is None or obj_name.startswith('_'):
                 continue
             if callable(obj) and not isinstance(obj, property):
+                try:
+                    desc = obj_name + str(signature(obj))
+                except ValueError:
+                    continue
                 qn = obj.__qualname__
                 if qn.find('.') > 0:
                     a = qn.split('.')
@@ -178,7 +182,6 @@ def run_shell(locals, msg=None, exitmsg=None):
                     clist = subcmd_list[a[0]] 
                 else:
                     clist = None
-                desc = obj_name + str(signature(obj))
                 if locals[obj_name].__doc__:
                     desc += " - " + locals[obj_name].__doc__
                     cmd_list[obj_name] = desc
