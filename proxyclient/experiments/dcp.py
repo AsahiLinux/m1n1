@@ -178,9 +178,83 @@ surf = Container(
     unk_1f9 = 0,
 )
 
-iova = 0x7e0000
+compressed_surf = Container(
+    is_tiled = False,
+    unk_1 = False,
+    unk_2 = False,
+    plane_cnt = 2,
+    plane_cnt2 = 2,
+    format = '&b38',
+    unk_f = 0x00000000,
+    unk_13 = 13,
+    unk_14 = 2,
+    stride = 1920,
+    pix_size = 1,
+    pel_w = 1,
+    pel_h = 1,
+    offset = 0xA38000,
+    width = 1920,
+    height = 1080,
+    buf_size = 0x00A36000,
+    unk_2d = 0,
+    unk_31 = 0,
+    surface_id = 5,
+    comp_types = [
+        Container(count = 0, types =[]),
+        Container(count = 0, types =[]),
+    ],
+    has_comp = True,
+    planes = [
+        Container(
+            width = 1920,
+            height = 1080,
+            base = 0,
+            offset = 0,
+            stride = 0x1e000,
+            size = 0x818000,
+            tile_size = 1024,
+            tile_w = 16,
+            tile_h = 16,
+            unk2 = 0x05,
+        ),
+        Container(
+            width = 1920,
+            height = 1080,
+            base = 0x818000,
+            offset = 0x818000,
+            stride = 0x7800,
+            size = 0x21e000,
+            tile_size = 256,
+            tile_w = 16,
+            tile_h = 16,
+            unk2 = 0x05,
+        )
+    ],
+    has_planes = True,
+    compression_info = [
+        unhex("""
+            10 00 00 00 10 00 00 00 00 80 7F 00 00 00 00 00
+            08 00 00 00 78 00 00 00 44 00 00 00 00 00 00 00
+            03 00 00 00 00 00 00 00 AA AA AA 00 04 00 00 00
+            E0 01 00 AA
+        """),
+        unhex("""
+            10 00 00 00 10 00 00 00 00 60 A1 00 00 80 81 00
+            08 00 00 00 78 00 00 00 44 00 00 00 00 00 00 00
+            03 00 00 00 00 00 00 00 AA AA AA 00 01 00 00 00
+            78 00 00 AA
+        """),
+    ],
+    has_compr_info = True,
+    unk_1f5 = 0x100000,
+    unk_1f9 = 0x100000,
+)
 
-surfaces = [surf, None, None, None]
+
+iova = 0
+
+#surfaces = [surf, None, None, None]
+surfaces = [compressed_surf, None, None, None]
 surfAddr = [iova, 0, 0, 0]
 
 outB = ByRef(False)
@@ -191,33 +265,15 @@ mon.poll()
 
 buf = u.memalign(0x4000, 16<<20)
 
-#iface.writemem(buf, open("fb0.bin", "rb").read())
-
-p.memset8(buf, 0, 16<<20)
-p.memset8(buf, 0xff, 65536)
-
-iface.writemem(buf, open("cur1.bin", "rb").read())
+iface.writemem(buf, open("fb1.bin", "rb").read())
 
 disp_dart.iomap_at(0, iova, buf, 16<<20)
-
-disp_dart.regs.dump_regs()
-
 ret = mgr.swap_submit_dcp(swap_rec=swap_rec, surfaces=surfaces, surfAddr=surfAddr,
                           unkBool=False, unkFloat=0.0, unkInt=0, unkOutBool=outB)
 print(f"swap returned {ret} / {outB}")
 
-time.sleep(0.2)
-
-mon.poll()
-dcp.work()
-mon.poll()
-dcp.work()
-mon.poll()
-
-disp_dart.regs.dump_regs()
-
-#while swaps == mgr.swaps:
-    #dcp.work()
+while swaps == mgr.swaps:
+    dcp.work()
     
 print("swap complete!")
 
