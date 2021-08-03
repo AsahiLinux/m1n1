@@ -119,7 +119,7 @@ class Method:
 
             if nullable:
                 if array_of_p:
-                    self.in_fields.append((name + "_null") / Array(array_size, bool_))
+                    self.in_fields.append((name + "_null") / bool_[array_size])
                     in_size += array_size
                 else:
                     self.in_fields.append((name + "_null") / bool_)
@@ -388,10 +388,13 @@ def Bool(c):
     return ExprAdapter(c, lambda d, ctx: bool(d & 1), lambda d, ctx: int(d))
 
 def SizedArray(count, svar, subcon):
-    return Lazy(Padded(subcon.sizeof() * count, Array(lambda ctx: ctx.get(svar) or ctx._.get(svar), subcon)))
+    return Padded(subcon.sizeof() * count, Array(lambda ctx: min(count, ctx.get(svar, ctx._.get(svar))), subcon))
 
 def SizedBytes(count, svar):
     return Lazy(Padded(count, Bytes(lambda ctx: ctx.get(svar) or ctx._.get(svar))))
+
+def UnkBytes(s):
+    return Default(HexDump(Bytes(s)), b"\x00" * s)
 
 bool_ = Bool(int8_t)
 
@@ -431,8 +434,8 @@ class OSDictionary(OSObject):
     TYPE = 'd'
 
 FourCC = ExprAdapter(uint32_t,
-                     lambda d, ctx: d.to_bytes(4, "big").decode("ascii"),
-                     lambda d, ctx: int.from_bytes(d.encode("ascii"), "big"))
+                     lambda d, ctx: d.to_bytes(4, "big").decode("latin-1"),
+                     lambda d, ctx: int.from_bytes(d.encode("latin-1"), "big"))
 
 void = None
 
@@ -468,8 +471,100 @@ BufferDescriptor = uint64_t
 SwapCompleteData = Bytes(0x12)
 SwapInfoBlob = Bytes(0x680)
 
-IOMFBSwapRec = Bytes(0x320)
-IOSurface = HexDump(Bytes(0x204))
+SWAP_SURFACES = 4
+
+Rect = NamedTuple("rect", "x y w h", Int32ul[4])
+
+IOMFBSwapRec = Struct(
+    "ts1" / Default(Int64ul, 0),
+    "ts2" / Default(Int64ul, 0),
+    "unk_10" / Default(Int64ul, 0),
+    "unk_18" / Default(Int64ul, 0),
+    "ts64_unk" / Default(Int64ul, 0),
+    "unk_28" / Default(Int64ul, 0),
+    "ts3" / Default(Int64ul, 0),
+    "unk_38" / Default(Int64ul, 0),
+    "flags1" / Hex(Int64ul),
+    "flags2" / Hex(Int64ul),
+    "swap_id" / Int32ul,
+    "surf_ids" / Int32ul[SWAP_SURFACES],
+    "src_rect" / Rect[SWAP_SURFACES],
+    "surf_flags" / Int32ul[SWAP_SURFACES],
+    "surf_unk" / Int32ul[SWAP_SURFACES],
+    "dst_rect" / Rect[SWAP_SURFACES],
+    "swap_enabled" / Hex(Int32ul),
+    "swap_completed" / Hex(Int32ul),
+    "unk_10c" / Hex(Default(Int32ul, 0)),
+    "unk_110" / UnkBytes(0x1b8),
+    "unk_2c8" / Hex(Default(Int32ul, 0)),
+    "unk_2cc" / UnkBytes(0x14),
+    "unk_2e0" / Hex(Default(Int32ul, 0)),
+    "unk_2e4" / UnkBytes(0x3c),
+)
+
+assert IOMFBSwapRec.sizeof() == 0x320
+
+MAX_PLANES = 3
+
+ComponentTypes = Struct(
+    "count" / Int8ul,
+    "types" / SizedArray(7, "count", Int8ul),
+)
+
+#ComponentTypes = Bytes(8)
+
+PlaneInfo = Struct(
+    "width" / Int32ul,
+    "height" / Int32ul,
+    "base" / Hex(Int32ul),
+    "offset" / Hex(Int32ul),
+    "stride" / Hex(Int32ul),
+    "size" / Hex(Int32ul),
+    "tile_size" / Int16ul,
+    "tile_w" / Int8ul,
+    "tile_h" / Int8ul,
+    "unk1" / UnkBytes(0xd),
+    "unk2" / Hex(Int8ul),
+    "unk3" / UnkBytes(0x26),
+)
+
+print(hex(PlaneInfo.sizeof()))
+assert PlaneInfo.sizeof() == 0x50
+
+IOSurface = Struct(
+    "is_tiled" / bool_,
+    "unk_1" / bool_,
+    "unk_2" / bool_,
+    "plane_cnt" / Int32ul,
+    "plane_cnt2" / Int32ul,
+    "format" / FourCC,
+    "unk_f" / Default(Hex(Int32ul), 0),
+    "unk_13" / Int8ul,
+    "unk_14" / Int8ul,
+    "stride" / Int32ul,
+    "pix_size" / Int16ul,
+    "pel_w" / Int8ul,
+    "pel_h" / Int8ul,
+    "offset" / Default(Hex(Int32ul), 0),
+    "width" / Int32ul,
+    "height" / Int32ul,
+    "buf_size" / Hex(Int32ul),
+    "unk_2d" / Default(Int32ul, 0),
+    "unk_31" / Default(Int32ul, 0),
+    "surface_id" / Int32ul,
+    "comp_types" / Default(SizedArray(MAX_PLANES, "plane_cnt", ComponentTypes), []),
+    "has_comp" / Bool(Int64ul),
+    "planes" / Default(SizedArray(MAX_PLANES, "plane_cnt", PlaneInfo), []),
+    "has_planes" / Bool(Int64ul),
+    "compression_info" / Default(SizedArray(MAX_PLANES, "plane_cnt", UnkBytes(0x34)), []),
+    "has_compr_info" / Bool(Int64ul),
+    "unk_1f5" / Int32ul,
+    "unk_1f9" / Int32ul,
+    "padding" / UnkBytes(7),
+)
+
+print(hex(IOSurface.sizeof()))
+assert IOSurface.sizeof() == 0x204
 
 IOMFBColorFixedMatrix = Array(5, Array(3, ulong))
 
@@ -502,7 +597,7 @@ class UnifiedPipeline2(IPCObject):
     D111 = Callback(bool_, "create_backlight_service")
     D116 = Callback(bool_, "start_hardware_boot")
     D118 = Callback(bool_, "is_waking_from_hibernate")
-    D120 = Callback(bool_, "read_edt_data", key=string(0x40), count=uint, value=InOut(SizedArray(8, "count", uint32_t)))
+    D120 = Callback(bool_, "read_edt_data", key=string(0x40), count=uint, value=InOut(Lazy(SizedArray(8, "count", uint32_t))))
 
     D122 = Callback(bool_, "setDCPAVPropStart", length=uint)
     D123 = Callback(bool_, "setDCPAVPropChunk", data=HexDump(SizedBytes(0x1000, "length")), offset=uint, length=uint)
@@ -547,12 +642,13 @@ class IOMobileFramebufferAP(IPCObject):
     A427 = Call(uint32_t, "setBrightnessCorrection", uint)
 
     A435 = Call(uint32_t, "set_block_dcp", arg1=uint64_t, arg2=uint, arg3=uint, arg4=Array(8, ulong), arg5=uint, data=SizedBytes(0x1000, "length"), length=ulong)
-    A439 = Call(uint32_t, "set_parameter_dcp", param=IOMFBParameterName, value=SizedArray(4, "count", ulong), count=uint)
+    A439 = Call(uint32_t, "set_parameter_dcp", param=IOMFBParameterName, value=Lazy(SizedArray(4, "count", ulong)), count=uint)
 
     A440 = Call(uint, "display_width")
     A441 = Call(uint, "display_height")
     A442 = Call(void, "get_display_size", OutPtr(uint), OutPtr(uint))
     A443 = Call(int_, "do_create_default_frame_buffer")
+    A444 = Call(void, "printRegs")
     A447 = Call(int_, "enable_disable_video_power_savings", uint)
     A454 = Call(void, "first_client_open")
     A456 = Call(bool_, "writeDebugInfo", ulong)
