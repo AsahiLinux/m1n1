@@ -23,6 +23,9 @@
 
 struct vector_args next_stage;
 
+const char *const version_tag = "##m1n1_ver##" BUILD_TAG;
+const char *const m1n1_version = version_tag + 12;
+
 void print_info(void)
 {
     printf("Device info:\n");
@@ -67,7 +70,7 @@ void run_actions(void)
 
 void m1n1_main(void)
 {
-    printf("\n\nm1n1 v%s\n", BUILD_TAG);
+    printf("\n\nm1n1 v%s\n", m1n1_version);
     printf("Copyright (C) 2021 The Asahi Linux Contributors\n");
     printf("Licensed under the MIT license\n\n");
 
