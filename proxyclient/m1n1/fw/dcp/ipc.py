@@ -528,7 +528,6 @@ PlaneInfo = Struct(
     "unk3" / UnkBytes(0x26),
 )
 
-print(hex(PlaneInfo.sizeof()))
 assert PlaneInfo.sizeof() == 0x50
 
 IOSurface = Struct(
@@ -563,7 +562,6 @@ IOSurface = Struct(
     "padding" / UnkBytes(7),
 )
 
-print(hex(IOSurface.sizeof()))
 assert IOSurface.sizeof() == 0x204
 
 IOMFBColorFixedMatrix = Array(5, Array(3, ulong))
