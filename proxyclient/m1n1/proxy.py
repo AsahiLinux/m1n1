@@ -378,6 +378,9 @@ class UartInterface(Reloadable):
         self.reply(self.REQ_MEMWRITE)
 
     def readmem(self, addr, size):
+        if size == 0:
+            return b""
+
         req = struct.pack("<QQ", addr, size)
         self.cmd(self.REQ_MEMREAD, req)
         reply = self.reply(self.REQ_MEMREAD)
