@@ -3,6 +3,7 @@
 import struct
 
 from ..utils import *
+from ..malloc import Heap
 
 __all__ = ["DARTRegs", "DART"]
 
@@ -37,7 +38,11 @@ class R_REMAP(Register32):
 
 class PTE(Register64):
     OFFSET = 36, 14
+    VALID2 = 1
     VALID = 0
+
+class R_CONFIG(Register32):
+    LOCK = 15
 
 class DARTRegs(RegMap):
     STREAM_COMMAND  = 0x20, R_STREAM_COMMAND
@@ -45,6 +50,7 @@ class DARTRegs(RegMap):
     ERROR           = 0x40, R_ERROR
     ERROR_ADDR_LO   = 0x50, Register32
     ERROR_ADDR_HI   = 0x54, Register32
+    CONFIG          = 0x60, R_CONFIG
     REMAP           = irange(0x80, 4, 4), R_REMAP
 
     TCR             = irange(0x100, 16, 4), R_TCR
@@ -63,10 +69,13 @@ class DART(Reloadable):
     Lx_SIZE = (1 << IDX_BITS)
     IDX_MASK = Lx_SIZE - 1
 
-    def __init__(self, iface, regs):
+    def __init__(self, iface, regs, util=None, iova_range=(0x80000000, 0x90000000)):
         self.iface = iface
         self.regs = regs
+        self.u = util
         self.pt_cache = {}
+        self.iova_allocator = [Heap(iova_range[0], iova_range[1], self.PAGE_SIZE)
+                               for i in range(16)]
 
     def ioread(self, stream, base, size):
         if size == 0:
@@ -83,6 +92,85 @@ class DART(Reloadable):
             iova += size
 
         return b"".join(data)
+
+    def iowrite(self, stream, base, data):
+        if len(data) == 0:
+            return
+
+        ranges = self.iotranslate(stream, base, len(data))
+
+        iova = base
+        p = 0
+        for addr, size in ranges:
+            if addr is None:
+                raise Exception(f"Unmapped page at iova {iova:#x}")
+            self.iface.writemem(addr, data[p:p + size])
+            p += size
+            iova += size
+
+    def iomap(self, stream, addr, size):
+        iova = self.iova_allocator[stream].malloc(size)
+
+        self.iomap_at(stream, iova, addr, size)
+        return iova
+
+    def iomap_at(self, stream, iova, addr, size):
+        if size == 0:
+            return
+
+        tcr = self.regs.TCR[stream].reg
+
+        if tcr.BYPASS_DART and not tcr.TRANSLATE_ENABLE:
+            raise Exception("Stream is bypassed in DART")
+
+        if tcr.BYPASS_DART or not tcr.TRANSLATE_ENABLE:
+            raise Exception(f"Unknown DART mode {tcr}")
+
+        if addr & (self.PAGE_SIZE - 1):
+            raise Exception(f"Unaligned PA {addr:#x}")
+
+        if iova & (self.PAGE_SIZE - 1):
+            raise Exception(f"Unaligned IOVA {iova:#x}")
+
+        start_page = align_down(iova, self.PAGE_SIZE)
+        end = iova + size
+        end_page = align_up(end, self.PAGE_SIZE)
+
+        dirty = set()
+
+        for page in range(start_page, end_page, self.PAGE_SIZE):
+            paddr = addr + page - start_page
+
+            l0 = page >> self.L0_OFF
+            assert l0 < self.L0_SIZE
+            ttbr = self.regs.TTBR[stream, l0].reg
+            if not ttbr.VALID:
+                raise Exception(f"L0 page table not ready (TTBR{l0})")
+
+            cached, l1 = self.get_pt(ttbr.ADDR << 12)
+            l1idx = (page >> self.L1_OFF) & self.IDX_MASK
+            l1pte = PTE(l1[l1idx])
+            if not l1pte.VALID and cached:
+                cached, l1 = self.get_pt(ttbr.ADDR << 12, uncached=True)
+                l1pte = PTE(l1[l1idx])
+            if not l1pte.VALID:
+                l2addr = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
+                self.pt_cache[l2addr] = [0] * self.Lx_SIZE
+                l1pte = PTE(
+                    OFFSET=l2addr >> self.PAGE_BITS, VALID=1, VALID2=1)
+                l1[l1idx] = l1pte.value
+                dirty.add(ttbr.ADDR << 12)
+            else:
+                l2addr = l1pte.OFFSET << self.PAGE_BITS
+
+            dirty.add(l1pte.OFFSET << self.PAGE_BITS)
+            cached, l2 = self.get_pt(l2addr)
+            l2idx = (page >> self.L2_OFF) & self.IDX_MASK
+            self.pt_cache[l2addr][l2idx] = PTE(
+                OFFSET=paddr >> self.PAGE_BITS, VALID=1, VALID2=1).value
+
+        for page in dirty:
+            self.flush_pt(page)
 
     def iotranslate(self, stream, start, size):
         if size == 0:
@@ -157,10 +245,14 @@ class DART(Reloadable):
         cached = True
         if addr not in self.pt_cache or uncached:
             cached = False
-            self.pt_cache[addr] = struct.unpack(f"<{self.Lx_SIZE}Q",
-                                                self.iface.readmem(addr, self.PAGE_SIZE))
+            self.pt_cache[addr] = list(
+                struct.unpack(f"<{self.Lx_SIZE}Q", self.iface.readmem(addr, self.PAGE_SIZE)))
 
         return cached, self.pt_cache[addr]
+
+    def flush_pt(self, addr):
+        assert addr in self.pt_cache
+        self.iface.writemem(addr, struct.pack(f"<{self.Lx_SIZE}Q", *self.pt_cache[addr]))
 
     def invalidate_cache(self):
         self.pt_cache = {}
