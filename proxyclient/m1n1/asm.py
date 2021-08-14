@@ -47,7 +47,6 @@ class BaseAsm(object):
     def disassemble(self):
         output = subprocess.check_output("%sobjdump -zd %s" % (self.PREFIX, self.elffile), shell=True).decode("ascii")
 
-        disas = []
         for line in output.split("\n"):
             if not line or line[0] != " ":
                 continue

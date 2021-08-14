@@ -348,7 +348,6 @@ class RegMonitor(Reloadable):
         self.bufsize = bufsize
         self.ascii = ascii
 
-        base = utils.base
         if bufsize:
             self.scratch = utils.malloc(bufsize)
         else:

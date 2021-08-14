@@ -200,8 +200,6 @@ class HCR(Register64):
     NV2      = 45
     AT       = 44
     NV1      = 43
-    NV1      = 43
-    NV       = 42
     NV       = 42
     API      = 41
     APK      = 40

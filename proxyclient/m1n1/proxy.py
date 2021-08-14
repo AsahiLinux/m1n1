@@ -289,7 +289,6 @@ class UartInterface(Reloadable):
     def handle_boot(self, data):
         reason, code, info = struct.unpack("<IIQ", data[:16])
         reason = START(reason)
-        info_type = None
         if reason in (START.EXCEPTION, START.EXCEPTION_LOWER):
             code = EXC(code)
         if (reason, code) in self.handlers:

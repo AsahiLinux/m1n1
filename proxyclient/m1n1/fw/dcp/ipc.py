@@ -194,8 +194,6 @@ class Method:
             if name == "ret":
                 continue
 
-            dir = self.dir[i]
-
             val = self.get_field_val(i, in_vals, out_vals, nullobj=NULL)
 
             if name in in_vals and out_vals is not None and name not in out_vals:

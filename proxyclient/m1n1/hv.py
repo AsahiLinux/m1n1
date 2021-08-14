@@ -197,9 +197,9 @@ class HV(Reloadable):
     def map_hook(self, ipa, size, read=None, write=None, **kwargs):
         index = len(self.vm_hooks)
         self.vm_hooks.append((read, write, ipa, kwargs))
-        self.map_hook_idx(ipa, size, index, read is not None, write is not None, kwargs)
+        self.map_hook_idx(ipa, size, index, read is not None, write is not None)
 
-    def map_hook_idx(self, ipa, size, index, read=False, write=False, kwargs={}):
+    def map_hook_idx(self, ipa, size, index, read=False, write=False):
         if read:
             if write:
                 t = self.SPTE_PROXY_HOOK_RW
@@ -224,7 +224,7 @@ class HV(Reloadable):
         if len(self.interrupt_map):
             self.add_tracer(zone, "AIC_IRQ", TraceMode.RESERVED)
         else:
-            self.del_tracer(zone, "AIC_IRQ", TraceMode.RESERVED)
+            self.del_tracer(zone, "AIC_IRQ")
 
         assert self.p.hv_trace_irq(self.AIC_EVT_TYPE_HW, num, count, flags) > 0
 
@@ -599,7 +599,6 @@ class HV(Reloadable):
         if ctx.esr.ISS == 0x20:
             return self.handle_msr(ctx, ctx.afsr1)
 
-        start = ctx.elr_phys
         code = struct.unpack("<I", self.iface.readmem(ctx.elr_phys, 4))
         c = ARMAsm(".inst " + ",".join(str(i) for i in code), ctx.elr_phys)
         insn = "; ".join(c.disassemble())
@@ -1180,7 +1179,6 @@ class HV(Reloadable):
             data = open(data, "rb")
 
         self.macho = macho = MachO(data)
-        symbols = None
         if symfile is not None:
             if isinstance(symfile, str):
                 symfile = open(symfile, "rb")
