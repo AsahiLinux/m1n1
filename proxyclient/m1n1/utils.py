@@ -101,6 +101,14 @@ class Reloadable(metaclass=ReloadableMeta):
     def _reloadme(self):
         self.__class__ = self._reloadcls()
 
+class Constant:
+    def __init__(self, value):
+        self.value = value
+
+    def __call__(self, v):
+        assert v == self.value
+        return v
+
 class RegisterMeta(ReloadableMeta):
     def __new__(cls, name, bases, dct):
         m = super().__new__(cls, name, bases, dct)
@@ -123,8 +131,17 @@ class RegisterMeta(ReloadableMeta):
         return m
 
 class Register(Reloadable, metaclass=RegisterMeta):
-    def __init__(self, v=0, **kwargs):
-        self._value = v
+    def __init__(self, v=None, **kwargs):
+        if v is not None:
+            self._value = v
+            for k in self._fields_list:
+                getattr(self, k) # validate
+        else:
+            self._value = 0
+            for k in self._fields_list:
+                field = getattr(self.__class__, k)
+                if isinstance(field, tuple) and len(field) >= 3 and isinstance(field[2], Constant):
+                    setattr(self, k, field[2].value)
 
         for k,v in kwargs.items():
             setattr(self, k, v)
