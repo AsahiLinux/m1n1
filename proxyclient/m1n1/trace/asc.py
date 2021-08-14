@@ -5,34 +5,11 @@ from enum import IntEnum
 from ..hv import TraceMode
 from ..utils import *
 from . import ADTDevTracer
+from ..hw.asc import *
 
 class DIR(IntEnum):
     RX = 0
     TX = 1
-
-class R_OUTBOX_CTRL(Register32):
-    EMPTY = 17
-
-class R_INBOX_CTRL(Register32):
-    ENABLE = 1
-
-class R_INBOX1(Register64):
-    EP      = 7, 0
-
-class R_OUTBOX1(Register64):
-    OUTCNT  = 56, 52
-    INCNT   = 51, 48
-    OUTPTR  = 47, 44
-    INPTR   = 43, 40
-    EP      = 7, 0
-
-class ASCRegs(RegMap):
-    INBOX_CTRL  = 0x8110, R_INBOX_CTRL
-    OUTBOX_CTRL = 0x8114, R_OUTBOX_CTRL
-    INBOX0      = 0x8800, Register64
-    INBOX1      = 0x8808, R_INBOX1
-    OUTBOX0     = 0x8830, Register64
-    OUTBOX1     = 0x8838, R_OUTBOX1
 
 def msg(message, direction=None, regtype=None, name=None):
     def f(x):
@@ -188,29 +165,12 @@ class BaseASCTracer(ADTDevTracer):
 
 # System endpoints
 
-class SystemMessage(Register64):
-    TYPE    = 59, 52
-
 ## Management endpoint
 
-class Mgmt_EPMap(SystemMessage):
-    LAST    = 51
-    BASE    = 34, 32
-    BITMAP  = 31, 0
-
-class Mgmt_EPMap_Ack(SystemMessage):
-    LAST    = 51
-    BASE    = 34, 32
-    MORE    = 0
-
-class Mgmt_StartEP(SystemMessage):
-    EP      = 39, 32
-
-class Mgmt_StartSyslog(SystemMessage):
-    UNK1 = 15, 0
+from ..fw.asc.mgmt import ManagementMessage, Mgmt_EPMap, Mgmt_EPMap_Ack, Mgmt_StartEP, Mgmt_StartSyslog
 
 class Management(EP):
-    BASE_MESSAGE = SystemMessage
+    BASE_MESSAGE = ManagementMessage
 
     HELLO =     msg_log(1, DIR.RX)
     HELLO_ACK = msg_log(2, DIR.TX)
@@ -223,7 +183,7 @@ class Management(EP):
             self.log(f"  Starting endpoint #{msg.EP:#02x} ({ep.name})")
         else:
             self.log(f"  Starting endpoint #{msg.EP:#02x}")
-        return True
+        #return True
 
     Init = msg_log(6, DIR.TX)
 
@@ -246,34 +206,30 @@ class Management(EP):
 
 ## Syslog endpoint
 
-class Syslog_Init(SystemMessage):
-    BUFSIZE = 7, 0
-
-class Syslog_GetBuf(SystemMessage):
-    UNK1 = 51, 44
-    UNK2 = 39, 32
-    IOVA = 31, 0
-
-class Syslog_Log(SystemMessage):
-    INDEX = 7, 0
+from ..fw.asc.syslog import SyslogMessage, Syslog_Init, Syslog_GetBuf, Syslog_Log
 
 class Syslog(EP):
-    BASE_MESSAGE = SystemMessage
+    BASE_MESSAGE = SyslogMessage
 
-    Init = msg_log(8, DIR.RX, Syslog_Init)
     GetBuf = msg_log(1, DIR.RX, Syslog_GetBuf)
+
+    @msg(8, DIR.RX, Syslog_Init)
+    def Init(self, msg):
+        self.state.count = msg.COUNT
+        self.state.entrysize = msg.ENTRYSIZE
 
     @msg(1, DIR.TX, Syslog_GetBuf)
     def GetBuf_Ack(self, msg):
-        self.state.syslog_buf = msg.IOVA
+        self.state.syslog_buf = msg.DVA & 0xffffffff
 
     @msg(5, DIR.RX, Syslog_Log)
     def Log(self, msg):
         if self.tracer.dart is None:
             return False
         buf = self.state.syslog_buf
-        log = self.tracer.dart.ioread(0, buf + msg.INDEX * 0xa0, 0xa0)
-        hdr, unk, context, logmsg = struct.unpack("<II24s128s", log)
+        stride = 0x20 + self.state.entrysize
+        log = self.tracer.dart.ioread(0, buf + msg.INDEX * stride, stride)
+        hdr, unk, context, logmsg = struct.unpack(f"<II24s{self.state.entrysize}s", log)
         context = context.split(b"\x00")[0].decode("ascii")
         logmsg = logmsg.split(b"\x00")[0].decode("ascii").rstrip("\n")
         self.log(f"* [{context}]{logmsg}")
