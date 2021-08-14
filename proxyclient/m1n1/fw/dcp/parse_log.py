@@ -23,14 +23,20 @@ def parse_log(fd):
         yield op
 
 def dump_log(fd):
-    nesting = 0
+    nesting = {
+        "": 0,
+        "OOB": 0,
+    }
     for op in parse_log(fd):
+        ctx = ""
+        if "OOB" in op.chan:
+            ctx = "[OOB] -----------> "
         if not op.complete:
-            op.print_req(indent="  " * nesting)
-            nesting += 1
+            op.print_req(indent=ctx + "  " * nesting.setdefault(ctx, 0))
+            nesting[ctx] += 1
         else:
-            nesting -= 1
-            op.print_reply(indent="  " * nesting)
+            nesting[ctx] -= 1
+            op.print_reply(indent=ctx + "  " * nesting.setdefault(ctx, 0))
 
 if __name__ == "__main__":
     import sys

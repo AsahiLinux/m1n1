@@ -1,9 +1,15 @@
 # SPDX-License-Identifier: MIT
 
+from dataclasses import dataclass
 import pprint
+from enum import IntEnum
 
 from m1n1.utils import *
 from construct import *
+
+@dataclass
+class ByRef:
+    val: object
 
 class Pointer(Subconstruct):
     pass
@@ -22,6 +28,13 @@ class InOut(Subconstruct):
 
 Ptr = InOutPtr
 
+class NULL:
+    def __str__(self):
+        return "NULL"
+    def __repr__(self):
+        return "NULL"
+NULL = NULL()
+
 class Method:
     def __init__(self, rtype, name, *args, **kwargs):
         self.rtype = rtype
@@ -31,8 +44,10 @@ class Method:
             raise Exception("Cannot specify args and kwargs")
         elif args:
             args = [(f"arg{i}", arg) for i, arg in enumerate(args)]
+            self.as_kwargs = False
         elif kwargs:
             args = list(kwargs.items())
+            self.as_kwargs = True
         else:
             args = []
 
@@ -48,6 +63,7 @@ class Method:
 
         self.dir = []
         self.nullable = []
+        self.array_of_p = []
 
         for i, (name, field) in enumerate(self.args):
             align = 1
@@ -88,19 +104,29 @@ class Method:
             self.dir.append(dir)
 
         for i, (name, field) in enumerate(self.args):
+            array_size = None
+            array_of_p = False
             nullable = False
             pfield = field
 
             while isinstance(pfield, Subconstruct):
+                if isinstance(pfield, Array) and array_size is None:
+                    array_size = pfield.count
                 if isinstance(pfield, Pointer):
                     nullable = True
+                    array_of_p = array_size is not None
                 pfield = pfield.subcon
 
             if nullable:
-                self.in_fields.append((name + "_null") / bool_)
-                in_size += 1
+                if array_of_p:
+                    self.in_fields.append((name + "_null") / bool_[array_size])
+                    in_size += array_size
+                else:
+                    self.in_fields.append((name + "_null") / bool_)
+                    in_size += 1
 
             self.nullable.append(nullable)
+            self.array_of_p.append(array_of_p)
 
         if in_size % 4:
             self.in_fields.append(Padding(4 - (in_size % 4)))
@@ -109,6 +135,33 @@ class Method:
 
         self.in_struct = Struct(*self.in_fields)
         self.out_struct = Struct(*self.out_fields)
+
+    def get_field_val(self, i, in_vals, out_vals=None, nullobj=None):
+        name, field = self.args[i]
+
+        nullable = self.nullable[i]
+        array_of_p = self.array_of_p[i]
+
+        val = None
+
+        if out_vals:
+            val = out_vals.get(name, val)
+        if val is None and in_vals:
+            val = in_vals.get(name, val)
+
+        if nullable and val is not None:
+            null = in_vals.get(name + "_null", None)
+            if null is None:
+                return None
+            if not array_of_p:
+                val = nullobj if null else val
+            else:
+                val2 = [nullobj if n else val for val, n in zip(val, null)]
+                if isinstance(val, ListContainer):
+                    val2 = ListContainer(val2)
+                val = val2
+
+        return val
 
     def fmt_args(self, in_vals, out_vals=None):
         s = []
@@ -120,31 +173,17 @@ class Method:
             dir = self.dir[i]
             nullable = self.nullable[i]
 
-            if nullable:
-                null = in_vals.get(name + "_null", None)
-                if null is None:
-                    s.append(f"{name}=?")
-                    continue
-                elif null:
-                    s.append(f"{name}=NULL")
-                    continue
+            val = self.get_field_val(i, in_vals, out_vals, nullobj=NULL)
 
-            if out_vals and name in out_vals:
-                if self.is_long(out_vals[name]):
+            if val is not None:
+                if self.is_long(val):
                     s.append(f"{name}=...")
-                elif isinstance(out_vals[name], ListContainer):
-                    s.append(f"{name}={list(out_vals[name])!r}")
+                elif isinstance(val, ListContainer):
+                    s.append(f"{name}={list(val)!r}")
                 else:
-                    s.append(f"{name}={out_vals[name]!r}")
+                    s.append(f"{name}={val!r}")
             elif dir == "out":
                 s.append(f"{name}=<out>")
-            elif name in in_vals:
-                if self.is_long(in_vals[name]):
-                    s.append(f"{name}=...")
-                elif isinstance(in_vals[name], ListContainer):
-                    s.append(f"{name}={list(in_vals[name])!r}")
-                else:
-                    s.append(f"{name}={in_vals[name]!r}")
             else:
                 s.append(f"{name}=?")
 
@@ -157,16 +196,9 @@ class Method:
 
             dir = self.dir[i]
 
-            if self.nullable[i] and in_vals.get(name + "_null", None):
-                continue
+            val = self.get_field_val(i, in_vals, out_vals, nullobj=NULL)
 
-            if out_vals and name in out_vals:
-                val = out_vals[name]
-            elif out_vals:
-                continue
-            elif name in in_vals:
-                val = in_vals[name]
-            else:
+            if name in in_vals and out_vals is not None and name not in out_vals:
                 continue
 
             if self.is_long(val):
@@ -184,7 +216,7 @@ class Method:
 
     def is_long(self, arg):
         if isinstance(arg, (list, bytes)):
-            return len(arg) > 4
+            return len(arg) > 4 or any(self.is_long(i) for i in arg)
 
         return isinstance(arg, (dict, list, bytes))
 
@@ -202,6 +234,128 @@ class Method:
         vals = self.out_struct.parse(data, **context)
 
         return Container({ k: v() if callable(v) else v for k,v in vals.items() })
+
+    def __str__(self):
+        if self.rtype is None:
+            rtype = "void"
+        else:
+            rtype = str(self.rtype)
+
+        args = []
+        for name, field in self.args:
+            if name == "ret":
+                continue
+            args.append(f"{field} {name}")
+
+        return f"{rtype} {self.name}({', '.join(args)})"
+
+    def callback(self, func, in_data):
+        in_vals = self.parse_input(in_data)
+
+        args = []
+        kwargs = {}
+
+        out_vals = {}
+
+        for i, (name, field) in enumerate(self.args):
+            if name == "ret":
+                continue
+
+            dir = self.dir[i]
+
+            val = self.get_field_val(i, in_vals, out_vals, nullobj=NULL)
+            is_null = val is NULL
+            if is_null:
+                val = None
+
+            if dir == "inout":
+                if val is not None and not isinstance(val, list):
+                    val = ByRef(val)
+                out_vals[name] = val
+            elif dir == "out" and not is_null:
+                val = ByRef(None)
+                out_vals[name] = val
+
+            if self.as_kwargs:
+                kwargs[name] = val
+            else:
+                args.append(val)
+
+        retval = func(*args, **kwargs)
+
+        if self.rtype is None:
+            assert retval is None
+        else:
+            assert retval is not None
+            out_vals["ret"] = retval
+
+        out_vals = {k: v.val if isinstance(v, ByRef) else v for k, v in out_vals.items()}
+
+        context = dict(in_vals)
+
+        if "obj" in context:
+            del context["obj"]
+
+        out_data = self.out_struct.build(out_vals, **context)
+        return out_data
+
+
+    def call(self, call, *args, **kwargs):
+        if args and kwargs:
+            raise Exception("Cannot use both args and kwargs")
+
+        if args:
+            for arg, (name, field) in zip(args, self.args):
+                kwargs[name] = arg
+
+        in_vals = {}
+        out_refs = {}
+
+        for i, (name, field) in enumerate(self.args):
+            if name == "ret":
+                continue
+
+            val = kwargs[name]
+            dir = self.dir[i]
+            nullable = self.nullable[i]
+            array_of_p = self.array_of_p[i]
+
+            if nullable:
+                if not array_of_p:
+                    in_vals[name + "_null"] = val is None
+                else:
+                    defaults = field.parse(b"\x00" * field.sizeof())
+                    in_vals[name + "_null"] = [i is None for i in val]
+                    val = [v if v is not None else defaults[i] for i, v in enumerate(val)]
+            else:
+                assert val is not None
+
+            if val is None:
+                continue
+
+            if dir == "out":
+                assert isinstance(val, ByRef)
+                out_refs[name] = val
+            elif dir == "inout":
+                if isinstance(val, ByRef):
+                    in_vals[name] = val.val
+                    out_refs[name] = val
+                elif val is not None:
+                    in_vals[name] = val
+            elif val is not None:
+                in_vals[name] = val
+
+        in_data = self.in_struct.build(in_vals)
+        print(f"{self.name}({self.fmt_args(in_vals)})")
+
+        out_data = call(in_data)
+        out_vals = self.parse_output(out_data, in_vals)
+
+        for k, v in out_refs.items():
+            v.val = out_vals[k]
+
+        if self.rtype is not None:
+            return out_vals["ret"]
 
 def dump_fields(fields):
     off = 0
@@ -234,10 +388,13 @@ def Bool(c):
     return ExprAdapter(c, lambda d, ctx: bool(d & 1), lambda d, ctx: int(d))
 
 def SizedArray(count, svar, subcon):
-    return Lazy(Padded(subcon.sizeof() * count, Array(lambda ctx: ctx.get(svar) or ctx._.get(svar), subcon)))
+    return Padded(subcon.sizeof() * count, Array(lambda ctx: min(count, ctx.get(svar, ctx._.get(svar))), subcon))
 
 def SizedBytes(count, svar):
     return Lazy(Padded(count, Bytes(lambda ctx: ctx.get(svar) or ctx._.get(svar))))
+
+def UnkBytes(s):
+    return Default(HexDump(Bytes(s)), b"\x00" * s)
 
 bool_ = Bool(int8_t)
 
@@ -277,8 +434,8 @@ class OSDictionary(OSObject):
     TYPE = 'd'
 
 FourCC = ExprAdapter(uint32_t,
-                     lambda d, ctx: d.to_bytes(4, "big").decode("ascii"),
-                     lambda d, ctx: int.from_bytes(d.encode("ascii"), "big"))
+                     lambda d, ctx: d.to_bytes(4, "big").decode("latin-1"),
+                     lambda d, ctx: int.from_bytes(d.encode("latin-1"), "big"))
 
 void = None
 
@@ -312,15 +469,112 @@ IOMFBParameterName = Int32ul
 BufferDescriptor = uint64_t
 
 SwapCompleteData = Bytes(0x12)
-SwapInfoBlob = Bytes(0x600)
+SwapInfoBlob = Bytes(0x680)
 
-IOMFBSwapRec = Bytes(0x274)
-IOSurface = Bytes(0x204)
+SWAP_SURFACES = 4
+
+Rect = NamedTuple("rect", "x y w h", Int32ul[4])
+
+IOMFBSwapRec = Struct(
+    "ts1" / Default(Int64ul, 0),
+    "ts2" / Default(Int64ul, 0),
+    "unk_10" / Default(Int64ul, 0),
+    "unk_18" / Default(Int64ul, 0),
+    "ts64_unk" / Default(Int64ul, 0),
+    "unk_28" / Default(Int64ul, 0),
+    "ts3" / Default(Int64ul, 0),
+    "unk_38" / Default(Int64ul, 0),
+    "flags1" / Hex(Int64ul),
+    "flags2" / Hex(Int64ul),
+    "swap_id" / Int32ul,
+    "surf_ids" / Int32ul[SWAP_SURFACES],
+    "src_rect" / Rect[SWAP_SURFACES],
+    "surf_flags" / Int32ul[SWAP_SURFACES],
+    "surf_unk" / Int32ul[SWAP_SURFACES],
+    "dst_rect" / Rect[SWAP_SURFACES],
+    "swap_enabled" / Hex(Int32ul),
+    "swap_completed" / Hex(Int32ul),
+    "unk_10c" / Hex(Default(Int32ul, 0)),
+    "unk_110" / UnkBytes(0x1b8),
+    "unk_2c8" / Hex(Default(Int32ul, 0)),
+    "unk_2cc" / UnkBytes(0x14),
+    "unk_2e0" / Hex(Default(Int32ul, 0)),
+    "unk_2e4" / UnkBytes(0x3c),
+)
+
+assert IOMFBSwapRec.sizeof() == 0x320
+
+MAX_PLANES = 3
+
+ComponentTypes = Struct(
+    "count" / Int8ul,
+    "types" / SizedArray(7, "count", Int8ul),
+)
+
+#ComponentTypes = Bytes(8)
+
+PlaneInfo = Struct(
+    "width" / Int32ul,
+    "height" / Int32ul,
+    "base" / Hex(Int32ul),
+    "offset" / Hex(Int32ul),
+    "stride" / Hex(Int32ul),
+    "size" / Hex(Int32ul),
+    "tile_size" / Int16ul,
+    "tile_w" / Int8ul,
+    "tile_h" / Int8ul,
+    "unk1" / UnkBytes(0xd),
+    "unk2" / Hex(Int8ul),
+    "unk3" / UnkBytes(0x26),
+)
+
+print(hex(PlaneInfo.sizeof()))
+assert PlaneInfo.sizeof() == 0x50
+
+IOSurface = Struct(
+    "is_tiled" / bool_,
+    "unk_1" / bool_,
+    "unk_2" / bool_,
+    "plane_cnt" / Int32ul,
+    "plane_cnt2" / Int32ul,
+    "format" / FourCC,
+    "unk_f" / Default(Hex(Int32ul), 0),
+    "unk_13" / Int8ul,
+    "unk_14" / Int8ul,
+    "stride" / Int32ul,
+    "pix_size" / Int16ul,
+    "pel_w" / Int8ul,
+    "pel_h" / Int8ul,
+    "offset" / Default(Hex(Int32ul), 0),
+    "width" / Int32ul,
+    "height" / Int32ul,
+    "buf_size" / Hex(Int32ul),
+    "unk_2d" / Default(Int32ul, 0),
+    "unk_31" / Default(Int32ul, 0),
+    "surface_id" / Int32ul,
+    "comp_types" / Default(SizedArray(MAX_PLANES, "plane_cnt", ComponentTypes), []),
+    "has_comp" / Bool(Int64ul),
+    "planes" / Default(SizedArray(MAX_PLANES, "plane_cnt", PlaneInfo), []),
+    "has_planes" / Bool(Int64ul),
+    "compression_info" / Default(SizedArray(MAX_PLANES, "plane_cnt", UnkBytes(0x34)), []),
+    "has_compr_info" / Bool(Int64ul),
+    "unk_1f5" / Int32ul,
+    "unk_1f9" / Int32ul,
+    "padding" / UnkBytes(7),
+)
+
+print(hex(IOSurface.sizeof()))
+assert IOSurface.sizeof() == 0x204
+
+IOMFBColorFixedMatrix = Array(5, Array(3, ulong))
+
+class PropID(IntEnum):
+    BrightnessCorrection = 14
 
 class UPPipeAP_H13P(IPCObject):
     A000 = Call(bool_, "late_init_signal")
     A029 = Call(void, "setup_video_limits")
-    A034 = Call(void, "update_notify_clients_dcp", Array(11, uint))
+    A034 = Call(void, "update_notify_clients_dcp", Array(13, uint))
     A036 = Call(bool_, "apt_supported")
 
     D000 = Callback(bool_, "did_boot_signal")
@@ -330,6 +584,7 @@ class UPPipeAP_H13P(IPCObject):
 
 class UnifiedPipeline2(IPCObject):
     A357 = Call(void, "set_create_DFB")
+    A358 = Call(IOMFBStatus, "vi_set_temperature_hint")
 
     D100 = Callback(void, "match_pmu_service")
     D101 = Callback(uint32_t, "UNK_get_some_field")
@@ -341,40 +596,44 @@ class UnifiedPipeline2(IPCObject):
     D110 = Callback(bool_, "create_iomfb_service")
     D111 = Callback(bool_, "create_backlight_service")
     D116 = Callback(bool_, "start_hardware_boot")
-    D119 = Callback(bool_, "read_edt_data", key=string(0x40), count=uint, value=InOut(SizedArray(8, "count", uint32_t)))
+    D118 = Callback(bool_, "is_waking_from_hibernate")
+    D120 = Callback(bool_, "read_edt_data", key=string(0x40), count=uint, value=InOut(Lazy(SizedArray(8, "count", uint32_t))))
 
-    D121 = Callback(bool_, "setDCPAVPropStart", length=uint)
-    D122 = Callback(bool_, "setDCPAVPropChunk", data=HexDump(SizedBytes(0x1000, "length")), offset=uint, length=uint)
-    D123 = Callback(bool_, "setDCPAVPropEnd", key=string(0x40))
+    D122 = Callback(bool_, "setDCPAVPropStart", length=uint)
+    D123 = Callback(bool_, "setDCPAVPropChunk", data=HexDump(SizedBytes(0x1000, "length")), offset=uint, length=uint)
+    D124 = Callback(bool_, "setDCPAVPropEnd", key=string(0x40))
 
 class UPPipe2(IPCObject):
     A103 = Call(uint64_t, "test_control", cmd=uint64_t, arg=uint)
+    A131 = Call(bool_, "pmu_service_matched")
 
     D201 = Callback(uint32_t, "map_buf", InPtr(BufferDescriptor), OutPtr(ulong), OutPtr(ulong), bool_)
 
-    D206 = Callback(bool_, "match_pmu_service")
+    D206 = Callback(bool_, "match_pmu_service_2")
     D207 = Callback(bool_, "match_backlight_service")
     D208 = Callback(uint64_t, "get_calendar_time_ms")
 
 class PropRelay(IPCObject):
-    D300 = Callback(void, "publish", prop_id=uint32_t, value=int_)
+    D300 = Callback(void, "pr_publish", prop_id=uint32_t, value=int_)
 
 class IOMobileFramebufferAP(IPCObject):
     A401 = Call(uint32_t, "start_signal")
 
-    A407 = Call(uint32_t, "swap_start", InOutPtr(uint), InOutPtr(IOUserClient))
+    A407 = Call(uint32_t, "swap_start", swap_id=InOutPtr(uint), client=InOutPtr(IOUserClient))
     A408 = Call(uint32_t, "swap_submit_dcp",
                 swap_rec=InPtr(IOMFBSwapRec),
-                surf0=InPtr(IOSurface),
-                surf1=InPtr(IOSurface),
-                surf2=InPtr(IOSurface),
-                surfInfo=Array(3, uint),
+                surfaces=Array(4, InPtr(IOSurface)),
+                surfAddr=Array(4, Hex(ulong)),
                 unkBool=bool_,
                 unkFloat=Float64l,
                 unkInt=uint,
                 unkOutBool=OutPtr(bool_))
 
     A410 = Call(uint32_t, "set_display_device", uint)
+    A411 = Call(bool_, "is_main_display")
+    A438 = Call(uint32_t, "swap_set_color_matrix", matrix=InOutPtr(IOMFBColorFixedMatrix), func=uint32_t, unk=uint)
+#"A438": "IOMobileFramebufferAP::swap_set_color_matrix(IOMFBColorFixedMatrix*, IOMFBColorMatrixFunction, unsigned int)",
+
     A412 = Call(uint32_t, "set_digital_out_mode", uint, uint)
     A419 = Call(uint32_t, "get_gamma_table", InOutPtr(Bytes(0xc0c)))
     A422 = Call(uint32_t, "set_matrix", uint, InPtr(Array(3, Array(3, ulong))))
@@ -383,23 +642,27 @@ class IOMobileFramebufferAP(IPCObject):
     A427 = Call(uint32_t, "setBrightnessCorrection", uint)
 
     A435 = Call(uint32_t, "set_block_dcp", arg1=uint64_t, arg2=uint, arg3=uint, arg4=Array(8, ulong), arg5=uint, data=SizedBytes(0x1000, "length"), length=ulong)
-    A438 = Call(uint32_t, "set_parameter_dcp", param=IOMFBParameterName, value=SizedArray(4, "count", ulong), count=uint)
+    A439 = Call(uint32_t, "set_parameter_dcp", param=IOMFBParameterName, value=Lazy(SizedArray(4, "count", ulong)), count=uint)
 
-    A441 = Call(void, "get_display_size", OutPtr(uint), OutPtr(uint))
-    A442 = Call(int_, "do_create_default_frame_buffer")
-    A446 = Call(int_, "enable_disable_video_power_savings", uint)
-    A453 = Call(void, "first_client_open")
-    A455 = Call(bool_, "writeDebugInfo", ulong)
-    A459 = Call(bool_, "setDisplayRefreshProperties")
-    A462 = Call(void, "flush_supportsPower", bool_)
-    A467 = Call(uint32_t, "setPowerState", ulong, bool_, OutPtr(uint))
-    A468 = Call(bool_, "isKeepOnScreen")
+    A440 = Call(uint, "display_width")
+    A441 = Call(uint, "display_height")
+    A442 = Call(void, "get_display_size", OutPtr(uint), OutPtr(uint))
+    A443 = Call(int_, "do_create_default_frame_buffer")
+    A444 = Call(void, "printRegs")
+    A447 = Call(int_, "enable_disable_video_power_savings", uint)
+    A454 = Call(void, "first_client_open")
+    A456 = Call(bool_, "writeDebugInfo", ulong)
+    A458 = Call(bool_, "io_fence_notify", uint, uint, ulong, IOMFBStatus)
+    A460 = Call(bool_, "setDisplayRefreshProperties")
+    A463 = Call(void, "flush_supportsPower", bool_)
+    A468 = Call(uint32_t, "setPowerState", ulong, bool_, OutPtr(uint))
+    A469 = Call(bool_, "isKeepOnScreen")
 
-    D552 = Callback(bool_, "setProperty<OSDictionary>", key=string(0x40), value=InPtr(Padded(0x1000, OSDictionary())))
-    D561 = Callback(bool_, "setProperty<OSDictionary>", key=string(0x40), value=InPtr(Padded(0x1000, OSDictionary())))
-    D563 = Callback(bool_, "setProperty<OSNumber>", key=string(0x40), value=InPtr(uint64_t))
-    D565 = Callback(bool_, "setProperty<OSBoolean>", key=string(0x40), value=InPtr(Bool(uint32_t)))
-    D567 = Callback(bool_, "setProperty<AFKString>", key=string(0x40), value=string(0x40))
+    D552 = Callback(bool_, "setProperty_dict", key=string(0x40), value=InPtr(Padded(0x1000, OSDictionary())))
+    D561 = Callback(bool_, "setProperty_dict", key=string(0x40), value=InPtr(Padded(0x1000, OSDictionary())))
+    D563 = Callback(bool_, "setProperty_int", key=string(0x40), value=InPtr(uint64_t))
+    D565 = Callback(bool_, "setProperty_bool", key=string(0x40), value=InPtr(Bool(uint32_t)))
+    D567 = Callback(bool_, "setProperty_str", key=string(0x40), value=string(0x40))
 
     D574 = Callback(IOMFBStatus, "powerUpDART", bool_)
 
@@ -414,16 +677,16 @@ class IOMobileFramebufferAP(IPCObject):
     D598 = Callback(void, "find_swap_function_gated")
 
 class ServiceRelay(IPCObject):
-    D401 = Callback(bool_, "get_uint_prop", obj=FourCC, key=string(0x40), value=InOutPtr(ulong))
-    D408 = Callback(uint64_t, "getClockFrequency", uint, uint)
-    D411 = Callback(IOMFBStatus, "mapDeviceMemoryWithIndex", uint, uint, uint, OutPtr(ulong), OutPtr(ulong))
-    D413 = Callback(bool_, "setProperty<OSDictionary>", obj=FourCC, key=string(0x40), value=InPtr(Padded(0x1000, OSDictionary())))
-    D414 = Callback(bool_, "setProperty<OSNumber>", obj=FourCC, key=string(0x40), value=InPtr(uint64_t))
-    D415 = Callback(bool_, "setProperty<OSBoolean>", obj=FourCC, key=string(0x40), value=InPtr(Bool(uint32_t)))
+    D401 = Callback(bool_, "sr_get_uint_prop", obj=FourCC, key=string(0x40), value=InOutPtr(ulong))
+    D408 = Callback(uint64_t, "sr_getClockFrequency", obj=FourCC, arg=uint)
+    D411 = Callback(IOMFBStatus, "sr_mapDeviceMemoryWithIndex", obj=FourCC, index=uint, flags=uint, addr=OutPtr(ulong), length=OutPtr(ulong))
+    D413 = Callback(bool_, "sr_setProperty_dict", obj=FourCC, key=string(0x40), value=InPtr(Padded(0x1000, OSDictionary())))
+    D414 = Callback(bool_, "sr_setProperty_int", obj=FourCC, key=string(0x40), value=InPtr(uint64_t))
+    D415 = Callback(bool_, "sr_setProperty_bool", obj=FourCC, key=string(0x40), value=InPtr(Bool(uint32_t)))
 
 class MemDescRelay(IPCObject):
     D451 = Callback(uint, "allocate_buffer", uint, ulong, uint, OutPtr(ulong), OutPtr(ulong), OutPtr(ulong))
-    D452 = Callback(uint, "map_physical", ulong, ulong, uint, OutPtr(ulong), OutPtr(ulong))
+    D452 = Callback(uint, "map_physical", paddr=ulong, size=ulong, flags=uint, dva=OutPtr(ulong), dvasize=OutPtr(ulong))
 
 ALL_CLASSES = [
     UPPipeAP_H13P,
@@ -444,7 +707,8 @@ SHORT_CHANNELS = {
     "CB": "d",
     "CMD": "C",
     "ASYNC": "a",
-    "OOB": "O",
+    "OOBCMD": "O",
+    "OOBCB": "o",
 }
 
 RDIR = { ">": "<", "<": ">" }

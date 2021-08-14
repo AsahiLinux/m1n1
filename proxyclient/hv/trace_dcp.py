@@ -461,23 +461,7 @@ KNOWN_MSGS = {
 22: getNamedProperty
 """
 
-class DCPMessage(Register64):
-    TYPE        = 3, 0
-
-class DCPEp_SetShmem(DCPMessage):
-    IOVA        = 47, 16
-
-class CallContext(IntEnum):
-    CALLBACK    = 0
-    CMD         = 2
-    ASYNC       = 3
-    OOB         = 6
-
-class DCPEp_Msg(DCPMessage):
-    LEN         = 63, 32
-    OFF         = 31, 16
-    CTX         = 11, 8, CallContext
-    ACK         = 6
+from m1n1.fw.dcp.dcpep import DCPMessage, DCPEp_SetShmem, CallContext, DCPEp_Msg
 
 class DCPCallState:
     pass
@@ -571,23 +555,26 @@ class DCPEp(EP):
         self.state.ch = {}
         self.state.dumpfile = None
 
-        self.ch_cb = DCPCallChannel(self, "CB", 0x60000, 0x20000)
+        self.ch_cb = DCPCallChannel(self, "CB", 0x60000, 0x8000)
         self.ch_cmd = DCPCallChannel(self, "CMD", 0, 0x8000)
         self.ch_async = DCPCallChannel(self, "ASYNC", 0x40000, 0x20000)
-        self.ch_oob = DCPCallChannel(self, "OOB", 0x8000, 0x8000)
+        self.ch_oobcb = DCPCallChannel(self, "OOBCB", 0x68000, 0x8000)
+        self.ch_oobcmd = DCPCallChannel(self, "OOBCMD", 0x8000, 0x8000)
 
         self.cmd_ch = {
-            CallContext.CALLBACK: self.ch_cmd,
+            CallContext.CB: self.ch_cmd,
             CallContext.CMD: self.ch_cmd,
-            CallContext.ASYNC: self.ch_oob, # guess?
-            CallContext.OOB: self.ch_oob,
+            CallContext.ASYNC: None, # unknown
+            CallContext.OOBCB: self.ch_oobcmd,
+            CallContext.OOBCMD: self.ch_oobcmd,
         }
 
         self.cb_ch = {
-            CallContext.CALLBACK: self.ch_cb,
+            CallContext.CB: self.ch_cb,
             CallContext.CMD: None,
             CallContext.ASYNC: self.ch_async,
-            CallContext.OOB: None,
+            CallContext.OOBCB: self.ch_oobcb,
+            CallContext.OOBCMD: None,
         }
 
     def start(self):
@@ -607,8 +594,8 @@ class DCPEp(EP):
 
     @msg(0, DIR.TX, DCPEp_SetShmem)
     def SetShmem(self, msg):
-        self.log(f"Shared memory IOVA: {msg.IOVA:#x}")
-        self.state.shmem_iova = msg.IOVA
+        self.log(f"Shared memory DVA: {msg.DVA:#x}")
+        self.state.shmem_iova = msg.DVA & 0xffffffff
         self.add_mon()
 
     @msg(2, DIR.TX, DCPEp_Msg)
@@ -625,6 +612,7 @@ class DCPEp(EP):
 
     @msg(2, DIR.RX, DCPEp_Msg)
     def Rx(self, msg):
+        self.log(msg)
         if msg.ACK:
             self.cmd_ch[msg.CTX].ack(msg, "<")
         else:
@@ -703,6 +691,9 @@ class DCPTracer(ASCTracer):
 
 dart_dcp_tracer = DARTTracer(hv, "/arm-io/dart-dcp")
 dart_dcp_tracer.start()
+
+dart_disp0_tracer = DARTTracer(hv, "/arm-io/dart-disp0")
+dart_disp0_tracer.start()
 
 def readmem_iova(addr, size):
     try:
