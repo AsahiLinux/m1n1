@@ -154,7 +154,7 @@ class BaseASCTracer(ADTDevTracer):
                 return
 
         d = ">" if direction == DIR.TX else "<"
-        self.log(f"{d}{r1.EP:02x} {r0.value:016x} ({r0.str_fields()})")
+        self.log(f"{d}ep:{r1.EP:02x} {r0.value:016x} ({r0.str_fields()})")
 
     def start(self, dart=None):
         super().start()
