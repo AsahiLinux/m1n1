@@ -188,6 +188,11 @@ static bool hv_handle_msr(u64 *regs, u64 iss)
             }
             return true;
 #endif
+        /* M1RACLES reg, handle here due to silly 12.0 "mitigation" */
+        case SYSREG_ISS(sys_reg(3, 5, 15, 10, 1)):
+            if (is_read)
+                regs[rt] = 0;
+            return true;
     }
 
     return false;

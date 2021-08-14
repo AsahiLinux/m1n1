@@ -523,9 +523,7 @@ class HV(Reloadable):
 
         name = sysreg_name(enc)
 
-        skip = set((
-            (3, 5, 15, 10, 1), # M1RACLES mitigation
-        ))
+        skip = set()
         shadow = {
             #SPRR_CONFIG_EL1,
             #SPRR_PERM_EL0,
@@ -557,7 +555,8 @@ class HV(Reloadable):
                 if iss.Rt != 31:
                     ctx.regs[iss.Rt] = 0
             else:
-                value = ctx.regs[iss.Rt]
+                if iss.Rt != 31:
+                    value = ctx.regs[iss.Rt]
                 print(f"Skip: msr {name}, x{iss.Rt} = {value:x}")
         else:
             if iss.DIR == MSR_DIR.READ:
