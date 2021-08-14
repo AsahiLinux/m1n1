@@ -41,12 +41,10 @@ def find_regs(u, regs=None, block=1024, call=None, values=True):
 
         mov, mrs, st = struct.unpack("3I", template.data)
 
-        data = []
 
         BAD = 0xacce5515abad1dea
         OOPS = 0xdeadc0dedeadc0de
 
-        rblock = []
         iregs = iter(regs)
 
         while True:
