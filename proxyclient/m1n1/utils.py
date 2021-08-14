@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 from enum import Enum
-import bisect, copy, heapq, importlib, sys, itertools, time, os, functools
+import bisect, copy, heapq, importlib, sys, itertools, time, os, functools, struct, re
 from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul
 
 __all__ = []
@@ -62,6 +62,10 @@ def chexdump32(s, st=0, abbreviate=True):
                 hexdump32(val, ' ')))
             last = val
             skip = False
+
+def unhex(s):
+    s = re.sub(r"/\*.*?\*/", "", s)
+    return bytes.fromhex(s.replace(" ", "").replace("\n", ""))
 
 class ReloadableMeta(type):
     def __new__(cls, name, bases, dct):
