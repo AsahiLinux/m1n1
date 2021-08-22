@@ -682,9 +682,11 @@ class ServiceRelay(IPCObject):
     D414 = Callback(bool_, "sr_setProperty_int", obj=FourCC, key=string(0x40), value=InPtr(uint64_t))
     D415 = Callback(bool_, "sr_setProperty_bool", obj=FourCC, key=string(0x40), value=InPtr(Bool(uint32_t)))
 
+mem_desc_id = uint
+
 class MemDescRelay(IPCObject):
-    D451 = Callback(uint, "allocate_buffer", uint, ulong, uint, OutPtr(ulong), OutPtr(ulong), OutPtr(ulong))
-    D452 = Callback(uint, "map_physical", paddr=ulong, size=ulong, flags=uint, dva=OutPtr(ulong), dvasize=OutPtr(ulong))
+    D451 = Callback(mem_desc_id, "allocate_buffer", uint, ulong, uint, OutPtr(ulong), OutPtr(ulong), OutPtr(ulong))
+    D452 = Callback(mem_desc_id, "map_physical", paddr=ulong, size=ulong, flags=uint, dva=OutPtr(ulong), dvasize=OutPtr(ulong))
 
 ALL_CLASSES = [
     UPPipeAP_H13P,

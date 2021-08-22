@@ -370,9 +370,9 @@ KNOWN_MSGS = {
     "D424": "void IOMFB::ServiceRelay::removeProperty(unsigned int, OSString<0x40> const*)",
 
     "D450": "bool IOMFB::MemDescRelay::from_id(unsigned int, unsigned long*, unsigned long*, unsigned long long*)",
-    "D451": "unsigned int IOMFB::MemDescRelay::allocate_buffer(unsigned int, unsigned long long, unsigned int, unsigned long*, unsigned long*, unsigned long long*)",
-    "D452": "unsigned int IOMFB::MemDescRelay::map_physical(unsigned long long, unsigned long long, unsigned int, unsigned long*, unsigned long long*)",
-    "D453": "unsigned int IOMFB::MemDescRelay::withAddressRange(unsigned long long, unsigned long long, unsigned int, task*, unsigned long*, unsigned long long*)",
+    "D451": "MemDescRelay::desc_id_t IOMFB::MemDescRelay::allocate_buffer(unsigned int, unsigned long long, unsigned int, unsigned long*, unsigned long*, unsigned long long*)",
+    "D452": "MemDescRelay::desc_id_t IOMFB::MemDescRelay::map_physical(unsigned long long, unsigned long long, unsigned int, unsigned long*, unsigned long long*)",
+    "D453": "MemDescRelay::desc_id_t IOMFB::MemDescRelay::withAddressRange(unsigned long long, unsigned long long, unsigned int, task*, unsigned long*, unsigned long long*)",
     "D454": "IOMFBStatus IOMFB::MemDescRelay::prepare(unsigned int, unsigned int)",
     "D455": "IOMFBStatus IOMFB::MemDescRelay::complete(unsigned int, unsigned int)",
     "D456": "bool IOMFB::MemDescRelay::release_descriptor(unsigned int)",
