@@ -1177,8 +1177,8 @@ class HV(Reloadable):
         self.iface.writemem(guest_base + self.bootargs_off, BootArgs.build(self.tba))
 
     def load_system_map(self, path):
-        # Assume Linux, no pac_mask
-        self.pac_mask = 0
+        # Assume Linux
+        self.pac_mask = 0xffffffc000000000
         self.sym_offset = 0
         self.xnu_mode = False
         self.symbols = []
