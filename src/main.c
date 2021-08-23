@@ -3,6 +3,7 @@
 #include "../config.h"
 
 #include "adt.h"
+#include "aic.h"
 #include "exception.h"
 #include "fb.h"
 #include "heapblock.h"
@@ -85,6 +86,7 @@ void m1n1_main(void)
 #endif
 
     print_info();
+    aic_init();
     wdt_disable();
     pmgr_init();
 

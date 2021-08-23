@@ -37,6 +37,7 @@ LIBFDT_OBJECTS := $(patsubst %,libfdt/%, \
 
 OBJECTS := \
 	adt.o \
+	aic.o \
 	bootlogo_128.o bootlogo_256.o \
 	chickens.o \
 	dart.o \

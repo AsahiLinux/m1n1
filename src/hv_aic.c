@@ -1,23 +1,10 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "adt.h"
+#include "aic_regs.h"
 #include "hv.h"
 #include "uartproxy.h"
 #include "utils.h"
-
-#define AIC_INFO       0x0004
-#define AIC_INFO_NR_HW GENMASK(15, 0)
-
-#define AIC_EVENT      0x2004
-#define AIC_EVENT_TYPE GENMASK(31, 16)
-#define AIC_EVENT_NUM  GENMASK(15, 0)
-
-#define AIC_EVENT_TYPE_HW   1
-#define AIC_EVENT_TYPE_IPI  4
-#define AIC_EVENT_IPI_OTHER 1
-#define AIC_EVENT_IPI_SELF  2
-
-#define AIC_MAX_HW_NUM (28 * 32)
 
 #define IRQTRACE_IRQ BIT(0)
 
@@ -88,19 +75,8 @@ bool hv_trace_irq(u32 type, u32 num, u32 count, u32 flags)
     }
 
     if (!aic_base) {
-        static const char path[] = "/arm-io/aic";
-        int adt_path[8];
-
-        int node = adt_path_offset_trace(adt, path, adt_path);
-        if (node < 0) {
-            printf("HV: Error getting %s node\n", path);
-            return false;
-        }
-
-        if (adt_get_reg(adt, adt_path, "reg", 0, &aic_base, NULL) < 0) {
-            printf("HV: Error getting AIC base address.\n");
-            return false;
-        }
+        printf("HV: AIC not initialized\n");
+        return false;
     }
 
     static bool hooked = false;
