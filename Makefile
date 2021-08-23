@@ -39,7 +39,6 @@ OBJECTS := \
 	adt.o \
 	bootlogo_128.o bootlogo_256.o \
 	chickens.o \
-	cpio.o \
 	dart.o \
 	exception.o exception_asm.o \
 	fb.o font.o font_retina.o \
