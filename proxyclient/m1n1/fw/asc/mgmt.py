@@ -8,13 +8,13 @@ class ManagementMessage(Register64):
 
 class Mgmt_Hello(ManagementMessage):
     TYPE    = 59, 52, Constant(1)
-    UNK1    = 31, 16
-    UNK2    = 15, 0
+    MAX_VER = 31, 16
+    MIN_VER = 15, 0
 
 class Mgmt_HelloAck(ManagementMessage):
     TYPE    = 59, 52, Constant(2)
-    UNK1    = 31, 16
-    UNK2    = 15, 0
+    MAX_VER = 31, 16
+    MIN_VER = 15, 0
 
 class Mgmt_Ping(ManagementMessage):
     TYPE    = 59, 52, Constant(3)
@@ -61,7 +61,9 @@ class ASCManagementEndpoint(ASCBaseEndpoint):
 
     @msg_handler(1, Mgmt_Hello)
     def Hello(self, msg):
-        self.send(Mgmt_HelloAck(UNK1=msg.UNK1, UNK2=msg.UNK2))
+        self.log(f"Supported versions {msg.MIN_VER} .. {msg.MAX_VER}")
+        # FIXME: we pick the highest version, we should negotiate
+        self.send(Mgmt_HelloAck(MIN_VER=msg.MAX_VER, MAX_VER=msg.MAX_VER))
         return True
 
     @msg_handler(8, Mgmt_EPMap)
