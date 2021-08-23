@@ -162,7 +162,7 @@ dwc3_dev_t *usb_iodev_bringup(u32 idx)
 }
 
 #define USB_IODEV_WRAPPER(name, pipe)                                                              \
-    static bool usb_##name##_can_read(void *dev)                                                   \
+    static ssize_t usb_##name##_can_read(void *dev)                                                \
     {                                                                                              \
         return usb_dwc3_can_read(dev, pipe);                                                       \
     }                                                                                              \

@@ -1365,7 +1365,7 @@ size_t usb_dwc3_read(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe, void *buf, size_t 
     return recvd;
 }
 
-bool usb_dwc3_can_read(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe)
+ssize_t usb_dwc3_can_read(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe)
 {
     if (!dev || !dev->ready)
         return false;

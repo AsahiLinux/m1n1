@@ -30,7 +30,7 @@ char con_buf[CONSOLE_BUFFER_SIZE];
 size_t con_wp;
 size_t con_rp[IODEV_MAX];
 
-bool iodev_can_read(iodev_id_t id)
+ssize_t iodev_can_read(iodev_id_t id)
 {
     if (!iodevs[id]->ops->can_read)
         return false;

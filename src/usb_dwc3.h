@@ -19,7 +19,7 @@ void usb_dwc3_shutdown(dwc3_dev_t *dev);
 
 void usb_dwc3_handle_events(dwc3_dev_t *dev);
 
-bool usb_dwc3_can_read(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe);
+ssize_t usb_dwc3_can_read(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe);
 bool usb_dwc3_can_write(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe);
 
 u8 usb_dwc3_getbyte(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe);
