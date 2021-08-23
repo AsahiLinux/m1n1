@@ -441,6 +441,7 @@ class GuardedHeap:
         self.ptrs = set()
 
 def bootstrap_port(iface, proxy):
+    to = iface.dev.timeout
     try:
         iface.dev.timeout = 0.15
         iface.nop()
@@ -449,4 +450,4 @@ def bootstrap_port(iface, proxy):
         iface.dev.baudrate = 1500000
 
     iface.nop()
-    iface.dev.timeout = 3
+    iface.dev.timeout = to

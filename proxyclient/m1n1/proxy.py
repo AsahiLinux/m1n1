@@ -139,7 +139,7 @@ class UartInterface(Reloadable):
         #d = self.dev.read(1)
         #while d != "":
             #d = self.dev.read(1)
-        self.dev.timeout = 3
+        self.dev.timeout = int(os.environ.get("M1N1TIMEOUT", "3"))
         self.tty_enable = True
         self.handlers = {}
         self.evt_handlers = {}
