@@ -59,7 +59,8 @@ bool hv_pa_rw(u64 addr, u64 *val, bool write, int width);
 bool hv_trace_irq(u32 type, u32 num, u32 count, u32 flags);
 
 /* Virtual peripherals */
-void hv_map_vuart(u64 base, iodev_id_t iodev);
+void hv_vuart_poll(void);
+void hv_map_vuart(u64 base, int irq, iodev_id_t iodev);
 
 /* Exceptions */
 void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_t type,

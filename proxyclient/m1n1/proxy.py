@@ -951,8 +951,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_HV_TRANSLATE, addr, s1, w)
     def hv_pt_walk(self, addr):
         return self.request(self.P_HV_PT_WALK, addr)
-    def hv_map_vuart(self, base, iodev):
-        return self.request(self.P_HV_MAP_VUART, base, iodev)
+    def hv_map_vuart(self, base, irq, iodev):
+        return self.request(self.P_HV_MAP_VUART, base, irq, iodev)
     def hv_trace_irq(self, evt_type, num, count, flags):
         return self.request(self.P_HV_TRACE_IRQ, evt_type, num, count, flags)
 

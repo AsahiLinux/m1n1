@@ -90,6 +90,11 @@ void uart_flush(void)
         ;
 }
 
+void uart_clear_irqs(void)
+{
+    write32(UART_BASE + UTRSTAT, UTRSTAT_TXTHRESH | UTRSTAT_RXTHRESH | UTRSTAT_RXTO);
+}
+
 int uart_printf(const char *fmt, ...)
 {
     va_list args;

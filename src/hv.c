@@ -147,4 +147,5 @@ void hv_tick(u64 *regs)
     iodev_handle_events(uartproxy_iodev);
     if (iodev_can_read(uartproxy_iodev))
         hv_exc_proxy(regs, START_HV, HV_USER_INTERRUPT, NULL);
+    hv_vuart_poll();
 }

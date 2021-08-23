@@ -22,6 +22,8 @@ void uart_setbaud(int baudrate);
 
 void uart_flush(void);
 
+void uart_clear_irqs(void);
+
 int uart_printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 #endif

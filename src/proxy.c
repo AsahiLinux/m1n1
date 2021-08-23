@@ -429,7 +429,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->retval = hv_pt_walk(request->args[0]);
             break;
         case P_HV_MAP_VUART:
-            hv_map_vuart(request->args[0], request->args[1]);
+            hv_map_vuart(request->args[0], request->args[1], request->args[2]);
             break;
         case P_HV_TRACE_IRQ:
             reply->retval = hv_trace_irq(request->args[0], request->args[1], request->args[2],
