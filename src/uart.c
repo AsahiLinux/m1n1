@@ -22,7 +22,7 @@ void uart_init(void)
 
 void uart_putbyte(u8 c)
 {
-    while (!(read32(UART_BASE + UTRSTAT) & 0x02))
+    while (!(read32(UART_BASE + UTRSTAT) & UTRSTAT_TXBE))
         ;
 
     write32(UART_BASE + UTXH, c);
@@ -30,7 +30,7 @@ void uart_putbyte(u8 c)
 
 u8 uart_getbyte(void)
 {
-    while (!(read32(UART_BASE + UTRSTAT) & 0x01))
+    while (!(read32(UART_BASE + UTRSTAT) & UTRSTAT_RXD))
         ;
 
     return read32(UART_BASE + URXH);
@@ -86,7 +86,7 @@ void uart_setbaud(int baudrate)
 
 void uart_flush(void)
 {
-    while (!(read32(UART_BASE + UTRSTAT) & 0x04))
+    while (!(read32(UART_BASE + UTRSTAT) & UTRSTAT_TXE))
         ;
 }
 
@@ -114,7 +114,7 @@ static bool uart_iodev_can_write(void *opaque)
 static ssize_t uart_iodev_can_read(void *opaque)
 {
     UNUSED(opaque);
-    return read32(UART_BASE + UTRSTAT) & 0x01;
+    return read32(UART_BASE + UTRSTAT) & UTRSTAT_RXD;
 }
 
 static ssize_t uart_iodev_read(void *opaque, void *buf, size_t len)
