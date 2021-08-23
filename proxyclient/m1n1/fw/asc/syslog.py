@@ -16,7 +16,7 @@ class Syslog_Init(SyslogMessage):
 
 class Syslog_GetBuf(SyslogMessage):
     TYPE        = 59, 52, Constant(1)
-    UNK1        = 51, 44, Constant(3)
+    SIZE        = 51, 44
     DVA         = 43, 0
 
 class Syslog_Log(SyslogMessage):
@@ -44,14 +44,14 @@ class ASCSysLogEndpoint(ASCBaseEndpoint):
 
     @msg_handler(1, Syslog_GetBuf)
     def GetBuf(self, msg):
-        size = 0x4000
+        size = 0x1000 * msg.SIZE
 
         if self.iobuffer:
             print("WARNING: trying to reset iobuffer!")
 
         self.iobuffer, self.iobuffer_dva = self.asc.ioalloc(size)
         self.log(f"buf {self.iobuffer:#x} / {self.iobuffer_dva:#x}")
-        self.send(Syslog_GetBuf(DVA=self.iobuffer_dva))
+        self.send(Syslog_GetBuf(DVA=self.iobuffer_dva, SIZE=msg.SIZE))
         self.started = True
         return True
 

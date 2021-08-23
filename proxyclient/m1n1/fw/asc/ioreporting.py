@@ -7,7 +7,7 @@ class IOReportingMessage(Register64):
 
 class IOReporting_GetBuf(IOReportingMessage):
     TYPE = 63, 52, Constant(1)
-    BUFTYPE = 51, 44, Constant(4)
+    SIZE = 51, 44
     DVA = 43, 0
 
 class IOReporting_Start(IOReportingMessage):
@@ -30,10 +30,10 @@ class ASCIOReportingEndpoint(ASCBaseEndpoint):
         if self.iobuffer:
             self.log("WARNING: trying to reset iobuffer!")
 
-        size = 0x4000
-        self.iobuffer, self.iobuffer_dva = self.asc.ioalloc(size)
+        self.bufsize = 0x1000 * msg.SIZE
+        self.iobuffer, self.iobuffer_dva = self.asc.ioalloc(self.bufsize)
         self.log(f"buf {self.iobuffer:#x} / {self.iobuffer_dva:#x}")
-        self.send(IOReporting_GetBuf(DVA=self.iobuffer_dva))
+        self.send(IOReporting_GetBuf(DVA=self.iobuffer_dva, SIZE=msg.SIZE))
         return True
 
     @msg_handler(0xc, IOReporting_Start)
@@ -44,7 +44,7 @@ class ASCIOReportingEndpoint(ASCBaseEndpoint):
     @msg_handler(8, IOReporting_Report)
     def Init(self, msg):
         self.log("report!")
-        buf = self.asc.iface.readmem(self.iobuffer, 0x4000)
+        buf = self.asc.iface.readmem(self.iobuffer, self.bufsize)
         #chexdump(buf)
         self.send(IOReporting_Report())
         return True
