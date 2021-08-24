@@ -59,7 +59,8 @@ void dump_boot_args(struct boot_args *ba)
     printf("    stride:     0x%lx\n", ba->video.stride);
     printf("    width:      %lu\n", ba->video.width);
     printf("    height:     %lu\n", ba->video.height);
-    printf("    depth:      %lubpp\n", ba->video.depth);
+    printf("    depth:      %lubpp\n", ba->video.depth & 0xff);
+    printf("    density:    %lu\n", ba->video.depth >> 16);
     printf("  machine_type: %d\n", ba->machine_type);
     printf("  devtree:      %p\n", ba->devtree);
     printf("  devtree_size: 0x%x\n", ba->devtree_size);
