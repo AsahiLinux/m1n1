@@ -50,6 +50,8 @@ def parse_prop(node, path, name, v):
             at = Hex(Int64ul) if ac == 2 else Array(ac, Hex(Int32ul))
             st = Hex(Int64ul) if sc == 2 else Array(sc, Hex(Int32ul))
             t = GreedyRange(Struct("addr" / at, "size" / st))
+            if len(v) % ((ac + sc) * 4):
+                t = None
 
     elif name == "ranges":
         try:
