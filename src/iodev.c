@@ -33,7 +33,7 @@ size_t con_rp[IODEV_MAX];
 ssize_t iodev_can_read(iodev_id_t id)
 {
     if (!iodevs[id]->ops->can_read)
-        return false;
+        return 0;
 
     return iodevs[id]->ops->can_read(iodevs[id]->opaque);
 }

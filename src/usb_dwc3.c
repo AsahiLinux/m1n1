@@ -1368,11 +1368,11 @@ size_t usb_dwc3_read(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe, void *buf, size_t 
 ssize_t usb_dwc3_can_read(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe)
 {
     if (!dev || !dev->ready)
-        return false;
+        return 0;
 
     ringbuffer_t *host2device = dev->pipe[pipe].host2device;
     if (!host2device)
-        return false;
+        return 0;
 
     return ringbuffer_get_used(host2device);
 }
