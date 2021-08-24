@@ -24,6 +24,7 @@ static void update_irq(void)
     utrstat |= UTRSTAT_TXBE | UTRSTAT_TXE;
     utrstat &= ~UTRSTAT_RXD;
 
+    ufstat = 0;
     if ((rx_queued = iodev_can_read(vuart_iodev))) {
         utrstat |= UTRSTAT_RXD;
         if (rx_queued > 15)
