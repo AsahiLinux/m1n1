@@ -72,6 +72,7 @@ class ASCManagementEndpoint(ASCBaseEndpoint):
             if msg.BITMAP & (1 << i):
                 epno = 32 * msg.BASE + i
                 self.asc.eps.append(epno)
+                self.log(f"Adding endpoint {epno:#x}")
 
         self.send(Mgmt_EPMap_Ack(BASE=msg.BASE, LAST=msg.LAST, MORE=0 if msg.LAST else 1))
 
