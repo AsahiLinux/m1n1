@@ -150,9 +150,6 @@ class DART(Reloadable):
             cached, l1 = self.get_pt(ttbr.ADDR << 12)
             l1idx = (page >> self.L1_OFF) & self.IDX_MASK
             l1pte = PTE(l1[l1idx])
-            if not l1pte.VALID and cached:
-                cached, l1 = self.get_pt(ttbr.ADDR << 12, uncached=True)
-                l1pte = PTE(l1[l1idx])
             if not l1pte.VALID:
                 l2addr = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
                 self.pt_cache[l2addr] = [0] * self.Lx_SIZE
