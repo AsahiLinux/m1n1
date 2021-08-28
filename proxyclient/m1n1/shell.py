@@ -168,7 +168,7 @@ def run_shell(locals, msg=None, exitmsg=None):
             if callable(obj) and not isinstance(obj, property):
                 try:
                     desc = obj_name + str(signature(obj))
-                except ValueError:
+                except:
                     continue
                 qn = obj.__qualname__
                 if qn.find('.') > 0:
