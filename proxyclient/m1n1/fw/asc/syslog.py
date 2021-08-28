@@ -49,16 +49,22 @@ class ASCSysLogEndpoint(ASCBaseEndpoint):
         if self.iobuffer:
             print("WARNING: trying to reset iobuffer!")
 
-        self.iobuffer, self.iobuffer_dva = self.asc.ioalloc(size)
-        self.log(f"buf {self.iobuffer:#x} / {self.iobuffer_dva:#x}")
-        self.send(Syslog_GetBuf(DVA=self.iobuffer_dva, SIZE=msg.SIZE))
+        if msg.DVA:
+            self.iobuffer_dva = msg.DVA
+            self.log(f"buf prealloc at dva {self.iobuffer_dva:#x}")
+            self.send(Syslog_GetBuf(SIZE=msg.SIZE))
+        else:
+            self.iobuffer, self.iobuffer_dva = self.asc.ioalloc(size)
+            self.log(f"buf {self.iobuffer:#x} / {self.iobuffer_dva:#x}")
+            self.send(Syslog_GetBuf(SIZE=msg.SIZE, DVA=self.iobuffer_dva))
+
         self.started = True
         return True
 
     @msg_handler(5, Syslog_Log)
     def Log(self, msg):
         stride = 0x20 + self.entrysize
-        log = self.asc.iface.readmem(self.iobuffer + msg.INDEX * stride, stride)
+        log = self.asc.ioread(self.iobuffer_dva + msg.INDEX * stride, stride)
         hdr, unk, context, logmsg = struct.unpack(f"<II24s{self.entrysize}s", log)
         context = context.split(b"\x00")[0].decode("ascii")
         logmsg = logmsg.split(b"\x00")[0].decode("ascii").rstrip("\n")

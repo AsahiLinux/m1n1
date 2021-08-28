@@ -26,7 +26,7 @@ class StandardASC(ASC):
         0xa: ASCDummyEndpoint, # tracekit
     }
 
-    def __init__(self, u, asc_base, dart):
+    def __init__(self, u, asc_base, dart=None):
         super().__init__(u, asc_base)
         self.remote_eps = set()
         self.add_ep(0, ASCManagementEndpoint(self, 0))
@@ -43,12 +43,26 @@ class StandardASC(ASC):
                     self.epcls[k] = v
 
     def iomap(self, addr, size):
+        if self.dart is None:
+            return addr
         return 0xf00000000 | self.dart.iomap(0, addr, size)
 
     def ioalloc(self, size):
         paddr = self.u.memalign(0x4000, size)
         dva = self.iomap(paddr, size)
         return paddr, dva
+
+    def ioread(self, dva, size):
+        if self.dart:
+            return self.dart.ioread(0, dva & 0xFFFFFFFF, size)
+        else:
+            return self.iface.readmem(dva, size)
+
+    def iowrite(self, dva, data):
+        if self.dart:
+            return self.dart.iowrite(0, dva & 0xFFFFFFFF, data)
+        else:
+            return self.iface.writemem(dva, data)
 
     def start_ep(self, epno):
         if epno not in self.epcls:

@@ -3,27 +3,40 @@ from .base import *
 from ...utils import *
 
 class CrashLogMessage(Register64):
-    TYPE = 63, 44
-
-class CrashLog_TranslateDva(Register64):
-    TYPE = 63, 44, Constant(0x104)
-    ADDR = 43, 0
-
-class CrashLog_Crashed(Register64):
-    TYPE = 63, 44, Constant(0x103)
+    TYPE = 63, 52
+    SIZE = 51, 44
     DVA = 43, 0
 
 class ASCCrashLogEndpoint(ASCBaseEndpoint):
     SHORT = "crash"
     BASE_MESSAGE = CrashLogMessage
 
-    @msg_handler(0x104, CrashLog_TranslateDva)
-    def TranslateDva(self, msg):
-        ranges = self.asc.dart.iotranslate(0, msg.ADDR & 0xffffffff, 4096)
-        assert len(ranges) == 1
-        self.crashbuf = ranges[0][0]
-        self.log(f"Translate {msg.ADDR:#x} -> {self.crashbuf:#x}")
-        self.send(CrashLog_TranslateDva(ADDR=self.crashbuf))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.iobuffer = None
+        self.iobuffer_dva = None
+        self.started = False
+
+    @msg_handler(0x1)
+    def Handle(self, msg):
+        if self.started:
+            return self.handle_crashed(msg)
+        else:
+            return self.handle_getbuf(msg)
+
+    def handle_getbuf(self, msg):
+        size = 0x1000 * msg.SIZE
+
+        if msg.DVA:
+            self.iobuffer_dva = msg.DVA
+            self.log(f"buf prealloc at dva {self.iobuffer_dva:#x}")
+            self.send(CrashLogMessage(TYPE=1, SIZE=msg.SIZE))
+        else:
+            self.iobuffer, self.iobuffer_dva = self.asc.ioalloc(size)
+            self.log(f"buf {self.iobuffer:#x} / {self.iobuffer_dva:#x}")
+            self.send(CrashLogMessage(TYPE=1, SIZE=msg.SIZE, DVA=self.iobuffer_dva))
+
+        self.started = True
         return True
 
     def crash_soft(self):
@@ -32,10 +45,11 @@ class ASCCrashLogEndpoint(ASCBaseEndpoint):
     def crash_hard(self):
         self.send(0x22)
 
-    @msg_handler(0x103, CrashLog_Crashed)
-    def Crashed(self, msg):
+    def handle_crashed(self, msg):
+        size = 0x1000 * msg.SIZE
+
         self.log(f"Crashed!")
-        crashdata = self.asc.dart.ioread(0, msg.DVA & 0xffffffff, 2048)
+        crashdata = self.asc.ioread(msg.DVA, size)
         chexdump(crashdata)
 
         return True
