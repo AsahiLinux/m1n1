@@ -605,7 +605,7 @@ class UPPipe2(IPCObject):
     A103 = Call(uint64_t, "test_control", cmd=uint64_t, arg=uint)
     A131 = Call(bool_, "pmu_service_matched")
 
-    D201 = Callback(uint32_t, "map_buf", InPtr(BufferDescriptor), OutPtr(ulong), OutPtr(ulong), bool_)
+    D201 = Callback(uint32_t, "map_buf", buf=InPtr(BufferDescriptor), vaddr=OutPtr(ulong), dva=OutPtr(ulong), unk=bool_)
 
     D206 = Callback(bool_, "match_pmu_service_2")
     D207 = Callback(bool_, "match_backlight_service")

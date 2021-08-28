@@ -73,6 +73,7 @@ class DCPManager(DCPBaseManager):
         self.frame = 0
 
         self.mapid = 0
+        self.bufs = {}
 
     ## IOMobileFramebufferAP methods
 
@@ -191,10 +192,12 @@ class DCPManager(DCPBaseManager):
     def match_backlight_service(self):
         return True
 
-    def map_buf(self, buf, out1, out2, unkBool):
-        print(f"map buf {buf}, {unkBool}")
-        out1.val = 0xfffffe1667b9d0e0
-        out2.val = 0
+    def map_buf(self, buf, vaddr, dva, unk):
+        print(f"map buf {buf}, {unk}")
+        paddr, dcpdva, dvasize = self.bufs[buf]
+        vaddr.val = 0
+        dva.val = self.dcp.disp_dart.iomap(4, paddr, dvasize)
+        print(f"mapped to dva {dva}")
         return 0
 
     ## ServiceRelay methods
@@ -237,6 +240,9 @@ class DCPManager(DCPBaseManager):
 
         self.mapid += 1
         print(f"Allocating {self.mapid} as {hex(paddr.val)} / {hex(dva.val)}")
+
+        self.bufs[self.mapid] = (paddr.val, dva.val, dvasize.val)
+
         return self.mapid
 
     def map_physical(self, paddr, size, flags, dva, dvasize):

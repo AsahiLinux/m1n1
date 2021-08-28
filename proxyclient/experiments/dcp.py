@@ -73,10 +73,13 @@ dart = DART(iface, DARTRegs(u, dart_addr), u)
 disp_dart_addr = u.adt["arm-io/dart-disp0"].get_reg(0)[0]
 disp_dart = DART(iface, DARTRegs(u, disp_dart_addr), u)
 
-disp_dart.dump_all()
+print("DCP DART:")
+dart.regs.dump_regs()
+print("DISP DART:")
+disp_dart.regs.dump_regs()
 
 dcp_addr = u.adt["arm-io/dcp"].get_reg(0)[0]
-dcp = DCPClient(u, dcp_addr, dart)
+dcp = DCPClient(u, dcp_addr, dart, disp_dart)
 
 dcp.start()
 dcp.start_ep(0x37)
@@ -255,7 +258,7 @@ compressed_surf = Container(
 )
 
 
-iova = 0
+iova = 0x420000
 
 surfaces = [surf, None, None, None]
 #surfaces = [compressed_surf, None, None, None]
