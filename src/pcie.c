@@ -185,6 +185,9 @@ int pcie_init(void)
 
         sprintf(bridge, "/arm-io/apcie/pci-bridge%d", port);
 
+        if (adt_path_offset(adt, bridge) < 0)
+            continue;
+
         if (adt_get_reg(adt, adt_path, "reg", port * 4 + 6, &port_base[port], NULL)) {
             printf("pcie: Error getting reg with index %d for %s\n", port * 4 + 6, path);
             return -1;
