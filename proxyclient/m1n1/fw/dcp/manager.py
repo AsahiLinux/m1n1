@@ -127,12 +127,11 @@ class DCPManager(DCPBaseManager):
 
     def rt_bandwidth_setup_ap(self, config):
         print("rt_bandwidth_setup_ap(...)")
-        config.val = {"data":unhex("""
-          6C 43 6C 6F 63 6B 00 44 14 80 73 3B 02 00 00 00
-          00 C0 C3 3B 02 00 00 00 00 00 00 00 02 00 00 00
-          00 00 00 00 90 26 FB 43 FF FF FF FF 04 00 00 00
-          00 00 00 00 65 04 00 00 00 00 00 00
-          """)}
+        config.val = {
+            "reg1": 0x23b738014, # reg[5] in disp0/dispext0, plus 0x14 - part of pmgr
+            "reg2": 0x23bc3c000, # reg[6] in disp0/dispext0 - part of pmp/pmgr
+            "bit": 2,
+        }
     ## UnifiedPipeline2 methods
 
     def match_pmu_service(self):

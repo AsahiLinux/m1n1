@@ -452,7 +452,12 @@ class IPCObject:
         return ret
 
 rt_bw_config_t = Struct(
-    "data" / HexDump(Bytes(0x3c)),
+    "unk1" / UnkBytes(8),
+    "reg1" / Int64ul,
+    "reg2" / Int64ul,
+    "unk2" / UnkBytes(4),
+    "bit" / Int32ul,
+    "padding" / UnkBytes(0x1c),
 )
 
 IOUserClient = Struct(
