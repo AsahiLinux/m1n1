@@ -117,18 +117,17 @@ typedef struct dwc3_dev {
         uintptr_t trb_iova;
     } endpoints[MAX_ENDPOINTS];
 
-    /* USB ACM CDC serial */
-    u8 cdc_line_coding[7];
-
     struct {
         ringbuffer_t *host2device;
         ringbuffer_t *device2host;
         u8 ep_intr;
         u8 ep_in;
         u8 ep_out;
+        bool ready;
+        /* USB ACM CDC serial */
+        u8 cdc_line_coding[7];
     } pipe[CDC_ACM_PIPE_MAX];
 
-    bool ready;
 } dwc3_dev_t;
 
 static const struct usb_string_descriptor str_manufacturer =
@@ -607,7 +606,8 @@ static void usb_dwc3_ep0_handle_standard_device(dwc3_dev_t *dev,
                     clear32(dev->regs + DWC3_DALEPENA, DWC3_DALEPENA_EP(USB_LEP_CDC_BULK_IN_2));
                     clear32(dev->regs + DWC3_DALEPENA, DWC3_DALEPENA_EP(USB_LEP_CDC_INTR_IN_2));
                     dev->ep0_state = USB_DWC3_EP0_STATE_DATA_SEND_STATUS;
-                    dev->ready = false;
+                    for (int i = 0; i < CDC_ACM_PIPE_MAX; i++)
+                        dev->pipe[i].ready = false;
                     break;
                 case 1:
                     /* we've already configured these endpoints so that we just need to enable them
@@ -728,20 +728,22 @@ static void usb_dwc3_ep0_handle_standard(dwc3_dev_t *dev, const union usb_setup_
 
 static void usb_dwc3_ep0_handle_class(dwc3_dev_t *dev, const union usb_setup_packet *setup)
 {
+    int pipe = setup->raw.wIndex / 2;
+
     switch (setup->raw.bRequest) {
         case USB_REQUEST_CDC_GET_LINE_CODING:
-            dev->ep0_buffer_len = min(setup->raw.wLength, sizeof(dev->cdc_line_coding));
-            dev->ep0_buffer = dev->cdc_line_coding;
+            dev->ep0_buffer_len = min(setup->raw.wLength, sizeof(dev->pipe[pipe].cdc_line_coding));
+            dev->ep0_buffer = dev->pipe[pipe].cdc_line_coding;
             dev->ep0_state = USB_DWC3_EP0_STATE_DATA_SEND;
             break;
 
         case USB_REQUEST_CDC_SET_CTRL_LINE_STATE:
             if (setup->raw.wValue & 1) { // DTR
-                dev->ready = false;
+                dev->pipe[pipe].ready = false;
                 usb_debug_printf("ACM device opened\n");
-                dev->ready = true;
+                dev->pipe[pipe].ready = true;
             } else {
-                dev->ready = false;
+                dev->pipe[pipe].ready = false;
                 usb_debug_printf("ACM device closed\n");
             }
             usb_dwc3_start_status_phase(dev, USB_LEP_CTRL_IN);
@@ -749,8 +751,9 @@ static void usb_dwc3_ep0_handle_class(dwc3_dev_t *dev, const union usb_setup_pac
             break;
 
         case USB_REQUEST_CDC_SET_LINE_CODING:
-            dev->ep0_read_buffer = dev->cdc_line_coding;
-            dev->ep0_read_buffer_len = min(setup->raw.wLength, sizeof(dev->cdc_line_coding));
+            dev->ep0_read_buffer = dev->pipe[pipe].cdc_line_coding;
+            dev->ep0_read_buffer_len =
+                min(setup->raw.wLength, sizeof(dev->pipe[pipe].cdc_line_coding));
             dev->ep0_state = USB_DWC3_EP0_STATE_DATA_RECV;
             break;
 
@@ -1072,7 +1075,10 @@ dwc3_dev_t *usb_dwc3_init(uintptr_t regs, dart_dev_t *dart)
         return NULL;
 
     memset(dev, 0, sizeof(*dev));
-    memcpy(dev->cdc_line_coding, cdc_default_line_coding, sizeof(cdc_default_line_coding));
+    for (int i = 0; i < CDC_ACM_PIPE_MAX; i++)
+        memcpy(dev->pipe[i].cdc_line_coding, cdc_default_line_coding,
+               sizeof(cdc_default_line_coding));
+
     dev->regs = regs;
     dev->dart = dart;
 
@@ -1226,7 +1232,8 @@ error:
 
 void usb_dwc3_shutdown(dwc3_dev_t *dev)
 {
-    dev->ready = false;
+    for (int i = 0; i < CDC_ACM_PIPE_MAX; i++)
+        dev->pipe[i].ready = false;
 
     /* stop all ongoing transfers */
     for (int i = 1; i < MAX_ENDPOINTS; ++i) {
@@ -1306,7 +1313,7 @@ size_t usb_dwc3_queue(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe, const void *buf, 
     const u8 *p = buf;
     size_t wrote, sent = 0;
 
-    if (!dev || !dev->ready)
+    if (!dev || !dev->pipe[pipe].ready)
         return 0;
 
     ringbuffer_t *device2host = dev->pipe[pipe].device2host;
@@ -1344,7 +1351,7 @@ size_t usb_dwc3_read(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe, void *buf, size_t 
     u8 *p = buf;
     size_t read, recvd = 0;
 
-    if (!dev || !dev->ready)
+    if (!dev || !dev->pipe[pipe].ready)
         return 0;
 
     ringbuffer_t *host2device = dev->pipe[pipe].host2device;
@@ -1367,7 +1374,7 @@ size_t usb_dwc3_read(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe, void *buf, size_t 
 
 ssize_t usb_dwc3_can_read(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe)
 {
-    if (!dev || !dev->ready)
+    if (!dev || !dev->pipe[pipe].ready)
         return 0;
 
     ringbuffer_t *host2device = dev->pipe[pipe].host2device;
@@ -1383,12 +1390,12 @@ bool usb_dwc3_can_write(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe)
     if (!dev)
         return false;
 
-    return dev->ready;
+    return dev->pipe[pipe].ready;
 }
 
 void usb_dwc3_flush(dwc3_dev_t *dev, cdc_acm_pipe_id_t pipe)
 {
-    if (!dev || !dev->ready)
+    if (!dev || !dev->pipe[pipe].ready)
         return;
 
     ringbuffer_t *device2host = dev->pipe[pipe].device2host;
