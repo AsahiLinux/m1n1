@@ -291,6 +291,12 @@ struct iodev iodev_fb = {
     .usage = USAGE_CONSOLE,
 };
 
+static void fb_clear_console(void)
+{
+    for (u32 row = 0; row < console.cursor.max_row; ++row)
+        fb_clear_font_row(row);
+}
+
 void fb_init(void)
 {
     fb.ptr = (void *)cur_boot_args.video.base;
@@ -312,10 +318,12 @@ void fb_init(void)
         console.font.height = 16;
     }
 
-    orig_logo = *logo;
-    orig_logo.ptr = malloc(orig_logo.width * orig_logo.height * 4);
-    fb_unblit_image((fb.width - orig_logo.width) / 2, (fb.height - orig_logo.height) / 2,
-                    &orig_logo);
+    if (!orig_logo.ptr) {
+        orig_logo = *logo;
+        orig_logo.ptr = malloc(orig_logo.width * orig_logo.height * 4);
+        fb_unblit_image((fb.width - orig_logo.width) / 2, (fb.height - orig_logo.height) / 2,
+                        &orig_logo);
+    }
 
     console.margin.rows = 2;
     console.margin.cols = 4;
@@ -328,21 +336,22 @@ void fb_init(void)
 
     console.initialized = 1;
 
-    for (u32 row = 0; row < console.cursor.max_row; ++row)
-        fb_clear_font_row(row);
+    fb_clear_console();
 
     printf("fb console: max rows %d, max cols %d\n", console.cursor.max_row,
            console.cursor.max_col);
 }
 
-void fb_shutdown(void)
+void fb_shutdown(bool restore_logo)
 {
     if (!console.initialized)
         return;
 
     console.initialized = 0;
-    fb_clear((rgb_t){0, 0, 0});
-    fb_restore_logo();
-    free(orig_logo.ptr);
-    orig_logo.ptr = NULL;
+    fb_clear_console();
+    if (restore_logo) {
+        fb_restore_logo();
+        free(orig_logo.ptr);
+        orig_logo.ptr = NULL;
+    }
 }

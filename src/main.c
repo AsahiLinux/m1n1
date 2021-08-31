@@ -104,7 +104,7 @@ void m1n1_main(void)
     usb_iodev_shutdown();
     mmu_shutdown();
 #ifdef USE_FB
-    fb_shutdown();
+    fb_shutdown(next_stage.restore_logo);
 #endif
 
     printf("Vectoring to next stage...\n");

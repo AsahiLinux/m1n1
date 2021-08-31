@@ -958,8 +958,8 @@ class M1N1Proxy(Reloadable):
 
     def fb_init(self):
         return self.request(self.P_FB_INIT)
-    def fb_shutdown(self):
-        return self.request(self.P_FB_SHUTDOWN)
+    def fb_shutdown(self, restore_logo=True):
+        return self.request(self.P_FB_SHUTDOWN, restore_logo)
     def fb_blit(self, x, y, w, h, ptr, stride):
         return self.request(self.P_FB_BLIP, x, y, w, h, ptr, stride)
     def fb_unblit(self, x, y, w, h, ptr, stride):

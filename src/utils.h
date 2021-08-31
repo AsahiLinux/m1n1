@@ -391,6 +391,7 @@ typedef u64(generic_func)(u64, u64, u64, u64);
 struct vector_args {
     generic_func *entry;
     u64 args[4];
+    bool restore_logo;
 };
 
 extern struct vector_args next_stage;

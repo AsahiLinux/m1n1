@@ -350,6 +350,7 @@ int kboot_boot(void *kernel)
     next_stage.args[1] = 0;
     next_stage.args[2] = 0;
     next_stage.args[3] = 0;
+    next_stage.restore_logo = false;
 
     return 0;
 }

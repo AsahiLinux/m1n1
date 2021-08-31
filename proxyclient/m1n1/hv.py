@@ -1226,7 +1226,7 @@ class HV(Reloadable):
         self.p.fb_improve_logo()
 
         print("Shutting down framebuffer...")
-        self.p.fb_shutdown()
+        self.p.fb_shutdown(True)
 
         print("Enabling SPRR...")
         self.u.msr(SPRR_CONFIG_EL1, 1)

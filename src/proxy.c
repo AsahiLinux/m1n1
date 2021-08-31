@@ -88,6 +88,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             iodev_console_flush();
             next_stage.entry = (generic_func *)request->args[0];
             memcpy(next_stage.args, &request->args[1], 4 * sizeof(u64));
+            next_stage.restore_logo = true;
             return 1;
         case P_GL1_CALL:
             reply->retval = gl1_call((void *)request->args[0], request->args[1], request->args[2],
@@ -440,7 +441,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             fb_init();
             break;
         case P_FB_SHUTDOWN:
-            fb_shutdown();
+            fb_shutdown(request->args[0]);
             break;
         case P_FB_BLIT:
             fb_blit(request->args[0], request->args[1], request->args[2], request->args[3],
