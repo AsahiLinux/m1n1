@@ -24,7 +24,7 @@
 
 struct vector_args next_stage;
 
-const char *const version_tag = "##m1n1_ver##" BUILD_TAG;
+const char version_tag[] = "##m1n1_ver##" BUILD_TAG;
 const char *const m1n1_version = version_tag + 12;
 
 void print_info(void)
