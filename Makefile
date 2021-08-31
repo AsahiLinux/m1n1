@@ -80,7 +80,7 @@ TARGET := m1n1.macho
 
 DEPDIR := build/.deps
 
-.PHONY: all clean format
+.PHONY: all clean format update_tag
 all: build/$(TARGET) $(DTBS)
 clean:
 	rm -rf build/*
@@ -119,9 +119,12 @@ build/$(NAME).macho: build/$(NAME).elf
 	@echo "  MACHO $@"
 	@$(OBJCOPY) -O binary $< $@
 
-build/build_tag.h:
-	@echo "  TAG   $@"
-	@echo "#define BUILD_TAG \"$$(git describe --always --dirty)\"" > $@
+update_tag:
+	@echo "#define BUILD_TAG \"$$(git describe --always --dirty)\"" > build/build_tag.tmp
+	@cmp -s build/build_tag.h build/build_tag.tmp 2>/dev/null || \
+	( mv -f build/build_tag.tmp build/build_tag.h && echo "  TAG   build/build_tag.h" )
+
+build/build_tag.h: update_tag
 
 build/%.bin: data/%.png
 	@echo "  IMG   $@"
@@ -136,8 +139,6 @@ build/%.bin: font/%.bin
 	@cp $< $@
 
 build/main.o: build/build_tag.h src/main.c
+build/usb_dwc3.o: build/build_tag.h src/usb_dwc3.c
 
 -include $(DEPDIR)/*
-
-
-
