@@ -16,6 +16,8 @@
 
 const u8 gz_magic[] = {0x1f, 0x8b};
 const u8 xz_magic[] = {0xfd, '7', 'z', 'X', 'Z', 0x00};
+const u8 xz_magic[] = {0xfd, '7', 'z', 'X', 'Z', 0x00};
+const u8 zstd_magic[] = {0x28, 0xb5, 0x2f, 0xfd};
 const u8 fdt_magic[] = {0xd0, 0x0d, 0xfe, 0xed};
 const u8 kernel_magic[] = {'A', 'R', 'M', 0x64};   // at 0x38
 const u8 cpio_magic[] = {'0', '7', '0', '7', '0'}; // '1' or '2' next
@@ -148,6 +150,9 @@ static void *load_one_payload(void *start, size_t size)
     } else if (!memcmp(p, xz_magic, sizeof xz_magic)) {
         printf("Found an XZ compressed payload at %p\n", p);
         return decompress_xz(p, size);
+    } else if (!memcmp(p, zstd_magic, sizeof zstd_magic)) {
+        printf("Found a ZSTD compressed payload at %p\n", p);
+        return NULL;
     } else if (!memcmp(p, fdt_magic, sizeof fdt_magic)) {
         printf("Found a devicetree at %p\n", p);
         return load_fdt(p, size);
