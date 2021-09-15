@@ -17,10 +17,14 @@ extern spinlock_t bhl;
      ((op2) << ESR_ISS_MSR_OP2_SHIFT))
 #define SYSREG_ISS(...) _SYSREG_ISS(__VA_ARGS__)
 
-bool ipi_pending = false;
-bool pmc_pending = false;
-u64 pmc_irq_mode = 0;
-static u64 exc_entry_pmcr0_cnt;
+#define D_PERCPU(t, x) t x[MAX_CPUS]
+#define PERCPU(x)      x[mrs(TPIDR_EL2)]
+
+D_PERCPU(static bool, ipi_pending);
+D_PERCPU(static bool, pmc_pending);
+D_PERCPU(static u64, pmc_irq_mode);
+
+D_PERCPU(static u64, exc_entry_pmcr0_cnt);
 
 void hv_exit_guest(void) __attribute__((noreturn));
 
@@ -97,7 +101,7 @@ static void hv_update_fiq(void)
         reg_set(SYS_IMP_APL_VM_TMR_FIQ_ENA_EL2, VM_TMR_FIQ_ENA_ENA_V);
     }
 
-    fiq_pending |= ipi_pending || pmc_pending;
+    fiq_pending |= PERCPU(ipi_pending) || PERCPU(pmc_pending);
 
     sysop("isb");
 
@@ -166,20 +170,21 @@ static bool hv_handle_msr(u64 *regs, u64 iss)
         SYSREG_PASS(SYS_IMP_APL_IPI_CR_EL1)
         case SYSREG_ISS(SYS_IMP_APL_IPI_SR_EL1):
             if (is_read)
-                regs[rt] = ipi_pending ? IPI_SR_PENDING : 0;
+                regs[rt] = PERCPU(ipi_pending) ? IPI_SR_PENDING : 0;
             else if (regs[rt] & IPI_SR_PENDING)
-                ipi_pending = false;
+                PERCPU(ipi_pending) = false;
             return true;
         /* shadow the interrupt mode and state flag */
         case SYSREG_ISS(SYS_IMP_APL_PMCR0):
             if (is_read) {
-                u64 val = (mrs(SYS_IMP_APL_PMCR0) & ~PMCR0_IMODE_MASK) | pmc_irq_mode;
-                regs[rt] = val | (pmc_pending ? PMCR0_IACT : 0) | exc_entry_pmcr0_cnt;
+                u64 val = (mrs(SYS_IMP_APL_PMCR0) & ~PMCR0_IMODE_MASK) | PERCPU(pmc_irq_mode);
+                regs[rt] =
+                    val | (PERCPU(pmc_pending) ? PMCR0_IACT : 0) | PERCPU(exc_entry_pmcr0_cnt);
             } else {
-                pmc_pending = !!(regs[rt] & PMCR0_IACT);
-                pmc_irq_mode = regs[rt] & PMCR0_IMODE_MASK;
-                exc_entry_pmcr0_cnt = regs[rt] & PMCR0_CNT_MASK;
-                msr(SYS_IMP_APL_PMCR0, regs[rt] & ~exc_entry_pmcr0_cnt);
+                PERCPU(pmc_pending) = !!(regs[rt] & PMCR0_IACT);
+                PERCPU(pmc_irq_mode) = regs[rt] & PMCR0_IMODE_MASK;
+                PERCPU(exc_entry_pmcr0_cnt) = regs[rt] & PMCR0_CNT_MASK;
+                msr(SYS_IMP_APL_PMCR0, regs[rt] & ~PERCPU(exc_entry_pmcr0_cnt));
             }
             return true;
 #ifdef DEBUG_PMU_IRQ
@@ -211,7 +216,7 @@ static void hv_exc_entry(u64 *regs)
     exc_entry_time = mrs(CNTPCT_EL0);
     /* disable PMU counters in the hypervisor */
     u64 pmcr0 = mrs(SYS_IMP_APL_PMCR0);
-    exc_entry_pmcr0_cnt = pmcr0 & PMCR0_CNT_MASK;
+    PERCPU(exc_entry_pmcr0_cnt) = pmcr0 & PMCR0_CNT_MASK;
     msr(SYS_IMP_APL_PMCR0, pmcr0 & ~PMCR0_CNT_MASK);
 }
 
@@ -220,8 +225,8 @@ static void hv_exc_exit(u64 *regs)
     UNUSED(regs);
     hv_wdt_breadcrumb('x');
     hv_update_fiq();
-    /* reenabale PMU counters */
-    reg_set(SYS_IMP_APL_PMCR0, exc_entry_pmcr0_cnt);
+    /* reenable PMU counters */
+    reg_set(SYS_IMP_APL_PMCR0, PERCPU(exc_entry_pmcr0_cnt));
     u64 lost = mrs(CNTPCT_EL0) - exc_entry_time;
     if (lost > 8)
         stolen_time += lost - 8;
@@ -298,7 +303,7 @@ void hv_exc_fiq(u64 *regs)
         printf("[FIQ] PMC IRQ, masking and delivering to the guest\n");
 #endif
         reg_clr(SYS_IMP_APL_PMCR0, PMCR0_IACT | PMCR0_IMODE_MASK);
-        pmc_pending = true;
+        PERCPU(pmc_pending) = true;
     }
 
     reg = mrs(SYS_IMP_APL_UPMCR0);
@@ -309,7 +314,7 @@ void hv_exc_fiq(u64 *regs)
     }
 
     if (mrs(SYS_IMP_APL_IPI_SR_EL1) & IPI_SR_PENDING) {
-        ipi_pending = true;
+        PERCPU(ipi_pending) = true;
         msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
         sysop("isb");
     }
