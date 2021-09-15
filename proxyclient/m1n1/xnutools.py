@@ -31,7 +31,7 @@ def decode_debugger_state(u, ctx):
         assert addr != 0
         return iface.readmem(addr, size)
 
-    p_state = p.hv_translate(ctx.regs[23], False, False)
+    p_state = p.hv_translate(ctx.regs[25], False, False)
     assert p_state != 0
     di = iface.readstruct(p_state, DebuggerState)
     print(di)
