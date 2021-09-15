@@ -11,6 +11,8 @@
 
 #define HV_TICK_RATE 1000
 
+DECLARE_SPINLOCK(bhl);
+
 void hv_enter_guest(u64 x0, u64 x1, u64 x2, u64 x3, void *entry);
 
 extern char _hv_vectors_start[0];

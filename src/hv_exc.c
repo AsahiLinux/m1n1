@@ -8,6 +8,8 @@
 #include "uart.h"
 #include "uartproxy.h"
 
+extern spinlock_t bhl;
+
 #define _SYSREG_ISS(_1, _2, op0, op1, CRn, CRm, op2)                                               \
     (((op0) << ESR_ISS_MSR_OP0_SHIFT) | ((op1) << ESR_ISS_MSR_OP1_SHIFT) |                         \
      ((CRn) << ESR_ISS_MSR_CRn_SHIFT) | ((CRm) << ESR_ISS_MSR_CRm_SHIFT) |                         \
@@ -65,6 +67,7 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
             hv_wdt_breadcrumb('p');
             return;
         case EXC_EXIT_GUEST:
+            spin_unlock(&bhl);
             hv_exit_guest();
         default:
             printf("Guest exception not handled, rebooting.\n");
@@ -201,6 +204,7 @@ static bool hv_handle_msr(u64 *regs, u64 iss)
 static void hv_exc_entry(u64 *regs)
 {
     UNUSED(regs);
+    spin_lock(&bhl);
     hv_wdt_breadcrumb('X');
     exc_entry_time = mrs(CNTPCT_EL0);
     /* disable PMU counters in the hypervisor */
@@ -220,6 +224,7 @@ static void hv_exc_exit(u64 *regs)
     if (lost > 8)
         stolen_time += lost - 8;
     msr(CNTVOFF_EL2, stolen_time);
+    spin_unlock(&bhl);
 }
 
 void hv_exc_sync(u64 *regs)
