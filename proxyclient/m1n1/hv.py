@@ -121,7 +121,7 @@ class HV(Reloadable):
         self._bps = [None, None, None, None, None]
         self.sym_offset = 0
         self.symbols = []
-        self.sysreg = {}
+        self.sysreg = {0: {}}
         self.novm = False
         self._in_handler = False
         self._sigint_pending = False
@@ -549,7 +549,7 @@ class HV(Reloadable):
         value = 0
         if enc in shadow:
             if iss.DIR == MSR_DIR.READ:
-                value = self.sysreg.setdefault(enc, 0)
+                value = self.sysreg[self.ctx.cpu_id].setdefault(enc, 0)
                 self.log(f"Shadow: mrs x{iss.Rt}, {name} = {value:x}")
                 if iss.Rt != 31:
                     ctx.regs[iss.Rt] = value
@@ -557,7 +557,7 @@ class HV(Reloadable):
                 if iss.Rt != 31:
                     value = ctx.regs[iss.Rt]
                 self.log(f"Shadow: msr {name}, x{iss.Rt} = {value:x}")
-                self.sysreg[enc] = value
+                self.sysreg[self.ctx.cpu_id][enc] = value
         elif enc in skip or (enc in ro and iss.DIR == MSR_DIR.WRITE):
             if iss.DIR == MSR_DIR.READ:
                 self.log(f"Skip: mrs x{iss.Rt}, {name} = 0")
