@@ -89,6 +89,7 @@ void hv_set_elr(u64 val);
 /* HV main */
 void hv_init(void);
 void hv_start(void *entry, u64 regs[4]);
+void hv_start_secondary(int cpu, void *entry, u64 regs[4]);
 void hv_arm_tick(void);
 void hv_tick(u64 *regs);
 

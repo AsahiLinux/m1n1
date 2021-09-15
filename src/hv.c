@@ -4,8 +4,10 @@
 #include "assert.h"
 #include "cpu_regs.h"
 #include "gxf.h"
+#include "memory.h"
 #include "pcie.h"
 #include "smp.h"
+#include "string.h"
 #include "usb.h"
 #include "utils.h"
 
@@ -14,11 +16,14 @@
 DECLARE_SPINLOCK(bhl);
 
 void hv_enter_guest(u64 x0, u64 x1, u64 x2, u64 x3, void *entry);
+void hv_exit_guest(void) __attribute__((noreturn));
 
 extern char _hv_vectors_start[0];
 
 u64 hv_tick_interval;
 
+static bool hv_should_exit;
+bool hv_started_cpus[MAX_CPUS];
 u64 hv_saved_sp[MAX_CPUS];
 
 void hv_init(void)
@@ -62,6 +67,9 @@ static void hv_set_gxf_vbar(void)
 
 void hv_start(void *entry, u64 regs[4])
 {
+    hv_should_exit = false;
+    memset(hv_started_cpus, 0, sizeof(hv_started_cpus));
+
     msr(VBAR_EL1, _hv_vectors_start);
 
     if (gxf_enabled())
@@ -69,9 +77,114 @@ void hv_start(void *entry, u64 regs[4])
 
     hv_arm_tick();
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
+
+    spin_lock(&bhl);
+
     hv_wdt_stop();
 
-    printf("Exiting hypervisor.\n");
+    hv_should_exit = true;
+    printf("HV: Exiting hypervisor (main CPU)\n");
+
+    for (int i = 0; i < MAX_CPUS; i++) {
+        if (hv_started_cpus[i]) {
+            printf("HV: Waiting for CPU %d to exit\n", i);
+            spin_unlock(&bhl);
+            smp_wait(i);
+            spin_lock(&bhl);
+            hv_started_cpus[i] = false;
+        }
+    }
+
+    printf("HV: All CPUs exited\n");
+    spin_unlock(&bhl);
+}
+
+struct hv_secondary_info_t {
+    uint64_t hcr;
+    uint64_t hacr;
+    uint64_t vtcr, vttbr;
+    uint64_t mdcr;
+    uint64_t mdscr;
+    uint64_t amx_ctl;
+    uint64_t apvmkeylo, apvmkeyhi, apsts;
+    uint64_t actlr;
+    uint64_t cnthctl;
+    uint64_t sprr_config;
+    uint64_t gxf_config;
+};
+
+static void hv_init_secondary(struct hv_secondary_info_t *info)
+{
+    gxf_init();
+
+    msr(VBAR_EL1, _hv_vectors_start);
+
+    msr(HCR_EL2, info->hcr);
+    msr(HACR_EL2, info->hacr);
+    msr(VTCR_EL2, info->vtcr);
+    msr(VTTBR_EL2, info->vttbr);
+    msr(MDCR_EL2, info->mdcr);
+    msr(MDSCR_EL1, info->mdscr);
+    msr(SYS_IMP_APL_AMX_CTL_EL2, info->amx_ctl);
+    msr(SYS_IMP_APL_APVMKEYLO_EL2, info->apvmkeylo);
+    msr(SYS_IMP_APL_APVMKEYHI_EL2, info->apvmkeyhi);
+    msr(SYS_IMP_APL_APSTS_EL12, info->apsts);
+    msr(ACTLR_EL2, info->actlr);
+    msr(CNTHCTL_EL2, info->cnthctl);
+    msr(SYS_IMP_APL_SPRR_CONFIG_EL1, info->sprr_config);
+    msr(SYS_IMP_APL_GXF_CONFIG_EL1, info->gxf_config);
+
+    if (gxf_enabled())
+        gl2_call(hv_set_gxf_vbar, 0, 0, 0, 0);
+
+    hv_arm_tick();
+}
+
+static void hv_enter_secondary(void *entry, u64 regs[4])
+{
+    hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
+
+    spin_lock(&bhl);
+
+    hv_should_exit = true;
+    printf("HV: Exiting from CPU %d\n", smp_id());
+
+    spin_unlock(&bhl);
+}
+
+void hv_start_secondary(int cpu, void *entry, u64 regs[4])
+{
+    printf("HV: Initializing secondary %d\n", cpu);
+    iodev_console_flush();
+
+    struct hv_secondary_info_t info = {
+        .hcr = mrs(HCR_EL2),
+        .hacr = mrs(HACR_EL2),
+        .vtcr = mrs(VTCR_EL2),
+        .vttbr = mrs(VTTBR_EL2),
+        .mdcr = mrs(MDCR_EL2),
+        .mdscr = mrs(MDSCR_EL1),
+        .amx_ctl = mrs(SYS_IMP_APL_AMX_CTL_EL2),
+        .apvmkeylo = mrs(SYS_IMP_APL_APVMKEYLO_EL2),
+        .apvmkeyhi = mrs(SYS_IMP_APL_APVMKEYHI_EL2),
+        .apsts = mrs(SYS_IMP_APL_APSTS_EL12),
+        .actlr = mrs(ACTLR_EL2),
+        .cnthctl = mrs(CNTHCTL_EL2),
+        .sprr_config = mrs(SYS_IMP_APL_SPRR_CONFIG_EL1),
+        .gxf_config = mrs(SYS_IMP_APL_GXF_CONFIG_EL1),
+    };
+
+    mmu_init_secondary(cpu);
+    iodev_console_flush();
+    smp_call4(cpu, hv_init_secondary, (u64)&info, 0, 0, 0);
+    smp_wait(cpu);
+    iodev_console_flush();
+
+    printf("HV: Entering guest secondary %d at %p\n", cpu, entry);
+    hv_started_cpus[cpu] = true;
+
+    iodev_console_flush();
+    smp_call4(cpu, hv_enter_secondary, (u64)entry, (u64)regs, 0, 0);
 }
 
 void hv_write_hcr(u64 val)
@@ -146,6 +259,10 @@ void hv_arm_tick(void)
 
 void hv_tick(u64 *regs)
 {
+    if (hv_should_exit) {
+        spin_unlock(&bhl);
+        hv_exit_guest();
+    }
     hv_wdt_pet();
     iodev_handle_events(uartproxy_iodev);
     if (iodev_can_read(uartproxy_iodev))
