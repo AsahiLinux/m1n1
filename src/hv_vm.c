@@ -582,7 +582,10 @@ static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 *width)
 
     regs[31] = 0;
 
-    u64 mask = (1UL << (8 << *width)) - 1;
+    u64 mask = 0xffffffffffffffffUL;
+
+    if (*width < 3)
+        mask = (1UL << (8 << *width)) - 1;
 
     if ((insn & 0x3fe00400) == 0x38000400) {
         // STRx (immediate) Pre/Post-index
