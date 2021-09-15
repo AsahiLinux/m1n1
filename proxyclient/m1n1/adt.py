@@ -62,7 +62,7 @@ PMGRDevices = GreedyRange(Struct(
     Const(0, Int8ul),
     "parents" / Array(2, Int16ul),
     "unk" / Int16ul,
-    "gate" / Int8ul,
+    "psidx" / Int8ul,
     "psreg" / Int8ul,
     "unk2_0" / Int16ul,
     "pd" / Int8ul,
