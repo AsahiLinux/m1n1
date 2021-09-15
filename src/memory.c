@@ -461,6 +461,27 @@ void mmu_init(void)
     printf("MMU: running with MMU and caches enabled!\n");
 }
 
+static void mmu_secondary_setup(void)
+{
+    mmu_configure();
+    mmu_init_sprr();
+
+    // Enable EL0 memory access by EL1
+    msr(PAN, 0);
+
+    // RES1 bits
+    u64 sctlr = SCTLR_LSMAOE | SCTLR_nTLSMD | SCTLR_TSCXT | SCTLR_ITD;
+    // Configure translation
+    sctlr |= SCTLR_I | SCTLR_C | SCTLR_M | SCTLR_SPAN;
+    write_sctlr(sctlr);
+}
+
+void mmu_init_secondary(int cpu)
+{
+    smp_call4(cpu, mmu_secondary_setup, 0, 0, 0, 0);
+    smp_wait(cpu);
+}
+
 void mmu_shutdown(void)
 {
     fb_console_reserve_lines(3);
