@@ -9,6 +9,8 @@
 #include "uart.h"
 #include "uartproxy.h"
 
+//#define TIME_ACCOUNTING
+
 extern spinlock_t bhl;
 
 #define _SYSREG_ISS(_1, _2, op0, op1, CRn, CRm, op2)                                               \
@@ -227,9 +229,11 @@ static void hv_exc_exit(u64 *regs)
     hv_update_fiq();
     /* reenable PMU counters */
     reg_set(SYS_IMP_APL_PMCR0, PERCPU(exc_entry_pmcr0_cnt));
+#ifdef TIME_ACCOUNTING
     u64 lost = mrs(CNTPCT_EL0) - exc_entry_time;
     if (lost > 8)
         stolen_time += lost - 8;
+#endif
     msr(CNTVOFF_EL2, stolen_time);
     spin_unlock(&bhl);
 }
