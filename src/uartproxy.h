@@ -33,6 +33,7 @@ typedef enum _uartproxy_event_type_t {
 } uartproxy_event_type_t;
 
 struct uartproxy_exc_info {
+    u64 cpu_id;
     u64 spsr;
     u64 elr;
     u64 esr;

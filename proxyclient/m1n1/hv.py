@@ -15,6 +15,7 @@ from . import xnutools, shell
 __all__ = ["HV"]
 
 class MMIOTraceFlags(Register32):
+    CPU = 23, 16
     WIDTH = 4, 0
     WRITE = 5
     MULTI = 6

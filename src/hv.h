@@ -9,9 +9,10 @@
 
 typedef bool(hv_hook_t)(u64 addr, u64 *val, bool write, int width);
 
-#define MMIO_EVT_WIDTH GENMASK(4, 0)
-#define MMIO_EVT_WRITE BIT(5)
+#define MMIO_EVT_CPU   GENMASK(23, 16)
 #define MMIO_EVT_MULTI BIT(6)
+#define MMIO_EVT_WRITE BIT(5)
+#define MMIO_EVT_WIDTH GENMASK(4, 0)
 
 struct hv_evt_mmiotrace {
     u32 flags;

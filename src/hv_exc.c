@@ -4,6 +4,7 @@
 #include "assert.h"
 #include "cpu_regs.h"
 #include "exception.h"
+#include "smp.h"
 #include "string.h"
 #include "uart.h"
 #include "uartproxy.h"
@@ -33,6 +34,7 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
     hv_wdt_breadcrumb('P');
 
     struct uartproxy_exc_info exc_info = {
+        .cpu_id = smp_id(),
         .spsr = hv_get_spsr(),
         .elr = hv_get_elr(),
         .esr = hv_get_esr(),

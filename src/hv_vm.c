@@ -7,6 +7,7 @@
 #include "cpu_regs.h"
 #include "iodev.h"
 #include "malloc.h"
+#include "smp.h"
 #include "string.h"
 #include "types.h"
 #include "uartproxy.h"
@@ -616,7 +617,7 @@ static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 *width)
 static void emit_mmiotrace(u64 pc, u64 addr, u64 *data, u64 width, u64 flags, bool sync)
 {
     struct hv_evt_mmiotrace evt = {
-        .flags = flags,
+        .flags = flags | FIELD_PREP(MMIO_EVT_CPU, smp_id()),
         .pc = pc,
         .addr = addr,
     };

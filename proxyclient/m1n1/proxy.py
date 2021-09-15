@@ -67,6 +67,7 @@ class EXC_RET(IntEnum):
     STEP = 4
 
 ExcInfo = Struct(
+    "cpu_id" / Int64ul,
     "spsr" / RegAdapter(SPSR),
     "elr" / Int64ul,
     "esr" / RegAdapter(ESR),
