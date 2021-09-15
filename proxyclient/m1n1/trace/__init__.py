@@ -133,7 +133,7 @@ class Tracer(Reloadable):
         self.hv.clear_tracers(self.ident)
 
     def log(self, msg):
-        print(f"[{self.ident}] {msg}")
+        self.hv.log(f"[{self.ident}] {msg}")
 
 class PrintTracer(Tracer):
     def __init__(self, hv, device_addr_tbl):
