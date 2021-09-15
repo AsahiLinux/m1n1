@@ -1,9 +1,11 @@
 /* SPDX-License-Identifier: MIT */
 
+#include <assert.h>
 #include <stdarg.h>
 
 #include "utils.h"
 #include "iodev.h"
+#include "smp.h"
 #include "types.h"
 #include "vsprintf.h"
 
@@ -103,11 +105,27 @@ void flush_and_reboot(void)
 
 void spin_lock(spinlock_t *lock)
 {
-    while (__atomic_test_and_set((void *)lock, __ATOMIC_ACQUIRE))
-        ;
+    s64 me = smp_id();
+    if (__atomic_load_n(&lock->lock, __ATOMIC_ACQUIRE) == me) {
+        lock->count++;
+        return;
+    }
+
+    s64 free = -1;
+
+    while (!__atomic_compare_exchange_n(&lock->lock, &free, me, false, __ATOMIC_ACQUIRE,
+                                        __ATOMIC_RELAXED))
+        free = -1;
+
+    assert(__atomic_load_n(&lock->lock, __ATOMIC_RELAXED) == me);
+    lock->count++;
 }
 
 void spin_unlock(spinlock_t *lock)
 {
-    __atomic_clear((void *)lock, __ATOMIC_RELEASE);
+    s64 me = smp_id();
+    assert(__atomic_load_n(&lock->lock, __ATOMIC_RELAXED) == me);
+    assert(lock->count > 0);
+    if (!--lock->count)
+        __atomic_store_n(&lock->lock, -1L, __ATOMIC_RELEASE);
 }
