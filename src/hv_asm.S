@@ -138,6 +138,8 @@ _v_hv_serr:
 
     b _hv_return
 
+.extern hv_saved_sp
+
 .globl hv_enter_guest
 .type hv_enter_guest, @function
 hv_enter_guest:
@@ -149,8 +151,10 @@ hv_enter_guest:
     stp x19, x20, [sp, #-16]!
     str x18, [sp, #-16]!
 
+    mrs x7, tpidr_el2
+    ldr x6, =hv_saved_sp
     mov x5, sp
-    msr tpidr_el2, x5
+    str x5, [x6, x7, LSL #3]
 
     mrs x5, daif
     msr daifclr, 3
@@ -168,7 +172,9 @@ hv_enter_guest:
 .globl hv_exit_guest
 .type hv_exit_guest, @function
 hv_exit_guest:
-    mrs x5, tpidr_el2
+    mrs x7, tpidr_el2
+    ldr x6, =hv_saved_sp
+    ldr x5, [x6, x7, LSL #3]
     mov sp, x5
 
     ldr x18, [sp], #16

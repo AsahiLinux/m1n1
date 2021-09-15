@@ -17,6 +17,8 @@ extern char _hv_vectors_start[0];
 
 u64 hv_tick_interval;
 
+u64 hv_saved_sp[MAX_CPUS];
+
 void hv_init(void)
 {
     pcie_shutdown();
