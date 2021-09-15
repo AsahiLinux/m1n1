@@ -155,6 +155,12 @@ class HV(Reloadable):
             if callable(a):
                 self.shell_locals[attr] = getattr(self, attr)
 
+    def log(self, s, *args, **kwargs):
+        if self.ctx is not None:
+            print(f"[cpu{self.ctx.cpu_id}] " + s, *args, **kwargs)
+        else:
+            print(s, *args, **kwargs)
+
     def unmap(self, ipa, size):
         assert self.p.hv_map(ipa, 0, size, 0) >= 0
 
@@ -544,26 +550,26 @@ class HV(Reloadable):
         if enc in shadow:
             if iss.DIR == MSR_DIR.READ:
                 value = self.sysreg.setdefault(enc, 0)
-                print(f"Shadow: mrs x{iss.Rt}, {name} = {value:x}")
+                self.log(f"Shadow: mrs x{iss.Rt}, {name} = {value:x}")
                 if iss.Rt != 31:
                     ctx.regs[iss.Rt] = value
             else:
                 if iss.Rt != 31:
                     value = ctx.regs[iss.Rt]
-                print(f"Shadow: msr {name}, x{iss.Rt} = {value:x}")
+                self.log(f"Shadow: msr {name}, x{iss.Rt} = {value:x}")
                 self.sysreg[enc] = value
         elif enc in skip or (enc in ro and iss.DIR == MSR_DIR.WRITE):
             if iss.DIR == MSR_DIR.READ:
-                print(f"Skip: mrs x{iss.Rt}, {name} = 0")
+                self.log(f"Skip: mrs x{iss.Rt}, {name} = 0")
                 if iss.Rt != 31:
                     ctx.regs[iss.Rt] = 0
             else:
                 if iss.Rt != 31:
                     value = ctx.regs[iss.Rt]
-                print(f"Skip: msr {name}, x{iss.Rt} = {value:x}")
+                self.log(f"Skip: msr {name}, x{iss.Rt} = {value:x}")
         else:
             if iss.DIR == MSR_DIR.READ:
-                print(f"Pass: mrs x{iss.Rt}, {name}", end=" ")
+                self.log(f"Pass: mrs x{iss.Rt}, {name}", end=" ")
                 sys.stdout.flush()
                 enc2 = self.MSR_REDIRECTS.get(enc, enc)
                 value = self.u.mrs(enc2)
@@ -573,7 +579,7 @@ class HV(Reloadable):
             else:
                 if iss.Rt != 31:
                     value = ctx.regs[iss.Rt]
-                print(f"Pass: msr {name}, x{iss.Rt} = {value:x}", end=" ")
+                self.log(f"Pass: msr {name}, x{iss.Rt} = {value:x}", end=" ")
                 enc2 = self.MSR_REDIRECTS.get(enc, enc)
                 sys.stdout.flush()
                 self.u.msr(enc2, value, call=self.p.gl2_call)
@@ -595,7 +601,7 @@ class HV(Reloadable):
         c = ARMAsm(".inst " + ",".join(str(i) for i in code), ctx.elr_phys)
         insn = "; ".join(c.disassemble())
 
-        print(f"IMPDEF exception on: {insn}")
+        self.log(f"IMPDEF exception on: {insn}")
 
         return False
 
@@ -606,7 +612,7 @@ class HV(Reloadable):
 
         vector, target = self.vectors[idx]
         if target is None:
-            print(f"EL1: Exception #{vector} with no target")
+            self.log(f"EL1: Exception #{vector} with no target")
             target = 0
             ok = False
         else:
@@ -625,22 +631,22 @@ class HV(Reloadable):
             if esr.EC == ESR_EC.DABORT or esr.EC == ESR_EC.IABORT:
                 far = self.u.mrs(FAR_EL12)
                 if self.sym(elr)[1] != "com.apple.kernel:_panic_trap_to_debugger":
-                    print("Page fault")
+                    self.log("Page fault")
                     return ok
 
-            print(f"EL1: Exception #{vector} ({esr.EC!s}) to {self.addr(target)} from {spsr.M.name}")
-            print(f"     ELR={self.addr(elr)} (0x{elr_phys:x})")
-            print(f"     SP_EL1=0x{sp_el1:x} SP_EL0=0x{sp_el0:x}")
+            self.log(f"EL1: Exception #{vector} ({esr.EC!s}) to {self.addr(target)} from {spsr.M.name}")
+            self.log(f"     ELR={self.addr(elr)} (0x{elr_phys:x})")
+            self.log(f"     SP_EL1=0x{sp_el1:x} SP_EL0=0x{sp_el0:x}")
             if far is not None:
-                print(f"     FAR={self.addr(far)}")
+                self.log(f"     FAR={self.addr(far)}")
             if elr_phys:
                 self.u.disassemble_at(elr_phys - 4 * 4, 9 * 4, elr_phys)
             if self.sym(elr)[1] == "com.apple.kernel:_panic_trap_to_debugger":
-                print("Panic! Trying to decode panic...")
+                self.log("Panic! Trying to decode panic...")
                 try:
                     self.decode_panic_call()
                 except:
-                    print("Error decoding panic.")
+                    self.log("Error decoding panic.")
                 try:
                     self.bt()
                 except:
@@ -649,11 +655,11 @@ class HV(Reloadable):
             if esr.EC == ESR_EC.UNKNOWN:
                 instr = self.p.read32(elr_phys)
                 if instr == 0xe7ffdeff:
-                    print("Debugger break! Trying to decode panic...")
+                    self.log("Debugger break! Trying to decode panic...")
                     try:
                         self.decode_dbg_panic()
                     except:
-                        print("Error decoding panic.")
+                        self.log("Error decoding panic.")
                     try:
                         self.bt()
                     except:
@@ -662,7 +668,7 @@ class HV(Reloadable):
                 return False
         else:
             elr = self.u.mrs(ELR_EL12)
-            print(f"Guest: {str(EXC(vector & 3))} at {self.addr(elr)}")
+            self.log(f"Guest: {str(EXC(vector & 3))} at {self.addr(elr)}")
 
         return ok
 
@@ -730,15 +736,15 @@ class HV(Reloadable):
                 elif code == HV_EVENT.USER_INTERRUPT:
                     handled = True
         except Exception as e:
-            print(f"Python exception while handling guest exception:")
+            self.log(f"Python exception while handling guest exception:")
             traceback.print_exc()
 
         if handled:
             ret = EXC_RET.HANDLED
             if self._sigint_pending:
-                print("User interrupt")
+                self.log("User interrupt")
         else:
-            print(f"Guest exception: {reason.name}/{code.name}")
+            self.log(f"Guest exception: {reason.name}/{code.name}")
             self.u.print_exception(code, ctx)
 
         if self._sigint_pending or not handled:
@@ -852,14 +858,14 @@ class HV(Reloadable):
         if self.u.mrs(SCTLR_EL12) & 1:
             vbar_phys = self.p.hv_translate(vbar, False, False)
             if vbar_phys == 0:
-                print(f"VBAR vaddr 0x{vbar:x} translation failed!")
+                self.log(f"VBAR vaddr 0x{vbar:x} translation failed!")
                 if self.vbar_el1 is not None:
                     self.want_vbar = vbar
                     self.u.msr(VBAR_EL12, self.vbar_el1)
                 return
         else:
             if vbar & (1 << 63):
-                print(f"VBAR vaddr 0x{vbar:x} without translation enabled")
+                self.log(f"VBAR vaddr 0x{vbar:x} without translation enabled")
                 if self.vbar_el1 is not None:
                     self.want_vbar = vbar
                     self.u.msr(VBAR_EL12, self.vbar_el1)
@@ -871,7 +877,7 @@ class HV(Reloadable):
             self.want_vbar = None
             self.u.msr(VBAR_EL12, vbar)
 
-        print(f"New VBAR paddr: 0x{vbar_phys:x}")
+        self.log(f"New VBAR paddr: 0x{vbar_phys:x}")
 
         #for i in range(16):
         for i in [0, 3, 4, 7, 8, 11, 12, 15]:
@@ -879,17 +885,17 @@ class HV(Reloadable):
             addr = vbar_phys + 0x80 * i
             orig = self.p.read32(addr)
             if (orig & 0xfc000000) != 0x14000000:
-                print(f"Unknown vector #{i}:\n")
+                self.log(f"Unknown vector #{i}:\n")
                 self.u.disassemble_at(addr, 16)
             else:
                 idx = len(self.vectors)
                 delta = orig & 0x3ffffff
                 if delta == 0:
                     target = None
-                    print(f"Vector #{i}: Loop\n")
+                    self.log(f"Vector #{i}: Loop\n")
                 else:
                     target = (delta << 2) + vbar + 0x80 * i
-                    print(f"Vector #{i}: 0x{target:x}\n")
+                    self.log(f"Vector #{i}: 0x{target:x}\n")
                 self.vectors.append((i, target))
                 self.u.disassemble_at(addr, 16)
             self.p.write32(addr, self.hvc(idx))
