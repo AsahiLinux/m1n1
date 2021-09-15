@@ -8,8 +8,6 @@
 
 #define CPU_START_OFF 0x54000
 
-#define SECONDARY_STACK_SIZE 0x4000
-
 struct spin_table {
     u64 mpidr;
     u64 flag;
@@ -20,7 +18,7 @@ struct spin_table {
 
 void *_reset_stack;
 
-static u8 secondary_stacks[MAX_CPUS][SECONDARY_STACK_SIZE] ALIGNED(64);
+u8 secondary_stacks[MAX_CPUS][SECONDARY_STACK_SIZE] ALIGNED(0x4000);
 
 static int target_cpu;
 static struct spin_table spin_table[MAX_CPUS];
