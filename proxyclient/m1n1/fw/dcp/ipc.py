@@ -433,9 +433,6 @@ class OSObject(Construct):
 class OSDictionary(OSObject):
     TYPE = 'd'
 
-FourCC = ExprAdapter(uint32_t,
-                     lambda d, ctx: d.to_bytes(4, "big").decode("latin-1"),
-                     lambda d, ctx: int.from_bytes(d.encode("latin-1"), "big"))
 
 void = None
 

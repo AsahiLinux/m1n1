@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: MIT
 from enum import Enum
 import bisect, copy, heapq, importlib, sys, itertools, time, os, functools, struct, re
-from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul
+from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul, ExprAdapter
 
-__all__ = []
+__all__ = ["FourCC"]
 
 def align_up(v, a=16384):
     return (v + a - 1) & ~(a - 1)
@@ -66,6 +66,10 @@ def chexdump32(s, st=0, abbreviate=True):
 def unhex(s):
     s = re.sub(r"/\*.*?\*/", "", s)
     return bytes.fromhex(s.replace(" ", "").replace("\n", ""))
+
+FourCC = ExprAdapter(Int32ul,
+                     lambda d, ctx: d.to_bytes(4, "big").decode("latin-1"),
+                     lambda d, ctx: int.from_bytes(d.encode("latin-1"), "big"))
 
 class ReloadableMeta(type):
     def __new__(cls, name, bases, dct):
