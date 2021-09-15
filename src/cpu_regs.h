@@ -9,6 +9,10 @@
 
 #define SYS_IMP_APL_ACTLR_EL12 sys_reg(3, 6, 15, 14, 6)
 
+#define SYS_IMP_APL_AMX_CTL_EL2 sys_reg(3, 4, 15, 4, 7)
+#define AMX_CTL_EN              BIT(63)
+#define AMX_CTL_EN_EL1          BIT(62)
+
 /* HID registers */
 #define SYS_IMP_APL_HID0                sys_reg(3, 0, 15, 0, 0)
 #define HID0_FETCH_WIDTH_DISABLE        (1UL << 28)
@@ -188,6 +192,11 @@
 #define SYS_IMP_APL_SP_GL12   sys_reg(3, 6, 15, 10, 0)
 
 #define SYS_IMP_APL_AFSR1_GL1 sys_reg(3, 6, 15, 0, 1)
+
+/* PAuth registers */
+#define SYS_IMP_APL_APVMKEYLO_EL2 sys_reg(3, 6, 15, 14, 4)
+#define SYS_IMP_APL_APVMKEYHI_EL2 sys_reg(3, 6, 15, 14, 5)
+#define SYS_IMP_APL_APSTS_EL12    sys_reg(3, 6, 15, 14, 7)
 
 /* VM registers */
 #define SYS_IMP_APL_VM_TMR_FIQ_ENA_EL2 sys_reg(3, 5, 15, 1, 3)
