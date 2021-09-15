@@ -119,6 +119,7 @@ typedef enum {
     P_HV_PT_WALK,
     P_HV_MAP_VUART,
     P_HV_TRACE_IRQ,
+    P_HV_WDT_START,
 
     P_FB_INIT = 0xd00,
     P_FB_SHUTDOWN,

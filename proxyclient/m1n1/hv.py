@@ -132,6 +132,7 @@ class HV(Reloadable):
         self.shell_locals = {}
         self.xnu_mode = False
         self._update_shell_locals()
+        self.wdt_cpu = None
 
     def _reloadme(self):
         super()._reloadme()
@@ -1041,14 +1042,9 @@ class HV(Reloadable):
                     del self.adt[name]
                 except KeyError:
                     pass
-        for name in ("/cpus/cpu1",
-                     "/cpus/cpu2",
-                     "/cpus/cpu3",
-                     "/cpus/cpu4",
-                     "/cpus/cpu5",
-                     "/cpus/cpu6",
-                     "/cpus/cpu7",
-                    ):
+
+        if self.wdt_cpu is not None:
+            name = f"/cpus/cpu{self.wdt_cpu}"
             print(f"Removing ADT node {name}")
             try:
                 del self.adt[name]
@@ -1239,6 +1235,8 @@ class HV(Reloadable):
         self.iface.dev.timeout = None
         self.default_sigint = signal.signal(signal.SIGINT, self._handle_sigint)
 
+        if self.wdt_cpu is not None:
+            self.p.hv_wdt_start(self.wdt_cpu)
         # Does not return
         self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)
 

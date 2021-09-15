@@ -65,7 +65,6 @@ void hv_start(void *entry, u64 regs[4])
     if (gxf_enabled())
         gl2_call(hv_set_gxf_vbar, 0, 0, 0, 0);
 
-    hv_wdt_start();
     hv_arm_tick();
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
     hv_wdt_stop();

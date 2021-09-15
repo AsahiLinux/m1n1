@@ -436,6 +436,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->retval = hv_trace_irq(request->args[0], request->args[1], request->args[2],
                                          request->args[3]);
             break;
+        case P_HV_WDT_START:
+            hv_wdt_start(request->args[0]);
+            break;
 
         case P_FB_INIT:
             fb_init();

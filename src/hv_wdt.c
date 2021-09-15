@@ -6,7 +6,6 @@
 #include "uart.h"
 #include "utils.h"
 
-#define WDT_CPU     1
 #define WDT_TIMEOUT 1
 
 static bool hv_wdt_active = false;
@@ -14,6 +13,8 @@ static bool hv_wdt_enabled = false;
 static volatile u64 hv_wdt_timestamp = 0;
 static u64 hv_wdt_timeout = 0;
 static volatile u64 hv_wdt_breadcrumbs;
+
+static int hv_wdt_cpu;
 
 static u64 cpu_dbg_base = 0;
 
@@ -105,18 +106,25 @@ void hv_wdt_init(void)
     cpu_dbg_base = reg[0];
 }
 
-void hv_wdt_start(void)
+void hv_wdt_start(int cpu)
 {
+    if (hv_wdt_active)
+        return;
+
+    hv_wdt_cpu = cpu;
     hv_wdt_breadcrumbs = 0;
     hv_wdt_timeout = mrs(CNTFRQ_EL0) * WDT_TIMEOUT;
     hv_wdt_pet();
     hv_wdt_active = true;
     hv_wdt_enabled = true;
-    smp_call4(WDT_CPU, hv_wdt_main, 0, 0, 0, 0);
+    smp_call4(hv_wdt_cpu, hv_wdt_main, 0, 0, 0, 0);
 }
 
 void hv_wdt_stop(void)
 {
+    if (!hv_wdt_active)
+        return;
+
     hv_wdt_active = false;
-    smp_wait(WDT_CPU);
+    smp_wait(hv_wdt_cpu);
 }

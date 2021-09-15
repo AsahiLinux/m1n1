@@ -71,7 +71,7 @@ void hv_wdt_pet(void);
 void hv_wdt_suspend(void);
 void hv_wdt_resume(void);
 void hv_wdt_init(void);
-void hv_wdt_start(void);
+void hv_wdt_start(int cpu);
 void hv_wdt_stop(void);
 void hv_wdt_breadcrumb(char c);
 
