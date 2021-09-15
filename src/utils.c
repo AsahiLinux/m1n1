@@ -100,3 +100,14 @@ void flush_and_reboot(void)
     iodev_console_flush();
     reboot();
 }
+
+void spin_lock(spinlock_t *lock)
+{
+    while (__atomic_test_and_set((void *)lock, __ATOMIC_ACQUIRE))
+        ;
+}
+
+void spin_unlock(spinlock_t *lock)
+{
+    __atomic_clear((void *)lock, __ATOMIC_RELEASE);
+}
