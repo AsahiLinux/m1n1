@@ -581,17 +581,19 @@ static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 *width)
 
     regs[31] = 0;
 
+    u64 mask = (1UL << (8 << *width)) - 1;
+
     if ((insn & 0x3fe00400) == 0x38000400) {
         // STRx (immediate) Pre/Post-index
         CHECK_RN;
         regs[Rn] += imm9;
-        *val = regs[Rt];
+        *val = regs[Rt] & mask;
     } else if ((insn & 0x3fc00000) == 0x39000000) {
         // STRx (immediate) Unsigned offset
-        *val = regs[Rt];
+        *val = regs[Rt] & mask;
     } else if ((insn & 0x3fe04c00) == 0x38204800) {
         // STRx (register)
-        *val = regs[Rt];
+        *val = regs[Rt] & mask;
     } else if ((insn & 0xffc00000) == 0xa9000000) {
         // STP (Signed offset, 64-bit)
         CHECK_RN;
@@ -601,7 +603,7 @@ static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 *width)
         *width = 4;
     } else if ((insn & 0x3fe00c00) == 0x38000000) {
         // STURx (unscaled)
-        *val = regs[Rt];
+        *val = regs[Rt] & mask;
     } else {
         return false;
     }
