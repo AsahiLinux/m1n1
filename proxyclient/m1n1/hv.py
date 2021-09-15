@@ -134,6 +134,7 @@ class HV(Reloadable):
         self.xnu_mode = False
         self._update_shell_locals()
         self.wdt_cpu = None
+        self.smp = True
         self.hook_exceptions = False
 
     def _reloadme(self):
@@ -1016,6 +1017,8 @@ class HV(Reloadable):
             self.log(f"PMGR R {base:x}+{off:x}:{width} = 0x{data:x} -> 0x{ret:x}")
             return ret
 
+        pmgr0_start, _ = self.adt["/arm-io/pmgr"].get_reg(0)
+
         if self.iodev == IODEV.USB0:
             pmgr_hooks = (0x23b700420, 0x23d280098, 0x23d280088)
         elif self.iodev == IODEV.USB1:
@@ -1025,6 +1028,37 @@ class HV(Reloadable):
             self.map_hook(addr, 4, write=wh, read=rh)
             #TODO : turn into a real tracer
             self.add_tracer(irange(addr, 4), "PMGR HACK", TraceMode.RESERVED)
+
+        def cpustart_wh(base, off, data, width):
+            print(f"CPUSTART W {base:x}+{off:x}:{width} = 0x{data:x}")
+            if off >= 8:
+                assert width == 32
+                cluster = (off - 8) // 4
+                for i in range(32):
+                    if data & (1 << i):
+                        self.start_secondary(cluster, i)
+
+        PMGR_CPU_START = 0x54000
+        zone = irange(pmgr0_start + PMGR_CPU_START, 0x10)
+        self.map_hook(pmgr0_start + PMGR_CPU_START, 0x10, write=cpustart_wh)
+        self.add_tracer(zone, "CPU_START", TraceMode.RESERVED)
+
+    def start_secondary(self, cluster, cpu):
+        self.log(f"Starting guest secondary {cluster}:{cpu}")
+
+        for node in list(self.adt["cpus"]):
+            if ((cluster << 8) | cpu) == node.reg:
+                break
+        else:
+            self.log("CPU not found!")
+            return
+
+        entry = self.p.read64(node.cpu_impl_reg[0]) & 0xfffffffffff
+        index = node.cpu_id
+        self.log(f" CPU #{index}: RVBAR = {entry:#x}")
+
+        self.sysreg[index] = {}
+        self.p.hv_start_secondary(index, entry)
 
     def setup_adt(self):
         self.adt["product"].product_name += " on m1n1 hypervisor"
@@ -1065,13 +1099,14 @@ class HV(Reloadable):
             except KeyError:
                 pass
 
-        #for cpu in list(self.adt["cpus"]):
-            #if cpu.name != "cpu0":
-                #print(f"Removing ADT node {cpu._path}")
-                #try:
-                    #del self.adt["cpus"][cpu.name]
-                #except KeyError:
-                    #pass
+        if not self.smp:
+            for cpu in list(self.adt["cpus"]):
+                if cpu.name != "cpu0":
+                    print(f"Removing ADT node {cpu._path}")
+                    try:
+                        del self.adt["cpus"][cpu.name]
+                    except KeyError:
+                        pass
 
     def set_bootargs(self, boot_args):
         if "-v" in boot_args.split():
@@ -1185,6 +1220,13 @@ class HV(Reloadable):
         self.sym_offset = macho.vmin - guest_base + self.tba.phys_base - self.tba.virt_base
 
         self.iface.writemem(guest_base + self.bootargs_off, BootArgs.build(self.tba))
+
+        print("Setting secondary CPU RVBARs...")
+        rvbar = self.entry & ~0xfff
+        for cpu in self.adt["cpus"][1:]:
+            addr, size = cpu.cpu_impl_reg
+            print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
+            self.p.write64(addr, rvbar)
 
     def load_system_map(self, path):
         # Assume Linux
