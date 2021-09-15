@@ -1,9 +1,13 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "cpu_regs.h"
+#include "gxf.h"
 
 #define genter .long 0x00201420
 #define gexit .long 0x00201400
+
+.extern gl1_stack
+.extern gl2_stack
 
 .global gxf_init
 .type gxf_init, @function
@@ -32,8 +36,19 @@ gxf_enter:
     ret
 
 _gxf_setup:
-    ldr x0, =gl2_stack_base
-    ldr x0, [x0]
+    mrs x2, TPIDR_EL1
+    mrs x4, CurrentEL
+    cmp x4, #8
+    bne 1f
+    mrs x2, TPIDR_EL2
+1:
+    add x2, x2, 1
+
+    ldr x0, =gl2_stack
+    ldr x1, =GL_STACK_SIZE
+    mul x1, x1, x2
+    add x0, x0, x1
+
     mov sp, x0
     ldr x1, =_gxf_vectors
     ldr x2, =_gxf_exc_sync
@@ -46,14 +61,18 @@ _gxf_setup:
     cmp x4, #8
     bne 1f
 
-    ldr x0, =gl1_stack_base
-    ldr x0, [x0]
+    mrs x2, TPIDR_EL2
+    ldr x0, =gl1_stack
+    ldr x1, =GL_STACK_SIZE
+    mul x1, x1, x2
+    add x0, x0, x1
+
     msr SYS_IMP_APL_SP_GL12, x0
     msr SYS_IMP_APL_VBAR_GL12, x1
     msr SYS_IMP_APL_GXF_ABORT_EL12, x2
     msr SYS_IMP_APL_GXF_ENTER_EL12, x3
 
-    1:
+1:
     isb
     gexit
 

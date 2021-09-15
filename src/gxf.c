@@ -4,18 +4,14 @@
 #include "exception.h"
 #include "gxf.h"
 #include "memory.h"
+#include "smp.h"
 #include "uart.h"
 #include "utils.h"
 
-#define GL_STACK_SIZE 0x4000
-
 uint64_t gxf_enter(void *func, uint64_t a, uint64_t b, uint64_t c, uint64_t d);
 
-u8 gl1_stack[GL_STACK_SIZE] ALIGNED(64);
-void *gl1_stack_base = &gl1_stack[GL_STACK_SIZE];
-
-u8 gl2_stack[GL_STACK_SIZE] ALIGNED(64);
-void *gl2_stack_base = &gl2_stack[GL_STACK_SIZE];
+u8 gl1_stack[MAX_CPUS][GL_STACK_SIZE] ALIGNED(0x4000);
+u8 gl2_stack[MAX_CPUS][GL_STACK_SIZE] ALIGNED(0x4000);
 
 bool gxf_enabled(void)
 {
