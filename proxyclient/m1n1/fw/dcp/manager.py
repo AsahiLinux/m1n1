@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+import pprint
 import struct, functools
 from dataclasses import dataclass
 from enum import IntEnum
@@ -157,14 +158,25 @@ class DCPManager(DCPBaseManager):
 
     def setDCPAVPropStart(self, length):
         print(f"setDCPAVPropStart({length:#x})")
+        self.dcpav_prop_len = length - 1 # off by one?
+        self.dcpav_prop_off = 0
+        self.dcpav_prop_data = []
         return True
 
     def setDCPAVPropChunk(self, data, offset, length):
         print(f"setDCPAVPropChunk(..., {offset:#x}, {length:#x})")
+        assert offset == self.dcpav_prop_off
+        self.dcpav_prop_data.append(data)
+        self.dcpav_prop_off += len(data)
         return True
 
     def setDCPAVPropEnd(self, key):
         print(f"setDCPAVPropEnd({key!r})")
+        blob = b"".join(self.dcpav_prop_data)
+        assert self.dcpav_prop_len == len(blob)
+        self.dcpav_prop[key] = ipc.OSSerialize().parse(blob)
+        self.dcpav_prop_data = self.dcpav_prop_len = self.dcpav_prop_off = None
+        pprint.pprint(self.dcpav_prop[key])
         return True
 
     def set_boolean_property(self, key, value):

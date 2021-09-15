@@ -433,6 +433,63 @@ class OSObject(Construct):
 class OSDictionary(OSObject):
     TYPE = 'd'
 
+class OSSerialize(Construct):
+    def _parse(self, stream, context, path, recurse=False):
+        hdr = Int32ul.parse_stream(stream)
+        if hdr != 0xd3:
+            raise Exception("Bad header")
+
+        obj, last = self.parse_obj(stream)
+        assert last
+        return obj
+
+    def parse_obj(self, stream, level=0):
+        # align to 32 bits
+        pos = stream.tell()
+        if pos & 3:
+            stream.read(4 - (pos & 3))
+
+        tag = Int32ul.parse_stream(stream)
+
+        last = bool(tag & 0x80000000)
+        otype = (tag >> 24) & 0x1f
+        size = tag & 0xffffff
+
+        #print(f"{'  '*level} @{stream.tell():#x} {otype} {last} {size}")
+
+        if otype == 1:
+            d = {}
+            for i in range(size):
+                k, l = self.parse_obj(stream, level + 1)
+                assert not l
+                v, l = self.parse_obj(stream, level + 1)
+                assert l == (i == size - 1)
+                d[k] = v
+        elif otype == 2:
+            d = []
+            for i in range(size):
+                v, l = self.parse_obj(stream, level + 1)
+                assert l == (i == size - 1)
+                d.append(v)
+        elif otype == 4:
+            d = Int64ul.parse_stream(stream)
+        elif otype == 9:
+            d = stream.read(size).decode("utf-8")
+        elif otype == 10:
+            d = stream.read(size)
+        elif otype == 11:
+            d = bool(size)
+        else:
+            raise Exception(f"Unknown tag {otype}")
+
+        #print(f"{'  '*level}  => {d}")
+        return d, last
+
+    def _build(self, obj, stream, context, path):
+        assert False
+
+    def _sizeof(self, context, path):
+        return None
 
 void = None
 
