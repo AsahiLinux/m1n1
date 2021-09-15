@@ -3,6 +3,7 @@
 //#define DEBUG_IODEV
 
 #include "iodev.h"
+#include "memory.h"
 #include "string.h"
 
 #ifdef DEBUG_IODEV
@@ -80,14 +81,31 @@ void iodev_flush(iodev_id_t id)
 
 int in_iodev = 0;
 
+static DECLARE_SPINLOCK(console_lock);
+
 void iodev_console_write(const void *buf, size_t length)
 {
-    if (in_iodev || !is_primary_core()) {
+    bool do_lock = mmu_active();
+
+    if (!do_lock && !is_primary_core()) {
         if (length) {
             iodev_write(IODEV_UART, "*", 1);
             iodev_write(IODEV_UART, buf, length);
-            return;
         }
+        return;
+    }
+
+    if (do_lock)
+        spin_lock(&console_lock);
+
+    if (in_iodev) {
+        if (length) {
+            iodev_write(IODEV_UART, "*", 1);
+            iodev_write(IODEV_UART, buf, length);
+        }
+        if (do_lock)
+            spin_unlock(&console_lock);
+        return;
     }
     in_iodev++;
 
@@ -159,6 +177,8 @@ void iodev_console_write(const void *buf, size_t length)
     }
 
     in_iodev--;
+    if (do_lock)
+        spin_unlock(&console_lock);
 }
 
 void iodev_handle_events(iodev_id_t id)
