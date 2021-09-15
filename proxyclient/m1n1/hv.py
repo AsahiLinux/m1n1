@@ -1004,16 +1004,16 @@ class HV(Reloadable):
 
     def map_essential(self):
         # Things we always map/take over, for the hypervisor to work
-        _pmu = {}
+        _pmgr = {}
 
         def wh(base, off, data, width):
-            print(f"W {base:x}+{off:x}:{width} = 0x{data:x}: Dangerous write")
-            _pmu[base + off] = (data & 0xff0f) | ((data & 0xf) << 4)
+            self.log(f"PMGR W {base:x}+{off:x}:{width} = 0x{data:x}: Dangerous write")
+            _pmgr[base + off] = (data & 0xff0f) | ((data & 0xf) << 4)
 
         def rh(base, off, width):
             data = self.p.read32(base + off)
-            ret = _pmu.setdefault(base + off, data)
-            print(f"R {base:x}+{off:x}:{width} = 0x{data:x} -> 0x{ret:x}")
+            ret = _pmgr.setdefault(base + off, data)
+            self.log(f"PMGR R {base:x}+{off:x}:{width} = 0x{data:x} -> 0x{ret:x}")
             return ret
 
         if self.iodev == IODEV.USB0:
@@ -1023,8 +1023,8 @@ class HV(Reloadable):
 
         for addr in pmgr_hooks:
             self.map_hook(addr, 4, write=wh, read=rh)
-            # TODO: turn into a real tracer
-            self.add_tracer(irange(addr, 4), "PMU HACK", TraceMode.RESERVED)
+            #TODO : turn into a real tracer
+            self.add_tracer(irange(addr, 4), "PMGR HACK", TraceMode.RESERVED)
 
     def setup_adt(self):
         self.adt["product"].product_name += " on m1n1 hypervisor"
