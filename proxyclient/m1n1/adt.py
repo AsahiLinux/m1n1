@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
-import itertools
+import itertools, fnmatch
 from construct import *
 
-from .utils import AddrLookup
+from .utils import AddrLookup, FourCC
 
 __all__ = ["load_adt"]
 
@@ -24,6 +24,12 @@ ADTStringList = GreedyRange(CString("ascii"))
 ADT2Tuple = Array(2, Hex(Int64ul))
 ADT3Tuple = Array(3, Hex(Int64ul))
 
+Function = Struct(
+    "phandle" / Int32ul,
+    "name" / FourCC,
+    "args" / GreedyRange(Int32ul),
+)
+
 STD_PROPERTIES = {
     "cpu-impl-reg": ADT2Tuple,
     "name": CString("ascii"),
@@ -31,13 +37,105 @@ STD_PROPERTIES = {
     "model": CString("ascii"),
     "#size-cells": Int32ul,
     "#address-cells": Int32ul,
+    "clock-ids": GreedyRange(Int32ul),
+    "clock-gates": GreedyRange(Int32ul),
+    "power-gates": GreedyRange(Int32ul),
 }
 
-def parse_prop(node, path, name, v):
+PMGRPSRegs = GreedyRange(Struct(
+    "reg" / Int32ul,
+    "offset" / Hex(Int32ul),
+    "mask" / Hex(Int32ul),
+))
+
+PMGRPWRGateRegs = GreedyRange(Struct(
+    "reg" / Int32ul,
+    "offset" / Hex(Int32ul),
+    "mask" / Hex(Int32ul),
+    "unk" / Hex(Int32ul),
+))
+
+PMGRDevices = GreedyRange(Struct(
+    "unk0" / Int8ul,
+    "v_idx" / Int8ul,
+    "v_set" / Int8ul,
+    Const(0, Int8ul),
+    "parents" / Array(2, Int16ul),
+    "unk" / Int16ul,
+    "gate" / Int8ul,
+    "psreg" / Int8ul,
+    "unk2_0" / Int16ul,
+    "pd" / Int8ul,
+    "unk2_2" / Int8ul,
+    Const(0, Int32ul),
+    Const(0, Int32ul),
+    "unk2_3" / Int16ul,
+    "id" / Int16ul,
+    "unk3" / Int32ul,
+    "name" / PaddedString(16, "ascii")
+))
+
+PMGRClocks = GreedyRange(Struct(
+    "a" / Int16ul,
+    "b" / Int8ul,
+    "id" / Int8ul,
+    Const(0, Int32ul),
+    "name" / PaddedString(16, "ascii"),
+))
+
+PMGRPowerDomains = GreedyRange(Struct(
+    "unk" / Const(0, Int8ul),
+    "a" / Int8ul,
+    "b" / Int8ul,
+    "id" / Int8ul,
+    Const(0, Int32ul),
+    "name" / PaddedString(16, "ascii"),
+))
+
+PMGRDeviceBridges = GreedyRange(Struct(
+    "idx" / Int32ub,
+    "subdevs" / HexDump(Bytes(0x48)),
+))
+
+DEV_PROPERTIES = {
+    "pmgr": {
+        "clusters": GreedyRange(Int32ul),
+        "ps-regs": PMGRPSRegs,
+        "pwrgate-regs": PMGRPWRGateRegs,
+        "devices": PMGRDevices,
+        "power-domains": PMGRPowerDomains,
+        "clocks": PMGRClocks,
+        "device-bridges": PMGRDeviceBridges,
+        "voltage-states*": GreedyRange(Int32ul),
+    },
+    "clpc": {
+        "events": GreedyRange(Int32ul),
+        "devices": GreedyRange(Int32ul),
+    },
+    "soc-tuner": {
+        "device-set-*": GreedyRange(Int32ul),
+        "mcc-configs": GreedyRange(Int32ul),
+    },
+}
+
+def parse_prop(node, path, node_name, name, v):
     t = None
+
+    dev_props = DEV_PROPERTIES.get(path, DEV_PROPERTIES.get(node_name, {}))
+
+    for k, pt in dev_props.items():
+        if fnmatch.fnmatch(name, k):
+            t = pt
+            break
 
     if v == b'' or v is None:
         return None, None
+
+    if name.startswith("function-"):
+        if len(v) == 4:
+            t = FourCC
+        else:
+            t = Function
 
     if name == "reg" and path != "/device-tree/memory":
         n = node._parent
@@ -130,7 +228,7 @@ class ADTNode:
 
             for p in val.properties:
                 try:
-                    self._types[p.name], self._properties[p.name] = parse_prop(self, path, p.name, p.value)
+                    self._types[p.name], self._properties[p.name] = parse_prop(self, path, _name, p.name, p.value)
                 except Exception as e:
                     print(f"Exception parsing {path}.{p.name} value {p.value.hex()}:")
                     raise
@@ -138,7 +236,7 @@ class ADTNode:
             # Second pass
             for k, v in self._types.items():
                 if v is None:
-                    self._types[k], self._properties[k] = parse_prop(self, path, k, self._properties[k])
+                    self._types[k], self._properties[k] = parse_prop(self, path, _name, k, self._properties[k])
 
             for c in val.children:
                 node = ADTNode(c, f"{self._path}/", parent=self)
