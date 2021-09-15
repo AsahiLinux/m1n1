@@ -110,9 +110,10 @@ class Tracer(Reloadable):
                 m = "+" if evt.flags.MULTI else " "
                 self.log(f"MMIO: {t.upper()}.{1<<evt.flags.WIDTH:<2}{m} " + s)
 
-    def trace(self, start, size, mode, **kwargs):
+    def trace(self, start, size, mode, read=True, write=True, **kwargs):
         zone = irange(start, size)
-        self.hv.add_tracer(zone, self.ident, mode, self.evt_rw, self.evt_rw, **kwargs)
+        self.hv.add_tracer(zone, self.ident, mode, self.evt_rw if read else None,
+                           self.evt_rw if write else None, **kwargs)
 
     def trace_regmap(self, start, size, cls, mode=None, name=None, prefix=None):
         if mode is None:
