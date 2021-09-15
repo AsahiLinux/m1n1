@@ -10,6 +10,7 @@ parser.add_argument('-s', '--symbols', type=pathlib.Path)
 parser.add_argument('-m', '--script', type=pathlib.Path, action='append', default=[])
 parser.add_argument('-c', '--command', action="append", default=[])
 parser.add_argument('-S', '--shell', action="store_true")
+parser.add_argument('-e', '--hook-exceptions', action="store_true")
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
@@ -26,6 +27,8 @@ bootstrap_port(iface, p)
 u = ProxyUtils(p, heap_size = 128 * 1024 * 1024)
 
 hv = HV(iface, p, u)
+
+hv.hook_exceptions = args.hook_exceptions
 
 hv.init()
 

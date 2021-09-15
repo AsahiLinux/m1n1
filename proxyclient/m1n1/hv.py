@@ -133,6 +133,7 @@ class HV(Reloadable):
         self.xnu_mode = False
         self._update_shell_locals()
         self.wdt_cpu = None
+        self.hook_exceptions = False
 
     def _reloadme(self):
         super()._reloadme()
@@ -579,7 +580,8 @@ class HV(Reloadable):
 
         ctx.elr += 4
 
-        #self.patch_exception_handling()
+        if self.hook_exceptions:
+            self.patch_exception_handling()
 
         return True
 
