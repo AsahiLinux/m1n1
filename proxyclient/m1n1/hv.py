@@ -846,6 +846,9 @@ class HV(Reloadable):
             frame = self.p.read64(fpp)
 
     def patch_exception_handling(self):
+        if self.ctx.cpu_id != 0:
+            return
+
         if self.want_vbar is not None:
             vbar = self.want_vbar
         else:
