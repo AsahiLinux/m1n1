@@ -28,6 +28,12 @@ extern u8 _vectors_start[0];
 void smp_secondary_entry(void)
 {
     struct spin_table *me = &spin_table[target_cpu];
+
+    if (in_el2())
+        msr(TPIDR_EL2, target_cpu);
+    else
+        msr(TPIDR_EL1, target_cpu);
+
     printf("  Index: %d (table: %p)\n\n", target_cpu, me);
 
     me->mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;

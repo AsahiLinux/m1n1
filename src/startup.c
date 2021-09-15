@@ -72,6 +72,12 @@ void dump_boot_args(struct boot_args *ba)
 void _start_c(void *boot_args, void *base)
 {
     UNUSED(base);
+
+    if (in_el2())
+        msr(TPIDR_EL2, 0);
+    else
+        msr(TPIDR_EL1, 0);
+
     memset64(_bss_start, 0, _bss_end - _bss_start);
     uart_putchar('s');
     uart_init();

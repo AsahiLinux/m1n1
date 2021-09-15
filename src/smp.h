@@ -28,4 +28,12 @@ bool smp_is_alive(int cpu);
 int smp_get_mpidr(int cpu);
 u64 smp_get_release_addr(int cpu);
 
+static inline int smp_id(void)
+{
+    if (in_el2())
+        return mrs(TPIDR_EL2);
+    else
+        return mrs(TPIDR_EL1);
+}
+
 #endif
