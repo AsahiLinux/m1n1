@@ -3,6 +3,7 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
+#include "cpu_regs.h"
 #include "types.h"
 
 #define REGION_RWX_EL0 0x8000000000
@@ -10,6 +11,8 @@
 #define REGION_RX_EL1  0xa000000000
 
 #ifndef __ASSEMBLER__
+
+#include "utils.h"
 
 void ic_ivau_range(void *addr, size_t length);
 void dc_ivac_range(void *addr, size_t length);
@@ -29,6 +32,11 @@ void mmu_shutdown(void);
 
 u64 mmu_disable(void);
 void mmu_restore(u64 state);
+
+static inline bool mmu_active(void)
+{
+    return mrs(SCTLR_EL1) & SCTLR_M;
+}
 
 #endif
 
