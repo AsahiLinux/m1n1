@@ -4,7 +4,9 @@
 #include "assert.h"
 #include "cpu_regs.h"
 #include "fb.h"
+#include "gxf.h"
 #include "malloc.h"
+#include "smp.h"
 #include "string.h"
 #include "utils.h"
 
@@ -28,6 +30,10 @@ CACHE_RANGE_OP(dc_zva_range, "dc zva")
 CACHE_RANGE_OP(dc_cvac_range, "dc cvac")
 CACHE_RANGE_OP(dc_cvau_range, "dc cvau")
 CACHE_RANGE_OP(dc_civac_range, "dc civac")
+
+extern u8 _stack_top[];
+extern u8 gl1_stack[GL_STACK_SIZE];
+extern u8 gl2_stack[MAX_CPUS][GL_STACK_SIZE];
 
 static inline u64 read_sctlr(void)
 {
@@ -327,6 +333,12 @@ static void mmu_add_mapping(u64 from, u64 to, size_t size, u8 attribute_index, u
         panic("Failed to add MMU mapping 0x%lx -> 0x%lx (0x%lx)\n", from, to, size);
 }
 
+static void mmu_rm_mapping(u64 from, size_t size)
+{
+    if (mmu_map(from, 0, size) < 0)
+        panic("Failed to rm MMU mapping at 0x%lx (0x%lx)\n", from, size);
+}
+
 static void mmu_add_default_mappings(void)
 {
     /*
@@ -351,6 +363,17 @@ static void mmu_add_default_mappings(void)
      */
     mmu_add_mapping((u64)_base, (u64)_base, (u64)_rodata_end - (u64)_base, MAIR_IDX_NORMAL,
                     PERM_RX_EL0);
+
+    /*
+     * Make guard pages at the end of stacks
+     */
+    mmu_rm_mapping((u64)_stack_top, PAGE_SIZE);
+
+    for (int i = 0; i < MAX_CPUS; i++) {
+        mmu_rm_mapping((u64)secondary_stacks[i], PAGE_SIZE);
+        mmu_rm_mapping((u64)gl1_stack[i], PAGE_SIZE);
+        mmu_rm_mapping((u64)gl2_stack[i], PAGE_SIZE);
+    }
 
     /*
      * Create mapping for 16GB RAM from 0x88_0000_0000 to 0x8c_0000_0000,
