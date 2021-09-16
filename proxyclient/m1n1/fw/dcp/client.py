@@ -5,6 +5,8 @@ from ..asc import StandardASC
 from .dcpep import DCPEndpoint
 
 class DCPClient(StandardASC):
+    DVA_OFFSET = 0xf00000000
+
     ENDPOINTS = {
         0x37: DCPEndpoint,
     }

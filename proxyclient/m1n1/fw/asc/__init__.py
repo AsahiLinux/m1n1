@@ -16,6 +16,8 @@ class ASCDummyEndpoint(ASCBaseEndpoint):
     SHORT = "dummy"
 
 class StandardASC(ASC):
+    DVA_OFFSET = 0
+
     ENDPOINTS = {
         0: ASCManagementEndpoint,
         1: ASCCrashLogEndpoint,
@@ -45,7 +47,7 @@ class StandardASC(ASC):
     def iomap(self, addr, size):
         if self.dart is None:
             return addr
-        return 0xf00000000 | self.dart.iomap(0, addr, size)
+        return self.DVA_OFFSET | self.dart.iomap(0, addr, size)
 
     def ioalloc(self, size):
         paddr = self.u.memalign(0x4000, size)
