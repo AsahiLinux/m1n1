@@ -116,6 +116,10 @@ DEV_PROPERTIES = {
         "device-set-*": GreedyRange(Int32ul),
         "mcc-configs": GreedyRange(Int32ul),
     },
+    "mcc": {
+        "dramcfg-data": Array(2, Hex(Int32ul)),
+        "config-data": GreedyRange(Int32ul)
+    },
 }
 
 def parse_prop(node, path, node_name, name, v, is_template=False):
