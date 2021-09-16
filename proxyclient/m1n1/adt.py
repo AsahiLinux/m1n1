@@ -118,7 +118,10 @@ DEV_PROPERTIES = {
     },
     "mcc": {
         "dramcfg-data": Array(2, Hex(Int32ul)),
-        "config-data": GreedyRange(Int32ul)
+        "config-data": GreedyRange(Int32ul),
+    },
+    "stockholm-spmi": {
+        "required-functions": ADTStringList,
     },
 }
 
@@ -350,6 +353,17 @@ class ADTNode:
                 return f"zeroes({len(v):#x})"
             else:
                 return v.hex()
+        elif k.startswith("function-"):
+            if isinstance(v, str):
+                return f"{v}()"
+            else:
+                args = []
+                for arg in v.args:
+                    b = arg.to_bytes(4, "big")
+                    is_ascii = all(0x20 <= c <= 0x7e for c in b)
+                    args.append(f"{arg:#x}" if not is_ascii else f"'{b.decode('ascii')}'")
+                return f"{v.phandle}:{v.name}({', '.join(args)})"
+            name.startswith("function-")
         else:
             return str(v)
 
