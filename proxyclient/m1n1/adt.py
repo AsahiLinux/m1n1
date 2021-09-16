@@ -118,8 +118,11 @@ DEV_PROPERTIES = {
     },
 }
 
-def parse_prop(node, path, node_name, name, v):
+def parse_prop(node, path, node_name, name, v, is_template=False):
     t = None
+
+    if is_template:
+        t = CString("ascii")
 
     dev_props = DEV_PROPERTIES.get(path, DEV_PROPERTIES.get(node_name, {}))
 
@@ -227,16 +230,21 @@ class ADTNode:
             path = self._parent_path + _name
 
             for p in val.properties:
+                is_template = bool(p.size & 0x80000000)
                 try:
-                    self._types[p.name], self._properties[p.name] = parse_prop(self, path, _name, p.name, p.value)
+                    t, v = parse_prop(self, path, _name, p.name, p.value, is_template)
+                    self._types[p.name] = t, is_template
+                    self._properties[p.name] = v
                 except Exception as e:
                     print(f"Exception parsing {path}.{p.name} value {p.value.hex()}:")
                     raise
 
             # Second pass
-            for k, v in self._types.items():
-                if v is None:
-                    self._types[k], self._properties[k] = parse_prop(self, path, _name, k, self._properties[k])
+            for k, (t, is_template) in self._types.items():
+                if t is None:
+                    t, v = parse_prop(self, path, _name, k, self._properties[k], is_template)
+                    self._types[k] = t, is_template
+                    self._properties[k] = v
 
             for c in val.children:
                 node = ADTNode(c, f"{self._path}/", parent=self)
@@ -323,16 +331,24 @@ class ADTNode:
     def interrupt_cells(self):
         return self._properties["#interrupt-cells"]
 
-    def _fmt_prop(self, v):
-        if isinstance(v, ListContainer):
-            return f"[{', '.join(self._fmt_prop(i) for i in v)}]"
+    def _fmt_prop(self, k, v):
+        t, is_template = self._types[k]
+        if is_template:
+            return f"<< {v} >>"
+        elif isinstance(v, ListContainer):
+            return f"[{', '.join(self._fmt_prop(k, i) for i in v)}]"
+        elif isinstance(v, bytes):
+            if all(i == 0 for i in v):
+                return f"zeroes({len(v):#x})"
+            else:
+                return v.hex()
         else:
             return str(v)
 
     def __str__(self, t=""):
         return "\n".join([
             t + f"{self.name} {{",
-            *(t + f"    {k} = {self._fmt_prop(v)}" for k, v in self._properties.items() if k != "name"),
+            *(t + f"    {k} = {self._fmt_prop(k, v)}" for k, v in self._properties.items() if k != "name"),
             "",
             *(i.__str__(t + "    ") for i in self._children),
             t + "}"
@@ -364,10 +380,11 @@ class ADTNode:
     def tostruct(self):
         properties = []
         for k,v in itertools.chain(self._properties.items()):
-            value = build_prop(self._path, k, v, t=self._types.get(k, None))
+            t, is_template = self._types.get(k, (None, False))
+            value = build_prop(self._path, k, v, t=t)
             properties.append({
                 "name": k,
-                "size": len(value),
+                "size": len(value) | (0x80000000 if is_template else 0),
                 "value": value
             })
 
