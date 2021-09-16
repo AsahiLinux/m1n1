@@ -660,7 +660,7 @@ class RegAccessor(Reloadable):
 
     def set(self, **kwargs):
         r = self.reg
-        for k, v in kwargs:
+        for k, v in kwargs.items():
             setattr(r, k, v)
         self.wr(self.addr, int(r))
 
