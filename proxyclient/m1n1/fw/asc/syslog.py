@@ -44,7 +44,7 @@ class ASCSysLogEndpoint(ASCBaseEndpoint):
 
     @msg_handler(1, Syslog_GetBuf)
     def GetBuf(self, msg):
-        size = 0x1000 * msg.SIZE
+        size = align(0x1000 * msg.SIZE, 0x4000)
 
         if self.iobuffer:
             print("WARNING: trying to reset iobuffer!")
@@ -56,7 +56,7 @@ class ASCSysLogEndpoint(ASCBaseEndpoint):
         else:
             self.iobuffer, self.iobuffer_dva = self.asc.ioalloc(size)
             self.log(f"buf {self.iobuffer:#x} / {self.iobuffer_dva:#x}")
-            self.send(Syslog_GetBuf(SIZE=msg.SIZE, DVA=self.iobuffer_dva))
+            self.send(Syslog_GetBuf(SIZE=size // 0x1000, DVA=self.iobuffer_dva))
 
         self.started = True
         return True
