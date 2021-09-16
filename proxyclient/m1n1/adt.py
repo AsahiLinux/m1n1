@@ -191,7 +191,11 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
         t = ADT2Tuple
 
     if t is not None:
-        v = Sequence(t, Terminated).parse(v)[0]
+        try:
+            v = Sequence(t, Terminated).parse(v)[0]
+        except:
+            print("Failed to parse:", path, name, v.hex())
+            raise
 
     return t, v
 
