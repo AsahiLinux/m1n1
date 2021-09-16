@@ -406,4 +406,6 @@ struct vector_args {
 
 extern struct vector_args next_stage;
 
+void deep_wfi(void);
+
 #endif

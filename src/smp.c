@@ -2,6 +2,7 @@
 
 #include "smp.h"
 #include "adt.h"
+#include "cpu_regs.h"
 #include "string.h"
 #include "types.h"
 #include "utils.h"
@@ -42,9 +43,11 @@ void smp_secondary_entry(void)
     me->flag = 1;
     sysop("dmb sy");
     u64 target;
+
     while (1) {
         while (!(target = me->target)) {
-            sysop("wfe");
+            deep_wfi();
+            msr(SYS_IMP_APL_IPI_SR_EL1, 1);
         }
         sysop("dmb sy");
         me->flag++;
@@ -173,7 +176,9 @@ void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
     sysop("dmb sy");
     target->target = (u64)func;
     sysop("dmb sy");
-    sysop("sev");
+
+    msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, spin_table[cpu].mpidr);
+
     while (target->flag == flag)
         sysop("dmb sy");
 }
