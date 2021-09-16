@@ -53,6 +53,9 @@ class DARTRegs(RegMap):
     CONFIG          = 0x60, R_CONFIG
     REMAP           = irange(0x80, 4, 4), R_REMAP
 
+    UNK1            = 0xf8, Register32
+    ENABLED_STREAMS = 0xfc, Register32
+
     TCR             = irange(0x100, 16, 4), R_TCR
     TTBR            = (irange(0x200, 16, 16), range(0, 16, 4)), R_TTBR
 
@@ -74,6 +77,7 @@ class DART(Reloadable):
         self.regs = regs
         self.u = util
         self.pt_cache = {}
+        self.enabled_streams = regs.ENABLED_STREAMS.val
         self.iova_allocator = [Heap(iova_range[0], iova_range[1], self.PAGE_SIZE)
                                for i in range(16)]
 
@@ -118,6 +122,10 @@ class DART(Reloadable):
         if size == 0:
             return
 
+        if not (self.enabled_streams & (1 << stream)):
+            self.enabled_streams |= (1 << stream)
+            self.regs.ENABLED_STREAMS.val |= self.enabled_streams
+
         tcr = self.regs.TCR[stream].reg
 
         if tcr.BYPASS_DART and not tcr.TRANSLATE_ENABLE:
@@ -145,7 +153,11 @@ class DART(Reloadable):
             assert l0 < self.L0_SIZE
             ttbr = self.regs.TTBR[stream, l0].reg
             if not ttbr.VALID:
-                raise Exception(f"L0 page table not ready (TTBR{l0})")
+                l1addr = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
+                self.pt_cache[l1addr] = [0] * self.Lx_SIZE
+                ttbr.VALID = 1
+                ttbr.ADDR = l1addr >> 12
+                self.regs.TTBR[stream, l0].reg = ttbr
 
             cached, l1 = self.get_pt(ttbr.ADDR << 12)
             l1idx = (page >> self.L1_OFF) & self.IDX_MASK
@@ -250,6 +262,25 @@ class DART(Reloadable):
     def flush_pt(self, addr):
         assert addr in self.pt_cache
         self.iface.writemem(addr, struct.pack(f"<{self.Lx_SIZE}Q", *self.pt_cache[addr]))
+
+    def initialize(self):
+        for i in range(15):
+            self.regs.TCR[i].reg = R_TCR(TRANSLATE_ENABLE=1)
+        self.regs.TCR[15].reg = R_TCR(BYPASS_DART=1)
+
+        for i in range(16):
+            for j in range(4):
+                self.regs.TTBR[i, j].reg = R_TTBR(VALID = 0)
+
+        self.regs.UNK1.val = 0
+        self.regs.ENABLED_STREAMS.val = 0
+        self.enabled_streams = 0
+
+        self.invalidate_streams()
+
+    def invalidate_streams(self, streams=0xffffffff):
+        self.regs.STREAM_SELECT.val = streams
+        self.regs.STREAM_COMMAND.val = R_STREAM_COMMAND(INVALIDATE=1)
 
     def invalidate_cache(self):
         self.pt_cache = {}
