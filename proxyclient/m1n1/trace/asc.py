@@ -108,6 +108,12 @@ class BaseASCTracer(ADTDevTracer):
     def w_OUTBOX_CTRL(self, val):
         self.log(f"OUTBOX_CTRL = {val!s}")
 
+    def w_INBOX_CTRL(self, val):
+        self.log(f"INBOX_CTRL = {val!s}")
+
+    def w_CPU_CONTROL(self, val):
+        self.log(f"CPU_CONTROL = {val!s}")
+
     def w_INBOX1(self, inbox1):
         inbox0 = self.asc.cached.INBOX0.reg
         if self.verbose >= 2:
