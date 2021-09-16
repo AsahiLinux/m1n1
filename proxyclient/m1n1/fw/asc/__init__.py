@@ -79,6 +79,12 @@ class StandardASC(ASC):
 
     def start(self):
         self.mgmt.start()
+        self.mgmt.wait_boot()
+
+    def boot(self):
+        print("Booting ASC...")
+        super().boot()
+        self.mgmt.wait_boot()
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

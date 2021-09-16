@@ -100,7 +100,10 @@ class ASCManagementEndpoint(ASCBaseEndpoint):
         return True
 
     def start(self):
+        self.log("Starting via message")
         self.send(Mgmt_Init(UNK=0x220))
+
+    def wait_boot(self):
         while not self.boot_done or not self.syslog_started:
             self.asc.work()
         self.log("startup complete")
