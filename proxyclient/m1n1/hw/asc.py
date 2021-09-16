@@ -53,7 +53,10 @@ class ASC:
         self.asc.INBOX0.val = msg0
         self.asc.INBOX1.val = msg1
 
-        print(f"> {msg1.EP:02x}:{msg0}")
+        if isinstance(msg0, Register):
+            print(f"> {msg1.EP:02x}:{msg0}")
+        else:
+            print(f"> {msg1.EP:02x}:{msg0:#x}")
 
         while self.asc.INBOX_CTRL.reg.FULL:
             pass
