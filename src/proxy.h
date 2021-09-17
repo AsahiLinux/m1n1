@@ -80,6 +80,7 @@ typedef enum {
     P_SMP_START_SECONDARIES = 0x500, // SMP and system management ops
     P_SMP_CALL,
     P_SMP_CALL_SYNC,
+    P_SMP_WAIT,
 
     P_HEAPBLOCK_ALLOC = 0x600, // Heap and memory management ops
     P_MALLOC,
