@@ -166,6 +166,10 @@ static bool hv_handle_msr(u64 *regs, u64 iss)
         SYSREG_PASS(SYS_IMP_APL_PMC7)
         SYSREG_PASS(SYS_IMP_APL_PMC8)
         SYSREG_PASS(SYS_IMP_APL_PMC9)
+        /* Handle this one here because m1n1/Linux (will) use it for explicit cpuidle.
+         * We can pass it through; going into deep sleep doesn't break the HV since we
+         * don't do any wfis that assume otherwise in m1n1. */
+        SYSREG_PASS(SYS_IMP_APL_CYC_OVRD)
         /* IPI handling */
         SYSREG_PASS(SYS_IMP_APL_IPI_RR_LOCAL_EL1)
         SYSREG_PASS(SYS_IMP_APL_IPI_RR_GLOBAL_EL1)

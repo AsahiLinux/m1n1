@@ -546,7 +546,6 @@ class HV(Reloadable):
         }
         ro = {
             ACC_CFG_EL1,
-            CYC_OVRD_EL1,
             ACC_OVRD_EL1,
         }
         value = 0
