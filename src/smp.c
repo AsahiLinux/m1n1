@@ -21,6 +21,8 @@ void *_reset_stack;
 
 u8 secondary_stacks[MAX_CPUS][SECONDARY_STACK_SIZE] ALIGNED(0x4000);
 
+static bool wfe_mode = false;
+
 static int target_cpu;
 static struct spin_table spin_table[MAX_CPUS];
 
@@ -46,7 +48,10 @@ void smp_secondary_entry(void)
 
     while (1) {
         while (!(target = me->target)) {
-            deep_wfi();
+            if (wfe_mode)
+                sysop("wfe");
+            else
+                deep_wfi();
             msr(SYS_IMP_APL_IPI_SR_EL1, 1);
         }
         sysop("dmb sy");
@@ -191,6 +196,18 @@ u64 smp_wait(int cpu)
         sysop("dmb sy");
 
     return target->retval;
+}
+
+void smp_set_wfe_mode(bool new_mode)
+{
+    wfe_mode = new_mode;
+    sysop("dmb sy");
+
+    for (int cpu = 1; cpu < MAX_CPUS; cpu++)
+        if (smp_is_alive(cpu))
+            msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, spin_table[cpu].mpidr);
+
+    sysop("sev");
 }
 
 bool smp_is_alive(int cpu)
