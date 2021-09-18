@@ -140,9 +140,9 @@ time.sleep(0.5)
 
 print("== Final CPU frequencies ==")
 
-elapsed = p.smp_call(7, util.bench, 80000000)
+#elapsed = p.smp_call(7, util.bench, 80000000)
 
-for cpu in range(7):
+for cpu in range(8):
     print(f"CPU {cpu}: {bench_cpu(cpu):.2f} MHz")
 
-elapsed = p.smp_wait(7)
+#elapsed = p.smp_wait(7)
