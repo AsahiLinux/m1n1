@@ -356,6 +356,8 @@ class ADTNode:
         elif k.startswith("function-"):
             if isinstance(v, str):
                 return f"{v}()"
+            elif v is None:
+                return f"None"
             else:
                 args = []
                 for arg in v.args:
