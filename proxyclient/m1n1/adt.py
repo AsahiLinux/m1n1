@@ -123,6 +123,11 @@ DEV_PROPERTIES = {
     "stockholm-spmi": {
         "required-functions": ADTStringList,
     },
+    "arm-io": {
+        "clock-frequencies": GreedyRange(Int32ul),
+        "clock-frequencies-regs": GreedyRange(Hex(Int64ul)),
+        "clock-frequencies-nclk": GreedyRange(Int32ul),
+    },
 }
 
 def parse_prop(node, path, node_name, name, v, is_template=False):
