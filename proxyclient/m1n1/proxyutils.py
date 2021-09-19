@@ -442,12 +442,18 @@ class GuardedHeap:
 
 def bootstrap_port(iface, proxy):
     to = iface.dev.timeout
+    do_baud = True
     try:
-        iface.dev.timeout = 0.15
-        iface.nop()
-        proxy.set_baud(1500000)
-    except UartTimeout:
-        iface.dev.baudrate = 1500000
+        do_baud = proxy.iodev_whoami() == IODEV.UART
+    except ProxyCommandError:
+        pass
+    if do_baud:
+        try:
+            iface.dev.timeout = 0.15
+            iface.nop()
+            proxy.set_baud(1500000)
+        except UartTimeout:
+            iface.dev.baudrate = 1500000
 
     iface.nop()
     iface.dev.timeout = to
