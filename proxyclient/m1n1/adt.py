@@ -57,8 +57,8 @@ PMGRPWRGateRegs = GreedyRange(Struct(
 
 PMGRDevices = GreedyRange(Struct(
     "unk0" / Int8ul,
-    "v_idx" / Int8ul,
-    "v_set" / Int8ul,
+    "unk1_0" / Int8ul,
+    "unk1_1" / Int8ul,
     Const(0, Int8ul),
     "parents" / Array(2, Int16ul),
     "unk" / Int16ul,
