@@ -88,7 +88,7 @@ void iodev_console_write(const void *buf, size_t length)
     bool do_lock = mmu_active();
 
     if (!do_lock && !is_primary_core()) {
-        if (length) {
+        if (length && iodevs[IODEV_UART]->usage & USAGE_CONSOLE) {
             iodev_write(IODEV_UART, "*", 1);
             iodev_write(IODEV_UART, buf, length);
         }
@@ -99,7 +99,7 @@ void iodev_console_write(const void *buf, size_t length)
         spin_lock(&console_lock);
 
     if (in_iodev) {
-        if (length) {
+        if (length && iodevs[IODEV_UART]->usage & USAGE_CONSOLE) {
             iodev_write(IODEV_UART, "*", 1);
             iodev_write(IODEV_UART, buf, length);
         }
