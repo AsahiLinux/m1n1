@@ -1018,7 +1018,7 @@ class HV(Reloadable):
 
         pmgr0_start, _ = self.adt["/arm-io/pmgr"].get_reg(0)
 
-        pmgr_hooks = (0x23b700220, 0x23b700270) # UART0
+        pmgr_hooks = (0x23b7001c0, 0x23b700220, 0x23b700270) # UART0
 
         if self.iodev == IODEV.USB0:
             pmgr_hooks += (0x23b700420, 0x23d280098, 0x23d280088)
