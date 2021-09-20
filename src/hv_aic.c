@@ -8,7 +8,7 @@
 
 #define IRQTRACE_IRQ BIT(0)
 
-static u64 aic_base;
+extern u64 aic_base;
 
 static u32 trace_hw_num[AIC_MAX_HW_NUM / 32];
 
