@@ -56,17 +56,18 @@ PMGRPWRGateRegs = GreedyRange(Struct(
 ))
 
 PMGRDevices = GreedyRange(Struct(
-    "unk0" / Int8ul,
+    "flags" / Int8ul,
     "unk1_0" / Int8ul,
     "unk1_1" / Int8ul,
     Const(0, Int8ul),
     "parents" / Array(2, Int16ul),
-    "unk" / Int16ul,
+    "ctl_idx" / Int8ul,
+    "ctl_block" / Int8ul,
     "psidx" / Int8ul,
     "psreg" / Int8ul,
     "unk2_0" / Int16ul,
     "pd" / Int8ul,
-    "unk2_2" / Int8ul,
+    "ps_cfg16" / Int8ul,
     Const(0, Int32ul),
     Const(0, Int32ul),
     "unk2_3" / Int16ul,
@@ -76,8 +77,9 @@ PMGRDevices = GreedyRange(Struct(
 ))
 
 PMGRClocks = GreedyRange(Struct(
-    "a" / Int16ul,
-    "b" / Int8ul,
+    "ctl_idx" / Int8ul,
+    "ctl_block" / Int8ul,
+    "unk" / Int8ul,
     "id" / Int8ul,
     Const(0, Int32ul),
     "name" / PaddedString(16, "ascii"),
@@ -85,8 +87,8 @@ PMGRClocks = GreedyRange(Struct(
 
 PMGRPowerDomains = GreedyRange(Struct(
     "unk" / Const(0, Int8ul),
-    "a" / Int8ul,
-    "b" / Int8ul,
+    "ctl_idx" / Int8ul,
+    "ctl_block" / Int8ul,
     "id" / Int8ul,
     Const(0, Int32ul),
     "name" / PaddedString(16, "ascii"),
@@ -95,6 +97,18 @@ PMGRPowerDomains = GreedyRange(Struct(
 PMGRDeviceBridges = GreedyRange(Struct(
     "idx" / Int32ub,
     "subdevs" / HexDump(Bytes(0x48)),
+))
+
+PMGREvents = GreedyRange(Struct(
+    "unk1" / Int8ul,
+    "unk2" / Int8ul,
+    "unk3" / Int8ul,
+    "id" / Int8ul,
+    "ctl2_idx" / Int8ul,
+    "ctl2_block" / Int8ul,
+    "ctl_idx" / Int8ul,
+    "ctl_block" / Int8ul,
+    "name" / PaddedString(16, "ascii"),
 ))
 
 DEV_PROPERTIES = {
@@ -107,6 +121,7 @@ DEV_PROPERTIES = {
         "clocks": PMGRClocks,
         "device-bridges": PMGRDeviceBridges,
         "voltage-states*": GreedyRange(Int32ul),
+        "events": PMGREvents,
     },
     "clpc": {
         "events": GreedyRange(Int32ul),

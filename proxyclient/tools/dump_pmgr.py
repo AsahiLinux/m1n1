@@ -41,9 +41,12 @@ print()
 print("=== Devices ===")
 for i, dev in enumerate(pmgr.devices):
     ps = pmgr.ps_regs[dev.psreg]
+    HAS_CTL = 0x20
+    NO_PS = 0x10
+    flags = "".join(j if dev.flags & (1 << (7-i)) else " " for i,j in enumerate("abCdefgh"))
     s = f" #{i:3d} {dev.name:20s} id: {dev.id:3d} psreg: {dev.psreg:2d}:{dev.psidx:2d} "
-    s += f" unk1_0: {dev.unk1_0} unk1_1: {dev.unk1_1} unk0: {dev.unk0:#4x}"
-    s += f" unk: {dev.unk:#05x} unk3: {dev.unk3:3d} {dev.unk2_0:2d} {dev.unk2_2:2d} {dev.unk2_3:3d}"
+    s += f" flags:{flags} unk1_0: {dev.unk1_0} unk1_1: {dev.unk1_1} "
+    s += f" ctl_reg: {dev.ctl_block}:{dev.ctl_idx:#04x} unk3: {dev.unk3:3d} {dev.unk2_0:2d} {dev.ps_cfg16:2d} {dev.unk2_3:3d}"
     if dev.psidx or dev.psreg:
         addr = pmgr.get_reg(ps.reg)[0] + ps.offset + dev.psidx * 8
         val = p.read32(addr)
@@ -61,15 +64,34 @@ for i, dev in enumerate(pmgr.devices):
     for i in dev_users.get(dev.id, []):
         print(f"  User: {i}")
 
+cfg_bases = [
+    pmgr.get_reg(1)[0] + 0x34100, # TODO:check
+    pmgr.get_reg(0)[0] + 0x34100,
+    pmgr.get_reg(0)[0] + 0x7c100,
+    pmgr.get_reg(0)[0] + 0x78100,
+]
+
 print()
 print("=== Clocks ===")
 for i, clk in enumerate(pmgr.clocks):
-    print(f" #{i:3d} {clk.name:20s} id: {clk.id:3d} {clk.a:#5x} {clk.b:2d}")
+    reg = cfg_bases[clk.ctl_block] + clk.ctl_idx * 0x10
+    print(f" #{i:3d} {clk.name:20s} id: {clk.id:3d} reg:{clk.ctl_block}:{clk.ctl_idx:#4x} ({reg:#x}) {clk.unk:#x}")
 
 print()
 print("=== Power Domains ===")
 for i, pd in enumerate(pmgr.power_domains):
-    print(f" #{i:3d} {pd.name:20s} id: {pd.id:3d} {pd.a:#5x} {pd.b:2d}")
+    reg = cfg_bases[pd.ctl_block] + pd.ctl_idx * 0x10
+    print(f" #{i:3d} {pd.name:20s} id: {pd.id:3d} reg:{pd.ctl_block}:{pd.ctl_idx:#4x} ({reg:#x})")
+
+print()
+print("=== Events ===")
+for i, ev in enumerate(pmgr.events):
+    reg = cfg_bases[ev.ctl_block]  + ev.ctl_idx * 0x10
+    v = f" #{i:3d} {ev.name:20s} unk:{ev.unk1:#3x}/{ev.unk2}/{ev.unk3} id: {ev.id:3d} reg:{ev.ctl_block}:{ev.ctl_idx:#4x} ({reg:#x})"
+    if ev.ctl2_idx:
+        reg2 = cfg_bases[ev.ctl2_block] + ev.ctl2_idx * 0x10
+        v += f" reg2:{ev.ctl2_block}:{ev.ctl2_idx:#4x} ({reg2:#x})"
+    print(v)
 
 arm_io = dt["/arm-io"]
 
