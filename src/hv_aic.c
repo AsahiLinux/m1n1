@@ -1,14 +1,13 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "adt.h"
+#include "aic.h"
 #include "aic_regs.h"
 #include "hv.h"
 #include "uartproxy.h"
 #include "utils.h"
 
 #define IRQTRACE_IRQ BIT(0)
-
-extern u64 aic_base;
 
 static u32 trace_hw_num[AIC_MAX_HW_NUM / 32];
 
