@@ -203,6 +203,18 @@ class ProxyUtils(Reloadable):
         for i in lines:
             print(" " + i)
 
+    def print_l2c_regs(self):
+        print()
+        print("  == L2C Registers ==")
+        l2c_err_sts = self.mrs(L2C_ERR_STS_EL1)
+
+        print(f"  L2C_ERR_STS: {l2c_err_sts:#x}")
+        print(f"  L2C_ERR_ADR: {self.mrs(L2C_ERR_ADR_EL1):#x}");
+        print(f"  L2C_ERR_INF: {self.mrs(L2C_ERR_INF_EL1):#x}");
+
+        self.msr(L2C_ERR_STS_EL1, l2c_err_sts) # Clear the flag bits
+        self.msr(DAIF, self.mrs(DAIF) | 0x100) # Re-enable SError exceptions
+
     def print_exception(self, code, ctx, addr=lambda a: f"0x{a:x}"):
         print(f"  == Exception taken from {ctx.spsr.M.name} ==")
         el = ctx.spsr.M >> 2
@@ -248,6 +260,13 @@ class ProxyUtils(Reloadable):
                     print(f"  ISS: {iss!s}")
                 else:
                     print("  No instruction syndrome available")
+
+                if iss.DFSC == DABORT_DFSC.ECC_ERROR:
+                    self.print_l2c_regs()
+
+        elif code == EXC.SERROR:
+            if ctx.esr.EC == ESR_EC.SERROR and ctx.esr.ISS == 0:
+                self.print_l2c_regs()
 
         print()
 
