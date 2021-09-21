@@ -12,7 +12,7 @@ LD := $(ARCH)ld
 OBJCOPY := $(ARCH)objcopy
 endif
 
-CFLAGS := -O2 -Wall -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
+CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-Werror=implicit-function-declaration -Werror=implicit-int \
 	-Wsign-compare -Wunused-parameter -Wno-multichar \
 	-ffreestanding -fpic -ffunction-sections -fdata-sections \
@@ -21,7 +21,7 @@ CFLAGS := -O2 -Wall -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-Wstack-usage=1024
 
 LDFLAGS := -T m1n1.ld -EL -maarch64elf --no-undefined -X -Bsymbolic \
-	-z notext --no-apply-dynamic-relocs --orphan-handling=warn --strip-debug \
+	-z notext --no-apply-dynamic-relocs --orphan-handling=warn \
 	-z nocopyreloc --gc-sections -pie
 
 MINILZLIB_OBJECTS := $(patsubst %,minilzlib/%, \
@@ -118,7 +118,7 @@ build/$(NAME).elf: $(BUILD_OBJS) m1n1.ld
 
 build/$(NAME).macho: build/$(NAME).elf
 	@echo "  MACHO $@"
-	@$(OBJCOPY) -O binary $< $@
+	@$(OBJCOPY) -O binary --strip-debug $< $@
 
 update_tag:
 	@echo "#define BUILD_TAG \"$$(git describe --always --dirty)\"" > build/build_tag.tmp
