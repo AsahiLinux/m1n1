@@ -267,6 +267,8 @@ int uartproxy_run(struct uartproxy_msg_start *start)
                 reply.status = ST_BADCMD;
                 break;
         }
+        sysop("dsb sy");
+        sysop("isb");
         reply.checksum = checksum(&reply, REPLY_SIZE - 4);
         iodev_queue(iodev, &reply, REPLY_SIZE);
 

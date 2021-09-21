@@ -73,6 +73,9 @@ _hv_entry:
     stp x2, x3, [sp, #-16]!
     stp x0, x1, [sp, #-16]!
 
+    dsb sy
+    isb
+
     mov x0, sp
     ret
 

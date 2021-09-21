@@ -484,6 +484,8 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->status = S_BADCMD;
             break;
     }
+    sysop("dsb sy");
+    sysop("isb");
     exc_guard = guard_save;
     return 0;
 }
