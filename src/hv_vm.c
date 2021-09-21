@@ -645,33 +645,49 @@ static void emit_mmiotrace(u64 pc, u64 addr, u64 *data, u64 width, u64 flags, bo
     }
 }
 
-bool hv_pa_write(u64 addr, u64 *val, int width)
+bool hv_pa_write(struct exc_info *ctx, u64 addr, u64 *val, int width)
 {
+    exc_count = 0;
+    exc_guard = GUARD_SKIP;
     switch (width) {
         case 0:
             write8(addr, val[0]);
-            return true;
+            break;
         case 1:
             write16(addr, val[0]);
-            return true;
+            break;
         case 2:
             write32(addr, val[0]);
-            return true;
+            break;
         case 3:
             write64(addr, val[0]);
-            return true;
+            break;
         case 4:
             write64(addr, val[0]);
             write64(addr + 8, val[1]);
-            return true;
+            break;
         default:
             dprintf("HV: unsupported write width %ld\n", width);
             return false;
     }
+    // Make sure we catch SErrors here
+    sysop("dsb sy");
+    sysop("isb");
+    if (exc_count) {
+        printf("HV: Exception during write to 0x%lx (width: %d)\n", addr, width);
+        // Update exception info with "real" cause
+        ctx->esr = hv_get_esr();
+        ctx->far = hv_get_far();
+        return false;
+    }
+    exc_guard = GUARD_OFF;
+    return true;
 }
 
-bool hv_pa_read(u64 addr, u64 *val, int width)
+bool hv_pa_read(struct exc_info *ctx, u64 addr, u64 *val, int width)
 {
+    exc_count = 0;
+    exc_guard = GUARD_SKIP;
     switch (width) {
         case 0:
             val[0] = read8(addr);
@@ -693,14 +709,23 @@ bool hv_pa_read(u64 addr, u64 *val, int width)
             dprintf("HV: unsupported read width %ld\n", width);
             return false;
     }
+    sysop("dsb sy");
+    if (exc_count) {
+        dprintf("HV: Exception during read from 0x%lx (width: %d)\n", addr, width);
+        // Update exception info with "real" cause
+        ctx->esr = hv_get_esr();
+        ctx->far = hv_get_far();
+        return false;
+    }
+    exc_guard = GUARD_OFF;
 }
 
-bool hv_pa_rw(u64 addr, u64 *val, bool write, int width)
+bool hv_pa_rw(struct exc_info *ctx, u64 addr, u64 *val, bool write, int width)
 {
     if (write)
-        return hv_pa_write(addr, val, width);
+        return hv_pa_write(ctx, addr, val, width);
     else
-        return hv_pa_read(addr, val, width);
+        return hv_pa_read(ctx, addr, val, width);
 }
 
 bool hv_handle_dabort(struct exc_info *ctx)
@@ -778,13 +803,13 @@ bool hv_handle_dabort(struct exc_info *ctx)
                 hv_wdt_breadcrumb('5');
                 dprintf("HV: SPTE_MAP[W] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr_pa, far, paddr,
                         1 << width, val[0]);
-                if (!hv_pa_write(paddr, val, width))
+                if (!hv_pa_write(ctx, paddr, val, width))
                     return false;
                 break;
             case SPTE_HOOK: {
                 hv_wdt_breadcrumb('6');
                 hv_hook_t *hook = (hv_hook_t *)target;
-                if (!hook(ipa, val, true, width))
+                if (!hook(ctx, ipa, val, true, width))
                     return false;
                 dprintf("HV: SPTE_HOOK[W] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr_pa, far,
                         ipa, 1 << width, hook, val);
@@ -821,7 +846,7 @@ bool hv_handle_dabort(struct exc_info *ctx)
                 // fallthrough
             case SPTE_MAP:
                 hv_wdt_breadcrumb('4');
-                if (!hv_pa_read(paddr, val, width))
+                if (!hv_pa_read(ctx, paddr, val, width))
                     return false;
                 dprintf("HV: SPTE_MAP[R] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr_pa, far, paddr,
                         1 << width, val[0]);
@@ -829,7 +854,7 @@ bool hv_handle_dabort(struct exc_info *ctx)
             case SPTE_HOOK: {
                 hv_wdt_breadcrumb('5');
                 hv_hook_t *hook = (hv_hook_t *)target;
-                if (!hook(ipa, val, false, width))
+                if (!hook(ctx, ipa, val, false, width))
                     return false;
                 dprintf("HV: SPTE_HOOK[R] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr_pa, far,
                         ipa, 1 << width, hook, val);

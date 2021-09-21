@@ -24,9 +24,9 @@ static void emit_irqtrace(u16 type, u16 num)
     hv_wdt_resume();
 }
 
-static bool trace_aic_event(u64 addr, u64 *val, bool write, int width)
+static bool trace_aic_event(struct exc_info *ctx, u64 addr, u64 *val, bool write, int width)
 {
-    if (!hv_pa_rw(addr, val, write, width))
+    if (!hv_pa_rw(ctx, addr, val, write, width))
         return false;
 
     if (addr != (aic_base + AIC_EVENT) || write || width != 2) {

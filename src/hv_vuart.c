@@ -53,8 +53,9 @@ static void update_irq(void)
     //     printf("HV: vuart UTRSTAT=0x%x UFSTAT=0x%x UCON=0x%x\n", utrstat, ufstat, ucon);
 }
 
-static bool handle_vuart(u64 addr, u64 *val, bool write, int width)
+static bool handle_vuart(struct exc_info *ctx, u64 addr, u64 *val, bool write, int width)
 {
+    UNUSED(ctx);
     UNUSED(width);
 
     addr &= 0xfff;

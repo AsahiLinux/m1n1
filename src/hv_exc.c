@@ -301,7 +301,11 @@ void hv_exc_sync(struct exc_info *ctx)
         ctx->elr += 4;
     } else {
         hv_wdt_breadcrumb('-');
-        hv_exc_proxy(ctx, START_EXCEPTION_LOWER, EXC_SYNC, NULL);
+        // VM code can forward a nested SError exception here
+        if (FIELD_GET(ESR_EC, ctx->esr) == ESR_EC_SERROR)
+            hv_exc_proxy(ctx, START_EXCEPTION_LOWER, EXC_SERROR, NULL);
+        else
+            hv_exc_proxy(ctx, START_EXCEPTION_LOWER, EXC_SYNC, NULL);
     }
 
     hv_exc_exit(ctx);

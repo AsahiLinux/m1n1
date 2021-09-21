@@ -8,7 +8,7 @@
 #include "types.h"
 #include "uartproxy.h"
 
-typedef bool(hv_hook_t)(u64 addr, u64 *val, bool write, int width);
+typedef bool(hv_hook_t)(struct exc_info *ctx, u64 addr, u64 *val, bool write, int width);
 
 #define MMIO_EVT_CPU   GENMASK(23, 16)
 #define MMIO_EVT_MULTI BIT(6)
@@ -53,9 +53,9 @@ int hv_map_hook(u64 from, hv_hook_t *hook, u64 size);
 u64 hv_translate(u64 addr, bool s1only, bool w);
 u64 hv_pt_walk(u64 addr);
 bool hv_handle_dabort(struct exc_info *ctx);
-bool hv_pa_write(u64 addr, u64 *val, int width);
-bool hv_pa_read(u64 addr, u64 *val, int width);
-bool hv_pa_rw(u64 addr, u64 *val, bool write, int width);
+bool hv_pa_write(struct exc_info *ctx, u64 addr, u64 *val, int width);
+bool hv_pa_read(struct exc_info *ctx, u64 addr, u64 *val, int width);
+bool hv_pa_rw(struct exc_info *ctx, u64 addr, u64 *val, bool write, int width);
 
 /* AIC events through tracing the MMIO event address */
 bool hv_trace_irq(u32 type, u32 num, u32 count, u32 flags);
