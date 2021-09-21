@@ -289,5 +289,46 @@ class DBGBCR(Register32):
     PMC = 2,1
     E = 0
 
+# TCR_EL1
+class TCR(Register64):
+    DS = 59
+    TCMA1 = 58
+    TCMA0 = 57
+    E0PD1 = 56
+    E0PD0 = 55
+    NFD1 = 54
+    NFD0 = 53
+    TBID1 = 52
+    TBID0 = 51
+    HWU162 = 50
+    HWU161 = 49
+    HWU160 = 48
+    HWU159 = 47
+    HWU062 = 46
+    HWU061 = 45
+    HWU060 = 44
+    HWU059 = 43
+    HPD1 = 42
+    HPD0 = 41
+    HD = 40
+    HA = 39
+    TBI1 = 38
+    TBI0 = 37
+    AS = 36
+    IPS = 34, 32
+    TG1 = 31, 30
+    SH1 = 29, 28
+    ORGN1 = 27, 26
+    IRGN1 = 25, 24
+    EPD1 = 23
+    A1 = 22
+    T1SZ = 21, 16
+    TG0 = 15, 14
+    SH0 = 13, 12
+    ORGN0 = 11, 10
+    IRGN0 = 9, 8
+    EPD0 = 7
+    T0SZ = 5, 0
+
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

@@ -114,6 +114,7 @@ class HV(Reloadable):
         self.p = proxy
         self.u = utils
         self.pac_mask = self.PAC_MASK
+        self.user_pac_mask = self.PAC_MASK
         self.vbar_el1 = None
         self.want_vbar = None
         self.vectors = [None]
@@ -746,9 +747,11 @@ class HV(Reloadable):
         if handled:
             ret = EXC_RET.HANDLED
             if self._sigint_pending:
+                self.update_pac_mask()
                 self.log("User interrupt")
         else:
             self.log(f"Guest exception: {reason.name}/{code.name}")
+            self.update_pac_mask()
             self.u.print_exception(code, ctx)
 
         if self._sigint_pending or not handled or user_interrupt:
@@ -838,7 +841,7 @@ class HV(Reloadable):
         if frame is None:
             frame = self.ctx.regs[29]
         if lr is None:
-            lr = self.ctx.regs[30] | self.pac_mask
+            lr = self.unpac(self.ctx.regs[30])
 
         print("Stack trace:")
         while frame:
@@ -847,7 +850,7 @@ class HV(Reloadable):
             fpp = self.p.hv_translate(frame)
             if not fpp:
                 break
-            lr = self.p.read64(lrp) | self.pac_mask
+            lr = self.unpac(self.p.read64(lrp))
             frame = self.p.read64(fpp)
 
     def patch_exception_handling(self):
@@ -1247,9 +1250,21 @@ class HV(Reloadable):
             print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
             self.p.write64(addr, rvbar)
 
+    def update_pac_mask(self):
+        tcr = TCR(self.u.mrs(TCR_EL12))
+        valid_bits = (1 << (64 - tcr.T1SZ)) - 1
+        self.pac_mask = 0xffffffffffffffff & ~valid_bits
+        valid_bits = (1 << (64 - tcr.T0SZ)) - 1
+        self.user_pac_mask = 0xffffffffffffffff & ~valid_bits
+
+    def unpac(self, v):
+        if v & (1 << 55):
+            return v | self.pac_mask
+        else:
+            return v & ~self.user_pac_mask
+
     def load_system_map(self, path):
         # Assume Linux
-        self.pac_mask = 0xffffffc000000000
         self.sym_offset = 0
         self.xnu_mode = False
         self.symbols = []
