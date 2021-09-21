@@ -244,6 +244,10 @@ static void hv_exc_entry(struct exc_info *ctx)
     ctx->cpu_id = smp_id();
     ctx->mpidr = mrs(MPIDR_EL1);
 
+    sysop("isb");
+
+    sysop("msr daifclr, 4"); // Enable SErrors in the HV
+
     __atomic_sub_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
     spin_lock(&bhl);
     hv_wdt_breadcrumb('X');
