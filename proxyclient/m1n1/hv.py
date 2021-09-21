@@ -1008,7 +1008,8 @@ class HV(Reloadable):
 
         def wh(base, off, data, width):
             self.log(f"PMGR W {base:x}+{off:x}:{width} = 0x{data:x}: Dangerous write")
-            _pmgr[base + off] = (data & 0xff0f) | ((data & 0xf) << 4)
+            self.p.mask32(base + off, 0x3ff, (data | 0xf) & ~(0x80000400))
+            _pmgr[base + off] = (data & 0xfffffc0f) | ((data & 0xf) << 4)
 
         def rh(base, off, width):
             data = self.p.read32(base + off)
@@ -1021,13 +1022,25 @@ class HV(Reloadable):
         pmgr_hooks = (0x23b7001c0, 0x23b700220, 0x23b700270) # UART0
 
         if self.iodev == IODEV.USB0:
-            pmgr_hooks += (0x23b700420, 0x23d280098, 0x23d280088)
+            pmgr_hooks += (0x23d280098, 0x23d280088)
         elif self.iodev == IODEV.USB1:
-            pmgr_hooks += (0x23b700448, 0x23d2800a0, 0x23d280090)
+            pmgr_hooks += (0x23d2800a0, 0x23d280090)
+
+        # XNU bug workaround: don't let ATCx_COMMON power down or reset
+        pmgr_hooks += (0x23b700420, 0x23b700448)
 
         for addr in pmgr_hooks:
             self.map_hook(addr, 4, write=wh, read=rh)
             #TODO : turn into a real tracer
+            self.add_tracer(irange(addr, 4), "PMGR HACK", TraceMode.RESERVED)
+
+        pg_overrides = {
+            0x23d29c05c: 0xc000000,
+            0x23d29c044: 0xc000000,
+        }
+
+        for addr in pg_overrides:
+            self.map_hook(addr, 4, read=lambda base, off, width: pg_overrides[base + off])
             self.add_tracer(irange(addr, 4), "PMGR HACK", TraceMode.RESERVED)
 
         def cpustart_wh(base, off, data, width):
