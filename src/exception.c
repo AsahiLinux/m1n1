@@ -360,11 +360,17 @@ void exc_serr(u64 *regs)
     if (!(exc_guard & GUARD_SILENT))
         printf("Exception: SError\n");
 
-    sysop("isb");
     sysop("dsb sy");
+    sysop("isb");
 
     if (!(exc_guard & GUARD_SILENT))
         print_regs(regs, 0);
 
-    //     reboot();
+    if ((exc_guard & GUARD_TYPE_MASK) == GUARD_OFF)
+        flush_and_reboot();
+
+    exc_count++;
+
+    sysop("dsb sy");
+    sysop("isb");
 }
