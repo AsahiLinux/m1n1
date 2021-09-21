@@ -873,10 +873,15 @@ class HV(Reloadable):
         if frame is None:
             frame = self.ctx.regs[29]
         if lr is None:
-            lr = self.unpac(self.ctx.regs[30])
+            lr = self.unpac(self.ctx.elr) + 4
 
         print("Stack trace:")
+        frames = set()
         while frame:
+            if frame in frames:
+                print("Stack loop detected!")
+                break
+            frames.add(frame)
             print(f" - {self.addr(lr - 4)}")
             lrp = self.p.hv_translate(frame + 8)
             fpp = self.p.hv_translate(frame)
