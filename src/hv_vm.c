@@ -668,11 +668,13 @@ bool hv_pa_write(struct exc_info *ctx, u64 addr, u64 *val, int width)
             break;
         default:
             dprintf("HV: unsupported write width %ld\n", width);
+            exc_guard = GUARD_OFF;
             return false;
     }
     // Make sure we catch SErrors here
     sysop("dsb sy");
     sysop("isb");
+    exc_guard = GUARD_OFF;
     if (exc_count) {
         printf("HV: Exception during write to 0x%lx (width: %d)\n", addr, width);
         // Update exception info with "real" cause
@@ -680,7 +682,6 @@ bool hv_pa_write(struct exc_info *ctx, u64 addr, u64 *val, int width)
         ctx->far = hv_get_far();
         return false;
     }
-    exc_guard = GUARD_OFF;
     return true;
 }
 
@@ -691,25 +692,27 @@ bool hv_pa_read(struct exc_info *ctx, u64 addr, u64 *val, int width)
     switch (width) {
         case 0:
             val[0] = read8(addr);
-            return true;
+            break;
         case 1:
             val[0] = read16(addr);
-            return true;
+            break;
         case 2:
             val[0] = read32(addr);
-            return true;
+            break;
         case 3:
             val[0] = read64(addr);
-            return true;
+            break;
         case 4:
             val[0] = read64(addr);
             val[1] = read64(addr + 8);
-            return true;
+            break;
         default:
             dprintf("HV: unsupported read width %ld\n", width);
+            exc_guard = GUARD_OFF;
             return false;
     }
     sysop("dsb sy");
+    exc_guard = GUARD_OFF;
     if (exc_count) {
         dprintf("HV: Exception during read from 0x%lx (width: %d)\n", addr, width);
         // Update exception info with "real" cause
@@ -717,7 +720,7 @@ bool hv_pa_read(struct exc_info *ctx, u64 addr, u64 *val, int width)
         ctx->far = hv_get_far();
         return false;
     }
-    exc_guard = GUARD_OFF;
+    return true;
 }
 
 bool hv_pa_rw(struct exc_info *ctx, u64 addr, u64 *val, bool write, int width)

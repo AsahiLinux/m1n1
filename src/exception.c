@@ -267,6 +267,7 @@ void exc_sync(u64 *regs)
             break;
         case GUARD_OFF:
         default:
+            printf("Unhandled exception, rebooting...\n");
             flush_and_reboot();
     }
 
@@ -366,8 +367,10 @@ void exc_serr(u64 *regs)
     if (!(exc_guard & GUARD_SILENT))
         print_regs(regs, 0);
 
-    if ((exc_guard & GUARD_TYPE_MASK) == GUARD_OFF)
+    if ((exc_guard & GUARD_TYPE_MASK) == GUARD_OFF) {
+        printf("Unhandled exception, rebooting...\n");
         flush_and_reboot();
+    }
 
     exc_count++;
 

@@ -246,7 +246,9 @@ static void hv_exc_entry(struct exc_info *ctx)
 
     sysop("isb");
 
-    sysop("msr daifclr, 4"); // Enable SErrors in the HV
+    // Enable SErrors in the HV, but only if not already pending
+    if (!(mrs(ISR_EL1) & 0x100))
+        sysop("msr daifclr, 4");
 
     __atomic_sub_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
     spin_lock(&bhl);
