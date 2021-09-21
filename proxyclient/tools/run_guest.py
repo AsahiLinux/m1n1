@@ -11,6 +11,7 @@ parser.add_argument('-m', '--script', type=pathlib.Path, action='append', defaul
 parser.add_argument('-c', '--command', action="append", default=[])
 parser.add_argument('-S', '--shell', action="store_true")
 parser.add_argument('-e', '--hook-exceptions', action="store_true")
+parser.add_argument('-d', '--debug-xnu', action="store_true")
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
@@ -31,6 +32,9 @@ hv = HV(iface, p, u)
 hv.hook_exceptions = args.hook_exceptions
 
 hv.init()
+
+if args.debug_xnu:
+    hv.adt["chosen"].debug_enabled = 1
 
 if len(args.boot_args) > 0:
     boot_args = " ".join(args.boot_args)
