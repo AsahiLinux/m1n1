@@ -346,6 +346,11 @@ void exc_fiq(u64 *regs)
         reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
     }
 
+    if (mrs(SYS_IMP_APL_IPI_SR_EL1) & IPI_SR_PENDING) {
+        printf("  Fast IPI IRQ, clearing\n");
+        msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
+    }
+
     UNUSED(regs);
     // print_regs(regs);
 }
