@@ -168,7 +168,8 @@ void smp_start_secondaries(void)
 
 void smp_send_ipi(int cpu)
 {
-    msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, spin_table[cpu].mpidr);
+    u64 mpidr = spin_table[cpu].mpidr;
+    msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, (mpidr & 0xff) | ((mpidr & 0xff00) << 8));
 }
 
 void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
@@ -220,7 +221,7 @@ bool smp_is_alive(int cpu)
     return spin_table[cpu].flag;
 }
 
-int smp_get_mpidr(int cpu)
+uint64_t smp_get_mpidr(int cpu)
 {
     return spin_table[cpu].mpidr;
 }

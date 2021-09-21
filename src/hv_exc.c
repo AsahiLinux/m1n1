@@ -22,6 +22,7 @@ extern spinlock_t bhl;
 #define D_PERCPU(t, x) t x[MAX_CPUS]
 #define PERCPU(x)      x[mrs(TPIDR_EL2)]
 
+D_PERCPU(static bool, ipi_queued);
 D_PERCPU(static bool, ipi_pending);
 D_PERCPU(static bool, pmc_pending);
 D_PERCPU(static u64, pmc_irq_mode);
@@ -184,9 +185,25 @@ static bool hv_handle_msr(u64 *regs, u64 iss)
          * don't do any wfis that assume otherwise in m1n1. */
         SYSREG_PASS(SYS_IMP_APL_CYC_OVRD)
         /* IPI handling */
-        SYSREG_PASS(SYS_IMP_APL_IPI_RR_LOCAL_EL1)
-        SYSREG_PASS(SYS_IMP_APL_IPI_RR_GLOBAL_EL1)
         SYSREG_PASS(SYS_IMP_APL_IPI_CR_EL1)
+        case SYSREG_ISS(SYS_IMP_APL_IPI_RR_LOCAL_EL1): {
+            assert(!is_read);
+            u64 mpidr = (regs[rt] & 0xff) | (mrs(MPIDR_EL1) & 0xffff00);
+            msr(SYS_IMP_APL_IPI_RR_LOCAL_EL1, regs[rt]);
+            for (int i = 0; i < MAX_CPUS; i++)
+                if (mpidr == smp_get_mpidr(i))
+                    ipi_queued[i] = true;
+            return true;
+        }
+        case SYSREG_ISS(SYS_IMP_APL_IPI_RR_GLOBAL_EL1):
+            assert(!is_read);
+            u64 mpidr = (regs[rt] & 0xff) | ((regs[rt] & 0xff0000) >> 8);
+            msr(SYS_IMP_APL_IPI_RR_LOCAL_EL1, regs[rt]);
+            for (int i = 0; i < MAX_CPUS; i++) {
+                if (mpidr == (smp_get_mpidr(i) & 0xffff))
+                    ipi_queued[i] = true;
+            }
+            return true;
         case SYSREG_ISS(SYS_IMP_APL_IPI_SR_EL1):
             if (is_read)
                 regs[rt] = PERCPU(ipi_pending) ? IPI_SR_PENDING : 0;
@@ -332,11 +349,14 @@ void hv_exc_fiq(u64 *regs)
     }
 
     if (mrs(SYS_IMP_APL_IPI_SR_EL1) & IPI_SR_PENDING) {
-        hv_tick(regs);
-        PERCPU(ipi_pending) = true;
+        if (PERCPU(ipi_queued)) {
+            PERCPU(ipi_pending) = true;
+            PERCPU(ipi_queued) = false;
+        }
         msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
         sysop("isb");
     }
+    hv_check_rendezvous(regs);
 
     // Handles guest timers
     hv_exc_exit(regs);

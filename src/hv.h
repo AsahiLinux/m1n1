@@ -94,6 +94,7 @@ void hv_rendezvous(void);
 void hv_switch_cpu(int cpu);
 void hv_arm_tick(void);
 void hv_rearm(void);
+void hv_check_rendezvous(u64 *regs);
 void hv_tick(u64 *regs);
 
 #endif

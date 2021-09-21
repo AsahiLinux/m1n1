@@ -215,6 +215,10 @@ void hv_rendezvous(void)
 
 void hv_switch_cpu(int cpu)
 {
+    if (cpu > MAX_CPUS || cpu < 0 || !hv_started_cpus[cpu]) {
+        printf("HV: CPU #%d is inactive or invalid\n", cpu);
+        return;
+    }
     hv_rendezvous();
     printf("HV: switching to CPU #%d\n", cpu);
     hv_want_cpu = cpu;
@@ -297,6 +301,22 @@ void hv_rearm(void)
     msr(CNTP_CTL_EL0, CNTx_CTL_ENABLE);
 }
 
+void hv_check_rendezvous(u64 *regs)
+{
+    if (hv_want_cpu == smp_id()) {
+        hv_want_cpu = -1;
+        hv_exc_proxy(regs, START_HV, HV_USER_INTERRUPT, NULL);
+    } else if (hv_want_cpu != -1) {
+        // Unlock the HV so the target CPU can get into the proxy
+        spin_unlock(&bhl);
+        while (hv_want_cpu != -1)
+            sysop("dmb sy");
+        spin_lock(&bhl);
+        // Make sure we tick at least once more before running the guest
+        hv_rearm();
+    }
+}
+
 void hv_tick(u64 *regs)
 {
     if (hv_should_exit) {
@@ -305,8 +325,7 @@ void hv_tick(u64 *regs)
     }
     hv_wdt_pet();
     iodev_handle_events(uartproxy_iodev);
-    if (hv_want_cpu == smp_id() || iodev_can_read(uartproxy_iodev)) {
-        hv_want_cpu = -1;
+    if (iodev_can_read(uartproxy_iodev)) {
         hv_exc_proxy(regs, START_HV, HV_USER_INTERRUPT, NULL);
     }
     hv_vuart_poll();

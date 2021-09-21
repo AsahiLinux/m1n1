@@ -25,7 +25,7 @@ void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3);
 u64 smp_wait(int cpu);
 
 bool smp_is_alive(int cpu);
-int smp_get_mpidr(int cpu);
+uint64_t smp_get_mpidr(int cpu);
 u64 smp_get_release_addr(int cpu);
 void smp_set_wfe_mode(bool new_mode);
 void smp_send_ipi(int cpu);
