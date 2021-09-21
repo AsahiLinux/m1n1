@@ -720,6 +720,8 @@ class HV(Reloadable):
         self._in_handler = True
 
         info_data = self.iface.readmem(info, ExcInfo.sizeof())
+        self.exc_reason = reason
+        self.exc_code = code
         self.ctx = ctx = ExcInfo.parse(info_data)
 
         handled = False
@@ -793,6 +795,36 @@ class HV(Reloadable):
 
     def cont(self):
         raise shell.ExitConsole(EXC_RET.HANDLED)
+
+    def lower(self, step=False):
+        self.u.msr(ELR_EL12, self.ctx.elr)
+        self.u.msr(SPSR_EL12, self.ctx.spsr.value)
+        self.u.msr(ESR_EL12, self.ctx.esr.value)
+        self.u.msr(FAR_EL12, self.ctx.far)
+
+        exc_off = 0x80 * self.exc_code
+
+        if self.ctx.spsr.M == SPSR_M.EL0t:
+            exc_off += 0x400
+        elif self.ctx.spsr.M == SPSR_M.EL1t:
+            pass
+        elif self.ctx.spsr.M == SPSR_M.EL1h:
+            exc_off += 0x200
+        else:
+            print(f"Unknown exception level {self.ctx.spsr.M}")
+            return
+
+        self.ctx.spsr.M = SPSR_M.EL1h
+        self.ctx.spsr.D = 1
+        self.ctx.spsr.A = 1
+        self.ctx.spsr.I = 1
+        self.ctx.spsr.F = 1
+        self.ctx.elr = self.u.mrs(VBAR_EL12) + exc_off
+
+        if step:
+            self.step()
+        else:
+            raise shell.ExitConsole(EXC_RET.HANDLED)
 
     def step(self):
         self.u.msr(MDSCR_EL1, MDSCR(SS=1, MDE=1).value)

@@ -149,7 +149,7 @@ class ESR(Register64):
     ISS = 24, 0
 
 class SPSR_M(IntEnum):
-    EP0t = 0
+    EL0t = 0
     EL1t = 4
     EL1h = 5
     EL2t = 8
