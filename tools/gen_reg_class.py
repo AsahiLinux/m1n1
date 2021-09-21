@@ -28,6 +28,6 @@ for reg in data:
             if msb == lsb:
                 print(f"    {fname} = {lsb}")
             else:
-                print(f"    {fname} {msb}, {lsb}")
+                print(f"    {fname} = {msb}, {lsb}")
 
     print()
