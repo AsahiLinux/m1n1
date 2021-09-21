@@ -9,7 +9,7 @@
 #include "uart.h"
 #include "uartproxy.h"
 
-//#define TIME_ACCOUNTING
+#define TIME_ACCOUNTING
 
 extern spinlock_t bhl;
 
@@ -33,11 +33,20 @@ void hv_exit_guest(void) __attribute__((noreturn));
 static u64 stolen_time = 0;
 static u64 exc_entry_time;
 
+extern u32 hv_cpus_in_guest;
+
 void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_t type, void *extra)
 {
     int from_el = FIELD_GET(SPSR_M, hv_get_spsr()) >> 2;
 
     hv_wdt_breadcrumb('P');
+
+#ifdef TIME_ACCOUNTING
+    /* Wait until all CPUs have entered the HV (max 1ms), to ensure they exit with an
+     * updated timer offset. */
+    hv_rendezvous();
+    u64 entry_time = mrs(CNTPCT_EL0);
+#endif
 
     struct uartproxy_exc_info exc_info = {
         .cpu_id = smp_id(),
@@ -73,6 +82,10 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
             msr(SP_EL0, exc_info.sp[0]);
             msr(SP_EL1, exc_info.sp[1]);
             hv_wdt_breadcrumb('p');
+#ifdef TIME_ACCOUNTING
+            u64 lost = mrs(CNTPCT_EL0) - entry_time;
+            stolen_time += lost;
+#endif
             return;
         case EXC_EXIT_GUEST:
             spin_unlock(&bhl);
@@ -217,6 +230,7 @@ static bool hv_handle_msr(u64 *regs, u64 iss)
 static void hv_exc_entry(u64 *regs)
 {
     UNUSED(regs);
+    __atomic_sub_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
     spin_lock(&bhl);
     hv_wdt_breadcrumb('X');
     exc_entry_time = mrs(CNTPCT_EL0);
@@ -233,13 +247,9 @@ static void hv_exc_exit(u64 *regs)
     hv_update_fiq();
     /* reenable PMU counters */
     reg_set(SYS_IMP_APL_PMCR0, PERCPU(exc_entry_pmcr0_cnt));
-#ifdef TIME_ACCOUNTING
-    u64 lost = mrs(CNTPCT_EL0) - exc_entry_time;
-    if (lost > 8)
-        stolen_time += lost - 8;
-#endif
     msr(CNTVOFF_EL2, stolen_time);
     spin_unlock(&bhl);
+    __atomic_add_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
 }
 
 void hv_exc_sync(u64 *regs)

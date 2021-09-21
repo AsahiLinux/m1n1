@@ -24,6 +24,7 @@ u64 hv_tick_interval;
 
 static bool hv_should_exit;
 bool hv_started_cpus[MAX_CPUS];
+u32 hv_cpus_in_guest;
 u64 hv_saved_sp[MAX_CPUS];
 
 void hv_init(void)
@@ -69,6 +70,7 @@ void hv_start(void *entry, u64 regs[4])
 {
     hv_should_exit = false;
     memset(hv_started_cpus, 0, sizeof(hv_started_cpus));
+    hv_started_cpus[0] = 1;
 
     msr(VBAR_EL1, _hv_vectors_start);
 
@@ -76,8 +78,11 @@ void hv_start(void *entry, u64 regs[4])
         gl2_call(hv_set_gxf_vbar, 0, 0, 0, 0);
 
     hv_arm_tick();
+    hv_cpus_in_guest = 1;
+
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
 
+    __atomic_sub_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
     spin_lock(&bhl);
 
     hv_wdt_stop();
@@ -149,6 +154,8 @@ static void hv_enter_secondary(void *entry, u64 regs[4])
     hv_should_exit = true;
     printf("HV: Exiting from CPU %d\n", smp_id());
 
+    __atomic_sub_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
+
     spin_unlock(&bhl);
 }
 
@@ -182,9 +189,25 @@ void hv_start_secondary(int cpu, void *entry, u64 regs[4])
 
     printf("HV: Entering guest secondary %d at %p\n", cpu, entry);
     hv_started_cpus[cpu] = true;
+    __atomic_add_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
 
     iodev_console_flush();
     smp_call4(cpu, hv_enter_secondary, (u64)entry, (u64)regs, 0, 0);
+}
+
+void hv_rendezvous(void)
+{
+    if (!__atomic_load_n(&hv_cpus_in_guest, __ATOMIC_ACQUIRE))
+        return;
+
+    /* IPI all CPUs. This might result in spurious IPIs to the guest... */
+    for (int i = 0; i < MAX_CPUS; i++) {
+        if (i != smp_id() && hv_started_cpus[i]) {
+            smp_send_ipi(i);
+        }
+    }
+    while (__atomic_load_n(&hv_cpus_in_guest, __ATOMIC_ACQUIRE))
+        ;
 }
 
 void hv_write_hcr(u64 val)

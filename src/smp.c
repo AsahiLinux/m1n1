@@ -166,6 +166,11 @@ void smp_start_secondaries(void)
     spin_table[0].mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
 }
 
+void smp_send_ipi(int cpu)
+{
+    msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, spin_table[cpu].mpidr);
+}
+
 void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
 {
     struct spin_table *target = &spin_table[cpu];
@@ -182,7 +187,7 @@ void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
     target->target = (u64)func;
     sysop("dmb sy");
 
-    msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, spin_table[cpu].mpidr);
+    smp_send_ipi(cpu);
 
     while (target->flag == flag)
         sysop("dmb sy");
@@ -205,7 +210,7 @@ void smp_set_wfe_mode(bool new_mode)
 
     for (int cpu = 1; cpu < MAX_CPUS; cpu++)
         if (smp_is_alive(cpu))
-            msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, spin_table[cpu].mpidr);
+            smp_send_ipi(cpu);
 
     sysop("sev");
 }
