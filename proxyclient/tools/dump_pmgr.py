@@ -96,6 +96,15 @@ for i, ev in enumerate(pmgr.events):
 arm_io = dt["/arm-io"]
 
 print()
+print("=== Fixed clocks ===")
+for clk in range(256):
+    users = clock_users.get(clk, [])
+    if users:
+        print(f" #{clk}")
+        for j in users:
+            print(f"  User: {j}")
+
+print()
 print("=== Boot clocks ===")
 for i, (freq, reg, nclk) in enumerate(zip(arm_io.clock_frequencies,
                                           arm_io.clock_frequencies_regs,
