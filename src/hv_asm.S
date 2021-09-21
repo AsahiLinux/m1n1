@@ -73,9 +73,6 @@ _hv_entry:
     stp x2, x3, [sp, #-16]!
     stp x0, x1, [sp, #-16]!
 
-    /* Enable SErrors while in the HV */
-    msr DAIFClr, #4
-
     mov x0, sp
     ret
 
