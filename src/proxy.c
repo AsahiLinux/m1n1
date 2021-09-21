@@ -445,6 +445,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_HV_START_SECONDARY:
             hv_start_secondary(request->args[0], (void *)request->args[1], &request->args[2]);
             break;
+        case P_HV_SWITCH_CPU:
+            hv_switch_cpu(request->args[0]);
+            break;
 
         case P_FB_INIT:
             fb_init();

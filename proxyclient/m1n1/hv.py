@@ -722,6 +722,7 @@ class HV(Reloadable):
         self.ctx = ctx = ExcInfo.parse(info_data)
 
         handled = False
+        user_interrupt = False
 
         try:
             if reason == START.EXCEPTION_LOWER:
@@ -737,6 +738,7 @@ class HV(Reloadable):
                     handled = self.handle_vm_hook(ctx)
                 elif code == HV_EVENT.USER_INTERRUPT:
                     handled = True
+                    user_interrupt = True
         except Exception as e:
             self.log(f"Python exception while handling guest exception:")
             traceback.print_exc()
@@ -749,8 +751,7 @@ class HV(Reloadable):
             self.log(f"Guest exception: {reason.name}/{code.name}")
             self.u.print_exception(code, ctx)
 
-        if self._sigint_pending or not handled:
-
+        if self._sigint_pending or not handled or user_interrupt:
             self._sigint_pending = False
 
             signal.signal(signal.SIGINT, self.default_sigint)
@@ -794,6 +795,10 @@ class HV(Reloadable):
         self.u.msr(MDSCR_EL1, MDSCR(SS=1, MDE=1).value)
         self.ctx.spsr.SS = 1
         self._stepping = True
+        raise shell.ExitConsole(EXC_RET.HANDLED)
+
+    def cpu(self, cpu):
+        self.p.hv_switch_cpu(cpu)
         raise shell.ExitConsole(EXC_RET.HANDLED)
 
     def add_hw_bp(self, vaddr):

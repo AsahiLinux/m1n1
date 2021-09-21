@@ -332,6 +332,7 @@ void hv_exc_fiq(u64 *regs)
     }
 
     if (mrs(SYS_IMP_APL_IPI_SR_EL1) & IPI_SR_PENDING) {
+        hv_tick(regs);
         PERCPU(ipi_pending) = true;
         msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
         sysop("isb");

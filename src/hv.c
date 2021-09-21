@@ -22,6 +22,8 @@ extern char _hv_vectors_start[0];
 
 u64 hv_tick_interval;
 
+int hv_want_cpu;
+
 static bool hv_should_exit;
 bool hv_started_cpus[MAX_CPUS];
 u32 hv_cpus_in_guest;
@@ -78,6 +80,7 @@ void hv_start(void *entry, u64 regs[4])
         gl2_call(hv_set_gxf_vbar, 0, 0, 0, 0);
 
     hv_arm_tick();
+    hv_want_cpu = -1;
     hv_cpus_in_guest = 1;
 
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
@@ -210,6 +213,14 @@ void hv_rendezvous(void)
         ;
 }
 
+void hv_switch_cpu(int cpu)
+{
+    hv_rendezvous();
+    printf("HV: switching to CPU #%d\n", cpu);
+    hv_want_cpu = cpu;
+    hv_rearm();
+}
+
 void hv_write_hcr(u64 val)
 {
     if (gxf_enabled() && !in_gl12())
@@ -280,6 +291,12 @@ void hv_arm_tick(void)
     msr(CNTP_CTL_EL0, CNTx_CTL_ENABLE);
 }
 
+void hv_rearm(void)
+{
+    msr(CNTP_TVAL_EL0, 0);
+    msr(CNTP_CTL_EL0, CNTx_CTL_ENABLE);
+}
+
 void hv_tick(u64 *regs)
 {
     if (hv_should_exit) {
@@ -288,7 +305,9 @@ void hv_tick(u64 *regs)
     }
     hv_wdt_pet();
     iodev_handle_events(uartproxy_iodev);
-    if (iodev_can_read(uartproxy_iodev))
+    if (hv_want_cpu == smp_id() || iodev_can_read(uartproxy_iodev)) {
+        hv_want_cpu = -1;
         hv_exc_proxy(regs, START_HV, HV_USER_INTERRUPT, NULL);
+    }
     hv_vuart_poll();
 }

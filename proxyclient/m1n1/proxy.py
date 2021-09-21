@@ -565,6 +565,7 @@ class M1N1Proxy(Reloadable):
     P_HV_TRACE_IRQ = 0xc06
     P_HV_WDT_START = 0xc07
     P_HV_START_SECONDARY = 0xc08
+    P_HV_SWITCH_CPU = 0xc09
 
     P_FB_INIT = 0xd00
     P_FB_SHUTDOWN = 0xd01
@@ -963,6 +964,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_HV_WDT_START, cpu)
     def hv_start_secondary(self, cpu, entry, *args):
         return self.request(self.P_HV_START_SECONDARY, cpu, entry, *args)
+    def hv_switch_cpu(self, cpu):
+        return self.request(self.P_HV_SWITCH_CPU, cpu)
 
     def fb_init(self):
         return self.request(self.P_FB_INIT)
