@@ -36,9 +36,10 @@ static u64 exc_entry_time;
 
 extern u32 hv_cpus_in_guest;
 
-void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_t type, void *extra)
+void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, uartproxy_exc_code_t type,
+                  void *extra)
 {
-    int from_el = FIELD_GET(SPSR_M, hv_get_spsr()) >> 2;
+    int from_el = FIELD_GET(SPSR_M, ctx->spsr) >> 2;
 
     hv_wdt_breadcrumb('P');
 
@@ -49,26 +50,15 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
     u64 entry_time = mrs(CNTPCT_EL0);
 #endif
 
-    struct exc_info exc_info = {
-        .cpu_id = smp_id(),
-        .spsr = hv_get_spsr(),
-        .elr = hv_get_elr(),
-        .esr = hv_get_esr(),
-        .far = hv_get_far(),
-        .afsr1 = hv_get_afsr1(),
-        .sp = {mrs(SP_EL0), mrs(SP_EL1), 0},
-        .mpidr = mrs(MPIDR_EL1),
-        .elr_phys = hv_translate(hv_get_elr(), false, false),
-        .far_phys = hv_translate(hv_get_far(), false, false),
-        .sp_phys = hv_translate(from_el == 0 ? mrs(SP_EL0) : mrs(SP_EL1), false, false),
-        .extra = extra,
-    };
-    memcpy(exc_info.regs, regs, sizeof(exc_info.regs));
+    ctx->elr_phys = hv_translate(ctx->elr, false, false);
+    ctx->far_phys = hv_translate(ctx->far, false, false);
+    ctx->sp_phys = hv_translate(from_el == 0 ? ctx->sp[0] : ctx->sp[1], false, false);
+    ctx->extra = extra;
 
     struct uartproxy_msg_start start = {
         .reason = reason,
         .code = type,
-        .info = &exc_info,
+        .info = ctx,
     };
 
     hv_wdt_suspend();
@@ -77,11 +67,6 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
 
     switch (ret) {
         case EXC_RET_HANDLED:
-            memcpy(regs, exc_info.regs, sizeof(exc_info.regs));
-            hv_set_spsr(exc_info.spsr);
-            hv_set_elr(exc_info.elr);
-            msr(SP_EL0, exc_info.sp[0]);
-            msr(SP_EL1, exc_info.sp[1]);
             hv_wdt_breadcrumb('p');
 #ifdef TIME_ACCOUNTING
             u64 lost = mrs(CNTPCT_EL0) - entry_time;
@@ -93,7 +78,7 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
             hv_exit_guest();
         default:
             printf("Guest exception not handled, rebooting.\n");
-            print_regs(regs, 0);
+            print_regs(ctx->regs, 0);
             flush_and_reboot();
     }
 }
@@ -144,12 +129,14 @@ static void hv_update_fiq(void)
             _msr(sr_tkn(sr), regs[rt]);                                                            \
         return true;
 
-static bool hv_handle_msr(u64 *regs, u64 iss)
+static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
 {
     u64 reg = iss & (ESR_ISS_MSR_OP0 | ESR_ISS_MSR_OP2 | ESR_ISS_MSR_OP1 | ESR_ISS_MSR_CRn |
                      ESR_ISS_MSR_CRm);
     u64 rt = FIELD_GET(ESR_ISS_MSR_Rt, iss);
     bool is_read = iss & ESR_ISS_MSR_DIR;
+
+    u64 *regs = ctx->regs;
 
     regs[31] = 0;
 
@@ -244,9 +231,19 @@ static bool hv_handle_msr(u64 *regs, u64 iss)
     return false;
 }
 
-static void hv_exc_entry(u64 *regs)
+static void hv_exc_entry(struct exc_info *ctx)
 {
-    UNUSED(regs);
+    ctx->spsr = hv_get_spsr();
+    ctx->elr = hv_get_elr();
+    ctx->esr = hv_get_esr();
+    ctx->far = hv_get_far();
+    ctx->afsr1 = hv_get_afsr1();
+    ctx->sp[0] = mrs(SP_EL0);
+    ctx->sp[1] = mrs(SP_EL1);
+    ctx->sp[2] = (u64)ctx;
+    ctx->cpu_id = smp_id();
+    ctx->mpidr = mrs(MPIDR_EL1);
+
     __atomic_sub_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
     spin_lock(&bhl);
     hv_wdt_breadcrumb('X');
@@ -257,9 +254,8 @@ static void hv_exc_entry(u64 *regs)
     msr(SYS_IMP_APL_PMCR0, pmcr0 & ~PMCR0_CNT_MASK);
 }
 
-static void hv_exc_exit(u64 *regs)
+static void hv_exc_exit(struct exc_info *ctx)
 {
-    UNUSED(regs);
     hv_wdt_breadcrumb('x');
     hv_update_fiq();
     /* reenable PMU counters */
@@ -267,30 +263,34 @@ static void hv_exc_exit(u64 *regs)
     msr(CNTVOFF_EL2, stolen_time);
     spin_unlock(&bhl);
     __atomic_add_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
+
+    hv_set_spsr(ctx->spsr);
+    hv_set_elr(ctx->elr);
+    msr(SP_EL0, ctx->sp[0]);
+    msr(SP_EL1, ctx->sp[1]);
 }
 
-void hv_exc_sync(u64 *regs)
+void hv_exc_sync(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('S');
-    hv_exc_entry(regs);
+    hv_exc_entry(ctx);
     bool handled = false;
-    u64 esr = hv_get_esr();
-    u32 ec = FIELD_GET(ESR_EC, esr);
+    u32 ec = FIELD_GET(ESR_EC, ctx->esr);
 
     switch (ec) {
         case ESR_EC_DABORT_LOWER:
             hv_wdt_breadcrumb('D');
-            handled = hv_handle_dabort(regs);
+            handled = hv_handle_dabort(ctx);
             break;
         case ESR_EC_MSR:
             hv_wdt_breadcrumb('M');
-            handled = hv_handle_msr(regs, FIELD_GET(ESR_ISS, esr));
+            handled = hv_handle_msr(ctx, FIELD_GET(ESR_ISS, ctx->esr));
             break;
         case ESR_EC_IMPDEF:
             hv_wdt_breadcrumb('A');
-            switch (FIELD_GET(ESR_ISS, esr)) {
+            switch (FIELD_GET(ESR_ISS, ctx->esr)) {
                 case ESR_ISS_IMPDEF_MSR:
-                    handled = hv_handle_msr(regs, hv_get_afsr1());
+                    handled = hv_handle_msr(ctx, ctx->afsr1);
                     break;
             }
             break;
@@ -298,38 +298,38 @@ void hv_exc_sync(u64 *regs)
 
     if (handled) {
         hv_wdt_breadcrumb('+');
-        hv_set_elr(hv_get_elr() + 4);
+        ctx->elr += 4;
     } else {
         hv_wdt_breadcrumb('-');
-        hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_SYNC, NULL);
+        hv_exc_proxy(ctx, START_EXCEPTION_LOWER, EXC_SYNC, NULL);
     }
 
-    hv_exc_exit(regs);
+    hv_exc_exit(ctx);
     hv_wdt_breadcrumb('s');
 }
 
-void hv_exc_irq(u64 *regs)
+void hv_exc_irq(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('I');
-    hv_exc_entry(regs);
-    hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_IRQ, NULL);
-    hv_exc_exit(regs);
+    hv_exc_entry(ctx);
+    hv_exc_proxy(ctx, START_EXCEPTION_LOWER, EXC_IRQ, NULL);
+    hv_exc_exit(ctx);
     hv_wdt_breadcrumb('i');
 }
 
-void hv_exc_fiq(u64 *regs)
+void hv_exc_fiq(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('F');
-    hv_exc_entry(regs);
+    hv_exc_entry(ctx);
     if (mrs(CNTP_CTL_EL0) == (CNTx_CTL_ISTATUS | CNTx_CTL_ENABLE)) {
         msr(CNTP_CTL_EL0, CNTx_CTL_ISTATUS | CNTx_CTL_IMASK | CNTx_CTL_ENABLE);
-        hv_tick(regs);
+        hv_tick(ctx);
         hv_arm_tick();
     }
 
     if (mrs(CNTV_CTL_EL0) == (CNTx_CTL_ISTATUS | CNTx_CTL_ENABLE)) {
         msr(CNTV_CTL_EL0, CNTx_CTL_ISTATUS | CNTx_CTL_IMASK | CNTx_CTL_ENABLE);
-        hv_exc_proxy(regs, START_HV, HV_VTIMER, NULL);
+        hv_exc_proxy(ctx, START_HV, HV_VTIMER, NULL);
     }
 
     u64 reg = mrs(SYS_IMP_APL_PMCR0);
@@ -345,7 +345,7 @@ void hv_exc_fiq(u64 *regs)
     if ((reg & UPMCR0_IMODE_MASK) == UPMCR0_IMODE_FIQ && (mrs(SYS_IMP_APL_UPMSR) & UPMSR_IACT)) {
         printf("[FIQ] UPMC IRQ, masking");
         reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
-        hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_FIQ, NULL);
+        hv_exc_proxy(ctx, START_EXCEPTION_LOWER, EXC_FIQ, NULL);
     }
 
     if (mrs(SYS_IMP_APL_IPI_SR_EL1) & IPI_SR_PENDING) {
@@ -356,18 +356,18 @@ void hv_exc_fiq(u64 *regs)
         msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
         sysop("isb");
     }
-    hv_check_rendezvous(regs);
+    hv_check_rendezvous(ctx);
 
     // Handles guest timers
-    hv_exc_exit(regs);
+    hv_exc_exit(ctx);
     hv_wdt_breadcrumb('f');
 }
 
-void hv_exc_serr(u64 *regs)
+void hv_exc_serr(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('E');
-    hv_exc_entry(regs);
-    hv_exc_proxy(regs, START_EXCEPTION_LOWER, EXC_SERROR, NULL);
-    hv_exc_exit(regs);
+    hv_exc_entry(ctx);
+    hv_exc_proxy(ctx, START_EXCEPTION_LOWER, EXC_SERROR, NULL);
+    hv_exc_exit(ctx);
     hv_wdt_breadcrumb('e');
 }

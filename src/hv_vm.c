@@ -443,11 +443,12 @@ union simd_reg {
     u8 b[16];
 };
 
-static bool emulate_load(u64 *regs, u32 insn, u64 *val, u64 *width)
+static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width)
 {
     u64 Rt = insn & 0x1f;
     u64 Rn = (insn >> 5) & 0x1f;
     u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
+    u64 *regs = ctx->regs;
 
     union simd_reg simd[32];
 
@@ -571,11 +572,12 @@ static bool emulate_load(u64 *regs, u32 insn, u64 *val, u64 *width)
     return true;
 }
 
-static bool emulate_store(u64 *regs, u32 insn, u64 *val, u64 *width)
+static bool emulate_store(struct exc_info *ctx, u32 insn, u64 *val, u64 *width)
 {
     u64 Rt = insn & 0x1f;
     u64 Rn = (insn >> 5) & 0x1f;
     u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
+    u64 *regs = ctx->regs;
 
     *width = insn >> 30;
 
@@ -701,7 +703,7 @@ bool hv_pa_rw(u64 addr, u64 *val, bool write, int width)
         return hv_pa_read(addr, val, width);
 }
 
-bool hv_handle_dabort(u64 *regs)
+bool hv_handle_dabort(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('0');
     u64 esr = hv_get_esr();
@@ -740,7 +742,7 @@ bool hv_handle_dabort(u64 *regs)
     u64 target = pte & PTE_TARGET_MASK_L4;
     u64 paddr = target | (far & MASK(VADDR_L4_OFFSET_BITS));
 
-    u64 elr = hv_get_elr();
+    u64 elr = ctx->elr;
     u64 elr_pa = hv_translate(elr, false, false);
     if (!elr_pa) {
         printf("HV: Failed to fetch instruction for data abort at 0x%lx\n", elr);
@@ -756,7 +758,7 @@ bool hv_handle_dabort(u64 *regs)
     if (esr & ESR_ISS_DABORT_WnR) {
         hv_wdt_breadcrumb('W');
 
-        if (!emulate_store(regs, insn, val, &width)) {
+        if (!emulate_store(ctx, insn, val, &width)) {
             printf("HV: store not emulated: 0x%08x at 0x%lx\n", insn, ipa);
             return false;
         }
@@ -797,7 +799,7 @@ bool hv_handle_dabort(u64 *regs)
                     .addr = ipa,
                     .data = {val[0], val[1]},
                 };
-                hv_exc_proxy(regs, START_HV, HV_HOOK_VM, &hook);
+                hv_exc_proxy(ctx, START_HV, HV_HOOK_VM, &hook);
                 break;
             }
             default:
@@ -807,7 +809,7 @@ bool hv_handle_dabort(u64 *regs)
     } else {
         hv_wdt_breadcrumb('R');
 
-        if (!emulate_load(regs, insn, NULL, &width)) {
+        if (!emulate_load(ctx, insn, NULL, &width)) {
             printf("HV: load not emulated: 0x%08x at 0x%lx\n", insn, ipa);
             return false;
         }
@@ -841,7 +843,7 @@ bool hv_handle_dabort(u64 *regs)
                     .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
                     .addr = ipa,
                 };
-                hv_exc_proxy(regs, START_HV, HV_HOOK_VM, &hook);
+                hv_exc_proxy(ctx, START_HV, HV_HOOK_VM, &hook);
                 memcpy(val, hook.data, sizeof(val));
                 break;
             }
@@ -855,7 +857,7 @@ bool hv_handle_dabort(u64 *regs)
             emit_mmiotrace(elr, ipa, val, width, 0, pte & SPTE_TRACE_UNBUF);
 
         hv_wdt_breadcrumb('8');
-        if (!emulate_load(regs, insn, val, &width))
+        if (!emulate_load(ctx, insn, val, &width))
             return false;
 
         hv_wdt_breadcrumb('9');

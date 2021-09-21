@@ -3,6 +3,7 @@
 #ifndef HV_H
 #define HV_H
 
+#include "exception.h"
 #include "iodev.h"
 #include "types.h"
 #include "uartproxy.h"
@@ -51,7 +52,7 @@ int hv_map_sw(u64 from, u64 to, u64 size);
 int hv_map_hook(u64 from, hv_hook_t *hook, u64 size);
 u64 hv_translate(u64 addr, bool s1only, bool w);
 u64 hv_pt_walk(u64 addr);
-bool hv_handle_dabort(u64 *regs);
+bool hv_handle_dabort(struct exc_info *ctx);
 bool hv_pa_write(u64 addr, u64 *val, int width);
 bool hv_pa_read(u64 addr, u64 *val, int width);
 bool hv_pa_rw(u64 addr, u64 *val, bool write, int width);
@@ -64,7 +65,7 @@ void hv_vuart_poll(void);
 void hv_map_vuart(u64 base, int irq, iodev_id_t iodev);
 
 /* Exceptions */
-void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_t type,
+void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, uartproxy_exc_code_t type,
                   void *extra);
 
 /* WDT */
@@ -94,7 +95,7 @@ void hv_rendezvous(void);
 void hv_switch_cpu(int cpu);
 void hv_arm_tick(void);
 void hv_rearm(void);
-void hv_check_rendezvous(u64 *regs);
-void hv_tick(u64 *regs);
+void hv_check_rendezvous(struct exc_info *ctx);
+void hv_tick(struct exc_info *ctx);
 
 #endif

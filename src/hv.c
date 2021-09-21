@@ -301,11 +301,11 @@ void hv_rearm(void)
     msr(CNTP_CTL_EL0, CNTx_CTL_ENABLE);
 }
 
-void hv_check_rendezvous(u64 *regs)
+void hv_check_rendezvous(struct exc_info *ctx)
 {
     if (hv_want_cpu == smp_id()) {
         hv_want_cpu = -1;
-        hv_exc_proxy(regs, START_HV, HV_USER_INTERRUPT, NULL);
+        hv_exc_proxy(ctx, START_HV, HV_USER_INTERRUPT, NULL);
     } else if (hv_want_cpu != -1) {
         // Unlock the HV so the target CPU can get into the proxy
         spin_unlock(&bhl);
@@ -317,7 +317,7 @@ void hv_check_rendezvous(u64 *regs)
     }
 }
 
-void hv_tick(u64 *regs)
+void hv_tick(struct exc_info *ctx)
 {
     if (hv_should_exit) {
         spin_unlock(&bhl);
@@ -326,7 +326,7 @@ void hv_tick(u64 *regs)
     hv_wdt_pet();
     iodev_handle_events(uartproxy_iodev);
     if (iodev_can_read(uartproxy_iodev)) {
-        hv_exc_proxy(regs, START_HV, HV_USER_INTERRUPT, NULL);
+        hv_exc_proxy(ctx, START_HV, HV_USER_INTERRUPT, NULL);
     }
     hv_vuart_poll();
 }
