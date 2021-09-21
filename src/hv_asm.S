@@ -1,5 +1,7 @@
 /* spDx-License-Identifier: MIT */
 
+#include "exception.h"
+
 .align 11
 .globl _hv_vectors_start
 _hv_vectors_start:
@@ -96,12 +98,16 @@ _hv_return:
     ldp x26, x27, [sp], #16
     ldp x28, x29, [sp], #16
     ldr x30, [sp], #16
+
+    add sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
+
     eret
 
 .globl _v_hv_sync
 .type _v_hv_sync, @function
 _v_hv_sync:
     msr pan, #0
+    sub sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
     str x30, [sp, #-16]!
     bl _hv_entry
     bl hv_exc_sync
@@ -112,6 +118,7 @@ _v_hv_sync:
 .type _v_hv_irq, @function
 _v_hv_irq:
     msr pan, #0
+    sub sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
     str x30, [sp, #-16]!
     bl _hv_entry
     bl hv_exc_irq
@@ -122,6 +129,7 @@ _v_hv_irq:
 .type _v_hv_fiq, @function
 _v_hv_fiq:
     msr pan, #0
+    sub sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
     str x30, [sp, #-16]!
     bl _hv_entry
     bl hv_exc_fiq
@@ -132,6 +140,7 @@ _v_hv_fiq:
 .type _v_hv_serr, @function
 _v_hv_serr:
     msr pan, #0
+    sub sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
     str x30, [sp, #-16]!
     bl _hv_entry
     bl hv_exc_serr

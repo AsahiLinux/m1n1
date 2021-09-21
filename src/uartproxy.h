@@ -32,22 +32,6 @@ typedef enum _uartproxy_event_type_t {
     EVT_IRQTRACE = 2,
 } uartproxy_event_type_t;
 
-struct uartproxy_exc_info {
-    u64 cpu_id;
-    u64 spsr;
-    u64 elr;
-    u64 esr;
-    u64 far;
-    u64 afsr1;
-    u64 regs[31];
-    u64 sp[3];
-    u64 mpidr;
-    u64 elr_phys;
-    u64 far_phys;
-    u64 sp_phys;
-    void *extra;
-};
-
 struct uartproxy_msg_start {
     u32 reason;
     u32 code;

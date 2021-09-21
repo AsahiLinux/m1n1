@@ -5,6 +5,7 @@
 #include "hv.h"
 #include "assert.h"
 #include "cpu_regs.h"
+#include "exception.h"
 #include "iodev.h"
 #include "malloc.h"
 #include "smp.h"

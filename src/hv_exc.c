@@ -49,7 +49,7 @@ void hv_exc_proxy(u64 *regs, uartproxy_boot_reason_t reason, uartproxy_exc_code_
     u64 entry_time = mrs(CNTPCT_EL0);
 #endif
 
-    struct uartproxy_exc_info exc_info = {
+    struct exc_info exc_info = {
         .cpu_id = smp_id(),
         .spsr = hv_get_spsr(),
         .elr = hv_get_elr(),

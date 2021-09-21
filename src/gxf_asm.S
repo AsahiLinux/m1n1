@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: MIT */
 
-#include "cpu_regs.h"
 #include "gxf.h"
+#include "cpu_regs.h"
+#include "exception.h"
 
 #define genter .long 0x00201420
 #define gexit .long 0x00201400
@@ -161,6 +162,7 @@ _gxf_vectors:
 
 _gxf_exc_sync:
     msr pan, #0
+    sub sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
     str x30, [sp, #-16]!
     bl _gxf_exc_entry
     bl exc_sync
@@ -168,6 +170,7 @@ _gxf_exc_sync:
 
 _gxf_serr:
     msr pan, #0
+    sub sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
     str x30, [sp, #-16]!
     bl _gxf_exc_entry
     bl exc_serr
@@ -225,6 +228,9 @@ _gxf_exc_return:
     ldp x26, x27, [sp], #16
     ldp x28, x29, [sp], #16
     ldr x30, [sp], #16
+
+    add sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
+
     isb
 
     gexit

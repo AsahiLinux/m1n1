@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "exception.h"
 #include "memory.h"
 
 .globl exc_sync
@@ -13,6 +14,7 @@
 .type _v_sp0_sync, @function
 _v_sp0_sync:
     msr pan, #0
+    sub sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
     str x30, [sp, #-16]!
     bl _exc_entry
     bl exc_sync
@@ -23,6 +25,7 @@ _v_sp0_sync:
 .type _v_sp0_irq, @function
 _v_sp0_irq:
     msr pan, #0
+    sub sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
     str x30, [sp, #-16]!
     bl _exc_entry
     bl exc_irq
@@ -33,6 +36,7 @@ _v_sp0_irq:
 .type _v_sp0_fiq, @function
 _v_sp0_fiq:
     msr pan, #0
+    sub sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
     str x30, [sp, #-16]!
     bl _exc_entry
     bl exc_fiq
@@ -43,6 +47,7 @@ _v_sp0_fiq:
 .type _v_sp0_serr, @function
 _v_sp0_serr:
     msr pan, #0
+    sub sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
     str x30, [sp, #-16]!
     bl _exc_entry
     bl exc_serr
@@ -84,10 +89,11 @@ _exc_return:
     ldp x14, x15, [sp], #16
     ldp x16, x17, [sp], #16
     ldr x18, [sp], #8
-
     add sp, sp, #88
-
     ldr x30, [sp], #16
+
+    add sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
+
     eret
 
 .globl el0_call
