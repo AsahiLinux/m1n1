@@ -82,8 +82,11 @@ CLUSTER_PSCTRL = 0x200f8
 for cluster in range(2):
     print(f"Initializing cluster {cluster}")
     ena = (1<<63)
+    val = p.read64(CREG[cluster] + CLUSTER_DVMR)
     if cluster == 1:
         ena |= (1<<32) | (1<<31)
+    if (val & ena) != ena:
+        print(f"DVMR: {val:#x} -> {val|ena:#x}")
         p.set64(CREG[cluster] + CLUSTER_DVMR, ena) # CLUSTER_DVMR
     
     #p.set64(CREG[cluster] + CLUSTER_LIMIT1, 1<<63)
