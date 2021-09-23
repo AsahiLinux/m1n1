@@ -79,13 +79,12 @@ PMGR_CPUGATING = 0x1c080
 CLUSTER_CTRL = 0x440f8
 CLUSTER_PSCTRL = 0x200f8
 
-#for cluster in range(2):
-    #print(f"Initializing cluster {cluster}")
-    ##ena = (1<<63)
-    ##if cluster == 1:
-        ##ena |= (1<<32) | (1<<31)
-    ##if cluster == 1:
-        ##p.set64(CREG[cluster] + CLUSTER_DVMR, ena) # CLUSTER_DVMR
+for cluster in range(2):
+    print(f"Initializing cluster {cluster}")
+    ena = (1<<63)
+    if cluster == 1:
+        ena |= (1<<32) | (1<<31)
+        p.set64(CREG[cluster] + CLUSTER_DVMR, ena) # CLUSTER_DVMR
     
     #p.set64(CREG[cluster] + CLUSTER_LIMIT1, 1<<63)
     #p.clear64(CREG[cluster] + CLUSTER_LIMIT2, 1<<63)
