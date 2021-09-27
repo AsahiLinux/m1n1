@@ -121,7 +121,7 @@ class UartInterface(Reloadable):
         self.debug = debug
         self.devpath = None
         if device is None:
-            device = os.environ.get("M1N1DEVICE", "/dev/ttyUSB0:115200")
+            device = os.environ.get("M1N1DEVICE", "/dev/ttyACM0:115200")
         if isinstance(device, str):
             baud = 115200
             if ":" in device:
@@ -990,7 +990,7 @@ __all__.extend(k for k, v in globals().items()
 
 if __name__ == "__main__":
     import serial
-    uartdev = os.environ.get("M1N1DEVICE", "/dev/ttyUSB0")
+    uartdev = os.environ.get("M1N1DEVICE", "/dev/ttyACM0")
     usbuart = serial.Serial(uartdev, 115200)
     uartif = UartInterface(usbuart, debug=True)
     print("Sending NOP...", end=' ')
