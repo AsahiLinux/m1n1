@@ -29,7 +29,6 @@ bool hv_started_cpus[MAX_CPUS];
 u32 hv_cpus_in_guest;
 u64 hv_saved_sp[MAX_CPUS];
 
-
 struct hv_secondary_info_t {
     uint64_t hcr;
     uint64_t hacr;
