@@ -206,6 +206,10 @@ static int dt_set_cpus(void)
     int node, cpu = 0;
     fdt_for_each_subnode(node, dt, cpus)
     {
+        const char *name = fdt_get_name(dt, node, NULL);
+        if (strncmp(name, "cpu@", 4))
+            continue;
+
         const fdt64_t *prop = fdt_getprop(dt, node, "reg", NULL);
         if (!prop)
             bail("FDT: failed to get reg property of CPU\n");

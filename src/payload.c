@@ -177,7 +177,7 @@ int payload_run(void)
         smp_start_secondaries();
 
         if (kboot_prepare_dt(fdt)) {
-            printf("Failed to prepare FDT!");
+            printf("Failed to prepare FDT!\n");
             return -1;
         }
 
