@@ -334,7 +334,7 @@ class LazyADT:
     def __delattr__(self, attr):
         return delattr(self._adt, attr)
     def __str__(self, t=""):
-        return gstr(self._adt)
+        return str(self._adt)
     def __iter__(self):
         return iter(self._adt)
 
