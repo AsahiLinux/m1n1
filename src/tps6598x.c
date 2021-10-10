@@ -70,7 +70,8 @@ int tps6598x_command(tps6598x_dev_t *dev, const char *cmd, const u8 *data_in, si
     } while (cmd_status != 0);
 
     if (len_out) {
-        if (i2c_smbus_read(dev->i2c, dev->addr, TPS_REG_DATA1, data_out, len_out) != len_out)
+        if (i2c_smbus_read(dev->i2c, dev->addr, TPS_REG_DATA1, data_out, len_out) !=
+            (ssize_t)len_out)
             return -1;
     }
 
