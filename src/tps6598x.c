@@ -16,9 +16,6 @@
 #define TPS_REG_POWER_STATE 0x20
 #define TPS_CMD_INVALID     0x21434d44 // !CMD
 
-// 80 ms is not enough
-#define TPS_WRITE_DELAY 120
-
 struct tps6598x_dev {
     i2c_dev_t *i2c;
     u8 addr;
@@ -102,13 +99,12 @@ int tps6598x_disable_irqs(tps6598x_dev_t *dev, tps6598x_irq_state_t *state)
         printf("tps6598x: writing TPS_REG_INT_CLEAR1 failed, written: %d\n", written);
         return -1;
     }
-    udelay(TPS_WRITE_DELAY);
     written = i2c_smbus_write(dev->i2c, dev->addr, TPS_REG_INT_MASK1, zeros, sizeof(zeros));
     if (written != sizeof(ones)) {
         printf("tps6598x: writing TPS_REG_INT_MASK1 failed, written: %d\n", written);
         return -1;
     }
-    udelay(TPS_WRITE_DELAY);
+
 #ifdef DEBUG
     u8 tmp[CD3218B12_IRQ_WIDTH] = {0x00};
     read = i2c_smbus_read(dev->i2c, dev->addr, TPS_REG_INT_MASK1, tmp, CD3218B12_IRQ_WIDTH);
@@ -133,7 +129,7 @@ int tps6598x_restore_irqs(tps6598x_dev_t *dev, tps6598x_irq_state_t *state)
         printf("tps6598x: restoring TPS_REG_INT_MASK1 failed\n");
         return -1;
     }
-    udelay(TPS_WRITE_DELAY);
+
 #ifdef DEBUG
     int read;
     u8 tmp[CD3218B12_IRQ_WIDTH];
