@@ -8,19 +8,20 @@
 #include "utils.h"
 
 #define PASEMI_FIFO_TX       0x00
-#define PASEMI_TX_FLAG_READ  0x00000400
-#define PASEMI_TX_FLAG_STOP  0x00000200
-#define PASEMI_TX_FLAG_START 0x00000100
+#define PASEMI_TX_FLAG_READ  BIT(10)
+#define PASEMI_TX_FLAG_STOP  BIT(9)
+#define PASEMI_TX_FLAG_START BIT(8)
 
 #define PASEMI_FIFO_RX       0x04
-#define PASEMI_RX_FLAG_EMPTY 0x00000100
+#define PASEMI_RX_FLAG_EMPTY BIT(8)
 
 #define PASEMI_STATUS            0x14
-#define PASEMI_STATUS_XFER_READY 0x08000000
+#define PASEMI_STATUS_XFER_BUSY  BIT(28)
+#define PASEMI_STATUS_XFER_ENDED BIT(27)
 
 #define PASEMI_CONTROL          0x1c
-#define PASEMI_CONTROL_CLEAR_RX 0x00000400
-#define PASEMI_CONTROL_CLEAR_TX 0x00000200
+#define PASEMI_CONTROL_CLEAR_RX BIT(10)
+#define PASEMI_CONTROL_CLEAR_TX BIT(9)
 
 struct i2c_dev {
     uintptr_t base;
@@ -84,8 +85,10 @@ static size_t i2c_xfer_read(i2c_dev_t *dev, u8 *bfr, size_t len)
 
         while (val & PASEMI_RX_FLAG_EMPTY && --timeout)
             val = read32(dev->base + PASEMI_FIFO_RX);
-        if (val & PASEMI_RX_FLAG_EMPTY)
+        if (val & PASEMI_RX_FLAG_EMPTY) {
+            printf("i2c: timeout while reading (got %lu, expected %lu bytes)\n", i, len);
             return i;
+        }
 
         bfr[i] = val;
     }
@@ -109,10 +112,9 @@ static int i2c_xfer_write(i2c_dev_t *dev, u8 addr, u32 start, u32 stop, const u8
     if (!stop)
         return 0;
 
-    if (poll32(dev->base + PASEMI_STATUS, PASEMI_STATUS_XFER_READY, PASEMI_STATUS_XFER_READY,
-               1000)) {
+    if (poll32(dev->base + PASEMI_STATUS, PASEMI_STATUS_XFER_BUSY, 0, 1000)) {
         printf(
-            "i2c: timeout while waiting for PASEMI_STATUS_XFER_READY to clear after write xfer\n");
+            "i2c: timeout while waiting for PASEMI_STATUS_XFER_BUSY to clear after write xfer\n");
         return -1;
     }
 
@@ -139,7 +141,14 @@ size_t i2c_smbus_read(i2c_dev_t *dev, u8 addr, u8 reg, u8 *bfr, size_t len)
         printf("i2c: want to read %ld bytes from addr %d but device wants to send %d\n", len, addr,
                len_reply);
 
-    return i2c_xfer_read(dev, bfr, min(len, len_reply));
+    size_t read = i2c_xfer_read(dev, bfr, min(len, len_reply));
+
+    if (poll32(dev->base + PASEMI_STATUS, PASEMI_STATUS_XFER_BUSY, 0, 1000)) {
+        printf("i2c: timeout while waiting for PASEMI_STATUS_XFER_BUSY to clear after read xfer\n");
+        return -1;
+    }
+
+    return read;
 }
 
 int i2c_smbus_write(i2c_dev_t *dev, u8 addr, u8 reg, const u8 *bfr, size_t len)
