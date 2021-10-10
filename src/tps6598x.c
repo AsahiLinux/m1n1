@@ -82,7 +82,8 @@ int tps6598x_disable_irqs(tps6598x_dev_t *dev, tps6598x_irq_state_t *state)
     size_t read;
     int written;
     static const u8 zeros[CD3218B12_IRQ_WIDTH] = {0x00};
-    static const u8 ones[CD3218B12_IRQ_WIDTH] = {0xFF};
+    static const u8 ones[CD3218B12_IRQ_WIDTH] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                                                 0xFF, 0xFF, 0xFF, 0xFF};
 
     // store IntEvent 1 to restore it later
     read = i2c_smbus_read(dev->i2c, dev->addr, TPS_REG_INT_MASK1, state->int_mask1,
