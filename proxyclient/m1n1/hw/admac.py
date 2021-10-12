@@ -169,8 +169,8 @@ class ADMACTXChannel(Reloadable):
         self.desc_id = 0
 
     def reset(self):
-        self.regs.TX_CTL[self.ch].set(RESET_RINGS=1)
-        self.regs.TX_CTL[self.ch].set(RESET_RINGS=0)
+        self.regs.TX_CTL[self.ch].set(RESET_RINGS=1, CLEAR_OF_UF_COUNTERS=1)
+        self.regs.TX_CTL[self.ch].set(RESET_RINGS=0, CLEAR_OF_UF_COUNTERS=0)
 
     def enable(self):
         self.regs.TX_EN.val = 1 << self.ch
