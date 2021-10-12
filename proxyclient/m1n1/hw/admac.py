@@ -25,14 +25,15 @@ class R_RING(Register32):
 
 class R_CHAN_STATUS(Register32):
     # only raised if the descriptor had NOTIFY set
-    DESC_DONE = 1
+    DESC_DONE = 0
 
     DESC_RING_EMPTY = 4
     REPORT_RING_FULL = 5
 
     # cleared by writing ERR=1 either to TX_DESC_RING or TX_REPORT_RING
-    ERR = 7
+    RING_ERR = 6
 
+    UNK0 = 1
     UNK3 = 8
     UNK4 = 9
     UNK5 = 10
@@ -66,6 +67,11 @@ class ADMACRegs(RegMap):
 
     TX_CTL = (irange(0x8000, 16, 0x400)), R_CHAN_CONTROL
 
+    TX_UNK1 = (irange(0x8040, 16, 0x400)), Register32
+    TX_UNK2 = (irange(0x8054, 16, 0x400)), Register32
+
+    TX_RESIDUE = irange(0x8064, 16, 0x400), Register32
+
     TX_DESC_RING   = irange(0x8070, 16, 0x400), R_RING
     TX_REPORT_RING = irange(0x8074, 16, 0x400), R_RING
 
@@ -74,7 +80,7 @@ class ADMACRegs(RegMap):
 
     # per-channel, per-internal-line
     TX_STATUS  = (irange(0x8010, 16, 0x400), irange(0x0, 4, 0x4)), R_CHAN_STATUS
-    TX_INTMASK = (irange(0x8010, 16, 0x400), irange(0x0, 4, 0x4)), R_CHAN_STATUS
+    TX_INTMASK = (irange(0x8020, 16, 0x400), irange(0x0, 4, 0x4)), R_CHAN_STATUS
 
     # missing: RX variety of registers shifted by +0x200
 
@@ -82,6 +88,13 @@ class ADMACRegs(RegMap):
 class ADMACDescriptorFlags(Register32):
     # whether to raise DESC_DONE in TX_STATUS
     NOTIFY = 16
+
+    # whether to repeat this descriptor ad infinitum
+    #
+    # once a descriptor with this flag is loaded, any descriptors loaded
+    # afterwards are also repeated and nothing short of full power domain reset
+    # seems to revoke that behaviour. this looks like a HW bug.
+    REPEAT = 17
 
     # arbitrary ID propagated into reports
     DESC_ID = 7, 0
@@ -178,7 +191,7 @@ class ADMACTXChannel(Reloadable):
         for piece in desc.ser():
             self.regs.TX_DESC_WRITE[self.ch].val = piece
 
-    def submit(self, data):
+    def submit(self, data, **kwargs):
         assert self.dart is not None
 
         self.poll()
@@ -186,12 +199,12 @@ class ADMACTXChannel(Reloadable):
         buf, iova = self.p._get_buffer(len(data))
         self.iface.writemem(buf, data)
         self.submit_desc(ADMACDescriptor(
-            iova, len(data), DESC_ID=self.desc_id, NOTIFY=1,
+            iova, len(data), DESC_ID=self.desc_id, NOTIFY=1, **kwargs
         ))
         self.desc_id += 1
 
     def poll(self):
-        if self.regs.TX_STATUS[self.ch, 1].reg.ERR:
+        if self.regs.TX_STATUS[self.ch, 1].reg.RING_ERR:
             if self.p.debug:
                 print(f"TX_STATUS={self.regs.TX_STATUS[self.ch,1].reg} " + \
                       f"REPORT_RING={self.regs.TX_DESC_RING[self.ch]} " + \
