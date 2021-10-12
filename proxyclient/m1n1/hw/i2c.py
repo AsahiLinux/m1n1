@@ -72,6 +72,7 @@ class I2C:
 
     def write_reg(self, addr, reg, data):
         self.clear_fifos()
+        self.clear_status()
 
         self.regs.CONTROL.set(ENABLE=1, CLOCK=0x4)
         self.regs.FIFO_TX.set(DATA=addr << 1, START=1)
@@ -80,6 +81,7 @@ class I2C:
 
     def read_reg(self, addr, reg, nbytes):
         self.clear_fifos()
+        self.clear_status()
 
         self.regs.CONTROL.set(ENABLE=1, CLOCK=0x4)
         self.regs.FIFO_TX.set(DATA=addr << 1, START=1)
