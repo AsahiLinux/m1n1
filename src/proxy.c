@@ -289,6 +289,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_MMU_RESTORE:
             mmu_restore(request->args[0]);
             break;
+        case P_MMU_INIT_SECONDARY:
+            mmu_init_secondary(request->args[0]);
+            break;
 
         case P_XZDEC: {
             uint32_t destlen, srclen;

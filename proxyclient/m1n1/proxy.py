@@ -516,6 +516,7 @@ class M1N1Proxy(Reloadable):
     P_MMU_INIT = 0x30c
     P_MMU_DISABLE = 0x30d
     P_MMU_RESTORE = 0x30e
+    P_MMU_INIT_SECONDARY = 0x30f
 
     P_XZDEC = 0x400
     P_GZDEC = 0x401
@@ -864,6 +865,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_MMU_DISABLE)
     def mmu_restore(self, flags):
         self.request(self.P_MMU_RESTORE, flags)
+    def mmu_init_secondary(self, cpu):
+        self.request(self.P_MMU_INIT_SECONDARY, cpu)
 
 
     def xzdec(self, inbuf, insize, outbuf=0, outsize=0):

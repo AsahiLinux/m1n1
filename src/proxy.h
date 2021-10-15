@@ -73,6 +73,7 @@ typedef enum {
     P_MMU_INIT,
     P_MMU_DISABLE,
     P_MMU_RESTORE,
+    P_MMU_INIT_SECONDARY,
 
     P_XZDEC = 0x400, // Decompression and data processing ops
     P_GZDEC,
