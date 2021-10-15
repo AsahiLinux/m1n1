@@ -9,6 +9,7 @@
 #include "smp.h"
 #include "string.h"
 #include "utils.h"
+#include "xnuboot.h"
 
 #define PAGE_SIZE       0x4000
 #define CACHE_LINE_SIZE 64
@@ -46,36 +47,6 @@ static inline void write_sctlr(u64 val)
     msr(SCTLR_EL1, val);
     sysop("isb");
 }
-
-/*
- * https://armv8-ref.codingbelief.com/en/chapter_d4/d43_2_armv8_translation_table_level_3_descriptor_formats.html
- * PTE_TYPE:PTE_BLOCK indicates that the page table entry (PTE) points to a physical memory block
- * PTE_TYPE:PTE_TABLE indicates that the PTE points to another PTE
- * PTE_TYPE:PTE_PAGE indicates that the PTE points to a single page
- * PTE_FLAG_ACCESS is required to allow access to the memory region
- * PTE_MAIR_IDX sets the MAIR index to be used for this PTE
- */
-#define PTE_VALID       BIT(0)
-#define PTE_TYPE        BIT(1)
-#define PTE_BLOCK       0
-#define PTE_TABLE       1
-#define PTE_PAGE        1
-#define PTE_ACCESS      BIT(10)
-#define PTE_MAIR_IDX(i) ((i & 7) << 2)
-#define PTE_PXN         BIT(53)
-#define PTE_UXN         BIT(54)
-#define PTE_AP_RO       BIT(7)
-#define PTE_AP_EL0      BIT(6)
-
-#define PERM_RO_EL0  PTE_AP_EL0 | PTE_AP_RO | PTE_PXN | PTE_UXN
-#define PERM_RW_EL0  PTE_AP_EL0 | PTE_PXN | PTE_UXN
-#define PERM_RX_EL0  PTE_AP_EL0 | PTE_AP_RO
-#define PERM_RWX_EL0 PTE_AP_EL0
-
-#define PERM_RO  PTE_AP_RO | PTE_PXN | PTE_UXN
-#define PERM_RW  PTE_PXN | PTE_UXN
-#define PERM_RX  PTE_AP_RO | PTE_UXN
-#define PERM_RWX 0
 
 #define VADDR_L3_INDEX_BITS 11
 #define VADDR_L2_INDEX_BITS 11
@@ -171,9 +142,6 @@ enum SPRR_val_t {
  * contains a field to select one of these which will then be used
  * to select the corresponding memory access flags from MAIR.
  */
-#define MAIR_IDX_NORMAL        0
-#define MAIR_IDX_DEVICE_nGnRnE 1
-#define MAIR_IDX_DEVICE_nGnRE  2
 
 #define MAIR_SHIFT_NORMAL        (MAIR_IDX_NORMAL * 8)
 #define MAIR_SHIFT_DEVICE_nGnRnE (MAIR_IDX_DEVICE_nGnRnE * 8)
@@ -326,11 +294,16 @@ static void mmu_init_pagetables(void)
     mmu_pt_L0[1] = mmu_make_table_pte(&mmu_pt_L1[ENTRIES_PER_L1_TABLE >> 1]);
 }
 
-static void mmu_add_mapping(u64 from, u64 to, size_t size, u8 attribute_index, u64 perms)
+void mmu_add_mapping(u64 from, u64 to, size_t size, u8 attribute_index, u64 perms)
 {
     if (mmu_map(from, to | PTE_MAIR_IDX(attribute_index) | PTE_ACCESS | PTE_VALID | perms, size) <
         0)
         panic("Failed to add MMU mapping 0x%lx -> 0x%lx (0x%lx)\n", from, to, size);
+
+    sysop("dsb ishst");
+    sysop("tlbi vmalle1is");
+    sysop("dsb ish");
+    sysop("isb");
 }
 
 static void mmu_rm_mapping(u64 from, size_t size)
@@ -352,11 +325,17 @@ static void mmu_add_default_mappings(void)
     mmu_add_mapping(0x0680000000, 0x0680000000, 0x0020000000, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
     mmu_add_mapping(0x06a0000000, 0x06a0000000, 0x0060000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
 
+    uint64_t ram_size = cur_boot_args.mem_size + cur_boot_args.phys_base - 0x0800000000;
+
+    ram_size = ALIGN_DOWN(ram_size, 0x4000);
+
+    printf("Top of RAM: 0x%lx\n", ram_size);
+
     /*
-     * Create identity mapping for 16GB RAM from 0x08_0000_0000 to 0x0c_0000_0000
+     * Create identity mapping for RAM from 0x08_0000_0000
      * With SPRR enabled, this becomes RW.
      */
-    mmu_add_mapping(0x0800000000, 0x0800000000, 0x0400000000, MAIR_IDX_NORMAL, PERM_RWX);
+    mmu_add_mapping(0x0800000000, 0x0800000000, ram_size, MAIR_IDX_NORMAL, PERM_RWX);
 
     /*
      * Remap m1n1 executable code as RX.
@@ -376,25 +355,25 @@ static void mmu_add_default_mappings(void)
     }
 
     /*
-     * Create mapping for 16GB RAM from 0x88_0000_0000 to 0x8c_0000_0000,
+     * Create mapping for RAM from 0x88_0000_0000,
      * read/writable/exec by EL0 (but not executable by EL1)
      * With SPRR enabled, this becomes RX_EL0.
      */
-    mmu_add_mapping(0x0800000000 | REGION_RWX_EL0, 0x0800000000, 0x0400000000, MAIR_IDX_NORMAL,
+    mmu_add_mapping(0x0800000000 | REGION_RWX_EL0, 0x0800000000, ram_size, MAIR_IDX_NORMAL,
                     PERM_RWX_EL0);
     /*
-     * Create mapping for 16GB RAM from 0x98_0000_0000 to 0x9c_0000_0000,
+     * Create mapping for RAM from 0x98_0000_0000,
      * read/writable by EL0 (but not executable by EL1)
      * With SPRR enabled, this becomes RW_EL0.
      */
-    mmu_add_mapping(0x0800000000 | REGION_RW_EL0, 0x0800000000, 0x0400000000, MAIR_IDX_NORMAL,
+    mmu_add_mapping(0x0800000000 | REGION_RW_EL0, 0x0800000000, ram_size, MAIR_IDX_NORMAL,
                     PERM_RW_EL0);
     /*
-     * Create mapping for 16GB RAM from 0xa8_0000_0000 to 0xac_0000_0000,
+     * Create mapping for RAM from 0xa8_0000_0000,
      * read/executable by EL1
      * This allows executing from dynamic regions in EL1
      */
-    mmu_add_mapping(0x0800000000 | REGION_RX_EL1, 0x0800000000, 0x0400000000, MAIR_IDX_NORMAL,
+    mmu_add_mapping(0x0800000000 | REGION_RX_EL1, 0x0800000000, ram_size, MAIR_IDX_NORMAL,
                     PERM_RX_EL0);
 
     /*
