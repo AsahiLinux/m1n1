@@ -316,7 +316,7 @@ class HV(Reloadable):
 
                 print(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> {mode.name}.{'R' if read else ''}{'W' if read else ''} {ident}{rest}")
 
-        self.u.inst(0xd50c879f) # tlbi alle1
+        self.u.inst(0xd50c83df) # tlbi vmalls12e1is
         self.dirty_maps.clear()
 
     def shellwrap(self, func, description, update=None, needs_ret=False):
