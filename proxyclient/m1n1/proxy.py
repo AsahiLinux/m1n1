@@ -784,7 +784,7 @@ class M1N1Proxy(Reloadable):
         if addr & 3:
             raise AlignmentError()
         self.request(self.P_MASK32, addr, clear, set)
-    def mset64ask16(self, addr, clear, set):
+    def mask16(self, addr, clear, set):
         '''Clear select bits in 16 bit memory addr that are set
  in clear parameter, then set the bits in set parameter and return result'''
         if addr & 1:
