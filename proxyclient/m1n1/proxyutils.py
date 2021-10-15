@@ -428,9 +428,9 @@ class GuardedHeap:
             malloc, memalign, free = malloc.malloc, malloc.memalign, malloc.free
 
         self.ptrs = set()
-        self.malloc = malloc
-        self.memalign = memalign
-        self.free = free
+        self._malloc = malloc
+        self._memalign = memalign
+        self._free = free
 
     def __enter__(self):
         return self
@@ -440,22 +440,22 @@ class GuardedHeap:
         return False
 
     def malloc(self, sz):
-        ptr = self.malloc(sz)
+        ptr = self._malloc(sz)
         self.ptrs.add(ptr)
         return ptr
 
     def memalign(self, align, sz):
-        ptr = self.memalign(align, sz)
+        ptr = self._memalign(align, sz)
         self.ptrs.add(ptr)
         return ptr
 
     def free(self, ptr):
         self.ptrs.remove(ptr)
-        self.free(ptr)
+        self._free(ptr)
 
     def free_all(self):
         for ptr in self.ptrs:
-            self.free(ptr)
+            self._free(ptr)
         self.ptrs = set()
 
 def bootstrap_port(iface, proxy):
