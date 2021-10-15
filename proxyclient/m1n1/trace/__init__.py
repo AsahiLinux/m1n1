@@ -74,6 +74,12 @@ class Tracer(Reloadable):
     def init_state(self):
         pass
 
+    def hook_w(self, addr, val, width, **kwargs):
+        self.hv.u.write(addr, val, width)
+
+    def hook_r(self, addr, width, **kwargs):
+        return self.hv.u.read(addr, width)
+
     def evt_rw(self, evt, regmap=None, prefix=None):
         self._cache.update(evt.addr, evt.data)
         reg = rcls = None
@@ -112,8 +118,12 @@ class Tracer(Reloadable):
 
     def trace(self, start, size, mode, read=True, write=True, **kwargs):
         zone = irange(start, size)
-        self.hv.add_tracer(zone, self.ident, mode, self.evt_rw if read else None,
-                           self.evt_rw if write else None, **kwargs)
+        if mode == TraceMode.HOOK:
+            self.hv.add_tracer(zone, self.ident, mode, self.hook_r if read else None,
+                               self.hook_w if write else None, **kwargs)
+        else:
+            self.hv.add_tracer(zone, self.ident, mode, self.evt_rw if read else None,
+                               self.evt_rw if write else None, **kwargs)
 
     def trace_regmap(self, start, size, cls, mode=None, name=None, prefix=None):
         if mode is None:
