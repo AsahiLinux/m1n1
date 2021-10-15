@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "memory.h"
+#include "adt.h"
 #include "assert.h"
 #include "cpu_regs.h"
 #include "fb.h"
@@ -312,6 +313,40 @@ static void mmu_rm_mapping(u64 from, size_t size)
         panic("Failed to rm MMU mapping at 0x%lx (0x%lx)\n", from, size);
 }
 
+#define TZ_START(i) (0x6a0 + i * 0x10)
+#define TZ_END(i)   (0x6a4 + i * 0x10)
+#define TZ_REGS     4
+
+static void mmu_unmap_carveouts(void)
+{
+    int path[8];
+    int node = adt_path_offset_trace(adt, "/arm-io/mcc", path);
+    u64 mcc_tz_base;
+
+    if (node < 0) {
+        printf("MMU: MCC node not found!\n");
+        return;
+    }
+
+    if (adt_get_reg(adt, path, "reg", 1, &mcc_tz_base, NULL)) {
+        printf("MMU: Failed to get MCC reg property!\n");
+        return;
+    }
+
+    printf("MMU: TZ registers @ 0x%lx\n", mcc_tz_base);
+
+    for (int i = 0; i < TZ_REGS; i++) {
+        uint64_t start = ((uint64_t)read32(mcc_tz_base + TZ_START(i))) << 12;
+        uint64_t end = ((uint64_t)(1 + read32(mcc_tz_base + TZ_END(i)))) << 12;
+        if (start) {
+            start |= 0x0800000000;
+            end |= 0x0800000000;
+            printf("MMU: Unmapping TZ%d region at 0x%lx..0x%lx\n", i, start, end);
+            mmu_rm_mapping(start, end - start);
+        }
+    }
+}
+
 static void mmu_add_default_mappings(void)
 {
     /*
@@ -326,16 +361,20 @@ static void mmu_add_default_mappings(void)
     mmu_add_mapping(0x06a0000000, 0x06a0000000, 0x0060000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
 
     uint64_t ram_size = cur_boot_args.mem_size + cur_boot_args.phys_base - 0x0800000000;
-
     ram_size = ALIGN_DOWN(ram_size, 0x4000);
 
-    printf("Top of RAM: 0x%lx\n", ram_size);
+    printf("MMU: Top of normal RAM: 0x%lx\n", 0x0800000000 + ram_size);
 
     /*
      * Create identity mapping for RAM from 0x08_0000_0000
      * With SPRR enabled, this becomes RW.
+     * This range includes all real RAM, including carveouts
      */
-    mmu_add_mapping(0x0800000000, 0x0800000000, ram_size, MAIR_IDX_NORMAL, PERM_RWX);
+    mmu_add_mapping(0x0800000000, 0x0800000000, cur_boot_args.mem_size_actual, MAIR_IDX_NORMAL,
+                    PERM_RWX);
+
+    /* Unmap carveout regions */
+    mmu_unmap_carveouts();
 
     /*
      * Remap m1n1 executable code as RX.
