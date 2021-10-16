@@ -17,7 +17,7 @@ from m1n1.hw.admac import ADMAC, ADMACRegs
 from m1n1.hw.i2c import I2C
 
 # this here is an embedded console so that one can poke while
-# the descriptors keep being filled-in
+# the descriptors keep being filled in
 class PollingConsole(code.InteractiveConsole):
     def __init__(self, locals=None, filename="<console>"):
         global patch_stdout, PromptSession, FileHistory
@@ -123,49 +123,35 @@ tx_chan = admac.tx[2]
 tx_chan.disable()
 tx_chan.reset()
 
-#admac.regs.UNK_CONTROL.val = 1
-#admac.regs.UNK_CONTROL.val = 0
-
 tx_chan.poll() # read stale reports
 
 
-def pmgr_reset():
-    # pmgr-related, unknown meaning,
-    # needs to be written for the speaker-amp IC to respond over I2C
-    p.write32(0x23d10c000, 0)
-    p.write32(0x23d10c004, 3)
-    p.write32(0x23d10c008, 0)
-    p.write32(0x23d10c00c, 3)
-pmgr_reset()
+admac.regs.TX_UNK1[2].val = 0x2 # stream width
+admac.regs.TX_UNK2[2].val = 0xc0_0060 # burst size
 
 
-mca_switch_base = 0x2_3840_0000
+mca_switch0_base = 0x2_3840_0000 # size: 0x1_8000
+mca_switch1_base = 0x2_3830_0000 # size: 0x3_0000
 
-for off in [0x0, 0x100, 0x300, 0x4000, 0x4100, 0x4300]:
-    p.write32(mca_switch_base + off, 0x0)
-    p.write32(mca_switch_base + off, 0x2)
+for off in [0x0, 0x100, 0x4000, 0x4100]:
+    p.write32(mca_switch0_base + off, 0x0)
+    p.write32(mca_switch0_base + off, 0x2)
 
 
-p.write32(0x238208840, 0x22)
-p.write32(0x238208854, 0xc00060)
-p.write32(0x238208854, 0xc00060)
+p.write32(mca_switch0_base + 0x4104, 0x0)
+p.write32(mca_switch0_base + 0x4108, 0x0)
+p.write32(mca_switch0_base + 0x410c, 0xfe)
 
-p.write32(mca_switch_base + 0x4004, 0x100)
-p.write32(mca_switch_base + 0x4104, 0x200)
-p.write32(mca_switch_base + 0x4108, 0x0)
-p.write32(mca_switch_base + 0x410c, 0xfe)
-p.write32(mca_switch_base + 0x8004, 0x100)
-p.write32(mca_switch_base + 0xc004, 0x100)
-
-p.write32(0x238308000, 0x102048)
+p.write32(mca_switch1_base + 0x8000, 0x102048)
 # bits 0x0000e0 influence clock
 #      0x00000f influence sample serialization
 
+# clock
 p.write32(0x23b0400d8, 0x06000000) # 48 ksps, zero out for ~96 ksps
 
-p.write32(mca_switch_base + 0x0600, 0xe) # 0x8 or have zeroed samples, 0x6 or have no clock
-p.write32(mca_switch_base + 0x0604, 0x200) # sensitive in mask 0xf00, any other value disables clock
-p.write32(mca_switch_base + 0x0608, 0x4) # 0x4 or zeroed samples
+p.write32(mca_switch0_base + 0x0600, 0xe) # 0x8 or have zeroed samples, 0x6 or have no clock
+p.write32(mca_switch0_base + 0x0604, 0x200) # sensitive in mask 0xf00, any other value disables clock
+p.write32(mca_switch0_base + 0x0608, 0x4) # 0x4 or zeroed samples
 
 # toggle the GPIO line driving the speaker-amp IC reset
 p.write32(0x23c1002d4, 0x76a02) # invoke reset
@@ -180,14 +166,13 @@ tx_chan.enable()
 # the associated enable bit cleared, or they cause SErrors
 def mca_switch_unk_disable():
     for off in [0x4000, 0x4100, 0x4300]:
-        p.write32(mca_switch_base + off, 0x0)
+        p.write32(mca_switch0_base + off, 0x0)
 
 def mca_switch_unk_enable():
     for off in [0x4000, 0x4100, 0x4300]:
-        p.write32(mca_switch_base + off, 0x1)
+        p.write32(mca_switch0_base + off, 0x1)
 
-p.write32(mca_switch_base + 0x4104, 0x202)
-p.write32(mca_switch_base + 0x4208, 0x3107)
+p.write32(mca_switch0_base + 0x4104, 0x2)
 mca_switch_unk_enable()
 
 
@@ -220,7 +205,9 @@ with (PollingConsole(locals()) if args.console else NoConsole()) as cons:
         while cons.poll():
             while (not tx_chan.can_submit()) and cons.poll():
                 tx_chan.poll()
-                pass
+
+            if not cons.poll():
+                break
 
             tx_chan.submit(inputf.read(args.bufsize))
     except KeyboardInterrupt:
