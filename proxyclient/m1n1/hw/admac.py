@@ -123,7 +123,7 @@ class ADMACDescriptor(Reloadable):
         return ADMACDescriptor(
             seq[0] | seq[1] << 32, # addr
             seq[2], # length (in bytes)
-            seq[3] # flags
+            **ADMACDescriptorFlags(seq[3]).fields
         )
 
 
