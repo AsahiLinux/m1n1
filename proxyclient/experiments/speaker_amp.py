@@ -192,10 +192,10 @@ mca_switch_unk_enable()
 
 
 # by ADT and leaked schematic, i2c1 contains TAS5770L,
-# which is not a public part. but there's e.g. TAS2110
+# which is not a public part. but there's e.g. TAS2770
 # with similar registers
 #
-# https://www.ti.com/product/TAS2110
+# https://www.ti.com/product/TAS2770
 #
 # if the speaker-amp IC loses clock on the serial sample input,
 # it automatically switches to software shutdown.
