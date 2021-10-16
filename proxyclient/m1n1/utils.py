@@ -239,7 +239,7 @@ class Register(Reloadable, metaclass=RegisterMeta):
         return {k: getattr(self, k) for k in self._fields_list}
 
     def str_fields(self):
-        return f"{', '.join(f'{k}={self._field_val(k)}' for k in self._fields_list)}"
+        return ', '.join(f'{k}={self._field_val(k)}' for k in self._fields_list)
 
     def __str__(self):
         return f"0x{self._value:x} ({self.str_fields()})"
