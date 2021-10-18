@@ -404,6 +404,10 @@ struct vector_args {
     bool restore_logo;
 };
 
+extern u32 board_id, chip_id;
+
+#define T8103 0x8103
+
 extern struct vector_args next_stage;
 
 void deep_wfi(void);
