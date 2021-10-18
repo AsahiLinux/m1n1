@@ -135,6 +135,35 @@ static void *load_kernel(void *p, size_t size)
     }
 }
 
+#define MAX_VAR_NAME 32
+#define MAX_VAR_SIZE 1024
+
+#define IS_VAR(x) !strncmp((char *)*p, x, strlen(x))
+
+static bool check_var(u8 **p)
+{
+    char *val = memchr(*p, '=', MAX_VAR_NAME + 1);
+    if (!val)
+        return false;
+
+    val++;
+
+    char *end = memchr(val, '\n', MAX_VAR_SIZE + 1);
+    if (!end)
+        return false;
+
+    if (IS_VAR("boot-args=")) {
+        *end = 0;
+        kboot_set_bootargs(val);
+    } else {
+        return false;
+    }
+
+    printf("Found a variable at %p: %s\n", *p, (char *)*p);
+    *p = (u8 *)(end + 1);
+    return true;
+}
+
 static void *load_one_payload(void *start, size_t size)
 {
     u8 *p = start;
@@ -157,6 +186,8 @@ static void *load_one_payload(void *start, size_t size)
     } else if (!memcmp(p + 0x38, kernel_magic, sizeof kernel_magic)) {
         printf("Found a kernel at %p\n", p);
         return load_kernel(p, size);
+    } else if (check_var(&p)) {
+        return p;
     } else if (!memcmp(p, empty, sizeof empty)) {
         printf("No more payloads at %p\n", p);
         return NULL;
