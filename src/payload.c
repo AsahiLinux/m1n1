@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "payload.h"
+#include "adt.h"
 #include "assert.h"
 #include "heapblock.h"
 #include "kboot.h"
@@ -21,6 +22,7 @@ static const u8 kernel_magic[] = {'A', 'R', 'M', 0x64};   // at 0x38
 static const u8 cpio_magic[] = {'0', '7', '0', '7', '0'}; // '1' or '2' next
 static const u8 empty[] = {0, 0, 0, 0};
 
+static char expect_compatible[256];
 static struct kernel_header *kernel = NULL;
 static void *fdt = NULL;
 
@@ -91,9 +93,12 @@ static void *decompress_xz(void *p, size_t size)
 
 static void *load_fdt(void *p, size_t size)
 {
-    fdt = p;
-    assert(!size || size == fdt_totalsize(fdt));
-    return ((u8 *)p) + fdt_totalsize(fdt);
+    if (fdt_node_check_compatible(p, 0, expect_compatible) == 0) {
+        printf("DT matches this target (%s)\n", expect_compatible);
+        fdt = p;
+    }
+    assert(!size || size == fdt_totalsize(p));
+    return ((u8 *)p) + fdt_totalsize(p);
 }
 
 static void *load_cpio(void *p, size_t size)
@@ -199,6 +204,20 @@ static void *load_one_payload(void *start, size_t size)
 
 int payload_run(void)
 {
+    const char *target = adt_getprop(adt, 0, "target-type", NULL);
+    if (target) {
+        strcpy(expect_compatible, "apple,");
+        char *p = expect_compatible + strlen(expect_compatible);
+        while (*target && p != expect_compatible + sizeof(expect_compatible) - 1) {
+            *p++ = tolower(*target++);
+        }
+        *p = 0;
+        printf("Devicetree compatible value: %s\n", expect_compatible);
+    } else {
+        printf("Cannot find target type! %p %p\n", target, adt);
+        return -1;
+    }
+
     void *p = _payload_start;
 
     while (p)
