@@ -185,7 +185,7 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
         case SYSREG_ISS(SYS_IMP_APL_IPI_RR_GLOBAL_EL1):
             assert(!is_read);
             u64 mpidr = (regs[rt] & 0xff) | ((regs[rt] & 0xff0000) >> 8);
-            msr(SYS_IMP_APL_IPI_RR_LOCAL_EL1, regs[rt]);
+            msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, regs[rt]);
             for (int i = 0; i < MAX_CPUS; i++) {
                 if (mpidr == (smp_get_mpidr(i) & 0xffff))
                     ipi_queued[i] = true;
