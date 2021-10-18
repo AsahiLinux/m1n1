@@ -19,4 +19,20 @@ size_t strnlen(const char *s, size_t n);
 char *strchr(const char *s, int c);
 char *strrchr(const char *s, int c);
 
+static inline int tolower(int c)
+{
+    if (c >= 'A' && c <= 'Z')
+        return c - 'A' + 'a';
+    else
+        return c;
+}
+
+static inline int toupper(int c)
+{
+    if (c >= 'a' && c <= 'z')
+        return c - 'a' + 'A';
+    else
+        return c;
+}
+
 #endif
