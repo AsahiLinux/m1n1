@@ -4,6 +4,7 @@
 
 #include "adt.h"
 #include "aic.h"
+#include "cpufreq.h"
 #include "exception.h"
 #include "fb.h"
 #include "heapblock.h"
@@ -91,6 +92,7 @@ void m1n1_main(void)
     aic_init();
     wdt_disable();
     pmgr_init();
+    cpufreq_init();
 
     printf("Initialization complete.\n");
 

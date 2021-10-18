@@ -41,6 +41,7 @@ OBJECTS := \
 	aic.o \
 	bootlogo_128.o bootlogo_256.o \
 	chickens.o \
+	cpufreq.o \
 	dart.o \
 	exception.o exception_asm.o \
 	fb.o font.o font_retina.o \
