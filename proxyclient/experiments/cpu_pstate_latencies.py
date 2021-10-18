@@ -71,7 +71,7 @@ timelog:
     sub x1, x1, #1
     cbnz x1, 1b
     
-    
+    ret
 """, code)
 iface.writemem(code, util.data)
 p.dc_cvau(code, len(util.data))
