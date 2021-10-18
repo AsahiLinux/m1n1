@@ -14,15 +14,15 @@
 // Kernels must be 2MB aligned
 #define KERNEL_ALIGN (2 << 20)
 
-const u8 gz_magic[] = {0x1f, 0x8b};
-const u8 xz_magic[] = {0xfd, '7', 'z', 'X', 'Z', 0x00};
-const u8 fdt_magic[] = {0xd0, 0x0d, 0xfe, 0xed};
-const u8 kernel_magic[] = {'A', 'R', 'M', 0x64};   // at 0x38
-const u8 cpio_magic[] = {'0', '7', '0', '7', '0'}; // '1' or '2' next
-const u8 empty[] = {0, 0, 0, 0};
+static const u8 gz_magic[] = {0x1f, 0x8b};
+static const u8 xz_magic[] = {0xfd, '7', 'z', 'X', 'Z', 0x00};
+static const u8 fdt_magic[] = {0xd0, 0x0d, 0xfe, 0xed};
+static const u8 kernel_magic[] = {'A', 'R', 'M', 0x64};   // at 0x38
+static const u8 cpio_magic[] = {'0', '7', '0', '7', '0'}; // '1' or '2' next
+static const u8 empty[] = {0, 0, 0, 0};
 
-struct kernel_header *kernel = NULL;
-void *fdt = NULL;
+static struct kernel_header *kernel = NULL;
+static void *fdt = NULL;
 
 static void *load_one_payload(void *start, size_t size);
 
