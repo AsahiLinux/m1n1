@@ -113,35 +113,49 @@ PMGREvents = GreedyRange(Struct(
 
 DEV_PROPERTIES = {
     "pmgr": {
-        "clusters": GreedyRange(Int32ul),
-        "ps-regs": PMGRPSRegs,
-        "pwrgate-regs": PMGRPWRGateRegs,
-        "devices": PMGRDevices,
-        "power-domains": PMGRPowerDomains,
-        "clocks": PMGRClocks,
-        "device-bridges": PMGRDeviceBridges,
-        "voltage-states*": GreedyRange(Int32ul),
-        "events": PMGREvents,
+        "pmgr1,t8103": {
+            "devices": PMGRDevices,
+        },
+        "*": {
+            "clusters": GreedyRange(Int32ul),
+            "ps-regs": PMGRPSRegs,
+            "pwrgate-regs": PMGRPWRGateRegs,
+            "power-domains": PMGRPowerDomains,
+            "clocks": PMGRClocks,
+            "device-bridges": PMGRDeviceBridges,
+            "voltage-states*": GreedyRange(Int32ul),
+            "events": PMGREvents,
+        }
     },
     "clpc": {
-        "events": GreedyRange(Int32ul),
-        "devices": GreedyRange(Int32ul),
+        "*": {
+            "events": GreedyRange(Int32ul),
+            "devices": GreedyRange(Int32ul),
+        }
     },
     "soc-tuner": {
-        "device-set-*": GreedyRange(Int32ul),
-        "mcc-configs": GreedyRange(Int32ul),
+        "*": {
+            "device-set-*": GreedyRange(Int32ul),
+            "mcc-configs": GreedyRange(Int32ul),
+        }
     },
     "mcc": {
-        "dramcfg-data": Array(2, Hex(Int32ul)),
-        "config-data": GreedyRange(Int32ul),
+        "*": {
+            "dramcfg-data": GreedyRange(Int32ul),
+            "config-data": GreedyRange(Int32ul),
+        }
     },
     "stockholm-spmi": {
-        "required-functions": ADTStringList,
+        "*": {
+            "required-functions": ADTStringList,
+        },
     },
     "arm-io": {
-        "clock-frequencies": GreedyRange(Int32ul),
-        "clock-frequencies-regs": GreedyRange(Hex(Int64ul)),
-        "clock-frequencies-nclk": GreedyRange(Int32ul),
+        "*": {
+            "clock-frequencies": GreedyRange(Int32ul),
+            "clock-frequencies-regs": GreedyRange(Hex(Int64ul)),
+            "clock-frequencies-nclk": GreedyRange(Int32ul),
+        },
     },
 }
 
@@ -151,12 +165,31 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
     if is_template:
         t = CString("ascii")
 
-    dev_props = DEV_PROPERTIES.get(path, DEV_PROPERTIES.get(node_name, {}))
+    dev_props = DEV_PROPERTIES.get(path, DEV_PROPERTIES.get(node_name, None))
 
-    for k, pt in dev_props.items():
-        if fnmatch.fnmatch(name, k):
-            t = pt
-            break
+    possible_match = False
+    if dev_props:
+        for compat_match, cprops in dev_props.items():
+            for k, pt in cprops.items():
+                if fnmatch.fnmatch(name, k):
+                    possible_match = True
+                    break
+
+    if possible_match:
+        try:
+            compat = node.compatible[0]
+        except AttributeError:
+            return None, v
+
+        for compat_match, cprops in dev_props.items():
+            if fnmatch.fnmatch(compat, compat_match):
+                for k, pt in cprops.items():
+                    if fnmatch.fnmatch(name, k):
+                        t = pt
+                        break
+                else:
+                    continue
+                break
 
     if v == b'' or v is None:
         return None, None
@@ -184,7 +217,7 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
     elif name == "ranges":
         try:
             ac, sc = node.address_cells, node.size_cells
-        except KeyError:
+        except AttributeError:
             return None, v
         pac, _ = node._parent.address_cells, node._parent.size_cells
         at = Hex(Int64ul) if ac == 2 else Array(ac, Hex(Int32ul))
@@ -267,7 +300,7 @@ class ADTNode:
                     self._types[p.name] = t, is_template
                     self._properties[p.name] = v
                 except Exception as e:
-                    print(f"Exception parsing {path}.{p.name} value {p.value.hex()}:")
+                    print(f"Exception parsing {path}.{p.name} value {p.value.hex()}:", file=sys.stderr)
                     raise
 
             # Second pass
@@ -352,15 +385,24 @@ class ADTNode:
 
     @property
     def address_cells(self):
-        return self._properties["#address-cells"]
+        try:
+            return self._properties["#address-cells"]
+        except KeyError:
+            raise AttributeError("#address-cells")
 
     @property
     def size_cells(self):
-        return self._properties["#size-cells"]
+        try:
+            return self._properties["#size-cells"]
+        except KeyError:
+            raise AttributeError("#size-cells")
 
     @property
     def interrupt_cells(self):
-        return self._properties["#interrupt-cells"]
+        try:
+            return self._properties["#interrupt-cells"]
+        except KeyError:
+            raise AttributeError("#interrupt-cells")
 
     def _fmt_prop(self, k, v):
         t, is_template = self._types[k]
