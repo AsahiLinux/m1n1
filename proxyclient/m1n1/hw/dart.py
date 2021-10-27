@@ -2,6 +2,7 @@
 
 import struct
 
+from enum import IntEnum
 from ..utils import *
 from ..malloc import Heap
 
@@ -11,6 +12,8 @@ class R_ERROR(Register32):
     FLAG = 31
     STREAM = 27, 24
     CODE = 23, 0
+    NO_DAPF_MATCH = 11
+    WRITE = 10
     READ_FAULT = 4
     WRITE_FAULT = 3
     NO_PTE = 2
@@ -44,6 +47,9 @@ class PTE(Register64):
 class R_CONFIG(Register32):
     LOCK = 15
 
+class R_DAPF_LOCK(Register32):
+    LOCK = 0
+
 class DARTRegs(RegMap):
     STREAM_COMMAND  = 0x20, R_STREAM_COMMAND
     STREAM_SELECT   = 0x34, Register32
@@ -53,6 +59,7 @@ class DARTRegs(RegMap):
     CONFIG          = 0x60, R_CONFIG
     REMAP           = irange(0x80, 4, 4), R_REMAP
 
+    DAPF_LOCK       = 0xf0, R_DAPF_LOCK
     UNK1            = 0xf8, Register32
     ENABLED_STREAMS = 0xfc, Register32
 
@@ -272,11 +279,18 @@ class DART(Reloadable):
             for j in range(4):
                 self.regs.TTBR[i, j].reg = R_TTBR(VALID = 0)
 
+        self.regs.ERROR.val = 0xffffffff
         self.regs.UNK1.val = 0
         self.regs.ENABLED_STREAMS.val = 0
         self.enabled_streams = 0
 
         self.invalidate_streams()
+
+    def show_error(self):
+        if self.regs.ERROR.reg.FLAG:
+            print(f"ERROR: {self.regs.ERROR.reg!s}")
+            print(f"ADDR: {self.regs.ERROR_ADDR_HI.val:#x}:{self.regs.ERROR_ADDR_LO.val:#x}")
+            self.regs.ERROR.val = 0xffffffff
 
     def invalidate_streams(self, streams=0xffffffff):
         self.regs.STREAM_SELECT.val = streams
