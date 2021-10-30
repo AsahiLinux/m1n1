@@ -460,17 +460,23 @@ class GuardedHeap:
 
 def bootstrap_port(iface, proxy):
     to = iface.dev.timeout
-    do_baud = True
+    iface.dev.timeout = 0.15
     try:
         do_baud = proxy.iodev_whoami() == IODEV.UART
     except ProxyCommandError:
-        pass
+        # Old m1n1 version -- assume non-USB serial link, force baudrate adjust
+        do_baud = True
+    except UartTimeout:
+        # Assume the receiving end is already at 1500000
+        iface.dev.baudrate = 1500000
+        do_baud = False
+
     if do_baud:
         try:
-            iface.dev.timeout = 0.15
             iface.nop()
             proxy.set_baud(1500000)
         except UartTimeout:
+            # May fail even if the setting did get applied; checked by the .nop next
             iface.dev.baudrate = 1500000
 
     iface.nop()
