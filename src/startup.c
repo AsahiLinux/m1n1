@@ -79,24 +79,26 @@ void _start_c(void *boot_args, void *base)
         msr(TPIDR_EL1, 0);
 
     memset64(_bss_start, 0, _bss_end - _bss_start);
-    uart_putchar('s');
-    uart_init();
-    uart_putchar('c');
-    uart_puts(": Initializing");
+    boot_args_addr = (u64)boot_args;
+    memcpy(&cur_boot_args, boot_args, sizeof(cur_boot_args));
+
+    adt =
+        (void *)(((u64)cur_boot_args.devtree) - cur_boot_args.virt_base + cur_boot_args.phys_base);
+
+    int ret = uart_init();
+    if (ret < 0) {
+        debug_putc('!');
+    }
+
+    uart_puts("Initializing");
     printf("CPU init... ");
     const char *type = init_cpu();
     printf("CPU: %s\n\n", type);
 
     printf("boot_args at %p\n", boot_args);
 
-    boot_args_addr = (u64)boot_args;
-    memcpy(&cur_boot_args, boot_args, sizeof(cur_boot_args));
-
     dump_boot_args(&cur_boot_args);
     printf("\n");
-
-    adt =
-        (void *)(((u64)cur_boot_args.devtree) - cur_boot_args.virt_base + cur_boot_args.phys_base);
 
     exception_initialize();
     gxf_init();

@@ -1,13 +1,11 @@
 /* SPDX-License-Identifier: MIT */
 
-#define UART_BASE 0x235200000
+#if defined(EARLY_UART) && !defined(EARLY_UART_BASE)
+#error EARLY_UART_BASE must be defined to the UART base address
+#endif
+
 #define UTRSTAT 0x010
 #define UTXH 0x020
-
-#define WDT_BASE 0x23d2b0000
-#define WDT_COUNT 0x10
-#define WDT_ALARM 0x14
-#define WDT_CTL 0x1c
 
 .extern _start_c
 .extern _stack_bot
@@ -17,6 +15,7 @@
 .extern _v_sp0_serr
 .extern _reset_stack
 .extern _cpu_reset_c
+.extern wdt_reboot
 
 .section .init, "ax"
 
@@ -154,13 +153,15 @@ cpu_reset:
 .globl debug_putc
 .type debug_putc, @function
 debug_putc:
-    ldr x1, =UART_BASE
+#ifdef EARLY_UART
+    ldr x1, =EARLY_UART_BASE
 
 1:
     ldr w2, [x1, UTRSTAT]
     tst w2, #2
     beq 1b
     str w0, [x1, UTXH]
+#endif
     ret
 
 .globl reboot
@@ -171,13 +172,7 @@ reboot:
     beq 1f
     hvc #0
 1:
-    ldr x1, =WDT_BASE
-    mov w0, #0x100000
-    str w0, [x1, #WDT_ALARM]
-    mov w0, #0
-    str w0, [x1, #WDT_COUNT]
-    mov w0, #4
-    str w0, [x1, #WDT_CTL]
+    bl wdt_reboot
     b .
 
 .pool

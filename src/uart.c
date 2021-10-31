@@ -2,38 +2,56 @@
 
 #include <stdarg.h>
 
-#include "uart.h"
+#include "adt.h"
 #include "iodev.h"
 #include "types.h"
+#include "uart.h"
 #include "uart_regs.h"
 #include "utils.h"
 #include "vsprintf.h"
 
 #define UART_CLOCK 24000000
 
-#define UART_BASE 0x235200000L
+static u64 uart_base = 0;
 
-void *pxx = uart_init;
-
-void uart_init(void)
+int uart_init(void)
 {
-    /* keep UART config from iBoot */
+    int path[8];
+    int node = adt_path_offset_trace(adt, "/arm-io/uart0", path);
+
+    if (node < 0) {
+        printf("!!! UART node not found!\n");
+        return -1;
+    }
+
+    if (adt_get_reg(adt, path, "reg", 0, &uart_base, NULL)) {
+        printf("!!! Failed to get UART reg property!\n");
+        return -1;
+    }
+
+    return 0;
 }
 
 void uart_putbyte(u8 c)
 {
-    while (!(read32(UART_BASE + UTRSTAT) & UTRSTAT_TXBE))
+    if (!uart_base)
+        return;
+
+    while (!(read32(uart_base + UTRSTAT) & UTRSTAT_TXBE))
         ;
 
-    write32(UART_BASE + UTXH, c);
+    write32(uart_base + UTXH, c);
 }
 
 u8 uart_getbyte(void)
 {
-    while (!(read32(UART_BASE + UTRSTAT) & UTRSTAT_RXD))
+    if (!uart_base)
+        return 0;
+
+    while (!(read32(uart_base + UTRSTAT) & UTRSTAT_RXD))
         ;
 
-    return read32(UART_BASE + URXH);
+    return read32(uart_base + URXH);
 }
 
 void uart_putchar(u8 c)
@@ -80,19 +98,28 @@ size_t uart_read(void *buf, size_t count)
 
 void uart_setbaud(int baudrate)
 {
+    if (!uart_base)
+        return;
+
     uart_flush();
-    write32(UART_BASE + UBRDIV, ((UART_CLOCK / baudrate + 7) / 16) - 1);
+    write32(uart_base + UBRDIV, ((UART_CLOCK / baudrate + 7) / 16) - 1);
 }
 
 void uart_flush(void)
 {
-    while (!(read32(UART_BASE + UTRSTAT) & UTRSTAT_TXE))
+    if (!uart_base)
+        return;
+
+    while (!(read32(uart_base + UTRSTAT) & UTRSTAT_TXE))
         ;
 }
 
 void uart_clear_irqs(void)
 {
-    write32(UART_BASE + UTRSTAT, UTRSTAT_TXTHRESH | UTRSTAT_RXTHRESH | UTRSTAT_RXTO);
+    if (!uart_base)
+        return;
+
+    write32(uart_base + UTRSTAT, UTRSTAT_TXTHRESH | UTRSTAT_RXTHRESH | UTRSTAT_RXTO);
 }
 
 int uart_printf(const char *fmt, ...)
@@ -119,7 +146,11 @@ static bool uart_iodev_can_write(void *opaque)
 static ssize_t uart_iodev_can_read(void *opaque)
 {
     UNUSED(opaque);
-    return (read32(UART_BASE + UTRSTAT) & UTRSTAT_RXD) ? 1 : 0;
+
+    if (!uart_base)
+        return 0;
+
+    return (read32(uart_base + UTRSTAT) & UTRSTAT_RXD) ? 1 : 0;
 }
 
 static ssize_t uart_iodev_read(void *opaque, void *buf, size_t len)

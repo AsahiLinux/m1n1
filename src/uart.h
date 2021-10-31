@@ -5,7 +5,7 @@
 
 #include "types.h"
 
-void uart_init(void);
+int uart_init(void);
 
 void uart_putbyte(u8 c);
 u8 uart_getbyte(void);
