@@ -1248,8 +1248,9 @@ class HV(Reloadable):
         self.entry = macho.entry - macho.vmin + guest_base
 
         print(f"Mapping guest physical memory...")
-        self.map_hw(0x800000000, 0x800000000, self.u.ba.phys_base - 0x800000000)
-        self.map_hw(phys_base, phys_base, self.u.ba.mem_size_actual - phys_base + 0x800000000)
+        ram_base = self.u.ba.phys_base & ~0xffffffff
+        #self.map_hw(ram_base, ram_base, self.u.ba.phys_base - ram_base)
+        self.map_hw(phys_base, phys_base, self.u.ba.mem_size_actual - phys_base + ram_base)
 
         print(f"Loading kernel image (0x{len(image):x} bytes)...")
         self.u.compressed_writemem(guest_base, image, True)
