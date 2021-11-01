@@ -85,7 +85,7 @@ static void smp_start_cpu(int index, int cluster, int core, u64 rvbar, u64 cpu_s
 
     // Some kind of system level startup/status bit
     // Without this, IRQs don't work
-    write32(cpu_start_base + 0x4, 1 << index);
+    write32(cpu_start_base + 0x4, 1 << (4 * cluster + core));
 
     // Actually start the core
     write32(cpu_start_base + 0x8 + 4 * cluster, 1 << core);
