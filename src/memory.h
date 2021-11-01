@@ -7,8 +7,8 @@
 #include "types.h"
 
 #define REGION_RWX_EL0 0x8000000000
-#define REGION_RW_EL0  0x9000000000
-#define REGION_RX_EL1  0xa000000000
+#define REGION_RW_EL0  0xa000000000
+#define REGION_RX_EL1  0xc000000000
 
 /*
  * https://armv8-ref.codingbelief.com/en/chapter_d4/d43_2_armv8_translation_table_level_3_descriptor_formats.html
@@ -47,6 +47,8 @@
 #ifndef __ASSEMBLER__
 
 #include "utils.h"
+
+extern uint64_t ram_base;
 
 void ic_ivau_range(void *addr, size_t length);
 void dc_ivac_range(void *addr, size_t length);

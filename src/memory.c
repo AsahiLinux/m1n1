@@ -37,6 +37,8 @@ extern u8 _stack_top[];
 extern u8 gl1_stack[GL_STACK_SIZE];
 extern u8 gl2_stack[MAX_CPUS][GL_STACK_SIZE];
 
+uint64_t ram_base = 0;
+
 static inline u64 read_sctlr(void)
 {
     sysop("isb");
@@ -339,8 +341,8 @@ static void mmu_unmap_carveouts(void)
         uint64_t start = ((uint64_t)read32(mcc_tz_base + TZ_START(i))) << 12;
         uint64_t end = ((uint64_t)(1 + read32(mcc_tz_base + TZ_END(i)))) << 12;
         if (start) {
-            start |= 0x0800000000;
-            end |= 0x0800000000;
+            start |= ram_base;
+            end |= ram_base;
             printf("MMU: Unmapping TZ%d region at 0x%lx..0x%lx\n", i, start, end);
             mmu_rm_mapping(start, end - start);
         }
@@ -360,18 +362,19 @@ static void mmu_add_default_mappings(void)
     mmu_add_mapping(0x0680000000, 0x0680000000, 0x0020000000, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
     mmu_add_mapping(0x06a0000000, 0x06a0000000, 0x0060000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
 
-    uint64_t ram_size = cur_boot_args.mem_size + cur_boot_args.phys_base - 0x0800000000;
+    ram_base = ALIGN_DOWN(cur_boot_args.phys_base, BIT(32));
+    uint64_t ram_size = cur_boot_args.mem_size + cur_boot_args.phys_base - ram_base;
     ram_size = ALIGN_DOWN(ram_size, 0x4000);
 
-    printf("MMU: Top of normal RAM: 0x%lx\n", 0x0800000000 + ram_size);
+    printf("MMU: RAM base: 0x%lx\n", ram_base);
+    printf("MMU: Top of normal RAM: 0x%lx\n", ram_base + ram_size);
 
     /*
      * Create identity mapping for RAM from 0x08_0000_0000
      * With SPRR enabled, this becomes RW.
      * This range includes all real RAM, including carveouts
      */
-    mmu_add_mapping(0x0800000000, 0x0800000000, cur_boot_args.mem_size_actual, MAIR_IDX_NORMAL,
-                    PERM_RWX);
+    mmu_add_mapping(ram_base, ram_base, cur_boot_args.mem_size_actual, MAIR_IDX_NORMAL, PERM_RWX);
 
     /* Unmap carveout regions */
     mmu_unmap_carveouts();
@@ -398,22 +401,19 @@ static void mmu_add_default_mappings(void)
      * read/writable/exec by EL0 (but not executable by EL1)
      * With SPRR enabled, this becomes RX_EL0.
      */
-    mmu_add_mapping(0x0800000000 | REGION_RWX_EL0, 0x0800000000, ram_size, MAIR_IDX_NORMAL,
-                    PERM_RWX_EL0);
+    mmu_add_mapping(ram_base | REGION_RWX_EL0, ram_base, ram_size, MAIR_IDX_NORMAL, PERM_RWX_EL0);
     /*
      * Create mapping for RAM from 0x98_0000_0000,
      * read/writable by EL0 (but not executable by EL1)
      * With SPRR enabled, this becomes RW_EL0.
      */
-    mmu_add_mapping(0x0800000000 | REGION_RW_EL0, 0x0800000000, ram_size, MAIR_IDX_NORMAL,
-                    PERM_RW_EL0);
+    mmu_add_mapping(ram_base | REGION_RW_EL0, ram_base, ram_size, MAIR_IDX_NORMAL, PERM_RW_EL0);
     /*
      * Create mapping for RAM from 0xa8_0000_0000,
      * read/executable by EL1
      * This allows executing from dynamic regions in EL1
      */
-    mmu_add_mapping(0x0800000000 | REGION_RX_EL1, 0x0800000000, ram_size, MAIR_IDX_NORMAL,
-                    PERM_RX_EL0);
+    mmu_add_mapping(ram_base | REGION_RX_EL1, ram_base, ram_size, MAIR_IDX_NORMAL, PERM_RX_EL0);
 
     /*
      * Create two seperate nGnRnE and nGnRE full mappings of MMIO space

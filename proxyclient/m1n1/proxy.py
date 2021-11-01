@@ -440,8 +440,8 @@ class GUARD(IntFlag):
     SILENT = 0x100
 
 REGION_RWX_EL0 = 0x8000000000
-REGION_RW_EL0 = 0x9000000000
-REGION_RX_EL1 = 0xa000000000
+REGION_RW_EL0 = 0xa000000000
+REGION_RX_EL1 = 0xc000000000
 
 # Uses UartInterface.proxyreq() to send requests to M1N1 and process
 # reponses sent back.
