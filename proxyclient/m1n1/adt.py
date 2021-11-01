@@ -2,7 +2,7 @@
 import itertools, fnmatch
 from construct import *
 
-from .utils import AddrLookup, FourCC
+from .utils import AddrLookup, FourCC, SafeGreedyRange
 
 __all__ = ["load_adt"]
 
@@ -19,7 +19,7 @@ ADTNodeStruct = Struct(
     "children" / Array(this.child_count, LazyBound(lambda: ADTNodeStruct))
 )
 
-ADTStringList = GreedyRange(CString("ascii"))
+ADTStringList = SafeGreedyRange(CString("ascii"))
 
 ADT2Tuple = Array(2, Hex(Int64ul))
 ADT3Tuple = Array(3, Hex(Int64ul))
@@ -27,7 +27,7 @@ ADT3Tuple = Array(3, Hex(Int64ul))
 Function = Struct(
     "phandle" / Int32ul,
     "name" / FourCC,
-    "args" / GreedyRange(Int32ul),
+    "args" / SafeGreedyRange(Int32ul),
 )
 
 STD_PROPERTIES = {
@@ -37,25 +37,25 @@ STD_PROPERTIES = {
     "model": CString("ascii"),
     "#size-cells": Int32ul,
     "#address-cells": Int32ul,
-    "clock-ids": GreedyRange(Int32ul),
-    "clock-gates": GreedyRange(Int32ul),
-    "power-gates": GreedyRange(Int32ul),
+    "clock-ids": SafeGreedyRange(Int32ul),
+    "clock-gates": SafeGreedyRange(Int32ul),
+    "power-gates": SafeGreedyRange(Int32ul),
 }
 
-PMGRPSRegs = GreedyRange(Struct(
+PMGRPSRegs = SafeGreedyRange(Struct(
     "reg" / Int32ul,
     "offset" / Hex(Int32ul),
     "mask" / Hex(Int32ul),
 ))
 
-PMGRPWRGateRegs = GreedyRange(Struct(
+PMGRPWRGateRegs = SafeGreedyRange(Struct(
     "reg" / Int32ul,
     "offset" / Hex(Int32ul),
     "mask" / Hex(Int32ul),
     "unk" / Hex(Int32ul),
 ))
 
-PMGRDevices = GreedyRange(Struct(
+PMGRDevices = SafeGreedyRange(Struct(
     "flags" / Int8ul,
     "unk1_0" / Int8ul,
     "unk1_1" / Int8ul,
@@ -76,7 +76,7 @@ PMGRDevices = GreedyRange(Struct(
     "name" / PaddedString(16, "ascii")
 ))
 
-PMGRClocks = GreedyRange(Struct(
+PMGRClocks = SafeGreedyRange(Struct(
     "ctl_idx" / Int8ul,
     "ctl_block" / Int8ul,
     "unk" / Int8ul,
@@ -85,7 +85,7 @@ PMGRClocks = GreedyRange(Struct(
     "name" / PaddedString(16, "ascii"),
 ))
 
-PMGRPowerDomains = GreedyRange(Struct(
+PMGRPowerDomains = SafeGreedyRange(Struct(
     "unk" / Const(0, Int8ul),
     "ctl_idx" / Int8ul,
     "ctl_block" / Int8ul,
@@ -94,12 +94,12 @@ PMGRPowerDomains = GreedyRange(Struct(
     "name" / PaddedString(16, "ascii"),
 ))
 
-PMGRDeviceBridges = GreedyRange(Struct(
+PMGRDeviceBridges = SafeGreedyRange(Struct(
     "idx" / Int32ub,
     "subdevs" / HexDump(Bytes(0x48)),
 ))
 
-PMGREvents = GreedyRange(Struct(
+PMGREvents = SafeGreedyRange(Struct(
     "unk1" / Int8ul,
     "unk2" / Int8ul,
     "unk3" / Int8ul,
@@ -117,32 +117,32 @@ DEV_PROPERTIES = {
             "devices": PMGRDevices,
         },
         "*": {
-            "clusters": GreedyRange(Int32ul),
+            "clusters": SafeGreedyRange(Int32ul),
             "ps-regs": PMGRPSRegs,
             "pwrgate-regs": PMGRPWRGateRegs,
             "power-domains": PMGRPowerDomains,
             "clocks": PMGRClocks,
             "device-bridges": PMGRDeviceBridges,
-            "voltage-states*": GreedyRange(Int32ul),
+            "voltage-states*": SafeGreedyRange(Int32ul),
             "events": PMGREvents,
         }
     },
     "clpc": {
         "*": {
-            "events": GreedyRange(Int32ul),
-            "devices": GreedyRange(Int32ul),
+            "events": SafeGreedyRange(Int32ul),
+            "devices": SafeGreedyRange(Int32ul),
         }
     },
     "soc-tuner": {
         "*": {
-            "device-set-*": GreedyRange(Int32ul),
-            "mcc-configs": GreedyRange(Int32ul),
+            "device-set-*": SafeGreedyRange(Int32ul),
+            "mcc-configs": SafeGreedyRange(Int32ul),
         }
     },
     "mcc": {
         "*": {
-            "dramcfg-data": GreedyRange(Int32ul),
-            "config-data": GreedyRange(Int32ul),
+            "dramcfg-data": SafeGreedyRange(Int32ul),
+            "config-data": SafeGreedyRange(Int32ul),
         }
     },
     "stockholm-spmi": {
@@ -152,9 +152,9 @@ DEV_PROPERTIES = {
     },
     "arm-io": {
         "*": {
-            "clock-frequencies": GreedyRange(Int32ul),
-            "clock-frequencies-regs": GreedyRange(Hex(Int64ul)),
-            "clock-frequencies-nclk": GreedyRange(Int32ul),
+            "clock-frequencies": SafeGreedyRange(Int32ul),
+            "clock-frequencies-regs": SafeGreedyRange(Hex(Int64ul)),
+            "clock-frequencies-nclk": SafeGreedyRange(Int32ul),
         },
     },
 }
@@ -210,7 +210,7 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
             ac, sc = node._parent.address_cells, node._parent.size_cells
             at = Hex(Int64ul) if ac == 2 else Array(ac, Hex(Int32ul))
             st = Hex(Int64ul) if sc == 2 else Array(sc, Hex(Int32ul))
-            t = GreedyRange(Struct("addr" / at, "size" / st))
+            t = SafeGreedyRange(Struct("addr" / at, "size" / st))
             if len(v) % ((ac + sc) * 4):
                 t = None
 
@@ -223,7 +223,7 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
         at = Hex(Int64ul) if ac == 2 else Array(ac, Hex(Int32ul))
         pat = Hex(Int64ul) if pac == 2 else Array(pac, Hex(Int32ul))
         st = Hex(Int64ul) if sc == 2 else Array(sc, Hex(Int32ul))
-        t = GreedyRange(Struct("bus_addr" / pat, "parent_addr" / at, "size" / st))
+        t = SafeGreedyRange(Struct("bus_addr" / pat, "parent_addr" / at, "size" / st))
 
     elif name == "interrupts":
         # parse "interrupts" as Array of Int32ul, wrong for nodes whose

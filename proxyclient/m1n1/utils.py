@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 from enum import Enum
 import bisect, copy, heapq, importlib, sys, itertools, time, os, functools, struct, re
-from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul, ExprAdapter
+from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul, ExprAdapter, GreedyRange, ListContainer, StopFieldError, ExplicitError, StreamError
 
 __all__ = ["FourCC"]
 
@@ -70,6 +70,24 @@ def unhex(s):
 FourCC = ExprAdapter(Int32ul,
                      lambda d, ctx: d.to_bytes(4, "big").decode("latin-1"),
                      lambda d, ctx: int.from_bytes(d.encode("latin-1"), "big"))
+
+class SafeGreedyRange(GreedyRange):
+    def __init__(self, subcon, discard=False):
+        super().__init__(subcon)
+        self.discard = discard
+
+    def _parse(self, stream, context, path):
+        discard = self.discard
+        obj = ListContainer()
+        try:
+            for i in itertools.count():
+                context._index = i
+                e = self.subcon._parsereport(stream, context, path)
+                if not discard:
+                    obj.append(e)
+        except StreamError:
+            pass
+        return obj
 
 class ReloadableMeta(type):
     def __new__(cls, name, bases, dct):
