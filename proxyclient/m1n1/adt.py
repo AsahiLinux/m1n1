@@ -42,6 +42,13 @@ STD_PROPERTIES = {
     "power-gates": SafeGreedyRange(Int32ul),
 }
 
+PMAPIORanges = SafeGreedyRange(Struct(
+    "addr" / Hex(Int64ul),
+    "size" / Hex(Int64ul),
+    "flags" / Hex(Int32ul),
+    "name" / FourCC,
+))
+
 PMGRPSRegs = SafeGreedyRange(Struct(
     "reg" / Int32ul,
     "offset" / Hex(Int32ul),
@@ -157,6 +164,11 @@ DEV_PROPERTIES = {
             "clock-frequencies-nclk": SafeGreedyRange(Int32ul),
         },
     },
+    "defaults": {
+        "*": {
+            "pmap-io-ranges": PMAPIORanges,
+        }
+    }
 }
 
 def parse_prop(node, path, node_name, name, v, is_template=False):
@@ -179,7 +191,7 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
         try:
             compat = node.compatible[0]
         except AttributeError:
-            return None, v
+            compat = ""
 
         for compat_match, cprops in dev_props.items():
             if fnmatch.fnmatch(compat, compat_match):
