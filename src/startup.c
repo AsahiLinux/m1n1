@@ -91,9 +91,9 @@ void _start_c(void *boot_args, void *base)
     }
 
     uart_puts("Initializing");
-    printf("CPU init... ");
+    printf("CPU init (MIDR: 0x%lx)...\n", mrs(MIDR_EL1));
     const char *type = init_cpu();
-    printf("CPU: %s\n\n", type);
+    printf("  CPU: %s\n\n", type);
 
     printf("boot_args at %p\n", boot_args);
 

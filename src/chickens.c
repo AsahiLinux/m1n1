@@ -6,20 +6,26 @@
 #include "utils.h"
 
 /* Part IDs in MIDR_EL1 */
-#define MIDR_PART_M1_ICESTORM  34
-#define MIDR_PART_M1_FIRESTORM 35
+#define MIDR_PART_A14_ICESTORM  0x20
+#define MIDR_PART_A14_FIRESTORM 0x21
+#define MIDR_PART_M1_ICESTORM   0x22
+#define MIDR_PART_M1_FIRESTORM  0x23
 
-void init_m1_common(void)
+#define MIDR_REV_LOW  GENMASK(3, 0)
+#define MIDR_PART     GENMASK(15, 4)
+#define MIDR_REV_HIGH GENMASK(23, 20)
+
+void init_common(void)
 {
     int core = mrs(MPIDR_EL1) & 0xff;
 
     // Unknown, related to SMP?
     msr(s3_4_c15_c5_0, core);
-    msr(s3_4_c15_c1_4, 0x100);
+    msr(SYS_IMP_APL_AMX_CTL_EL1, 0x100);
     sysop("isb");
 }
 
-void init_m1_icestorm(void)
+void init_common_icestorm(void)
 {
     // "Sibling Merge in LLC can cause UC load to violate ARM Memory Ordering Rules."
     reg_set(SYS_IMP_APL_HID5, HID5_DISABLE_FILL_2C_MERGE);
@@ -32,22 +38,11 @@ void init_m1_icestorm(void)
 
     // FIXME: do we actually need this?
     reg_set(SYS_IMP_APL_EHID20, EHID20_TRAP_SMC);
-
-    reg_set(SYS_IMP_APL_EHID20, EHID20_FORCE_NONSPEC_IF_OLDEST_REDIR_VALID_AND_OLDER |
-                                    EHID20_FORCE_NONSPEC_IF_SPEC_FLUSH_POINTER_NE_BLK_RTR_POINTER);
-
-    reg_mask(SYS_IMP_APL_EHID20, EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL_MASK,
-             EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL(3));
-
-    init_m1_common();
 }
 
-void init_m1_firestorm(void)
+void init_common_firestorm(void)
 {
-    // "Cross-beat Crypto(AES/PMUL) ICache fusion is not disabled for branch
-    // uncondtional "recoded instruction."
-    reg_set(SYS_IMP_APL_HID0,
-            HID0_SAME_PG_POWER_OPTIMIZATION | HID0_FETCH_WIDTH_DISABLE | HID0_CACHE_FUSION_DISABLE);
+    reg_set(SYS_IMP_APL_HID0, HID0_SAME_PG_POWER_OPTIMIZATION);
 
     // FIXME: do we actually need this?
     reg_set(SYS_IMP_APL_HID1, HID1_TRAP_SMC);
@@ -56,6 +51,56 @@ void init_m1_firestorm(void)
 
     // "Post-silicon tuning of STNT widget contiguous counter threshold"
     reg_mask(SYS_IMP_APL_HID4, HID4_STNT_COUNTER_THRESHOLD_MASK, HID4_STNT_COUNTER_THRESHOLD(3));
+
+    // "Sibling Merge in LLC can cause UC load to violate ARM Memory Ordering Rules."
+    reg_set(SYS_IMP_APL_HID5, HID5_DISABLE_FILL_2C_MERGE);
+
+    reg_set(SYS_IMP_APL_HID9, HID9_TSO_ALLOW_DC_ZVA_WC);
+
+    reg_set(SYS_IMP_APL_HID11, HID11_DISABLE_LD_NT_WIDGET);
+
+    // "configure dummy cycles to work around incorrect temp sensor readings on
+    // NEX power gating"
+    reg_mask(SYS_IMP_APL_HID13, HID13_PRE_CYCLES_MASK, HID13_PRE_CYCLES(4));
+
+    // Best bit names...
+    // Maybe: "RF bank and Multipass conflict forward progress widget does not
+    // handle 3+ cycle livelock"
+    reg_set(SYS_IMP_APL_HID16, HID16_SPAREBIT0 | HID16_SPAREBIT3 | HID16_ENABLE_MPX_PICK_45 |
+                                   HID16_ENABLE_MP_CYCLONE_7);
+}
+
+void init_m1_icestorm(int rev)
+{
+    UNUSED(rev);
+
+    init_common_icestorm();
+
+    reg_set(SYS_IMP_APL_EHID20, EHID20_FORCE_NONSPEC_IF_OLDEST_REDIR_VALID_AND_OLDER |
+                                    EHID20_FORCE_NONSPEC_IF_SPEC_FLUSH_POINTER_NE_BLK_RTR_POINTER);
+
+    reg_mask(SYS_IMP_APL_EHID20, EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL_MASK,
+             EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL(3));
+
+    init_common();
+}
+
+void init_m1_firestorm(int rev)
+{
+    if (rev < 0x10)
+        printf("  Revisions <0x10 not supported!\n");
+
+    init_common_firestorm();
+
+    // "Cross-beat Crypto(AES/PMUL) ICache fusion is not disabled for branch
+    // uncondtional "recoded instruction."
+    reg_set(SYS_IMP_APL_HID0, HID0_FETCH_WIDTH_DISABLE | HID0_CACHE_FUSION_DISABLE);
+
+    if (rev == 0x11)
+        reg_set(SYS_IMP_APL_HID1, HID1_ENABLE_MDSB_STALL_PIPELINE_ECO | HID1_ENABLE_BR_KILL_LIMIT);
+
+    reg_set(SYS_IMP_APL_HID4,
+            HID4_ENABLE_LFSR_STALL_LOAD_PIPE_2_ISSUE | HID4_ENABLE_LFSR_STALL_STQ_REPLAY);
 
     // "Sibling Merge in LLC can cause UC load to violate ARM Memory Ordering
     // Rules."
@@ -70,25 +115,16 @@ void init_m1_firestorm(void)
              HID7_FORCE_NONSPEC_TARGET_TIMER_SEL(3));
 
     reg_set(SYS_IMP_APL_HID9,
-            HID9_TSO_ALLOW_DC_ZVA_WC | HID9_TSO_SERIALIZE_VLD_MICROOPS | HID9_FIX_BUG_51667805);
-
-    reg_set(SYS_IMP_APL_HID11, HID11_DISABLE_LD_NT_WIDGET);
-
-    // "configure dummy cycles to work around incorrect temp sensor readings on
-    // NEX power gating"
-    reg_mask(SYS_IMP_APL_HID13, HID13_PRE_CYCLES_MASK, HID13_PRE_CYCLES(4));
-
-    // Best bit names...
-    // Maybe: "RF bank and Multipass conflict forward progress widget does not
-    // handle 3+ cycle livelock"
-    reg_set(SYS_IMP_APL_HID16, HID16_SPAREBIT0 | HID16_SPAREBIT3 | HID16_ENABLE_MPX_PICK_45 |
-                                   HID16_ENABLE_MP_CYCLONE_7);
+            HID9_TSO_SERIALIZE_VLD_MICROOPS | HID9_FIX_BUG_51667805 | HID9_FIX_BUG_55719865);
 
     reg_set(SYS_IMP_APL_HID18, HID18_HVC_SPECULATION_DISABLE);
 
+    if (rev >= 0x11)
+        reg_set(SYS_IMP_APL_HID18, HID18_SPAREBIT17);
+
     reg_clr(SYS_IMP_APL_HID21, HID21_ENABLE_LDREX_FILL_REPLY);
 
-    init_m1_common();
+    init_common();
 }
 
 const char *init_cpu(void)
@@ -103,21 +139,25 @@ const char *init_cpu(void)
     else
         reg_set(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA | HID4_DISABLE_DC_SW_L2_OPS);
 
-    int part = (mrs(MIDR_EL1) >> 4) & 0xfff;
+    uint64_t midr = mrs(MIDR_EL1);
+    int part = FIELD_GET(MIDR_PART, midr);
+    int rev = (FIELD_GET(MIDR_REV_HIGH, midr) << 4) | FIELD_GET(MIDR_REV_LOW, midr);
+
+    printf("  CPU part: 0x%x rev: 0x%x\n", part, rev);
 
     switch (part) {
         case MIDR_PART_M1_FIRESTORM:
             cpu = "M1 Firestorm";
-            init_m1_firestorm();
+            init_m1_firestorm(rev);
             break;
 
         case MIDR_PART_M1_ICESTORM:
             cpu = "M1 Icestorm";
-            init_m1_icestorm();
+            init_m1_icestorm(rev);
             break;
 
         default:
-            uart_puts("Unknown CPU type");
+            uart_puts("  Unknown CPU type");
             break;
     }
 
