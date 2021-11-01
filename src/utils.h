@@ -15,7 +15,7 @@
     } while (0)
 #endif
 
-#define BIT(x)                 (1L << (x))
+#define BIT(x)                 (1UL << (x))
 #define MASK(x)                (BIT(x) - 1)
 #define GENMASK(msb, lsb)      ((BIT((msb + 1) - (lsb)) - 1) << (lsb))
 #define _FIELD_LSB(field)      ((field) & ~(field - 1))
