@@ -6,10 +6,14 @@
 #include "utils.h"
 
 /* Part IDs in MIDR_EL1 */
-#define MIDR_PART_A14_ICESTORM  0x20
-#define MIDR_PART_A14_FIRESTORM 0x21
-#define MIDR_PART_M1_ICESTORM   0x22
-#define MIDR_PART_M1_FIRESTORM  0x23
+#define MIDR_PART_T8181_ICESTORM  0x20
+#define MIDR_PART_T8181_FIRESTORM 0x21
+#define MIDR_PART_T8103_ICESTORM  0x22
+#define MIDR_PART_T8103_FIRESTORM 0x23
+#define MIDR_PART_T6000_ICESTORM  0x24
+#define MIDR_PART_T6000_FIRESTORM 0x25
+#define MIDR_PART_T6001_ICESTORM  0x28
+#define MIDR_PART_T6001_FIRESTORM 0x29
 
 #define MIDR_REV_LOW  GENMASK(3, 0)
 #define MIDR_PART     GENMASK(15, 4)
@@ -146,13 +150,25 @@ const char *init_cpu(void)
     printf("  CPU part: 0x%x rev: 0x%x\n", part, rev);
 
     switch (part) {
-        case MIDR_PART_M1_FIRESTORM:
+        case MIDR_PART_T8103_FIRESTORM:
+        case MIDR_PART_T6000_FIRESTORM:
+        case MIDR_PART_T6001_FIRESTORM:
             cpu = "M1 Firestorm";
             init_m1_firestorm(rev);
             break;
 
-        case MIDR_PART_M1_ICESTORM:
+        case MIDR_PART_T8103_ICESTORM:
             cpu = "M1 Icestorm";
+            init_m1_icestorm(rev);
+            break;
+
+        case MIDR_PART_T6000_ICESTORM:
+            cpu = "M1 Pro Icestorm";
+            init_m1_icestorm(rev);
+            break;
+
+        case MIDR_PART_T6001_ICESTORM:
+            cpu = "M1 Max Icestorm";
             init_m1_icestorm(rev);
             break;
 
