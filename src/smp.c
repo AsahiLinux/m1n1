@@ -88,11 +88,7 @@ static void smp_start_cpu(int index, int cluster, int core, u64 rvbar, u64 cpu_s
     write32(cpu_start_base + 0x4, 1 << index);
 
     // Actually start the core
-    if (cluster == 0) {
-        write32(cpu_start_base + 0x8, 1 << core);
-    } else {
-        write32(cpu_start_base + 0xc, 1 << core);
-    }
+    write32(cpu_start_base + 0x8 + 4 * cluster, 1 << core);
 
     for (i = 0; i < 500; i++) {
         sysop("dmb ld");
