@@ -87,13 +87,11 @@ void __assert_fail(const char *assertion, const char *file, unsigned int line, c
     flush_and_reboot();
 }
 
-#define AIC_TIMER 0x23b108020
-
 void udelay(u32 d)
 {
-    u32 delay = d * 24;
-    u32 val = read32(AIC_TIMER);
-    while ((read32(AIC_TIMER) - val) < delay)
+    u64 delay = (u64)d * mrs(CNTFRQ_EL0) / 1000000;
+    u32 val = mrs(CNTPCT_EL0);
+    while ((mrs(CNTPCT_EL0) - val) < delay)
         ;
 }
 
