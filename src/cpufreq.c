@@ -8,8 +8,6 @@
 #define CLUSTER_PSTATE 0x20
 #define CLUSTER_CONFIG 0x6b8
 
-#define CLUSTER_PSTATE_
-
 #define CLUSTER_PSTATE_BUSY     BIT(31)
 #define CLUSTER_PSTATE_SET      BIT(25)
 #define CLUSTER_PSTATE_DESIRED2 GENMASK(15, 12)
@@ -65,6 +63,13 @@ static const struct cluster_t t8103_clusters[] = {
     {},
 };
 
+static const struct cluster_t t6000_clusters[] = {
+    {"ECPU0", 0x210e20000, false, 5},
+    {"PCPU0", 0x211e20000, false, 7},
+    {"PCPU1", 0x212e20000, false, 7},
+    {},
+};
+
 int cpufreq_init(void)
 {
     printf("cpufreq: Initializing clusters\n");
@@ -74,6 +79,10 @@ int cpufreq_init(void)
     switch (chip_id) {
         case T8103:
             cluster = t8103_clusters;
+            break;
+        case T6000:
+        case T6001:
+            cluster = t6000_clusters;
             break;
         default:
             printf("cpufreq: Chip 0x%x is unsupported\n", chip_id);
