@@ -341,3 +341,21 @@ int adt_get_reg(const void *adt, int *path, const char *prop, int idx, u64 *padd
 
     return 0;
 }
+
+bool adt_is_compatible(const void *adt, int nodeoffset, const char *compat)
+{
+    u32 len;
+    const char *list = adt_getprop(adt, nodeoffset, "compatible", &len);
+    if (!list)
+        return false;
+
+    const char *end = list + len;
+
+    while (list != end) {
+        if (!strcmp(list, compat))
+            return true;
+        list += strlen(list) + 1;
+    }
+
+    return false;
+}

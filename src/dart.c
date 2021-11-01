@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "dart.h"
+#include "adt.h"
 #include "assert.h"
 #include "malloc.h"
 #include "memory.h"
@@ -34,6 +35,8 @@
 #define DART_ERROR_ADDR_HI 0x54
 #define DART_ERROR_ADDR_LO 0x50
 
+#define DART_ENABLED_STREAMS 0xfc
+
 #define DART_TCR(sid)             (0x100 + 4 * (sid))
 #define DART_TCR_TRANSLATE_ENABLE BIT(7)
 #define DART_TCR_BYPASS_DART      BIT(8)
@@ -43,12 +46,18 @@
 #define DART_TTBR_VALID     BIT(31)
 #define DART_TTBR_SHIFT     12
 
-#define DART_PTE_VALID 0b11
+#define DART_PTE_OFFSET_SHIFT 14
+#define DART_PTE_SP_START     GENMASK(63, 52)
+#define DART_PTE_SP_END       GENMASK(51, 40)
+#define DART_PTE_OFFSET_T8020 GENMASK(39, 14)
+#define DART_PTE_OFFSET_T6000 GENMASK(39, 10)
+#define DART_PTE_VALID        0b11
 
 struct dart_dev {
     uintptr_t regs;
     u8 device;
 
+    u64 offset_mask;
     u64 *l1;
 };
 
@@ -79,6 +88,8 @@ dart_dev_t *dart_init(uintptr_t base, u8 device)
         goto error;
     }
 
+    dart->offset_mask = DART_PTE_OFFSET_T8020;
+
     dart->l1 = memalign(SZ_16K, 4 * SZ_16K);
     if (!dart->l1)
         goto error;
@@ -104,17 +115,54 @@ error:
     return NULL;
 }
 
+dart_dev_t *dart_init_adt(const char *path, int device)
+{
+    int dart_path[8];
+    int node = adt_path_offset_trace(adt, path, dart_path);
+    if (node < 0) {
+        printf("dart: Error getting DART node %s\n", path);
+        return NULL;
+    }
+
+    u64 base;
+    if (adt_get_reg(adt, dart_path, "reg", 1, &base, NULL) < 0) {
+        printf("dart: Error getting DART %s base address.\n", path);
+        return NULL;
+    }
+
+    dart_dev_t *dart = dart_init(base, device);
+
+    if (!dart)
+        return NULL;
+
+    if (adt_is_compatible(adt, node, "dart,t8020")) {
+        printf("dart: dart %s at 0x%lx is a t8020\n", path, base);
+        dart->offset_mask = DART_PTE_OFFSET_T8020;
+    } else if (adt_is_compatible(adt, node, "dart,t6000")) {
+        printf("dart: dart %s at 0x%lx is a t6000\n", path, base);
+        dart->offset_mask = DART_PTE_OFFSET_T6000;
+    }
+
+    return dart;
+}
+
 static u64 *dart_get_l2(dart_dev_t *dart, u32 idx)
 {
-    if (dart->l1[idx] & DART_PTE_VALID)
-        return (u64 *)(dart->l1[idx] & ~DART_PTE_VALID);
+    if (dart->l1[idx] & DART_PTE_VALID) {
+        u64 off = FIELD_GET(dart->offset_mask, dart->l1[idx]) << DART_PTE_OFFSET_SHIFT;
+        return (u64 *)off;
+    }
 
     u64 *tbl = memalign(SZ_16K, SZ_16K);
     if (!tbl)
         return NULL;
 
     memset(tbl, 0, SZ_16K);
-    dart->l1[idx] = (uintptr_t)tbl | DART_PTE_VALID;
+
+    u64 offset = FIELD_PREP(dart->offset_mask, ((u64)tbl) >> DART_PTE_OFFSET_SHIFT);
+
+    dart->l1[idx] = offset | DART_PTE_VALID;
+
     return tbl;
 }
 
@@ -134,7 +182,10 @@ static int dart_map_page(dart_dev_t *dart, uintptr_t iova, uintptr_t paddr)
         return -1;
     }
 
-    l2[l2_index] = (uintptr_t)paddr | DART_PTE_VALID;
+    u64 offset = FIELD_PREP(dart->offset_mask, paddr >> DART_PTE_OFFSET_SHIFT);
+
+    l2[l2_index] = offset | FIELD_PREP(DART_PTE_SP_END, 0xfff) | FIELD_PREP(DART_PTE_SP_START, 0) |
+                   DART_PTE_VALID;
 
     return 0;
 }
@@ -174,7 +225,7 @@ static void dart_unmap_page(dart_dev_t *dart, uintptr_t iova)
     if (!(dart->l1[l1_index] & DART_PTE_VALID))
         return;
 
-    u64 *l2 = (u64 *)(dart->l1[l1_index] & ~DART_PTE_VALID);
+    u64 *l2 = dart_get_l2(dart, l1_index);
     l2[l2_index] = 0;
 }
 
@@ -204,7 +255,7 @@ void dart_shutdown(dart_dev_t *dart)
 
     for (int i = 0; i < SZ_16K / 8; ++i) {
         if (dart->l1[i] & DART_PTE_VALID)
-            free((void *)(dart->l1[i] & ~DART_PTE_VALID));
+            free(dart_get_l2(dart, i));
     }
 
     free(dart->l1);
