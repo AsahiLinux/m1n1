@@ -49,25 +49,11 @@ static bool usb_is_initialized = false;
 
 static dart_dev_t *usb_dart_init(const char *path, const char *mapper_path)
 {
-    int dart_path[8];
-    int dart_offset;
     int mapper_offset;
-
-    dart_offset = adt_path_offset_trace(adt, path, dart_path);
-    if (dart_offset < 0) {
-        printf("usb: Error getting DART node %s\n", path);
-        return NULL;
-    }
 
     mapper_offset = adt_path_offset(adt, mapper_path);
     if (mapper_offset < 0) {
         printf("usb: Error getting DART mapper node %s\n", mapper_path);
-        return NULL;
-    }
-
-    u64 dart_base;
-    if (adt_get_reg(adt, dart_path, "reg", 1, &dart_base, NULL) < 0) {
-        printf("usb: Error getting DART %s base address.\n", path);
         return NULL;
     }
 
@@ -77,7 +63,7 @@ static dart_dev_t *usb_dart_init(const char *path, const char *mapper_path)
         return NULL;
     }
 
-    return dart_init(dart_base, dart_idx);
+    return dart_init_adt(path, dart_idx);
 }
 
 static int usb_drd_get_regs(const char *phy_path, const char *drd_path, struct usb_drd_regs *regs)
