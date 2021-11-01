@@ -66,7 +66,7 @@ PMGRDevices = SafeGreedyRange(Struct(
     "flags" / Int8ul,
     "unk1_0" / Int8ul,
     "unk1_1" / Int8ul,
-    Const(0, Int8ul),
+    "unk1_2" / Int8ul,
     "parents" / Array(2, Int16ul),
     "ctl_idx" / Int8ul,
     "ctl_block" / Int8ul,
@@ -120,11 +120,9 @@ PMGREvents = SafeGreedyRange(Struct(
 
 DEV_PROPERTIES = {
     "pmgr": {
-        "pmgr1,t8103": {
-            "devices": PMGRDevices,
-        },
         "*": {
             "clusters": SafeGreedyRange(Int32ul),
+            "devices": PMGRDevices,
             "ps-regs": PMGRPSRegs,
             "pwrgate-regs": PMGRPWRGateRegs,
             "power-domains": PMGRPowerDomains,

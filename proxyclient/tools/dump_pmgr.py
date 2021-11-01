@@ -45,7 +45,7 @@ for i, dev in enumerate(pmgr.devices):
     NO_PS = 0x10
     flags = "".join(j if dev.flags & (1 << (7-i)) else " " for i,j in enumerate("abCdefgh"))
     s = f" #{i:3d} {dev.name:20s} id: {dev.id:3d} psreg: {dev.psreg:2d}:{dev.psidx:2d} "
-    s += f" flags:{flags} unk1_0: {dev.unk1_0} unk1_1: {dev.unk1_1} "
+    s += f" flags:{flags} unk1_0: {dev.unk1_0} unk1_1: {dev.unk1_1} unk1_2: {dev.unk1_2} "
     s += f" ctl_reg: {dev.ctl_block}:{dev.ctl_idx:#04x} unk3: {dev.unk3:3d} {dev.unk2_0:2d} {dev.ps_cfg16:2d} {dev.unk2_3:3d}"
     if dev.psidx or dev.psreg:
         addr = pmgr.get_reg(ps.reg)[0] + ps.offset + dev.psidx * 8
