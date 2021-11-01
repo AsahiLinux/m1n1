@@ -2,6 +2,7 @@
 
 #include "cpufreq.h"
 #include "adt.h"
+#include "soc.h"
 #include "utils.h"
 
 #define CLUSTER_PSTATE 0x20

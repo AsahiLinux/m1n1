@@ -1,8 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 
-#if defined(EARLY_UART) && !defined(EARLY_UART_BASE)
-#error EARLY_UART_BASE must be defined to the UART base address
-#endif
+#include "soc.h"
 
 #define UTRSTAT 0x010
 #define UTXH 0x020
@@ -153,7 +151,7 @@ cpu_reset:
 .globl debug_putc
 .type debug_putc, @function
 debug_putc:
-#ifdef EARLY_UART
+#ifdef EARLY_UART_BASE
     ldr x1, =EARLY_UART_BASE
 
 1:
