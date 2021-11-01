@@ -6,6 +6,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 import argparse, pathlib, time
 
 parser = argparse.ArgumentParser(description='Mach-O loader for m1n1')
+parser.add_argument('-q', '--quiet', action="store_true", help="Disable framebuffer")
 parser.add_argument('-x', '--xnu', action="store_true", help="Load XNU")
 parser.add_argument('-c', '--call', action="store_true", help="Use call mode")
 parser.add_argument('payload', type=pathlib.Path)
@@ -26,6 +27,9 @@ new_base = u.base
 entry = macho.entry
 entry -= macho.vmin
 entry += new_base
+
+if args.quiet:
+    p.iodev_set_usage(IODEV.FB, 0)
 
 if args.xnu:
     sepfw_start, sepfw_length = u.adt["chosen"]["memory-map"].SEPFW
