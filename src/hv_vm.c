@@ -35,18 +35,19 @@
 #define VADDR_L4_INDEX_BITS 12
 #define VADDR_L3_INDEX_BITS 11
 #define VADDR_L2_INDEX_BITS 11
+#define VADDR_L1_INDEX_BITS 8
 
 #define VADDR_L4_OFFSET_BITS 2
 #define VADDR_L3_OFFSET_BITS 14
 #define VADDR_L2_OFFSET_BITS 25
-
-#define VADDR_BITS 36
+#define VADDR_L1_OFFSET_BITS 36
 
 #define VADDR_L2_ALIGN_MASK GENMASK(VADDR_L2_OFFSET_BITS - 1, VADDR_L3_OFFSET_BITS)
 #define VADDR_L3_ALIGN_MASK GENMASK(VADDR_L3_OFFSET_BITS - 1, VADDR_L4_OFFSET_BITS)
 #define PTE_TARGET_MASK     GENMASK(49, VADDR_L3_OFFSET_BITS)
 #define PTE_TARGET_MASK_L4  GENMASK(49, VADDR_L4_OFFSET_BITS)
 
+#define ENTRIES_PER_L1_TABLE BIT(VADDR_L1_INDEX_BITS)
 #define ENTRIES_PER_L2_TABLE BIT(VADDR_L2_INDEX_BITS)
 #define ENTRIES_PER_L3_TABLE BIT(VADDR_L3_INDEX_BITS)
 #define ENTRIES_PER_L4_TABLE BIT(VADDR_L4_INDEX_BITS)
@@ -64,6 +65,8 @@
 #define IS_HW(pte) ((pte) && pte & PTE_VALID)
 #define IS_SW(pte) ((pte) && !(pte & PTE_VALID))
 
+#define L1_IS_TABLE(pte) ((pte) && FIELD_GET(PTE_TYPE, pte) == PTE_TABLE)
+
 #define L2_IS_TABLE(pte)     ((pte) && FIELD_GET(PTE_TYPE, pte) == PTE_TABLE)
 #define L2_IS_NOT_TABLE(pte) ((pte) && !L2_IS_TABLE(pte))
 #define L2_IS_HW_BLOCK(pte)  (IS_HW(pte) && FIELD_GET(PTE_TYPE, pte) == PTE_BLOCK)
@@ -74,6 +77,8 @@
 #define L3_IS_HW_BLOCK(pte)  (IS_HW(pte) && FIELD_GET(PTE_TYPE, pte) == PTE_PAGE)
 #define L3_IS_SW_BLOCK(pte)                                                                        \
     (IS_SW(pte) && FIELD_GET(PTE_TYPE, pte) == PTE_BLOCK && FIELD_GET(SPTE_TYPE, pte) == SPTE_MAP)
+
+uint64_t vaddr_bits;
 
 /*
  * We use 16KB page tables for stage 2 translation, and a 64GB (36-bit) guest
@@ -98,23 +103,58 @@
  * otherwise the page table format is the same. The PTE_TYPE bit is weird, as 0 means
  * block but 1 means both table (at L<3) and page (at L3). For mmiotrace, this is
  * pushed to L4.
+ *
+ * On SoCs with more than 36-bit PA sizes there is an additional L1 translation level,
+ * but no blocks or software mappings are allowed there. This level can have up to 8 bits
+ * at this time.
  */
 
-static u64 hv_L2[ENTRIES_PER_L2_TABLE] ALIGNED(PAGE_SIZE);
+static u64 hv_Ltop[ENTRIES_PER_L2_TABLE] ALIGNED(PAGE_SIZE);
 
 void hv_pt_init(void)
 {
-    memset(hv_L2, 0, sizeof(hv_L2));
+    const uint64_t pa_bits[] = {32, 36, 40, 42, 44, 48, 52};
+    uint64_t pa_range = FIELD_GET(ID_AA64MMFR0_PARange, mrs(ID_AA64MMFR0_EL1));
 
-    msr(VTCR_EL2, FIELD_PREP(VTCR_PS, 1) |        // 64GB PA size
-                      FIELD_PREP(VTCR_TG0, 2) |   // 16KB page size
-                      FIELD_PREP(VTCR_SH0, 3) |   // PTWs Inner Sharable
-                      FIELD_PREP(VTCR_ORGN0, 1) | // PTWs Cacheable
-                      FIELD_PREP(VTCR_IRGN0, 1) | // PTWs Cacheable
-                      FIELD_PREP(VTCR_SL0, 1) |   // Start at level 2
-                      FIELD_PREP(VTCR_T0SZ, 28)); // 64GB translation region
+    vaddr_bits = min(44, pa_bits[pa_range]);
 
-    msr(VTTBR_EL2, hv_L2);
+    printf("HV: Initializing for %ld-bit PA range\n", vaddr_bits);
+
+    memset(hv_Ltop, 0, sizeof(hv_Ltop));
+
+    u64 sl0 = vaddr_bits > 36 ? 2 : 1;
+
+    msr(VTCR_EL2, FIELD_PREP(VTCR_PS, pa_range) |              // Full PA size
+                      FIELD_PREP(VTCR_TG0, 2) |                // 16KB page size
+                      FIELD_PREP(VTCR_SH0, 3) |                // PTWs Inner Sharable
+                      FIELD_PREP(VTCR_ORGN0, 1) |              // PTWs Cacheable
+                      FIELD_PREP(VTCR_IRGN0, 1) |              // PTWs Cacheable
+                      FIELD_PREP(VTCR_SL0, sl0) |              // Start level
+                      FIELD_PREP(VTCR_T0SZ, 64 - vaddr_bits)); // Translation region == PA
+
+    msr(VTTBR_EL2, hv_Ltop);
+}
+
+static u64 *hv_pt_get_l2(u64 from)
+{
+    u64 l1idx = from >> VADDR_L1_OFFSET_BITS;
+
+    if (vaddr_bits <= 36) {
+        assert(l1idx == 0);
+        return hv_Ltop;
+    }
+
+    u64 l1d = hv_Ltop[l1idx];
+
+    if (L1_IS_TABLE(l1d))
+        return (u64 *)(l1d & PTE_TARGET_MASK);
+
+    u64 *l2 = (u64 *)memalign(PAGE_SIZE, ENTRIES_PER_L2_TABLE * sizeof(u64));
+    memset64(l2, 0, ENTRIES_PER_L2_TABLE * sizeof(u64));
+
+    l1d = ((u64)l2) | FIELD_PREP(PTE_TYPE, PTE_TABLE) | PTE_VALID;
+    hv_Ltop[l1idx] = l1d;
+    return l2;
 }
 
 static void hv_pt_free_l3(u64 *l3)
@@ -137,12 +177,13 @@ static void hv_pt_map_l2(u64 from, u64 to, u64 size, u64 incr)
     to |= FIELD_PREP(PTE_TYPE, PTE_BLOCK);
 
     for (; size; size -= BIT(VADDR_L2_OFFSET_BITS)) {
-        u64 idx = from >> VADDR_L2_OFFSET_BITS;
+        u64 *l2 = hv_pt_get_l2(from);
+        u64 idx = (from >> VADDR_L2_OFFSET_BITS) & MASK(VADDR_L2_INDEX_BITS);
 
-        if (L2_IS_TABLE(hv_L2[idx]))
-            hv_pt_free_l3((u64 *)(hv_L2[idx] & PTE_TARGET_MASK));
+        if (L2_IS_TABLE(l2[idx]))
+            hv_pt_free_l3((u64 *)(l2[idx] & PTE_TARGET_MASK));
 
-        hv_L2[idx] = to;
+        l2[idx] = to;
         from += BIT(VADDR_L2_OFFSET_BITS);
         to += incr * BIT(VADDR_L2_OFFSET_BITS);
     }
@@ -150,8 +191,9 @@ static void hv_pt_map_l2(u64 from, u64 to, u64 size, u64 incr)
 
 static u64 *hv_pt_get_l3(u64 from)
 {
-    u64 l2idx = from >> VADDR_L2_OFFSET_BITS;
-    u64 l2d = hv_L2[l2idx];
+    u64 *l2 = hv_pt_get_l2(from);
+    u64 l2idx = (from >> VADDR_L2_OFFSET_BITS) & MASK(VADDR_L2_INDEX_BITS);
+    u64 l2d = l2[l2idx];
 
     if (L2_IS_TABLE(l2d))
         return (u64 *)(l2d & PTE_TARGET_MASK);
@@ -174,7 +216,7 @@ static u64 *hv_pt_get_l3(u64 from)
     }
 
     l2d = ((u64)l3) | FIELD_PREP(PTE_TYPE, PTE_TABLE) | PTE_VALID;
-    hv_L2[l2idx] = l2d;
+    l2[l2idx] = l2d;
     return l3;
 }
 
@@ -386,11 +428,27 @@ u64 hv_pt_walk(u64 addr)
 {
     dprintf("hv_pt_walk(0x%lx)\n", addr);
 
-    u64 idx = addr >> VADDR_L2_OFFSET_BITS;
-    assert(idx < ENTRIES_PER_L2_TABLE);
+    u64 idx = addr >> VADDR_L1_OFFSET_BITS;
+    u64 *l2;
+    if (vaddr_bits > 36) {
+        assert(idx < ENTRIES_PER_L1_TABLE);
 
-    u64 l2d = hv_L2[idx];
+        u64 l1d = hv_Ltop[idx];
 
+        dprintf("  l1d = 0x%lx\n", l2d);
+
+        if (!L1_IS_TABLE(l1d)) {
+            dprintf("  result: 0x%lx\n", l1d);
+            return l1d;
+        }
+        l2 = (u64 *)(l1d & PTE_TARGET_MASK);
+    } else {
+        assert(idx == 0);
+        l2 = hv_Ltop;
+    }
+
+    idx = (addr >> VADDR_L2_OFFSET_BITS) & MASK(VADDR_L2_INDEX_BITS);
+    u64 l2d = l2[idx];
     dprintf("  l2d = 0x%lx\n", l2d);
 
     if (!L2_IS_TABLE(l2d)) {
@@ -746,7 +804,7 @@ bool hv_handle_dabort(struct exc_info *ctx)
         return false;
     }
 
-    if (ipa >= BIT(VADDR_BITS)) {
+    if (ipa >= BIT(vaddr_bits)) {
         printf("hv_handle_abort(): IPA out of bounds: 0x%0lx -> 0x%lx\n", far, ipa);
         return false;
     }
