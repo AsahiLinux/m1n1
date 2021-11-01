@@ -6,9 +6,9 @@
 #include "cpu_regs.h"
 #include "types.h"
 
-#define REGION_RWX_EL0 0x8000000000
-#define REGION_RW_EL0  0xa000000000
-#define REGION_RX_EL1  0xc000000000
+#define REGION_RWX_EL0 0x80000000000
+#define REGION_RW_EL0  0xa0000000000
+#define REGION_RX_EL1  0xc0000000000
 
 /*
  * https://armv8-ref.codingbelief.com/en/chapter_d4/d43_2_armv8_translation_table_level_3_descriptor_formats.html

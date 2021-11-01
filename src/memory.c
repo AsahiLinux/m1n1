@@ -340,7 +340,7 @@ static void mmu_unmap_carveouts(void)
     for (int i = 0; i < TZ_REGS; i++) {
         uint64_t start = ((uint64_t)read32(mcc_tz_base + TZ_START(i))) << 12;
         uint64_t end = ((uint64_t)(1 + read32(mcc_tz_base + TZ_END(i)))) << 12;
-        if (start) {
+        if (start && start != end) {
             start |= ram_base;
             end |= ram_base;
             printf("MMU: Unmapping TZ%d region at 0x%lx..0x%lx\n", i, start, end);
@@ -349,18 +349,65 @@ static void mmu_unmap_carveouts(void)
     }
 }
 
+static void mmu_map_mmio(void)
+{
+    int node = adt_path_offset(adt, "/arm-io");
+    if (node < 0) {
+        printf("MMU: ARM-IO node not found!\n");
+        return;
+    }
+    u32 ranges_len;
+    const u32 *ranges = adt_getprop(adt, node, "ranges", &ranges_len);
+    if (!ranges) {
+        printf("MMU: Failed to get ranges property!\n");
+        return;
+    }
+    // Assume all cell counts are 2 (64bit)
+    int range_cnt = ranges_len / 24;
+    while (range_cnt--) {
+        u64 bus = ranges[2] | ((u64)ranges[3] << 32);
+        u64 size = ranges[4] | ((u64)ranges[5] << 32);
+
+        mmu_add_mapping(bus, bus, size, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
+
+        ranges += 6;
+    }
+}
+
+static void mmu_remap_pcie(void)
+{
+
+    int node = adt_path_offset(adt, "/defaults");
+    if (node < 0) {
+        printf("MMU: defaults node not found!\n");
+        return;
+    }
+    u32 ranges_len;
+    const u32 *ranges = adt_getprop(adt, node, "pmap-io-ranges", &ranges_len);
+    if (!ranges) {
+        printf("MMU: Failed to get pmap-io-ranges property!\n");
+        return;
+    }
+    int range_cnt = ranges_len / 20;
+    while (range_cnt--) {
+        u64 addr = ranges[0] | ((u64)ranges[1] << 32);
+        u64 size = ranges[2] | ((u64)ranges[3] << 32);
+        u32 flags = ranges[4];
+
+        // TODO: is this the right logic?
+        if ((flags >> 28) == 8) {
+            printf("MMU: Adding nGnRE mapping at 0x%lx (0x%lx)\n", addr, size);
+            mmu_add_mapping(addr, addr, size, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
+        }
+
+        ranges += 6;
+    }
+}
+
 static void mmu_add_default_mappings(void)
 {
-    /*
-     * Create MMIO mappings. PCIe has to be mapped as nGnRE while MMIO needs nGnRnE.
-     * see https://lore.kernel.org/linux-arm-kernel/c1bc2a087747c4d9@bloch.sibelius.xs4all.nl/
-     */
-    mmu_add_mapping(0x0200000000, 0x0200000000, 0x0200000000, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
-    mmu_add_mapping(0x0400000000, 0x0400000000, 0x0100000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
-    mmu_add_mapping(0x0500000000, 0x0500000000, 0x0080000000, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
-    mmu_add_mapping(0x0580000000, 0x0580000000, 0x0100000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
-    mmu_add_mapping(0x0680000000, 0x0680000000, 0x0020000000, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
-    mmu_add_mapping(0x06a0000000, 0x06a0000000, 0x0060000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
+    mmu_map_mmio();
+    mmu_remap_pcie();
 
     ram_base = ALIGN_DOWN(cur_boot_args.phys_base, BIT(32));
     uint64_t ram_size = cur_boot_args.mem_size + cur_boot_args.phys_base - ram_base;
@@ -427,7 +474,7 @@ static void mmu_configure(void)
     msr(MAIR_EL1, (MAIR_ATTR_NORMAL_DEFAULT << MAIR_SHIFT_NORMAL) |
                       (MAIR_ATTR_DEVICE_nGnRnE << MAIR_SHIFT_DEVICE_nGnRnE) |
                       (MAIR_ATTR_DEVICE_nGnRE << MAIR_SHIFT_DEVICE_nGnRE));
-    msr(TCR_EL1, FIELD_PREP(TCR_IPS, TCR_IPS_1TB) | FIELD_PREP(TCR_TG1, TCR_TG1_16K) |
+    msr(TCR_EL1, FIELD_PREP(TCR_IPS, TCR_IPS_4TB) | FIELD_PREP(TCR_TG1, TCR_TG1_16K) |
                      FIELD_PREP(TCR_SH1, TCR_SH1_IS) | FIELD_PREP(TCR_ORGN1, TCR_ORGN1_WBWA) |
                      FIELD_PREP(TCR_IRGN1, TCR_IRGN1_WBWA) | FIELD_PREP(TCR_T1SZ, TCR_T1SZ_48BIT) |
                      FIELD_PREP(TCR_TG0, TCR_TG0_16K) | FIELD_PREP(TCR_SH0, TCR_SH0_IS) |

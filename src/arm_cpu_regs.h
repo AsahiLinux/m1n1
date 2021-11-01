@@ -273,6 +273,8 @@
 #define TCR_AS         BIT(36)
 #define TCR_IPS        GENMASK(34, 32)
 #define TCR_IPS_1TB    0b010UL
+#define TCR_IPS_4TB    0b011UL
+#define TCR_IPS_16TB   0b100UL
 #define TCR_TG1        GENMASK(31, 30)
 #define TCR_TG1_16K    0b01UL
 #define TCR_SH1        GENMASK(29, 28)
