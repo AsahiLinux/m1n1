@@ -242,6 +242,10 @@ int pmgr_init(void)
                                device->name);
                         continue;
                     }
+
+                    if ((pdevice->flags & PMGR_FLAG_VIRTUAL))
+                        continue;
+
                     addr = pmgr_device_get_addr(pdevice);
                     if (!addr)
                         continue;
