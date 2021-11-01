@@ -1041,9 +1041,11 @@ class HV(Reloadable):
         self.setup_adt()
 
     def map_vuart(self):
-        zone = irange(0x2_35200000, 0x4000)
+        base = self.adt["/arm-io/uart0"].get_reg(0)[0]
+
+        zone = irange(base, 0x4000)
         irq = 605
-        self.p.hv_map_vuart(0x2_35200000, irq, getattr(IODEV, self.iodev.name + "_SEC"))
+        self.p.hv_map_vuart(base, irq, getattr(IODEV, self.iodev.name + "_SEC"))
         self.add_tracer(zone, "VUART", TraceMode.RESERVED)
 
     def map_essential(self):
