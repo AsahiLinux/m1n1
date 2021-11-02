@@ -1117,8 +1117,8 @@ class HV(Reloadable):
                         self.start_secondary(cluster, i)
 
         PMGR_CPU_START = 0x54000
-        zone = irange(pmgr0_start + PMGR_CPU_START, 0x10)
-        self.map_hook(pmgr0_start + PMGR_CPU_START, 0x10, write=cpustart_wh)
+        zone = irange(pmgr0_start + PMGR_CPU_START, 0x20)
+        self.map_hook(pmgr0_start + PMGR_CPU_START, 0x20, write=cpustart_wh)
         self.add_tracer(zone, "CPU_START", TraceMode.RESERVED)
 
     def start_secondary(self, cluster, cpu):
