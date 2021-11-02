@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "exception.h"
+#include "aic.h"
 #include "cpu_regs.h"
 #include "gxf.h"
 #include "iodev.h"
@@ -283,26 +284,11 @@ void exc_sync(u64 *regs)
 
 void exc_irq(u64 *regs)
 {
-#ifdef DEBUG_UART_IRQS
-    u32 ucon, utrstat, uerstat, ufstat;
-    ucon = read32(0x235200004);
-    utrstat = read32(0x235200010);
-    uerstat = read32(0x235200014);
-    ufstat = read32(0x235200018);
-#endif
+    u32 reason = aic_ack();
 
-    printf("Exception: IRQ (from %s)\n", get_exception_source(0));
+    printf("Exception: IRQ (from %s) type: %d num: %d mpidr: %lx\n", get_exception_source(0),
+           reason >> 16, reason & 0xffff, mrs(MPIDR_EL1));
 
-    u32 reason = read32(0x23b102004);
-
-    printf(" type: %d num: %d mpidr: %lx\n", reason >> 16, reason & 0xffff, mrs(MPIDR_EL1));
-
-#ifdef DEBUG_UART_IRQS
-    printf(" UCON: 0x%x\n", ucon);
-    printf(" UTRSTAT: 0x%x\n", utrstat);
-    printf(" UERSTAT: 0x%x\n", uerstat);
-    printf(" UFSTAT: 0x%x\n", ufstat);
-#endif
     UNUSED(regs);
     // print_regs(regs);
 }
