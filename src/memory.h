@@ -29,6 +29,9 @@
 #define PTE_UXN         BIT(54)
 #define PTE_AP_RO       BIT(7)
 #define PTE_AP_EL0      BIT(6)
+#define PTE_SH_NS       (0b00 << 8)
+#define PTE_SH_OS       (0b10 << 8)
+#define PTE_SH_IS       (0b11 << 8)
 
 #define PERM_RO_EL0  PTE_AP_EL0 | PTE_AP_RO | PTE_PXN | PTE_UXN
 #define PERM_RW_EL0  PTE_AP_EL0 | PTE_PXN | PTE_UXN
@@ -43,6 +46,7 @@
 #define MAIR_IDX_NORMAL        0
 #define MAIR_IDX_DEVICE_nGnRnE 1
 #define MAIR_IDX_DEVICE_nGnRE  2
+#define MAIR_IDX_FRAMEBUFFER   3
 
 #ifndef __ASSEMBLER__
 

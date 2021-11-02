@@ -149,6 +149,7 @@ enum SPRR_val_t {
 #define MAIR_SHIFT_NORMAL        (MAIR_IDX_NORMAL * 8)
 #define MAIR_SHIFT_DEVICE_nGnRnE (MAIR_IDX_DEVICE_nGnRnE * 8)
 #define MAIR_SHIFT_DEVICE_nGnRE  (MAIR_IDX_DEVICE_nGnRE * 8)
+#define MAIR_SHIFT_FRAMEBUFFER   (MAIR_IDX_FRAMEBUFFER * 8)
 
 /*
  * https://developer.arm.com/documentation/ddi0500/e/system-control/aarch64-register-descriptions/memory-attribute-indirection-register--el1
@@ -161,6 +162,7 @@ enum SPRR_val_t {
 #define MAIR_ATTR_NORMAL_DEFAULT 0xffUL
 #define MAIR_ATTR_DEVICE_nGnRnE  0x00UL
 #define MAIR_ATTR_DEVICE_nGnRE   0x04UL
+#define MAIR_ATTR_FRAMEBUFFER    0x44UL
 
 static u64 mmu_pt_L0[2] ALIGNED(PAGE_SIZE);
 static u64 mmu_pt_L1[ENTRIES_PER_L1_TABLE] ALIGNED(PAGE_SIZE);
@@ -299,8 +301,9 @@ static void mmu_init_pagetables(void)
 
 void mmu_add_mapping(u64 from, u64 to, size_t size, u8 attribute_index, u64 perms)
 {
-    if (mmu_map(from, to | PTE_MAIR_IDX(attribute_index) | PTE_ACCESS | PTE_VALID | perms, size) <
-        0)
+    if (mmu_map(from,
+                to | PTE_MAIR_IDX(attribute_index) | PTE_ACCESS | PTE_VALID | PTE_SH_OS | perms,
+                size) < 0)
         panic("Failed to add MMU mapping 0x%lx -> 0x%lx (0x%lx)\n", from, to, size);
 
     sysop("dsb ishst");
@@ -473,7 +476,8 @@ static void mmu_configure(void)
 {
     msr(MAIR_EL1, (MAIR_ATTR_NORMAL_DEFAULT << MAIR_SHIFT_NORMAL) |
                       (MAIR_ATTR_DEVICE_nGnRnE << MAIR_SHIFT_DEVICE_nGnRnE) |
-                      (MAIR_ATTR_DEVICE_nGnRE << MAIR_SHIFT_DEVICE_nGnRE));
+                      (MAIR_ATTR_DEVICE_nGnRE << MAIR_SHIFT_DEVICE_nGnRE) |
+                      (MAIR_ATTR_FRAMEBUFFER << MAIR_SHIFT_FRAMEBUFFER));
     msr(TCR_EL1, FIELD_PREP(TCR_IPS, TCR_IPS_4TB) | FIELD_PREP(TCR_TG1, TCR_TG1_16K) |
                      FIELD_PREP(TCR_SH1, TCR_SH1_IS) | FIELD_PREP(TCR_ORGN1, TCR_ORGN1_WBWA) |
                      FIELD_PREP(TCR_IRGN1, TCR_IRGN1_WBWA) | FIELD_PREP(TCR_T1SZ, TCR_T1SZ_48BIT) |
