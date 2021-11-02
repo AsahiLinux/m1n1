@@ -417,6 +417,9 @@ class RangeMap(Reloadable):
             yield range(self.__start[pos], self.__end[pos] + 1), self.__value[pos]
 
     def replace(self, zone, val):
+        zone = self.__zone(zone)
+        if zone.start == zone.stop:
+            return
         start, stop = self._overlap_range(zone, True)
         self.__start = self.__start[:start] + [zone.start] + self.__start[stop:]
         self.__end = self.__end[:start] + [zone.stop - 1] + self.__end[stop:]
@@ -428,6 +431,9 @@ class RangeMap(Reloadable):
             self.__end = []
             self.__value = []
         else:
+            zone = self.__zone(zone)
+            if zone.start == zone.stop:
+                return
             start, stop = self._overlap_range(zone, True)
             self.__start = self.__start[:start] + self.__start[stop:]
             self.__end = self.__end[:start] + self.__end[stop:]
@@ -888,6 +894,7 @@ if __name__ == "__main__":
     a = BoolRangeMap()
     a.set(range(0, 2))
     a.set(range(4, 6))
+    a.set(range(5, 5))
     a.clear(range(3, 5))
     expect = [True, True, False, False, False, True, False]
     for i,j in enumerate(expect):
