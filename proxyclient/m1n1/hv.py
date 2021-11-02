@@ -983,8 +983,10 @@ class HV(Reloadable):
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
         self.iface.set_event_handler(EVENT.IRQTRACE, self.handle_irqtrace)
 
-        # Map MMIO range as HW by default)
-        self.add_tracer(range(0x2_00000000, 0x7_00000000), "HW", TraceMode.OFF)
+        # Map MMIO ranges as HW by default
+        for r in self.adt["/arm-io"].ranges:
+            print(f"Mapping MMIO range: {r.parent_addr:#x} .. {r.parent_addr + r.size:#x}")
+            self.add_tracer(irange(r.parent_addr, r.size), "HW", TraceMode.OFF)
 
         hcr = HCR(self.u.mrs(HCR_EL2))
         if self.novm:
@@ -1063,17 +1065,33 @@ class HV(Reloadable):
             self.log(f"PMGR R {base:x}+{off:x}:{width} = 0x{data:x} -> 0x{ret:x}")
             return ret
 
-        pmgr0_start, _ = self.adt["/arm-io/pmgr"].get_reg(0)
-
-        pmgr_hooks = (0x23b7001c0, 0x23b700220, 0x23b700270) # UART0
-
         if self.iodev == IODEV.USB0:
-            pmgr_hooks += (0x23d280098, 0x23d280088)
+            atc = "ATC0_USB"
         elif self.iodev == IODEV.USB1:
-            pmgr_hooks += (0x23d2800a0, 0x23d280090)
+            atc = "ATC1_USB"
 
-        # XNU bug workaround: don't let ATCx_COMMON power down or reset
-        pmgr_hooks += (0x23b700420, 0x23b700448)
+        hook_devs = ["UART0", atc]
+
+        pmgr = self.adt["/arm-io/pmgr"]
+        dev_by_name = {dev.name: dev for dev in pmgr.devices}
+        dev_by_id = {dev.id: dev for dev in pmgr.devices}
+
+        pmgr_hooks = []
+
+        def hook_pmgr_dev(dev):
+            ps = pmgr.ps_regs[dev.psreg]
+            if dev.psidx or dev.psreg:
+                addr = pmgr.get_reg(ps.reg)[0] + ps.offset + dev.psidx * 8
+                pmgr_hooks.append(addr)
+                for idx in dev.parents:
+                    if idx in dev_by_id:
+                        hook_pmgr_dev(dev_by_id[idx])
+
+        for name in hook_devs:
+            dev = dev_by_name[name]
+            hook_pmgr_dev(dev)
+
+        pmgr0_start = pmgr.get_reg(0)[0]
 
         for addr in pmgr_hooks:
             self.map_hook(addr, 4, write=wh, read=rh)
