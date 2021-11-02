@@ -29,7 +29,7 @@ static bool trace_aic_event(struct exc_info *ctx, u64 addr, u64 *val, bool write
     if (!hv_pa_rw(ctx, addr, val, write, width))
         return false;
 
-    if (addr != (aic_base + AIC_EVENT) || write || width != 2) {
+    if (addr != (aic_base + aic_regs->event) || write || width != 2) {
         return true;
     }
 
@@ -86,7 +86,7 @@ bool hv_trace_irq(u32 type, u32 num, u32 count, u32 flags)
             printf("HV: AIC supports more IRQs than expected! nr_hw: %u\n", nr_hw);
             return false;
         }
-        hv_map_hook(aic_base, trace_aic_event, 0x4000);
+        hv_map_hook(aic_base, trace_aic_event, aic_regs->reg_size);
         hooked = true;
     }
 

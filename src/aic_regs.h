@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 
+#define AIC_REG_SIZE     0x4000
 #define AIC_INFO         0x0004
 #define AIC_WHOAMI       0x2000
 #define AIC_EVENT        0x2004
@@ -13,6 +14,12 @@
 #define AIC_MASK_SET     0x4100
 #define AIC_MASK_CLR     0x4180
 
+#define AIC_CPU_IPI_SET(cpu)      (0x5008 + ((cpu) << 7))
+#define AIC_CPU_IPI_CLR(cpu)      (0x500c + ((cpu) << 7))
+#define AIC_CPU_IPI_MASK_SET(cpu) (0x5024 + ((cpu) << 7))
+#define AIC_CPU_IPI_MASK_CLR(cpu) (0x5028 + ((cpu) << 7))
+
+#define AIC2_REG_SIZE   0x10000
 #define AIC2_INFO       0x0004
 #define AIC2_LATENCY    0x0204
 #define AIC2_EVENT      0xc000
@@ -21,11 +28,6 @@
 #define AIC2_SW_CLR     0x6200
 #define AIC2_MASK_SET   0x6400
 #define AIC2_MASK_CLR   0x6800
-
-#define AIC_CPU_IPI_SET(cpu)      (0x5008 + ((cpu) << 7))
-#define AIC_CPU_IPI_CLR(cpu)      (0x500c + ((cpu) << 7))
-#define AIC_CPU_IPI_MASK_SET(cpu) (0x5024 + ((cpu) << 7))
-#define AIC_CPU_IPI_MASK_CLR(cpu) (0x5028 + ((cpu) << 7))
 
 #define AIC_INFO_NR_HW GENMASK(15, 0)
 
@@ -42,4 +44,4 @@
 #define AIC_IPI_OTHER BIT(0)
 #define AIC_IPI_SELF  BIT(31)
 
-#define AIC_MAX_HW_NUM (28 * 32)
+#define AIC_MAX_HW_NUM (0x80 * 32)

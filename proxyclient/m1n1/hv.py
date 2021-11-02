@@ -220,7 +220,7 @@ class HV(Reloadable):
                 self.interrupt_map.pop(n, None)
 
         start, size = self.adt["/arm-io/aic"].get_reg(0)
-        zone = irange(start, 0x4000)
+        zone = irange(start, size)
         if len(self.interrupt_map):
             self.add_tracer(zone, "AIC_IRQ", TraceMode.RESERVED)
         else:

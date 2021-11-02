@@ -10,16 +10,6 @@ u64 aic_base;
 #define MASK_REG(x) (4 * ((x) >> 5))
 #define MASK_BIT(x) BIT((x)&GENMASK(4, 0))
 
-struct aic_regs {
-    uint64_t reg_size;
-    uint64_t event;
-    uint64_t tgt_cpu;
-    uint64_t sw_set;
-    uint64_t sw_clr;
-    uint64_t mask_set;
-    uint64_t mask_clr;
-};
-
 static const struct aic_regs aic1_regs = {
     .reg_size = AIC_REG_SIZE,
     .event = AIC_EVENT,
@@ -40,7 +30,7 @@ static const struct aic_regs aic2_regs = {
     .mask_clr = AIC2_MASK_CLR,
 };
 
-static const struct aic_regs *regs;
+const struct aic_regs *aic_regs;
 
 void aic_init(void)
 {
@@ -59,10 +49,10 @@ void aic_init(void)
 
     if (adt_is_compatible(adt, node, "aic,1")) {
         printf("AIC: Version 1 @ 0x%lx\n", aic_base);
-        regs = &aic1_regs;
+        aic_regs = &aic1_regs;
     } else if (adt_is_compatible(adt, node, "aic,2")) {
         printf("AIC: Version 2 @ 0x%lx\n", aic_base);
-        regs = &aic2_regs;
+        aic_regs = &aic2_regs;
     } else {
         printf("AIC: Error: Unsupported version @ 0x%lx\n", aic_base);
     }
@@ -71,12 +61,12 @@ void aic_init(void)
 void aic_set_sw(int irq, bool active)
 {
     if (active)
-        write32(aic_base + regs->sw_set + MASK_REG(irq), MASK_BIT(irq));
+        write32(aic_base + aic_regs->sw_set + MASK_REG(irq), MASK_BIT(irq));
     else
-        write32(aic_base + regs->sw_clr + MASK_REG(irq), MASK_BIT(irq));
+        write32(aic_base + aic_regs->sw_clr + MASK_REG(irq), MASK_BIT(irq));
 }
 
 uint32_t aic_ack(void)
 {
-    return read32(aic_base + regs->event);
+    return read32(aic_base + aic_regs->event);
 }
