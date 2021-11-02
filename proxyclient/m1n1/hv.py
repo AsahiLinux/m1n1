@@ -1267,7 +1267,7 @@ class HV(Reloadable):
 
         print(f"Mapping guest physical memory...")
         ram_base = self.u.ba.phys_base & ~0xffffffff
-        #self.map_hw(ram_base, ram_base, self.u.ba.phys_base - ram_base)
+        self.map_hw(ram_base, ram_base, self.u.ba.phys_base - ram_base)
         self.map_hw(phys_base, phys_base, self.u.ba.mem_size_actual - phys_base + ram_base)
 
         print(f"Loading kernel image (0x{len(image):x} bytes)...")
