@@ -89,10 +89,11 @@ void __assert_fail(const char *assertion, const char *file, unsigned int line, c
 
 void udelay(u32 d)
 {
-    u64 delay = (u64)d * mrs(CNTFRQ_EL0) / 1000000;
-    u32 val = mrs(CNTPCT_EL0);
+    u64 delay = ((u64)d) * mrs(CNTFRQ_EL0) / 1000000;
+    u64 val = mrs(CNTPCT_EL0);
     while ((mrs(CNTPCT_EL0) - val) < delay)
         ;
+    sysop("isb");
 }
 
 void flush_and_reboot(void)
