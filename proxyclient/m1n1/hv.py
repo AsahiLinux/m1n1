@@ -460,7 +460,7 @@ class HV(Reloadable):
         if data.flags.WRITE:
             mode, ident, read, write, kwargs = maps[0]
 
-            if data.flags.WIDTH < 3:
+            if data.flags.WIDTH <= 3:
                 wval = val[0]
             else:
                 wval = val
