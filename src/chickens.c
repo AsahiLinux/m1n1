@@ -26,6 +26,10 @@ void init_common(void)
     // Unknown, related to SMP?
     msr(s3_4_c15_c5_0, core);
     msr(SYS_IMP_APL_AMX_CTL_EL1, 0x100);
+
+    // Enable IRQs (at least necessary on t600x)
+    msr(s3_4_c15_c10_4, 0);
+
     sysop("isb");
 }
 
