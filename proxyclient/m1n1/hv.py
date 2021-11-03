@@ -104,6 +104,11 @@ class HV(Reloadable):
         GXF_CONFIG_EL1: GXF_CONFIG_EL12,
         GXF_ABORT_EL1: GXF_ABORT_EL12,
         GXF_ENTER_EL1: GXF_ENTER_EL12,
+        VBAR_GL1: VBAR_GL12,
+        SPSR_GL1: SPSR_GL12,
+        ASPSR_GL1: ASPSR_GL12,
+        ESR_GL1: ESR_GL12,
+        ELR_GL1: ELR_GL12,
     }
 
     AIC_EVT_TYPE_HW = 1
