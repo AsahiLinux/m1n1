@@ -149,13 +149,23 @@ class PrintTracer(Tracer):
     def __init__(self, hv, device_addr_tbl):
         super().__init__(hv)
         self.device_addr_tbl = device_addr_tbl
+        self.log_file = None
 
     def event_mmio(self, evt):
         dev, zone = self.device_addr_tbl.lookup(evt.addr)
         t = "W" if evt.flags.WRITE else "R"
         m = "+" if evt.flags.MULTI else " "
-        print(f"[cpu{evt.flags.CPU}][0x{evt.pc:016x}] MMIO: {t}.{1<<evt.flags.WIDTH:<2}{m} " +
-              f"0x{evt.addr:x} ({dev}, offset {evt.addr - zone.start:#04x}) = 0x{evt.data:x}")
+        logline = (f"[cpu{evt.flags.CPU}][0x{evt.pc:016x}] MMIO: {t}.{1<<evt.flags.WIDTH:<2}{m} " +
+                   f"0x{evt.addr:x} ({dev}, offset {evt.addr - zone.start:#04x}) = 0x{evt.data:x}")
+        print(logline)
+        if self.log_file:
+            self.log_file.write(f"# {logline}\n")
+            width = 8 << evt.flags.WIDTH
+            if evt.flags.WRITE:
+                stmt = f"p.write{width}({zone.start:#x} + {evt.addr - zone.start:#x}, {evt.data:#x})\n"
+            else:
+                stmt = f"p.read{width}({zone.start:#x} + {evt.addr - zone.start:#x})\n"
+            self.log_file.write(stmt)
 
 class ADTDevTracer(Tracer):
     REGMAPS = []

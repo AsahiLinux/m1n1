@@ -166,8 +166,12 @@ class HV(Reloadable):
     def log(self, s, *args, **kwargs):
         if self.ctx is not None:
             print(f"[cpu{self.ctx.cpu_id}] " + s, *args, **kwargs)
+            if self.print_tracer.log_file:
+                print(f"# [cpu{self.ctx.cpu_id}] " + s, *args, file=self.print_tracer.log_file, **kwargs)
         else:
             print(s, *args, **kwargs)
+            if self.print_tracer.log_file:
+                print("# " + s, *args, file=self.print_tracer.log_file, **kwargs)
 
     def unmap(self, ipa, size):
         assert self.p.hv_map(ipa, 0, size, 0) >= 0
@@ -578,21 +582,18 @@ class HV(Reloadable):
                 self.log(f"Skip: msr {name}, x{iss.Rt} = {value:x}")
         else:
             if iss.DIR == MSR_DIR.READ:
-                self.log(f"Pass: mrs x{iss.Rt}, {name}", end=" ")
-                sys.stdout.flush()
                 enc2 = self.MSR_REDIRECTS.get(enc, enc)
                 value = self.u.mrs(enc2)
-                print(f"= {value:x} ({sysreg_name(enc2)})")
+                self.log(f"Pass: mrs x{iss.Rt}, {name} = {value:x} ({sysreg_name(enc2)})")
                 if iss.Rt != 31:
                     ctx.regs[iss.Rt] = value
             else:
                 if iss.Rt != 31:
                     value = ctx.regs[iss.Rt]
-                self.log(f"Pass: msr {name}, x{iss.Rt} = {value:x}", end=" ")
                 enc2 = self.MSR_REDIRECTS.get(enc, enc)
                 sys.stdout.flush()
                 self.u.msr(enc2, value, call=self.p.gl2_call)
-                print(f"(OK) ({sysreg_name(enc2)})")
+                self.log(f"Pass: msr {name}, x{iss.Rt} = {value:x} (OK) ({sysreg_name(enc2)})")
 
         ctx.elr += 4
 
@@ -960,6 +961,8 @@ class HV(Reloadable):
 
         self.vbar_el1 = vbar
 
+    def set_logfile(self, fd):
+        self.print_tracer.log_file = fd
 
     def init(self):
         self.adt = load_adt(self.u.get_adt())
@@ -1114,7 +1117,7 @@ class HV(Reloadable):
             self.add_tracer(irange(addr, 4), "PMGR HACK", TraceMode.RESERVED)
 
         def cpustart_wh(base, off, data, width):
-            print(f"CPUSTART W {base:x}+{off:x}:{width} = 0x{data:x}")
+            self.log(f"CPUSTART W {base:x}+{off:x}:{width} = 0x{data:x}")
             if off >= 8:
                 assert width == 32
                 cluster = (off - 8) // 4
