@@ -142,6 +142,7 @@ class HV(Reloadable):
         self.wdt_cpu = None
         self.smp = True
         self.hook_exceptions = False
+        self.started_cpus = set()
 
     def _reloadme(self):
         super()._reloadme()
@@ -1141,6 +1142,7 @@ class HV(Reloadable):
         self.log(f" CPU #{index}: RVBAR = {entry:#x}")
 
         self.sysreg[index] = {}
+        self.started_cpus.add(index)
         self.p.hv_start_secondary(index, entry)
 
     def setup_adt(self):
