@@ -9,10 +9,14 @@
 
 #define SYS_IMP_APL_ACTLR_EL12 sys_reg(3, 6, 15, 14, 6)
 
-#define SYS_IMP_APL_AMX_CTL_EL1 sys_reg(3, 4, 15, 1, 4)
-#define SYS_IMP_APL_AMX_CTL_EL2 sys_reg(3, 4, 15, 4, 7)
-#define AMX_CTL_EN              BIT(63)
-#define AMX_CTL_EN_EL1          BIT(62)
+#define SYS_IMP_APL_AMX_CTL_EL1  sys_reg(3, 4, 15, 1, 4)
+#define SYS_IMP_APL_AMX_CTL_EL2  sys_reg(3, 4, 15, 4, 7)
+#define SYS_IMP_APL_AMX_CTL_EL12 sys_reg(3, 4, 15, 4, 6)
+
+#define AMX_CTL_EN     BIT(63)
+#define AMX_CTL_EN_EL1 BIT(62)
+
+#define SYS_IMP_APL_CNTVCT_ALIAS_EL0 sys_reg(3, 4, 15, 10, 6)
 
 /* HID registers */
 #define SYS_IMP_APL_HID0                sys_reg(3, 0, 15, 0, 0)
@@ -184,8 +188,10 @@
 #define SYS_IMP_APL_GXF_ABORT_EL12 sys_reg(3, 6, 15, 15, 3)
 #define SYS_IMP_APL_GXF_ENTER_EL12 sys_reg(3, 6, 15, 15, 2)
 
-#define SYS_IMP_APL_SPRR_PERM_EL0 sys_reg(3, 6, 15, 1, 5)
-#define SYS_IMP_APL_SPRR_PERM_EL1 sys_reg(3, 6, 15, 1, 6)
+#define SYS_IMP_APL_SPRR_PERM_EL0  sys_reg(3, 6, 15, 1, 5)
+#define SYS_IMP_APL_SPRR_PERM_EL1  sys_reg(3, 6, 15, 1, 6)
+#define SYS_IMP_APL_SPRR_PERM_EL02 sys_reg(3, 4, 15, 5, 2)
+#define SYS_IMP_APL_SPRR_PERM_EL12 sys_reg(3, 6, 15, 15, 7)
 
 #define SYS_IMP_APL_TPIDR_GL1 sys_reg(3, 6, 15, 10, 1)
 #define SYS_IMP_APL_VBAR_GL1  sys_reg(3, 6, 15, 10, 2)
@@ -195,8 +201,12 @@
 #define SYS_IMP_APL_ELR_GL1   sys_reg(3, 6, 15, 10, 6)
 #define SYS_IMP_APL_FAR_GL1   sys_reg(3, 6, 15, 10, 7)
 
-#define SYS_IMP_APL_VBAR_GL12 sys_reg(3, 6, 15, 9, 2)
-#define SYS_IMP_APL_SP_GL12   sys_reg(3, 6, 15, 10, 0)
+#define SYS_IMP_APL_VBAR_GL12  sys_reg(3, 6, 15, 9, 2)
+#define SYS_IMP_APL_SPSR_GL12  sys_reg(3, 6, 15, 9, 3)
+#define SYS_IMP_APL_ASPSR_GL12 sys_reg(3, 6, 15, 9, 4)
+#define SYS_IMP_APL_ESR_GL12   sys_reg(3, 6, 15, 9, 5)
+#define SYS_IMP_APL_ELR_GL12   sys_reg(3, 6, 15, 9, 6)
+#define SYS_IMP_APL_SP_GL12    sys_reg(3, 6, 15, 10, 0)
 
 #define SYS_IMP_APL_AFSR1_GL1 sys_reg(3, 6, 15, 0, 1)
 
@@ -204,6 +214,10 @@
 #define SYS_IMP_APL_APVMKEYLO_EL2 sys_reg(3, 6, 15, 14, 4)
 #define SYS_IMP_APL_APVMKEYHI_EL2 sys_reg(3, 6, 15, 14, 5)
 #define SYS_IMP_APL_APSTS_EL12    sys_reg(3, 6, 15, 14, 7)
+
+#define SYS_IMP_APL_APCTL_EL1  sys_reg(3, 4, 15, 0, 4)
+#define SYS_IMP_APL_APCTL_EL2  sys_reg(3, 6, 15, 12, 2)
+#define SYS_IMP_APL_APCTL_EL12 sys_reg(3, 6, 15, 15, 0)
 
 /* VM registers */
 #define SYS_IMP_APL_VM_TMR_FIQ_ENA_EL2 sys_reg(3, 5, 15, 1, 3)
