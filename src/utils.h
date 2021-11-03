@@ -371,8 +371,13 @@ typedef struct {
     int count;
 } spinlock_t ALIGNED(64);
 
-#define DECLARE_SPINLOCK(n) spinlock_t n = {-1, 0}
+#define SPINLOCK_INIT                                                                              \
+    {                                                                                              \
+        -1, 0                                                                                      \
+    }
+#define DECLARE_SPINLOCK(n) spinlock_t n = SPINLOCK_INIT;
 
+void spin_init(spinlock_t *lock);
 void spin_lock(spinlock_t *lock);
 void spin_unlock(spinlock_t *lock);
 

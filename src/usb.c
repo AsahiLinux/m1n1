@@ -210,10 +210,12 @@ struct iodev iodev_usb[USB_INSTANCES] = {
     {
         .ops = &iodev_usb_ops,
         .usage = USAGE_CONSOLE | USAGE_UARTPROXY,
+        .lock = SPINLOCK_INIT,
     },
     {
         .ops = &iodev_usb_ops,
         .usage = USAGE_CONSOLE | USAGE_UARTPROXY,
+        .lock = SPINLOCK_INIT,
     },
 };
 
@@ -221,10 +223,12 @@ struct iodev iodev_usb_sec[USB_INSTANCES] = {
     {
         .ops = &iodev_usb_sec_ops,
         .usage = 0,
+        .lock = SPINLOCK_INIT,
     },
     {
         .ops = &iodev_usb_sec_ops,
         .usage = 0,
+        .lock = SPINLOCK_INIT,
     },
 };
 

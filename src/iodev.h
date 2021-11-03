@@ -34,6 +34,7 @@ struct iodev_ops {
 struct iodev {
     const struct iodev_ops *ops;
 
+    spinlock_t lock;
     iodev_usage_t usage;
     void *opaque;
 };

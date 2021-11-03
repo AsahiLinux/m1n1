@@ -301,6 +301,7 @@ const struct iodev_ops iodev_fb_ops = {
 struct iodev iodev_fb = {
     .ops = &iodev_fb_ops,
     .usage = USAGE_CONSOLE,
+    .lock = SPINLOCK_INIT,
 };
 
 static void fb_clear_console(void)

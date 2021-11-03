@@ -102,6 +102,12 @@ void flush_and_reboot(void)
     reboot();
 }
 
+void spin_init(spinlock_t *lock)
+{
+    lock->lock = -1;
+    lock->count = 0;
+}
+
 void spin_lock(spinlock_t *lock)
 {
     s64 me = smp_id();

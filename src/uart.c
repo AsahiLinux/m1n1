@@ -176,4 +176,5 @@ static struct iodev_ops iodev_uart_ops = {
 struct iodev iodev_uart = {
     .ops = &iodev_uart_ops,
     .usage = USAGE_CONSOLE | USAGE_UARTPROXY,
+    .lock = SPINLOCK_INIT,
 };

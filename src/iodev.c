@@ -36,7 +36,10 @@ ssize_t iodev_can_read(iodev_id_t id)
     if (!iodevs[id]->ops->can_read)
         return 0;
 
-    return iodevs[id]->ops->can_read(iodevs[id]->opaque);
+    spin_lock(&iodevs[id]->lock);
+    ssize_t ret = iodevs[id]->ops->can_read(iodevs[id]->opaque);
+    spin_unlock(&iodevs[id]->lock);
+    return ret;
 }
 
 bool iodev_can_write(iodev_id_t id)
@@ -44,7 +47,12 @@ bool iodev_can_write(iodev_id_t id)
     if (!iodevs[id]->ops->can_write)
         return false;
 
-    return iodevs[id]->ops->can_write(iodevs[id]->opaque);
+    if (mmu_active())
+        spin_lock(&iodevs[id]->lock);
+    bool ret = iodevs[id]->ops->can_write(iodevs[id]->opaque);
+    if (mmu_active())
+        spin_unlock(&iodevs[id]->lock);
+    return ret;
 }
 
 ssize_t iodev_read(iodev_id_t id, void *buf, size_t length)
@@ -52,7 +60,10 @@ ssize_t iodev_read(iodev_id_t id, void *buf, size_t length)
     if (!iodevs[id]->ops->read)
         return -1;
 
-    return iodevs[id]->ops->read(iodevs[id]->opaque, buf, length);
+    spin_lock(&iodevs[id]->lock);
+    ssize_t ret = iodevs[id]->ops->read(iodevs[id]->opaque, buf, length);
+    spin_unlock(&iodevs[id]->lock);
+    return ret;
 }
 
 ssize_t iodev_write(iodev_id_t id, const void *buf, size_t length)
@@ -60,7 +71,12 @@ ssize_t iodev_write(iodev_id_t id, const void *buf, size_t length)
     if (!iodevs[id]->ops->write)
         return -1;
 
-    return iodevs[id]->ops->write(iodevs[id]->opaque, buf, length);
+    if (mmu_active())
+        spin_lock(&iodevs[id]->lock);
+    ssize_t ret = iodevs[id]->ops->write(iodevs[id]->opaque, buf, length);
+    if (mmu_active())
+        spin_unlock(&iodevs[id]->lock);
+    return ret;
 }
 
 ssize_t iodev_queue(iodev_id_t id, const void *buf, size_t length)
@@ -68,7 +84,10 @@ ssize_t iodev_queue(iodev_id_t id, const void *buf, size_t length)
     if (!iodevs[id]->ops->queue)
         return iodev_write(id, buf, length);
 
-    return iodevs[id]->ops->queue(iodevs[id]->opaque, buf, length);
+    spin_lock(&iodevs[id]->lock);
+    ssize_t ret = iodevs[id]->ops->queue(iodevs[id]->opaque, buf, length);
+    spin_unlock(&iodevs[id]->lock);
+    return ret;
 }
 
 void iodev_flush(iodev_id_t id)
@@ -76,7 +95,9 @@ void iodev_flush(iodev_id_t id)
     if (!iodevs[id]->ops->flush)
         return;
 
+    spin_lock(&iodevs[id]->lock);
     iodevs[id]->ops->flush(iodevs[id]->opaque);
+    spin_unlock(&iodevs[id]->lock);
 }
 
 int in_iodev = 0;
@@ -89,8 +110,8 @@ void iodev_console_write(const void *buf, size_t length)
 
     if (!do_lock && !is_primary_core()) {
         if (length && iodevs[IODEV_UART]->usage & USAGE_CONSOLE) {
-            iodev_write(IODEV_UART, "*", 1);
-            iodev_write(IODEV_UART, buf, length);
+            iodevs[IODEV_UART]->ops->write(iodevs[IODEV_UART]->opaque, "*", 1);
+            iodevs[IODEV_UART]->ops->write(iodevs[IODEV_UART]->opaque, buf, length);
         }
         return;
     }
@@ -100,8 +121,8 @@ void iodev_console_write(const void *buf, size_t length)
 
     if (in_iodev) {
         if (length && iodevs[IODEV_UART]->usage & USAGE_CONSOLE) {
-            iodev_write(IODEV_UART, "*", 1);
-            iodev_write(IODEV_UART, buf, length);
+            iodevs[IODEV_UART]->ops->write(iodevs[IODEV_UART]->opaque, "+", 1);
+            iodevs[IODEV_UART]->ops->write(iodevs[IODEV_UART]->opaque, buf, length);
         }
         if (do_lock)
             spin_unlock(&console_lock);
@@ -183,8 +204,16 @@ void iodev_console_write(const void *buf, size_t length)
 
 void iodev_handle_events(iodev_id_t id)
 {
-    if (in_iodev)
+    bool do_lock = mmu_active();
+
+    if (do_lock)
+        spin_lock(&console_lock);
+
+    if (in_iodev) {
+        if (do_lock)
+            spin_unlock(&console_lock);
         return;
+    }
 
     in_iodev++;
 
@@ -195,6 +224,9 @@ void iodev_handle_events(iodev_id_t id)
 
     if (iodev_can_write(id))
         iodev_console_write(NULL, 0);
+
+    if (do_lock)
+        spin_unlock(&console_lock);
 }
 
 void iodev_console_kick(void)
