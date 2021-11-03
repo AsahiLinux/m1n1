@@ -73,13 +73,15 @@ static u64 rc_base;
 static u64 phy_base;
 static u64 phy_ip_base;
 static u64 fuse_base;
-static u64 port_base[3];
+static u32 port_count;
+static u64 port_base[8];
 
 int pcie_init(void)
 {
     const char *path = "/arm-io/apcie";
     int adt_path[8];
     int adt_offset;
+    u64 port_reg_cnt;
 
     if (pcie_initialized)
         return 0;
@@ -87,6 +89,20 @@ int pcie_init(void)
     adt_offset = adt_path_offset_trace(adt, path, adt_path);
     if (adt_offset < 0) {
         printf("pcie: Error getting node %s\n", path);
+        return -1;
+    }
+
+    if (adt_is_compatible(adt, adt_offset, "apcie,t8103")) {
+        port_reg_cnt = 4;
+    } else if (adt_is_compatible(adt, adt_offset, "apcie,t6000")) {
+        port_reg_cnt = 5;
+    } else {
+        printf("pcie: Unsupported compatible\n");
+        return -1;
+    }
+
+    if (ADT_GETPROP(adt, adt_offset, "#ports", &port_count) < 0) {
+        printf("pcie: Error getting port count for %s\n", path);
         return -1;
     }
 
@@ -176,8 +192,10 @@ int pcie_init(void)
     }
 
     int port;
-    for (port = 0; port < 3; port++) {
+    for (port = 0; port < port_count; port++) {
         char bridge[64];
+
+        printf("pcie: Initializing port %d\n", port);
 
         /*
          * Initialize RC port.
@@ -188,7 +206,7 @@ int pcie_init(void)
         if (adt_path_offset(adt, bridge) < 0)
             continue;
 
-        if (adt_get_reg(adt, adt_path, "reg", port * 4 + 6, &port_base[port], NULL)) {
+        if (adt_get_reg(adt, adt_path, "reg", port * port_reg_cnt + 6, &port_base[port], NULL)) {
             printf("pcie: Error getting reg with index %d for %s\n", port * 4 + 6, path);
             return -1;
         }
@@ -204,8 +222,10 @@ int pcie_init(void)
         set32(port_base[port] + APCIE_PORT_RESET, APCIE_PORT_RESET_DIS);
 
         if (poll32(port_base[port] + APCIE_PORT_STATUS, APCIE_PORT_STATUS_RUN,
-                   APCIE_PORT_STATUS_RUN, 250000))
+                   APCIE_PORT_STATUS_RUN, 250000)) {
+            printf("pcie: Port failed to come up on %s\n", bridge);
             return -1;
+        }
 
         /* Make Designware PCIe Core registers writable. */
         set32(config_base + DWC_DBI_RO_WR, DWC_DBI_RO_WR_EN);
@@ -241,7 +261,7 @@ int pcie_shutdown(void)
     if (!pcie_initialized)
         return 0;
 
-    for (int port = 0; port < 3; port++) {
+    for (int port = 0; port < port_count; port++) {
         clear32(port_base[port] + APCIE_PORT_RESET, APCIE_PORT_RESET_DIS);
         clear32(port_base[port] + APCIE_PORT_APPCLK, APCIE_PORT_APPCLK_EN);
     }
