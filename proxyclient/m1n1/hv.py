@@ -442,6 +442,7 @@ class HV(Reloadable):
             first += 1
 
         flags = data.flags.copy()
+        flags.CPU = self.ctx.cpu_id
         width = data.flags.WIDTH
 
         if width > 3:
