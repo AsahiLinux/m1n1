@@ -120,13 +120,13 @@ build/%.o: src/%.S
 	@echo "  AS    $@"
 	@mkdir -p $(DEPDIR)
 	@mkdir -p "$(dir $@)"
-	@$(AS) -c $(CFLAGS) -Wp,-MMD,$(DEPDIR)/$(*F).d,-MQ,"$@",-MP -o $@ $<
+	@$(AS) -c $(CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
 
 build/%.o: src/%.c
 	@echo "  CC    $@"
 	@mkdir -p $(DEPDIR)
 	@mkdir -p "$(dir $@)"
-	@$(CC) -c $(CFLAGS) -Wp,-MMD,$(DEPDIR)/$(*F).d,-MQ,"$@",-MP -o $@ $<
+	@$(CC) -c $(CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
 
 build/$(NAME).elf: $(BUILD_OBJS) m1n1.ld
 	@echo "  LD    $@"
