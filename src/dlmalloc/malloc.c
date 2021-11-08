@@ -587,8 +587,12 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define MAX_SIZE_T           (~(size_t)0)
 
 #ifndef USE_LOCKS /* ensure true if spin or recursive locks set */
-#define USE_LOCKS  ((defined(USE_SPIN_LOCKS) && USE_SPIN_LOCKS != 0) || \
+#if ((defined(USE_SPIN_LOCKS) && USE_SPIN_LOCKS != 0) || \
                     (defined(USE_RECURSIVE_LOCKS) && USE_RECURSIVE_LOCKS != 0))
+#define USE_LOCKS 1
+#else
+#define USE_LOCKS 0
+#endif
 #endif /* USE_LOCKS */
 
 #if USE_LOCKS /* Spin locks for gcc >= 4.1, older gcc on x86, MSC >= 1310 */

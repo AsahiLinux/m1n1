@@ -191,8 +191,7 @@ int pcie_init(void)
         return -1;
     }
 
-    int port;
-    for (port = 0; port < port_count; port++) {
+    for (u32 port = 0; port < port_count; port++) {
         char bridge[64];
 
         printf("pcie: Initializing port %d\n", port);
@@ -261,7 +260,7 @@ int pcie_shutdown(void)
     if (!pcie_initialized)
         return 0;
 
-    for (int port = 0; port < port_count; port++) {
+    for (u32 port = 0; port < port_count; port++) {
         clear32(port_base[port] + APCIE_PORT_RESET, APCIE_PORT_RESET_DIS);
         clear32(port_base[port] + APCIE_PORT_APPCLK, APCIE_PORT_APPCLK_EN);
     }

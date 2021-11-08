@@ -36,8 +36,7 @@ static u64 exc_entry_time;
 
 extern u32 hv_cpus_in_guest;
 
-void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, uartproxy_exc_code_t type,
-                  void *extra)
+void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type, void *extra)
 {
     int from_el = FIELD_GET(SPSR_M, ctx->spsr) >> 2;
 
