@@ -82,7 +82,7 @@ class BaseAsm(object):
         self._call(OBJDUMP, f"-rd {self.elffile}")
 
     def disassemble(self):
-        output = self._get("OBJDUMP", f"-zd {self.elffile}")
+        output = self._get(OBJDUMP, f"-zd {self.elffile}")
 
         for line in output.split("\n"):
             if not line or line[0] != " ":
