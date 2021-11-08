@@ -431,7 +431,11 @@ class HV(Reloadable):
                     val = [val]
                 first += 1
             elif mode == TraceMode.SYNC:
-                val = self.u.read(data.addr, 8 << data.flags.WIDTH)
+                try:
+                    val = self.u.read(data.addr, 8 << data.flags.WIDTH)
+                except:
+                    self.log(f"MMIO read failed: {data.addr:#x} (w={data.flags.WIDTH})")
+                    raise
                 if not isinstance(val, list) and not isinstance(val, tuple):
                     val = [val]
 
@@ -480,7 +484,13 @@ class HV(Reloadable):
                 self.shellwrap(lambda: write(data.addr, wval, 8 << data.flags.WIDTH, **kwargs),
                             f"Tracer {ident}:write (HOOK)", update=do_update)
             elif mode == TraceMode.SYNC:
-                self.u.write(data.addr, wval, 8 << data.flags.WIDTH)
+                try:
+                    self.u.write(data.addr, wval, 8 << data.flags.WIDTH)
+                except:
+                    if data.flags.WIDTH > 3:
+                        wval = wval[0]
+                    self.log(f"MMIO write failed: {data.addr:#x} = {wval} (w={data.flags.WIDTH})")
+                    raise
 
         return True
 
