@@ -184,7 +184,10 @@ void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
     target->target = (u64)func;
     sysop("dmb sy");
 
-    smp_send_ipi(cpu);
+    if (wfe_mode)
+        sysop("sev");
+    else
+        smp_send_ipi(cpu);
 
     while (target->flag == flag)
         sysop("dmb sy");

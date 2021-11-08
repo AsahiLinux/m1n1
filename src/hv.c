@@ -52,6 +52,7 @@ void hv_init(void)
     // reenable hpm interrupts for the guest for unused iodevs
     usb_hpm_restore_irqs(0);
     smp_start_secondaries();
+    smp_set_wfe_mode(true);
     hv_wdt_init();
 
     // Enable physical timer for EL1
