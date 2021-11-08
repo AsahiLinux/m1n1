@@ -3,6 +3,35 @@ import os, tempfile, shutil, subprocess
 
 __all__ = ["AsmException", "ARMAsm"]
 
+uname = os.uname()
+
+if uname.sysname == "Darwin":
+    if uname.machine == "arm64":
+        TOOLCHAIN = "/opt/homebrew/opt/llvm/bin/"
+    else:
+        TOOLCHAIN = "/usr/local/opt/llvm/bin/"
+    USE_CLANG = "1"
+else:
+    DEFAULT_ARCH = "aarch64-linux-gnu-"
+    USE_CLANG = "0"
+    TOOLCHAIN = ""
+
+use_clang = os.environ.get("USE_CLANG", USE_CLANG).strip() == "1"
+toolchain = os.environ.get("TOOLCHAIN", TOOLCHAIN)
+
+if use_clang:
+    CC = toolchain + "clang --target=%ARCH"
+    LD = toolchain + "ld.lld"
+    OBJCOPY = toolchain + "llvm-objcopy"
+    OBJDUMP = toolchain + "llvm-objdump"
+    NM = toolchain + "llvm-nm"
+else:
+    CC = toolchain + "%ARCHgcc"
+    LD = toolchain + "%ARCHld"
+    OBJCOPY = toolchain + "%ARCHobjcopy"
+    OBJDUMP = toolchain + "%ARCHobjdump"
+    NM = toolchain + "%ARCHnm"
+
 class AsmException(Exception):
     pass
 
@@ -13,6 +42,12 @@ class BaseAsm(object):
         self.addr = addr
         self.compile(source)
 
+    def _call(self, program, args):
+        subprocess.check_call(program.replace("%ARCH", self.ARCH) + " " + args, shell=True)
+
+    def _get(self, program, args):
+        return subprocess.check_output(program.replace("%ARCH", self.ARCH) + " " + args, shell=True).decode("ascii")
+
     def compile(self, source):
         self.sfile = self._tmp + "b.S"
         with open(self.sfile, "w") as fd:
@@ -20,13 +55,15 @@ class BaseAsm(object):
             fd.write(source + "\n")
             fd.write(self.FOOTER + "\n")
 
+        self.ofile = self._tmp + "b.o"
         self.elffile = self._tmp + "b.elf"
         self.bfile = self._tmp + "b.b"
         self.nfile = self._tmp + "b.n"
 
-        subprocess.check_call("%sgcc %s -Ttext=0x%x -o %s %s" % (self.PREFIX, self.CFLAGS, self.addr, self.elffile, self.sfile), shell=True)
-        subprocess.check_call("%sobjcopy -j.text -O binary %s %s" % (self.PREFIX, self.elffile, self.bfile), shell=True)
-        subprocess.check_call("%snm %s > %s" % (self.PREFIX, self.elffile, self.nfile), shell=True)
+        self._call(CC, f"{self.CFLAGS} -c -o {self.ofile} {self.sfile}")
+        self._call(LD, f"{self.LDFLAGS} --Ttext={self.addr:#x} -o {self.elffile} {self.ofile}")
+        self._call(OBJCOPY, f"-j.text -O binary {self.elffile} {self.bfile}")
+        self._call(NM, f"{self.elffile} > {self.nfile}")
 
         with open(self.bfile, "rb") as fd:
             self.data = fd.read()
@@ -42,10 +79,10 @@ class BaseAsm(object):
         self.end = self.start + self.len
 
     def objdump(self):
-        subprocess.check_call("%sobjdump -rd %s" % (self.PREFIX, self.elffile), shell=True)
+        self._call(OBJDUMP, f"-rd {self.elffile}")
 
     def disassemble(self):
-        output = subprocess.check_output("%sobjdump -zd %s" % (self.PREFIX, self.elffile), shell=True).decode("ascii")
+        output = self._get("OBJDUMP", f"-zd {self.elffile}")
 
         for line in output.split("\n"):
             if not line or line[0] != " ":
@@ -58,8 +95,9 @@ class BaseAsm(object):
             self._tmp = None
 
 class ARMAsm(BaseAsm):
-    PREFIX = os.path.join(os.environ.get("ARCH", "aarch64-linux-gnu-"))
-    CFLAGS = "-pipe -Wall -nostartfiles -nodefaultlibs -march=armv8.2-a"
+    ARCH = os.path.join(os.environ.get("ARCH", "aarch64-linux-gnu-"))
+    CFLAGS = "-pipe -Wall -march=armv8.2-a"
+    LDFLAGS = "-maarch64elf"
     HEADER = """
     .text
     .globl _start
@@ -84,5 +122,5 @@ test:
     c = ARMAsm(code, 0x1238)
     c.objdump()
     assert c.start == 0x1238
-    assert c.test == 0x1240
-
+    if not sys.argv[1:]:
+        assert c.test == 0x1248
