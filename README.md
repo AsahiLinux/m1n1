@@ -17,6 +17,15 @@ The output will be in build/m1n1.macho.
 
 To build on a native arm64 machine, use `make ARCH=`.
 
+Building on ARM64 macOS is supported with clang and LLVM; you need to use Homebrew to
+install the required dependencies:
+
+```shell
+$ brew install llvm imagemagick dtc
+```
+
+After that, just type `make`.
+
 ### Building using the container setup
 
 If you have a container runtime installed, like Podman or Docker, you can make use of the compose setup, which contains all build dependencies.

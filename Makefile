@@ -1,15 +1,30 @@
-ARCH := aarch64-linux-gnu-
+ARCH ?= aarch64-linux-gnu-
+
+ifeq ($(shell uname),Darwin)
+USE_CLANG ?= 1
+$(info INFO: Building on Darwin)
+ifeq ($(shell uname -p),arm)
+TOOLCHAIN ?= /opt/homebrew/opt/llvm/bin/
+else
+TOOLCHAIN ?= /usr/local/opt/llvm/bin/
+endif
+$(info INFO: Toolchain path: $(TOOLCHAIN))
+endif
 
 ifeq ($(USE_CLANG),1)
-CC := clang --target=$(ARCH)
-AS := clang --target=$(ARCH)
-LD := ld.lld
-OBJCOPY := llvm-objcopy
+CC := $(TOOLCHAIN)clang --target=$(ARCH)
+AS := $(TOOLCHAIN)clang --target=$(ARCH)
+LD := $(TOOLCHAIN)ld.lld
+OBJCOPY := $(TOOLCHAIN)llvm-objcopy
+CLANG_FORMAT := $(TOOLCHAIN)clang-format
+EXTRA_CFLAGS ?=
 else
-CC := $(ARCH)gcc
-AS := $(ARCH)gcc
-LD := $(ARCH)ld
-OBJCOPY := $(ARCH)objcopy
+CC := $(TOOLCHAIN)$(ARCH)gcc
+AS := $(TOOLCHAIN)$(ARCH)gcc
+LD := $(TOOLCHAIN)$(ARCH)ld
+OBJCOPY := $(TOOLCHAIN)$(ARCH)objcopy
+CLANG_FORMAT := clang-format
+EXTRA_CFLAGS ?= -Wstack-usage=1024
 endif
 
 CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
@@ -18,7 +33,7 @@ CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-ffreestanding -fpic -ffunction-sections -fdata-sections \
 	-nostdinc -isystem $(shell $(CC) -print-file-name=include) -isystem sysinc \
 	-fno-stack-protector -mgeneral-regs-only -mstrict-align -march=armv8.2-a \
-	-Wstack-usage=1024
+	$(EXTRA_CFLAGS)
 
 LDFLAGS := -T m1n1.ld -EL -maarch64elf --no-undefined -X -Bsymbolic \
 	-z notext --no-apply-dynamic-relocs --orphan-handling=warn \
@@ -87,9 +102,9 @@ all: build/$(TARGET) $(DTBS)
 clean:
 	rm -rf build/*
 format:
-	clang-format -i src/*.c src/*.h sysinc/*.h
+	$(CLANG_FORMAT) -i src/*.c src/*.h sysinc/*.h
 format-check:
-	clang-format --dry-run --Werror src/*.c src/*.h sysinc/*.h
+	$(CLANG_FORMAT) --dry-run --Werror src/*.c src/*.h sysinc/*.h
 
 build/dtb/%.dts: dts/%.dts
 	@echo "  DTCPP $@"
