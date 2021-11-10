@@ -233,7 +233,7 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
         at = Hex(Int64ul) if ac == 2 else Array(ac, Hex(Int32ul))
         pat = Hex(Int64ul) if pac == 2 else Array(pac, Hex(Int32ul))
         st = Hex(Int64ul) if sc == 2 else Array(sc, Hex(Int32ul))
-        t = SafeGreedyRange(Struct("bus_addr" / pat, "parent_addr" / at, "size" / st))
+        t = SafeGreedyRange(Struct("bus_addr" / at, "parent_addr" / pat, "size" / st))
 
     elif name == "interrupts":
         # parse "interrupts" as Array of Int32ul, wrong for nodes whose
