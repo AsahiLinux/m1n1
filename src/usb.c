@@ -16,6 +16,7 @@
 #define USB_INSTANCES 2
 
 struct usb_drd_regs {
+    int initialized;
     uintptr_t drd_regs;
     uintptr_t drd_regs_unk3;
     uintptr_t atc;
@@ -46,6 +47,7 @@ static const struct {
 
 static tps6598x_irq_state_t tps6598x_irq_state[USB_INSTANCES];
 static bool usb_is_initialized = false;
+struct usb_drd_regs usb_regs[USB_INSTANCES];
 
 static dart_dev_t *usb_dart_init(const char *path, const char *mapper_path)
 {
@@ -75,7 +77,8 @@ static int usb_drd_get_regs(const char *phy_path, const char *drd_path, struct u
 
     adt_drd_offset = adt_path_offset_trace(adt, drd_path, adt_drd_path);
     if (adt_drd_offset < 0) {
-        printf("usb: Error getting drd node %s\n", drd_path);
+        // Nonexistent device
+        // printf("usb: Error getting drd node %s\n", drd_path);
         return -1;
     }
 
@@ -101,9 +104,9 @@ static int usb_drd_get_regs(const char *phy_path, const char *drd_path, struct u
     return 0;
 }
 
-int usb_phy_bringup(u32 idx)
+static int usb_phy_bringup(u32 idx)
 {
-    if (idx >= 2)
+    if (idx >= USB_INSTANCES)
         return -1;
 
     if (pmgr_adt_clocks_enable(usb_drd_paths[idx].atc_path) < 0)
@@ -115,25 +118,21 @@ int usb_phy_bringup(u32 idx)
     if (pmgr_adt_clocks_enable(usb_drd_paths[idx].drd_path) < 0)
         return -1;
 
-    struct usb_drd_regs usb_regs;
-    if (usb_drd_get_regs(usb_drd_paths[idx].atc_path, usb_drd_paths[idx].drd_path, &usb_regs) < 0)
-        return -1;
+    write32(usb_regs[idx].atc + 0x08, 0x01c1000f);
+    write32(usb_regs[idx].atc + 0x04, 0x00000003);
+    write32(usb_regs[idx].atc + 0x04, 0x00000000);
+    write32(usb_regs[idx].atc + 0x1c, 0x008c0813);
+    write32(usb_regs[idx].atc + 0x00, 0x00000002);
 
-    write32(usb_regs.atc + 0x08, 0x01c1000f);
-    write32(usb_regs.atc + 0x04, 0x00000003);
-    write32(usb_regs.atc + 0x04, 0x00000000);
-    write32(usb_regs.atc + 0x1c, 0x008c0813);
-    write32(usb_regs.atc + 0x00, 0x00000002);
-
-    write32(usb_regs.drd_regs_unk3 + 0x0c, 0x00000002);
-    write32(usb_regs.drd_regs_unk3 + 0x0c, 0x00000022);
-    write32(usb_regs.drd_regs_unk3 + 0x1c, 0x00000021);
-    write32(usb_regs.drd_regs_unk3 + 0x20, 0x00009332);
+    write32(usb_regs[idx].drd_regs_unk3 + 0x0c, 0x00000002);
+    write32(usb_regs[idx].drd_regs_unk3 + 0x0c, 0x00000022);
+    write32(usb_regs[idx].drd_regs_unk3 + 0x1c, 0x00000021);
+    write32(usb_regs[idx].drd_regs_unk3 + 0x20, 0x00009332);
 
     return 0;
 }
 
-dwc3_dev_t *usb_iodev_bringup(u32 idx)
+static dwc3_dev_t *usb_iodev_bringup(u32 idx)
 {
     dart_dev_t *usb_dart =
         usb_dart_init(usb_drd_paths[idx].dart_path, usb_drd_paths[idx].dart_mapper_path);
@@ -250,6 +249,24 @@ static tps6598x_dev_t *hpm_init(i2c_dev_t *i2c, int idx)
     return tps;
 }
 
+static int usb_init_regs(int idx)
+{
+    int ret;
+
+    if (!usb_regs[idx].initialized) {
+        ret = usb_drd_get_regs(usb_drd_paths[idx].atc_path, usb_drd_paths[idx].drd_path,
+                               &usb_regs[idx]);
+        if (ret >= 0)
+            usb_regs[idx].initialized = 1;
+        else
+            usb_regs[idx].initialized = ret;
+    } else {
+        ret = min(usb_regs[idx].initialized, 0);
+    }
+
+    return ret;
+}
+
 void usb_init(void)
 {
     if (usb_is_initialized)
@@ -277,6 +294,9 @@ void usb_init(void)
     i2c_shutdown(i2c);
 
     for (int idx = 0; idx < 2; ++idx) {
+        if (usb_init_regs(idx) < 0)
+            continue; // Missing instance
+
         if (usb_phy_bringup(idx) < 0)
             printf("usb: unable to bringup the phy with index %d\n", idx);
     }
@@ -336,4 +356,16 @@ void usb_iodev_shutdown(void)
         iodev_usb[i].opaque = NULL;
         iodev_usb_sec[i].opaque = NULL;
     }
+}
+
+int usb_idx_from_address(u64 drd_base)
+{
+
+    for (int i = 0; i < USB_INSTANCES; i++) {
+        if (usb_init_regs(i) < 0)
+            continue;
+        if (usb_regs[i].drd_regs == drd_base)
+            return i;
+    }
+    return -1;
 }

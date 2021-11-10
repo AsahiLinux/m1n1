@@ -12,5 +12,6 @@ void usb_init(void);
 void usb_hpm_restore_irqs(bool force);
 void usb_iodev_init(void);
 void usb_iodev_shutdown(void);
+int usb_idx_from_address(u64 drd_base);
 
 #endif
