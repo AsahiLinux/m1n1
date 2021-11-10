@@ -218,17 +218,10 @@ struct iodev iodev_usb[USB_INSTANCES] = {
     },
 };
 
-struct iodev iodev_usb_sec[USB_INSTANCES] = {
-    {
-        .ops = &iodev_usb_sec_ops,
-        .usage = 0,
-        .lock = SPINLOCK_INIT,
-    },
-    {
-        .ops = &iodev_usb_sec_ops,
-        .usage = 0,
-        .lock = SPINLOCK_INIT,
-    },
+struct iodev iodev_usb_vuart = {
+    .ops = &iodev_usb_sec_ops,
+    .usage = 0,
+    .lock = SPINLOCK_INIT,
 };
 
 static tps6598x_dev_t *hpm_init(i2c_dev_t *i2c, int idx)
@@ -338,8 +331,6 @@ void usb_iodev_init(void)
         if (!iodev_usb[i].opaque)
             continue;
 
-        iodev_usb_sec[i].opaque = iodev_usb[i].opaque;
-
         printf("USB%d: initialized at %p\n", i, iodev_usb[i].opaque);
     }
 }
@@ -354,7 +345,6 @@ void usb_iodev_shutdown(void)
         usb_dwc3_shutdown(iodev_usb[i].opaque);
 
         iodev_usb[i].opaque = NULL;
-        iodev_usb_sec[i].opaque = NULL;
     }
 }
 
@@ -368,4 +358,12 @@ int usb_idx_from_address(u64 drd_base)
             return i;
     }
     return -1;
+}
+
+void usb_iodev_vuart_setup(iodev_id_t iodev)
+{
+    if (iodev < IODEV_USB0 || iodev >= IODEV_USB0 + USB_INSTANCES)
+        return;
+
+    iodev_usb_vuart.opaque = iodev_usb[iodev - IODEV_USB0].opaque;
 }
