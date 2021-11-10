@@ -254,3 +254,13 @@ void iodev_console_flush(void)
         iodev_flush(id);
     }
 }
+
+void iodev_set_usage(iodev_id_t id, iodev_usage_t usage)
+{
+    iodevs[id]->usage = usage;
+}
+
+iodev_usage_t iodev_get_usage(iodev_id_t id)
+{
+    return iodevs[id]->usage;
+}
