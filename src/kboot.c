@@ -283,6 +283,65 @@ static int dt_set_mac_addresses(void)
     return 0;
 }
 
+static int dt_disable_usbdevs(void)
+{
+    // Disable USB devices not present in ADT, so Linux doesn't step on top of the hypervisor
+    int soc = fdt_path_offset(dt, "/soc");
+    if (soc < 0)
+        bail("FDT: /soc node not found in devtree\n");
+
+    int usb;
+    char name_shadow[32];
+    fdt_for_each_subnode(usb, dt, soc)
+    {
+        const char *name = fdt_get_name(dt, usb, NULL);
+        if (strncmp(name, "usb@", 4))
+            continue;
+
+        strncpy(name_shadow, name, 32);
+
+        const fdt64_t *reg = fdt_getprop(dt, usb, "reg", NULL);
+        if (!reg)
+            bail("FDT: failed to get reg property of %s\n", name);
+
+        int idx = usb_idx_from_address(fdt64_ld(reg));
+        if (idx >= 0)
+            continue;
+
+        int iommus_size;
+        u32 iommu_phandles[2];
+        const fdt32_t *iommus = fdt_getprop(dt, usb, "iommus", &iommus_size);
+        if (!iommus || iommus_size != sizeof(iommu_phandles) * 2) {
+            printf("FDT: failed to get iommus property of %s\n", name);
+            continue;
+        }
+        for (int i = 0; i < iommus_size / 8; i++)
+            iommu_phandles[i] = fdt32_ld(&iommus[i * 2]);
+
+        printf("FDT: Disabling missing USB device %s\n", name);
+        if (fdt_setprop_string(dt, usb, "status", "disabled") < 0)
+            bail("FDT: failed to set status property of %s\n", name);
+
+        for (int i = 0; i < iommus_size / 8; i++) {
+            int iommu = fdt_node_offset_by_phandle(dt, iommu_phandles[i]);
+            if (iommu < 0) {
+                printf("FDT: failed to get iommu at phandle %d\n", iommu_phandles[i]);
+                continue;
+            }
+            if (fdt_setprop_string(dt, iommu, "status", "disabled") < 0)
+                bail("FDT: failed to set status property of iommu #%d\n", iommu_phandles[i]);
+        }
+
+        // The changes above invalidated the iterator, so fix it
+        usb = fdt_subnode_offset(dt, soc, name_shadow);
+    }
+
+    if ((usb < 0) && (usb != -FDT_ERR_NOTFOUND))
+        bail("FDT: USB device iteration failed: %d\n", usb);
+
+    return 0;
+}
+
 void kboot_set_initrd(void *start, size_t size)
 {
     initrd_start = start;
@@ -332,6 +391,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_cpus())
         return -1;
     if (dt_set_mac_addresses())
+        return -1;
+    if (dt_disable_usbdevs())
         return -1;
 
     if (fdt_pack(dt))
