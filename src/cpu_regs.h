@@ -68,8 +68,9 @@
 #define HID10_FORCE_WAIT_STATE_DRAIN_UC BIT(32)
 #define HID10_DISABLE_ZVA_TEMPORAL_TSO  BIT(49)
 
-#define SYS_IMP_APL_HID11          sys_reg(3, 0, 15, 11, 0)
-#define HID11_DISABLE_LD_NT_WIDGET BIT(59)
+#define SYS_IMP_APL_HID11            sys_reg(3, 0, 15, 11, 0)
+#define HID11_ENABLE_FIX_UC_55719865 BIT(15)
+#define HID11_DISABLE_LD_NT_WIDGET   BIT(59)
 
 #define SYS_IMP_APL_HID13     sys_reg(3, 0, 15, 14, 0)
 #define HID13_PRE_CYCLES(x)   (((unsigned long)x) << 14)
