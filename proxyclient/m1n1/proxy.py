@@ -83,7 +83,7 @@ ExcInfo = Struct(
 )
 # Sends 56+ byte Commands and Expects 36 Byte Responses
 # Commands are format <I48sI
-#   4 byte command, 48 byte null padded data + 4 byte checksum 
+#   4 byte command, 48 byte null padded data + 4 byte checksum
 # Responses are of the format: struct format <Ii24sI
 #   4byte Response , 4 byte status, 24 byte string,  4 byte Checksum
 #    Response must start 0xff55aaXX where XX distiguishes between them
