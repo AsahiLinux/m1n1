@@ -211,8 +211,6 @@ int pcie_init(void)
     for (u32 port = 0; port < port_count; port++) {
         char bridge[64];
 
-        printf("pcie: Initializing port %d\n", port);
-
         /*
          * Initialize RC port.
          */
@@ -221,6 +219,8 @@ int pcie_init(void)
 
         if (adt_path_offset(adt, bridge) < 0)
             continue;
+
+        printf("pcie: Initializing port %d\n", port);
 
         if (adt_get_reg(adt, adt_path, "reg", port * port_reg_cnt + 6, &port_base[port], NULL)) {
             printf("pcie: Error getting reg with index %d for %s\n", port * 4 + 6, path);
