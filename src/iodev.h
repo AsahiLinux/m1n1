@@ -38,8 +38,6 @@ struct iodev {
     void *opaque;
 };
 
-extern struct iodev *iodevs[IODEV_MAX];
-
 ssize_t iodev_can_read(iodev_id_t id);
 bool iodev_can_write(iodev_id_t id);
 ssize_t iodev_read(iodev_id_t id, void *buf, size_t length);
@@ -52,9 +50,7 @@ void iodev_console_write(const void *buf, size_t length);
 void iodev_console_kick(void);
 void iodev_console_flush(void);
 
-static inline void iodev_set_usage(iodev_id_t id, iodev_usage_t usage)
-{
-    iodevs[id]->usage = usage;
-}
+iodev_usage_t iodev_get_usage(iodev_id_t id);
+void iodev_set_usage(iodev_id_t id, iodev_usage_t usage);
 
 #endif
