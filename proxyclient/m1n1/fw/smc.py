@@ -42,6 +42,9 @@ class SMCResult(Register64):
     SIZE = 31, 16
     VALUE = 63, 32
 
+class SMCError(Exception):
+    pass
+
 class SMCEndpoint(ASCBaseEndpoint):
     BASE_MESSAGE = SMCMessage
     SHORT = "smcep"
@@ -51,9 +54,11 @@ class SMCEndpoint(ASCBaseEndpoint):
         self.shmem = None
         self.msgid = 0
         self.outstanding = set()
+        self.ret = {}
 
     def start(self):
         self.send(SMCInitialize(ID = 0))
+        self.msgid += 1 # important!
         while self.shmem is None:
             self.asc.work()
 
@@ -64,14 +69,48 @@ class SMCEndpoint(ASCBaseEndpoint):
         self.outstanding.add(mid)
         return mid
 
-    def write_key(self, key, data):
-        print(self.shmem, key, data, len(data))
+    def write(self, key, data):
+        key = int.from_bytes(key.encode("ascii"), byteorder="big")
         self.asc.iface.writemem(self.shmem, data)
         ID = self.new_msgid()
         self.send(SMCWriteKey(ID = ID, KEY = key, SIZE = len(data)))
         while ID in self.outstanding:
             self.asc.work()
-        return True
+        ret = self.ret[ID]
+        if ret.RESULT != 0:
+            raise SMCError(f"SMC error {ret}", ret)
+
+    def write32(self, key, data):
+        self.write(key, struct.pack("<I", data))
+
+    def write16(self, key, data):
+        self.write(key, struct.pack("<H", data))
+
+    def write8(self, key, data):
+        self.write(key, struct.pack("<B", data))
+
+    def read(self, key, size):
+        key = int.from_bytes(key.encode("ascii"), byteorder="big")
+        ID = self.new_msgid()
+        self.send(SMCReadKey(ID = ID, KEY = key, SIZE = size))
+        while ID in self.outstanding:
+            self.asc.work()
+        ret = self.ret[ID]
+        if ret.RESULT != 0:
+            raise SMCError(f"SMC error {ret.RESULT}", ret.RESULT)
+        if size <= 4:
+            return ret.VALUE
+        else:
+            return self.asc.iface.readmem(self.shmem, ret.SIZE)
+
+    def read32(self, key):
+        return self.read(key, 4)
+
+    def read16(self, key):
+        return self.read(key, 2)
+
+    def read8(self, key):
+        return self.read(key, 1)
 
     def handle_msg(self, msg0, msg1):
         if self.shmem is None:
@@ -79,16 +118,15 @@ class SMCEndpoint(ASCBaseEndpoint):
             self.shmem = msg0
         else:
             msg = SMCResult(msg0)
-            ret = msg.TYPE
+            ret = msg.RESULT
             mid = msg.ID
             print(f"msg {mid} return value {ret}")
             self.outstanding.discard(mid)
+            self.ret[mid] = msg
 
         return True
 
 class SMCClient(StandardASC):
-    pass
-
     ENDPOINTS = {
         0x20: SMCEndpoint,
     }
