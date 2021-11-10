@@ -62,11 +62,19 @@ struct fuse_bits {
     u8 width;
 };
 
-struct fuse_bits pcie_fuse_bits[] = {
+const struct fuse_bits pcie_fuse_bits_t8103[] = {
     {0x0084, 0x6238, 4, 0, 6},   {0x0084, 0x6220, 10, 14, 3}, {0x0084, 0x62a4, 13, 17, 2},
     {0x0418, 0x522c, 27, 9, 2},  {0x0418, 0x522c, 13, 12, 3}, {0x0418, 0x5220, 18, 14, 3},
     {0x0418, 0x52a4, 21, 17, 2}, {0x0418, 0x522c, 23, 16, 5}, {0x0418, 0x5278, 23, 20, 3},
-    {0x0418, 0x5018, 31, 2, 1},  {0x041c, 0x1204, 0, 2, 5},   {}};
+    {0x0418, 0x5018, 31, 2, 1},  {0x041c, 0x1204, 0, 2, 5},   {},
+};
+
+const struct fuse_bits pcie_fuse_bits_t6000[] = {
+    {0x004c, 0x1004, 3, 2, 5},   {0x0048, 0x522c, 26, 16, 5}, {0x0048, 0x522c, 29, 9, 2},
+    {0x0048, 0x522c, 26, 12, 3}, {0x0048, 0x522c, 26, 16, 5}, {0x0048, 0x52a4, 24, 17, 2},
+    {0x004c, 0x5018, 2, 3, 1},   {0x0048, 0x50a4, 14, 17, 2}, {0x0048, 0x62a4, 14, 17, 2},
+    {0x0048, 0x6220, 8, 14, 3},  {0x0048, 0x6238, 2, 0, 6},   {},
+};
 
 static bool pcie_initialized = false;
 static u64 rc_base;
@@ -82,6 +90,7 @@ int pcie_init(void)
     int adt_path[8];
     int adt_offset;
     u64 port_reg_cnt;
+    const struct fuse_bits *fuse_bits;
 
     if (pcie_initialized)
         return 0;
@@ -94,8 +103,10 @@ int pcie_init(void)
 
     if (adt_is_compatible(adt, adt_offset, "apcie,t8103")) {
         port_reg_cnt = 4;
+        fuse_bits = pcie_fuse_bits_t8103;
     } else if (adt_is_compatible(adt, adt_offset, "apcie,t6000")) {
         port_reg_cnt = 5;
+        fuse_bits = pcie_fuse_bits_t6000;
     } else {
         printf("pcie: Unsupported compatible\n");
         return -1;
@@ -175,11 +186,13 @@ int pcie_init(void)
     udelay(1);
 
     /* Apply "fuses". */
-    for (int i = 0; pcie_fuse_bits[i].width; i++) {
+    for (int i = 0; fuse_bits[i].width; i++) {
         u32 fuse;
-        fuse = (read32(fuse_base + pcie_fuse_bits[i].src_reg) >> pcie_fuse_bits[i].src_bit);
-        mask32(phy_ip_base + pcie_fuse_bits[i].tgt_reg, (1 << pcie_fuse_bits[i].width) - 1,
-               fuse << pcie_fuse_bits[i].tgt_bit);
+        fuse = (read32(fuse_base + fuse_bits[i].src_reg) >> fuse_bits[i].src_bit);
+        fuse &= (1 << fuse_bits[i].width) - 1;
+        mask32(phy_ip_base + fuse_bits[i].tgt_reg,
+               ((1 << fuse_bits[i].width) - 1) << fuse_bits[i].tgt_bit,
+               fuse << fuse_bits[i].tgt_bit);
     }
 
     if (tunables_apply_local(path, "apcie-phy-ip-pll-tunables", 3)) {
