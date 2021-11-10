@@ -2,10 +2,10 @@
 
 #include "hv.h"
 #include "aic.h"
+#include "iodev.h"
 #include "uart.h"
 #include "uart_regs.h"
-
-static iodev_id_t vuart_iodev;
+#include "usb.h"
 
 bool active = false;
 
@@ -19,13 +19,13 @@ static void update_irq(void)
 {
     ssize_t rx_queued;
 
-    iodev_handle_events(vuart_iodev);
+    iodev_handle_events(IODEV_USB_VUART);
 
     utrstat |= UTRSTAT_TXBE | UTRSTAT_TXE;
     utrstat &= ~UTRSTAT_RXD;
 
     ufstat = 0;
-    if ((rx_queued = iodev_can_read(vuart_iodev))) {
+    if ((rx_queued = iodev_can_read(IODEV_USB_VUART))) {
         utrstat |= UTRSTAT_RXD;
         if (rx_queued > 15)
             ufstat = FIELD_PREP(UFSTAT_RXCNT, 15) | UFSTAT_RXFULL;
@@ -70,8 +70,8 @@ static bool handle_vuart(struct exc_info *ctx, u64 addr, u64 *val, bool write, i
                 break;
             case UTXH: {
                 uint8_t b = *val;
-                if (iodev_can_write(vuart_iodev))
-                    iodev_write(vuart_iodev, &b, 1);
+                if (iodev_can_write(IODEV_USB_VUART))
+                    iodev_write(IODEV_USB_VUART, &b, 1);
                 break;
             }
             case UTRSTAT:
@@ -84,9 +84,9 @@ static bool handle_vuart(struct exc_info *ctx, u64 addr, u64 *val, bool write, i
                 *val = ucon;
                 break;
             case URXH:
-                if (iodev_can_read(vuart_iodev)) {
+                if (iodev_can_read(IODEV_USB_VUART)) {
                     uint8_t c;
-                    iodev_read(vuart_iodev, &c, 1);
+                    iodev_read(IODEV_USB_VUART, &c, 1);
                     *val = c;
                 } else {
                     *val = 0;
@@ -119,7 +119,7 @@ void hv_vuart_poll(void)
 void hv_map_vuart(u64 base, int irq, iodev_id_t iodev)
 {
     hv_map_hook(base, handle_vuart, 0x1000);
-    vuart_iodev = iodev;
+    usb_iodev_vuart_setup(iodev);
     vuart_irq = irq;
     active = true;
 }

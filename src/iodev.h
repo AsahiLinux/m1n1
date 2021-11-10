@@ -9,10 +9,9 @@
 typedef enum _iodev_id_t {
     IODEV_UART,
     IODEV_FB,
+    IODEV_USB_VUART,
     IODEV_USB0,
     IODEV_USB1,
-    IODEV_USB0_SEC,
-    IODEV_USB1_SEC,
     IODEV_MAX,
 } iodev_id_t;
 

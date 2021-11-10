@@ -1068,7 +1068,7 @@ class HV(Reloadable):
 
         zone = irange(base, 0x4000)
         irq = node.interrupts[0]
-        self.p.hv_map_vuart(base, irq, getattr(IODEV, self.iodev.name + "_SEC"))
+        self.p.hv_map_vuart(base, irq, self.iodev)
         self.add_tracer(zone, "VUART", TraceMode.RESERVED)
 
     def map_essential(self):

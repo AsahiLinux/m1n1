@@ -423,10 +423,9 @@ class AlignmentError(Exception):
 class IODEV(IntEnum):
     UART = 0
     FB = 1
-    USB0 = 2
-    USB1 = 3
-    USB0_SEC = 4
-    USB1_SEC = 5
+    USB_VUART = 2
+    USB0 = 3
+    USB1 = 4
 
 class USAGE(IntFlag):
     CONSOLE = (1 << 0)

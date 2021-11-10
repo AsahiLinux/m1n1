@@ -19,12 +19,12 @@
 extern struct iodev iodev_uart;
 extern struct iodev iodev_fb;
 extern struct iodev iodev_usb[];
-extern struct iodev iodev_usb_sec[];
+extern struct iodev iodev_usb_vuart;
 
 struct iodev *iodevs[IODEV_MAX] = {
     [IODEV_UART] = &iodev_uart,           [IODEV_FB] = &iodev_fb,
-    [IODEV_USB0] = &iodev_usb[0],         [IODEV_USB1] = &iodev_usb[1],
-    [IODEV_USB0_SEC] = &iodev_usb_sec[0], [IODEV_USB1_SEC] = &iodev_usb_sec[1],
+    [IODEV_USB_VUART] = &iodev_usb_vuart, [IODEV_USB0] = &iodev_usb[0],
+    [IODEV_USB1] = &iodev_usb[1],
 };
 
 char con_buf[CONSOLE_BUFFER_SIZE];
