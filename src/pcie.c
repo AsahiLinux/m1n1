@@ -152,6 +152,10 @@ int pcie_init(void)
         printf("pcie: Error applying %s for %s\n", "apcie-axi2af-tunables", path);
         return -1;
     }
+
+    /* ??? */
+    write32(rc_base + 0x4, 0);
+
     if (tunables_apply_local(path, "apcie-common-tunables", 1)) {
         printf("pcie: Error applying %s for %s\n", "apcie-common-tunables", path);
         return -1;
