@@ -232,7 +232,7 @@ static int dt_set_cpus(void)
             bail("FDT: DT CPU %d MPIDR mismatch: 0x%lx != 0x%lx\n", cpu, dt_mpidr, mpidr);
 
         u64 release_addr = smp_get_release_addr(cpu);
-        if (fdt_setprop_u64(dt, node, "cpu-release-addr", release_addr))
+        if (fdt_setprop_inplace_u64(dt, node, "cpu-release-addr", release_addr))
             bail("FDT: couldn't set cpu-release-addr property\n");
 
         printf("FDT: CPU %d MPIDR=0x%lx release-addr=0x%lx\n", cpu, mpidr, release_addr);
