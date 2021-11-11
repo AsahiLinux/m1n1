@@ -139,6 +139,18 @@ class BaseASCTracer(ADTDevTracer):
         d = ">" if direction == DIR.TX else "<"
         self.log(f"{d}ep:{r1.EP:02x} {r0.value:016x} ({r0.str_fields()})")
 
+    def ioread(self, dva, size):
+        if self.dart:
+            return self.dart.ioread(0, dva & 0xFFFFFFFF, size)
+        else:
+            return self.hv.iface.readmem(dva, size)
+
+    def iowrite(self, dva, data):
+        if self.dart:
+            return self.dart.iowrite(0, dva & 0xFFFFFFFF, data)
+        else:
+            return self.hv.iface.writemem(dva, data)
+
     def start(self, dart=None):
         super().start()
         self.dart = dart
@@ -226,15 +238,13 @@ class Syslog(EP):
 
     @msg(1, DIR.TX, Syslog_GetBuf)
     def GetBuf_Ack(self, msg):
-        self.state.syslog_buf = msg.DVA & 0xffffffff
+        self.state.syslog_buf = msg.DVA
 
     @msg(5, DIR.RX, Syslog_Log)
     def Log(self, msg):
-        if self.tracer.dart is None:
-            return False
         buf = self.state.syslog_buf
         stride = 0x20 + self.state.entrysize
-        log = self.tracer.dart.ioread(0, buf + msg.INDEX * stride, stride)
+        log = self.tracer.ioread(buf + msg.INDEX * stride, stride)
         hdr, unk, context, logmsg = struct.unpack(f"<II24s{self.state.entrysize}s", log)
         context = context.split(b"\x00")[0].decode("ascii")
         logmsg = logmsg.split(b"\x00")[0].decode("ascii").rstrip("\n")

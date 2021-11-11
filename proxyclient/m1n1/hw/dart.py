@@ -213,6 +213,8 @@ class DART(Reloadable):
         if tcr.BYPASS_DART or not tcr.TRANSLATE_ENABLE:
             raise Exception(f"Unknown DART mode {tcr}")
 
+        start = start & 0xffffffff
+
         start_page = align_down(start, self.PAGE_SIZE)
         start_off = start - start_page
         end = start + size
