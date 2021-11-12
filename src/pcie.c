@@ -215,7 +215,7 @@ int pcie_init(void)
          * Initialize RC port.
          */
 
-        sprintf(bridge, "/arm-io/apcie/pci-bridge%d", port);
+        snprintf(bridge, sizeof(bridge), "/arm-io/apcie/pci-bridge%d", port);
 
         if (adt_path_offset(adt, bridge) < 0)
             continue;

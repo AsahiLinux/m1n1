@@ -55,13 +55,13 @@ void regdump(u64 addr, size_t len)
     }
 }
 
-int sprintf(char *buffer, const char *fmt, ...)
+int snprintf(char *buffer, size_t size, const char *fmt, ...)
 {
     va_list args;
     int i;
 
     va_start(args, fmt);
-    i = vsprintf(buffer, fmt, args);
+    i = vsnprintf(buffer, size, fmt, args);
     va_end(args);
     return i;
 }
