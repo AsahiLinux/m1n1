@@ -38,6 +38,9 @@ struct iodev {
     void *opaque;
 };
 
+void iodev_register_device(iodev_id_t id, struct iodev *dev);
+struct iodev *iodev_unregister_device(iodev_id_t id);
+
 ssize_t iodev_can_read(iodev_id_t id);
 bool iodev_can_write(iodev_id_t id);
 ssize_t iodev_read(iodev_id_t id, void *buf, size_t length);
@@ -52,5 +55,6 @@ void iodev_console_flush(void);
 
 iodev_usage_t iodev_get_usage(iodev_id_t id);
 void iodev_set_usage(iodev_id_t id, iodev_usage_t usage);
+void *iodev_get_opaque(iodev_id_t id);
 
 #endif
