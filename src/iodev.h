@@ -6,13 +6,14 @@
 #include "types.h"
 #include "utils.h"
 
+#define USB_IODEV_COUNT 8
+
 typedef enum _iodev_id_t {
     IODEV_UART,
     IODEV_FB,
     IODEV_USB_VUART,
     IODEV_USB0,
-    IODEV_USB1,
-    IODEV_MAX,
+    IODEV_MAX = IODEV_USB0 + USB_IODEV_COUNT,
 } iodev_id_t;
 
 typedef enum _iodev_usage_t {
