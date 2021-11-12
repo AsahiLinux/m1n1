@@ -983,8 +983,8 @@ class HV(Reloadable):
         self.print_tracer = trace.PrintTracer(self, self.device_addr_tbl)
 
         # disable unused USB iodev early so interrupts can be reenabled in hv_init()
-        for iodev in (IODEV.USB0, IODEV.USB1):
-            if iodev != self.iodev:
+        for iodev in IODEV:
+            if iodev >= IODEV.USB0 and iodev != self.iodev:
                 print(f"Disable iodev {iodev!s}")
                 self.p.iodev_set_usage(iodev, 0)
 
@@ -1086,10 +1086,7 @@ class HV(Reloadable):
             self.log(f"PMGR R {base:x}+{off:x}:{width} = 0x{data:x} -> 0x{ret:x}")
             return ret
 
-        if self.iodev == IODEV.USB0:
-            atc = "ATC0_USB"
-        elif self.iodev == IODEV.USB1:
-            atc = "ATC1_USB"
+        atc = f"ATC{self.iodev - IODEV.USB0}_USB"
 
         hook_devs = ["UART0", atc]
 
@@ -1166,8 +1163,8 @@ class HV(Reloadable):
         soc_name = "Virtual " + self.adt["product"].product_soc_name + " on m1n1 hypervisor"
         self.adt["product"].product_soc_name = soc_name
 
-        if self.iodev in (IODEV.USB0, IODEV.USB1):
-            idx = int(str(self.iodev)[-1])
+        if self.iodev >= IODEV.USB0:
+            idx = self.iodev - IODEV.USB0
             for prefix in ("/arm-io/dart-usb%d",
                            "/arm-io/atc-phy%d",
                            "/arm-io/usb-drd%d",
