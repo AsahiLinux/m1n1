@@ -360,7 +360,7 @@ void put_simd_state(void *state);
 
 void hexdump(const void *d, size_t len);
 void regdump(u64 addr, size_t len);
-int sprintf(char *str, const char *fmt, ...);
+int snprintf(char *str, size_t size, const char *fmt, ...);
 int debug_printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void udelay(u32 d);
 void reboot(void) __attribute__((noreturn));

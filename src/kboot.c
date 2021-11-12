@@ -67,7 +67,7 @@ static int dt_set_chosen(void)
         u64 fbreg[2] = {cpu_to_fdt64(fb_base), cpu_to_fdt64(fb_size)};
         char fbname[32];
 
-        sprintf(fbname, "framebuffer@%lx", fb_base);
+        snprintf(fbname, sizeof(fbname), "framebuffer@%lx", fb_base);
 
         if (fdt_setprop(dt, fb, "reg", fbreg, sizeof(fbreg)))
             bail("FDT: couldn't set framebuffer.reg property\n");
@@ -263,7 +263,7 @@ static int dt_set_mac_addresses(void)
 
     for (size_t i = 0; i < sizeof(aliases) / sizeof(*aliases); i++) {
         char propname[32];
-        sprintf(propname, "mac-address-%s", aliases[i]);
+        snprintf(propname, sizeof(propname), "mac-address-%s", aliases[i]);
 
         uint8_t addr[6];
         if (ADT_GETPROP_ARRAY(adt, anode, propname, addr) < 0)
