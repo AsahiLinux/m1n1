@@ -18,22 +18,38 @@
 
 extern struct iodev iodev_uart;
 extern struct iodev iodev_fb;
-extern struct iodev iodev_usb[];
 extern struct iodev iodev_usb_vuart;
 
 struct iodev *iodevs[IODEV_MAX] = {
-    [IODEV_UART] = &iodev_uart,           [IODEV_FB] = &iodev_fb,
-    [IODEV_USB_VUART] = &iodev_usb_vuart, [IODEV_USB0] = &iodev_usb[0],
-    [IODEV_USB1] = &iodev_usb[1],
+    [IODEV_UART] = &iodev_uart,
+    [IODEV_FB] = &iodev_fb,
+    [IODEV_USB_VUART] = &iodev_usb_vuart,
 };
 
 char con_buf[CONSOLE_BUFFER_SIZE];
 size_t con_wp;
 size_t con_rp[IODEV_MAX];
 
+void iodev_register_device(iodev_id_t id, struct iodev *dev)
+{
+    if (id >= IODEV_MAX)
+        return;
+    iodevs[id] = dev;
+}
+
+struct iodev *iodev_unregister_device(iodev_id_t id)
+{
+    if (id < IODEV_USB0 || id >= IODEV_MAX)
+        return NULL;
+
+    struct iodev *dev = iodevs[id];
+    iodevs[id] = NULL;
+    return dev;
+}
+
 ssize_t iodev_can_read(iodev_id_t id)
 {
-    if (!iodevs[id]->ops->can_read)
+    if (!iodevs[id] || !iodevs[id]->ops->can_read)
         return 0;
 
     spin_lock(&iodevs[id]->lock);
@@ -44,7 +60,7 @@ ssize_t iodev_can_read(iodev_id_t id)
 
 bool iodev_can_write(iodev_id_t id)
 {
-    if (!iodevs[id]->ops->can_write)
+    if (!iodevs[id] || !iodevs[id]->ops->can_write)
         return false;
 
     if (mmu_active())
@@ -57,7 +73,7 @@ bool iodev_can_write(iodev_id_t id)
 
 ssize_t iodev_read(iodev_id_t id, void *buf, size_t length)
 {
-    if (!iodevs[id]->ops->read)
+    if (!iodevs[id] || !iodevs[id]->ops->read)
         return -1;
 
     spin_lock(&iodevs[id]->lock);
@@ -68,7 +84,7 @@ ssize_t iodev_read(iodev_id_t id, void *buf, size_t length)
 
 ssize_t iodev_write(iodev_id_t id, const void *buf, size_t length)
 {
-    if (!iodevs[id]->ops->write)
+    if (!iodevs[id] || !iodevs[id]->ops->write)
         return -1;
 
     if (mmu_active())
@@ -81,7 +97,7 @@ ssize_t iodev_write(iodev_id_t id, const void *buf, size_t length)
 
 ssize_t iodev_queue(iodev_id_t id, const void *buf, size_t length)
 {
-    if (!iodevs[id]->ops->queue)
+    if (!iodevs[id] || !iodevs[id]->ops->queue)
         return iodev_write(id, buf, length);
 
     spin_lock(&iodevs[id]->lock);
@@ -92,7 +108,7 @@ ssize_t iodev_queue(iodev_id_t id, const void *buf, size_t length)
 
 void iodev_flush(iodev_id_t id)
 {
-    if (!iodevs[id]->ops->flush)
+    if (!iodevs[id] || !iodevs[id]->ops->flush)
         return;
 
     spin_lock(&iodevs[id]->lock);
@@ -257,10 +273,21 @@ void iodev_console_flush(void)
 
 void iodev_set_usage(iodev_id_t id, iodev_usage_t usage)
 {
-    iodevs[id]->usage = usage;
+    if (iodevs[id])
+        iodevs[id]->usage = usage;
 }
 
 iodev_usage_t iodev_get_usage(iodev_id_t id)
 {
-    return iodevs[id]->usage;
+    if (iodevs[id])
+        return iodevs[id]->usage;
+    return 0;
+}
+
+void *iodev_get_opaque(iodev_id_t id)
+{
+    if (id >= IODEV_MAX || !iodevs[id])
+        return NULL;
+
+    return iodevs[id]->opaque;
 }

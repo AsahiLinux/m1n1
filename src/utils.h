@@ -366,10 +366,12 @@ void udelay(u32 d);
 void reboot(void) __attribute__((noreturn));
 void flush_and_reboot(void) __attribute__((noreturn));
 
+#define SPINLOCK_ALIGN 64
+
 typedef struct {
     s64 lock;
     int count;
-} spinlock_t ALIGNED(64);
+} spinlock_t ALIGNED(SPINLOCK_ALIGN);
 
 #define SPINLOCK_INIT                                                                              \
     {                                                                                              \

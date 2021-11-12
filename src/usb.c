@@ -205,19 +205,6 @@ static struct iodev_ops iodev_usb_sec_ops = {
     .handle_events = usb_1_handle_events,
 };
 
-struct iodev iodev_usb[USB_INSTANCES] = {
-    {
-        .ops = &iodev_usb_ops,
-        .usage = USAGE_CONSOLE | USAGE_UARTPROXY,
-        .lock = SPINLOCK_INIT,
-    },
-    {
-        .ops = &iodev_usb_ops,
-        .usage = USAGE_CONSOLE | USAGE_UARTPROXY,
-        .lock = SPINLOCK_INIT,
-    },
-};
-
 struct iodev iodev_usb_vuart = {
     .ops = &iodev_usb_sec_ops,
     .usage = 0,
@@ -306,7 +293,7 @@ void usb_hpm_restore_irqs(bool force)
     }
 
     for (int idx = 0; idx < USB_INSTANCES; ++idx) {
-        if (iodev_usb[idx].usage && !force)
+        if (iodev_get_usage(IODEV_USB0 + idx) && !force)
             continue;
 
         if (tps6598x_irq_state[idx].valid) {
@@ -327,24 +314,40 @@ void usb_hpm_restore_irqs(bool force)
 void usb_iodev_init(void)
 {
     for (int i = 0; i < USB_INSTANCES; i++) {
-        iodev_usb[i].opaque = usb_iodev_bringup(i);
-        if (!iodev_usb[i].opaque)
+        dwc3_dev_t *opaque;
+        struct iodev *usb_iodev;
+
+        if (usb_regs[i].initialized != 1)
             continue;
 
-        printf("USB%d: initialized at %p\n", i, iodev_usb[i].opaque);
+        opaque = usb_iodev_bringup(i);
+        if (!opaque)
+            continue;
+
+        usb_iodev = memalign(SPINLOCK_ALIGN, sizeof(*usb_iodev));
+        if (!usb_iodev)
+            continue;
+
+        usb_iodev->ops = &iodev_usb_ops;
+        usb_iodev->opaque = opaque;
+        usb_iodev->usage = USAGE_CONSOLE | USAGE_UARTPROXY;
+        spin_init(&usb_iodev->lock);
+
+        iodev_register_device(IODEV_USB0 + i, usb_iodev);
+        printf("USB%d: initialized at %p\n", i, opaque);
     }
 }
 
 void usb_iodev_shutdown(void)
 {
     for (int i = 0; i < USB_INSTANCES; i++) {
-        if (!iodev_usb[i].opaque)
+        struct iodev *usb_iodev = iodev_unregister_device(IODEV_USB0 + i);
+        if (!usb_iodev)
             continue;
 
         printf("USB%d: shutdown\n", i);
-        usb_dwc3_shutdown(iodev_usb[i].opaque);
-
-        iodev_usb[i].opaque = NULL;
+        usb_dwc3_shutdown(usb_iodev->opaque);
+        free(usb_iodev);
     }
 }
 
@@ -365,5 +368,5 @@ void usb_iodev_vuart_setup(iodev_id_t iodev)
     if (iodev < IODEV_USB0 || iodev >= IODEV_USB0 + USB_INSTANCES)
         return;
 
-    iodev_usb_vuart.opaque = iodev_usb[iodev - IODEV_USB0].opaque;
+    iodev_usb_vuart.opaque = iodev_get_opaque(iodev);
 }
