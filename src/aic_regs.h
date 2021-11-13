@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 
-#define AIC_REG_SIZE     0x4000
+#define AIC_REG_SIZE     0x8000
 #define AIC_INFO         0x0004
 #define AIC_WHOAMI       0x2000
 #define AIC_EVENT        0x2004
