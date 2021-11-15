@@ -204,14 +204,10 @@ static int dt_set_cpus(void)
         bail("FDT: /cpus node not found in devtree\n");
 
     int node, cpu = 0;
-    char name_shadow[32];
-    fdt_for_each_subnode(node, dt, cpus)
-    {
+    for (int node = fdt_first_subnode(dt, cpus); node >= 0;) {
         const char *name = fdt_get_name(dt, node, NULL);
         if (strncmp(name, "cpu@", 4))
-            continue;
-
-        strncpy(name_shadow, name, 32);
+            goto next_node;
 
         const fdt64_t *prop = fdt_getprop(dt, node, "reg", NULL);
         if (!prop)
@@ -220,16 +216,15 @@ static int dt_set_cpus(void)
         u64 dt_mpidr = fdt64_ld(prop);
 
         if (dt_mpidr == (mrs(MPIDR_EL1) & 0xFFFFFF))
-            goto next;
+            goto next_cpu;
 
         if (!smp_is_alive(cpu)) {
             printf("FDT: CPU %d is not alive, disabling...\n", cpu);
-            if (fdt_setprop_string(dt, node, "status", "disabled"))
-                bail("FDT: couldn't set status property\n");
-
-            // The above invalidates the iterator, so fix it
-            cpu = fdt_subnode_offset(dt, cpus, name_shadow);
-            goto next;
+            int next = fdt_next_subnode(dt, node);
+            fdt_nop_node(dt, node);
+            cpu++;
+            node = next;
+            continue;
         }
 
         u64 mpidr = smp_get_mpidr(cpu);
@@ -243,8 +238,10 @@ static int dt_set_cpus(void)
 
         printf("FDT: CPU %d MPIDR=0x%lx release-addr=0x%lx\n", cpu, mpidr, release_addr);
 
-    next:
+    next_cpu:
         cpu++;
+    next_node:
+        node = fdt_next_subnode(dt, node);
     }
 
     if ((node < 0) && (node != -FDT_ERR_NOTFOUND)) {
