@@ -204,11 +204,14 @@ static int dt_set_cpus(void)
         bail("FDT: /cpus node not found in devtree\n");
 
     int node, cpu = 0;
+    char name_shadow[32];
     fdt_for_each_subnode(node, dt, cpus)
     {
         const char *name = fdt_get_name(dt, node, NULL);
         if (strncmp(name, "cpu@", 4))
             continue;
+
+        strncpy(name_shadow, name, 32);
 
         const fdt64_t *prop = fdt_getprop(dt, node, "reg", NULL);
         if (!prop)
@@ -223,6 +226,9 @@ static int dt_set_cpus(void)
             printf("FDT: CPU %d is not alive, disabling...\n", cpu);
             if (fdt_setprop_string(dt, node, "status", "disabled"))
                 bail("FDT: couldn't set status property\n");
+
+            // The above invalidates the iterator, so fix it
+            cpu = fdt_subnode_offset(dt, cpus, name_shadow);
             goto next;
         }
 
