@@ -52,9 +52,11 @@ ssize_t iodev_can_read(iodev_id_t id)
     if (!iodevs[id] || !iodevs[id]->ops->can_read)
         return 0;
 
-    spin_lock(&iodevs[id]->lock);
+    if (mmu_active())
+        spin_lock(&iodevs[id]->lock);
     ssize_t ret = iodevs[id]->ops->can_read(iodevs[id]->opaque);
-    spin_unlock(&iodevs[id]->lock);
+    if (mmu_active())
+        spin_unlock(&iodevs[id]->lock);
     return ret;
 }
 
@@ -76,9 +78,11 @@ ssize_t iodev_read(iodev_id_t id, void *buf, size_t length)
     if (!iodevs[id] || !iodevs[id]->ops->read)
         return -1;
 
-    spin_lock(&iodevs[id]->lock);
+    if (mmu_active())
+        spin_lock(&iodevs[id]->lock);
     ssize_t ret = iodevs[id]->ops->read(iodevs[id]->opaque, buf, length);
-    spin_unlock(&iodevs[id]->lock);
+    if (mmu_active())
+        spin_unlock(&iodevs[id]->lock);
     return ret;
 }
 
@@ -100,9 +104,11 @@ ssize_t iodev_queue(iodev_id_t id, const void *buf, size_t length)
     if (!iodevs[id] || !iodevs[id]->ops->queue)
         return iodev_write(id, buf, length);
 
-    spin_lock(&iodevs[id]->lock);
+    if (mmu_active())
+        spin_lock(&iodevs[id]->lock);
     ssize_t ret = iodevs[id]->ops->queue(iodevs[id]->opaque, buf, length);
-    spin_unlock(&iodevs[id]->lock);
+    if (mmu_active())
+        spin_unlock(&iodevs[id]->lock);
     return ret;
 }
 
@@ -111,9 +117,11 @@ void iodev_flush(iodev_id_t id)
     if (!iodevs[id] || !iodevs[id]->ops->flush)
         return;
 
-    spin_lock(&iodevs[id]->lock);
+    if (mmu_active())
+        spin_lock(&iodevs[id]->lock);
     iodevs[id]->ops->flush(iodevs[id]->opaque);
-    spin_unlock(&iodevs[id]->lock);
+    if (mmu_active())
+        spin_unlock(&iodevs[id]->lock);
 }
 
 int in_iodev = 0;
