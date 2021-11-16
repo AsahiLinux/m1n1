@@ -108,6 +108,11 @@ void _start_c(void *boot_args, void *base)
 /* Secondary SMP core boot */
 void _cpu_reset_c(void *stack)
 {
+    if (mrs(MPIDR_EL1) & 0xffffff)
+        uart_puts("RVBAR entry on secondary CPU");
+    else
+        uart_puts("RVBAR entry on primary CPU");
+
     printf("\n  Stack base: %p\n", stack);
     printf("  MPIDR: 0x%lx\n", mrs(MPIDR_EL1));
     const char *type = init_cpu();
