@@ -101,6 +101,8 @@ static void smp_start_cpu(int index, int cluster, int core, u64 rvbar, u64 cpu_s
         printf("Failed!\n");
     else
         printf("  Started.\n");
+
+    _reset_stack = secondary_stacks[0] + SECONDARY_STACK_SIZE;
 }
 
 void smp_start_secondaries(void)
