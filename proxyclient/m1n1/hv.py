@@ -54,9 +54,10 @@ Different types of Tracing '''
     OFF = 0
     ASYNC = 1
     UNBUF = 2
-    SYNC = 3
-    HOOK = 4
-    RESERVED = 5
+    WSYNC = 3
+    SYNC = 4
+    HOOK = 5
+    RESERVED = 6
 
 class HV(Reloadable):
     PAC_MASK = 0xfffff00000000000
@@ -209,7 +210,7 @@ class HV(Reloadable):
         self.vm_hooks.append((read, write, ipa, kwargs))
         self.map_hook_idx(ipa, size, index, read is not None, write is not None)
 
-    def map_hook_idx(self, ipa, size, index, read=False, write=False):
+    def map_hook_idx(self, ipa, size, index, read=False, write=False, flags=0):
         if read:
             if write:
                 t = self.SPTE_PROXY_HOOK_RW
@@ -220,7 +221,7 @@ class HV(Reloadable):
         else:
             assert False
 
-        assert self.p.hv_map(ipa, (index << 2) | t, size, 0) >= 0
+        assert self.p.hv_map(ipa, (index << 2) | flags | t, size, 0) >= 0
 
     def trace_irq(self, device, num, count, flags):
         for n in range(num, num + count):
@@ -299,11 +300,16 @@ class HV(Reloadable):
                     print(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> RESERVED {ident}")
                     continue
                 elif mode in (TraceMode.HOOK, TraceMode.SYNC):
-                    self.map_hook_idx(mzone.start, mzone.stop - mzone.start, 0, need_read, need_write)
+                    self.map_hook_idx(mzone.start, mzone.stop - mzone.start, 0,
+                                      need_read, need_write)
                     if mode == TraceMode.HOOK:
                         for m2, i2, r2, w2, k2 in maps[1:]:
                             if m2 == TraceMode.HOOK:
                                 print(f"!! Conflict: HOOK {i2}")
+                elif mode == TraceMode.WSYNC:
+                    flags = self.SPTE_TRACE_READ if need_read else 0
+                    self.map_hook_idx(mzone.start, mzone.stop - mzone.start, 0,
+                                      False, need_write, flags=flags)
                 elif mode in (TraceMode.UNBUF, TraceMode.ASYNC):
                     pa = mzone.start
                     if mode == TraceMode.UNBUF:
@@ -380,7 +386,7 @@ class HV(Reloadable):
 
         maps = sorted(self.mmio_maps[evt.addr].values(), reverse=True)
         for mode, ident, read, write, kwargs in maps:
-            if mode > TraceMode.UNBUF:
+            if mode > TraceMode.WSYNC or (evt.flags.WRITE and mode > TraceMode.UNBUF):
                 print(f"ERROR: mmiotrace event but expected {mode.name} mapping")
                 continue
             if mode == TraceMode.OFF:
@@ -419,7 +425,7 @@ class HV(Reloadable):
 
         val = data.data
 
-        if mode not in (TraceMode.HOOK, TraceMode.SYNC):
+        if mode not in (TraceMode.HOOK, TraceMode.SYNC, TraceMode.WSYNC):
             raise Exception(f"VM hook with unexpected mapping at {data.addr:#x}: {maps[0][0].name}")
 
         if not data.flags.WRITE:
@@ -438,6 +444,8 @@ class HV(Reloadable):
                     raise
                 if not isinstance(val, list) and not isinstance(val, tuple):
                     val = [val]
+            elif mode == TraceMode.WSYNC:
+                raise Exception(f"VM hook with unexpected mapping at {data.addr:#x}: {maps[0][0].name}")
 
             for i in range(1 << max(0, data.flags.WIDTH - 3)):
                 self.p.write64(ctx.data + 16 + 8 * i, val[i])
@@ -483,7 +491,7 @@ class HV(Reloadable):
             if mode == TraceMode.HOOK:
                 self.shellwrap(lambda: write(data.addr, wval, 8 << data.flags.WIDTH, **kwargs),
                             f"Tracer {ident}:write (HOOK)", update=do_update)
-            elif mode == TraceMode.SYNC:
+            elif mode in (TraceMode.SYNC, TraceMode.WSYNC):
                 try:
                     self.u.write(data.addr, wval, 8 << data.flags.WIDTH)
                 except:
