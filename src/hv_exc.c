@@ -188,12 +188,28 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
         SYSREG_PASS(SYS_IMP_APL_PMC7)
         SYSREG_PASS(SYS_IMP_APL_PMC8)
         SYSREG_PASS(SYS_IMP_APL_PMC9)
-        /* Handle this one here because m1n1/Linux (will) use it for explicit cpuidle.
+
+        /*
+         * Handle this one here because m1n1/Linux (will) use it for explicit cpuidle.
          * We can pass it through; going into deep sleep doesn't break the HV since we
-         * don't do any wfis that assume otherwise in m1n1. */
-        SYSREG_PASS(SYS_IMP_APL_CYC_OVRD)
+         * don't do any wfis that assume otherwise in m1n1. However, don't het macOS
+         * disable WFI ret (when going into systemwide sleep), since that breaks things.
+         */
+        case SYSREG_ISS(SYS_IMP_APL_CYC_OVRD):
+            if (is_read) {
+                regs[rt] = mrs(SYS_IMP_APL_CYC_OVRD);
+            } else {
+                msr(SYS_IMP_APL_CYC_OVRD, regs[rt] & ~CYC_OVRD_DISABLE_WFI_RET);
+                if (regs[rt] & CYC_OVRD_DISABLE_WFI_RET)
+                    printf("msr(SYS_IMP_APL_CYC_OVRD, 0x%08lx): Filtered WFI RET disable\n",
+                           regs[rt]);
+            }
+            return true;
+            /* clang-format off */
+
         /* IPI handling */
         SYSREG_PASS(SYS_IMP_APL_IPI_CR_EL1)
+        /* clang-format on */
         case SYSREG_ISS(SYS_IMP_APL_IPI_RR_LOCAL_EL1): {
             assert(!is_read);
             u64 mpidr = (regs[rt] & 0xff) | (mrs(MPIDR_EL1) & 0xffff00);
