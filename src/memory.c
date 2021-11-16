@@ -7,6 +7,7 @@
 #include "fb.h"
 #include "gxf.h"
 #include "malloc.h"
+#include "mcc.h"
 #include "smp.h"
 #include "string.h"
 #include "utils.h"
@@ -312,44 +313,10 @@ void mmu_add_mapping(u64 from, u64 to, size_t size, u8 attribute_index, u64 perm
     sysop("isb");
 }
 
-static void mmu_rm_mapping(u64 from, size_t size)
+void mmu_rm_mapping(u64 from, size_t size)
 {
     if (mmu_map(from, 0, size) < 0)
         panic("Failed to rm MMU mapping at 0x%lx (0x%lx)\n", from, size);
-}
-
-#define TZ_START(i) (0x6a0 + i * 0x10)
-#define TZ_END(i)   (0x6a4 + i * 0x10)
-#define TZ_REGS     4
-
-static void mmu_unmap_carveouts(void)
-{
-    int path[8];
-    int node = adt_path_offset_trace(adt, "/arm-io/mcc", path);
-    u64 mcc_tz_base;
-
-    if (node < 0) {
-        printf("MMU: MCC node not found!\n");
-        return;
-    }
-
-    if (adt_get_reg(adt, path, "reg", 1, &mcc_tz_base, NULL)) {
-        printf("MMU: Failed to get MCC reg property!\n");
-        return;
-    }
-
-    printf("MMU: TZ registers @ 0x%lx\n", mcc_tz_base);
-
-    for (int i = 0; i < TZ_REGS; i++) {
-        uint64_t start = ((uint64_t)read32(mcc_tz_base + TZ_START(i))) << 12;
-        uint64_t end = ((uint64_t)(1 + read32(mcc_tz_base + TZ_END(i)))) << 12;
-        if (start && start != end) {
-            start |= ram_base;
-            end |= ram_base;
-            printf("MMU: Unmapping TZ%d region at 0x%lx..0x%lx\n", i, start, end);
-            mmu_rm_mapping(start, end - start);
-        }
-    }
 }
 
 static void mmu_map_mmio(void)
@@ -427,7 +394,7 @@ static void mmu_add_default_mappings(void)
     mmu_add_mapping(ram_base, ram_base, cur_boot_args.mem_size_actual, MAIR_IDX_NORMAL, PERM_RWX);
 
     /* Unmap carveout regions */
-    mmu_unmap_carveouts();
+    mcc_unmap_carveouts();
 
     /*
      * Remap m1n1 executable code as RX.

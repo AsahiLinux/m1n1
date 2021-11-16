@@ -8,6 +8,7 @@
 #include "exception.h"
 #include "fb.h"
 #include "heapblock.h"
+#include "mcc.h"
 #include "memory.h"
 #include "payload.h"
 #include "pcie.h"
@@ -82,6 +83,7 @@ void m1n1_main(void)
     get_device_info();
 
     heapblock_init();
+    mcc_init();
     mmu_init();
 
 #ifdef USE_FB

@@ -67,6 +67,7 @@ OBJECTS := \
 	iodev.o \
 	kboot.o \
 	main.o \
+	mcc.o \
 	memory.o memory_asm.o \
 	payload.o \
 	pcie.o \
