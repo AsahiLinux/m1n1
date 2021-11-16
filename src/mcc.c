@@ -149,7 +149,7 @@ int mcc_init_t8103(int node, int *path)
     }
 
     u32 val;
-    if (ADT_GETPROP(adt, node, "#ports", &val) < 0) {
+    if (ADT_GETPROP(adt, node, "dcs_num_channels", &val) < 0) {
         printf("MCC: Failed to get dcs_num_channels property!\n");
         return -1;
     }
