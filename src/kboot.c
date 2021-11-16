@@ -204,7 +204,7 @@ static int dt_set_cpus(void)
         bail("FDT: /cpus node not found in devtree\n");
 
     int node, cpu = 0;
-    for (int node = fdt_first_subnode(dt, cpus); node >= 0;) {
+    for (node = fdt_first_subnode(dt, cpus); node >= 0;) {
         const char *name = fdt_get_name(dt, node, NULL);
         if (strncmp(name, "cpu@", 4))
             goto next_node;
