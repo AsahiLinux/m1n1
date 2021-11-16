@@ -164,8 +164,8 @@ class HV(Reloadable):
             if callable(a):
                 self.shell_locals[attr] = getattr(self, attr)
 
-    def log(self, s, *args, **kwargs):
-        if self.ctx is not None:
+    def log(self, s, *args, show_cpu=True, **kwargs):
+        if self.ctx is not None and show_cpu:
             print(f"[cpu{self.ctx.cpu_id}] " + s, *args, **kwargs)
             if self.print_tracer.log_file:
                 print(f"# [cpu{self.ctx.cpu_id}] " + s, *args, file=self.print_tracer.log_file, **kwargs)
