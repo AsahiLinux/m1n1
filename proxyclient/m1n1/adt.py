@@ -55,6 +55,13 @@ PMGRPSRegs = SafeGreedyRange(Struct(
     "mask" / Hex(Int32ul),
 ))
 
+PMGRPerfRegs = SafeGreedyRange(Struct(
+    "reg" / Int32ul,
+    "offset" / Hex(Int32ul),
+    "size" / Hex(Int32ul),
+    "unk" / Int32ul,
+))
+
 PMGRPWRGateRegs = SafeGreedyRange(Struct(
     "reg" / Int32ul,
     "offset" / Hex(Int32ul),
@@ -62,14 +69,25 @@ PMGRPWRGateRegs = SafeGreedyRange(Struct(
     "unk" / Hex(Int32ul),
 ))
 
+PMGRDeviceFlags = BitStruct(
+    "b7" / Flag,
+    "b6" / Flag,
+    "perf" / Flag,
+    "no_ps" / Flag,
+    "critical" / Flag,
+    "b2" / Flag,
+    "notify_pmp" / Flag,
+    "on" / Flag,
+)
+
 PMGRDevices = SafeGreedyRange(Struct(
-    "flags" / Int8ul,
+    "flags" / PMGRDeviceFlags,
     "unk1_0" / Int8ul,
     "unk1_1" / Int8ul,
     "unk1_2" / Int8ul,
     "parents" / Array(2, Int16ul),
-    "ctl_idx" / Int8ul,
-    "ctl_block" / Int8ul,
+    "perf_idx" / Int8ul,
+    "perf_block" / Int8ul,
     "psidx" / Int8ul,
     "psreg" / Int8ul,
     "unk2_0" / Int16ul,
@@ -84,8 +102,8 @@ PMGRDevices = SafeGreedyRange(Struct(
 ))
 
 PMGRClocks = SafeGreedyRange(Struct(
-    "ctl_idx" / Int8ul,
-    "ctl_block" / Int8ul,
+    "perf_idx" / Int8ul,
+    "perf_block" / Int8ul,
     "unk" / Int8ul,
     "id" / Int8ul,
     Const(0, Int32ul),
@@ -94,8 +112,8 @@ PMGRClocks = SafeGreedyRange(Struct(
 
 PMGRPowerDomains = SafeGreedyRange(Struct(
     "unk" / Const(0, Int8ul),
-    "ctl_idx" / Int8ul,
-    "ctl_block" / Int8ul,
+    "perf_idx" / Int8ul,
+    "perf_block" / Int8ul,
     "id" / Int8ul,
     Const(0, Int32ul),
     "name" / PaddedString(16, "ascii"),
@@ -111,10 +129,10 @@ PMGREvents = SafeGreedyRange(Struct(
     "unk2" / Int8ul,
     "unk3" / Int8ul,
     "id" / Int8ul,
-    "ctl2_idx" / Int8ul,
-    "ctl2_block" / Int8ul,
-    "ctl_idx" / Int8ul,
-    "ctl_block" / Int8ul,
+    "perf2_idx" / Int8ul,
+    "perf2_block" / Int8ul,
+    "perf_idx" / Int8ul,
+    "perf_block" / Int8ul,
     "name" / PaddedString(16, "ascii"),
 ))
 
@@ -124,6 +142,7 @@ DEV_PROPERTIES = {
             "clusters": SafeGreedyRange(Int32ul),
             "devices": PMGRDevices,
             "ps-regs": PMGRPSRegs,
+            "perf-regs": PMGRPerfRegs,
             "pwrgate-regs": PMGRPWRGateRegs,
             "power-domains": PMGRPowerDomains,
             "clocks": PMGRClocks,

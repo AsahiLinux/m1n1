@@ -19,6 +19,11 @@ for i, r in enumerate(pmgr.ps_regs):
     print(f" #{i:2d} reg: {r.reg} off: {r.offset:05x} mask:{r.mask:08x}")
 
 print()
+print("=== Perf Regs ===")
+for i, r in enumerate(pmgr.perf_regs):
+    print(f" #{i:2d} reg: {r.reg} off: {r.offset:05x} size:{r.size:05x} unk:{r.unk:08x}")
+
+print()
 print("=== PWR Gate Regs ===")
 for i, r in enumerate(pmgr.pwrgate_regs):
     print(f" #{i:2d} reg: {r.reg} off: {r.offset:05x} mask:{r.mask:08x} unk:{r.unk:08x}")
@@ -40,14 +45,13 @@ for dev in dt["/arm-io"]:
 print()
 print("=== Devices ===")
 for i, dev in enumerate(pmgr.devices):
-    ps = pmgr.ps_regs[dev.psreg]
-    HAS_CTL = 0x20
-    NO_PS = 0x10
-    flags = "".join(j if dev.flags & (1 << (7-i)) else " " for i,j in enumerate("abCdefgh"))
+    flags = ", ".join(k for k in dev.flags if k[0] != "_" and dev.flags[k])
     s = f" #{i:3d} {dev.name:20s} id: {dev.id:3d} psreg: {dev.psreg:2d}:{dev.psidx:2d} "
-    s += f" flags:{flags} unk1_0: {dev.unk1_0} unk1_1: {dev.unk1_1} unk1_2: {dev.unk1_2} "
-    s += f" ctl_reg: {dev.ctl_block}:{dev.ctl_idx:#04x} unk3: {dev.unk3:3d} {dev.unk2_0:2d} {dev.ps_cfg16:2d} {dev.unk2_3:3d}"
-    if dev.psidx or dev.psreg:
+    s += f" flags: {flags:24s} unk1_0: {dev.unk1_0} unk1_1: {dev.unk1_1} unk1_2: {dev.unk1_2} "
+    s += f" perf_reg: {dev.perf_block}:{dev.perf_idx:#04x} unk3: {dev.unk3:3d} {dev.unk2_0:2d} {dev.ps_cfg16:2d} {dev.unk2_3:3d}"
+
+    if not dev.flags.no_ps:
+        ps = pmgr.ps_regs[dev.psreg]
         addr = pmgr.get_reg(ps.reg)[0] + ps.offset + dev.psidx * 8
         val = p.read32(addr)
         s += f" @ {addr:#x} = {val:#010x}"
@@ -64,33 +68,30 @@ for i, dev in enumerate(pmgr.devices):
     for i in dev_users.get(dev.id, []):
         print(f"  User: {i}")
 
-cfg_bases = [
-    pmgr.get_reg(1)[0] + 0x34100, # TODO:check
-    pmgr.get_reg(0)[0] + 0x34100,
-    pmgr.get_reg(0)[0] + 0x7c100,
-    pmgr.get_reg(0)[0] + 0x78100,
-]
-
 print()
 print("=== Clocks ===")
 for i, clk in enumerate(pmgr.clocks):
-    reg = cfg_bases[clk.ctl_block] + clk.ctl_idx * 0x10
-    print(f" #{i:3d} {clk.name:20s} id: {clk.id:3d} reg:{clk.ctl_block}:{clk.ctl_idx:#4x} ({reg:#x}) {clk.unk:#x}")
+    perf = pmgr.perf_regs[clk.perf_block]
+    reg = pmgr.get_reg(perf.reg)[0] + 0x100 + clk.perf_idx * 0x10
+    print(f" #{i:3d} {clk.name:20s} id: {clk.id:3d} reg:{clk.perf_block}:{clk.perf_idx:#4x} ({reg:#x}) {clk.unk:#x}")
 
 print()
 print("=== Power Domains ===")
 for i, pd in enumerate(pmgr.power_domains):
-    reg = cfg_bases[pd.ctl_block] + pd.ctl_idx * 0x10
-    print(f" #{i:3d} {pd.name:20s} id: {pd.id:3d} reg:{pd.ctl_block}:{pd.ctl_idx:#4x} ({reg:#x})")
+    perf = pmgr.perf_regs[pd.perf_block]
+    reg = pmgr.get_reg(perf.reg)[0] + 0x100 + pd.perf_idx * 0x10
+    print(f" #{i:3d} {pd.name:20s} id: {pd.id:3d} reg:{pd.perf_block}:{pd.perf_idx:#4x} ({reg:#x})")
 
 print()
 print("=== Events ===")
 for i, ev in enumerate(pmgr.events):
-    reg = cfg_bases[ev.ctl_block]  + ev.ctl_idx * 0x10
-    v = f" #{i:3d} {ev.name:20s} unk:{ev.unk1:#3x}/{ev.unk2}/{ev.unk3} id: {ev.id:3d} reg:{ev.ctl_block}:{ev.ctl_idx:#4x} ({reg:#x})"
-    if ev.ctl2_idx:
-        reg2 = cfg_bases[ev.ctl2_block] + ev.ctl2_idx * 0x10
-        v += f" reg2:{ev.ctl2_block}:{ev.ctl2_idx:#4x} ({reg2:#x})"
+    perf = pmgr.perf_regs[ev.perf_block]
+    reg = pmgr.get_reg(perf.reg)[0] + 0x100 + ev.perf_idx * 0x10
+    v = f" #{i:3d} {ev.name:20s} unk:{ev.unk1:#3x}/{ev.unk2}/{ev.unk3} id: {ev.id:3d} reg:{ev.perf_block}:{ev.perf_idx:#4x} ({reg:#x})"
+    if ev.perf2_idx:
+        perf2 = pmgr.perf_regs[ev.perf2_block]
+        reg2 = pmgr.get_reg(perf2.reg)[0] + 0x100 + ev.perf2_idx * 0x10
+        v += f" reg2:{ev.perf2_block}:{ev.perf2_idx:#4x} ({reg2:#x})"
     print(v)
 
 arm_io = dt["/arm-io"]
