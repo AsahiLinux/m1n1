@@ -4,6 +4,18 @@
 
 .text
 
+.globl memcpy128
+.type memcpy128, @function
+memcpy128:
+    ands    x2, x2, #~15
+    beq     2f
+1:  ldp     x3, x4, [x1], #16
+    stp     x3, x4, [x0], #16
+    subs    x2, x2, #16
+    bne     1b
+2:
+    ret
+
 .globl memcpy64
 .type memcpy64, @function
 memcpy64:

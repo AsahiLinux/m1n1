@@ -67,7 +67,7 @@ struct image orig_logo;
 
 void fb_update(void)
 {
-    memcpy(fb.hwptr, fb.ptr, fb.size);
+    memcpy128(fb.hwptr, fb.ptr, fb.size);
 }
 
 static void fb_clear_font_row(u32 row)

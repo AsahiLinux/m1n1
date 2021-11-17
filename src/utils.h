@@ -346,6 +346,7 @@ extern char _payload_end[];
  * These functions are guaranteed to copy by reading from src and writing to dst
  * in <n>-bit units If size is not aligned, the remaining bytes are not copied
  */
+void memcpy128(void *dst, void *src, size_t size);
 void memset64(void *dst, u64 value, size_t size);
 void memcpy64(void *dst, void *src, size_t size);
 void memset32(void *dst, u32 value, size_t size);
