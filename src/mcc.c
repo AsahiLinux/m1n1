@@ -181,6 +181,11 @@ int mcc_init_t6000(int node, int *path)
 
     printf("MCC: Initializing T6000 MCCs (%d instances)...\n", mcc_count);
 
+    if (mcc_count > MAX_MCC_INSTANCES) {
+        printf("MCC: Too many instances, increase MAX_MCC_INSTANCES!\n");
+        mcc_count = MAX_MCC_INSTANCES;
+    }
+
     for (int i = 0; i < mcc_count; i++) {
         u64 base;
         if (adt_get_reg(adt, path, "reg", 0, &base, NULL)) {
