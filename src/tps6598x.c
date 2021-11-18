@@ -67,6 +67,7 @@ int tps6598x_command(tps6598x_dev_t *dev, const char *cmd, const u8 *data_in, si
             return -1;
         if (cmd_status == TPS_CMD_INVALID)
             return -1;
+        udelay(100);
     } while (cmd_status != 0);
 
     if (len_out) {
