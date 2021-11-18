@@ -128,7 +128,7 @@ int i2c_smbus_read(i2c_dev_t *dev, u8 addr, u8 reg, u8 *bfr, size_t len)
     i2c_clear_fifos(dev);
     i2c_clear_status(dev);
 
-    if (i2c_xfer_write(dev, addr, 1, 1, &reg, 1))
+    if (i2c_xfer_write(dev, addr, 1, 0, &reg, 1))
         goto err;
 
     i2c_xfer_start_read(dev, addr, len + 1);
