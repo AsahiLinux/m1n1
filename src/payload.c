@@ -94,7 +94,7 @@ static void *decompress_xz(void *p, size_t size)
 static void *load_fdt(void *p, size_t size)
 {
     if (fdt_node_check_compatible(p, 0, expect_compatible) == 0) {
-        printf("DT matches this target (%s)\n", expect_compatible);
+        printf("Found a devicetree for %s at %p\n", expect_compatible, p);
         fdt = p;
     }
     assert(!size || size == fdt_totalsize(p));
@@ -183,7 +183,6 @@ static void *load_one_payload(void *start, size_t size)
         printf("Found an XZ compressed payload at %p\n", p);
         return decompress_xz(p, size);
     } else if (!memcmp(p, fdt_magic, sizeof fdt_magic)) {
-        printf("Found a devicetree at %p\n", p);
         return load_fdt(p, size);
     } else if (!memcmp(p, cpio_magic, sizeof cpio_magic)) {
         printf("Found a cpio initramfs at %p\n", p);
@@ -232,6 +231,10 @@ int payload_run(void)
         }
 
         return kboot_boot(kernel);
+    } else if (kernel && !fdt) {
+        printf("ERROR: Kernel found but no devicetree for %s available.\n", expect_compatible);
+    } else if (!kernel && fdt) {
+        printf("ERROR: Devicetree found but no kernel.\n");
     }
 
     return -1;
