@@ -286,6 +286,52 @@ static int dt_set_mac_addresses(void)
     return 0;
 }
 
+/* adjust PCI port properties, Required for adjusting max-link-speed
+ * for the 10 gigabit ehternet Mac Mini variant.
+ */
+static int dt_adjust_pcie_port_properties(void)
+{
+    int anode = adt_path_offset(adt, "/arm-io/apcie");
+
+    if (anode < 0)
+        bail("ADT: /arm-io/apcie not found\n");
+
+    ADT_FOREACH_CHILD(adt, anode)
+    {
+        u32 port_num;
+        if (ADT_GETPROP(adt, anode, "apcie-port", &port_num) < 0)
+            continue;
+
+        // restrict to 100 ports, matches the numbering in the FDT and ought ti be enough
+        if (port_num > 99)
+            continue;
+
+        u32 max_link_speed;
+        if (ADT_GETPROP(adt, anode, "maximum-link-speed", &max_link_speed) < 0)
+            continue;
+
+        if (max_link_speed < 1) {
+            printf("ADT: unexpected maximum-link-speed %u for port %u\n", max_link_speed, port_num);
+            continue;
+        }
+
+        char port_name[16];
+        snprintf(port_name, sizeof(port_name), "port%02u", port_num);
+
+        const char *path = fdt_get_alias(dt, port_name);
+        if (path == NULL)
+            continue;
+
+        int node = fdt_path_offset(dt, path);
+        if (node < 0)
+            continue;
+
+        fdt_setprop_inplace_u32(dt, node, "max-link-speed", max_link_speed);
+    }
+
+    return 0;
+}
+
 static int dt_disable_usbdevs(void)
 {
     // Disable USB devices not present in ADT, so Linux doesn't step on top of the hypervisor
@@ -394,6 +440,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_cpus())
         return -1;
     if (dt_set_mac_addresses())
+        return -1;
+    if (dt_adjust_pcie_port_properties())
         return -1;
     if (dt_disable_usbdevs())
         return -1;
