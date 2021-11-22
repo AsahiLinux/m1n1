@@ -41,7 +41,7 @@ class R_REMAP(Register32):
     MAP1 = 15, 8
     MAP0 = 7, 0
 
-class PTE_T8103(Register64):
+class PTE_T8020(Register64):
     SP_START = 63, 52
     SP_END = 51, 40
     OFFSET = 39, 14
@@ -77,6 +77,11 @@ class DARTRegs(RegMap):
     TCR             = irange(0x100, 16, 4), R_TCR
     TTBR            = (irange(0x200, 16, 16), range(0, 16, 4)), R_TTBR
 
+PTE_TYPES = {
+    "dart,t8020": PTE_T8020,
+    "dart,t6000": PTE_T6000,
+}
+
 class DART(Reloadable):
     PAGE_BITS = 14
     PAGE_SIZE = 1 << PAGE_BITS
@@ -98,7 +103,15 @@ class DART(Reloadable):
         self.enabled_streams = regs.ENABLED_STREAMS.val
         self.iova_allocator = [Heap(iova_range[0], iova_range[1], self.PAGE_SIZE)
                                for i in range(16)]
-        self.ptecls = PTE_T6000
+        self.ptecls = PTE_T8020
+
+    @classmethod
+    def from_adt(cls, u, path):
+        dart_addr = u.adt[path].get_reg(0)[0]
+        regs = DARTRegs(u, dart_addr)
+        dart = cls(u.iface, regs, u)
+        dart.ptecls = PTE_TYPES[u.adt[path].compatible[0]]
+        return dart
 
     def ioread(self, stream, base, size):
         if size == 0:
