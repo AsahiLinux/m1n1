@@ -11,6 +11,7 @@
 #include "kboot.h"
 #include "malloc.h"
 #include "memory.h"
+#include "pcie.h"
 #include "pmgr.h"
 #include "smp.h"
 #include "string.h"
@@ -481,6 +482,13 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_FB_IMPROVE_LOGO:
             fb_improve_logo();
+            break;
+
+        case P_PCIE_INIT:
+            pcie_init();
+            break;
+        case P_PCIE_SHUTDOWN:
+            pcie_shutdown();
             break;
 
         default:

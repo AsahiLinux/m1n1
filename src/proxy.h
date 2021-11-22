@@ -135,6 +135,9 @@ typedef enum {
     P_FB_RESTORE_LOGO,
     P_FB_IMPROVE_LOGO,
 
+    P_PCIE_INIT = 0xe00,
+    P_PCIE_SHUTDOWN,
+
 } ProxyOp;
 
 #define S_OK     0

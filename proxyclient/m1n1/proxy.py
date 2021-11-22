@@ -582,6 +582,9 @@ class M1N1Proxy(Reloadable):
     P_FB_RESTORE_LOGO = 0xd07
     P_FB_IMPROVE_LOGO = 0xd08
 
+    P_PCIE_INIT = 0xe00
+    P_PCIE_SHUTDOWN = 0xe01
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
@@ -992,6 +995,11 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_FB_RESTORE_LOGO)
     def fb_improve_logo(self):
         return self.request(self.P_FB_IMPROVE_LOGO)
+
+    def pcie_init(self):
+        return self.request(self.P_PCIE_INIT)
+    def pcie_shutdown(self):
+        return self.request(self.P_PCIE_SHUTDOWN)
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
