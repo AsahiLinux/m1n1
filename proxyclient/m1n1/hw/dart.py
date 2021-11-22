@@ -245,7 +245,7 @@ class DART(Reloadable):
                 continue
 
             cached, l1 = self.get_pt(ttbr.ADDR << 12)
-            l1pte = self.pteclsf(l1[(page >> self.L1_OFF) & self.IDX_MASK])
+            l1pte = self.ptecls(l1[(page >> self.L1_OFF) & self.IDX_MASK])
             if not l1pte.VALID and cached:
                 cached, l1 = self.get_pt(ttbr.ADDR << 12, uncached=True)
                 l1pte = self.ptecls(l1[(page >> self.L1_OFF) & self.IDX_MASK])
