@@ -67,11 +67,8 @@ mon.add(0x230845840, 0x40) # error regs
 
 mon.poll()
 
-dart_addr = u.adt["arm-io/dart-dcp"].get_reg(0)[0]
-dart = DART(iface, DARTRegs(u, dart_addr), u)
-
-disp_dart_addr = u.adt["arm-io/dart-disp0"].get_reg(0)[0]
-disp_dart = DART(iface, DARTRegs(u, disp_dart_addr), u)
+dart = DART.from_adt(u, "arm-io/dart-dcp")
+disp_dart = DART.from_adt(u, "arm-io/dart-disp0")
 
 print("DCP DART:")
 dart.regs.dump_regs()
