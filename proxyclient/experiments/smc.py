@@ -15,17 +15,13 @@ smc.start_ep(0x20)
 
 smcep = smc.epmap[0x20]
 
-def fourcc_key(fourcc):
-    assert(len(fourcc) == 4)
-    return sum([ord(x) << (8 * (3 - i)) for i, x in enumerate(fourcc)])
-
 def gpio_key(pin):
     assert(pin < (1 << 16))
 
     fourcc = 'gP' + ('00'+(hex(pin)[2:]))[-2:]
-    return fourcc_key(fourcc)
+    return fourcc
 
 # Enable wifi/bluetooth
 RFKILL_PIN = 13
-smcep.write_key(gpio_key(RFKILL_PIN), struct.pack('<I', 0x800000 | 0x0))
-smcep.write_key(gpio_key(RFKILL_PIN), struct.pack('<I', 0x800000 | 0x1))
+smcep.write(gpio_key(RFKILL_PIN), struct.pack('<I', 0x800000 | 0x0))
+smcep.write(gpio_key(RFKILL_PIN), struct.pack('<I', 0x800000 | 0x1))
