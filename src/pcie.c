@@ -84,12 +84,13 @@ static u64 fuse_base;
 static u32 port_count;
 static u64 port_base[8];
 
+#define SHARED_REG_COUNT 6
+
 int pcie_init(void)
 {
     const char *path = "/arm-io/apcie";
     int adt_path[8];
     int adt_offset;
-    u64 port_reg_cnt;
     const struct fuse_bits *fuse_bits;
 
     if (pcie_initialized)
@@ -102,11 +103,11 @@ int pcie_init(void)
     }
 
     if (adt_is_compatible(adt, adt_offset, "apcie,t8103")) {
-        port_reg_cnt = 4;
         fuse_bits = pcie_fuse_bits_t8103;
+        printf("pcie: Initializing t8103 PCIe controller\n");
     } else if (adt_is_compatible(adt, adt_offset, "apcie,t6000")) {
-        port_reg_cnt = 5;
         fuse_bits = pcie_fuse_bits_t6000;
+        printf("pcie: Initializing t6000 PCIe controller\n");
     } else {
         printf("pcie: Unsupported compatible\n");
         return -1;
@@ -142,6 +143,23 @@ int pcie_init(void)
         printf("pcie: Error getting reg with index %d for %s\n", 5, path);
         return -1;
     }
+
+    u32 reg_len;
+    if (!adt_getprop(adt, adt_offset, "reg", &reg_len)) {
+        printf("pcie: Error getting reg length for %s\n", path);
+        return -1;
+    }
+
+    int port_regs = (reg_len / 16) - SHARED_REG_COUNT;
+
+    if (port_regs % port_count) {
+        printf("pcie: %d port registers do not evenly divide into %d ports\n", port_regs,
+               port_count);
+        return -1;
+    }
+
+    int port_reg_cnt = port_regs / port_count;
+    printf("pcie: ADT uses %d reg entries per port\n", port_reg_cnt);
 
     if (pmgr_adt_clocks_enable(path)) {
         printf("pcie: Error enabling clocks for %s\n", path);
@@ -222,8 +240,10 @@ int pcie_init(void)
 
         printf("pcie: Initializing port %d\n", port);
 
-        if (adt_get_reg(adt, adt_path, "reg", port * port_reg_cnt + 6, &port_base[port], NULL)) {
-            printf("pcie: Error getting reg with index %d for %s\n", port * 4 + 6, path);
+        if (adt_get_reg(adt, adt_path, "reg", port * port_reg_cnt + SHARED_REG_COUNT,
+                        &port_base[port], NULL)) {
+            printf("pcie: Error getting reg with index %d for %s\n",
+                   port * port_reg_cnt + SHARED_REG_COUNT, path);
             return -1;
         }
 
@@ -267,7 +287,7 @@ int pcie_init(void)
     }
 
     pcie_initialized = true;
-    printf("pcie: initialized.\n");
+    printf("pcie: Initialized.\n");
 
     return 0;
 }
@@ -287,7 +307,7 @@ int pcie_shutdown(void)
     clear32(phy_base + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0REQ);
 
     pcie_initialized = false;
-    printf("pcie: shutdown.\n");
+    printf("pcie: Shutdown.\n");
 
     return 0;
 }
