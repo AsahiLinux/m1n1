@@ -741,6 +741,9 @@ class HV(Reloadable):
         if ctx.esr.EC == ESR_EC.BKPT_LOWER:
             return self.handle_break(ctx)
 
+        if ctx.esr.EC == ESR_EC.BRK:
+            return self._lower()
+
     def handle_exception(self, reason, code, info):
         self._in_handler = True
 
@@ -821,7 +824,7 @@ class HV(Reloadable):
     def cont(self):
         raise shell.ExitConsole(EXC_RET.HANDLED)
 
-    def lower(self, step=False):
+    def _lower(self):
         self.u.msr(ELR_EL12, self.ctx.elr)
         self.u.msr(SPSR_EL12, self.ctx.spsr.value)
         self.u.msr(ESR_EL12, self.ctx.esr.value)
@@ -837,7 +840,7 @@ class HV(Reloadable):
             exc_off += 0x200
         else:
             print(f"Unknown exception level {self.ctx.spsr.M}")
-            return
+            return False
 
         self.ctx.spsr.M = SPSR_M.EL1h
         self.ctx.spsr.D = 1
@@ -846,7 +849,12 @@ class HV(Reloadable):
         self.ctx.spsr.F = 1
         self.ctx.elr = self.u.mrs(VBAR_EL12) + exc_off
 
-        if step:
+        return True
+
+    def lower(self, step=False):
+        if not self._lower():
+            return
+        elif step:
             self.step()
         else:
             raise shell.ExitConsole(EXC_RET.HANDLED)
