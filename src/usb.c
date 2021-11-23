@@ -15,7 +15,6 @@
 #include "vsprintf.h"
 
 struct usb_drd_regs {
-    int initialized;
     uintptr_t drd_regs;
     uintptr_t drd_regs_unk3;
     uintptr_t atc;
@@ -35,7 +34,6 @@ struct usb_drd_regs {
 
 static tps6598x_irq_state_t tps6598x_irq_state[USB_IODEV_COUNT];
 static bool usb_is_initialized = false;
-struct usb_drd_regs usb_regs[USB_IODEV_COUNT];
 
 static dart_dev_t *usb_dart_init(u32 idx)
 {
@@ -72,7 +70,6 @@ static int usb_drd_get_regs(u32 idx, struct usb_drd_regs *regs)
     adt_drd_offset = adt_path_offset_trace(adt, drd_path, adt_drd_path);
     if (adt_drd_offset < 0) {
         // Nonexistent device
-        // printf("usb: Error getting drd node %s\n", drd_path);
         return -1;
     }
 
@@ -99,11 +96,15 @@ static int usb_drd_get_regs(u32 idx, struct usb_drd_regs *regs)
     return 0;
 }
 
-static int usb_phy_bringup(u32 idx)
+int usb_phy_bringup(u32 idx)
 {
     char path[24];
 
     if (idx >= USB_IODEV_COUNT)
+        return -1;
+
+    struct usb_drd_regs usb_regs;
+    if (usb_drd_get_regs(idx, &usb_regs) < 0)
         return -1;
 
     snprintf(path, sizeof(path), FMT_ATC_PATH, idx);
@@ -118,21 +119,21 @@ static int usb_phy_bringup(u32 idx)
     if (pmgr_adt_clocks_enable(path) < 0)
         return -1;
 
-    write32(usb_regs[idx].atc + 0x08, 0x01c1000f);
-    write32(usb_regs[idx].atc + 0x04, 0x00000003);
-    write32(usb_regs[idx].atc + 0x04, 0x00000000);
-    write32(usb_regs[idx].atc + 0x1c, 0x008c0813);
-    write32(usb_regs[idx].atc + 0x00, 0x00000002);
+    write32(usb_regs.atc + 0x08, 0x01c1000f);
+    write32(usb_regs.atc + 0x04, 0x00000003);
+    write32(usb_regs.atc + 0x04, 0x00000000);
+    write32(usb_regs.atc + 0x1c, 0x008c0813);
+    write32(usb_regs.atc + 0x00, 0x00000002);
 
-    write32(usb_regs[idx].drd_regs_unk3 + 0x0c, 0x00000002);
-    write32(usb_regs[idx].drd_regs_unk3 + 0x0c, 0x00000022);
-    write32(usb_regs[idx].drd_regs_unk3 + 0x1c, 0x00000021);
-    write32(usb_regs[idx].drd_regs_unk3 + 0x20, 0x00009332);
+    write32(usb_regs.drd_regs_unk3 + 0x0c, 0x00000002);
+    write32(usb_regs.drd_regs_unk3 + 0x0c, 0x00000022);
+    write32(usb_regs.drd_regs_unk3 + 0x1c, 0x00000021);
+    write32(usb_regs.drd_regs_unk3 + 0x20, 0x00009332);
 
     return 0;
 }
 
-static dwc3_dev_t *usb_iodev_bringup(u32 idx)
+dwc3_dev_t *usb_iodev_bringup(u32 idx)
 {
     dart_dev_t *usb_dart = usb_dart_init(idx);
     if (!usb_dart)
@@ -227,23 +228,6 @@ static tps6598x_dev_t *hpm_init(i2c_dev_t *i2c, const char *hpm_path)
     return tps;
 }
 
-static int usb_init_regs(int idx)
-{
-    int ret;
-
-    if (!usb_regs[idx].initialized) {
-        ret = usb_drd_get_regs(idx, &usb_regs[idx]);
-        if (ret >= 0)
-            usb_regs[idx].initialized = 1;
-        else
-            usb_regs[idx].initialized = ret;
-    } else {
-        ret = min(usb_regs[idx].initialized, 0);
-    }
-
-    return ret;
-}
-
 void usb_init(void)
 {
     char hpm_path[sizeof(FMT_HPM_PATH)];
@@ -275,13 +259,8 @@ void usb_init(void)
 
     i2c_shutdown(i2c);
 
-    for (int idx = 0; idx < USB_IODEV_COUNT; ++idx) {
-        if (usb_init_regs(idx) < 0)
-            continue; // Missing instance
-
-        if (usb_phy_bringup(idx) < 0)
-            printf("usb: unable to bringup the phy with index %d\n", idx);
-    }
+    for (int idx = 0; idx < USB_IODEV_COUNT; ++idx)
+        usb_phy_bringup(idx); /* Fails on missing devices, just continue */
 
     usb_is_initialized = true;
 }
@@ -324,9 +303,6 @@ void usb_iodev_init(void)
         dwc3_dev_t *opaque;
         struct iodev *usb_iodev;
 
-        if (usb_regs[i].initialized != 1)
-            continue;
-
         opaque = usb_iodev_bringup(i);
         if (!opaque)
             continue;
@@ -356,18 +332,6 @@ void usb_iodev_shutdown(void)
         usb_dwc3_shutdown(usb_iodev->opaque);
         free(usb_iodev);
     }
-}
-
-int usb_idx_from_address(u64 drd_base)
-{
-
-    for (int i = 0; i < USB_IODEV_COUNT; i++) {
-        if (usb_init_regs(i) < 0)
-            continue;
-        if (usb_regs[i].drd_regs == drd_base)
-            return i;
-    }
-    return -1;
 }
 
 void usb_iodev_vuart_setup(iodev_id_t iodev)
