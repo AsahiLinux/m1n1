@@ -29,10 +29,11 @@ class Mgmt_StartEP(ManagementMessage):
 
 class Mgmt_Init(ManagementMessage):
     TYPE    = 59, 52, Constant(6)
-    UNK     = 15, 0
+    CMD     = 15, 0
 
 class Mgmt_BootDone(ManagementMessage):
     TYPE    = 59, 52, Constant(7)
+    CMD     = 15, 0
 
 class Mgmt_EPMap(ManagementMessage):
     TYPE    = 59, 52, Constant(8)
@@ -48,7 +49,7 @@ class Mgmt_EPMap_Ack(ManagementMessage):
 
 class Mgmt_StartSyslog(ManagementMessage):
     TYPE    = 59, 52, Constant(0xb)
-    UNK1    = 15, 0
+    CMD    = 15, 0
 
 class ASCManagementEndpoint(ASCBaseEndpoint):
     BASE_MESSAGE = ManagementMessage
@@ -86,13 +87,18 @@ class ASCManagementEndpoint(ASCBaseEndpoint):
 
     @msg_handler(0xb, Mgmt_StartSyslog)
     def StartSyslogAck(self, msg):
-        self.syslog_started = True
+        if msg.CMD == 0x10:
+            self.syslog_started = False
+        else:
+            self.syslog_started = True
         return True
 
     @msg_handler(7, Mgmt_BootDone)
     def BootDone(self, msg):
-        #self.start_syslog()
-        self.boot_done = True
+        if msg.CMD == 0x10:
+            self.boot_done = False
+        else:
+            self.boot_done = True
         return True
 
     @msg_handler(4, Mgmt_Pong)
@@ -101,7 +107,8 @@ class ASCManagementEndpoint(ASCBaseEndpoint):
 
     def start(self):
         self.log("Starting via message")
-        self.send(Mgmt_Init(UNK=0x220))
+        self.boot_done = False
+        self.send(Mgmt_Init(CMD=0x220))
 
     def wait_boot(self):
         while not self.boot_done or not self.syslog_started:
@@ -112,7 +119,19 @@ class ASCManagementEndpoint(ASCBaseEndpoint):
         self.send(Mgmt_StartEP(EP=epno, FLAG=1))
 
     def start_syslog(self):
-        self.send(Mgmt_StartSyslog(UNK1=0x20))
+        self.send(Mgmt_StartSyslog(CMD=0x20))
+
+    def stop_syslog(self):
+        self.send(Mgmt_StartSyslog(CMD=0x10))
 
     def ping(self):
         self.send(Mgmt_Ping())
+
+    def stop(self):
+        self.log("Stopping via message")
+        self.stop_syslog()
+        while self.syslog_started:
+            self.asc.work()
+        self.send(Mgmt_Init(CMD=0x10))
+        while self.boot_done:
+            self.asc.work()

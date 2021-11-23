@@ -81,6 +81,9 @@ class StandardASC(ASC):
         self.mgmt.start()
         self.mgmt.wait_boot()
 
+    def stop(self):
+        self.mgmt.stop()
+
     def boot(self):
         print("Booting ASC...")
         super().boot()
