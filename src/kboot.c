@@ -29,6 +29,13 @@ static size_t initrd_size = 0;
         return -1;                                                                                 \
     } while (0)
 
+#define bail_cleanup(...)                                                                          \
+    do {                                                                                           \
+        printf(__VA_ARGS__);                                                                       \
+        ret = -1;                                                                                  \
+        goto err;                                                                                  \
+    } while (0)
+
 static int dt_set_chosen(void)
 {
 
@@ -286,63 +293,112 @@ static int dt_set_mac_addresses(void)
     return 0;
 }
 
-static int dt_disable_usbdevs(void)
+static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix, int max_devs)
 {
-    // Disable USB devices not present in ADT, so Linux doesn't step on top of the hypervisor
+    int ret = -1;
+    int adt_prefix_len = strlen(adt_prefix);
+    int dt_prefix_len = strlen(dt_prefix);
+
+    int acnt = 0, phcnt = 0;
+    u64 *addrs = malloc(max_devs * sizeof(u64));
+    u32 *phandles = malloc(max_devs * sizeof(u32) * 4); // Allow up to 4 extra nodes per device
+    if (!addrs || !phandles)
+        bail_cleanup("FDT: out of memory\n");
+
+    int path[8];
+    int node = adt_path_offset_trace(adt, "/arm-io", path);
+    if (node < 0)
+        bail_cleanup("ADT: /arm-io not found\n");
+
+    int pp = 0;
+    while (path[pp])
+        pp++;
+    path[pp + 1] = 0;
+
+    /* Find ADT registers */
+    ADT_FOREACH_CHILD(adt, node)
+    {
+        const char *name = adt_get_name(adt, node);
+        if (strncmp(name, adt_prefix, adt_prefix_len))
+            continue;
+
+        path[pp] = node;
+        if (adt_get_reg(adt, path, "reg", 0, &addrs[acnt++], NULL) < 0)
+            bail_cleanup("Error getting /arm-io/%s regs\n", name);
+    }
+
     int soc = fdt_path_offset(dt, "/soc");
     if (soc < 0)
         bail("FDT: /soc node not found in devtree\n");
 
-    int usb;
-    char name_shadow[32];
-    fdt_for_each_subnode(usb, dt, soc)
+    /* Disable primary devices */
+    fdt_for_each_subnode(node, dt, soc)
     {
-        const char *name = fdt_get_name(dt, usb, NULL);
-        if (strncmp(name, "usb@", 4))
+        const char *name = fdt_get_name(dt, node, NULL);
+        if (strncmp(name, dt_prefix, dt_prefix_len))
             continue;
 
-        strncpy(name_shadow, name, 32);
-
-        const fdt64_t *reg = fdt_getprop(dt, usb, "reg", NULL);
+        const fdt64_t *reg = fdt_getprop(dt, node, "reg", NULL);
         if (!reg)
-            bail("FDT: failed to get reg property of %s\n", name);
+            bail_cleanup("FDT: failed to get reg property of %s\n", name);
 
-        int idx = usb_idx_from_address(fdt64_ld(reg));
-        if (idx >= 0)
+        u64 addr = fdt64_ld(reg);
+
+        int i;
+        for (i = 0; i < acnt; i++)
+            if (addrs[i] == addr)
+                break;
+        if (i < acnt)
             continue;
 
         int iommus_size;
-        u32 iommu_phandles[2];
-        const fdt32_t *iommus = fdt_getprop(dt, usb, "iommus", &iommus_size);
-        if (!iommus || iommus_size != sizeof(iommu_phandles) * 2) {
-            printf("FDT: failed to get iommus property of %s\n", name);
-            continue;
-        }
-        for (int i = 0; i < iommus_size / 8; i++)
-            iommu_phandles[i] = fdt32_ld(&iommus[i * 2]);
-
-        printf("FDT: Disabling missing USB device %s\n", name);
-        if (fdt_setprop_string(dt, usb, "status", "disabled") < 0)
-            bail("FDT: failed to set status property of %s\n", name);
-
-        for (int i = 0; i < iommus_size / 8; i++) {
-            int iommu = fdt_node_offset_by_phandle(dt, iommu_phandles[i]);
-            if (iommu < 0) {
-                printf("FDT: failed to get iommu at phandle %d\n", iommu_phandles[i]);
-                continue;
+        const fdt32_t *iommus = fdt_getprop(dt, node, "iommus", &iommus_size);
+        if (iommus) {
+            if (iommus_size & 7 || iommus_size > 4 * 8) {
+                printf("FDT: bad iommus property for /soc/%s\n", name);
+            } else {
+                for (int i = 0; i < iommus_size / 8; i++)
+                    phandles[phcnt++] = fdt32_ld(&iommus[i * 2]);
             }
-            if (fdt_setprop_string(dt, iommu, "status", "disabled") < 0)
-                bail("FDT: failed to set status property of iommu #%d\n", iommu_phandles[i]);
         }
 
-        // The changes above invalidated the iterator, so fix it
-        usb = fdt_subnode_offset(dt, soc, name_shadow);
+        const char *status = fdt_getprop(dt, node, "status", NULL);
+        if (!status || strcmp(status, "disabled")) {
+            printf("FDT: Disabling missing device /soc/%s\n", name);
+
+            if (fdt_setprop_string(dt, node, "status", "disabled") < 0)
+                bail_cleanup("FDT: failed to set status property of /soc/%s\n", name);
+        }
     }
 
-    if ((usb < 0) && (usb != -FDT_ERR_NOTFOUND))
-        bail("FDT: USB device iteration failed: %d\n", usb);
+    /* Disable secondary devices */
+    fdt_for_each_subnode(node, dt, soc)
+    {
+        const char *name = fdt_get_name(dt, node, NULL);
+        u32 phandle = fdt_get_phandle(dt, node);
 
-    return 0;
+        for (int i = 0; i < phcnt; i++) {
+            if (phandles[i] != phandle)
+                continue;
+
+            const char *status = fdt_getprop(dt, node, "status", NULL);
+            if (status && !strcmp(status, "disabled"))
+                continue;
+
+            printf("FDT: Disabling secondary device /soc/%s\n", name);
+
+            if (fdt_setprop_string(dt, node, "status", "disabled") < 0)
+                bail_cleanup("FDT: failed to set status property of /soc/%s\n", name);
+            break;
+        }
+    }
+
+    ret = 0;
+err:
+    free(phandles);
+    free(addrs);
+
+    return ret;
 }
 
 void kboot_set_initrd(void *start, size_t size)
@@ -395,7 +451,9 @@ int kboot_prepare_dt(void *fdt)
         return -1;
     if (dt_set_mac_addresses())
         return -1;
-    if (dt_disable_usbdevs())
+    if (dt_disable_missing_devs("usb-drd", "usb@", 8))
+        return -1;
+    if (dt_disable_missing_devs("i2c", "i2c@", 8))
         return -1;
 
     if (fdt_pack(dt))
