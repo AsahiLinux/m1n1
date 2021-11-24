@@ -552,6 +552,7 @@ class M1N1Proxy(Reloadable):
     P_IODEV_READ = 0x903
     P_IODEV_WRITE = 0x904
     P_IODEV_WHOAMI = 0x905
+    P_USB_IODEV_VUART_SETUP = 0x906
 
     P_TUNABLES_APPLY_GLOBAL = 0xa00
     P_TUNABLES_APPLY_LOCAL = 0xa01
@@ -937,6 +938,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_IODEV_WRITE, iodev, buf, size)
     def iodev_whoami(self):
         return IODEV(self.request(self.P_IODEV_WHOAMI))
+    def usb_iodev_vuart_setup(self, iodev):
+        return self.request(self.P_USB_IODEV_VUART_SETUP, iodev)
 
     def tunables_apply_global(self, path, prop):
         return self.request(self.P_TUNABLES_APPLY_GLOBAL, path, prop)

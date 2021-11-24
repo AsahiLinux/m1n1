@@ -394,6 +394,10 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->retval = uartproxy_iodev;
             break;
 
+        case P_USB_IODEV_VUART_SETUP:
+            usb_iodev_vuart_setup(request->args[0]);
+            break;
+
         case P_TUNABLES_APPLY_GLOBAL:
             reply->retval = tunables_apply_global((const char *)request->args[0],
                                                   (const char *)request->args[1]);
