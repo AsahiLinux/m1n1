@@ -5,6 +5,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 from m1n1 import adt
 from m1n1.setup import *
+from m1n1.hw.nco import NCO
 
 dt = u.adt
 
@@ -119,9 +120,17 @@ for i, (freq, reg, nclk) in enumerate(zip(arm_io.clock_frequencies,
     elif clk_type in (0xa0, 0xa1, 0xa4, 0xa5):
         v = f"regval: {p.read32(reg):#x}"
     elif clk_type == 0xa8:
-        v = "nco: "
-        for off in range(6):
-            v += f"{p.read32(reg+off*4):#x} "
+        regvals = [p.read32(reg+off*4) for off in range(5)]
+        try:
+            # we are using the freq value from ADT as fin of NCO,
+            # that's not exactly correct
+            nco_freq = NCO.calc_rate(freq, regvals)
+        except ValueError as e:
+            nco_freq = 0
+
+        v = f"nco: (calculated rate: {nco_freq:d}) "
+        for val in regvals:
+            v += f"{val:#x} "
         
     
     print(f"#{i:3}: {freq:10d} {nclk} {clk_type:#x}/{reg:#x}: {v}")
