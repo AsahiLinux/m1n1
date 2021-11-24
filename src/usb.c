@@ -43,7 +43,7 @@ static dart_dev_t *usb_dart_init(u32 idx)
     snprintf(path, sizeof(path), FMT_DART_MAPPER_PATH, idx, idx);
     mapper_offset = adt_path_offset(adt, path);
     if (mapper_offset < 0) {
-        printf("usb: Error getting DART mapper node %s\n", path);
+        // Device not present
         return NULL;
     }
 
