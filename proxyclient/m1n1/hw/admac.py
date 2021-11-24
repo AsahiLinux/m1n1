@@ -166,7 +166,10 @@ class ADMACTXChannel(Reloadable):
         self.dart = parent.dart
         self.regs = parent.regs
         self.ch = channo
-        self.desc_id = 0
+
+        self._desc_id = 0
+        self._submitted = {}
+        self._last_report = None
 
     def reset(self):
         self.regs.TX_CTL[self.ch].set(RESET_RINGS=1, CLEAR_OF_UF_COUNTERS=1)
@@ -191,6 +194,8 @@ class ADMACTXChannel(Reloadable):
         for piece in desc.ser():
             self.regs.TX_DESC_WRITE[self.ch].val = piece
 
+        self._submitted[desc.flags.DESC_ID] = desc
+
     def submit(self, data, **kwargs):
         assert self.dart is not None
 
@@ -199,9 +204,9 @@ class ADMACTXChannel(Reloadable):
         buf, iova = self.p._get_buffer(len(data))
         self.iface.writemem(buf, data)
         self.submit_desc(ADMACDescriptor(
-            iova, len(data), DESC_ID=self.desc_id, NOTIFY=1, **kwargs
+            iova, len(data), DESC_ID=self._desc_id, NOTIFY=1, **kwargs
         ))
-        self.desc_id += 1
+        self._desc_id = (self._desc_id + 1) % 256
 
     def poll(self):
         if self.regs.TX_STATUS[self.ch, 1].reg.RING_ERR:
@@ -219,7 +224,16 @@ class ADMACTXChannel(Reloadable):
             report = ADMACReport.deser(pieces)
 
             if self.p.debug:
-                print(f"admac: picked up (ch{self.ch}): {report}")
+                if self._last_report is not None and report.flags.DESC_ID in self._submitted:
+                    countval_delta = report.countval - self._last_report.countval
+                    est_rate = 24e6*self._submitted[report.flags.DESC_ID].length/countval_delta/4
+                    est = f"(estimated rate: {est_rate:.2f} dwords/s)"
+                else:
+                    est = ""
+
+                print(f"admac: picked up (ch{self.ch}): {report} {est}")
+
+            self._last_report = report
 
 
 class ADMAC(Reloadable):
