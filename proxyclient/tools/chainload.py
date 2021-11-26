@@ -91,12 +91,12 @@ print(f"Copying stub...")
 
 stub = asm.ARMAsm(f"""
 1:
-        ldp x4, x5, [x1], #8
+        ldp x4, x5, [x1], #16
         stp x4, x5, [x2]
         dc cvau, x2
         ic ivau, x2
-        add x2, x2, #8
-        sub x3, x3, #8
+        add x2, x2, #16
+        sub x3, x3, #16
         cbnz x3, 1b
 
         ldr x1, ={entry}
