@@ -1,5 +1,6 @@
-__all__ = ["NCO"]
+# SPDX-License-Identifier: MIT
 
+__all__ = ["NCO"]
 
 def galois_lfsr(init, poly):
 	state = init

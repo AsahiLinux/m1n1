@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 import struct
 from collections import defaultdict, deque
 from enum import IntEnum
