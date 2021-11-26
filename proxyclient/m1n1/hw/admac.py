@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 from ..utils import *
 
 __all__ = ["ADMACRegs", "ADMAC"]
