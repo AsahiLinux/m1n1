@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+import sys, pathlib
+import time
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+
 # speaker_amp.py -- play audio through the embedded speaker on Mac mini
 #
 # sample usage with sox:
