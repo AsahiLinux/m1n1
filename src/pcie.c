@@ -63,6 +63,9 @@
 #define DWC_DBI_RO_WR    0x8bc
 #define DWC_DBI_RO_WR_EN BIT(0)
 
+#define DWC_DBI_LINK_WIDTH_SPEED_CONTROL 0x80c
+#define DWC_DBI_SPEED_CHANGE             BIT(17)
+
 struct fuse_bits {
     u16 src_reg;
     u16 tgt_reg;
@@ -292,6 +295,8 @@ int pcie_init(void)
             printf("pcie: Error applying %s for %s\n", "pcie-rc-gen4-shadow-tunables", bridge);
             return -1;
         }
+
+        set32(config_base + DWC_DBI_LINK_WIDTH_SPEED_CONTROL, DWC_DBI_SPEED_CHANGE);
 
         /* Make Designware PCIe Core registers readonly. */
         clear32(config_base + DWC_DBI_RO_WR, DWC_DBI_RO_WR_EN);
