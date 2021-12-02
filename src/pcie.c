@@ -46,6 +46,9 @@
 
 /* Port registers */
 
+#define APCIE_PORT_LINKSTS      0x208
+#define APCIE_PORT_LINKSTS_BUSY BIT(2)
+
 #define APCIE_PORT_APPCLK    0x800
 #define APCIE_PORT_APPCLK_EN BIT(0)
 
@@ -266,6 +269,11 @@ int pcie_init(void)
         if (poll32(port_base[port] + APCIE_PORT_STATUS, APCIE_PORT_STATUS_RUN,
                    APCIE_PORT_STATUS_RUN, 250000)) {
             printf("pcie: Port failed to come up on %s\n", bridge);
+            return -1;
+        }
+
+        if (poll32(port_base[port] + APCIE_PORT_LINKSTS, APCIE_PORT_LINKSTS_BUSY, 0, 250000)) {
+            printf("pcie: Port failed to become idle on %s\n", bridge);
             return -1;
         }
 
