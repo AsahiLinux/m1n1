@@ -41,6 +41,9 @@
 #define APCIE_PHY_CTRL_CLK1ACK BIT(3)
 #define APCIE_PHY_CTRL_RESET   BIT(7)
 
+#define APCIE_PHYIF_CTRL     0x024
+#define APCIE_PHYIF_CTRL_RUN BIT(0)
+
 /* Port registers */
 
 #define APCIE_PORT_APPCLK    0x800
@@ -207,7 +210,7 @@ int pcie_init(void)
     udelay(1);
 
     /* ??? */
-    set32(rc_base + 0x24, 1);
+    set32(rc_base + APCIE_PHYIF_CTRL, APCIE_PHYIF_CTRL_RUN);
     udelay(1);
 
     /* Apply "fuses". */
