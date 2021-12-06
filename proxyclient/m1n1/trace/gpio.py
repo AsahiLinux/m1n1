@@ -25,46 +25,38 @@ class GPIOTracer(ADTDevTracer):
     REGMAPS = [GPIORegs]
     NAMES = ["gpio"]
 
-    PIN_NAMES = {
-            0xC0: "i2c0:scl",
-            0xBC: "i2c0:sda",
-            0xC9: "i2c1:scl",
-            0xC7: "i2c1:sda",
-            0xA3: "i2c2:scl",
-            0xA2: "i2c2:sda",
-            106:  "hpm:irq",
-            136:  "bluetooth:irq",
-            196:  "wlan:irq",
-            183:  "cs42l83:irq",
-            182:  "tas5770:irq",
-            152:  "pci@0,0",
-            153:  "pci@1,0",
-            33:   "pci@2,0",
-            0x2D: "spi_nor:CS"
-        }
+    PIN_NAMES = {}
+
+    def __init__(self, hv, devpath, pin_names={}, verbose=False):
+        super().__init__(hv, devpath, verbose)
+        self.PIN_NAMES = pin_names
 
     def pn(self, pin):
         return self.PIN_NAMES.get(pin, f"Pin-{pin}")
 
     def r_PIN(self, val, index):
-        if index == 0x2D and self.verbose < 2:
-            return # ignore noisy SPI NOR CS
+        if index not in self.PIN_NAMES and self.verbose < 2:
+            return
         self.log(f"{self.pn(index):14} R {val!s} ")
 
     def w_PIN(self, val, index):
-        if index == 0x2D and self.verbose < 2:
-            return # ignore noisy SPI NOR CS
+        if index not in self.PIN_NAMES and self.verbose < 2:
+            return
         self.log(f"{self.pn(index):14} W {val!s} ")
 
     def r_IRQ_GROUP(self, val, index):
         (grp, index) = index
-        if int(val) != 0:
-            self.log(f"IRQ[{grp}] ACT {[self.pn(x) for x in bits32(val, index * 32)]}")
+        if int(val) == 0:
+            return
+        pins = [self.pn(x) for x in bits32(val, index * 32) if self.verbose >= 2 or x in self.PIN_NAMES]
+        if len(pins):
+            self.log(f"IRQ[{grp}] ACT {pins}")
 
     def w_IRQ_GROUP(self, val, index):
         (grp, index) = index
-        if int(val) == (1 << 32) - 1:
-            self.log(f"IRQ[{grp}] ACK {index * 32} - {index * 32 + 31}")
-        elif int(val) != 0:
-            self.log(f"IRQ[{grp}] ACK {[self.pn(x) for x in bits32(val, index * 32)]}")
+        if int(val) == 0:
+            return
+        pins = [self.pn(x) for x in bits32(val, index * 32) if self.verbose >= 2 or x in self.PIN_NAMES]
+        if len(pins):
+            self.log(f"IRQ[{grp}] ACK {pins}")
 
