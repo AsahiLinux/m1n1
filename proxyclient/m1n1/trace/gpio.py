@@ -5,11 +5,16 @@ from ..utils import *
 from . import ADTDevTracer
 
 class R_PIN(Register32):
-    GROUP       = 18, 16
-    CFG_DONE    = 9
-    PERIPH      = 5
-    CONFIG      = 3, 1
-    VALUE       = 0
+    DRIVE_STRENGTH1 = 23, 22
+    LOCK            = 21
+    GROUP           = 18, 16
+    SCHMITT         = 15
+    DRIVE_STRENGTH0 = 11, 10
+    INPUT_ENABLE    = 9
+    PULL            = 8, 7
+    PERIPH          = 6, 5
+    MODE            = 3, 1
+    DATA            = 0
 
 class GPIORegs(RegMap):
     PIN = irange(0x000, 212, 4), R_PIN
