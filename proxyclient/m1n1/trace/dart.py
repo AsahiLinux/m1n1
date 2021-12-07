@@ -21,7 +21,7 @@ class DARTTracer(ADTDevTracer):
 
     def start(self):
         super().start()
-        self.dart = DART(self.hv.iface, self.regs.cached)
+        self.dart = DART(self.hv.iface, self.regs.cached, compat=self.dev.compatible[0])
 
     def w_STREAM_COMMAND(self, stream_command):
         if stream_command.INVALIDATE:

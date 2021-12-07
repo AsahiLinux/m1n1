@@ -95,7 +95,7 @@ class DART(Reloadable):
     Lx_SIZE = (1 << IDX_BITS)
     IDX_MASK = Lx_SIZE - 1
 
-    def __init__(self, iface, regs, util=None, iova_range=(0x80000000, 0x90000000)):
+    def __init__(self, iface, regs, util=None, compat="dart,t8020", iova_range=(0x80000000, 0x90000000)):
         self.iface = iface
         self.regs = regs
         self.u = util
@@ -103,7 +103,7 @@ class DART(Reloadable):
         self.enabled_streams = regs.ENABLED_STREAMS.val
         self.iova_allocator = [Heap(iova_range[0], iova_range[1], self.PAGE_SIZE)
                                for i in range(16)]
-        self.ptecls = PTE_T8020
+        self.ptecls = PTE_TYPES[compat]
 
     @classmethod
     def from_adt(cls, u, path):
