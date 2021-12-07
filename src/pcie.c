@@ -58,6 +58,15 @@
 #define APCIE_PORT_RESET     0x814
 #define APCIE_PORT_RESET_DIS BIT(0)
 
+/* PCIe capability registers */
+#define PCIE_CAP_BASE    0x70
+#define PCIE_LNKCAP      0x0c
+#define PCIE_LNKCAP_SLS  GENMASK(3, 0)
+#define PCIE_LNKCAP2     0x2c
+#define PCIE_LNKCAP2_SLS GENMASK(6, 1)
+#define PCIE_LNKCTL2     0x30
+#define PCIE_LNKCTL2_TLS GENMASK(3, 0)
+
 /* DesignWare PCIe Core registers */
 
 #define DWC_DBI_RO_WR    0x8bc
@@ -240,6 +249,7 @@ int pcie_init(void)
 
     for (u32 port = 0; port < port_count; port++) {
         char bridge[64];
+        int bridge_offset;
 
         /*
          * Initialize RC port.
@@ -247,7 +257,7 @@ int pcie_init(void)
 
         snprintf(bridge, sizeof(bridge), "/arm-io/apcie/pci-bridge%d", port);
 
-        if (adt_path_offset(adt, bridge) < 0)
+        if ((bridge_offset = adt_path_offset(adt, bridge)) < 0)
             continue;
 
         printf("pcie: Initializing port %d\n", port);
@@ -294,6 +304,25 @@ int pcie_init(void)
         if (tunables_apply_local_addr(bridge, "pcie-rc-gen4-shadow-tunables", config_base)) {
             printf("pcie: Error applying %s for %s\n", "pcie-rc-gen4-shadow-tunables", bridge);
             return -1;
+        }
+
+        u32 max_speed;
+        if (ADT_GETPROP(adt, bridge_offset, "maximum-link-speed", &max_speed) >= 0) {
+            printf("pcie: Port %d max speed = %d\n", port, max_speed);
+
+            if (max_speed == 0) {
+                printf("pcie: Invalid max-speed\n");
+                return -1;
+            }
+
+            mask32(config_base + PCIE_CAP_BASE + PCIE_LNKCAP, PCIE_LNKCAP_SLS,
+                   FIELD_PREP(PCIE_LNKCAP_SLS, max_speed));
+
+            mask32(config_base + PCIE_CAP_BASE + PCIE_LNKCAP2, PCIE_LNKCAP2_SLS,
+                   FIELD_PREP(PCIE_LNKCAP2_SLS, (1 << max_speed) - 1));
+
+            mask16(config_base + PCIE_CAP_BASE + PCIE_LNKCTL2, PCIE_LNKCTL2_TLS,
+                   FIELD_PREP(PCIE_LNKCTL2_TLS, max_speed));
         }
 
         set32(config_base + DWC_DBI_LINK_WIDTH_SPEED_CONTROL, DWC_DBI_SPEED_CHANGE);
