@@ -45,14 +45,14 @@ class PTE_T8020(Register64):
     SP_START = 63, 52
     SP_END = 51, 40
     OFFSET = 39, 14
-    VALID2 = 1
+    SP_PROT_DIS = 1
     VALID = 0
 
 class PTE_T6000(Register64):
     SP_START = 63, 52
     SP_END = 51, 40
     OFFSET = 39, 10
-    VALID2 = 1
+    SP_PROT_DIS = 1
     VALID = 0
 
 class R_CONFIG(Register32):
@@ -198,7 +198,7 @@ class DART(Reloadable):
                 l2addr = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
                 self.pt_cache[l2addr] = [0] * self.Lx_SIZE
                 l1pte = self.ptecls(
-                    OFFSET=l2addr >> self.PAGE_BITS, VALID=1, VALID2=1)
+                    OFFSET=l2addr >> self.PAGE_BITS, VALID=1, SP_PROT_DIS=1)
                 l1[l1idx] = l1pte.value
                 dirty.add(ttbr.ADDR << 12)
             else:
@@ -209,7 +209,7 @@ class DART(Reloadable):
             l2idx = (page >> self.L2_OFF) & self.IDX_MASK
             self.pt_cache[l2addr][l2idx] = self.ptecls(
                 SP_START=0, SP_END=0xfff,
-                OFFSET=paddr >> self.PAGE_BITS, VALID=1, VALID2=1).value
+                OFFSET=paddr >> self.PAGE_BITS, VALID=1, SP_PROT_DIS=1).value
 
         for page in dirty:
             self.flush_pt(page)
@@ -343,7 +343,7 @@ class DART(Reloadable):
 
             print("    page (%d): %08x ... %08x -> %016x [%d%d]" % (
                 i, base + i*0x4000, base + (i+1)*0x4000,
-                pte.OFFSET << self.PAGE_BITS, pte.VALID2, pte.VALID))
+                pte.OFFSET << self.PAGE_BITS, pte.SP_PROT_DIS, pte.VALID))
             print(hex(pte.value))
 
     def dump_table(self, base, l1_addr):
@@ -362,7 +362,7 @@ class DART(Reloadable):
 
             print("  table (%d): %08x ... %08x -> %016x [%d%d]" % (
                 i, base + i*0x2000000, base + (i+1)*0x2000000,
-                pte.OFFSET << self.PAGE_BITS, pte.VALID2, pte.VALID))
+                pte.OFFSET << self.PAGE_BITS, pte.SP_PROT_DIS, pte.VALID))
             self.dump_table2(base + i*0x2000000, pte.OFFSET << self.PAGE_BITS)
 
     def dump_ttbr(self, idx, ttbr):
