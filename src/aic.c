@@ -3,6 +3,7 @@
 #include "aic.h"
 #include "adt.h"
 #include "aic_regs.h"
+#include "assert.h"
 #include "utils.h"
 
 u64 aic_base;
@@ -23,7 +24,7 @@ static const struct aic_regs aic1_regs = {
 static const struct aic_regs aic2_regs = {
     .reg_size = AIC2_REG_SIZE,
     .event = AIC2_EVENT,
-    .tgt_cpu = AIC2_TARGET_CPU,
+    .config = AIC2_IRQ_CFG,
     .sw_set = AIC2_SW_SET,
     .sw_clr = AIC2_SW_CLR,
     .mask_set = AIC2_MASK_SET,
@@ -31,6 +32,24 @@ static const struct aic_regs aic2_regs = {
 };
 
 const struct aic_regs *aic_regs;
+
+static void aic2_init(int node)
+{
+    u32 ext_intr_config_len;
+    const u8 *ext_intr_config = adt_getprop(adt, node, "aic-ext-intr-cfg", &ext_intr_config_len);
+
+    if (ext_intr_config) {
+        printf("AIC: Configuring %d external interrupts\n", ext_intr_config_len / 3);
+        for (u32 i = 0; i < ext_intr_config_len; i += 3) {
+            u16 irq = ext_intr_config[i] | (ext_intr_config[i + 1] << 8);
+            u8 target = ext_intr_config[i + 2];
+            assert(irq < 0x1000); // Will probably need updating for multi-die
+            mask32(aic_base + aic_regs->config + 4 * irq, AIC2_IRQ_CFG_TARGET,
+                   FIELD_PREP(AIC2_IRQ_CFG_TARGET, target));
+        }
+    }
+    return;
+}
 
 void aic_init(void)
 {
@@ -53,6 +72,7 @@ void aic_init(void)
     } else if (adt_is_compatible(adt, node, "aic,2")) {
         printf("AIC: Version 2 @ 0x%lx\n", aic_base);
         aic_regs = &aic2_regs;
+        aic2_init(node);
     } else {
         printf("AIC: Error: Unsupported version @ 0x%lx\n", aic_base);
     }

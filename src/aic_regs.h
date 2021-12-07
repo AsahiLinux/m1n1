@@ -19,15 +19,17 @@
 #define AIC_CPU_IPI_MASK_SET(cpu) (0x5024 + ((cpu) << 7))
 #define AIC_CPU_IPI_MASK_CLR(cpu) (0x5028 + ((cpu) << 7))
 
-#define AIC2_REG_SIZE   0x10000
-#define AIC2_INFO       0x0004
-#define AIC2_LATENCY    0x0204
-#define AIC2_EVENT      0xc000
-#define AIC2_TARGET_CPU 0x2000
-#define AIC2_SW_SET     0x6000
-#define AIC2_SW_CLR     0x6200
-#define AIC2_MASK_SET   0x6400
-#define AIC2_MASK_CLR   0x6800
+#define AIC2_REG_SIZE 0x10000
+#define AIC2_INFO     0x0004
+#define AIC2_LATENCY  0x0204
+#define AIC2_EVENT    0xc000
+#define AIC2_IRQ_CFG  0x2000
+#define AIC2_SW_SET   0x6000
+#define AIC2_SW_CLR   0x6200
+#define AIC2_MASK_SET 0x6400
+#define AIC2_MASK_CLR 0x6800
+
+#define AIC2_IRQ_CFG_TARGET GENMASK(3, 0)
 
 #define AIC_INFO_NR_HW GENMASK(15, 0)
 

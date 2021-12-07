@@ -11,6 +11,7 @@ struct aic_regs {
     uint64_t reg_size;
     uint64_t event;
     uint64_t tgt_cpu;
+    uint64_t config;
     uint64_t sw_set;
     uint64_t sw_clr;
     uint64_t mask_set;
