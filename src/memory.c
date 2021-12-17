@@ -163,8 +163,8 @@ enum SPRR_val_t {
 #define MAIR_ATTR_DEVICE_nGnRE   0x04UL
 #define MAIR_ATTR_FRAMEBUFFER    0x44UL
 
-static u64 mmu_pt_L0[2] ALIGNED(PAGE_SIZE);
-static u64 mmu_pt_L1[ENTRIES_PER_L1_TABLE] ALIGNED(PAGE_SIZE);
+static u64 *mmu_pt_L0;
+static u64 *mmu_pt_L1;
 
 static u64 *mmu_pt_get_l2(u64 from)
 {
@@ -291,8 +291,11 @@ static u64 mmu_make_table_pte(u64 *addr)
 
 static void mmu_init_pagetables(void)
 {
-    memset64(mmu_pt_L0, 0, sizeof mmu_pt_L0);
-    memset64(mmu_pt_L1, 0, sizeof mmu_pt_L1);
+    mmu_pt_L0 = memalign(PAGE_SIZE, sizeof(u64) * 2);
+    mmu_pt_L1 = memalign(PAGE_SIZE, sizeof(u64) * ENTRIES_PER_L1_TABLE);
+
+    memset64(mmu_pt_L0, 0, sizeof(u64) * 2);
+    memset64(mmu_pt_L1, 0, sizeof(u64) * ENTRIES_PER_L1_TABLE);
 
     mmu_pt_L0[0] = mmu_make_table_pte(&mmu_pt_L1[0]);
     mmu_pt_L0[1] = mmu_make_table_pte(&mmu_pt_L1[ENTRIES_PER_L1_TABLE >> 1]);
