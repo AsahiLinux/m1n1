@@ -35,7 +35,7 @@ CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-fno-stack-protector -mgeneral-regs-only -mstrict-align -march=armv8.2-a \
 	$(EXTRA_CFLAGS)
 
-LDFLAGS := -T m1n1.ld -EL -maarch64elf --no-undefined -X -Bsymbolic \
+LDFLAGS := -EL -maarch64elf --no-undefined -X -Bsymbolic \
 	-z notext --no-apply-dynamic-relocs --orphan-handling=warn \
 	-z nocopyreloc --gc-sections -pie
 
@@ -95,11 +95,12 @@ DTBS := $(patsubst %.dts,build/dtb/%.dtb,$(DTS))
 
 NAME := m1n1
 TARGET := m1n1.macho
+TARGET_RAW := m1n1.bin
 
 DEPDIR := build/.deps
 
 .PHONY: all clean format update_tag
-all: build/$(TARGET) $(DTBS)
+all: build/$(TARGET) build/$(TARGET_RAW) $(DTBS)
 clean:
 	rm -rf build/*
 format:
@@ -131,10 +132,18 @@ build/%.o: src/%.c
 
 build/$(NAME).elf: $(BUILD_OBJS) m1n1.ld
 	@echo "  LD    $@"
-	@$(LD) $(LDFLAGS) -o $@ $(BUILD_OBJS)
+	@$(LD) -T m1n1.ld $(LDFLAGS) -o $@ $(BUILD_OBJS)
+
+build/$(NAME)-raw.elf: $(BUILD_OBJS) m1n1-raw.ld
+	@echo "  LDRAW $@"
+	@$(LD) -T m1n1-raw.ld $(LDFLAGS) -o $@ $(BUILD_OBJS)
 
 build/$(NAME).macho: build/$(NAME).elf
 	@echo "  MACHO $@"
+	@$(OBJCOPY) -O binary --strip-debug $< $@
+
+build/$(NAME).bin: build/$(NAME)-raw.elf
+	@echo "  RAW   $@"
 	@$(OBJCOPY) -O binary --strip-debug $< $@
 
 update_tag:
