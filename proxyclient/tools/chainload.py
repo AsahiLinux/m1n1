@@ -7,7 +7,7 @@ import argparse, pathlib, time
 
 parser = argparse.ArgumentParser(description='Mach-O loader for m1n1')
 parser.add_argument('-q', '--quiet', action="store_true", help="Disable framebuffer")
-parser.add_argument('-x', '--xnu', action="store_true", help="Load XNU")
+parser.add_argument('-n', '--no-sepfw', action="store_true", help="Do not preserve SEPFW")
 parser.add_argument('-c', '--call', action="store_true", help="Use call mode")
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
@@ -31,10 +31,10 @@ entry += new_base
 if args.quiet:
     p.iodev_set_usage(IODEV.FB, 0)
 
-if args.xnu:
-    sepfw_start, sepfw_length = u.adt["chosen"]["memory-map"].SEPFW
-else:
+if args.no_sepfw:
     sepfw_start, sepfw_length = 0, 0
+else:
+    sepfw_start, sepfw_length = u.adt["chosen"]["memory-map"].SEPFW
 
 image_size = align(len(image))
 sepfw_off = image_size
@@ -50,31 +50,27 @@ print(f"Loading kernel image (0x{len(image):x} bytes)...")
 u.compressed_writemem(image_addr, image, True)
 p.dc_cvau(image_addr, len(image))
 
-if args.xnu:
+if not args.no_sepfw:
     print(f"Copying SEPFW (0x{sepfw_length:x} bytes)...")
     p.memcpy8(image_addr + sepfw_off, sepfw_start, sepfw_length)
     print(f"Adjusting addresses in ADT...")
     u.adt["chosen"]["memory-map"].SEPFW = (new_base + sepfw_off, sepfw_length)
     u.adt["chosen"]["memory-map"].BootArgs = (image_addr + bootargs_off, bootargs_size)
 
-    print("Setting secondary CPU RVBARs...")
-
-    rvbar = entry & ~0xfff
-    for cpu in u.adt["cpus"][1:]:
-        addr, size = cpu.cpu_impl_reg
-        print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
-        p.write64(addr, rvbar)
-
     u.push_adt()
+
+print("Setting secondary CPU RVBARs...")
+
+rvbar = entry & ~0xfff
+for cpu in u.adt["cpus"][1:]:
+    addr, size = cpu.cpu_impl_reg
+    print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
+    p.write64(addr, rvbar)
 
 print("Setting up bootargs...")
 tba = u.ba.copy()
 
-if args.xnu:
-    tba.top_of_kernel_data = new_base + image_size
-else:
-    # SEP firmware is in here somewhere, keep top_of_kdata high so we hopefully don't clobber it
-    tba.top_of_kernel_data = max(tba.top_of_kernel_data, new_base + image_size)
+tba.top_of_kernel_data = new_base + image_size
 
 if len(args.boot_args) > 0:
     boot_args = " ".join(args.boot_args)
