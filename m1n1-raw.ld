@@ -2,8 +2,6 @@ ENTRY(_start)
 
 _stack_size = 0x20000;
 
-_max_payload_size = 64*1024*1024;
-
 /* We are actually relocatable */
 . = 0;
 
@@ -81,7 +79,6 @@ SECTIONS {
     _data_size = . - _data_start;
     _end = .;
     _payload_start = .;
-    _payload_end = . + _max_payload_size;
 
     .symtab 0 : { *(.symtab) }
     .strtab 0 : { *(.strtab) }

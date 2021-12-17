@@ -20,13 +20,8 @@ static void *heap_base;
 void heapblock_init(void)
 {
     void *top_of_kernel_data = (void *)cur_boot_args.top_of_kernel_data;
-    void *payload_end = _payload_end;
 
-    if (payload_end > top_of_kernel_data)
-        heap_base = payload_end; // Chainloaded, we are last in RAM
-    else
-        heap_base = top_of_kernel_data; // Loaded by iBoot, there is data after us in RAM
-
+    heap_base = top_of_kernel_data;
     heapblock_alloc(0); // align base
 
     printf("Heap base: %p\n", heap_base);
