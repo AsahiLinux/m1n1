@@ -7,6 +7,7 @@
 #include "cpufreq.h"
 #include "exception.h"
 #include "fb.h"
+#include "gxf.h"
 #include "heapblock.h"
 #include "mcc.h"
 #include "memory.h"
@@ -83,6 +84,7 @@ void m1n1_main(void)
     get_device_info();
 
     heapblock_init();
+    gxf_init();
     mcc_init();
     mmu_init();
 

@@ -35,8 +35,6 @@ CACHE_RANGE_OP(dc_cvau_range, "dc cvau")
 CACHE_RANGE_OP(dc_civac_range, "dc civac")
 
 extern u8 _stack_top[];
-extern u8 gl1_stack[GL_STACK_SIZE];
-extern u8 gl2_stack[MAX_CPUS][GL_STACK_SIZE];
 
 uint64_t ram_base = 0;
 
@@ -403,15 +401,9 @@ static void mmu_add_default_mappings(void)
                     PERM_RX_EL0);
 
     /*
-     * Make guard pages at the end of stacks
+     * Make guard page at the end of the main stack
      */
     mmu_rm_mapping((u64)_stack_top, PAGE_SIZE);
-
-    for (int i = 0; i < MAX_CPUS; i++) {
-        mmu_rm_mapping((u64)secondary_stacks[i], PAGE_SIZE);
-        mmu_rm_mapping((u64)gl1_stack[i], PAGE_SIZE);
-        mmu_rm_mapping((u64)gl2_stack[i], PAGE_SIZE);
-    }
 
     /*
      * Create mapping for RAM from 0x88_0000_0000,

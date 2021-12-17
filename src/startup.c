@@ -2,7 +2,6 @@
 
 #include "chickens.h"
 #include "exception.h"
-#include "gxf.h"
 #include "smp.h"
 #include "string.h"
 #include "types.h"
@@ -101,7 +100,6 @@ void _start_c(void *boot_args, void *base)
     printf("\n");
 
     exception_initialize();
-    gxf_init();
     m1n1_main();
 }
 

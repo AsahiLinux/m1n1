@@ -3,6 +3,7 @@
 #include "cpu_regs.h"
 #include "exception.h"
 #include "gxf.h"
+#include "malloc.h"
 #include "memory.h"
 #include "smp.h"
 #include "uart.h"
@@ -10,8 +11,22 @@
 
 uint64_t gxf_enter(void *func, uint64_t a, uint64_t b, uint64_t c, uint64_t d);
 
-u8 gl1_stack[MAX_CPUS][GL_STACK_SIZE] ALIGNED(0x4000);
-u8 gl2_stack[MAX_CPUS][GL_STACK_SIZE] ALIGNED(0x4000);
+void _gxf_init(void *gl2_stack, void *gl1_stack);
+
+u8 *gl1_stack[MAX_CPUS];
+u8 *gl2_stack[MAX_CPUS];
+
+void gxf_init(void)
+{
+    int cpu = smp_id();
+
+    if (!gl2_stack[cpu])
+        gl2_stack[cpu] = memalign(0x4000, GL_STACK_SIZE);
+    if (in_el2() && !gl1_stack[cpu])
+        gl1_stack[cpu] = memalign(0x4000, GL_STACK_SIZE);
+
+    _gxf_init(gl2_stack[cpu], gl1_stack[cpu]);
+}
 
 bool gxf_enabled(void)
 {

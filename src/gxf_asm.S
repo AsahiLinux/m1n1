@@ -7,13 +7,12 @@
 #define genter .long 0x00201420
 #define gexit .long 0x00201400
 
-.extern gl1_stack
-.extern gl2_stack
-
-.global gxf_init
-.type gxf_init, @function
-gxf_init:
+.global _gxf_init
+.type _gxf_init, @function
+_gxf_init:
     str x30, [sp, #-16]!
+    mov x5, x0
+    mov x6, x1
     mov x0, 1
     msr SYS_IMP_APL_SPRR_CONFIG_EL1, x0
     isb
@@ -37,20 +36,7 @@ gxf_enter:
     ret
 
 _gxf_setup:
-    mrs x2, TPIDR_EL1
-    mrs x4, CurrentEL
-    cmp x4, #8
-    bne 1f
-    mrs x2, TPIDR_EL2
-1:
-    add x2, x2, 1
-
-    ldr x0, =gl2_stack
-    ldr x1, =GL_STACK_SIZE
-    mul x1, x1, x2
-    add x0, x0, x1
-
-    mov sp, x0
+    mov sp, x5
     ldr x1, =_gxf_vectors
     ldr x2, =_gxf_exc_sync
     ldr x3, =_gxf_entry
@@ -62,13 +48,7 @@ _gxf_setup:
     cmp x4, #8
     bne 1f
 
-    mrs x2, TPIDR_EL2
-    ldr x0, =gl1_stack
-    ldr x1, =GL_STACK_SIZE
-    mul x1, x1, x2
-    add x0, x0, x1
-
-    msr SYS_IMP_APL_SP_GL12, x0
+    msr SYS_IMP_APL_SP_GL12, x6
     msr SYS_IMP_APL_VBAR_GL12, x1
     msr SYS_IMP_APL_GXF_ABORT_EL12, x2
     msr SYS_IMP_APL_GXF_ENTER_EL12, x3
