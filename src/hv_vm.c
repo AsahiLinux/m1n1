@@ -109,7 +109,7 @@ uint64_t vaddr_bits;
  * at this time.
  */
 
-static u64 hv_Ltop[ENTRIES_PER_L2_TABLE] ALIGNED(PAGE_SIZE);
+static u64 *hv_Ltop;
 
 void hv_pt_init(void)
 {
@@ -120,7 +120,8 @@ void hv_pt_init(void)
 
     printf("HV: Initializing for %ld-bit PA range\n", vaddr_bits);
 
-    memset(hv_Ltop, 0, sizeof(hv_Ltop));
+    hv_Ltop = memalign(PAGE_SIZE, sizeof(u64) * ENTRIES_PER_L2_TABLE);
+    memset(hv_Ltop, 0, sizeof(u64) * ENTRIES_PER_L2_TABLE);
 
     u64 sl0 = vaddr_bits > 36 ? 2 : 1;
 
