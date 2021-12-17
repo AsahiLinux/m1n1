@@ -43,12 +43,25 @@ $ docker-compose run m1n1 make
 Our [developer quickstart](https://github.com/AsahiLinux/docs/wiki/Developer-Quickstart#using-m1n1)
 guide has more information on how to use m1n1.
 
+To install on an OS container based on macOS <12.1, use `m1n1.macho`:
+
+```shell
+kmutil configure-boot -c m1n1.macho -v <path to your OS volume>
+```
+
+To install on an OS container based on macOS >=12.1, use `m1n1.bin`:
+
+```shell
+kmutil configure-boot -c m1n1.bin --raw --entry-point 2048 --lowest-virtual-address 0 -v <path to your OS volume>
+```
+
 ## Payloads
 
 m1n1 supports running payloads by simple concatenation:
 
 ```shell
 $ cat build/m1n1.macho Image.gz build/dtb/apple-j274.dtb initramfs.cpio.gz > m1n1-payload.macho
+$ cat build/m1n1.bin Image.gz build/dtb/apple-j274.dtb initramfs.cpio.gz > m1n1-payload.bin
 ```
 
 Supported payload file formats:
