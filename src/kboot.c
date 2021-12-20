@@ -293,6 +293,32 @@ static int dt_set_mac_addresses(void)
     return 0;
 }
 
+static int dt_set_antenna(void)
+{
+    int anode = adt_path_offset(adt, "/arm-io/wlan");
+
+    if (anode < 0)
+        bail("ADT: /arm-io/wlan not found\n");
+
+    uint8_t info[16];
+    if (ADT_GETPROP_ARRAY(adt, anode, "wifi-antenna-sku-info", info) < 0)
+        bail("ADT: Failed to get wifi-antenna-sku-info");
+
+    const char *path = fdt_get_alias(dt, "wifi0");
+    if (path == NULL)
+        return 0;
+
+    int node = fdt_path_offset(dt, path);
+    if (node < 0)
+        return 0;
+
+    char antenna[8];
+    memcpy(antenna, &info[8], sizeof(antenna));
+    fdt_setprop_string(dt, node, "apple,antenna-sku", antenna);
+
+    return 0;
+}
+
 static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix, int max_devs)
 {
     int ret = -1;
@@ -450,6 +476,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_cpus())
         return -1;
     if (dt_set_mac_addresses())
+        return -1;
+    if (dt_set_antenna())
         return -1;
     if (dt_disable_missing_devs("usb-drd", "usb@", 8))
         return -1;
