@@ -30,16 +30,16 @@ static void init_common_icestorm(void)
     // violation"
     reg_set(SYS_IMP_APL_EHID10, HID10_FORCE_WAIT_STATE_DRAIN_UC | HID10_DISABLE_ZVA_TEMPORAL_TSO);
 
-    // FIXME: do we actually need this?
-    reg_set(SYS_IMP_APL_EHID20, EHID20_TRAP_SMC);
+    // Disable SMC trapping to EL2
+    reg_clr(SYS_IMP_APL_EHID20, EHID20_TRAP_SMC);
 }
 
 static void init_common_firestorm(void)
 {
     reg_set(SYS_IMP_APL_HID0, HID0_SAME_PG_POWER_OPTIMIZATION);
 
-    // FIXME: do we actually need this?
-    reg_set(SYS_IMP_APL_HID1, HID1_TRAP_SMC);
+    // Disable SMC trapping to EL2
+    reg_clr(SYS_IMP_APL_HID1, HID1_TRAP_SMC);
 
     reg_clr(SYS_IMP_APL_HID3, HID3_DEV_PCIE_THROTTLE_ENABLE | HID3_DISABLE_ARBITER_FIX_BIF_CRD);
 
