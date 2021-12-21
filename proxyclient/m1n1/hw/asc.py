@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 from ..utils import *
+import time
 
 class R_OUTBOX_CTRL(Register32):
     EMPTY = 17
@@ -25,12 +26,17 @@ class R_OUTBOX1(Register64):
 
 class ASCRegs(RegMap):
     CPU_CONTROL = 0x0044, R_CPU_CONTROL
+    CPU_STATUS  = 0x0048, Register32
+
     INBOX_CTRL  = 0x8110, R_INBOX_CTRL
     OUTBOX_CTRL = 0x8114, R_OUTBOX_CTRL
     INBOX0      = 0x8800, Register64
     INBOX1      = 0x8808, R_INBOX1
     OUTBOX0     = 0x8830, Register64
     OUTBOX1     = 0x8838, R_OUTBOX1
+
+    NMI1        = 0x10004, Register32
+    NMI2        = 0x10024, Register32
 
 class ASC:
     def __init__(self, u, asc_base):
@@ -39,6 +45,14 @@ class ASC:
         self.iface = u.iface
         self.asc = ASCRegs(u, asc_base)
         self.epmap = {}
+
+    def send_nmi(self):
+        print("send nmi")
+        #self.asc.NMI1.val = 0x11
+        #self.asc.NMI2.val = 0x1
+
+    def get_status(self):
+        return self.asc.CPU_STATUS.val
 
     def recv(self):
         if self.asc.OUTBOX_CTRL.reg.EMPTY:
@@ -62,6 +76,7 @@ class ASC:
             pass
 
     def boot(self):
+        #self.send_nmi()
         self.asc.CPU_CONTROL.set(RUN=1)
         self.asc.CPU_CONTROL.set(RUN=0)
 
