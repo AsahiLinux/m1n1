@@ -293,7 +293,7 @@ static int dt_set_mac_addresses(void)
     return 0;
 }
 
-static int dt_set_antenna(void)
+static int dt_set_wifi(void)
 {
     int anode = adt_path_offset(adt, "/arm-io/wlan");
 
@@ -315,6 +315,14 @@ static int dt_set_antenna(void)
     char antenna[8];
     memcpy(antenna, &info[8], sizeof(antenna));
     fdt_setprop_string(dt, node, "apple,antenna-sku", antenna);
+
+    u32 len;
+    const u8 *cal_blob = adt_getprop(adt, anode, "wifi-calibration-msf", &len);
+
+    if (!cal_blob || !len)
+        bail("ADT: Failed to get wifi-calibration-msf");
+
+    fdt_setprop(dt, node, "brcm,cal-blob", cal_blob, len);
 
     return 0;
 }
@@ -477,7 +485,7 @@ int kboot_prepare_dt(void *fdt)
         return -1;
     if (dt_set_mac_addresses())
         return -1;
-    if (dt_set_antenna())
+    if (dt_set_wifi())
         return -1;
     if (dt_disable_missing_devs("usb-drd", "usb@", 8))
         return -1;
