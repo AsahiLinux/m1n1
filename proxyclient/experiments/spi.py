@@ -92,15 +92,20 @@ class R_SHIFTCONFIG(Register32):
     CLK_ENABLE      = 0
 
 class R_PINCONFIG(Register32):
-    CLK_IDLE_VAL    = 8
+    MOSI_INIT_VAL   = 10
+    CS_INIT_VAL     = 9
+    CLK_INIT_VAL    = 8
     KEEP_MOSI       = 2
-    NO_AUTO_CS      = 1
+    KEEP_CS         = 1
+    KEEP_CLK        = 0
 
 class R_DELAY(Register32):
     DELAY           = 31, 16
     MOSI_VAL        = 12
+    CS_VAL          = 10
     SCK_VAL         = 8
     SET_MOSI        = 6
+    SET_CS          = 5
     SET_SCK         = 4
     NO_INTERBYTE    = 1
     ENABLE          = 0
@@ -171,6 +176,8 @@ mon.poll()
 
 m = GPIOLogicAnalyzer(u, "arm-io/gpio0",
                       pins={"miso": 0x34, "mosi": 0x35, "clk": 0x36, "cs": 0x37},
+                      #pins={"miso": 0xa, "mosi": 0xb, "clk": 0x20, "cs": 0x21},
+                      #pins={"clk": 46, "mosi": 47, "miso": 48, "cs": 49},
                       div=1, on_pin_change=False)
 
 #p.write32(spi + 0x100, 0xffffffff)
@@ -180,7 +187,7 @@ regs.PIN.val = 0x2
 regs.CONFIG.val = 0x20 | (1<<15) | 6
 regs.CONFIG.val = 0x20 | (1<<15) | 4
 regs.CONFIG.val = 0x20 | (1<<15) | 2
-regs.CONFIG.val = 0x20 | (3<<15) | 0 | (0<<17)
+regs.CONFIG.val = 0x20 | (3<<15) | 0
 
 def try_all_bits():
     for i in range(0, 0x200, 4):
@@ -192,29 +199,6 @@ def try_all_bits():
         p.write32(spi + i, v)
 
 
-regs.STATUS.val = 0xffffffff
-regs.ISTATUS1.val = 0xffffffff
-regs.ISTATUS2.val = 0xfffffff#f
-
-regs.CLKDIV.val = 0xfff
-regs.INTER_DLY.val = 0x1000
-
-regs.PINCONFIG.val = 0x101
-
-#p.write32(spi + 0x150, 0x80c07)
-p.write32(spi + 0x150, 0x88c07)
-print(hex(p.read32(spi + 0x150)))
-
-#p.write32(spi + 0x160, 0)
-p.write32(spi + 0x160, 0xfff0001)
-p.write32(spi + 0x168, 0)
-#p.write32(spi + 0x164, 0x06000210)
-#p.write32(spi + 0x180, 0x02000000)
-#p.write32(spi + 0x18c, 0x500)
-#regs.INTER_DLY2 = 0x20000001
-
-#p.write32(spi + 0x200, 0x11)
-
 m.regs = {
     "CTRL": (spi + 0x00, R_CTRL),
     "STATUS": (spi + 0x08, R_STATUS),
@@ -224,11 +208,60 @@ m.regs = {
     "ISTATUS1": (spi + 0x134, R_ISTATUS1),
     "ISTATUS2": (spi + 0x13c, R_ISTATUS2),
     "XFSTATUS": (spi + 0x1c0),
+    "SHIFTCONFIG": (spi + 0x150),
+    "PINCONFIG": (spi + 0x154),
+    "PIN": (spi + 0xc),
+    "3c": (spi + 0x3c),
     "DIVSTATUS": (spi + 0x1e0, R_DIVSTATUS)
 }
+
+m.regs = {}
+
 m.start(300000, bufsize=0x80000)
 
-p.write32(0x28e0380c4, 0x80100000)
+
+regs.STATUS.val = 0xffffffff
+regs.ISTATUS1.val = 0xffffffff
+regs.ISTATUS2.val = 0xffffffff
+
+regs.CLKDIV.val = 0xfff
+regs.INTER_DLY.val = 0x1000
+
+regs.SHIFTCONFIG.val = 0x20fcf7
+
+regs.PIN.val = 0x2
+print("pinconfig", hex(regs.PINCONFIG.val))
+regs.PINCONFIG.val = 0x100
+#regs.PINCONFIG.val = 0x2-7
+print("pinconfig", hex(regs.PINCONFIG.val))
+print("shiftconfig", hex(regs.SHIFTCONFIG.val))
+
+#regs.PIN.val = 0x0
+#regs.PIN.val = 0x2
+# auto_cs OR pin_cs
+
+#p.write32(spi + 0x150, 0x80c07)
+#p.write32(spi + 0x150, 0x88c07)
+print(hex(p.read32(spi + 0x150)))
+
+#p.write32(spi + 0x160, 0)
+p.write32(spi + 0x160, 0xfff0020)
+p.write32(spi + 0x168, 0xffffb20)
+#p.write32(spi + 0x164, 0x06000210)
+#p.write32(spi + 0x180, 0x02000000)
+#p.write32(spi + 0x18c, 0x500)
+#regs.INTER_DLY2 = 0x20000001
+
+p.write32(spi + 0x200, 0x0010)
+
+p.write32(spi + 0x3c, 0xffffffff)
+
+regs.PINCONFIG.val = 0x002
+regs.PINCONFIG.val = 0x200
+
+
+#p.write32(0x28e0380bc, 0x80100000)
+#p.write32(0x28e0380c4, 0x80100000)
 
 data = b"Asahi Linux"
 
@@ -251,8 +284,8 @@ for i in range(2):
     while regs.TXCNT.val != 0:
         print(f"{regs.TXCNT.val:#x} {regs.FIFO_STAT.reg} {regs.STATUS.val:#x} {regs.ISTATUS2.val:#x} {p.read32(spi + 0x134):#x}")
         regs.STATUS.val = 0xffffffff
-        #regs.ISTATUS1.val = 0xffffffff
-        #regs.ISTATUS2.val = 0xffffffff
+        regs.ISTATUS1.val = 0xffffffff
+        regs.ISTATUS2.val = 0xffffffff
         #regs.CTRL.val = 0x0
         #time.sleep(0.1)
         #regs.CTRL.val = 0x1[
@@ -263,19 +296,15 @@ for i in range(2):
         if i > 0x100:
             break
     time.sleep(0.001)
-    regs.PIN.val = 0x2
-    #regs.PINCONFIG.val = 0x001
-    #regs.PINCONFIG.val = 0x101
-    #regs.PINCONFIG.val = 0x201
-    #regs.PINCONFIG.val = 0x301
     print(f"{regs.RXCNT.val:#x} {regs.FIFO_STAT.reg} {regs.STATUS.val:#x} {regs.ISTATUS2.val:#x}")
     regs.STATUS.val = 0xffffffff
     regs.ISTATUS1.val = 0xffffffff
     regs.ISTATUS2.val = 0xffffffff
 
+    mon.poll()
     
     while regs.FIFO_STAT.reg.LEVEL_RX:
-        regs.RXDATA.val
+        print("RX", hex(regs.RXDATA.val))
 
     regs.CTRL.val = 0
 
