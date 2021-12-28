@@ -92,7 +92,7 @@ class Tracer(Reloadable):
             if rcls is not None:
                 value = rcls(evt.data)
 
-        if self.verbose >= 3 or reg is None and self.verbose >= 1:
+        if self.verbose >= 3 or (reg is None and self.verbose >= 1):
             if reg is None:
                 s = f"{evt.addr:#x} = {value:#x}"
             else:
@@ -111,7 +111,7 @@ class Tracer(Reloadable):
                     handler(value, index)
                 else:
                     handler(value)
-            elif self.verbose >= 2:
+            elif self.verbose == 2:
                 s = f"{regmap.get_name(evt.addr)} = {value!s}"
                 m = "+" if evt.flags.MULTI else " "
                 self.log(f"MMIO: {t.upper()}.{1<<evt.flags.WIDTH:<2}{m} " + s)
