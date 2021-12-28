@@ -7,7 +7,7 @@ from .proxy import REGION_RX_EL1
 from .sysreg import *
 
 class GPIOLogicAnalyzer(object):
-    def __init__(self, u, node, pins, regs=[], div=1, cpu=1, on_pin_change=True):
+    def __init__(self, u, node, pins, regs={}, div=1, cpu=1, on_pin_change=True):
         self.u = u
         self.p = u.proxy
         self.iface = u.iface
@@ -45,9 +45,12 @@ class GPIOLogicAnalyzer(object):
         2:
             mrs x5, CNTPCT_EL0
             isb
-            cmp x5, x4
-            b.lo 2b
         """
+        if self.div > 1:
+            text += f"""
+                cmp x5, x4
+                b.lo 2b
+            """
         
         for idx, pin in enumerate(self.pins.values()):
             text += f"""
