@@ -98,6 +98,9 @@ class IOEp(EP):
 
     GetBuf =        msg_log(0x89, DIR.RX)
 
+    Shutdown =      msg_log(0xc0, DIR.TX)
+    Shutdown_Ack =  msg_log(0xc1, DIR.RX)
+
     @msg(0xa1, DIR.TX, IOEp_SetBuf_Ack)
     def GetBuf_Ack(self, msg):
         self.state.shmem_iova = msg.IOVA
