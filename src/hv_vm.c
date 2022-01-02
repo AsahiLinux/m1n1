@@ -314,7 +314,7 @@ int hv_map(u64 from, u64 to, u64 size, u64 incr)
     }
 
     // L4 mappings to boundary
-    chunk = min(size, ALIGN_UP(from, MASK(VADDR_L3_OFFSET_BITS)) - from);
+    chunk = min(size, ALIGN_UP(from, BIT(VADDR_L3_OFFSET_BITS)) - from);
     if (chunk) {
         assert(!hw);
         hv_pt_map_l4(from, to, chunk, incr);
@@ -324,8 +324,8 @@ int hv_map(u64 from, u64 to, u64 size, u64 incr)
     }
 
     // L3 mappings to boundary
-    chunk = ALIGN_DOWN(min(size, ALIGN_UP(from, MASK(VADDR_L2_OFFSET_BITS)) - from),
-                       MASK(VADDR_L3_OFFSET_BITS));
+    chunk = ALIGN_DOWN(min(size, ALIGN_UP(from, BIT(VADDR_L2_OFFSET_BITS)) - from),
+                       BIT(VADDR_L3_OFFSET_BITS));
     if (chunk) {
         hv_pt_map_l3(from, to, chunk, incr);
         from += chunk;
@@ -334,7 +334,7 @@ int hv_map(u64 from, u64 to, u64 size, u64 incr)
     }
 
     // L2 mappings
-    chunk = ALIGN_DOWN(size, MASK(VADDR_L2_OFFSET_BITS));
+    chunk = ALIGN_DOWN(size, BIT(VADDR_L2_OFFSET_BITS));
     if (chunk && (!hw || (to & VADDR_L2_ALIGN_MASK) == 0)) {
         hv_pt_map_l2(from, to, chunk, incr);
         from += chunk;
@@ -343,7 +343,7 @@ int hv_map(u64 from, u64 to, u64 size, u64 incr)
     }
 
     // L3 mappings to end
-    chunk = ALIGN_DOWN(size, MASK(VADDR_L3_OFFSET_BITS));
+    chunk = ALIGN_DOWN(size, BIT(VADDR_L3_OFFSET_BITS));
     if (chunk) {
         hv_pt_map_l3(from, to, chunk, incr);
         from += chunk;
