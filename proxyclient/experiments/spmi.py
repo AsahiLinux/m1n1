@@ -38,9 +38,6 @@ class SPMIRegs(RegMap):
 # SPMI_CMD_REG : 0x04
 # SPMI_RSP_REG: 0x08
 
-# Check Status: Expecting SPMI_RX_FIFO_EMPTY set, something like 0x1000100
-print(hex(p.read32(spmi0_base_addr + 0x00)))
-
 def spmi_cmd(cmd):
     r.CMD.val = cmd
 
@@ -96,9 +93,6 @@ def gettime():
 
     return current_time
 
-def spmi_write_cmd(ofs):
-    print('Yo')
-
 def settime(t):
     spmi_cmd(0xd0028f3d)
     rsp=spmi_read_rsp()
@@ -126,4 +120,4 @@ print('\n\nPut time back:',gettime())
 print('\n')
 
 
-run_shell(globals(), msg="Have fun!")
+#run_shell(globals(), msg="Have fun!")
