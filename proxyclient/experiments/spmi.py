@@ -1,5 +1,33 @@
 import datetime
 
+import sys, pathlib
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+
+from m1n1.utils import Register32,RegMap
+from m1n1.setup import *
+from m1n1.shell import run_shell
+
+spmi0 = u.adt["/arm-io/nub-spmi"]
+
+spmi0_base_addr = spmi0.get_reg(0)[0]
+
+class R_STATUS(Register32):
+    RX_FIFO_EMPTY   = 24
+    RX_FIFO_CNT     = 21,16
+
+class R_CMD(Register32):
+    REG_ADDR    = 31,16
+    LAST        = 15    
+    SLAVE_ID    = 7,4
+    CMD         = 5,3
+    LEN         = 2,0
+
+
+class SPMIRegs(RegMap):
+    STATUS   = 0x00, R_STATUS
+    CMD      = 0x04, R_CMD
+    RSP      = 0x08, Register32
+
 # RTC is available from SERA PMU slave id/address 0xF
 # There is an RTC_TIME(32.16 fixed point) value to be added to an RTC_OFFSET(33.15 fixed point) value.
 
@@ -11,77 +39,91 @@ import datetime
 # SPMI_RSP_REG: 0x08
 
 # Check Status: Expecting SPMI_RX_FIFO_EMPTY set, something like 0x1000100
-p.read32(0x23d0d8000 + 0x1300)
+print(hex(p.read32(spmi0_base_addr + 0x00)))
 
-''' SPMI READ EXT CMD to read RTC TIME Reg:
-    SPMI_CMD_EXT_READL	0x38
-    SPMI_CMD_LAST       (1<<15)
-    PMU_SERA_SLAVE_ID   0x0f
-    RTC_TIME_ADDR		0xd002
-    RTC_TIME_LEN		6
+def spmi_cmd(cmd):
+    r.CMD.val = cmd
 
-    Resulting command:
-        SPMI_CMD_EXT_READL | PMU_SERA_SLAVE_ID<<8 | RTC_TIME_ADDR<<16 | RTC_TIME_LEN-1 | SMPI_CMD_LAST
-        => 0xd0028f3d
-'''
-p.write32(0x23d0d8000 + 0x1304, 0xd0028f3d)
+def spmi_read_rsp():
+    rsp=[]
+    while r.STATUS.reg.RX_FIFO_CNT !=0:
+        print('SPMI Status:',r.STATUS)
+        rsp.append(r.RSP.val)
+        print('SPMI Rsp({}):'.format(len(rsp)-1),hex(rsp[len(rsp)-1]))
 
-
-# Check if there is data in Rx FIFO (bit 24); Expecting SPMI_RX_FIFO_EMPTY not set, something like 0x30100
-p.read32(0x23d0d8000 + 0x1300)
-
-# Reading RSP: Expecting something like 0x3f0f3d SPMI RSP
-p.read32(0x23d0d8000 + 0x1308)
-
-# Checking SPMI_STATUS_REG: we can see the count of RSP to read reducing from 3 to 2: bit 16-17 of something like 0x20100
-p.read32(0x23d0d8000 + 0x1300)
-
-# Reading data rsp first part Expecting 4 bytes
-rtc_time = p.read32(0x23d0d8000 + 0x1308)
-
-# Checking SPMI_STATUS_REG: we can see the count of RSP to read reducing from 2 to 3: bit 16-17 of something like 0x10100
-p.read32(0x23d0d8000 + 0x1300)
-
-# Reading data rsp 2nd part Expecting 2 bytes
-rtc_time = rtc_time + (p.read32(0x23d0d8000 + 0x1308)<<32)
-
-# Check Status: Expecting SPMI_RX_FIFO_EMPTY set, something like 0x1000100
-p.read32(0x23d0d8000 + 0x1300)
+    print('SPMI Status:',r.STATUS)
+    return(rsp)
 
 
-'''
-    Reading RTC_OFFSET value
-    Same as RTC TIME Reg, only the address is different:
-    RTC_OFFSET_ADDR     0xd100
-    RTC_OFFSET_LEN    6
-    => 0xd1008f3d
-'''
-p.write32(0x23d0d8000 + 0x1304, 0xd1008f3d)
+r=SPMIRegs(u,spmi0_base_addr)
 
-# Check if there is data in Rx FIFO (bit 24); Expecting SPMI_RX_FIFO_EMPTY not set, something like 0x30100
-p.read32(0x23d0d8000 + 0x1300)
+print('SPMI STATUS:',r.STATUS)
 
-# Reading RSP: Expecting something like 0x3f0f3d SPMI RSP
-p.read32(0x23d0d8000 + 0x1308)
+def gettime():
+    ''' SPMI READ EXT CMD to read RTC TIME Reg:
+        SPMI_CMD_EXT_READL	0x38
+        SPMI_CMD_LAST       (1<<15)
+        PMU_SERA_SLAVE_ID   0x0f
+        RTC_TIME_ADDR		0xd002
+        RTC_TIME_LEN		6
 
-# Checking SPMI_STATUS_REG: we can see the count of RSP to read reducing from 3 to 2: bit 16-17 of something like 0x20100
-p.read32(0x23d0d8000 + 0x1300)
+        Resulting command:
+            SPMI_CMD_EXT_READL | PMU_SERA_SLAVE_ID<<8 | RTC_TIME_ADDR<<16 | RTC_TIME_LEN-1 | SMPI_CMD_LAST
+            => 0xd0028f3d
+            0x3d = 0b0011 1 101
+    '''
+    spmi_cmd(0xd0028f3d)
+    rsp=spmi_read_rsp()
+    rtc_time = rsp[1] + (rsp[2]<<32)
 
-# Reading data rsp first part Expecting 4 bytes
-rtc_offset = p.read32(0x23d0d8000 + 0x1308)
+    '''
+        Reading RTC_OFFSET value
+        Same as RTC TIME Reg, only the address is different:
+        RTC_OFFSET_ADDR     0xd100
+        RTC_OFFSET_LEN    6
+        => 0xd1008f3d
+    '''
+    spmi_cmd(0xd1008f3d)
+    rsp=spmi_read_rsp()
+    rtc_offset = rsp[1] + (rsp[2]<<32)
 
-# Checking SPMI_STATUS_REG: we can see the count of RSP to read reducing from 2 to 3: bit 16-17 of something like 0x10100
-p.read32(0x23d0d8000 + 0x1300)
+    print('time:',rtc_time)
+    print('offset:',rtc_offset)
 
-# Reading data rsp 2nd part Expecting 2 bytes
-rtc_offset = rtc_offset + (p.read32(0x23d0d8000 + 0x1308)<<32)
+    current_time=(rtc_time+(rtc_offset<<1))>>16
+    print('Epoch time:',current_time)
+    print('Actual time:',datetime.datetime.fromtimestamp(current_time))
 
-# Check Status: Expecting SPMI_RX_FIFO_EMPTY set, something like 0x1000100
-p.read32(0x23d0d8000 + 0x1300)
+    return current_time
 
-print('time:',rtc_time)
-print('offset:',rtc_offset)
+def spmi_write_cmd(ofs):
+    print('Yo')
 
-print('Epoch time:',(rtc_time+(rtc_offset<<1))>>16)
-print('Actual time:',datetime.datetime.fromtimestamp((rtc_time+(rtc_offset<<1))>>16))
+def settime(t):
+    spmi_cmd(0xd0028f3d)
+    rsp=spmi_read_rsp()
+    rtc_time = rsp[1] + (rsp[2]<<32)
 
+    new_offset = (t<<16)-rtc_time
+
+    '''
+        SPMI_CMD_EXT_WRITEL	0x30
+        Replace EXT_READL(0x38) by EXT_WRITEL (0x30) in 0xd1008f3d
+        => 0xd1008f35
+    '''
+
+    spmi_cmd(0xd1008f35)
+    spmi_cmd(0xFFFFFFFF & (new_offset>>1))
+    spmi_cmd((0xFFFF00000000 & (new_offset>>1))>>32)
+    spmi_read_rsp()
+
+print('\nChanging time 1h back in time')
+settime(gettime()-3600)
+print('\n\nChanged time to:',gettime())
+
+settime(gettime()+3601)
+print('\n\nPut time back:',gettime())
+print('\n')
+
+
+run_shell(globals(), msg="Have fun!")
