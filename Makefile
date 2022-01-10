@@ -71,6 +71,7 @@ OBJECTS := \
 	main.o \
 	mcc.o \
 	memory.o memory_asm.o \
+	nvme.o \
 	payload.o \
 	pcie.o \
 	pmgr.o \
