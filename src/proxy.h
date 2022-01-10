@@ -139,6 +139,8 @@ typedef enum {
     P_PCIE_INIT = 0xe00,
     P_PCIE_SHUTDOWN,
 
+    P_NVME_INIT = 0xf00,
+    P_NVME_SHUTDOWN,
 } ProxyOp;
 
 #define S_OK     0
