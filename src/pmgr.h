@@ -13,4 +13,6 @@ int pmgr_power_disable(u16 id);
 int pmgr_adt_power_enable(const char *path);
 int pmgr_adt_power_disable(const char *path);
 
+int pmgr_reset(const char *name);
+
 #endif
