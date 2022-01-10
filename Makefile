@@ -54,6 +54,7 @@ LIBFDT_OBJECTS := $(patsubst %,libfdt/%, \
 OBJECTS := \
 	adt.o \
 	aic.o \
+	asc.o \
 	bootlogo_128.o bootlogo_256.o \
 	chickens.o \
 	cpufreq.o \
