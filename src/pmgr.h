@@ -7,10 +7,10 @@
 
 int pmgr_init(void);
 
-int pmgr_clock_enable(u16 id);
-int pmgr_clock_disable(u16 id);
+int pmgr_power_enable(u16 id);
+int pmgr_power_disable(u16 id);
 
-int pmgr_adt_clocks_enable(const char *path);
-int pmgr_adt_clocks_disable(const char *path);
+int pmgr_adt_power_enable(const char *path);
+int pmgr_adt_power_disable(const char *path);
 
 #endif
