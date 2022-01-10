@@ -75,6 +75,7 @@ OBJECTS := \
 	pmgr.o \
 	proxy.o \
 	ringbuffer.o \
+	sart.o \
 	smp.o \
 	start.o \
 	startup.o \
