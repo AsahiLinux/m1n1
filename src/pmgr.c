@@ -196,6 +196,39 @@ int pmgr_adt_power_disable(const char *path)
     return pmgr_adt_devices_set_mode(path, PMGR_PS_PWRGATE, false);
 }
 
+int pmgr_reset(const char *name)
+{
+    const struct pmgr_device *dev = NULL;
+
+    for (unsigned int i = 0; i < pmgr_devices_len; ++i) {
+        if (strncmp(pmgr_devices[i].name, name, 0x10) == 0) {
+            dev = &pmgr_devices[i];
+            break;
+        }
+    }
+
+    if (!dev) {
+        printf("pmgr: unable to find device %s\n", name);
+        return -1;
+    }
+
+    uintptr_t addr = pmgr_device_get_addr(dev);
+
+    u32 reg = read32(addr);
+    if (FIELD_GET(PMGR_PS_ACTUAL, reg) != PMGR_PS_ACTIVE) {
+        printf("pmgr: will not reset disabled device %s\n", name);
+        return -1;
+    }
+
+    set32(addr, PMGR_DEV_DISABLE);
+    set32(addr, PMGR_RESET);
+    udelay(1);
+    clear32(addr, PMGR_RESET);
+    clear32(addr, PMGR_DEV_DISABLE);
+
+    return 0;
+}
+
 int pmgr_init(void)
 {
     pmgr_offset = adt_path_offset_trace(adt, "/arm-io/pmgr", pmgr_path);
