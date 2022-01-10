@@ -139,17 +139,17 @@ static int pmgr_set_mode_recursive(u16 id, u8 target_mode, bool recurse)
     return 0;
 }
 
-int pmgr_clock_enable(u16 id)
+int pmgr_power_enable(u16 id)
 {
     return pmgr_set_mode_recursive(id, PMGR_PS_ACTIVE, true);
 }
 
-int pmgr_clock_disable(u16 id)
+int pmgr_power_disable(u16 id)
 {
     return pmgr_set_mode_recursive(id, PMGR_PS_PWRGATE, false);
 }
 
-static int pmgr_adt_find_clocks(const char *path, const u32 **clocks, u32 *n_clocks)
+static int pmgr_adt_find_devices(const char *path, const u32 **devices, u32 *n_devices)
 {
     int node_offset = adt_path_offset(adt, path);
     if (node_offset < 0) {
@@ -157,43 +157,43 @@ static int pmgr_adt_find_clocks(const char *path, const u32 **clocks, u32 *n_clo
         return -1;
     }
 
-    *clocks = adt_getprop(adt, node_offset, "clock-gates", n_clocks);
-    if (*clocks == NULL || *n_clocks == 0) {
+    *devices = adt_getprop(adt, node_offset, "clock-gates", n_devices);
+    if (*devices == NULL || *n_devices == 0) {
         printf("pmgr: Error getting %s clock-gates.\n", path);
         return -1;
     }
 
-    *n_clocks /= 4;
+    *n_devices /= 4;
 
     return 0;
 }
 
-static int pmgr_adt_clocks_set_mode(const char *path, u8 target_mode, int recurse)
+static int pmgr_adt_devices_set_mode(const char *path, u8 target_mode, int recurse)
 {
-    const u32 *clocks;
-    u32 n_clocks;
+    const u32 *devices;
+    u32 n_devices;
     int ret = 0;
 
-    if (pmgr_adt_find_clocks(path, &clocks, &n_clocks) < 0)
+    if (pmgr_adt_find_devices(path, &devices, &n_devices) < 0)
         return -1;
 
-    for (u32 i = 0; i < n_clocks; ++i) {
-        if (pmgr_set_mode_recursive(clocks[i], target_mode, recurse))
+    for (u32 i = 0; i < n_devices; ++i) {
+        if (pmgr_set_mode_recursive(devices[i], target_mode, recurse))
             ret = -1;
     }
 
     return ret;
 }
 
-int pmgr_adt_clocks_enable(const char *path)
+int pmgr_adt_power_enable(const char *path)
 {
-    int ret = pmgr_adt_clocks_set_mode(path, PMGR_PS_ACTIVE, true);
+    int ret = pmgr_adt_devices_set_mode(path, PMGR_PS_ACTIVE, true);
     return ret;
 }
 
-int pmgr_adt_clocks_disable(const char *path)
+int pmgr_adt_power_disable(const char *path)
 {
-    return pmgr_adt_clocks_set_mode(path, PMGR_PS_PWRGATE, false);
+    return pmgr_adt_devices_set_mode(path, PMGR_PS_PWRGATE, false);
 }
 
 int pmgr_init(void)

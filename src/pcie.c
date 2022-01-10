@@ -182,8 +182,8 @@ int pcie_init(void)
     int port_reg_cnt = port_regs / port_count;
     printf("pcie: ADT uses %d reg entries per port\n", port_reg_cnt);
 
-    if (pmgr_adt_clocks_enable(path)) {
-        printf("pcie: Error enabling clocks for %s\n", path);
+    if (pmgr_adt_power_enable(path)) {
+        printf("pcie: Error enabling power for %s\n", path);
         return -1;
     }
 

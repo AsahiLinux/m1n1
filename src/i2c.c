@@ -43,8 +43,8 @@ i2c_dev_t *i2c_init(const char *adt_node)
         return NULL;
     }
 
-    if (pmgr_adt_clocks_enable(adt_node)) {
-        printf("i2c: Error enabling clocks for %s\n", adt_node);
+    if (pmgr_adt_power_enable(adt_node)) {
+        printf("i2c: Error enabling power for %s\n", adt_node);
         return NULL;
     }
 
