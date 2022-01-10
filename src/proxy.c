@@ -11,6 +11,7 @@
 #include "kboot.h"
 #include "malloc.h"
 #include "memory.h"
+#include "nvme.h"
 #include "pcie.h"
 #include "pmgr.h"
 #include "smp.h"
@@ -493,6 +494,14 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_PCIE_SHUTDOWN:
             pcie_shutdown();
+            break;
+
+        case P_NVME_INIT:
+            if (!nvme_init())
+                reply->retval = -1;
+            break;
+        case P_NVME_SHUTDOWN:
+            nvme_shutdown();
             break;
 
         default:
