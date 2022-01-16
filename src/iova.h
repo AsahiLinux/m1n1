@@ -7,7 +7,7 @@
 
 typedef struct iova_domain iova_domain_t;
 
-iova_domain_t *iovad_init(void);
+iova_domain_t *iovad_init(u64 base, u64 limit);
 void iovad_shutdown(iova_domain_t *iovad);
 
 bool iova_reserve(iova_domain_t *iovad, u64 iova, size_t sz);

@@ -15,7 +15,7 @@ struct iova_domain {
     struct iova_block *free_list;
 };
 
-iova_domain_t *iovad_init(void)
+iova_domain_t *iovad_init(u64 base, u64 limit)
 {
     iova_domain_t *iovad = malloc(sizeof(*iovad));
     if (!iovad)
@@ -30,8 +30,8 @@ iova_domain_t *iovad_init(void)
     }
 
     /* don't hand out NULL pointers */
-    blk->iova = SZ_16K;
-    blk->sz = (1ULL << 32) - SZ_16K;
+    blk->iova = base;
+    blk->sz = limit - SZ_16K;
     blk->next = NULL;
     iovad->free_list = blk;
 
