@@ -83,6 +83,12 @@ class AFKEp(EP):
     @msg(0xa1, DIR.TX, AFKEP_GetBuf_Ack)
     def GetBuf_Ack(self, msg):
         self.state.shmem_iova = msg.DVA
+        self.txbuf = None
+        self.rxbuf = None
+        self.state.txbuf = EPState()
+        self.state.rxbuf = EPState()
+        self.state.txbuf_info = None
+        self.state.rxbuf_info = None
         #self.add_mon()
 
     @msg(0xa2, DIR.TX, AFKEP_Send)
