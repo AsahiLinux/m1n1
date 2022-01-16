@@ -60,6 +60,8 @@ OBJECTS := \
 	chickens.o \
 	cpufreq.o \
 	dart.o \
+	dcp.o \
+	dcp_iboot.o \
 	exception.o exception_asm.o \
 	fb.o font.o font_retina.o \
 	gxf.o gxf_asm.o \
