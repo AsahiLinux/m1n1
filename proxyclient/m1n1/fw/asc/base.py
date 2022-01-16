@@ -49,5 +49,8 @@ class ASCBaseEndpoint:
     def start(self):
         pass
 
+    def stop(self):
+        pass
+
     def log(self, msg):
         print(f"[{self.name}] {msg}")

@@ -85,6 +85,10 @@ class StandardASC(ASC):
         self.mgmt.wait_boot()
 
     def stop(self):
+        for ep in list(self.epmap.values())[::-1]:
+            if ep.epnum < 0x10:
+                continue
+            ep.stop()
         self.mgmt.stop()
 
     def boot(self):
