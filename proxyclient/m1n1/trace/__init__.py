@@ -27,7 +27,7 @@ class RegCache(Reloadable):
         self.cache[addr] = data
 
     def read(self, addr, width):
-        if self.hv.ctx:
+        if self.hv.ctx or not self.hv.started:
             data = self.u.read(addr, width)
             self.cache[addr] = data
             return data
