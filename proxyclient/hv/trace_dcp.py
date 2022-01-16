@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 
 import struct
+from io import BytesIO
 
 from enum import IntEnum
 
@@ -8,6 +9,8 @@ from m1n1.proxyutils import RegMonitor
 from m1n1.utils import *
 from m1n1.trace.dart import DARTTracer
 from m1n1.trace.asc import ASCTracer, EP, EPState, msg, msg_log, DIR
+from m1n1.fw.afk.rbep import *
+from m1n1.fw.afk.epic import *
 
 trace_device("/arm-io/dcp", True, ranges=[1])
 
@@ -16,66 +19,36 @@ ASCTracer = ASCTracer._reloadcls()
 
 iomon = RegMonitor(hv.u, ascii=True)
 
-class IOEpMessage(Register64):
-    TYPE = 63, 48
-
-class IOEp_Generic(IOEpMessage):
-    ARG3 = 47, 32
-    ARG2 = 31, 16
-    ARG1 = 15, 0
-
-class IOEp_SetBuf_Ack(IOEpMessage):
-    UNK1 = 47, 32
-    IOVA = 31, 0
-
-class IOEp_Send(IOEpMessage):
-    WPTR = 31, 0
-
-class IORingBuf(Reloadable):
-    def __init__(self, ep, state, base):
-        self.ep = ep
-        self.dart = ep.dart
+class AFKRingBufSniffer(AFKRingBuf):
+    def __init__(self, ep, state, base, size):
+        super().__init__(ep, base, size)
         self.state = state
-        self.base = base
-        self.align = 0x40
+        self.rptr = getattr(state, "rptr", 0)
 
-    def init(self):
-        self.state.bufsize, unk = struct.unpack("<II", self.dart.ioread(0, self.base, 8))
-        self.state.rptr = 0
+    def update_rptr(self, rptr):
+        self.state.rptr = rptr
 
-    def read(self, max=None, wptr=None):
-        wptr2 = struct.unpack("<I", self.dart.ioread(0, self.base + 0x80, 4))[0]
-        assert wptr is None or wptr == wptr2
+    def update_wptr(self):
+        raise NotImplementedError()
 
-        rptr = self.state.rptr
-        while wptr2 != rptr:
-            hdr = self.dart.ioread(0, self.base + 0xc0 + rptr, 16)
-            rptr += 16
-            magic, size = struct.unpack("<4sI", hdr[:8])
-            assert magic == b"IOP "
-            if size > (self.state.bufsize - rptr - 16):
-                hdr = self.dart.ioread(0, self.base + 0xc0, 16)
-                rptr = 16
-                magic, size = struct.unpack("<4sI", hdr[:8])
-                assert magic == b"IOP "
+    def get_wptr(self):
+        return struct.unpack("<I", self.read_buf(2 * self.BLOCK_SIZE, 4))[0]
 
-            payload = self.dart.ioread(0, self.base + 0xc0 + rptr, size)
-            rptr = (align_up(rptr + size, self.align)) % self.state.bufsize
-            self.state.rptr = rptr
-            yield hdr[8:] + payload
-            if max is not None:
-                max -= 1
-                if max <= 0:
-                    break
+    def read_buf(self, off, size):
+        return self.ep.dart.ioread(0, self.base + off, size)
 
-class IOEp(EP):
-    BASE_MESSAGE = IOEp_Generic
+class AFKEp(EP):
+    BASE_MESSAGE = AFKEPMessage
 
     def __init__(self, tracer, epid):
         super().__init__(tracer, epid)
+        self.txbuf = None
+        self.rxbuf = None
         self.state.txbuf = EPState()
         self.state.rxbuf = EPState()
         self.state.shmem_iova = None
+        self.state.txbuf_info = None
+        self.state.rxbuf_info = None
         self.state.verbose = 1
 
     def start(self):
@@ -85,8 +58,14 @@ class IOEp(EP):
     def create_bufs(self):
         if not self.state.shmem_iova:
             return
-        self.txbuf = IORingBuf(self, self.state.txbuf, self.state.shmem_iova)
-        self.rxbuf = IORingBuf(self, self.state.rxbuf, self.state.shmem_iova + 0x4000)
+        if not self.txbuf and self.state.txbuf_info:
+            off, size = self.state.txbuf_info
+            self.txbuf = AFKRingBufSniffer(self, self.state.txbuf,
+                                           self.state.shmem_iova + off, size)
+        if not self.rxbuf and self.state.rxbuf_info:
+            off, size = self.state.rxbuf_info
+            self.rxbuf = AFKRingBufSniffer(self, self.state.rxbuf,
+                                           self.state.shmem_iova + off, size)
 
     def add_mon(self):
         if self.state.shmem_iova:
@@ -101,34 +80,100 @@ class IOEp(EP):
     Shutdown =      msg_log(0xc0, DIR.TX)
     Shutdown_Ack =  msg_log(0xc1, DIR.RX)
 
-    @msg(0xa1, DIR.TX, IOEp_SetBuf_Ack)
+    @msg(0xa1, DIR.TX, AFKEP_GetBuf_Ack)
     def GetBuf_Ack(self, msg):
-        self.state.shmem_iova = msg.IOVA
+        self.state.shmem_iova = msg.DVA
         #self.add_mon()
 
-    @msg(0xa2, DIR.TX, IOEp_Send)
+    @msg(0xa2, DIR.TX, AFKEP_Send)
     def Send(self, msg):
-        for data in self.txbuf.read(wptr=msg.WPTR):
-            if self.state.verbose >= 1:
+        for data in self.txbuf.read():
+            if self.state.verbose >= 3:
                 self.log(f">TX rptr={self.txbuf.state.rptr:#x}")
                 chexdump(data)
+            self.handle_ipc(data, dir=">")
         return True
 
     Hello =         msg_log(0xa3, DIR.TX)
 
-    @msg(0x85, DIR.RX, IOEpMessage)
+    @msg(0x85, DIR.RX, AFKEPMessage)
     def Recv(self, msg):
         for data in self.rxbuf.read():
-            if self.state.verbose >= 1:
+            if self.state.verbose >= 3:
                 self.log(f"<RX rptr={self.rxbuf.state.rptr:#x}")
                 chexdump(data)
+            self.handle_ipc(data, dir="<")
         return True
 
-    @msg(0x8b, DIR.RX)
-    def BufInitialized(self, msg):
+    def handle_ipc(self, data, dir=None):
+        pass
+
+    @msg(0x8a, DIR.RX, AFKEP_InitRB)
+    def InitTX(self, msg):
+        off = msg.OFFSET * AFKRingBuf.BLOCK_SIZE
+        size = msg.SIZE * AFKRingBuf.BLOCK_SIZE
+        self.state.txbuf_info = (off, size)
         self.create_bufs()
-        self.txbuf.init()
-        self.rxbuf.init()
+
+    @msg(0x8b, DIR.RX, AFKEP_InitRB)
+    def InitRX(self, msg):
+        off = msg.OFFSET * AFKRingBuf.BLOCK_SIZE
+        size = msg.SIZE * AFKRingBuf.BLOCK_SIZE
+        self.state.rxbuf_info = (off, size)
+        self.create_bufs()
+
+class EPICEp(AFKEp):
+    def handle_ipc(self, data, dir=None):
+        fd = BytesIO(data)
+        hdr = EPICHeader.parse_stream(fd)
+        sub = EPICSubHeader.parse_stream(fd)
+
+        self.log(f"{dir}Ch {hdr.channel} Type {hdr.type} Ver {hdr.version} Tag {hdr.seq}")
+        self.log(f"  Len {sub.length} Ver {sub.version} Cat {sub.category} Type {sub.type:#x} Seq {sub.seq}")
+        chexdump(data)
+
+        if sub.category == EPICCategory.REPORT:
+            self.handle_report(hdr, sub, fd)
+        if sub.category == EPICCategory.NOTIFY:
+            self.handle_notify(hdr, sub, fd)
+        elif sub.category == EPICCategory.REPLY:
+            self.handle_reply(hdr, sub, fd)
+        elif sub.category == EPICCategory.COMMAND:
+            self.handle_cmd(hdr, sub, fd)
+
+    def handle_report(self, hdr, sub, fd):
+        if sub.type == 0x30:
+            init = EPICAnnounce.parse_stream(fd)
+            self.log(f"Init: {init.name}")
+            self.log(f"  Props: {init.props}")
+        else:
+            self.log(f"Report {sub.type:#x}")
+            chexdump(fd.read())
+
+    def handle_notify(self, hdr, sub, fd):
+        self.log(f"Notify:")
+        chexdump(fd.read())
+
+    def handle_reply(self, hdr, sub, fd):
+        cmd = EPICCmd.parse_stream(fd)
+        payload = fd.read()
+        self.log(f"Response {sub.type:#x}: {cmd.retcode:#x}")
+        if payload:
+            self.log("Inline payload:")
+            chexdump(payload)
+        if cmd.rxbuf:
+            self.log(f"RX buf @ {cmd.rxbuf:#x} ({cmd.rxlen:#x} bytes):")
+            chexdump(self.dart.ioread(0, cmd.rxbuf, cmd.rxlen))
+
+    def handle_cmd(self, hdr, sub, fd):
+        cmd = EPICCmd.parse_stream(fd)
+        payload = fd.read()
+        self.log(f"Command {sub.type:#x}: {cmd.retcode:#x}")
+        if payload:
+            chexdump(payload)
+        if cmd.txbuf:
+            self.log(f"TX buf @ {cmd.txbuf:#x} ({cmd.txlen:#x} bytes):")
+            chexdump(self.dart.ioread(0, cmd.txbuf, cmd.txlen))
 
 KNOWN_MSGS = {
     "A000": "IOMFB::UPPipeAP_H13P::late_init_signal()",
@@ -636,37 +681,37 @@ class DCPEp(EP):
             else:
                 self.state.op_verb[i] = verb
 
-class SystemService(IOEp):
+class SystemService(EPICEp):
     NAME = "system"
 
-class TestService(IOEp):
+class TestService(EPICEp):
     NAME = "test"
 
-class DCPExpertService(IOEp):
+class DCPExpertService(EPICEp):
     NAME = "dcpexpert"
 
-class Disp0Service(IOEp):
+class Disp0Service(EPICEp):
     NAME = "disp0"
 
-class DPTXService(IOEp):
+class DPTXService(EPICEp):
     NAME = "dptx"
 
-class DPSACService(IOEp):
+class DPSACService(EPICEp):
     NAME = "dpsac"
 
-class DPDevService(IOEp):
+class DPDevService(EPICEp):
     NAME = "dpdev"
 
-class MDCP29XXService(IOEp):
+class MDCP29XXService(EPICEp):
     NAME = "mcdp29xx"
 
-class AVService(IOEp):
+class AVService(EPICEp):
     NAME = "av"
 
-class HDCPService(IOEp):
+class HDCPService(EPICEp):
     NAME = "hdcp"
 
-class RemoteAllocService(IOEp):
+class RemoteAllocService(EPICEp):
     NAME = "remotealloc"
 
 class DCPTracer(ASCTracer):
@@ -676,14 +721,14 @@ class DCPTracer(ASCTracer):
         0x22: DCPExpertService,
         0x23: Disp0Service,
         0x24: DPTXService,
-        0x25: IOEp, # dcpav-power-ep
+        0x25: EPICEp, # dcpav-power-ep
         0x26: DPSACService,
         0x27: DPDevService,
         0x28: MDCP29XXService,
         0x29: AVService,
-        0x2a: IOEp, # dcpdptx-port-ep
+        0x2a: EPICEp, # dcpdptx-port-ep
         0x2b: HDCPService,
-        0x2c: IOEp, # cb-ap-to-dcp-service-ep
+        0x2c: EPICEp, # cb-ap-to-dcp-service-ep
         0x2d: RemoteAllocService,
         0x37: DCPEp, # iomfb-link
     }
