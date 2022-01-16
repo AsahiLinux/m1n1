@@ -26,6 +26,7 @@
 struct asc_dev {
     uintptr_t cpu_base;
     uintptr_t base;
+    int iop_node;
 };
 
 asc_dev_t *asc_init(const char *path)
@@ -47,6 +48,7 @@ asc_dev_t *asc_init(const char *path)
     if (!asc)
         return NULL;
 
+    asc->iop_node = adt_first_child_offset(adt, node);
     asc->cpu_base = base;
     asc->base = base + 0x4000;
     return asc;
@@ -55,6 +57,11 @@ asc_dev_t *asc_init(const char *path)
 void asc_free(asc_dev_t *asc)
 {
     free(asc);
+}
+
+int asc_get_iop_node(asc_dev_t *asc)
+{
+    return asc->iop_node;
 }
 
 void asc_cpu_start(asc_dev_t *asc)
