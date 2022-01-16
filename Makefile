@@ -53,6 +53,7 @@ LIBFDT_OBJECTS := $(patsubst %,libfdt/%, \
 
 OBJECTS := \
 	adt.o \
+	afk.o \
 	aic.o \
 	asc.o \
 	bootlogo_128.o bootlogo_256.o \
