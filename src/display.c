@@ -7,6 +7,9 @@
 #include "utils.h"
 #include "xnuboot.h"
 
+#define DISPLAY_STATUS_DELAY   100
+#define DISPLAY_STATUS_RETRIES 20
+
 #define COMPARE(a, b)                                                                              \
     if ((a) > (b)) {                                                                               \
         *best = modes[i];                                                                          \
@@ -80,9 +83,22 @@ int display_configure(void)
 
     // Detect if display is connected
     int timing_cnt, color_cnt;
-    int hpd = ret = dcp_ib_get_hpd(iboot, &timing_cnt, &color_cnt);
+    int hpd = 0, retries = 0;
 
-    if (hpd < 0) {
+    /* After boot DCP does not immediately report a connected display. Retry getting display
+     * information for 2 seconds.
+     */
+    while (retries++ < DISPLAY_STATUS_RETRIES) {
+        hpd = dcp_ib_get_hpd(iboot, &timing_cnt, &color_cnt);
+        if (hpd < 0)
+            ret = hpd;
+        else if (hpd && timing_cnt && color_cnt)
+            break;
+        if (retries < DISPLAY_STATUS_RETRIES)
+            mdelay(DISPLAY_STATUS_DELAY);
+    }
+    printf("display: waited %d ms for display status\n", (retries - 1) * DISPLAY_STATUS_DELAY);
+    if (ret < 0) {
         printf("display: failed to get display status\n");
         goto err_iboot;
     }
