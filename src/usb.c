@@ -54,7 +54,7 @@ static dart_dev_t *usb_dart_init(u32 idx)
     }
 
     snprintf(path, sizeof(path), FMT_DART_PATH, idx);
-    return dart_init_adt(path, dart_idx);
+    return dart_init_adt(path, 1, dart_idx, false);
 }
 
 static int usb_drd_get_regs(u32 idx, struct usb_drd_regs *regs)

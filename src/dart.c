@@ -44,6 +44,7 @@
 
 #define DART_TTBR(sid, idx) (0x200 + 16 * (sid) + 4 * (idx))
 #define DART_TTBR_VALID     BIT(31)
+#define DART_TTBR_ADDR      GENMASK(30, 0)
 #define DART_TTBR_SHIFT     12
 
 #define DART_PTE_OFFSET_SHIFT 14
@@ -54,11 +55,13 @@
 #define DART_PTE_VALID        0b11
 
 struct dart_dev {
+    bool locked;
+    bool keep;
     uintptr_t regs;
     u8 device;
 
     u64 offset_mask;
-    u64 *l1;
+    u64 *l1[4];
 };
 
 static void dart_tlb_invalidate(dart_dev_t *dart)
@@ -73,49 +76,58 @@ static void dart_tlb_invalidate(dart_dev_t *dart)
         printf("dart: DART_STREAM_COMMAND_BUSY did not clear.\n");
 }
 
-dart_dev_t *dart_init(uintptr_t base, u8 device)
+dart_dev_t *dart_init(uintptr_t base, u8 device, bool keep_pts)
 {
     dart_dev_t *dart = malloc(sizeof(*dart));
     if (!dart)
         return NULL;
 
+    memset(dart, 0, sizeof(*dart));
+
     dart->regs = base;
     dart->device = device;
-    dart->l1 = NULL;
 
-    if (read32(dart->regs + DART_CONFIG) & DART_CONFIG_LOCK) {
-        printf("dart: dart at 0x%lx is locked\n", dart->regs);
-        goto error;
-    }
+    if (read32(dart->regs + DART_CONFIG) & DART_CONFIG_LOCK)
+        dart->locked = true;
 
     dart->offset_mask = DART_PTE_OFFSET_T8020;
+    dart->keep = keep_pts;
 
-    dart->l1 = memalign(SZ_16K, 4 * SZ_16K);
-    if (!dart->l1)
-        goto error;
-    memset(dart->l1, 0, 4 * SZ_16K);
+    if (dart->locked || keep_pts) {
+        for (int i = 0; i < 4; i++) {
+            u32 ttbr = read32(dart->regs + DART_TTBR(device, i));
+            if (ttbr & DART_TTBR_VALID)
+                dart->l1[i] = (u64 *)((ttbr & DART_TTBR_ADDR) << DART_TTBR_SHIFT);
+        }
+    }
 
-    write32(dart->regs + DART_TTBR(device, 0),
-            DART_TTBR_VALID | (((uintptr_t)dart->l1) >> DART_TTBR_SHIFT));
-    write32(dart->regs + DART_TTBR(device, 1),
-            DART_TTBR_VALID | (((uintptr_t)dart->l1 + SZ_16K) >> DART_TTBR_SHIFT));
-    write32(dart->regs + DART_TTBR(device, 2),
-            DART_TTBR_VALID | (((uintptr_t)dart->l1 + 2 * SZ_16K) >> DART_TTBR_SHIFT));
-    write32(dart->regs + DART_TTBR(device, 3),
-            DART_TTBR_VALID | (((uintptr_t)dart->l1 + 3 * SZ_16K) >> DART_TTBR_SHIFT));
+    for (int i = 0; i < 4; i++) {
+        if (dart->l1[i])
+            continue;
 
-    write32(dart->regs + DART_TCR(device), DART_TCR_TRANSLATE_ENABLE);
+        dart->l1[i] = memalign(SZ_16K, SZ_16K);
+        if (!dart->l1[i])
+            goto error;
+        memset(dart->l1[i], 0, SZ_16K);
+
+        write32(dart->regs + DART_TTBR(device, i),
+                DART_TTBR_VALID | (((uintptr_t)dart->l1[i]) >> DART_TTBR_SHIFT));
+    }
+
+    if (!dart->locked && !keep_pts)
+        write32(dart->regs + DART_TCR(device), DART_TCR_TRANSLATE_ENABLE);
+
     dart_tlb_invalidate(dart);
-
     return dart;
 
 error:
-    free(dart->l1);
+    if (!dart->locked)
+        free(dart->l1);
     free(dart);
     return NULL;
 }
 
-dart_dev_t *dart_init_adt(const char *path, int device)
+dart_dev_t *dart_init_adt(const char *path, int instance, int device, bool keep_pts)
 {
     int dart_path[8];
     int node = adt_path_offset_trace(adt, path, dart_path);
@@ -125,21 +137,23 @@ dart_dev_t *dart_init_adt(const char *path, int device)
     }
 
     u64 base;
-    if (adt_get_reg(adt, dart_path, "reg", 1, &base, NULL) < 0) {
+    if (adt_get_reg(adt, dart_path, "reg", instance, &base, NULL) < 0) {
         printf("dart: Error getting DART %s base address.\n", path);
         return NULL;
     }
 
-    dart_dev_t *dart = dart_init(base, device);
+    dart_dev_t *dart = dart_init(base, device, keep_pts);
 
     if (!dart)
         return NULL;
 
     if (adt_is_compatible(adt, node, "dart,t8020")) {
-        printf("dart: dart %s at 0x%lx is a t8020\n", path, base);
+        printf("dart: dart %s at 0x%lx is a t8020%s\n", path, base,
+               dart->locked ? " (locked)" : "");
         dart->offset_mask = DART_PTE_OFFSET_T8020;
     } else if (adt_is_compatible(adt, node, "dart,t6000")) {
-        printf("dart: dart %s at 0x%lx is a t6000\n", path, base);
+        printf("dart: dart %s at 0x%lx is a t6000%s\n", path, base,
+               dart->locked ? " (locked)" : "");
         dart->offset_mask = DART_PTE_OFFSET_T6000;
     }
 
@@ -148,8 +162,11 @@ dart_dev_t *dart_init_adt(const char *path, int device)
 
 static u64 *dart_get_l2(dart_dev_t *dart, u32 idx)
 {
-    if (dart->l1[idx] & DART_PTE_VALID) {
-        u64 off = FIELD_GET(dart->offset_mask, dart->l1[idx]) << DART_PTE_OFFSET_SHIFT;
+    int ttbr = idx >> 11;
+    idx &= 0x7ff;
+
+    if (dart->l1[ttbr][idx] & DART_PTE_VALID) {
+        u64 off = FIELD_GET(dart->offset_mask, dart->l1[ttbr][idx]) << DART_PTE_OFFSET_SHIFT;
         return (u64 *)off;
     }
 
@@ -161,7 +178,7 @@ static u64 *dart_get_l2(dart_dev_t *dart, u32 idx)
 
     u64 offset = FIELD_PREP(dart->offset_mask, ((u64)tbl) >> DART_PTE_OFFSET_SHIFT);
 
-    dart->l1[idx] = offset | DART_PTE_VALID;
+    dart->l1[ttbr][idx] = offset | DART_PTE_VALID;
 
     return tbl;
 }
@@ -219,10 +236,11 @@ int dart_map(dart_dev_t *dart, uintptr_t iova, void *bfr, size_t len)
 
 static void dart_unmap_page(dart_dev_t *dart, uintptr_t iova)
 {
-    u32 l1_index = (iova >> 25) & 0x1fff;
+    u32 ttbr = (iova >> 36) & 0x3;
+    u32 l1_index = (iova >> 25) & 0x7ff;
     u32 l2_index = (iova >> 14) & 0x7ff;
 
-    if (!(dart->l1[l1_index] & DART_PTE_VALID))
+    if (!(dart->l1[ttbr][l1_index] & DART_PTE_VALID))
         return;
 
     u64 *l2 = dart_get_l2(dart, l1_index);
@@ -248,16 +266,29 @@ void dart_unmap(dart_dev_t *dart, uintptr_t iova, size_t len)
 
 void dart_shutdown(dart_dev_t *dart)
 {
-    write32(dart->regs + DART_TCR(dart->device), DART_TCR_BYPASS_DART | DART_TCR_BYPASS_DAPF);
-    for (int i = 0; i < 4; ++i)
-        write32(dart->regs + DART_TTBR(dart->device, i), 0);
-    dart_tlb_invalidate(dart);
+    if (!dart->locked && !dart->keep)
+        write32(dart->regs + DART_TCR(dart->device), DART_TCR_BYPASS_DART | DART_TCR_BYPASS_DAPF);
 
-    for (int i = 0; i < SZ_16K / 8; ++i) {
-        if (dart->l1[i] & DART_PTE_VALID)
-            free(dart_get_l2(dart, i));
+    for (int i = 0; i < 4; ++i)
+        if (is_heap(dart->l1[i]))
+            write32(dart->regs + DART_TTBR(dart->device, i), 0);
+
+    for (int ttbr = 0; ttbr < 4; ++ttbr) {
+        for (int i = 0; i < SZ_16K / 8; ++i) {
+            if (dart->l1[ttbr][i] & DART_PTE_VALID) {
+                void *l2 = dart_get_l2(dart, i);
+                if (is_heap(l2)) {
+                    free(l2);
+                    dart->l1[ttbr][i] = 0;
+                }
+            }
+        }
     }
 
-    free(dart->l1);
+    dart_tlb_invalidate(dart);
+
+    for (int i = 0; i < 4; ++i)
+        if (is_heap(dart->l1[i]))
+            free(dart->l1[i]);
     free(dart);
 }

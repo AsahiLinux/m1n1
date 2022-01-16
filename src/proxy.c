@@ -413,7 +413,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
 
         case P_DART_INIT:
-            reply->retval = (u64)dart_init(request->args[0], request->args[1]);
+            reply->retval = (u64)dart_init(request->args[0], request->args[1], request->args[2]);
             break;
         case P_DART_SHUTDOWN:
             dart_shutdown((dart_dev_t *)request->args[0]);
