@@ -16,6 +16,12 @@ struct rtkit_message {
     u64 msg;
 };
 
+struct rtkit_buffer {
+    void *bfr;
+    u64 dva;
+    size_t sz;
+};
+
 rtkit_dev_t *rtkit_init(const char *name, asc_dev_t *asc, dart_dev_t *dart,
                         iova_domain_t *dart_iovad, sart_dev_t *sart);
 bool rtkit_shutdown(rtkit_dev_t *rtk);
@@ -26,5 +32,11 @@ bool rtkit_boot(rtkit_dev_t *rtk);
 
 bool rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg);
 bool rtkit_send(rtkit_dev_t *rtk, const struct rtkit_message *msg);
+
+bool rtkit_map(rtkit_dev_t *rtk, void *phys, size_t sz, u64 *dva);
+bool rtkit_unmap(rtkit_dev_t *rtk, u64 dva, size_t sz);
+
+bool rtkit_alloc_buffer(rtkit_dev_t *rtk, struct rtkit_buffer *bfr, size_t sz);
+bool rtkit_free_buffer(rtkit_dev_t *rtk, struct rtkit_buffer *bfr);
 
 #endif

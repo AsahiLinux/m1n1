@@ -1,10 +1,11 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "rtkit.h"
+#include "adt.h"
 #include "asc.h"
 #include "dart.h"
 #include "iova.h"
 #include "malloc.h"
-#include "rtkit.h"
 #include "sart.h"
 #include "string.h"
 #include "types.h"
@@ -67,18 +68,14 @@
 #define RTKIT_MIN_VERSION 11
 #define RTKIT_MAX_VERSION 12
 
+#define IOVA_MASK GENMASK(31, 0)
+
 enum rtkit_power_state {
     RTKIT_POWER_OFF = 0x00,
     RTKIT_POWER_SLEEP = 0x01,
     RTKIT_POWER_IDLE = 0x10,
     RTKIT_POWER_ON = 0x20,
     RTKIT_POWER_INIT = 0x220,
-};
-
-struct rtkit_buffer {
-    void *bfr;
-    u64 iova;
-    size_t sz;
 };
 
 struct rtkit_dev {
@@ -88,6 +85,8 @@ struct rtkit_dev {
     dart_dev_t *dart;
     iova_domain_t *dart_iovad;
     sart_dev_t *sart;
+
+    u64 dva_base;
 
     enum rtkit_power_state iop_power;
     enum rtkit_power_state ap_power;
@@ -136,6 +135,10 @@ rtkit_dev_t *rtkit_init(const char *name, asc_dev_t *asc, dart_dev_t *dart,
     rtk->sart = sart;
     rtk->iop_power = RTKIT_POWER_OFF;
     rtk->ap_power = RTKIT_POWER_OFF;
+    rtk->dva_base = 0;
+
+    int iop_node = asc_get_iop_node(asc);
+    ADT_GETPROP(adt, iop_node, "asc-dram-mask", &rtk->dva_base);
 
     return rtk;
 
@@ -146,6 +149,9 @@ out_free_rtk:
 
 void rtkit_free(rtkit_dev_t *rtk)
 {
+    rtkit_free_buffer(rtk, &rtk->syslog_bfr);
+    rtkit_free_buffer(rtk, &rtk->crashlog_bfr);
+    rtkit_free_buffer(rtk, &rtk->ioreport_bfr);
     free(rtk->name);
     free(rtk);
 }
@@ -160,6 +166,88 @@ bool rtkit_send(rtkit_dev_t *rtk, const struct rtkit_message *msg)
     return asc_send(rtk->asc, &asc_msg);
 }
 
+bool rtkit_map(rtkit_dev_t *rtk, void *phys, size_t sz, u64 *dva)
+{
+    sz = ALIGN_UP(sz, 16384);
+
+    if (rtk->sart) {
+        if (!sart_add_allowed_region(rtk->sart, phys, sz)) {
+            rtkit_printf("sart_ad_allowed_region failed (%p, 0x%lx)\n", phys, sz);
+            return false;
+        }
+        *dva = (u64)phys;
+        return true;
+    } else if (rtk->dart) {
+        u64 iova = iova_alloc(rtk->dart_iovad, sz);
+        if (!iova) {
+            rtkit_printf("failed to alloc iova (size 0x%lx)\n", sz);
+            return false;
+        }
+
+        if (dart_map(rtk->dart, iova, phys, sz) < 0) {
+            rtkit_printf("failed to DART map %p -> 0x%lx (0x%lx)\n", phys, iova, sz);
+            iova_free(rtk->dart_iovad, iova, sz);
+            return false;
+        }
+
+        *dva = iova | rtk->dva_base;
+        return true;
+    } else {
+        rtkit_printf("TODO: implement no IOMMU buffers\n");
+        return false;
+    }
+}
+
+bool rtkit_unmap(rtkit_dev_t *rtk, u64 dva, size_t sz)
+{
+    if (rtk->sart) {
+        if (!sart_remove_allowed_region(rtk->sart, (void *)dva, sz))
+            rtkit_printf("sart_remove_allowed_region failed (0x%lx, 0x%lx)\n", dva, sz);
+        return true;
+    } else if (rtk->dart) {
+        dart_unmap(rtk->dart, dva & IOVA_MASK, sz);
+        iova_free(rtk->dart_iovad, dva & IOVA_MASK, sz);
+        return true;
+    } else {
+        rtkit_printf("TODO: implement no IOMMU buffers\n");
+        return false;
+    }
+}
+
+bool rtkit_alloc_buffer(rtkit_dev_t *rtk, struct rtkit_buffer *bfr, size_t sz)
+{
+    bfr->bfr = memalign(SZ_16K, sz);
+    if (!bfr->bfr) {
+        rtkit_printf("unable to allocate %zu buffer\n", sz);
+        return false;
+    }
+
+    sz = ALIGN_UP(sz, 16384);
+
+    bfr->sz = sz;
+    if (!rtkit_map(rtk, bfr->bfr, sz, &bfr->dva))
+        goto error;
+
+    return true;
+
+error:
+    free(bfr->bfr);
+    return false;
+}
+
+bool rtkit_free_buffer(rtkit_dev_t *rtk, struct rtkit_buffer *bfr)
+{
+    if (!bfr->bfr || !is_heap(bfr->bfr))
+        return true;
+
+    if (!rtkit_unmap(rtk, bfr->dva, bfr->sz))
+        return false;
+
+    free(bfr->bfr);
+
+    return false;
+}
+
 static bool rtkit_handle_buffer_request(rtkit_dev_t *rtk, struct rtkit_message *msg,
                                         struct rtkit_buffer *bfr)
 {
@@ -168,55 +256,40 @@ static bool rtkit_handle_buffer_request(rtkit_dev_t *rtk, struct rtkit_message *
     u64 addr = FIELD_GET(MSG_BUFFER_REQUEST_IOVA, msg->msg);
 
     if (addr) {
-        rtkit_printf("buffer request but buffer already exists\n");
-        return false;
-    }
-
-    bfr->bfr = memalign(SZ_16K, sz);
-    if (!bfr->bfr) {
-        rtkit_printf("unable to allocate %zu buffer\n", sz);
-        return false;
-    }
-
-    bfr->sz = sz;
-
-    if (rtk->sart) {
-        if (!sart_add_allowed_region(rtk->sart, bfr->bfr, sz))
-            goto error;
-
-        bfr->iova = (u64)bfr->bfr;
-    } else if (rtk->dart) {
-        bfr->iova = iova_alloc(rtk->dart_iovad, sz);
-        if (!bfr->iova)
-            goto error;
-
-        if (dart_map(rtk->dart, bfr->iova, bfr->bfr, sz) < 0)
-            goto error;
+        bfr->dva = addr;
+        bfr->sz = sz;
+        bfr->bfr = dart_translate(rtk->dart, bfr->dva & IOVA_MASK);
+        if (!bfr->bfr) {
+            rtkit_printf("failed to translate pre-allocated buffer (ep 0x%x, buf 0x%lx)\n", msg->ep,
+                         addr);
+            return false;
+        } else {
+            rtkit_printf("pre-allocated buffer (ep 0x%x, dva 0x%lx, phys %p)\n", msg->ep, addr,
+                         bfr->bfr);
+        }
     } else {
-        rtkit_printf("TODO: implement no IOMMU buffers\n");
-        goto error;
+        if (!rtkit_alloc_buffer(rtk, bfr, sz)) {
+            rtkit_printf("unable to allocate buffer\n");
+            return false;
+        }
     }
 
     struct asc_message reply;
     reply.msg1 = msg->ep;
     reply.msg0 = FIELD_PREP(MGMT_TYPE, MSG_BUFFER_REQUEST);
     reply.msg0 |= FIELD_PREP(MSG_BUFFER_REQUEST_SIZE, n_4kpages);
-    reply.msg0 |= FIELD_PREP(MSG_BUFFER_REQUEST_IOVA, bfr->iova);
+    if (!addr)
+        reply.msg0 |= FIELD_PREP(MSG_BUFFER_REQUEST_IOVA, bfr->dva);
 
     if (!asc_send(rtk->asc, &reply)) {
         rtkit_printf("unable to send buffer reply\n");
+        rtkit_free_buffer(rtk, bfr);
         goto error;
     }
 
     return true;
 
 error:
-    if (bfr->iova && rtk->dart_iovad)
-        iova_free(rtk->dart_iovad, bfr->iova, sz);
-    free(bfr->bfr);
-    bfr->bfr = NULL;
-    bfr->sz = 0;
-    bfr->iova = 0;
     return false;
 }
 
