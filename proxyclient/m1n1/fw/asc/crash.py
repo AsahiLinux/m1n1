@@ -149,6 +149,7 @@ class ASCCrashLogEndpoint(ASCBaseEndpoint):
         open("crash.bin", "wb").write(crashdata)
         clog = CrashLogParser(crashdata)
         clog.dump()
+        raise Exception("ASC crashed!")
 
         return True
 
