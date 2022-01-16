@@ -31,6 +31,12 @@
 #define MSG_BUFFER_REQUEST_SIZE GENMASK(51, 44)
 #define MSG_BUFFER_REQUEST_IOVA GENMASK(41, 0)
 
+#define MSG_SYSLOG_INIT           8
+#define MSG_SYSLOG_INIT_ENTRYSIZE GENMASK(39, 24)
+#define MSG_SYSLOG_INIT_COUNT     GENMASK(15, 0)
+#define MSG_SYSLOG_LOG            5
+#define MSG_SYSLOG_LOG_INDEX      GENMASK(7, 0)
+
 #define MSG_OSLOG_INIT 0x10
 #define MSG_OSLOG_ACK  0x30
 
@@ -64,7 +70,9 @@
 enum rtkit_power_state {
     RTKIT_POWER_OFF = 0x00,
     RTKIT_POWER_SLEEP = 0x01,
+    RTKIT_POWER_IDLE = 0x10,
     RTKIT_POWER_ON = 0x20,
+    RTKIT_POWER_INIT = 0x220,
 };
 
 struct rtkit_buffer {
@@ -87,6 +95,15 @@ struct rtkit_dev {
     struct rtkit_buffer syslog_bfr;
     struct rtkit_buffer crashlog_bfr;
     struct rtkit_buffer ioreport_bfr;
+
+    u32 syslog_cnt, syslog_size;
+};
+
+struct syslog_log {
+    u32 hdr;
+    u32 unk;
+    char context[24];
+    char msg[];
 };
 
 rtkit_dev_t *rtkit_init(const char *name, asc_dev_t *asc, dart_dev_t *dart,
@@ -239,6 +256,22 @@ bool rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
                 switch (msgtype) {
                     case MSG_BUFFER_REQUEST:
                         rtkit_handle_buffer_request(rtk, msg, &rtk->syslog_bfr);
+                        break;
+                    case MSG_SYSLOG_INIT:
+                        rtk->syslog_cnt = FIELD_GET(MSG_SYSLOG_INIT_COUNT, msg->msg);
+                        rtk->syslog_size = FIELD_GET(MSG_SYSLOG_INIT_ENTRYSIZE, msg->msg);
+                        break;
+                    case MSG_SYSLOG_LOG:
+#ifdef RTKIT_SYSLOG
+                        u64 index = FIELD_GET(MSG_SYSLOG_LOG_INDEX, msg->msg);
+                        u64 stride = rtk->syslog_size + sizeof(struct syslog_log);
+                        struct syslog_log *log = rtk->syslog_bfr.bfr + stride * index;
+                        rtkit_printf("syslog: [%s]%s", log->context, log->msg);
+                        if (log->msg[strlen(log->msg) - 1] != '\n')
+                            printf("\n");
+#endif
+                        if (!asc_send(rtk->asc, &asc_msg))
+                            rtkit_printf("failed to ack syslog\n");
                         break;
                     default:
                         rtkit_printf("unknown syslog message %x\n", msgtype);
@@ -452,26 +485,47 @@ bool rtkit_boot(rtkit_dev_t *rtk)
         }
     }
 
-    /*
-     * normally we'd send a AP power state message now but that enables the syslog.
-     * we can get away without this message and keep the syslog disabled at least for
-     * NVMe / ANS.
-     */
+    /* this enables syslog */
+    msg.msg0 =
+        FIELD_PREP(MGMT_TYPE, MGMT_MSG_AP_PWR_STATE) | FIELD_PREP(MGMT_PWR_STATE, RTKIT_POWER_ON);
+    msg.msg1 = RTKIT_EP_MGMT;
+    if (!asc_send(rtk->asc, &msg)) {
+        rtkit_printf("unable to send AP power message\n");
+        return false;
+    }
+
     return true;
 }
 
 bool rtkit_shutdown(rtkit_dev_t *rtk)
 {
     struct asc_message msg;
-    msg.msg0 = FIELD_PREP(MGMT_TYPE, MGMT_MSG_IOP_PWR_STATE) |
-               FIELD_PREP(MGMT_PWR_STATE, RTKIT_POWER_SLEEP);
+
+    msg.msg0 =
+        FIELD_PREP(MGMT_TYPE, MGMT_MSG_AP_PWR_STATE) | FIELD_PREP(MGMT_PWR_STATE, RTKIT_POWER_IDLE);
     msg.msg1 = RTKIT_EP_MGMT;
     if (!asc_send(rtk->asc, &msg)) {
         rtkit_printf("unable to send shutdown message\n");
         return false;
     }
 
-    while (rtk->iop_power != RTKIT_POWER_SLEEP) {
+    while (rtk->ap_power != RTKIT_POWER_IDLE) {
+        struct rtkit_message rtk_msg;
+        if (rtkit_recv(rtk, &rtk_msg) == 1) {
+            rtkit_printf("unexpected message to non-system endpoint 0x%02x during shutdown: %lx\n",
+                         rtk_msg.ep, rtk_msg.msg);
+            continue;
+        }
+    }
+
+    msg.msg0 = FIELD_PREP(MGMT_TYPE, MGMT_MSG_IOP_PWR_STATE) |
+               FIELD_PREP(MGMT_PWR_STATE, RTKIT_POWER_IDLE);
+    if (!asc_send(rtk->asc, &msg)) {
+        rtkit_printf("unable to send shutdown message\n");
+        return false;
+    }
+
+    while (rtk->iop_power != RTKIT_POWER_IDLE) {
         struct rtkit_message rtk_msg;
         if (rtkit_recv(rtk, &rtk_msg)) {
             rtkit_printf("unexpected message to non-system endpoint 0x%02x during shutdown: %lx\n",

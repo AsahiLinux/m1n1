@@ -5,6 +5,8 @@
 
 #define USE_FB
 
+//#define RTKIT_SYSLOG
+
 // Target for device-specific debug builds
 //#define TARGET T8103
 
