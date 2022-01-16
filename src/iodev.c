@@ -14,7 +14,7 @@
     } while (0)
 #endif
 
-#define CONSOLE_BUFFER_SIZE SZ_2K
+#define CONSOLE_BUFFER_SIZE 8192
 
 extern struct iodev iodev_uart;
 extern struct iodev iodev_fb;
