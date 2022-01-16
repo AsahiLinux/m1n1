@@ -5,6 +5,7 @@
 #include "adt.h"
 #include "aic.h"
 #include "cpufreq.h"
+#include "display.h"
 #include "exception.h"
 #include "fb.h"
 #include "gxf.h"
@@ -89,6 +90,7 @@ void m1n1_main(void)
     mmu_init();
 
 #ifdef USE_FB
+    display_init();
     fb_init();
     fb_display_logo();
 #endif
