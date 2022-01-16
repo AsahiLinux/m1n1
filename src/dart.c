@@ -264,6 +264,56 @@ void dart_unmap(dart_dev_t *dart, uintptr_t iova, size_t len)
     dart_tlb_invalidate(dart);
 }
 
+void *dart_translate(dart_dev_t *dart, uintptr_t iova)
+{
+    u32 ttbr = (iova >> 36) & 0x3;
+    u32 l1_index = (iova >> 25) & 0x7ff;
+
+    if (!(dart->l1[ttbr][l1_index] & DART_PTE_VALID)) {
+        printf("dart: l1 translation failure %x %lx\n", l1_index, iova);
+        return NULL;
+    }
+
+    u32 l2_index = (iova >> 14) & 0x7ff;
+    u64 *l2 =
+        (u64 *)(FIELD_GET(dart->offset_mask, dart->l1[ttbr][l1_index]) << DART_PTE_OFFSET_SHIFT);
+
+    if (!(l2[l2_index] & DART_PTE_VALID)) {
+        printf("dart: l2 translation failure\n");
+        return NULL;
+    }
+
+    u32 offset = iova & 0x3fff;
+    void *base = (void *)(FIELD_GET(dart->offset_mask, l2[l2_index]) << DART_PTE_OFFSET_SHIFT);
+
+    return base + offset;
+}
+
+u64 dart_search(dart_dev_t *dart, void *paddr)
+{
+    for (int ttbr = 0; ttbr < 4; ++ttbr) {
+        if (!dart->l1[ttbr])
+            continue;
+        for (u32 l1_index = 0; l1_index < 0x7ff; l1_index++) {
+            if (!(dart->l1[ttbr][l1_index] & DART_PTE_VALID))
+                continue;
+
+            u64 *l2 = (u64 *)(FIELD_GET(dart->offset_mask, dart->l1[ttbr][l1_index])
+                              << DART_PTE_OFFSET_SHIFT);
+            for (u32 l2_index = 0; l2_index < 0x7ff; l2_index++) {
+                if (!(l2[l2_index] & DART_PTE_VALID))
+                    continue;
+                u64 *dst =
+                    (u64 *)(FIELD_GET(dart->offset_mask, l2[l2_index]) << DART_PTE_OFFSET_SHIFT);
+                if (dst == paddr)
+                    return ((u64)ttbr << 36) | ((u64)l1_index << 25) | (l2_index << 14);
+            }
+        }
+    }
+
+    return 0;
+}
+
 void dart_shutdown(dart_dev_t *dart)
 {
     if (!dart->locked && !dart->keep)
