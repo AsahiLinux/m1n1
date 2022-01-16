@@ -420,4 +420,6 @@ extern struct vector_args next_stage;
 
 void deep_wfi(void);
 
+bool is_heap(void *addr);
+
 #endif

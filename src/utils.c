@@ -8,6 +8,7 @@
 #include "smp.h"
 #include "types.h"
 #include "vsprintf.h"
+#include "xnuboot.h"
 
 static char ascii(char s)
 {
@@ -133,4 +134,13 @@ void spin_unlock(spinlock_t *lock)
     assert(lock->count > 0);
     if (!--lock->count)
         __atomic_store_n(&lock->lock, -1L, __ATOMIC_RELEASE);
+}
+
+bool is_heap(void *addr)
+{
+    u64 p = (u64)addr;
+    u64 top_of_kernel_data = (u64)cur_boot_args.top_of_kernel_data;
+    u64 top_of_ram = cur_boot_args.mem_size + cur_boot_args.phys_base;
+
+    return p > top_of_kernel_data && p < top_of_ram;
 }
