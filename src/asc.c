@@ -50,7 +50,7 @@ asc_dev_t *asc_init(const char *path)
 
     asc->iop_node = adt_first_child_offset(adt, node);
     asc->cpu_base = base;
-    asc->base = base + 0x4000;
+    asc->base = base + 0x8000;
     return asc;
 }
 
