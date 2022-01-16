@@ -21,6 +21,7 @@
 #define RTKIT_EP_SYSLOG   2
 #define RTKIT_EP_DEBUG    3
 #define RTKIT_EP_IOREPORT 4
+#define RTKIT_EP_OSLOG    8
 
 #define MGMT_TYPE GENMASK(59, 52)
 
@@ -29,6 +30,9 @@
 #define MSG_BUFFER_REQUEST      1
 #define MSG_BUFFER_REQUEST_SIZE GENMASK(51, 44)
 #define MSG_BUFFER_REQUEST_IOVA GENMASK(41, 0)
+
+#define MSG_OSLOG_INIT 0x10
+#define MSG_OSLOG_ACK  0x30
 
 #define MGMT_MSG_HELLO        1
 #define MGMT_MSG_HELLO_ACK    2
@@ -264,6 +268,17 @@ bool rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
                         rtkit_printf("unknown ioreport message %x\n", msgtype);
                 }
                 break;
+            case RTKIT_EP_OSLOG:
+                switch (msgtype) {
+                    case MSG_OSLOG_INIT:
+                        msg->msg = FIELD_PREP(MGMT_TYPE, MSG_OSLOG_ACK);
+                        if (!rtkit_send(rtk, msg))
+                            rtkit_printf("unable to ACK oslog init message\n");
+                        break;
+                    default:
+                        rtkit_printf("unknown oslog message %x\n", msgtype);
+                }
+                break;
             default:
                 rtkit_printf("message to unknown system endpoint 0x%02x: %lx\n", msg->ep, msg->msg);
         }
@@ -346,6 +361,7 @@ bool rtkit_boot(rtkit_dev_t *rtk)
     bool has_debug = false;
     bool has_ioreport = false;
     bool has_syslog = false;
+    bool has_oslog = false;
     bool got_epmap = false;
     while (!got_epmap) {
         if (!asc_recv_timeout(rtk->asc, &msg, USEC_PER_SEC)) {
@@ -387,6 +403,8 @@ bool rtkit_boot(rtkit_dev_t *rtk)
                     case RTKIT_EP_SYSLOG:
                         has_syslog = true;
                         break;
+                    case RTKIT_EP_OSLOG:
+                        has_oslog = true;
                     case RTKIT_EP_MGMT:
                         break;
                     default:
@@ -421,6 +439,8 @@ bool rtkit_boot(rtkit_dev_t *rtk)
     if (has_syslog && !rtkit_start_ep(rtk, RTKIT_EP_SYSLOG))
         return false;
     if (has_ioreport && !rtkit_start_ep(rtk, RTKIT_EP_IOREPORT))
+        return false;
+    if (has_oslog && !rtkit_start_ep(rtk, RTKIT_EP_OSLOG))
         return false;
 
     while (rtk->iop_power != RTKIT_POWER_ON) {
