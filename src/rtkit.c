@@ -339,7 +339,7 @@ static void rtkit_crashed(rtkit_dev_t *rtk)
     }
 }
 
-bool rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
+int rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
 {
     struct asc_message asc_msg;
 
@@ -350,7 +350,7 @@ bool rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
         if (asc_msg.msg1 >= 0x100) {
             rtkit_printf("WARNING: received message for invalid endpoint %x >= 0x100\n",
                          asc_msg.msg1);
-            return false;
+            continue;
         }
 
         msg->msg = asc_msg.msg0;
@@ -358,7 +358,7 @@ bool rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
 
         /* if this is an app message we can just forwad it to the caller */
         if (msg->ep >= 0x20)
-            return true;
+            return 1;
 
         u32 msgtype = FIELD_GET(MGMT_TYPE, msg->msg);
         switch (msg->ep) {
@@ -406,7 +406,7 @@ bool rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
                             rtkit_handle_buffer_request(rtk, msg, &rtk->crashlog_bfr);
                         } else {
                             rtkit_crashed(rtk);
-                            return false;
+                            return -1;
                         }
                         break;
                     default:
@@ -444,7 +444,7 @@ bool rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
         }
     }
 
-    return false;
+    return 0;
 }
 
 bool rtkit_start_ep(rtkit_dev_t *rtk, u8 ep)
@@ -605,11 +605,12 @@ bool rtkit_boot(rtkit_dev_t *rtk)
 
     while (rtk->iop_power != RTKIT_POWER_ON) {
         struct rtkit_message rtk_msg;
-        if (rtkit_recv(rtk, &rtk_msg)) {
+        int ret = rtkit_recv(rtk, &rtk_msg);
+        if (ret == 1)
             rtkit_printf("unexpected message to non-system endpoint 0x%02x during boot: %lx\n",
                          rtk_msg.ep, rtk_msg.msg);
-            continue;
-        }
+        else if (ret < 0)
+            break;
     }
 
     /* this enables syslog */

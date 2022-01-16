@@ -30,7 +30,7 @@ void rtkit_free(rtkit_dev_t *rtk);
 bool rtkit_start_ep(rtkit_dev_t *rtk, u8 ep);
 bool rtkit_boot(rtkit_dev_t *rtk);
 
-bool rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg);
+int rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg);
 bool rtkit_send(rtkit_dev_t *rtk, const struct rtkit_message *msg);
 
 bool rtkit_map(rtkit_dev_t *rtk, void *phys, size_t sz, u64 *dva);
