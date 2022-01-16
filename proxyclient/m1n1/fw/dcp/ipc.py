@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import pprint
 from enum import IntEnum
 
+from ..common import *
 from m1n1.utils import *
 from construct import *
 
@@ -382,117 +383,7 @@ int_ = int32_t
 ulong = uint64_t
 long_ = int64_t
 
-def Bool(c):
-    return ExprAdapter(c, lambda d, ctx: bool(d & 1), lambda d, ctx: int(d))
-
-def SizedArray(count, svar, subcon):
-    return Padded(subcon.sizeof() * count, Array(lambda ctx: min(count, ctx.get(svar, ctx._.get(svar))), subcon))
-
-def SizedBytes(count, svar):
-    return Lazy(Padded(count, Bytes(lambda ctx: ctx.get(svar) or ctx._.get(svar))))
-
-def UnkBytes(s):
-    return Default(HexDump(Bytes(s)), b"\x00" * s)
-
-bool_ = Bool(int8_t)
-
-class OSObject(Construct):
-    TYPE = None
-
-    def _parse(self, stream, context, path, recurse=False):
-        tag = stream.read(1).decode("ascii")
-        if not recurse and self.TYPE is not None and self.TYPE != tag:
-            raise Exception("Object type mismatch")
-
-        if tag == "d":
-            count = Int32ul.parse_stream(stream)
-            d = {}
-            for i in range(count):
-                k = self._parse(stream, context, path, True)
-                v = self._parse(stream, context, path, True)
-                d[k] = v
-            return d
-        elif tag == "n":
-            return Int64ul.parse_stream(stream)
-        elif tag == "s":
-            length = Int32ul.parse_stream(stream)
-            s = stream.read(length).decode("utf-8")
-            assert stream.read(1) == b'\0'
-            return s
-        else:
-            raise Exception(f"Unknown object tag {tag!r}")
-
-    def _build(self, obj, stream, context, path):
-        assert False
-
-    def _sizeof(self, context, path):
-        return None
-
-class OSDictionary(OSObject):
-    TYPE = 'd'
-
-class OSSerialize(Construct):
-    def _parse(self, stream, context, path, recurse=False):
-        hdr = Int32ul.parse_stream(stream)
-        if hdr != 0xd3:
-            raise Exception("Bad header")
-
-        obj, last = self.parse_obj(stream)
-        assert last
-        return obj
-
-    def parse_obj(self, stream, level=0):
-        # align to 32 bits
-        pos = stream.tell()
-        if pos & 3:
-            stream.read(4 - (pos & 3))
-
-        tag = Int32ul.parse_stream(stream)
-
-        last = bool(tag & 0x80000000)
-        otype = (tag >> 24) & 0x1f
-        size = tag & 0xffffff
-
-        #print(f"{'  '*level} @{stream.tell():#x} {otype} {last} {size}")
-
-        if otype == 1:
-            d = {}
-            for i in range(size):
-                k, l = self.parse_obj(stream, level + 1)
-                assert not l
-                v, l = self.parse_obj(stream, level + 1)
-                assert l == (i == size - 1)
-                d[k] = v
-        elif otype == 2:
-            d = []
-            for i in range(size):
-                v, l = self.parse_obj(stream, level + 1)
-                assert l == (i == size - 1)
-                d.append(v)
-        elif otype == 4:
-            d = Int64ul.parse_stream(stream)
-        elif otype == 9:
-            d = stream.read(size).decode("utf-8")
-        elif otype == 10:
-            d = stream.read(size)
-        elif otype == 11:
-            d = bool(size)
-        else:
-            raise Exception(f"Unknown tag {otype}")
-
-        #print(f"{'  '*level}  => {d}")
-        return d, last
-
-    def _build(self, obj, stream, context, path):
-        assert False
-
-    def _sizeof(self, context, path):
-        return None
-
 void = None
-
-def string(size):
-    return Padded(size, CString("utf8"))
 
 class IPCObject:
     @classmethod
