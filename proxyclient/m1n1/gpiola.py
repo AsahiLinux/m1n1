@@ -25,6 +25,12 @@ class GPIOLogicAnalyzer(Reloadable):
         self.p.mmu_init_secondary(cpu)
         self.tfreq = u.mrs(CNTFRQ_EL0)
 
+    def load_regmap(self, regmap, skip=set(), regs=set()):
+        base = regmap._base
+        for name, (addr, rcls) in regmap._namemap.items():
+            if name not in skip and (not regs or name in regs):
+                self.regs[name] = base + addr, rcls
+
     def start(self, ticks, bufsize=0x10000):
         self.bufsize = bufsize
         if self.dbuf:
