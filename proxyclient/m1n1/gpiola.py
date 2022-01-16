@@ -6,7 +6,7 @@ from . import asm
 from .proxy import REGION_RX_EL1
 from .sysreg import *
 
-class GPIOLogicAnalyzer(object):
+class GPIOLogicAnalyzer(Reloadable):
     def __init__(self, u, node, pins, regs={}, div=1, cpu=1, on_pin_change=True):
         self.u = u
         self.p = u.proxy
