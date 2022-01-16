@@ -144,6 +144,8 @@ class HV(Reloadable):
         self.smp = True
         self.hook_exceptions = False
         self.started_cpus = set()
+        self.started = False
+        self.ctx = None
 
     def _reloadme(self):
         super()._reloadme()
@@ -1419,6 +1421,8 @@ class HV(Reloadable):
         if self.wdt_cpu is not None:
             self.p.hv_wdt_start(self.wdt_cpu)
         # Does not return
+
+        self.started = True
         self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)
 
 from . import trace
