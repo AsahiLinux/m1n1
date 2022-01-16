@@ -87,21 +87,6 @@ SwapInfo = Struct(
     "unk5" / Int32ul,
 )
 
-PlaneInfo = Struct(
-    "width" / Int32ul,
-    "height" / Int32ul,
-    "base" / Hex(Int32ul),
-    "offset" / Hex(Int32ul),
-    "stride" / Hex(Int32ul),
-    "size" / Hex(Int32ul),
-    "tile_size" / Int16ul,
-    "tile_w" / Int8ul,
-    "tile_h" / Int8ul,
-    "unk1" / UnkBytes(0xd),
-    "unk2" / Hex(Int8ul),
-    "unk3" / UnkBytes(0x26),
-)
-
 IBootPlaneInfo = Struct(
     "unk1" / Default(Int32ul, 0),
     "addr" / Default(Int64ul, 0),
@@ -111,7 +96,7 @@ IBootPlaneInfo = Struct(
     "unk6" / Default(Int32ul, 0),
     "unk7" / Default(Int32ul, 0),
     "unk8" / Default(Int32ul, 0),
-    "addr_format" / Default(AddrFormat, AddrFormat.PLANAR),
+    "addr_format" / Default(AddrFormat, 0),
     "unk9" / Default(Int32ul, 0),
 )
 
@@ -139,7 +124,7 @@ SwapSetLayer = Struct(
     "dst_w" / Int32ul,
     "dst_h" / Int32ul,
     "dst_x" / Int32ul,
-    "dst_x" / Int32ul,
+    "dst_y" / Int32ul,
     "unk2" / Default(Int32ul, 0),
 )
 
