@@ -323,6 +323,8 @@ class DART(Reloadable):
     def invalidate_streams(self, streams=0xffffffff):
         self.regs.STREAM_SELECT.val = streams
         self.regs.STREAM_COMMAND.val = R_STREAM_COMMAND(INVALIDATE=1)
+        while self.regs.STREAM_COMMAND.reg.BUSY:
+            pass
 
     def invalidate_cache(self):
         self.pt_cache = {}
