@@ -96,6 +96,8 @@ struct rtkit_dev {
     struct rtkit_buffer ioreport_bfr;
 
     u32 syslog_cnt, syslog_size;
+
+    bool crashed;
 };
 
 struct syslog_log {
@@ -103,6 +105,22 @@ struct syslog_log {
     u32 unk;
     char context[24];
     char msg[];
+};
+
+struct crashlog_hdr {
+    u32 type;
+    u32 ver;
+    u32 total_size;
+    u32 flags;
+    u8 _padding[16];
+};
+
+struct crashlog_entry {
+    u32 type;
+    u32 _padding;
+    u32 flags;
+    u32 len;
+    u8 payload[];
 };
 
 rtkit_dev_t *rtkit_init(const char *name, asc_dev_t *asc, dart_dev_t *dart,
@@ -293,9 +311,40 @@ error:
     return false;
 }
 
+static void rtkit_crashed(rtkit_dev_t *rtk)
+{
+    struct crashlog_hdr *hdr = rtk->crashlog_bfr.bfr;
+    rtk->crashed = true;
+
+    rtkit_printf("IOP crashed!\n");
+
+    if (hdr->type != 'CLHE') {
+        rtkit_printf("bad crashlog header 0x%x @ %p\n", hdr->type, hdr);
+        return;
+    }
+
+    struct crashlog_entry *p = (void *)(hdr + 1);
+
+    rtkit_printf("== CRASH INFO ==\n");
+    while (p->type != 'CLHE') {
+        switch (p->type) {
+            case 'Cstr':
+                rtkit_printf("  Message %d: %s\n", p->payload[0], &p->payload[4]);
+                break;
+            default:
+                rtkit_printf("  0x%x\n", p->type);
+                break;
+        }
+        p = ((void *)p) + p->len;
+    }
+}
+
 bool rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
 {
     struct asc_message asc_msg;
+
+    if (rtk->crashed)
+        return -1;
 
     while (asc_recv(rtk->asc, &asc_msg)) {
         if (asc_msg.msg1 >= 0x100) {
@@ -353,7 +402,12 @@ bool rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
             case RTKIT_EP_CRASHLOG:
                 switch (msgtype) {
                     case MSG_BUFFER_REQUEST:
-                        rtkit_handle_buffer_request(rtk, msg, &rtk->crashlog_bfr);
+                        if (!rtk->crashlog_bfr.bfr) {
+                            rtkit_handle_buffer_request(rtk, msg, &rtk->crashlog_bfr);
+                        } else {
+                            rtkit_crashed(rtk);
+                            return false;
+                        }
                         break;
                     default:
                         rtkit_printf("unknown crashlog message %x\n", msgtype);
@@ -573,6 +627,9 @@ bool rtkit_boot(rtkit_dev_t *rtk)
 bool rtkit_shutdown(rtkit_dev_t *rtk)
 {
     struct asc_message msg;
+
+    if (rtk->crashed)
+        return false;
 
     msg.msg0 =
         FIELD_PREP(MGMT_TYPE, MGMT_MSG_AP_PWR_STATE) | FIELD_PREP(MGMT_PWR_STATE, RTKIT_POWER_IDLE);
