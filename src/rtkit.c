@@ -500,7 +500,7 @@ bool rtkit_boot(rtkit_dev_t *rtk)
     max_ver = FIELD_GET(MGMT_MSG_HELLO_MAXVER, msg.msg0);
     want_ver = min(RTKIT_MAX_VERSION, max_ver);
 
-    if (min_ver > RTKIT_MIN_VERSION || max_ver < RTKIT_MAX_VERSION) {
+    if (min_ver > RTKIT_MAX_VERSION || max_ver < RTKIT_MIN_VERSION) {
         rtkit_printf("supported versions [%d,%d] must overlap versions [%d,%d]\n",
                      RTKIT_MIN_VERSION, RTKIT_MAX_VERSION, min_ver, max_ver);
         return false;
