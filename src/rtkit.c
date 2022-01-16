@@ -469,8 +469,8 @@ bool rtkit_boot(rtkit_dev_t *rtk)
     struct asc_message msg;
 
     /* can be sent unconditionally to wake up a possibly sleeping IOP */
-    msg.msg0 =
-        FIELD_PREP(MGMT_TYPE, MGMT_MSG_IOP_PWR_STATE) | FIELD_PREP(MGMT_PWR_STATE, RTKIT_POWER_ON);
+    msg.msg0 = FIELD_PREP(MGMT_TYPE, MGMT_MSG_IOP_PWR_STATE) |
+               FIELD_PREP(MGMT_PWR_STATE, RTKIT_POWER_INIT);
     msg.msg1 = RTKIT_EP_MGMT;
     if (!asc_send(rtk->asc, &msg)) {
         rtkit_printf("unable to send wakeup message\n");
