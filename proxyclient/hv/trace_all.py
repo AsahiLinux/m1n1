@@ -4,7 +4,7 @@ from m1n1.utils import irange
 
 # Map the entire MMIO range as traceable
 for r in hv.adt["/arm-io"].ranges:
-    trace_range(irange(r.parent_addr, r.size), mode=TraceMode.SYNC)
+    trace_range(irange(r.parent_addr, r.size), mode=TraceMode.ASYNC)
 
 # Skip some noisy devices
 try:
