@@ -47,7 +47,10 @@ class StandardASC(ASC):
     def iomap(self, addr, size):
         if self.dart is None:
             return addr
-        return self.DVA_OFFSET | self.dart.iomap(0, addr, size)
+        dva = self.DVA_OFFSET | self.dart.iomap(0, addr, size)
+
+        self.dart.invalidate_streams(1)
+        return dva
 
     def ioalloc(self, size):
         paddr = self.u.memalign(0x4000, size)
