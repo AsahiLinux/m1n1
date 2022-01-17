@@ -77,7 +77,7 @@ void run_actions(void)
 void m1n1_main(void)
 {
     printf("\n\nm1n1 v%s\n", m1n1_version);
-    printf("Copyright (C) 2021 The Asahi Linux Contributors\n");
+    printf("Copyright The Asahi Linux Contributors\n");
     printf("Licensed under the MIT license\n\n");
 
     printf("Running in EL%lu\n\n", mrs(CurrentEL) >> 2);
