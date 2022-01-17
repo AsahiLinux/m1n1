@@ -75,7 +75,7 @@
 enum rtkit_power_state {
     RTKIT_POWER_OFF = 0x00,
     RTKIT_POWER_SLEEP = 0x01,
-    RTKIT_POWER_IDLE = 0x10,
+    RTKIT_POWER_HIBERNATE = 0x10,
     RTKIT_POWER_ON = 0x20,
     RTKIT_POWER_INIT = 0x220,
 };
@@ -627,22 +627,23 @@ bool rtkit_boot(rtkit_dev_t *rtk)
     return true;
 }
 
-bool rtkit_shutdown(rtkit_dev_t *rtk)
+static bool rtkit_switch_power_state(rtkit_dev_t *rtk, enum rtkit_power_state target)
 {
     struct asc_message msg;
 
     if (rtk->crashed)
         return false;
 
-    msg.msg0 =
-        FIELD_PREP(MGMT_TYPE, MGMT_MSG_AP_PWR_STATE) | FIELD_PREP(MGMT_PWR_STATE, RTKIT_POWER_IDLE);
+    /* AP power should always go to HIBERNATE, otherwise rebooting doesn't work */
+    msg.msg0 = FIELD_PREP(MGMT_TYPE, MGMT_MSG_AP_PWR_STATE) |
+               FIELD_PREP(MGMT_PWR_STATE, RTKIT_POWER_HIBERNATE);
     msg.msg1 = RTKIT_EP_MGMT;
     if (!asc_send(rtk->asc, &msg)) {
         rtkit_printf("unable to send shutdown message\n");
         return false;
     }
 
-    while (rtk->ap_power != RTKIT_POWER_IDLE) {
+    while (rtk->ap_power != RTKIT_POWER_HIBERNATE) {
         struct rtkit_message rtk_msg;
         if (rtkit_recv(rtk, &rtk_msg) == 1) {
             rtkit_printf("unexpected message to non-system endpoint 0x%02x during shutdown: %lx\n",
@@ -651,14 +652,13 @@ bool rtkit_shutdown(rtkit_dev_t *rtk)
         }
     }
 
-    msg.msg0 = FIELD_PREP(MGMT_TYPE, MGMT_MSG_IOP_PWR_STATE) |
-               FIELD_PREP(MGMT_PWR_STATE, RTKIT_POWER_IDLE);
+    msg.msg0 = FIELD_PREP(MGMT_TYPE, MGMT_MSG_IOP_PWR_STATE) | FIELD_PREP(MGMT_PWR_STATE, target);
     if (!asc_send(rtk->asc, &msg)) {
         rtkit_printf("unable to send shutdown message\n");
         return false;
     }
 
-    while (rtk->iop_power != RTKIT_POWER_IDLE) {
+    while (rtk->iop_power != target) {
         struct rtkit_message rtk_msg;
         if (rtkit_recv(rtk, &rtk_msg)) {
             rtkit_printf("unexpected message to non-system endpoint 0x%02x during shutdown: %lx\n",
@@ -668,4 +668,14 @@ bool rtkit_shutdown(rtkit_dev_t *rtk)
     }
 
     return true;
+}
+
+bool rtkit_hibernate(rtkit_dev_t *rtk)
+{
+    return rtkit_switch_power_state(rtk, RTKIT_POWER_HIBERNATE);
+}
+
+bool rtkit_sleep(rtkit_dev_t *rtk)
+{
+    return rtkit_switch_power_state(rtk, RTKIT_POWER_SLEEP);
 }
