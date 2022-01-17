@@ -45,7 +45,7 @@ dcp_dev_t *dcp_init(const char *dcp_path, const char *dcp_dart_path, const char 
 
     return dcp;
 
-    rtkit_shutdown(dcp->rtkit);
+    rtkit_hibernate(dcp->rtkit);
     rtkit_free(dcp->rtkit);
 out_iovad:
     iovad_shutdown(dcp->iovad_dcp);
@@ -59,7 +59,7 @@ out_free:
 
 int dcp_shutdown(dcp_dev_t *dcp)
 {
-    rtkit_shutdown(dcp->rtkit);
+    rtkit_hibernate(dcp->rtkit);
     rtkit_free(dcp->rtkit);
     dart_shutdown(dcp->dart_disp);
     dart_shutdown(dcp->dart_dcp);

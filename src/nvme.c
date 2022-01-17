@@ -63,7 +63,7 @@ bool nvme_init(void)
     return true;
 
 out_shutdown:
-    rtkit_shutdown(nvme_rtkit);
+    rtkit_sleep(nvme_rtkit);
     pmgr_reset("ANS2");
 out_rtkit:
     rtkit_free(nvme_rtkit);
@@ -81,7 +81,7 @@ void nvme_shutdown(void)
         return;
     }
 
-    rtkit_shutdown(nvme_rtkit);
+    rtkit_sleep(nvme_rtkit);
     pmgr_reset("ANS2");
     rtkit_free(nvme_rtkit);
     sart_free(nvme_sart);
