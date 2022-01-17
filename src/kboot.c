@@ -327,6 +327,59 @@ static int dt_set_wifi(void)
     return 0;
 }
 
+static void dt_set_uboot_dm_preloc(int node)
+{
+    // Tell U-Boot to bind this node early
+    fdt_setprop_empty(dt, node, "u-boot,dm-pre-reloc");
+
+    // Make sure the power domains are bound early as well
+    int pds_size;
+    const fdt32_t *pds = fdt_getprop(dt, node, "power-domains", &pds_size);
+    if (!pds)
+        return;
+
+    fdt32_t *phandles = malloc(pds_size);
+    if (!phandles) {
+        printf("FDT: out of memory\n");
+        return;
+    }
+    memcpy(phandles, pds, pds_size);
+
+    for (int i = 0; i < pds_size / 4; i++) {
+        node = fdt_node_offset_by_phandle(dt, fdt32_ld(&phandles[i]));
+        if (node < 0)
+            continue;
+        dt_set_uboot_dm_preloc(node);
+
+        // And make sure the PMGR node is bound early too
+        node = fdt_parent_offset(dt, node);
+        if (node < 0)
+            continue;
+        dt_set_uboot_dm_preloc(node);
+    }
+
+    free(phandles);
+}
+
+static int dt_set_uboot(void)
+{
+    // Make sure that U-Boot can initialize the serial port in its
+    // pre-relocation phase by marking its node and the nodes of the
+    // power domains it depends on with a "u-boot,dm-pre-reloc"
+    // property.
+
+    const char *path = fdt_get_alias(dt, "serial0");
+    if (path == NULL)
+        return 0;
+
+    int node = fdt_path_offset(dt, path);
+    if (node < 0)
+        return 0;
+
+    dt_set_uboot_dm_preloc(node);
+    return 0;
+}
+
 static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix, int max_devs)
 {
     int ret = -1;
@@ -486,6 +539,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_mac_addresses())
         return -1;
     if (dt_set_wifi())
+        return -1;
+    if (dt_set_uboot())
         return -1;
     if (dt_disable_missing_devs("usb-drd", "usb@", 8))
         return -1;
