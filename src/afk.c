@@ -244,7 +244,7 @@ static int afk_epic_rx(afk_epic_ep_t *epic, struct afk_qe **qe)
         do {
             ret = afk_epic_poll(epic);
             if (ret < 0)
-                break;
+                return ret;
         } while (ret == 0);
         dma_rmb();
     }
