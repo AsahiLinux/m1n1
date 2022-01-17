@@ -261,6 +261,7 @@ static int afk_epic_rx(afk_epic_ep_t *epic, struct afk_qe **qe)
         hdr = rb->buf + rptr;
         if (hdr->magic != QE_MAGIC) {
             printf("EPIC: bad queue entry magic!\n");
+            return -1;
         }
         rb->hdr->rptr = rptr;
     }
