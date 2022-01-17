@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "../config.h"
+
 #include "rtkit.h"
 #include "adt.h"
 #include "asc.h"
