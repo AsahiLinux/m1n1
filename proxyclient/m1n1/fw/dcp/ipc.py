@@ -619,7 +619,7 @@ class IOMobileFramebufferAP(IPCObject):
 
     D589 = Callback(void, "swap_complete_ap_gated", uint, bool_, InPtr(SwapCompleteData), SwapInfoBlob, uint)
 
-    D591 = Callback(void, "swap_complete_intent_gated", uint, bool_, uint32_t, uint, uint)
+    D591 = Callback(void, "swap_complete_intent_gated", swap_id=uint, unkB=bool_, unkInt=uint32_t, width=uint, height=uint)
     D598 = Callback(void, "find_swap_function_gated")
 
 class ServiceRelay(IPCObject):
