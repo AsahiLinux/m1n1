@@ -708,7 +708,7 @@ class DPSACService(EPICEp):
 class DPDevService(EPICEp):
     NAME = "dpdev"
 
-class MDCP29XXService(EPICEp):
+class MCDP29XXService(EPICEp):
     NAME = "mcdp29xx"
 
 class AVService(EPICEp):
@@ -730,7 +730,7 @@ class DCPTracer(ASCTracer):
         0x25: EPICEp, # dcpav-power-ep
         0x26: DPSACService,
         0x27: DPDevService,
-        0x28: MDCP29XXService,
+        0x28: MCDP29XXService,
         0x29: AVService,
         0x2a: EPICEp, # dcpdptx-port-ep
         0x2b: HDCPService,
