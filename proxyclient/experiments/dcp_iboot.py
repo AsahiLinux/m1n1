@@ -21,6 +21,7 @@ disp_dart.dump_all()
 
 dcp_addr = u.adt["arm-io/dcp"].get_reg(0)[0]
 dcp = DCPIBootClient(u, dcp_addr, dart, disp_dart)
+dcp.dva_offset = getattr(u.adt["/arm-io/dcp"][0], "asc_dram_mask", 0)
 
 dcp.start()
 dcp.start_ep(0x23)
