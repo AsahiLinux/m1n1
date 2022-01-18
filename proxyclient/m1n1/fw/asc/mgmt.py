@@ -25,15 +25,15 @@ class Mgmt_Pong(ManagementMessage):
 class Mgmt_StartEP(ManagementMessage):
     TYPE    = 59, 52, Constant(5)
     EP      = 39, 32
-    FLAG    = 1
+    FLAG    = 1, 0
 
-class Mgmt_Init(ManagementMessage):
+class Mgmt_SetIOPPower(ManagementMessage):
     TYPE    = 59, 52, Constant(6)
-    CMD     = 15, 0
+    STATE   = 15, 0
 
-class Mgmt_BootDone(ManagementMessage):
+class Mgmt_IOPPowerAck(ManagementMessage):
     TYPE    = 59, 52, Constant(7)
-    CMD     = 15, 0
+    STATE   = 15, 0
 
 class Mgmt_EPMap(ManagementMessage):
     TYPE    = 59, 52, Constant(8)
@@ -47,9 +47,9 @@ class Mgmt_EPMap_Ack(ManagementMessage):
     BASE    = 34, 32
     MORE    = 0
 
-class Mgmt_StartSyslog(ManagementMessage):
+class Mgmt_SetAPPower(ManagementMessage):
     TYPE    = 59, 52, Constant(0xb)
-    CMD    = 15, 0
+    STATE   = 15, 0
 
 class ASCManagementEndpoint(ASCBaseEndpoint):
     BASE_MESSAGE = ManagementMessage
@@ -58,7 +58,8 @@ class ASCManagementEndpoint(ASCBaseEndpoint):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.syslog_started = False
-        self.boot_done = False
+        self.iop_power_state = 0
+        self.ap_power_state = 0
 
     @msg_handler(1, Mgmt_Hello)
     def Hello(self, msg):
@@ -82,23 +83,20 @@ class ASCManagementEndpoint(ASCBaseEndpoint):
                 if ep == 0: continue
                 if ep < 0x10:
                     self.asc.start_ep(ep)
+            self.boot_done()
 
         return True
 
-    @msg_handler(0xb, Mgmt_StartSyslog)
-    def StartSyslogAck(self, msg):
-        if msg.CMD == 0x10:
-            self.syslog_started = False
-        else:
-            self.syslog_started = True
+    @msg_handler(0xb, Mgmt_SetAPPower)
+    def APPowerAck(self, msg):
+        self.log(f"AP power state is now {msg.STATE:#x}")
+        self.ap_power_state = msg.STATE
         return True
 
-    @msg_handler(7, Mgmt_BootDone)
-    def BootDone(self, msg):
-        if msg.CMD == 0x10:
-            self.boot_done = False
-        else:
-            self.boot_done = True
+    @msg_handler(7, Mgmt_IOPPowerAck)
+    def IOPPowerAck(self, msg):
+        self.log(f"IOP power state is now {msg.STATE:#x}")
+        self.iop_power_state = msg.STATE
         return True
 
     @msg_handler(4, Mgmt_Pong)
@@ -107,31 +105,30 @@ class ASCManagementEndpoint(ASCBaseEndpoint):
 
     def start(self):
         self.log("Starting via message")
-        self.boot_done = False
-        self.send(Mgmt_Init(CMD=0x220))
+        self.send(Mgmt_SetIOPPower(STATE=0x220))
 
     def wait_boot(self):
-        while not self.boot_done or not self.syslog_started:
+        while self.iop_power_state != 0x20 or self.ap_power_state != 0x20:
             self.asc.work()
         self.log("startup complete")
 
     def start_ep(self, epno):
+        self.send(Mgmt_StartEP(EP=epno, FLAG=2))
+
+    def stop_ep(self, epno):
         self.send(Mgmt_StartEP(EP=epno, FLAG=1))
 
-    def start_syslog(self):
-        self.send(Mgmt_StartSyslog(CMD=0x20))
-
-    def stop_syslog(self):
-        self.send(Mgmt_StartSyslog(CMD=0x10))
+    def boot_done(self):
+        self.send(Mgmt_SetAPPower(STATE=0x20))
 
     def ping(self):
         self.send(Mgmt_Ping())
 
-    def stop(self):
+    def stop(self, state=0x10):
         self.log("Stopping via message")
-        self.stop_syslog()
-        while self.syslog_started:
+        self.send(Mgmt_SetAPPower(STATE=0x10))
+        while self.ap_power_state == 0x20:
             self.asc.work()
-        self.send(Mgmt_Init(CMD=0x10))
-        while self.boot_done:
+        self.send(Mgmt_SetIOPPower(STATE=state))
+        while self.iop_power_state != state:
             self.asc.work()

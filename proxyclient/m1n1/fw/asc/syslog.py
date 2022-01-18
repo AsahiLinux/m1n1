@@ -70,6 +70,3 @@ class ASCSysLogEndpoint(ASCBaseEndpoint):
         self.log(f"* [{context}]{logmsg}")
         self.send(msg)
         return True
-
-    def start(self):
-        self.asc.mgmt.start_syslog()
