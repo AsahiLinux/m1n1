@@ -229,12 +229,15 @@ from ..fw.asc.syslog import SyslogMessage, Syslog_Init, Syslog_GetBuf, Syslog_Lo
 class Syslog(EP):
     BASE_MESSAGE = SyslogMessage
 
-    GetBuf = msg_log(1, DIR.RX, Syslog_GetBuf)
-
     @msg(8, DIR.RX, Syslog_Init)
     def Init(self, msg):
         self.state.count = msg.COUNT
         self.state.entrysize = msg.ENTRYSIZE
+
+    @msg(1, DIR.RX, Syslog_GetBuf)
+    def GetBuf(self, msg):
+        if msg.DVA:
+            self.state.syslog_buf = msg.DVA
 
     @msg(1, DIR.TX, Syslog_GetBuf)
     def GetBuf_Ack(self, msg):
