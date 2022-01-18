@@ -9,8 +9,11 @@ from m1n1.fw.smc import SMCClient
 
 smc_addr = u.adt["arm-io/smc"].get_reg(0)[0]
 smc = SMCClient(u, smc_addr, None)
+smc.verbose = 3
 
 smc.start()
 smc.start_ep(0x20)
 
 run_shell(globals(), msg="Have fun!")
+
+smc.stop()
