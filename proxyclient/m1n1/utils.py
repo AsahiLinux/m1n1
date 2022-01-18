@@ -47,6 +47,60 @@ def chexdump(s, st=0, abbreviate=True, indent="", print_fn=print):
             last = val
             skip = False
 
+_extascii_table_low = [
+    "▪", "☺", "☻", "♥", "♦", "♣", "♠", "•",
+    "◘", "○", "◙", "♂", "♀", "♪", "♫", "☼",
+    "►", "◄", "↕", "‼", "¶", "§", "▬", "↨",
+    "↑", "↓", "→", "←", "∟", "↔", "▲", "▼"]
+
+_extascii_table_high = [
+    "⌂",
+    "█", "⡀", "⢀", "⣀", "⠠", "⡠", "⢠", "⣠",
+    "⠄", "⡄", "⢄", "⣄", "⠤", "⡤", "⢤", "⣤",
+    "⠁", "⡁", "⢁", "⣁", "⠡", "⡡", "⢡", "⣡",
+    "⠅", "⡅", "⢅", "⣅", "⠥", "⡥", "⢥", "⣥",
+    "⠃", "⡃", "⢃", "⣃", "⠣", "⡣", "⢣", "⣣",
+    "⠇", "⡇", "⢇", "⣇", "⠧", "⡧", "⢧", "⣧",
+    "⠉", "⡉", "⢉", "⣉", "⠩", "⡩", "⢩", "⣩",
+    "⠍", "⡍", "⢍", "⣍", "⠭", "⡭", "⢭", "⣭",
+    "⠊", "⡊", "⢊", "⣊", "⠪", "⡪", "⢪", "⣪",
+    "⠎", "⡎", "⢎", "⣎", "⠮", "⡮", "⢮", "⣮",
+    "⠑", "⡑", "⢑", "⣑", "⠱", "⡱", "⢱", "⣱",
+    "⠕", "⡕", "⢕", "⣕", "⠵", "⡵", "⢵", "⣵",
+    "⠚", "⡚", "⢚", "⣚", "⠺", "⡺", "⢺", "⣺",
+    "⠞", "⡞", "⢞", "⣞", "⠾", "⡾", "⢾", "⣾",
+    "⠛", "⡛", "⢛", "⣛", "⠻", "⡻", "⢻", "⣻",
+    "⠟", "⡟", "⢟", "⣟", "⠿", "⡿", "⢿", "⣿"]
+
+def _extascii(s):
+    s2 = ""
+    for c in s:
+        if c < 0x20:
+            s2 += _extascii_table_low[c]
+        elif c > 0x7e:
+            s2 += _extascii_table_high[c-0x7f]
+        else:
+            s2 += chr(c)
+    return s2
+
+def ehexdump(s, st=0, abbreviate=True, indent="", print_fn=print):
+    last = None
+    skip = False
+    for i in range(0,len(s),16):
+        val = s[i:i+16]
+        if val == last and abbreviate:
+            if not skip:
+                print_fn(indent+"%08x  *" % (i + st))
+                skip = True
+        else:
+            print_fn(indent+"%08x  %s  %s  |%s|" % (
+                  i + st,
+                  hexdump(val[:8], ' ').ljust(23),
+                  hexdump(val[8:], ' ').ljust(23),
+                  _extascii(val).ljust(16)))
+            last = val
+            skip = False
+
 def chexdump32(s, st=0, abbreviate=True):
     last = None
     skip = False
