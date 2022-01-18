@@ -82,7 +82,6 @@ dcp.iboot.disp0.swapSetLayer(0, layer, (mw, mh, 0, 0), (mw, mh, 0, 0))
 dcp.iboot.disp0.swapEnd()
 #dcp.iboot.disp0.swapWait(swap.swap_id)
 
+run_shell(globals(), msg="Have fun!")
 
 dcp.stop()
-
-run_shell(globals(), msg="Have fun!")
