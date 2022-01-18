@@ -126,7 +126,6 @@ class ASCCrashLogEndpoint(ASCBaseEndpoint):
         if msg.DVA:
             self.iobuffer_dva = msg.DVA
             self.log(f"buf prealloc at dva {self.iobuffer_dva:#x}")
-            self.send(CrashLogMessage(TYPE=1, SIZE=msg.SIZE))
         else:
             self.iobuffer, self.iobuffer_dva = self.asc.ioalloc(size)
             self.log(f"buf {self.iobuffer:#x} / {self.iobuffer_dva:#x}")
