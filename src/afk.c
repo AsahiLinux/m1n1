@@ -80,8 +80,6 @@ struct epic_cmd {
     u64 txbuf;
     u32 rxlen;
     u32 txlen;
-    u8 rxcookie;
-    u8 txcookie;
 } PACKED;
 
 struct afk_epic_ep {
@@ -364,7 +362,7 @@ int afk_epic_command(afk_epic_ep_t *epic, int channel, u16 code, void *txbuf, si
     msg.hdr.version = 2;
     msg.hdr.seq = 0;
     msg.sub.length = sizeof(msg.cmd);
-    msg.sub.version = 4;
+    msg.sub.version = 3;
     msg.sub.category = CAT_COMMAND;
     msg.sub.code = code;
     msg.sub.seq = 0;
@@ -389,7 +387,7 @@ int afk_epic_command(afk_epic_ep_t *epic, int channel, u16 code, void *txbuf, si
         if (ret < 0)
             return ret;
 
-        if (rmsg->type != TYPE_REPLY) {
+        if (rmsg->type != TYPE_REPLY && rmsg->type != TYPE_NOTIFY) {
             printf("EPIC: got unexpected message type %d during command\n", rmsg->type);
             afk_epic_rx_ack(epic);
             continue;
