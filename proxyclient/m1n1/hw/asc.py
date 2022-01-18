@@ -44,6 +44,7 @@ class ASC:
         self.p = u.proxy
         self.iface = u.iface
         self.asc = ASCRegs(u, asc_base)
+        self.verbose = 0
         self.epmap = {}
 
     def send_nmi(self):
@@ -60,17 +61,19 @@ class ASC:
 
         msg0 = self.asc.OUTBOX0.val
         msg1 = R_INBOX1(self.asc.OUTBOX1.val)
-        print(f"< {msg1.EP:02x}:{msg0:#x}")
+        if self.verbose >= 3:
+            print(f"< {msg1.EP:02x}:{msg0:#x}")
         return msg0, msg1
 
     def send(self, msg0, msg1):
         self.asc.INBOX0.val = msg0
         self.asc.INBOX1.val = msg1
 
-        if isinstance(msg0, Register):
-            print(f"> {msg1.EP:02x}:{msg0}")
-        else:
-            print(f"> {msg1.EP:02x}:{msg0:#x}")
+        if self.verbose >= 3:
+            if isinstance(msg0, Register):
+                print(f"> {msg1.EP:02x}:{msg0}")
+            else:
+                print(f"> {msg1.EP:02x}:{msg0:#x}")
 
         while self.asc.INBOX_CTRL.reg.FULL:
             pass
