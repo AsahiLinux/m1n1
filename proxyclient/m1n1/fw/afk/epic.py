@@ -35,7 +35,7 @@ EPICHeader = Struct(
 
 EPICSubHeader = Struct(
     "length" / Int32ul,
-    "version" / Const(4, Int8ul),
+    "version" / Default(Int8ul, 4),
     "category" / EPICCategory,
     "type" / Hex(Int16ul),
     "timestamp" / Default(Int64ul, 0),
@@ -55,8 +55,8 @@ EPICCmd = Struct(
     "txbuf" / Hex(Int64ul),
     "rxlen" / Hex(Int32ul),
     "txlen" / Hex(Int32ul),
-    "rxcookie" / Default(Bool(Int8ul), False),
-    "txcookie" / Default(Bool(Int8ul), False),
+    "rxcookie" / Optional(Default(Bool(Int8ul), False)),
+    "txcookie" / Optional(Default(Bool(Int8ul), False)),
 )
 
 
