@@ -287,6 +287,8 @@ static bool rtkit_handle_buffer_request(rtkit_dev_t *rtk, struct rtkit_message *
             rtkit_printf("pre-allocated buffer (ep 0x%x, dva 0x%lx, phys %p)\n", msg->ep, addr,
                          bfr->bfr);
         }
+        return true;
+
     } else {
         if (!rtkit_alloc_buffer(rtk, bfr, sz)) {
             rtkit_printf("unable to allocate buffer\n");
