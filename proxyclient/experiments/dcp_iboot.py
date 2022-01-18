@@ -17,7 +17,7 @@ print(f"Framebuffer at {u.ba.video.base:#x}")
 
 dart = DART.from_adt(u, "arm-io/dart-dcp")
 disp_dart = DART.from_adt(u, "arm-io/dart-disp0")
-disp_dart.dump_all()
+#disp_dart.dump_all()
 
 dcp_addr = u.adt["arm-io/dcp"].get_reg(0)[0]
 dcp = DCPIBootClient(u, dcp_addr, dart, disp_dart)
