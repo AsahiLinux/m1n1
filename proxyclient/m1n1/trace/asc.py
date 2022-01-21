@@ -185,7 +185,7 @@ class BaseASCTracer(ADTDevTracer):
 
 ## Management endpoint
 
-from ..fw.asc.mgmt import ManagementMessage, Mgmt_EPMap, Mgmt_EPMap_Ack, Mgmt_StartEP, Mgmt_StartSyslog
+from ..fw.asc.mgmt import ManagementMessage, Mgmt_EPMap, Mgmt_EPMap_Ack, Mgmt_StartEP, Mgmt_SetAPPower
 
 class Management(EP):
     BASE_MESSAGE = ManagementMessage
@@ -219,8 +219,8 @@ class Management(EP):
 
     EPMap_Ack = msg_log(8, DIR.TX, Mgmt_EPMap_Ack)
 
-    StartSyslog = msg_log(0x0b, DIR.TX, Mgmt_StartSyslog)
-    StartSyslog_Ack = msg_log(0x0b, DIR.RX, Mgmt_StartSyslog)
+    SetAPPower = msg_log(0x0b, DIR.TX, Mgmt_SetAPPower)
+    SetAPPower_Ack = msg_log(0x0b, DIR.RX, Mgmt_SetAPPower)
 
 ## Syslog endpoint
 
