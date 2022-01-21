@@ -141,6 +141,8 @@ typedef enum {
 
     P_NVME_INIT = 0xf00,
     P_NVME_SHUTDOWN,
+    P_NVME_READ,
+    P_NVME_FLUSH,
 } ProxyOp;
 
 #define S_OK     0

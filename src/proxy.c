@@ -503,6 +503,12 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_NVME_SHUTDOWN:
             nvme_shutdown();
             break;
+        case P_NVME_READ:
+            nvme_read(request->args[0], request->args[1], (void *)request->args[2]);
+            break;
+        case P_NVME_FLUSH:
+            nvme_flush(request->args[0]);
+            break;
 
         default:
             reply->status = S_BADCMD;

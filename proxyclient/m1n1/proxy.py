@@ -588,6 +588,8 @@ class M1N1Proxy(Reloadable):
 
     P_NVME_INIT = 0xf00
     P_NVME_SHUTDOWN = 0xf01
+    P_NVME_READ = 0xf02
+    P_NVME_FLUSH = 0xf03
 
     def __init__(self, iface, debug=False):
         self.debug = debug
@@ -1011,6 +1013,10 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_NVME_INIT)
     def nvme_shutdown(self):
         return self.request(self.P_NVME_SHUTDOWN)
+    def nvme_read(self, nsid, lba, bfr):
+        return self.request(self.P_NVME_READ, nsid, lba, bfr)
+    def nvme_flush(self, nsid):
+        return self.request(self.P_NVME_FLUSH, nsid)
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
