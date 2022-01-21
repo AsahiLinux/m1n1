@@ -252,6 +252,12 @@ static inline u8 writeread8(u64 addr, u8 data)
     return read8(addr);
 }
 
+static inline void write64_lo_hi(u64 addr, u64 val)
+{
+    write32(addr, val);
+    write32(addr + 4, val >> 32);
+}
+
 #define _concat(a, _1, b, ...) a##b
 
 #define _sr_tkn_S(_0, _1, op0, op1, CRn, CRm, op2) s##op0##_##op1##_c##CRn##_c##CRm##_##op2
