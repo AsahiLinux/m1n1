@@ -97,6 +97,19 @@ void udelay(u32 d)
     sysop("isb");
 }
 
+u64 timeout_calculate(u32 usec)
+{
+    u64 delay = ((u64)usec) * mrs(CNTFRQ_EL0) / 1000000;
+    return mrs(CNTPCT_EL0) + delay;
+}
+
+bool timeout_expired(u64 timeout)
+{
+    bool expired = mrs(CNTPCT_EL0) > timeout;
+    sysop("isb");
+    return expired;
+}
+
 void flush_and_reboot(void)
 {
     iodev_console_flush();
