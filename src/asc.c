@@ -90,10 +90,8 @@ bool asc_recv(asc_dev_t *asc, struct asc_message *msg)
 
 bool asc_recv_timeout(asc_dev_t *asc, struct asc_message *msg, u32 delay_usec)
 {
-    u64 delay = ((u64)delay_usec) * mrs(CNTFRQ_EL0) / 1000000;
-    u64 val = mrs(CNTPCT_EL0);
-    while ((mrs(CNTPCT_EL0) - val) < delay) {
-        sysop("isb");
+    u64 timeout = timeout_calculate(delay_usec);
+    while (!timeout_expired(timeout)) {
         if (asc_recv(asc, msg))
             return true;
     }
