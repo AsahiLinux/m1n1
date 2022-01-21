@@ -389,12 +389,14 @@ int rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
                         break;
                     case MSG_SYSLOG_LOG:
 #ifdef RTKIT_SYSLOG
+                    {
                         u64 index = FIELD_GET(MSG_SYSLOG_LOG_INDEX, msg->msg);
                         u64 stride = rtk->syslog_size + sizeof(struct syslog_log);
                         struct syslog_log *log = rtk->syslog_bfr.bfr + stride * index;
                         rtkit_printf("syslog: [%s]%s", log->context, log->msg);
                         if (log->msg[strlen(log->msg) - 1] != '\n')
                             printf("\n");
+                    }
 #endif
                         if (!asc_send(rtk->asc, &asc_msg))
                             rtkit_printf("failed to ack syslog\n");
