@@ -12,6 +12,7 @@
 #include "heapblock.h"
 #include "mcc.h"
 #include "memory.h"
+#include "nvme.h"
 #include "payload.h"
 #include "pcie.h"
 #include "pmgr.h"
@@ -110,6 +111,7 @@ void m1n1_main(void)
 
     printf("Preparing to run next stage at %p...\n", next_stage.entry);
 
+    nvme_shutdown();
     exception_shutdown();
     usb_iodev_shutdown();
 #ifdef USE_FB
