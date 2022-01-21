@@ -375,6 +375,9 @@ void udelay(u32 d);
 void reboot(void) __attribute__((noreturn));
 void flush_and_reboot(void) __attribute__((noreturn));
 
+u64 timeout_calculate(u32 usec);
+bool timeout_expired(u64 timeout);
+
 #define SPINLOCK_ALIGN 64
 
 typedef struct {
