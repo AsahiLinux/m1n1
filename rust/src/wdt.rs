@@ -13,13 +13,13 @@ static mut WDT_ADDR: Option<NonZeroU64> = None;
 pub unsafe extern "C" fn wdt_disable() {
     let mut offsets = [0i32; 8];
     let adt = unsafe { Adt::get_default() };
-    let node = adt.path_offset_trace(b"/arm-io/wdt", &mut offsets);
+    let node = adt.path_offset_trace(b"/arm-io/wdt\0", &mut offsets);
     if node < 0 {
         println!("WDT node not found!");
         return;
     }
 
-    let addr = adt.get_reg_addr(&offsets, b"reg", 0);
+    let addr = adt.get_reg_addr(&offsets, b"reg\0", 0);
     if addr.is_err() {
         println!("Failed to get WDT reg property!");
         return;
