@@ -7,7 +7,8 @@ pub mod utils;
 pub mod wdt;
 
 #[panic_handler]
-fn panic(_: &::core::panic::PanicInfo) -> ! {
+fn panic(info: &::core::panic::PanicInfo) -> ! {
+    println!("{}", info);
     unsafe { wdt::wdt_reboot() };
     loop {}
 }
