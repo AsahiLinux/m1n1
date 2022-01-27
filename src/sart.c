@@ -117,15 +117,9 @@ sart_dev_t *sart_init(const char *adt_path)
         return NULL;
     }
 
-    unsigned int version = 0;
-    if (adt_is_compatible(adt, node, "sart,t8101")) {
-        printf("sart: SARTv2 %s at 0x%lx\n", adt_path, base);
-        version = 2;
-    } else if (adt_is_compatible(adt, node, "sart,t6000")) {
-        printf("sart: SARTv3 %s at 0x%lx\n", adt_path, base);
-        version = 3;
-    } else {
-        printf("sart: SART %s at 0x%lx with unknown version\n", adt_path, base);
+    const u32 *sart_version = adt_getprop(adt, node, "sart-version", NULL);
+    if (!sart_version) {
+        printf("sart: SART %s has no sart-version property\n", adt_path);
         return NULL;
     }
 
@@ -136,7 +130,7 @@ sart_dev_t *sart_init(const char *adt_path)
     memset(sart, 0, sizeof(*sart));
     sart->base = base;
 
-    switch (version) {
+    switch (*sart_version) {
         case 2:
             sart->get_entry = sart2_get_entry;
             sart->set_entry = sart2_set_entry;
@@ -145,7 +139,13 @@ sart_dev_t *sart_init(const char *adt_path)
             sart->get_entry = sart3_get_entry;
             sart->set_entry = sart3_set_entry;
             break;
+        default:
+            printf("sart: SART %s has unknown version %d\n", adt_path, *sart_version);
+            free(sart);
+            return NULL;
     }
+
+    printf("sart: SARTv%d %s at 0x%lx\n", *sart_version, adt_path, base);
 
     sart->protected_entries = 0;
     for (unsigned int i = 0; i < APPLE_SART_MAX_ENTRIES; ++i) {
