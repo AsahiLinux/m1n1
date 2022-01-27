@@ -25,6 +25,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install --no-install-recommends -y device-tree-compiler gcc-aarch64-linux-gnu
+        rustup target install aarch64-unknown-none-softfloat
     - name: build
       run: make -k -j2 ARCH=aarch64-linux-gnu-
     - uses: actions/upload-artifact@v2

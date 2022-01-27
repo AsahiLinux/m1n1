@@ -51,6 +51,8 @@ LIBFDT_OBJECTS := $(patsubst %,libfdt/%, \
 	fdt_addresses.o fdt_empty_tree.o fdt_ro.o fdt_rw.o fdt_strerror.o fdt_sw.o \
 	fdt_wip.o fdt.o)
 
+RUST_LIB := librust.a
+
 OBJECTS := \
 	adt.o \
 	afk.o \
@@ -94,8 +96,7 @@ OBJECTS := \
 	usb.o usb_dwc3.o \
 	utils.o utils_asm.o \
 	vsprintf.o \
-	wdt.o \
-	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS)
+	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS) $(RUST_LIB)
 
 DTS := t8103-j274.dts
 
@@ -126,6 +127,15 @@ build/dtb/%.dtb: build/dtb/%.dts
 	@echo "  DTC   $@"
 	@mkdir -p "$(dir $@)"
 	@dtc -I dts -i dts $< -o $@
+
+# FIXME
+.PHONY: build/$(RUST_LIB)
+build/$(RUST_LIB):
+	@echo "  RS    $@"
+	@mkdir -p $(DEPDIR)
+	@mkdir -p "$(dir $@)"
+	@cargo build --target aarch64-unknown-none-softfloat --lib --release --target-dir build
+	@cp "build/aarch64-unknown-none-softfloat/release/${RUST_LIB}" "$@"
 
 build/%.o: src/%.S
 	@echo "  AS    $@"
@@ -173,6 +183,8 @@ build/%.o: build/%.bin
 build/%.bin: font/%.bin
 	@echo "  CP    $@"
 	@cp $< $@
+
+build/rust.o:
 
 build/main.o: build/build_tag.h src/main.c
 build/usb_dwc3.o: build/build_tag.h src/usb_dwc3.c
