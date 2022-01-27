@@ -4,10 +4,10 @@ use core::ptr::null_mut;
 extern "C" {
     static mut adt: *mut c_void;
 
-    fn adt_path_offset_trace(adt: *const c_void, path: *const i8, offsets: *mut isize) -> isize;
+    fn adt_path_offset_trace(adt: *const c_void, path: *const i8, offsets: *mut i32) -> isize;
     fn adt_get_reg(
         adt: *const c_void,
-        path: *const isize,
+        path: *const i32,
         prop: *const i8,
         idx: isize,
         addr: *mut u64,
@@ -29,7 +29,7 @@ impl Adt {
 
     pub fn get_reg(
         &self,
-        path: &[isize],
+        path: &[i32],
         prop: &[u8],
         idx: isize,
         addr: &mut u64,
@@ -54,7 +54,7 @@ impl Adt {
     }
 
     // TODO: return error with some sort of Error type
-    pub fn path_offset_trace(&self, path: &[u8], offsets: &mut [isize]) -> isize {
+    pub fn path_offset_trace(&self, path: &[u8], offsets: &mut [i32]) -> isize {
         unsafe {
             adt_path_offset_trace(
                 self.as_ptr(),
@@ -64,7 +64,7 @@ impl Adt {
         }
     }
 
-    pub fn get_reg_addr(&self, path: &[isize], prop: &[u8], idx: isize) -> Result<u64, ()> {
+    pub fn get_reg_addr(&self, path: &[i32], prop: &[u8], idx: isize) -> Result<u64, ()> {
         let mut addr = 0;
 
         let ret = self.get_reg(path, prop, idx, &mut addr, None);
