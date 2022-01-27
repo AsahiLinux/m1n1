@@ -95,9 +95,9 @@ static bool sart3_set_entry(sart_dev_t *sart, int index, u8 flags, void *paddr_,
     if (size > APPLE_SART3_SIZE_MAX)
         return false;
 
-    write32(paddr, sart->base + APPLE_SART3_PADDR(index));
-    write32(size, sart->base + APPLE_SART3_SIZE(index));
-    write32(flags, sart->base + APPLE_SART3_CONFIG(index));
+    write32(sart->base + APPLE_SART3_PADDR(index), paddr);
+    write32(sart->base + APPLE_SART3_SIZE(index), size);
+    write32(sart->base + APPLE_SART3_CONFIG(index), flags);
 
     return true;
 }
