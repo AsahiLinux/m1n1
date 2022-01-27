@@ -45,7 +45,9 @@
 #define NVMMU_TCB_INVAL 0x28118
 #define NVMMU_TCB_STAT  0x29120
 
+#define NVME_ADMIN_CMD_DELETE_SQ 0x00
 #define NVME_ADMIN_CMD_CREATE_SQ 0x01
+#define NVME_ADMIN_CMD_DELETE_CQ 0x04
 #define NVME_ADMIN_CMD_CREATE_CQ 0x05
 #define NVME_QUEUE_CONTIGUOUS    BIT(0)
 
@@ -360,15 +362,22 @@ bool nvme_init(void)
     cmd.cdw11 |= 1 << 16; // cq id for this sq
     if (!nvme_exec_command(&adminq, &cmd, NULL)) {
         printf("nvme: create sq command failed\n");
-        goto out_disable_ctrl;
+        goto out_delete_cq;
     }
 
     nvme_initialized = true;
     printf("nvme: initialized at 0x%lx\n", nvme_base);
     return true;
 
+out_delete_cq:
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.opcode = NVME_ADMIN_CMD_DELETE_CQ;
+    cmd.cdw10 = 1; // cq id
+    if (!nvme_exec_command(&adminq, &cmd, NULL))
+        printf("nvme: delete cq command failed\n");
 out_disable_ctrl:
     nvme_ctrl_disable();
+    nvme_poll_syslog();
 out_shutdown:
     rtkit_sleep(nvme_rtkit);
     pmgr_reset("ANS2");
@@ -391,6 +400,20 @@ void nvme_shutdown(void)
         printf("nvme: trying to shut down but not initialized\n");
         return;
     }
+
+    struct nvme_command cmd;
+
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.opcode = NVME_ADMIN_CMD_DELETE_SQ;
+    cmd.cdw10 = 1; // sq id
+    if (!nvme_exec_command(&adminq, &cmd, NULL))
+        printf("nvme: delete sq command failed\n");
+
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.opcode = NVME_ADMIN_CMD_DELETE_CQ;
+    cmd.cdw10 = 1; // cq id
+    if (!nvme_exec_command(&adminq, &cmd, NULL))
+        printf("nvme: delete cq command failed\n");
 
     nvme_ctrl_disable();
     rtkit_sleep(nvme_rtkit);
