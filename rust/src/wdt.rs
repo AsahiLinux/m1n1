@@ -31,7 +31,7 @@ pub unsafe extern "C" fn wdt_disable() {
 
     unsafe { write32(addr + WDT_CTL, 0) };
 
-    println!("WDT disabled\n");
+    println!("WDT disabled");
 }
 
 #[no_mangle]
