@@ -1,4 +1,5 @@
 use crate::adt::Adt;
+use crate::println;
 use crate::utils::write32;
 use core::num::NonZeroU64;
 
@@ -14,27 +15,23 @@ pub unsafe extern "C" fn wdt_disable() {
     let adt = unsafe { Adt::get_default() };
     let node = adt.path_offset_trace(b"/arm-io/wdt", &mut path);
     if node < 0 {
-        // TODO: print warning
-        // printf("WDT node not found!\n");
+        println!("WDT node not found!");
         return;
     }
 
     let addr = adt.get_reg_addr(&path, b"reg", 0);
     if addr.is_err() {
-        // TODO: pprint warning
-        // printf("Failed to get WDT reg property!\n");
+        println!("Failed to get WDT reg property!");
         return;
     }
     let addr = addr.unwrap();
     unsafe { WDT_ADDR = NonZeroU64::new(addr) };
 
-    // TODO: print info
-    // printf("WDT registers @ 0x%lx\n", wdt_base);
+    println!("WDT registers @ {:#02x?}", addr);
 
-    write32(addr + WDT_CTL, 0);
+    unsafe { write32(addr + WDT_CTL, 0) };
 
-    // TODO: print warning
-    // printf("WDT disabled\n");
+    println!("WDT disabled\n");
 }
 
 #[no_mangle]
@@ -43,8 +40,10 @@ pub unsafe extern "C" fn wdt_reboot() {
 
     if let Some(wdt_base) = wdt_base {
         let wdt_base = wdt_base.get();
-        write32(wdt_base + WDT_ALARM, 0x100000);
-        write32(wdt_base + WDT_COUNT, 0);
-        write32(wdt_base + WDT_CTL, 4);
+        unsafe {
+            write32(wdt_base + WDT_ALARM, 0x100000);
+            write32(wdt_base + WDT_COUNT, 0);
+            write32(wdt_base + WDT_CTL, 4);
+        }
     }
 }
