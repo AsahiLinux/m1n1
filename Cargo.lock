@@ -3,5 +3,23 @@
 version = 3
 
 [[package]]
+name = "block_device"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d73c55835cc76243c11580a55eff3f31250b00105a744015b8957ed4203fb8ad"
+
+[[package]]
+name = "fat32"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04ade4c8dc650037c07d4d1d3329851b8bdbab0da8d2b83ac5d7114174702c17"
+dependencies = [
+ "block_device",
+]
+
+[[package]]
 name = "rust"
 version = "0.1.0"
+dependencies = [
+ "fat32",
+]
