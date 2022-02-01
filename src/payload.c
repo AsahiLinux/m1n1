@@ -18,8 +18,9 @@
 static const u8 gz_magic[] = {0x1f, 0x8b};
 static const u8 xz_magic[] = {0xfd, '7', 'z', 'X', 'Z', 0x00};
 static const u8 fdt_magic[] = {0xd0, 0x0d, 0xfe, 0xed};
-static const u8 kernel_magic[] = {'A', 'R', 'M', 0x64};   // at 0x38
-static const u8 cpio_magic[] = {'0', '7', '0', '7', '0'}; // '1' or '2' next
+static const u8 kernel_magic[] = {'A', 'R', 'M', 0x64};          // at 0x38
+static const u8 cpio_magic[] = {'0', '7', '0', '7', '0'};        // '1' or '2' next
+static const u8 img4_magic[] = {0x16, 0x04, 'I', 'M', 'G', '4'}; // IA5String 'IMG4'
 static const u8 empty[] = {0, 0, 0, 0};
 
 static char expect_compatible[256];
@@ -192,7 +193,8 @@ static void *load_one_payload(void *start, size_t size)
         return load_kernel(p, size);
     } else if (check_var(&p)) {
         return p;
-    } else if (!memcmp(p, empty, sizeof empty)) {
+    } else if (!memcmp(p, empty, sizeof empty) ||
+               !memcmp(p + 0x05, img4_magic, sizeof img4_magic)) { // SEPFW after m1n1
         printf("No more payloads at %p\n", p);
         return NULL;
     } else {
