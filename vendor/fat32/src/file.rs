@@ -1,7 +1,7 @@
 use core::cmp;
 use block_device::BlockDevice;
 use crate::bpb::BIOSParameterBlock;
-use crate::directory_item::DirectoryItem;
+use crate::entry::Entry;
 use crate::fat::FAT;
 use crate::BUFFER_SIZE;
 use crate::dir::DirIter;
@@ -27,7 +27,7 @@ pub struct File<'a, T>
     pub(crate) device: T,
     pub(crate) bpb: &'a BIOSParameterBlock,
     pub(crate) dir_cluster: u32,
-    pub(crate) detail: DirectoryItem,
+    pub(crate) detail: Entry,
     pub(crate) fat: FAT<T>,
 }
 
@@ -47,6 +47,10 @@ pub struct ReadIter<'a, T>
 impl<'a, T> File<'a, T>
     where T: BlockDevice + Clone + Copy,
           <T as BlockDevice>::Error: core::fmt::Debug {
+    /// Returns file length
+    pub fn length(&self) -> usize {
+        self.detail.length().unwrap()
+    }
     /// Read File To Buffer, Return File Length
     pub fn read(&self, buf: &mut [u8]) -> Result<usize, FileError> {
         let length = self.detail.length().unwrap();

@@ -1,6 +1,6 @@
 use block_device::BlockDevice;
 use crate::bpb::BIOSParameterBlock;
-use crate::directory_item::DirectoryItem;
+use crate::entry::Entry;
 use crate::BUFFER_SIZE;
 use crate::tool::{
     is_illegal,
@@ -9,7 +9,7 @@ use crate::tool::{
     get_lfn_index,
     generate_checksum,
 };
-use crate::directory_item::NameType;
+use crate::entry::NameType;
 use crate::file::File;
 use crate::fat::FAT;
 
@@ -36,7 +36,7 @@ pub struct Dir<'a, T>
           <T as BlockDevice>::Error: core::fmt::Debug {
     pub(crate) device: T,
     pub(crate) bpb: &'a BIOSParameterBlock,
-    pub(crate) detail: DirectoryItem,
+    pub(crate) detail: Entry,
     pub(crate) fat: FAT<T>,
 }
 
@@ -107,7 +107,7 @@ impl<'a, T> Dir<'a, T>
     }
 
     /// Check if file or dir is exist or not, Return Option Type
-    pub fn exist(&self, value: &str) -> Option<DirectoryItem> {
+    pub fn exist(&self, value: &str) -> Option<Entry> {
         let mut iter = DirIter::new(self.device, self.fat, self.bpb);
 
         match sfn_or_lfn(value) {
@@ -117,7 +117,7 @@ impl<'a, T> Dir<'a, T>
     }
 
     /// Check if file or dir is exist or not through DirIter<T>, Return Option Type
-    pub fn exist_iter(&self, iter: &mut DirIter<T>, value: &str) -> Option<DirectoryItem> {
+    pub fn exist_iter(&self, iter: &mut DirIter<T>, value: &str) -> Option<Entry> {
         match sfn_or_lfn(value) {
             NameType::SFN => iter.find(|d| d.sfn_equal(value)),
             NameType::LFN => self.find_lfn(iter, value),
@@ -125,7 +125,7 @@ impl<'a, T> Dir<'a, T>
     }
 
     /// Find Long File Name Item, Return Option Type
-    fn find_lfn(&self, iter: &mut DirIter<T>, value: &str) -> Option<DirectoryItem> {
+    fn find_lfn(&self, iter: &mut DirIter<T>, value: &str) -> Option<Entry> {
         let count = get_count_of_lfn(value);
         let mut index = get_lfn_index(value, count);
         let mut has_match = true;
@@ -172,9 +172,9 @@ impl<'a, T> Dir<'a, T>
 
         match sfn_or_lfn(value) {
             NameType::SFN => {
-                let di = DirectoryItem::new_sfn(blank_cluster,
-                                                value,
-                                                create_type);
+                let di = Entry::new_sfn(blank_cluster,
+                                        value,
+                                        create_type);
                 self.write_directory_item(di);
             }
             NameType::LFN => {
@@ -183,24 +183,24 @@ impl<'a, T> Dir<'a, T>
                 let count = get_count_of_lfn(value);
                 let mut lfn_index = get_lfn_index(value, count);
 
-                let di = DirectoryItem::new_lfn((count as u8) | (1 << 6),
-                                                check_sum,
-                                                &value[lfn_index..]);
+                let di = Entry::new_lfn((count as u8) | (1 << 6),
+                                        check_sum,
+                                        &value[lfn_index..]);
 
                 self.write_directory_item(di);
 
                 for c in (1..count).rev() {
                     let value = &value[0..lfn_index];
                     lfn_index = get_lfn_index(value, c);
-                    let di = DirectoryItem::new_lfn(c as u8,
-                                                    check_sum,
-                                                    &value[lfn_index..]);
+                    let di = Entry::new_lfn(c as u8,
+                                            check_sum,
+                                            &value[lfn_index..]);
                     self.write_directory_item(di);
                 }
 
-                let di = DirectoryItem::new_sfn_bytes(blank_cluster,
-                                                      sfn,
-                                                      create_type);
+                let di = Entry::new_sfn_bytes(blank_cluster,
+                                              sfn,
+                                              create_type);
                 self.write_directory_item(di);
             }
         }
@@ -271,7 +271,7 @@ impl<'a, T> Dir<'a, T>
     }
 
     /// Write Directory Item
-    fn write_directory_item(&self, di: DirectoryItem) {
+    fn write_directory_item(&self, di: Entry) {
         let mut iter = DirIter::new(self.device, self.fat, self.bpb);
         iter.find(|_| false);
         iter.update_item(&di.bytes());
@@ -295,10 +295,10 @@ impl<'a, T> Dir<'a, T>
 
         let mut value = [0x20; 11];
         value[0] = b'.';
-        let mut di = DirectoryItem::new_sfn_bytes(cluster, &value, OpType::Dir);
+        let mut di = Entry::new_sfn_bytes(cluster, &value, OpType::Dir);
         buffer[0..32].copy_from_slice(&di.bytes());
         value[1] = b'.';
-        di = DirectoryItem::new_sfn_bytes(self.detail.cluster(), &value, OpType::Dir);
+        di = Entry::new_sfn_bytes(self.detail.cluster(), &value, OpType::Dir);
         buffer[32..64].copy_from_slice(&di.bytes());
 
         let offset = self.bpb.offset(cluster);
@@ -450,7 +450,7 @@ impl<'a, T> DirIter<'a, T>
 impl<'a, T> Iterator for DirIter<'a, T>
     where T: BlockDevice + Clone + Copy,
           <T as BlockDevice>::Error: core::fmt::Debug {
-    type Item = DirectoryItem;
+    type Item = Entry;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index == 0 { self.update_buffer(); }
@@ -462,7 +462,7 @@ impl<'a, T> Iterator for DirIter<'a, T>
             self.next()
         } else {
             let buf = self.get_part_buf();
-            let di = DirectoryItem::from_buf(buf);
+            let di = Entry::from_buf(buf);
             self.offset_index();
             Some(di)
         }

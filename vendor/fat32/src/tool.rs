@@ -1,7 +1,7 @@
 use core::convert::TryInto;
 use core::str;
 use crate::BUFFER_SIZE;
-use crate::directory_item::NameType;
+use crate::entry::NameType;
 
 pub(crate) fn is_fat32(value: &[u8]) -> bool {
     let file_system_str = str::from_utf8(&value[0..5]).unwrap();

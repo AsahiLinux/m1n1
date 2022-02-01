@@ -8,47 +8,47 @@ pub(crate) enum NameType {
 }
 
 #[derive(Copy, Clone, Debug, PartialOrd, PartialEq)]
-pub enum ItemType {
+pub enum EntryType {
     Dir,
     File,
     LFN,
     Deleted,
 }
 
-impl ItemType {
-    fn from_value(value: u8) -> ItemType {
+impl EntryType {
+    fn from_value(value: u8) -> EntryType {
         if (value & 0x10) == 0x10 {
-            ItemType::Dir
+            EntryType::Dir
         } else if value == 0x0F {
-            ItemType::LFN
+            EntryType::LFN
         } else {
-            ItemType::File
+            EntryType::File
         }
     }
 
-    fn from_create(value: OpType) -> ItemType {
+    fn from_create(value: OpType) -> EntryType {
         match value {
-            OpType::Dir => ItemType::Dir,
-            OpType::File => ItemType::File
+            OpType::Dir => EntryType::Dir,
+            OpType::File => EntryType::File
         }
     }
 }
 
-impl Default for ItemType {
+impl Default for EntryType {
     fn default() -> Self {
-        ItemType::Dir
+        EntryType::Dir
     }
 }
 
 #[derive(Default, Copy, Clone, Debug)]
-pub struct ShortDirectoryItem {
+pub struct ShortDirectoryEntry {
     name: [u8; 8],
     extension: [u8; 3],
     length: u32,
     cluster: u32,
 }
 
-impl ShortDirectoryItem {
+impl ShortDirectoryEntry {
     fn new(cluster: u32, value: &str, create_type: OpType) -> Self {
         let (name, extension) = match value.find('.') {
             Some(i) => (&value[0..i], &value[i + 1..]),
@@ -74,7 +74,7 @@ impl ShortDirectoryItem {
             OpType::File => item[0x10] = 0x20,
         }
 
-        ShortDirectoryItem::from_buf(&item)
+        ShortDirectoryEntry::from_buf(&item)
     }
 
     fn new_bytes(cluster: u32, value: &[u8], create_type: OpType) -> Self {
@@ -92,7 +92,7 @@ impl ShortDirectoryItem {
             OpType::File => item[0x10] = 0x20,
         }
 
-        ShortDirectoryItem::from_buf(&item)
+        ShortDirectoryEntry::from_buf(&item)
     }
 
     fn root_dir(cluster: u32) -> Self {
@@ -146,7 +146,7 @@ impl ShortDirectoryItem {
         (full_name, len)
     }
 
-    fn bytes(&self, item_type: ItemType) -> [u8; 32] {
+    fn bytes(&self, item_type: EntryType) -> [u8; 32] {
         let mut item = [0; 32];
 
         item[0x00..0x08].copy_from_slice(&self.name);
@@ -164,10 +164,10 @@ impl ShortDirectoryItem {
         item[0x1C..0x20].copy_from_slice(&length);
 
         match item_type {
-            ItemType::Dir => item[0x0B] = 0x10,
-            ItemType::File => item[0x0B] = 0x20,
-            ItemType::LFN => item[0x0B] = 0x0F,
-            ItemType::Deleted => item[0x00] = 0xE5
+            EntryType::Dir => item[0x0B] = 0x10,
+            EntryType::File => item[0x0B] = 0x20,
+            EntryType::LFN => item[0x0B] = 0x0F,
+            EntryType::Deleted => item[0x00] = 0xE5
         }
 
         item
@@ -175,7 +175,7 @@ impl ShortDirectoryItem {
 }
 
 #[derive(Default, Copy, Clone, Debug)]
-pub struct LongDirectoryItem {
+pub struct LongDirectoryEntry {
     attribute: u8,
     check_sum: u8,
     unicode_part1: [u8; 10],
@@ -183,13 +183,13 @@ pub struct LongDirectoryItem {
     unicode_part3: [u8; 4],
 }
 
-impl LongDirectoryItem {
+impl LongDirectoryEntry {
     fn new(attribute: u8, check_sum: u8, value: &str) -> Self {
         let mut buf = [0; 32];
         buf[0x00] = attribute;
         buf[0x0D] = check_sum;
-        LongDirectoryItem::write_unicode(value, &mut buf);
-        LongDirectoryItem::from_buf(&buf)
+        LongDirectoryEntry::write_unicode(value, &mut buf);
+        LongDirectoryEntry::from_buf(&buf)
     }
 
     fn write_unicode(value: &str, buf: &mut [u8]) {
@@ -303,13 +303,13 @@ impl LongDirectoryItem {
 }
 
 #[derive(Default, Copy, Clone, Debug)]
-pub struct DirectoryItem {
-    pub(crate) item_type: ItemType,
-    sfn: Option<ShortDirectoryItem>,
-    lfn: Option<LongDirectoryItem>,
+pub struct Entry {
+    pub(crate) item_type: EntryType,
+    sfn: Option<ShortDirectoryEntry>,
+    lfn: Option<LongDirectoryEntry>,
 }
 
-impl DirectoryItem {
+impl Entry {
     pub(crate) fn cluster(&self) -> u32 {
         self.sfn.unwrap().cluster
     }
@@ -364,54 +364,54 @@ impl DirectoryItem {
 
     pub(crate) fn new_lfn(attribute: u8, check_sum: u8, value: &str) -> Self {
         Self {
-            item_type: ItemType::LFN,
+            item_type: EntryType::LFN,
             sfn: None,
-            lfn: Some(LongDirectoryItem::new(attribute, check_sum, value)),
+            lfn: Some(LongDirectoryEntry::new(attribute, check_sum, value)),
         }
     }
 
     pub(crate) fn new_sfn(cluster: u32, value: &str, create_type: OpType) -> Self {
         Self {
-            item_type: ItemType::from_create(create_type),
-            sfn: Some(ShortDirectoryItem::new(cluster, value, create_type)),
+            item_type: EntryType::from_create(create_type),
+            sfn: Some(ShortDirectoryEntry::new(cluster, value, create_type)),
             lfn: None,
         }
     }
 
     pub(crate) fn new_sfn_bytes(cluster: u32, value: &[u8], create_type: OpType) -> Self {
         Self {
-            item_type: ItemType::from_create(create_type),
-            sfn: Some(ShortDirectoryItem::new_bytes(cluster, value, create_type)),
+            item_type: EntryType::from_create(create_type),
+            sfn: Some(ShortDirectoryEntry::new_bytes(cluster, value, create_type)),
             lfn: None,
         }
     }
 
     pub(crate) fn root_dir(cluster: u32) -> Self {
         Self {
-            sfn: Some(ShortDirectoryItem::root_dir(cluster)),
+            sfn: Some(ShortDirectoryEntry::root_dir(cluster)),
             ..Self::default()
         }
     }
 
     pub(crate) fn from_buf(buf: &[u8]) -> Self {
         let item_type = if buf[0x00] == 0xE5 {
-            ItemType::Deleted
+            EntryType::Deleted
         } else {
-            ItemType::from_value(buf[0x0B])
+            EntryType::from_value(buf[0x0B])
         };
 
         match item_type {
-            ItemType::LFN => {
+            EntryType::LFN => {
                 Self {
                     item_type,
                     sfn: None,
-                    lfn: Some(LongDirectoryItem::from_buf(buf)),
+                    lfn: Some(LongDirectoryEntry::from_buf(buf)),
                 }
             }
             _ => {
                 Self {
                     item_type,
-                    sfn: Some(ShortDirectoryItem::from_buf(buf)),
+                    sfn: Some(ShortDirectoryEntry::from_buf(buf)),
                     lfn: None,
                 }
             }
@@ -447,18 +447,18 @@ impl DirectoryItem {
     }
 
     pub(crate) fn is_lfn(&self) -> bool {
-        ItemType::LFN == self.item_type
+        EntryType::LFN == self.item_type
     }
 
     pub(crate) fn is_deleted(&self) -> bool {
-        ItemType::Deleted == self.item_type
+        EntryType::Deleted == self.item_type
     }
 
     pub(crate) fn is_dir(&self) -> bool {
-        ItemType::Dir == self.item_type
+        EntryType::Dir == self.item_type
     }
 
     pub(crate) fn is_file(&self) -> bool {
-        ItemType::File == self.item_type
+        EntryType::File == self.item_type
     }
 }

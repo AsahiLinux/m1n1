@@ -1,4 +1,8 @@
+# News
+This crate has stopped updating, please use [rust-fatfs](https://github.com/rafalh/rust-fatfs).
+
 # FAT32 FileSystem Library
+[![crates.io version](https://img.shields.io/crates/v/fat32.svg)](https://crates.io/crates/fat32)
 
 This is FAT32 FileSystem Library, which is `#![no_std]` and does not use `alloc`.
  
@@ -90,7 +94,7 @@ let card = Card::init().unwrap();
 // Volume from fat32 crate
 let cont = Volume::new(card);
 // cd root dir
-let root = cont.root_dir();
+let mut root = cont.root_dir();
 // create file named test.txt
 root.create_file("test.txt").unwrap();
 // open file

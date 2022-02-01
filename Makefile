@@ -59,6 +59,7 @@ OBJECTS := \
 	aic.o \
 	asc.o \
 	bootlogo_128.o bootlogo_256.o \
+	chainload.o \
 	chickens.o \
 	cpufreq.o \
 	dart.o \

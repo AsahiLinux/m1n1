@@ -4,6 +4,7 @@
 
 #include "adt.h"
 #include "aic.h"
+#include "chainload.h"
 #include "cpufreq.h"
 #include "display.h"
 #include "exception.h"
@@ -58,6 +59,11 @@ void get_device_info(void)
 
 void run_actions(void)
 {
+    printf("Checking for update on ssd\n");
+    if (!nvme_init()) {
+	printf("nvme init fail\n");
+    }
+    do_chainload();
     printf("Checking for payloads...\n");
 
     if (payload_run() == 0) {

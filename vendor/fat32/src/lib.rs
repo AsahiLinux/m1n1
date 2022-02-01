@@ -3,7 +3,7 @@ pub mod bpb;
 pub mod volume;
 pub mod tool;
 pub mod dir;
-pub mod directory_item;
+pub mod entry;
 pub mod file;
 pub mod fat;
 
@@ -15,6 +15,14 @@ const BUFFER_SIZE: usize = 1024;
 const BUFFER_SIZE: usize = 2048;
 #[cfg(feature = "4096")]
 const BUFFER_SIZE: usize = 4096;
+#[cfg(feature = "8192")]
+const BUFFER_SIZE: usize = 8192;
+#[cfg(feature = "16384")]
+const BUFFER_SIZE: usize = 16384;
+#[cfg(feature = "32768")]
+const BUFFER_SIZE: usize = 32768;
+#[cfg(feature = "65536")]
+const BUFFER_SIZE: usize = 65536;
 
 #[cfg(test)]
 #[cfg(windows)]
