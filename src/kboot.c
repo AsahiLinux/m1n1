@@ -43,6 +43,183 @@ static char *chosen_params[MAX_CHOSEN_PARAMS][2];
         goto err;                                                                                  \
     } while (0)
 
+static dart_dev_t *dt_find_dart_by_dev_phandle(u32 phandle)
+{
+    int node = fdt_node_offset_by_phandle(dt, phandle);
+    if (node < 0) {
+        printf("FDT: node for phandle %u not found\n", phandle);
+        return NULL;
+    }
+
+    int len;
+    const void *prop = fdt_getprop(dt, node, "iommus", &len);
+    if (!prop || len != 8) {
+        printf("FDT: unexpected 'iommus' prop / len %d\n", len);
+        return NULL;
+    }
+
+    const fdt32_t *iommus = prop;
+    u32 iommu_phandle = fdt32_ld(&iommus[0]);
+    u8 iommu_stream = fdt32_ld(&iommus[1]);
+
+    return dart_init_fdt(dt, iommu_phandle, iommu_stream, true);
+}
+
+u64 dart_get_mapping(dart_dev_t *dart, const char *path, u64 paddr, size_t size)
+{
+    u64 iova = dart_search(dart, (void *)paddr);
+    if (DART_IS_ERR(iova)) {
+        printf("ADT: %s paddr: 0x%lx is not mapped\n", path, paddr);
+        return iova;
+    }
+
+    u64 pend = (u64)dart_translate(dart, iova + size - 1);
+    if (pend != (paddr + size - 1)) {
+        printf("ADT: %s is not continuously mapped: 0x%lx\n", path, pend);
+        return DART_PTR_ERR;
+    }
+
+    return iova;
+}
+
+typedef struct iommu_map {
+    u32 phandle;
+    u64 iova;
+    u64 size;
+} PACKED iommu_map_t;
+
+#define MAX_MAPPINGS 2
+
+static int dt_set_reserved_mem(const char *path, const char *name, u64 paddr, u64 size)
+{
+    char fbname[128];
+    snprintf(fbname, sizeof(fbname), "%s/%s", path, name);
+
+    int node = fdt_path_offset(dt, fbname);
+    if (node < 0)
+        bail("FDT: %s path not found in device tree\n", fbname);
+
+    snprintf(fbname, sizeof(fbname), "%s@%lx", name, paddr);
+
+    u64 fbreg[2] = {cpu_to_fdt64(paddr), cpu_to_fdt64(size)};
+    if (fdt_setprop(dt, node, "reg", fbreg, sizeof(fbreg)))
+        bail("FDT: couldn't set node.reg property\n");
+
+    if (fdt_set_name(dt, node, fbname))
+        bail("FDT: couldn't set node name\n");
+
+    iommu_map_t map[MAX_MAPPINGS];
+    int len;
+    const void *prop = fdt_getprop(dt, node, "iommu-addresses", &len);
+    if (!prop || len < 0)
+        bail("FDT: failed to get 'iommu-addresses' property for '%s/%s'\n", path, name);
+
+    u32 num_mappings = len / sizeof(iommu_map_t);
+    if ((u32)len != num_mappings * sizeof(iommu_map_t) || num_mappings > MAX_MAPPINGS)
+        bail("FDT: unexpected length of %d for prepared propterty 'iommu-addresses'\n", len);
+
+    const iommu_map_t *iomap = prop;
+    for (u32 idx = 0; idx < num_mappings; ++idx) {
+        u32 phandle = fdt32_ld(&iomap[idx].phandle);
+
+        dart_dev_t *dart = dt_find_dart_by_dev_phandle(phandle);
+        if (!dart)
+            bail("FDT: node for phandle %u not found in 'iommu-addresses'\n", phandle);
+
+        u64 iova = dart_get_mapping(dart, name, paddr, size);
+        dart_shutdown(dart);
+        if (DART_IS_ERR(iova)) {
+            bail("ADT: no mapping found for 0x%012lx iova:0x%08lx)\n", paddr, iova);
+        }
+
+        map[idx].phandle = cpu_to_fdt32(phandle);
+        map[idx].iova = cpu_to_fdt64(iova);
+        map[idx].size = cpu_to_fdt64(size);
+    }
+
+    int ret = fdt_setprop_inplace(dt, node, "iommu-addresses", map, num_mappings * sizeof(*map));
+    if (ret < 0)
+        bail("FDT: failed to replace 'iommu-addresses' for '%s/%s'\n", path, name);
+
+    fdt_delprop(dt, node, "status"); // may fail if it does not exist
+
+    return 0;
+}
+
+static int dt_dart_reserve_vram(void)
+{
+    int ret = 0;
+    u64 paddr, size;
+    int adt_path[4];
+    int node = adt_path_offset_trace(adt, "/vram", adt_path);
+
+    if (node < 0)
+        bail("ADT: '/vram' not found\n");
+
+    int pp = 0;
+    while (adt_path[pp])
+        pp++;
+    adt_path[pp + 1] = 0;
+
+    ret = adt_get_reg(adt, adt_path, "reg", 0, &paddr, &size);
+    if (ret < 0)
+        bail("ADT: failed to read /vram/reg\n");
+
+    ret = dt_set_reserved_mem("/reserved-memory", "vram", paddr, size);
+    if (ret < 0)
+        bail("ADT: failed to fill /reserved-memory/vram\n");
+
+    return 0;
+}
+
+struct disp_mapping {
+    char region_adt[24];
+    char mem_fdt[24];
+};
+
+static struct disp_mapping disp_reserved_regions[] = {
+    {"region-id-50", "dcp_text"},
+    {"region-id-57", "dcp_data"},
+    // The 2 following regions are mapped in dart-dcp sid 0 and dart-disp0 sid 0 and 4
+    // unclear if they are needed.
+    {"region-id-94", "region94"},
+    {"region-id-95", "region95"},
+    // used on M1 Pro/Max/Ultra, mapped to dcp and disp0
+    {"region-id-157", "region157"},
+};
+
+#define ARRAY_SIZE(s) (sizeof(s) / sizeof((s)[0]))
+
+static int dt_carveout_reserved_regions(struct disp_mapping *maps, u32 num_maps)
+{
+    int node = adt_path_offset(adt, "/chosen/carveout-memory-map");
+    if (node < 0)
+        bail("ADT: '/chosen/carveout-memory-map' not found\n");
+
+    for (unsigned i = 0; i < num_maps; i++) {
+
+        int ret;
+        u64 phys_map[2];
+        struct disp_mapping *map = &maps[i];
+        const char *name = map->region_adt;
+
+        ret = ADT_GETPROP_ARRAY(adt, node, name, phys_map);
+        if (ret != sizeof(phys_map)) {
+            printf("ADT: could not get carveout memory %s\n", name);
+            continue;
+        }
+
+        u64 paddr = phys_map[0];
+        u64 size = phys_map[1];
+
+        ret = dt_set_reserved_mem("/reserved-memory", map->mem_fdt, paddr, size);
+        if (ret < 0)
+            printf("ADT: failed to fill /reserved-memory/%s\n", map->mem_fdt);
+    }
+
+    return 0;
+}
+
 void get_notchless_fb(u64 *fb_base, u64 *fb_height)
 {
     *fb_base = cur_boot_args.video.base;
@@ -235,8 +412,16 @@ static int dt_set_chosen(void)
 
         printf("FDT: %s base 0x%lx size 0x%lx\n", fbname, fb_base, fb_size);
 
-        // We do not need to reserve the framebuffer, as it will be excluded from the usable RAM
-        // range already.
+        // Add "/vram" (should hold the framebuffer) as reserved memory.
+        // Required to avoid display processor lockups on DCP probe.
+
+        // check if the FDT has "/reserved-memory" node and fail silently if notch
+
+        int rnode = fdt_path_offset(dt, "/reserved-memory");
+        if (rnode >= 0) {
+            dt_dart_reserve_vram();
+            dt_carveout_reserved_regions(disp_reserved_regions, ARRAY_SIZE(disp_reserved_regions));
+        }
     }
 
     int ipd = adt_path_offset(adt, "/arm-io/spi3/ipd");
