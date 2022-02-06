@@ -322,7 +322,7 @@ void fb_init(void)
     fb.height = cur_boot_args.video.height;
     fb.depth = cur_boot_args.video.depth & FB_DEPTH_MASK;
     fb.size = cur_boot_args.video.stride * cur_boot_args.video.height;
-    printf("fb init: %dx%d (%d) [s=%d] @%p\n", fb.width, fb.height, fb.depth, fb.stride, fb.ptr);
+    printf("fb init: %dx%d (%d) [s=%d] @%p\n", fb.width, fb.height, fb.depth, fb.stride, fb.hwptr);
 
     mmu_add_mapping(cur_boot_args.video.base, cur_boot_args.video.base, ALIGN_UP(fb.size, 0x4000),
                     MAIR_IDX_FRAMEBUFFER, PERM_RW);
