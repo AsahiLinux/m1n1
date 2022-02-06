@@ -80,7 +80,7 @@ static void i2c_xfer_start_read(i2c_dev_t *dev, u8 addr, size_t len)
 static size_t i2c_xfer_read(i2c_dev_t *dev, u8 *bfr, size_t len)
 {
     for (size_t i = 0; i < len; ++i) {
-        u32 timeout = 1000;
+        u32 timeout = 5000;
         u32 val;
 
         do {
@@ -117,7 +117,7 @@ static int i2c_xfer_write(i2c_dev_t *dev, u8 addr, u32 start, u32 stop, const u8
     if (!stop)
         return 0;
 
-    if (poll32(dev->base + PASEMI_STATUS, PASEMI_STATUS_XFER_BUSY, 0, 1000)) {
+    if (poll32(dev->base + PASEMI_STATUS, PASEMI_STATUS_XFER_BUSY, 0, 50000)) {
         printf(
             "i2c: timeout while waiting for PASEMI_STATUS_XFER_BUSY to clear after write xfer\n");
         return -1;
@@ -151,7 +151,7 @@ int i2c_smbus_read(i2c_dev_t *dev, u8 addr, u8 reg, u8 *bfr, size_t len)
     ret = i2c_xfer_read(dev, bfr, min(len, len_reply));
 
 err:
-    if (poll32(dev->base + PASEMI_STATUS, PASEMI_STATUS_XFER_BUSY, 0, 1000)) {
+    if (poll32(dev->base + PASEMI_STATUS, PASEMI_STATUS_XFER_BUSY, 0, 50000)) {
         printf("i2c: timeout while waiting for PASEMI_STATUS_XFER_BUSY to clear after read xfer\n");
         return -1;
     }
