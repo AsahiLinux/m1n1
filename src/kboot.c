@@ -351,6 +351,11 @@ static void dt_set_uboot_dm_preloc(int node)
             continue;
         dt_set_uboot_dm_preloc(node);
 
+        // restore node offset after DT update
+        node = fdt_node_offset_by_phandle(dt, fdt32_ld(&phandles[i]));
+        if (node < 0)
+            continue;
+
         // And make sure the PMGR node is bound early too
         node = fdt_parent_offset(dt, node);
         if (node < 0)
