@@ -177,7 +177,7 @@ class ProxyUtils(Reloadable):
     def get_adt(self):
         if self.adt_data is not None:
             return self.adt_data
-        adt_base = self.ba.devtree - self.ba.virt_base + self.ba.phys_base
+        adt_base = (self.ba.devtree - self.ba.virt_base + self.ba.phys_base) & 0xffffffffffffffff
         adt_size = self.ba.devtree_size
         print(f"Fetching ADT ({adt_size} bytes)...")
         self.adt_data = self.iface.readmem(adt_base, self.ba.devtree_size)
@@ -185,7 +185,7 @@ class ProxyUtils(Reloadable):
 
     def push_adt(self):
         self.adt_data = self.adt.build()
-        adt_base = self.ba.devtree - self.ba.virt_base + self.ba.phys_base
+        adt_base = (self.ba.devtree - self.ba.virt_base + self.ba.phys_base) & 0xffffffffffffffff
         adt_size = len(self.adt_data)
         print(f"Pushing ADT ({adt_size} bytes)...")
         self.iface.writemem(adt_base, self.adt_data)
