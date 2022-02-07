@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+import sys
 from ..utils import *
 
 __all__ = ["ADMACRegs", "ADMAC"]
@@ -190,7 +191,7 @@ class ADMACTXChannel(Reloadable):
             raise Exception(f"ch{self.ch} descriptor ring full")
 
         if self.p.debug:
-            print(f"admac: submitting (ch{self.ch}): {desc}")
+            print(f"admac: submitting (ch{self.ch}): {desc}", file=sys.stderr)
 
         for piece in desc.ser():
             self.regs.TX_DESC_WRITE[self.ch].val = piece
@@ -214,7 +215,8 @@ class ADMACTXChannel(Reloadable):
             if self.p.debug:
                 print(f"TX_STATUS={self.regs.TX_STATUS[self.ch,1].reg} " + \
                       f"REPORT_RING={self.regs.TX_DESC_RING[self.ch]} " + \
-                      f"DESC_RING={self.regs.TX_REPORT_RING[self.ch]}")
+                      f"DESC_RING={self.regs.TX_REPORT_RING[self.ch]}",
+                      file=sys.stderr)
             self.regs.TX_DESC_RING[self.ch].set(ERR=1)
             self.regs.TX_REPORT_RING[self.ch].set(ERR=1)
 
@@ -232,7 +234,7 @@ class ADMACTXChannel(Reloadable):
                 else:
                     est = ""
 
-                print(f"admac: picked up (ch{self.ch}): {report} {est}")
+                print(f"admac: picked up (ch{self.ch}): {report} {est}", file=sys.stderr)
 
             self._last_report = report
 
