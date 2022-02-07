@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT
 import sys
+from enum import IntEnum
 from ..utils import *
 
-__all__ = ["ADMACRegs", "ADMAC"]
+__all__ = ["ADMACRegs", "ADMAC", "E_BUSWIDTH", "E_FRAME"]
 
 
 class R_RING(Register32):
@@ -45,6 +46,20 @@ class R_CHAN_CONTROL(Register32):
     CLEAR_OF_UF_COUNTERS = 1
     UNK1 = 3
 
+class E_BUSWIDTH(IntEnum):
+    W_8BIT  = 0
+    W_16BIT = 1
+    W_32BIT = 2
+
+class E_FRAME(IntEnum):
+    F_1_WORD  = 0
+    F_2_WORDS = 1
+    F_4_WRODS = 2
+
+class R_BUSWIDTH(Register32):
+    WORD  = 2, 0, E_BUSWIDTH
+    FRAME = 6, 4, E_FRAME
+
 class ADMACRegs(RegMap):
     TX_EN     = 0x0, Register32 # one bit per channel
     TX_EN_CLR = 0x4, Register32
@@ -70,8 +85,9 @@ class ADMACRegs(RegMap):
 
     CHAN_CTL = (irange(0x8000, 32, 0x200)), R_CHAN_CONTROL
 
-    CHAN_UNK1 = (irange(0x8040, 32, 0x200)), Register32
-    CHAN_UNK2 = (irange(0x8054, 32, 0x200)), Register32
+    CHAN_BUSWIDTH  = (irange(0x8040, 32, 0x200)), R_BUSWIDTH
+    # TODO: needs more research
+    CHAN_BURSTSIZE = (irange(0x8054, 32, 0x200)), Register32
 
     CHAN_RESIDUE = irange(0x8064, 32, 0x200), Register32
 
@@ -182,6 +198,10 @@ class ADMACChannel(Reloadable):
         self.regs.CHAN_CTL[self.ch].set(RESET_RINGS=1, CLEAR_OF_UF_COUNTERS=1)
         self.regs.CHAN_CTL[self.ch].set(RESET_RINGS=0, CLEAR_OF_UF_COUNTERS=0)
 
+        self.burstsize = 0xc0_0060
+        self.buswidth = E_BUSWIDTH.W_32BIT
+        self.framesize = E_FRAME.F_1_WORD
+
     def enable(self):
         if self.tx:
             self.regs.TX_EN.val = 1 << (self.ch//2)
@@ -193,6 +213,30 @@ class ADMACChannel(Reloadable):
             self.regs.TX_EN_CLR.val = 1 << (self.ch//2)
         else:
             self.regs.RX_EN_CLR.val = 1 << (self.ch//2)
+
+    @property
+    def buswidth(self):
+        self.regs.CHAN_BUSWIDTH[self.ch].reg.WORD
+
+    @buswidth.setter
+    def buswidth(self, wordsize):
+        return self.regs.CHAN_BUSWIDTH[self.ch].set(WORD=wordsize)
+
+    @property
+    def framesize(self):
+        self.regs.CHAN_BUSWIDTH[self.ch].reg.FRAME
+
+    @framesize.setter
+    def framesize(self, framesize):
+        return self.regs.CHAN_BUSWIDTH[self.ch].set(FRAME=framesize)
+
+    @property
+    def burstsize(self):
+        return self.regs.CHAN_BURSTSIZE[self.ch].val
+
+    @burstsize.setter
+    def burstsize(self, size):
+        self.regs.CHAN_BURSTSIZE[self.ch].val = size
 
     @property
     def DESC_WRITE(self):
