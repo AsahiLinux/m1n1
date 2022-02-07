@@ -15,9 +15,11 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 import argparse
 from m1n1.setup import *
 from m1n1.hw.dart import DART, DARTRegs
-from m1n1.hw.admac import *
 from m1n1.hw.i2c import I2C
-
+from m1n1.hw.pmgr import PMGR
+from m1n1.hw.nco import NCO
+from m1n1.hw.admac import *
+from m1n1.hw.mca import *
 
 argparser = argparse.ArgumentParser()
 argparser.add_argument("-f", "--file", "--input", "--samples",
@@ -35,7 +37,14 @@ p.pmgr_adt_clocks_enable("/arm-io/i2c1")
 p.pmgr_adt_clocks_enable("/arm-io/admac-sio")
 p.pmgr_adt_clocks_enable("/arm-io/dart-sio")
 p.pmgr_adt_clocks_enable("/arm-io/mca-switch")
+p.pmgr_adt_clocks_enable("/arm-io/mca0")
 
+# reset AUDIO_P
+PS_AUDIO_P = PMGR(u).regs[0].PS4[10]
+PS_AUDIO_P.set(DEV_DISABLE=1)
+PS_AUDIO_P.set(RESET=1)
+PS_AUDIO_P.set(RESET=0)
+PS_AUDIO_P.set(DEV_DISABLE=0)
 
 i2c1 = I2C(u, "/arm-io/i2c1")
 
@@ -43,8 +52,10 @@ dart_base, _ = u.adt["/arm-io/dart-sio"].get_reg(0) # stream index 2
 dart = DART(iface, DARTRegs(u, dart_base), util=u)
 dart.initialize()
 
+cl_no = 0
+
 admac = ADMAC(u, "/arm-io/admac-sio", dart, debug=True)
-tx_chan = admac.chans[4]
+tx_chan = admac.chans[4*cl_no]
 
 tx_chan.disable()
 tx_chan.reset()
@@ -52,52 +63,54 @@ tx_chan.read_reports() # read stale reports
 tx_chan.buswidth = E_BUSWIDTH.W_32BIT
 tx_chan.framesize = E_FRAME.F_1_WORD
 
-mca_switch0_base = 0x2_3840_0000 # size: 0x1_8000
-mca_switch1_base = 0x2_3830_0000 # size: 0x3_0000
+nco = NCO(u, "/arm-io/nco")
+nco[cl_no].set_rate(48000 * 256)
+nco[cl_no].enable()
 
-for off in [0x0, 0x100, 0x4000, 0x4100]:
-    p.write32(mca_switch0_base + off, 0x0)
-    p.write32(mca_switch0_base + off, 0x2)
+mca_switch1_base = u.adt["/arm-io/mca-switch"].get_reg(1)[0]
+mca_cl_base = u.adt["/arm-io/mca-switch"].get_reg(0)[0] + 0x4000*cl_no
+cl = MCACluster(u, mca_cl_base)
 
+regs, serdes = cl.regs, cl.txa
 
-p.write32(mca_switch0_base + 0x4104, 0x0)
-p.write32(mca_switch0_base + 0x4108, 0x0)
-p.write32(mca_switch0_base + 0x410c, 0xfe)
+regs.SYNCGEN_STATUS.set(RST=1, EN=0)
+regs.SYNCGEN_STATUS.set(RST=0)
+regs.SYNCGEN_MCLK_SEL.val =(1 + cl_no)
+regs.SYNCGEN_HI_PERIOD.val = 0
+regs.SYNCGEN_LO_PERIOD.val = 0xfe  # full period minus two
 
-p.write32(mca_switch1_base + 0x8000, 0x102048)
-# bits 0x0000e0 influence clock
-#      0x00000f influence sample serialization
+serdes.STATUS.set(EN=0)
+serdes.CONF.set(
+    NSLOTS=0,
+    SLOT_WIDTH=E_SLOT_WIDTH.W_32BIT,
+    BCLK_POL=1,
+    UNK1=1, UNK2=1,
+    IDLE_UNDRIVEN=1,
+    SYNC_SEL=(1 + cl_no)
+)
+serdes.BITDELAY.val = 0
 
-# clock
-p.write32(0x23b0400d8, 0x06000000) # 48 ksps, zero out for ~96 ksps
+serdes.CHANMASK[0].val = 0xffff_fffe
+serdes.CHANMASK[1].val = 0xffff_fffe
 
-p.write32(mca_switch0_base + 0x0600, 0xe) # 0x8 or have zeroed samples, 0x6 or have no clock
-p.write32(mca_switch0_base + 0x0604, 0x200) # sensitive in mask 0xf00, any other value disables clock
-p.write32(mca_switch0_base + 0x0608, 0x4) # 0x4 or zeroed samples
+regs.PORT_ENABLES.set(CLOCK1=1, CLOCK2=1, DATA=1)
+regs.PORT_CLK_SEL.set(SEL=(cl_no + 1))
+regs.PORT_DATA_SEL.val = cl_no + 1
+regs.MCLK_STATUS.set(EN=1)
+regs.SYNCGEN_STATUS.set(EN=1)
+
+p.write32(mca_switch1_base + 0x8000*cl_no, 0x102048)
 
 # toggle the GPIO line driving the speaker-amp IC reset
 p.write32(0x23c1002d4, 0x76a02) # invoke reset
 p.write32(0x23c1002d4, 0x76a03) # take out of reset
-
 
 tx_chan.submit(inputf.read(args.bufsize))
 tx_chan.enable()
 while tx_chan.can_submit():
     tx_chan.submit(inputf.read(args.bufsize))
 
-# accesses to 0x100-sized blocks in the +0x4000 region require 
-# the associated enable bit cleared, or they cause SErrors
-def mca_switch_unk_disable():
-    for off in [0x4000, 0x4100, 0x4300]:
-        p.write32(mca_switch0_base + off, 0x0)
-
-def mca_switch_unk_enable():
-    for off in [0x4000, 0x4100, 0x4300]:
-        p.write32(mca_switch0_base + off, 0x1)
-
-p.write32(mca_switch0_base + 0x4104, 0x2)
-mca_switch_unk_enable()
-
+serdes.STATUS.set(EN=1)
 
 # by ADT and leaked schematic, i2c1 contains TAS5770L,
 # which is not a public part. but there's e.g. TAS2770
