@@ -124,7 +124,7 @@ dart = DART(iface, DARTRegs(u, dart_base), util=u)
 dart.initialize()
 
 admac = ADMAC(u, "/arm-io/admac-sio", dart, debug=True)
-tx_chan = admac.tx[2]
+tx_chan = admac.chans[4]
 
 tx_chan.disable()
 tx_chan.reset()
@@ -132,8 +132,8 @@ tx_chan.reset()
 tx_chan.poll() # read stale reports
 
 
-admac.regs.TX_UNK1[2].val = 0x2 # stream width
-admac.regs.TX_UNK2[2].val = 0xc0_0060 # burst size
+admac.regs.CHAN_UNK1[tx_chan.ch].val = 0x2 # stream width
+admac.regs.CHAN_UNK2[tx_chan.ch].val = 0xc0_0060 # burst size
 
 
 mca_switch0_base = 0x2_3840_0000 # size: 0x1_8000
