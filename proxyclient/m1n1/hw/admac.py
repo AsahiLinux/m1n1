@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-import sys
+import sys, time
 from enum import IntEnum
 from ..utils import *
 
@@ -203,6 +203,10 @@ class ADMACChannel(Reloadable):
         self.framesize = E_FRAME.F_1_WORD
 
     def enable(self):
+        self.regs.CHAN_INTMASK[self.ch, 0].reg = \
+                R_CHAN_STATUS(DESC_DONE=1, DESC_RING_EMPTY=1,
+                                REPORT_RING_FULL=1, RING_ERR=1)
+
         if self.tx:
             self.regs.TX_EN.val = 1 << (self.ch//2)
         else:
@@ -282,16 +286,7 @@ class ADMACChannel(Reloadable):
         ))
         self._desc_id = (self._desc_id + 1) % 256
 
-    def poll(self):
-        if self.regs.CHAN_STATUS[self.ch, 1].reg.RING_ERR:
-            if self.p.debug:
-                print(f"STATUS={self.regs.CHAN_STATUS[self.ch,1].reg} " + \
-                      f"REPORT_RING={self.regs.CHAN_DESC_RING[self.ch]} " + \
-                      f"DESC_RING={self.regs.CHAN_REPORT_RING[self.ch]}",
-                      file=sys.stderr)
-            self.regs.CHAN_DESC_RING[self.ch].set(ERR=1)
-            self.regs.CHAN_REPORT_RING[self.ch].set(ERR=1)
-
+    def read_reports(self):
         data = bytearray()
 
         while not self.regs.CHAN_REPORT_RING[self.ch].reg.EMPTY:
@@ -322,6 +317,27 @@ class ADMACChannel(Reloadable):
             self._last_report = report
 
         return data if self.rx else None
+
+    @property
+    def status(self):
+        return self.regs.CHAN_STATUS[self.ch, 0].reg
+
+    def poll(self):
+        while not (self.status.DESC_DONE or self.status.RING_ERR):
+            time.sleep(0.001)
+
+        self.regs.CHAN_STATUS[self.ch,0].reg = R_CHAN_STATUS(DESC_DONE=1)
+
+        if self.status.RING_ERR:
+            if self.p.debug:
+                print(f"STATUS={self.regs.CHAN_STATUS[self.ch,1].reg} " + \
+                      f"REPORT_RING={self.regs.CHAN_DESC_RING[self.ch]} " + \
+                      f"DESC_RING={self.regs.CHAN_REPORT_RING[self.ch]}",
+                      file=sys.stderr)
+            self.regs.CHAN_DESC_RING[self.ch].set(ERR=1)
+            self.regs.CHAN_REPORT_RING[self.ch].set(ERR=1)
+
+        return self.read_reports()
 
 
 class ADMAC(Reloadable):

@@ -48,7 +48,7 @@ tx_chan = admac.chans[4]
 
 tx_chan.disable()
 tx_chan.reset()
-tx_chan.poll() # read stale reports
+tx_chan.read_reports() # read stale reports
 tx_chan.buswidth = E_BUSWIDTH.W_32BIT
 tx_chan.framesize = E_FRAME.F_1_WORD
 
@@ -122,10 +122,10 @@ i2c1.write_reg(0x31, 0x03, [0x0])
 # take the IC out of software shutdown
 i2c1.write_reg(0x31, 0x02, [0x0c])
 
-while True:
-    while tx_chan.can_submit():
-        tx_chan.submit(inputf.read(args.bufsize))
-    tx_chan.poll()
+while (buf := inputf.read(args.bufsize)):
+    while not tx_chan.can_submit():
+        tx_chan.poll()
+    tx_chan.submit(buf)
 
 # mute
 i2c1.write_reg(0x31, 0x02, [0x0d])
