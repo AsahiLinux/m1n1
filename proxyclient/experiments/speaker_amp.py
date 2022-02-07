@@ -19,7 +19,7 @@ import sys
 
 from m1n1.setup import *
 from m1n1.hw.dart import DART, DARTRegs
-from m1n1.hw.admac import ADMAC, ADMACRegs
+from m1n1.hw.admac import *
 from m1n1.hw.i2c import I2C
 
 # this here is an embedded console so that one can poke while
@@ -128,13 +128,9 @@ tx_chan = admac.chans[4]
 
 tx_chan.disable()
 tx_chan.reset()
-
 tx_chan.poll() # read stale reports
-
-
-admac.regs.CHAN_UNK1[tx_chan.ch].val = 0x2 # stream width
-admac.regs.CHAN_UNK2[tx_chan.ch].val = 0xc0_0060 # burst size
-
+tx_chan.buswidth = E_BUSWIDTH.W_32BIT
+tx_chan.framesize = E_FRAME.F_1_WORD
 
 mca_switch0_base = 0x2_3840_0000 # size: 0x1_8000
 mca_switch1_base = 0x2_3830_0000 # size: 0x3_0000
