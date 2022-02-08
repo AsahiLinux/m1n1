@@ -154,7 +154,7 @@ void smp_start_secondaries(void)
         int node = cpu_nodes[i];
 
         if (!node)
-            break;
+            continue;
 
         u32 reg;
         u64 cpu_impl_reg[2];
