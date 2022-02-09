@@ -362,17 +362,19 @@ class RegMonitor(Reloadable):
         else:
             self.scratch = None
 
-    def readmem(self, start, size):
+    def readmem(self, start, size, readfn):
+        if readfn:
+            return readfn(start, size)
         if self.scratch:
             assert size < self.bufsize
             self.proxy.memcpy32(self.scratch, start, size)
             start = self.scratch
         return self.proxy.iface.readmem(start, size)
 
-    def add(self, start, size, name=None, offset=None):
+    def add(self, start, size, name=None, offset=None, readfn=None):
         if offset is None:
             offset = start
-        self.ranges.append((start, size, name, offset))
+        self.ranges.append((start, size, name, offset, readfn))
         self.last.append(None)
 
     def show_regions(self, log=print):
@@ -384,9 +386,9 @@ class RegMonitor(Reloadable):
         if not self.ranges:
             return
         cur = []
-        for (start, size, name, offset), last in zip(self.ranges, self.last):
+        for (start, size, name, offset, readfn), last in zip(self.ranges, self.last):
             count = size // 4
-            block = self.readmem(start, size)
+            block = self.readmem(start, size, readfn)
             if block is None:
                 if last is not None:
                     self.log(f"# Lost: {name} ({start:#x}..{start + size - 1:#x})")

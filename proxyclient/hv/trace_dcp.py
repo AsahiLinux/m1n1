@@ -750,7 +750,7 @@ dart_dcp_tracer.start()
 dart_disp0_tracer = DARTTracer(hv, "/arm-io/dart-disp0")
 dart_disp0_tracer.start()
 
-def readmem_iova(addr, size):
+def readmem_iova(addr, size, readfn):
     try:
         return dart_dcp_tracer.dart.ioread(0, addr, size)
     except Exception as e:
