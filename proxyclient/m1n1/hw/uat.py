@@ -48,6 +48,7 @@ class UAT(Reloadable):
         self.VA_MASK = 0
         for (off, size) in self.LEVELS:
             self.VA_MASK |= (size - 1) << off
+        self.VA_MASK |= self.PAGE_SIZE - 1
 
     def set_ttbr(self, addr):
         self.ttbr = addr
