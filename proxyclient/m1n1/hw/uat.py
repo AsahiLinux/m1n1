@@ -15,6 +15,70 @@ class PTE(Register64):
     UNK1   = 1 # Useally unset on L0
     VALID  = 0
 
+class UatStream(Reloadable):
+    CACHE_SIZE = 0x1000
+
+    def __init__(self, uat, ctx, addr):
+        self.uat = uat
+        self.ctx = ctx
+        self.pos = addr
+        self.cache = None
+
+    def read(self, size):
+        assert size >= 0
+
+        data = b""
+        if self.cache:
+            data = self.cache[:size]
+            cached = len(self.cache)
+            self.pos += min(cached, size)
+            if cached > size:
+                self.cache = self.cache[size:]
+                return data
+            self.cache = None
+            if cached == size:
+                return data
+
+            size -= cached
+
+        # align any cache overreads to the next page boundary
+        remaining_in_page = self.uat.PAGE_SIZE - (self.pos % self.uat.PAGE_SIZE)
+        to_cache = min(remaining_in_page, self.CACHE_SIZE)
+
+        self.cache = self.uat.ioread(self.ctx, self.pos, max(size, to_cache))
+        return data + self.read(size)
+
+    def readable(self):
+        return True
+
+    def write(self, bytes):
+        self.uat.iowrite(self.ctx, self.pos, bytes)
+        self.pos += len(bytes)
+        self.cache = None
+
+    def writable(self):
+        return True
+
+    def flush(self):
+        self.cache = None
+
+    def seek(self, n, wherenc=0):
+        self.cache = None
+        if wherenc == 0:
+            self.pos = n
+        elif wherenc == 2:
+            self.pos += n
+
+    def seekable(self):
+        return True
+
+    def tell(self):
+        return self.pos
+
+    def closed(self):
+        return False
+
+
 class UAT(Reloadable):
     PAGE_BITS = 14
     PAGE_SIZE = 1 << PAGE_BITS
@@ -83,6 +147,9 @@ class UAT(Reloadable):
             self.iface.writemem(addr, data[p:p + size])
             p += size
             iova += size
+
+    def iostream(self, ctx, base):
+        return UatStream(self, ctx, base)
 
     # TODO: fix this
     # def iomap(self, stream, addr, size):
