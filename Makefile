@@ -97,7 +97,7 @@ OBJECTS := \
 	wdt.o \
 	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS)
 
-DTS := t8103-j274.dts
+DTS := $(patsubst dts/%,%,$(wildcard dts/*.dts))
 
 BUILD_OBJS := $(patsubst %,build/%,$(OBJECTS))
 DTBS := $(patsubst %.dts,build/dtb/%.dtb,$(DTS))
