@@ -51,7 +51,13 @@ class SMCEpTracer(EP):
     def GetInfo(self, msg):
         key = msg.KEY.to_bytes(4, byteorder="big").decode("ascii")
         self.state.rb[msg.ID] = msg.TYPE, key, None
-        self.log(f"[{msg.ID:x}] >Get Info: <{key}>")
+        self.log(f"[{msg.ID:x}] >KInfo: <{key}>")
+        return True
+
+    @msg(SMC_GET_KEY_BY_INDEX, DIR.TX, SMCGetKeyByIndex)
+    def GetKeyByIndex(self, msg):
+        self.state.rb[msg.ID] = msg.TYPE, msg.INDEX, None
+        self.log(f"[{msg.ID:x}] >KIdx: <{msg.INDEX}>")
         return True
 
     @msg(None, DIR.RX, Register64)
@@ -80,6 +86,11 @@ class SMCEpTracer(EP):
                 data = self.hv.iface.readmem(self.state.sram_addr, 6)
                 size, type, flags = struct.unpack("B4sB", data)
                 self.log(f"[{msg.ID:x}] <Info: <{key}>: size={size} type={type.decode('ascii')} flags={flags:#x}")
+                return True
+
+            elif msgtype == SMC_GET_KEY_BY_INDEX:
+                kname = msg.VALUE.to_bytes(4, byteorder="little").decode("ascii")
+                self.log(f"[{msg.ID:x}] <Key @{key}: <{kname}>")
                 return True
 
         self.log(f"[{msg.ID:x}] <OK {msg!r}")
