@@ -187,6 +187,9 @@ class SMCEndpoint(ASCBaseEndpoint):
             msg = SMCResult(msg0)
             ret = msg.RESULT
             mid = msg.ID
+            if ret == SMC_NOTIFICATION:
+                self.log(f"Notification: {msg.VALUE:#x}")
+                return True
             #print(f"msg {mid} return value {ret}")
             self.outstanding.discard(mid)
             self.ret[mid] = msg
