@@ -169,6 +169,12 @@ DEV_PROPERTIES = {
             "config-data": SafeGreedyRange(Int32ul),
         }
     },
+    "spmi-*": {
+        "*": {
+            "info-*name*": CString("ascii"),
+            "info-*": SafeGreedyRange(Hex(Int32ul)),
+        },
+    },
     "stockholm-spmi": {
         "*": {
             "required-functions": ADTStringList,
@@ -194,7 +200,11 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
     if is_template:
         t = CString("ascii")
 
-    dev_props = DEV_PROPERTIES.get(path, DEV_PROPERTIES.get(node_name, None))
+    dev_props = None
+    for k, pt in DEV_PROPERTIES.items():
+        if fnmatch.fnmatch(node_name, k) or fnmatch.fnmatch(path, k):
+            dev_props = pt
+            break
 
     possible_match = False
     if dev_props:
