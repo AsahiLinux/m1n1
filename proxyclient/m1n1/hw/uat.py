@@ -1,19 +1,89 @@
+"""
+    UAT is just regular ARMv8 pagetables, shared between the gfx-asc firmware
+    and the actual AGX hardware.
+
+    The OS doesn't have direct control over it, TTBR0 and TTBR1 entries are placed at
+    gpu-region-base, one pair for each context. The firmware automatically loads TTBR0/TTBR1
+    on boot and whenever the context changes.
+"""
+
+
 import struct
 from ..utils import *
+from enum import Enum
+
+class MemoryAttr(Enum):
+    Normal = 0 # Only accessed by the gfx-asc coprocessor
+    Device = 1
+    Shared = 2 # Probally Outer-shareable. Shared with either the main cpu or AGX hardware
+
+
+class TTBR(Register64):
+    ASID = 63, 48
+    BADDR = 47, 1
+    CnP = 0
+
+    def valid(self):
+        return self.BADDR != 0
+
+    def offset(self):
+        return self.BADDR << 1
+
+    def describe(self):
+        return f"{self.offset():x} [ASID={self.ASID}, CnP={self.CnP}]"
 
 class PTE(Register64):
-    FLAG   = 59, 56 # Values seen: 3, 4, 7, 6
-    CTX    = 55, 48 # Only ever set in L0, matches the context id (might just be software tracking)
     OFFSET = 47, 14
-    UNK11  = 11 # set for gfx pages, 0 for asc pages
-    UNK9   = 9
-    UNK8   = 8
-    READONLY = 7
-    UNK6   = 6
-    UNK3   = 3 # 1 for gfx pages, 0 for asc pages
-    UNCACHED = 2 # maybe? set for IO ranges
-    UNK1   = 1 # Useally unset on L0
+    TYPE   = 1
     VALID  = 0
+
+    def valid(self):
+        return self.VALID == 1 and self.TYPE == 1
+
+    def offset(self):
+        return self.OFFSET << 14
+
+    def describe(self):
+        if not self.valid():
+            return f"<invalid> [{int(self)}:x]"
+        return f"{self.offset():x}"
+
+class Page_PTE(Register64):
+    OS = 55 # Owned by host os or firmware
+    UXN  = 54
+    PXN = 53
+    OFFSET = 47, 14
+    nG  = 11 # global or local TLB caching
+    AF     = 10
+    SH     = 9, 8
+    AP     = 7, 6
+    AP_el0 = 6
+    AttrIndex = 4, 2
+    TYPE   = 1
+    VALID  = 0
+
+    def valid(self):
+        return self.VALID == 1 and self.TYPE == 1
+
+    def offset(self):
+        return self.OFFSET << 14
+
+    def access(self, el):
+        if el == 0:
+            return [["Xo", "RW", "Xo", "RX"],
+                    ["None", "RW", "None", "Ro"]][self.UXN][self.AP]
+
+        return [["RW", "RW", "RX", "RX"],
+                ["RW", "RW", "Ro", "Ro"]][self.PXN][self.AP]
+
+    def describe(self):
+        if not self.valid():
+            return f"<invalid> [{int(self)}:x]"
+
+        return f"{self.offset():x} [EL1={self.access(1)}, EL0={self.access(0)}, " \
+               f"{MemoryAttr(self.AttrIndex).name}, {['Global', 'Local'][self.nG]}, " \
+               f"Owner={['FW', 'OS'][self.OS]}, AF={self.AF}]"
+
 
 class UatStream(Reloadable):
     CACHE_SIZE = 0x1000
@@ -94,23 +164,23 @@ class UAT(Reloadable):
     Lx_SIZE = (1 << IDX_BITS)
 
     LEVELS = [
-        (L0_OFF, L0_SIZE),
-        (L1_OFF, L1_SIZE),
-        (L2_OFF, Lx_SIZE),
-        (L3_OFF, Lx_SIZE),
+        (L0_OFF, L0_SIZE, TTBR),
+        (L1_OFF, L1_SIZE, PTE),
+        (L2_OFF, Lx_SIZE, PTE),
+        (L3_OFF, Lx_SIZE, Page_PTE),
     ]
 
-    def __init__(self, iface, util=None, iova_range=(0x80000000, 0x90000000)):
+    def __init__(self, iface, util=None, hv=None, iova_range=(0x80000000, 0x90000000)):
         self.iface = iface
         self.u = util
+        self.hv = hv
         self.pt_cache = {}
         #self.iova_allocator = [Heap(iova_range[0], iova_range[1], self.PAGE_SIZE)
         #                       for i in range(16)]
-        self.ptecls = PTE
         self.ttbr = None
 
         self.VA_MASK = 0
-        for (off, size) in self.LEVELS:
+        for (off, size, _) in self.LEVELS:
             self.VA_MASK |= (size - 1) << off
         self.VA_MASK |= self.PAGE_SIZE - 1
 
@@ -216,14 +286,14 @@ class UAT(Reloadable):
     #     for page in dirty:
     #         self.flush_pt(page)
 
-    def fetch_pte(self, offset, idx, size):
+    def fetch_pte(self, offset, idx, size, ptecls):
         idx = idx & (size - 1)
 
         cached, level = self.get_pt(offset, size=size)
-        pte = self.ptecls(level[idx])
-        if not pte.VALID and cached:
+        pte = ptecls(level[idx])
+        if not pte.valid() and cached:
             cached, level = self.get_pt(offset, size=size, uncached=True)
-            pte = self.ptecls(level[idx])
+            pte = ptecls(level[idx])
         #print(f"fetch_pte {size} {offset:#x} {idx:#x} {int(pte):#x}")
 
         return pte
@@ -245,14 +315,14 @@ class UAT(Reloadable):
 
         for page in range(start_page, end_page, self.PAGE_SIZE):
             table_addr = self.ttbr + ctx * 16
-            for (offset, size) in self.LEVELS:
-                pte = self.fetch_pte(table_addr, page >> offset, size)
-                if not pte.VALID:
+            for (offset, size, ptecls) in self.LEVELS:
+                pte = self.fetch_pte(table_addr, page >> offset, size, ptecls)
+                if not pte.valid():
                     break
-                table_addr = pte.OFFSET << self.PAGE_BITS
+                table_addr = pte.offset()
 
-            if pte.VALID:
-                pages.append(pte.OFFSET << self.PAGE_BITS)
+            if pte.valid():
+                pages.append(pte.offset())
             else:
                 pages.append(None)
 
@@ -301,13 +371,13 @@ class UAT(Reloadable):
                 addr |= 0xf00_00000000
             return addr
 
-        offset, size = self.LEVELS[level]
+        offset, size, ptecls = self.LEVELS[level]
 
         cached, tbl = self.get_pt(table, size)
         unmapped = False
         for i, pte in enumerate(tbl):
-            pte = self.ptecls(pte)
-            if not pte.VALID:
+            pte = ptecls(pte)
+            if not pte.valid():
                 if not unmapped:
                     print("  ...")
                     unmapped = True
@@ -317,10 +387,10 @@ class UAT(Reloadable):
             range_size = 1 << offset
             start = extend(base + i * range_size)
             end = start + range_size - 1
-            addr = pte.OFFSET << self.PAGE_BITS
+            addr = pte.offset()
             type = " page" if level + 1 == len(self.LEVELS) else "table"
-            print(f"{'  ' * level}{type} ({i}): {start:011x} ... {end:011x}"
-                       f" -> {addr:016x} [{int(pte):x}]")
+            print(f"{'  ' * level}{type} ({i:03}): {start:011x} ... {end:011x}"
+                       f" -> {pte.describe()}")
 
             if level + 1 != len(self.LEVELS):
                 self.dump_level(level + 1, start, addr)
