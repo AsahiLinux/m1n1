@@ -330,22 +330,47 @@ class DART(Reloadable):
         self.pt_cache = {}
 
     def dump_table2(self, base, l1_addr):
+
+        def print_block(base, pte, start, last):
+            pgcount = last - start
+            pte.OFFSET -= pgcount
+            print("    page (%4d): %08x ... %08x -> %016x [%d%d]" % (
+                    start, base + start*0x4000, base + (start+1)*0x4000,
+                    pte.OFFSET << self.PAGE_BITS, pte.SP_PROT_DIS, pte.VALID))
+            if start < last:
+                print("     ==> (%4d):          ... %08x -> %016x size: %08x" % (
+                    last, base + (last+1)*0x4000,
+                    (pte.OFFSET + pgcount - 1) << self.PAGE_BITS, pgcount << self.PAGE_BITS))
+
         cached, tbl = self.get_pt(l1_addr)
 
         unmapped = False
+        start = 0
+        next_pte = self.ptecls(VALID=0)
+
         for i, pte in enumerate(tbl):
             pte = self.ptecls(pte)
             if not pte.VALID:
                 if not unmapped:
+                    if next_pte.VALID:
+                        print_block(base, next_pte, start, i)
                     print("  ...")
                     unmapped = True
+                    next_pte = pte
                 continue
 
             unmapped = False
 
-            print("    page (%d): %08x ... %08x -> %016x [%d%d]" % (
-                i, base + i*0x4000, base + (i+1)*0x4000,
-                pte.OFFSET << self.PAGE_BITS, pte.SP_PROT_DIS, pte.VALID))
+            if int(pte) != int(next_pte):
+                if next_pte.VALID:
+                    print_block(base, next_pte, start, i)
+                start = i
+
+            next_pte = pte
+            next_pte.OFFSET += 1
+
+        if next_pte.VALID:
+            print_block(base, next_pte, start, 2048)
 
     def dump_table(self, base, l1_addr):
         cached, tbl = self.get_pt(l1_addr)
