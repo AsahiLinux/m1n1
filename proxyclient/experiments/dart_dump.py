@@ -10,11 +10,12 @@ from m1n1 import asm
 from m1n1.hw.dart import DART, DARTRegs
 
 if len(sys.argv) > 1:
-    dart_addr = int(sys.argv[1], 16)
+    dart_name = sys.argv[1]
 else:
-    dart_addr = 0x231304000
+    dart_name = "dart-disp0"
+
 # disp0 DART
 # note that there's another range just before this one
-disp0 = DART(iface, DARTRegs(u, dart_addr))
+disp0 = DART.from_adt(u, "arm-io/" + dart_name)
 disp0.dump_all()
 disp0.regs.dump_regs()
