@@ -1306,6 +1306,7 @@ class HV(Reloadable):
         ram_base = self.u.ba.phys_base & ~0xffffffff
         self.map_hw(ram_base, ram_base, self.u.ba.phys_base - ram_base)
         self.map_hw(phys_base, phys_base, self.u.ba.mem_size_actual - phys_base + ram_base)
+        self.p.mcc_hv_unmap_carveouts()
 
         print(f"Loading kernel image (0x{len(image):x} bytes)...")
         self.u.compressed_writemem(guest_base, image, True)
