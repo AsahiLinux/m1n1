@@ -4,6 +4,7 @@
 #include "assert.h"
 #include "dcp.h"
 #include "dcp_iboot.h"
+#include "string.h"
 #include "utils.h"
 #include "xnuboot.h"
 
@@ -171,6 +172,9 @@ int display_configure(void)
     cur_boot_args.video.width = layer.width;
     cur_boot_args.video.height = layer.height;
     cur_boot_args.video.depth = 30;
+
+    /* Update for python / subsequent stages */
+    memcpy((void *)boot_args_addr, &cur_boot_args, sizeof(cur_boot_args));
 
 bail:
     ret = 0;
