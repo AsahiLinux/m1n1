@@ -143,6 +143,8 @@ typedef enum {
     P_NVME_SHUTDOWN,
     P_NVME_READ,
     P_NVME_FLUSH,
+
+    P_MCC_HV_UNMAP_CARVEOUTS = 0x1000,
 } ProxyOp;
 
 #define S_OK     0
