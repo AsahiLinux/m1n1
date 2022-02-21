@@ -405,6 +405,7 @@ class ADTNode:
 
     def __getattr__(self, attr):
         attr = attr.replace("_", "-")
+        attr = attr.replace("--", "_")
         if attr in self._properties:
             return self._properties[attr]
         raise AttributeError(attr)
@@ -414,6 +415,7 @@ class ADTNode:
             self.__dict__[attr] = value
             return
         attr = attr.replace("_", "-")
+        attr = attr.replace("--", "_")
         self._properties[attr] = value
 
     def __delattr__(self, attr):
