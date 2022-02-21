@@ -94,6 +94,7 @@ void m1n1_main(void)
     display_init();
     fb_init();
     fb_display_logo();
+    fb_set_active(true);
 #endif
 
     aic_init();

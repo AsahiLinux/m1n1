@@ -41,8 +41,9 @@ static struct {
         u32 cols;
     } margin;
 
-    int initialized;
-} console = {.initialized = 0};
+    bool initialized;
+    bool active;
+} console;
 
 extern u8 _binary_build_bootlogo_128_bin_start[];
 extern u8 _binary_build_bootlogo_256_bin_start[];
@@ -268,7 +269,7 @@ ssize_t fb_console_write(const char *bfr, size_t len)
 {
     ssize_t wrote = 0;
 
-    if (!console.initialized)
+    if (!console.initialized || !console.active)
         return 0;
 
     while (len--) {
@@ -284,7 +285,7 @@ ssize_t fb_console_write(const char *bfr, size_t len)
 static bool fb_console_iodev_can_write(void *opaque)
 {
     UNUSED(opaque);
-    return console.initialized;
+    return console.initialized && console.active;
 }
 
 static ssize_t fb_console_iodev_write(void *opaque, const void *buf, size_t len)
@@ -358,7 +359,8 @@ void fb_init(void)
     console.cursor.max_col =
         ((fb.width - logo->width) / 2) / console.font.width - 2 * console.margin.cols;
 
-    console.initialized = 1;
+    console.initialized = true;
+    console.active = false;
 
     fb_clear_console();
 
@@ -366,12 +368,20 @@ void fb_init(void)
            console.cursor.max_col);
 }
 
+void fb_set_active(bool active)
+{
+    console.active = active;
+    if (active)
+        iodev_console_kick();
+}
+
 void fb_shutdown(bool restore_logo)
 {
     if (!console.initialized)
         return;
 
-    console.initialized = 0;
+    console.active = false;
+    console.initialized = false;
     fb_clear_console();
     if (restore_logo) {
         fb_restore_logo();

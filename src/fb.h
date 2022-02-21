@@ -31,6 +31,7 @@ static inline rgb_t int2rgb(u32 c)
 void fb_init(void);
 void fb_shutdown(bool restore_logo);
 void fb_update(void);
+void fb_set_active(bool active);
 
 void fb_blit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride);
 void fb_unblit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride);
