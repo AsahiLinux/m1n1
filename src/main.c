@@ -58,6 +58,42 @@ void get_device_info(void)
 
 void run_actions(void)
 {
+    bool usb_up = false;
+
+#ifdef EARLY_PROXY_TIMEOUT
+    if (!cur_boot_args.video.display) {
+        printf("Bringing up USB for early debug...\n");
+
+        usb_init();
+        usb_iodev_init();
+
+        usb_up = true;
+
+        printf("Waiting for proxy connection... ");
+        for (int i = 0; i < EARLY_PROXY_TIMEOUT * 100; i++) {
+            for (int j = 0; j < USB_IODEV_COUNT; j++) {
+                iodev_id_t iodev = IODEV_USB0 + j;
+
+                if (!(iodev_get_usage(iodev) & USAGE_UARTPROXY))
+                    continue;
+
+                usb_iodev_vuart_setup(iodev);
+                iodev_handle_events(iodev);
+                if (iodev_can_write(iodev) || iodev_can_write(IODEV_USB_VUART)) {
+                    printf(" Connected!\n");
+                    uartproxy_run(NULL);
+                    return;
+                }
+            }
+
+            mdelay(10);
+            if (i % 100 == 99)
+                printf(".");
+        }
+        printf(" Timed out\n");
+    }
+#endif
+
     printf("Checking for payloads...\n");
 
     if (payload_run() == 0) {
@@ -65,10 +101,14 @@ void run_actions(void)
         return;
     }
 
+    fb_set_active(true);
+
     printf("No valid payload found\n");
 
-    usb_init();
-    usb_iodev_init();
+    if (!usb_up) {
+        usb_init();
+        usb_iodev_init();
+    }
 
     printf("Running proxy...\n");
 
@@ -94,7 +134,11 @@ void m1n1_main(void)
     display_init();
     fb_init();
     fb_display_logo();
+#ifdef FB_SILENT_MODE
+    fb_set_active(!cur_boot_args.video.display);
+#else
     fb_set_active(true);
+#endif
 #endif
 
     aic_init();

@@ -35,6 +35,10 @@ CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-fno-stack-protector -mgeneral-regs-only -mstrict-align -march=armv8.2-a \
 	$(EXTRA_CFLAGS)
 
+ifeq ($(RELEASE),1)
+CFLAGS += -DRELEASE
+endif
+
 LDFLAGS := -EL -maarch64elf --no-undefined -X -Bsymbolic \
 	-z notext --no-apply-dynamic-relocs --orphan-handling=warn \
 	-z nocopyreloc --gc-sections -pie
