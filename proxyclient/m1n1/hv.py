@@ -128,6 +128,7 @@ class HV(Reloadable):
         self._bps = [None, None, None, None, None]
         self.sym_offset = 0
         self.symbols = []
+        self.symbol_dict = {}
         self.sysreg = {0: {}}
         self.novm = False
         self._in_handler = False
@@ -546,6 +547,8 @@ class HV(Reloadable):
 
         return f"0x{addr:x} ({name}+0x{unslid_addr - saddr:x})"
 
+    def resolve_symbol(self, name):
+        return self.symbol_dict[name] - self.sym_offset
 
     def sym(self, addr):
         unslid_addr = addr + self.sym_offset
@@ -885,6 +888,12 @@ class HV(Reloadable):
         self._bps[idx] = None
         self.u.msr(DBGBCRn_EL1(idx), 0)
         self.u.msr(DBGBVRn_EL1(idx), 0)
+
+    def add_sym_bp(self, name):
+        return self.add_hw_bp(self.resolve_symbol(name))
+
+    def remove_sym_bp(self, name):
+        return self.remove_hw_bp(self.resolve_symbol(name))
 
     def exit(self):
         raise shell.ExitConsole(EXC_RET.EXIT_GUEST)
@@ -1243,6 +1252,7 @@ class HV(Reloadable):
             macho.add_symbols("com.apple.kernel", syms)
             self.xnu_mode = True
 
+        self.symbol_dict = macho.symbols
         self.symbols = [(v, k) for k, v in macho.symbols.items()]
         self.symbols.sort()
 
@@ -1362,10 +1372,13 @@ class HV(Reloadable):
         self.sym_offset = 0
         self.xnu_mode = False
         self.symbols = []
+        self.symbol_dict = {}
         with open(path) as fd:
             for line in fd.readlines():
                 addr, t, name = line.split()
-                self.symbols.append((int(addr, 16), name))
+                addr = int(addr, 16)
+                self.symbols.append((addr, name))
+                self.symbol_dict[name] = addr
         self.symbols.sort()
 
     def _handle_sigint(self, signal=None, stack=None):
