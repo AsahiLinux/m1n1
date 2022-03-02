@@ -10,14 +10,23 @@
 #include "string.h"
 #include "utils.h"
 
-#define NVME_TIMEOUT    1000000
-#define NVME_QUEUE_SIZE 64
+#define NVME_TIMEOUT          1000000
+#define NVME_SHUTDOWN_TIMEOUT (5 * NVME_TIMEOUT)
+#define NVME_QUEUE_SIZE       64
 
-#define NVME_CC    0x14
-#define NVME_CC_EN BIT(0)
+#define NVME_CC            0x14
+#define NVME_CC_SHN        GENMASK(15, 14)
+#define NVME_CC_SHN_NONE   0
+#define NVME_CC_SHN_NORMAL 1
+#define NVME_CC_SHN_ABRUPT 2
+#define NVME_CC_EN         BIT(0)
 
-#define NVME_CSTS     0x1c
-#define NVME_CSTS_RDY BIT(0)
+#define NVME_CSTS             0x1c
+#define NVME_CSTS_SHST        GENMASK(3, 2)
+#define NVME_CSTS_SHST_NORMAL 0
+#define NVME_CSTS_SHST_BUSY   1
+#define NVME_CSTS_SHST_DONE   2
+#define NVME_CSTS_RDY         BIT(0)
 
 #define NVME_AQA 0x24
 #define NVME_ASQ 0x28
@@ -178,11 +187,23 @@ static bool nvme_ctrl_enable(void)
 {
     u64 timeout = timeout_calculate(NVME_TIMEOUT);
 
-    set32(nvme_base + NVME_CC, NVME_CC_EN);
+    mask32(nvme_base + NVME_CC, NVME_CC_SHN, NVME_CC_EN);
     while (!(read32(nvme_base + NVME_CSTS) & NVME_CSTS_RDY) && !timeout_expired(timeout))
         nvme_poll_syslog();
 
     return read32(nvme_base + NVME_CSTS) & NVME_CSTS_RDY;
+}
+
+static bool nvme_ctrl_shutdown(void)
+{
+    u64 timeout = timeout_calculate(NVME_SHUTDOWN_TIMEOUT);
+
+    mask32(nvme_base + NVME_CC, NVME_CC_SHN, FIELD_PREP(NVME_CC_SHN, NVME_CC_SHN_NORMAL));
+    while (FIELD_GET(NVME_CSTS_SHST, read32(nvme_base + NVME_CSTS)) != NVME_CSTS_SHST_DONE &&
+           !timeout_expired(timeout))
+        nvme_poll_syslog();
+
+    return FIELD_GET(NVME_CSTS_SHST, read32(nvme_base + NVME_CSTS)) == NVME_CSTS_SHST_DONE;
 }
 
 static bool nvme_exec_command(struct nvme_queue *q, struct nvme_command *cmd, u64 *result)
@@ -415,7 +436,11 @@ void nvme_shutdown(void)
     if (!nvme_exec_command(&adminq, &cmd, NULL))
         printf("nvme: delete cq command failed\n");
 
-    nvme_ctrl_disable();
+    if (!nvme_ctrl_shutdown())
+        printf("nvme: timeout while waiting for controller shutdown\n");
+    if (!nvme_ctrl_disable())
+        printf("nvme: timeout while waiting for CSTS.RDY to clear\n");
+
     rtkit_sleep(nvme_rtkit);
     pmgr_reset("ANS2");
     rtkit_free(nvme_rtkit);
