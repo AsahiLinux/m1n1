@@ -192,7 +192,7 @@ bool rtkit_map(rtkit_dev_t *rtk, void *phys, size_t sz, u64 *dva)
 
     if (rtk->sart) {
         if (!sart_add_allowed_region(rtk->sart, phys, sz)) {
-            rtkit_printf("sart_ad_allowed_region failed (%p, 0x%lx)\n", phys, sz);
+            rtkit_printf("sart_add_allowed_region failed (%p, 0x%lx)\n", phys, sz);
             return false;
         }
         *dva = (u64)phys;
@@ -252,6 +252,7 @@ bool rtkit_alloc_buffer(rtkit_dev_t *rtk, struct rtkit_buffer *bfr, size_t sz)
 
 error:
     free(bfr->bfr);
+    bfr->bfr = NULL;
     return false;
 }
 
@@ -346,6 +347,7 @@ static void rtkit_crashed(rtkit_dev_t *rtk)
 int rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
 {
     struct asc_message asc_msg;
+    bool ok = true;
 
     if (rtk->crashed)
         return -1;
@@ -381,7 +383,7 @@ int rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
             case RTKIT_EP_SYSLOG:
                 switch (msgtype) {
                     case MSG_BUFFER_REQUEST:
-                        rtkit_handle_buffer_request(rtk, msg, &rtk->syslog_bfr);
+                        ok = ok && rtkit_handle_buffer_request(rtk, msg, &rtk->syslog_bfr);
                         break;
                     case MSG_SYSLOG_INIT:
                         rtk->syslog_cnt = FIELD_GET(MSG_SYSLOG_INIT_COUNT, msg->msg);
@@ -409,7 +411,7 @@ int rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
                 switch (msgtype) {
                     case MSG_BUFFER_REQUEST:
                         if (!rtk->crashlog_bfr.bfr) {
-                            rtkit_handle_buffer_request(rtk, msg, &rtk->crashlog_bfr);
+                            ok = ok && rtkit_handle_buffer_request(rtk, msg, &rtk->crashlog_bfr);
                         } else {
                             rtkit_crashed(rtk);
                             return -1;
@@ -422,7 +424,7 @@ int rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
             case RTKIT_EP_IOREPORT:
                 switch (msgtype) {
                     case MSG_BUFFER_REQUEST:
-                        rtkit_handle_buffer_request(rtk, msg, &rtk->ioreport_bfr);
+                        ok = ok && rtkit_handle_buffer_request(rtk, msg, &rtk->ioreport_bfr);
                         break;
                     /* unknown but must be ACKed */
                     case 0x8:
@@ -447,6 +449,11 @@ int rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
                 break;
             default:
                 rtkit_printf("message to unknown system endpoint 0x%02x: %lx\n", msg->ep, msg->msg);
+        }
+
+        if (!ok) {
+            rtkit_printf("failed to handle system message 0x%02x: %lx\n", msg->ep, msg->msg);
+            return -1;
         }
     }
 
@@ -616,7 +623,7 @@ bool rtkit_boot(rtkit_dev_t *rtk)
             rtkit_printf("unexpected message to non-system endpoint 0x%02x during boot: %lx\n",
                          rtk_msg.ep, rtk_msg.msg);
         else if (ret < 0)
-            break;
+            return false;
     }
 
     /* this enables syslog */
@@ -649,10 +656,15 @@ static bool rtkit_switch_power_state(rtkit_dev_t *rtk, enum rtkit_power_state ta
 
     while (rtk->ap_power != RTKIT_POWER_HIBERNATE) {
         struct rtkit_message rtk_msg;
-        if (rtkit_recv(rtk, &rtk_msg) == 1) {
+        int ret = rtkit_recv(rtk, &rtk_msg);
+
+        if (ret > 0) {
             rtkit_printf("unexpected message to non-system endpoint 0x%02x during shutdown: %lx\n",
                          rtk_msg.ep, rtk_msg.msg);
             continue;
+        } else if (ret < 0) {
+            rtkit_printf("IOP died during shutdown\n");
+            return false;
         }
     }
 
@@ -664,10 +676,15 @@ static bool rtkit_switch_power_state(rtkit_dev_t *rtk, enum rtkit_power_state ta
 
     while (rtk->iop_power != target) {
         struct rtkit_message rtk_msg;
-        if (rtkit_recv(rtk, &rtk_msg)) {
+        int ret = rtkit_recv(rtk, &rtk_msg);
+
+        if (ret > 0) {
             rtkit_printf("unexpected message to non-system endpoint 0x%02x during shutdown: %lx\n",
                          rtk_msg.ep, rtk_msg.msg);
             continue;
+        } else if (ret < 0) {
+            rtkit_printf("IOP died during shutdown\n");
+            return false;
         }
     }
 
