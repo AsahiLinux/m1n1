@@ -10,9 +10,10 @@
 
 import struct
 from ..utils import *
-from enum import Enum
+from ..malloc import Heap
+from enum import IntEnum
 
-class MemoryAttr(Enum):
+class MemoryAttr(IntEnum):
     Normal = 0 # Only accessed by the gfx-asc coprocessor
     Device = 1
     Shared = 2 # Probally Outer-shareable. Shared with either the main cpu or AGX hardware
@@ -29,11 +30,15 @@ class TTBR(Register64):
     def offset(self):
         return self.BADDR << 1
 
+    def set_offset(self, offset):
+        self.BADDR = offset >> 1
+
     def describe(self):
         return f"{self.offset():x} [ASID={self.ASID}, CnP={self.CnP}]"
 
 class PTE(Register64):
     OFFSET = 47, 14
+    UNK0   = 10 # probally an ownership flag, seems to be 1 for FW created PTEs and 0 for OS PTEs
     TYPE   = 1
     VALID  = 0
 
@@ -42,31 +47,36 @@ class PTE(Register64):
 
     def offset(self):
         return self.OFFSET << 14
+
+    def set_offset(self, offset):
+        self.OFFSET = offset >> 14
 
     def describe(self):
         if not self.valid():
             return f"<invalid> [{int(self)}:x]"
-        return f"{self.offset():x}"
+        return f"{self.offset():x}, UNK={self.UNK0}"
 
 class Page_PTE(Register64):
-    OS = 55 # Owned by host os or firmware
-    UXN  = 54
-    PXN = 53
-    OFFSET = 47, 14
-    nG  = 11 # global or local TLB caching
-    AF     = 10
-    SH     = 9, 8
-    AP     = 7, 6
-    AP_el0 = 6
+    OS        = 55 # Owned by host os or firmware
+    UXN       = 54
+    PXN       = 53
+    OFFSET    = 47, 14
+    nG        = 11 # global or local TLB caching
+    AF        = 10
+    SH        = 9, 8
+    AP        = 7, 6
     AttrIndex = 4, 2
-    TYPE   = 1
-    VALID  = 0
+    TYPE      = 1
+    VALID     = 0
 
     def valid(self):
         return self.VALID == 1 and self.TYPE == 1
 
     def offset(self):
         return self.OFFSET << 14
+
+    def set_offset(self, offset):
+        self.OFFSET = offset >> 14
 
     def access(self, el):
         if el == 0:
@@ -170,13 +180,13 @@ class UAT(Reloadable):
         (L3_OFF, Lx_SIZE, Page_PTE),
     ]
 
-    def __init__(self, iface, util=None, hv=None, iova_range=(0x80000000, 0x90000000)):
+    def __init__(self, iface, util=None, hv=None):
         self.iface = iface
         self.u = util
         self.hv = hv
         self.pt_cache = {}
-        #self.iova_allocator = [Heap(iova_range[0], iova_range[1], self.PAGE_SIZE)
-        #                       for i in range(16)]
+        self.dirty = set()
+        self.ctx_allocator = {}
         self.ttbr = None
 
         self.VA_MASK = 0
@@ -184,8 +194,27 @@ class UAT(Reloadable):
             self.VA_MASK |= (size - 1) << off
         self.VA_MASK |= self.PAGE_SIZE - 1
 
+    # Implements the OS side of UAT initilzion
+    def initilize(self, ttbr, ttbr1_addr, kernel_va_base):
+        self.ttbr = ttbr
+        # create the ttbr1 allocator at ctx 0
+        self.get_allocator(0, (kernel_va_base, kernel_va_base + 0x1_00000000))
+
+        # set ttbr0 and ttbr1, which are needed for gfx_asc to start
+        ttbr0_addr = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
+        self.write_pte(ttbr, 0, 2, TTBR(BADDR = ttbr0_addr >> 1, ASID = 0))
+        self.write_pte(ttbr, 1, 2, TTBR(BADDR = ttbr1_addr >> 1, ASID = 0))
+
+        self.flush_dirty()
+
+
     def set_ttbr(self, addr):
         self.ttbr = addr
+
+    def get_allocator(self, ctx, range=(0x16_00000000, 0x17_00000000)):
+        if ctx not in self.ctx_allocator:
+            self.ctx_allocator[ctx] = Heap(range[0], range[1], self.PAGE_SIZE)
+        return self.ctx_allocator[ctx]
 
     def ioread(self, ctx, base, size):
         if size == 0:
@@ -218,85 +247,73 @@ class UAT(Reloadable):
             p += size
             iova += size
 
+    # A stream interface that can be used for random access by Construct
     def iostream(self, ctx, base):
         return UatStream(self, ctx, base)
 
-    # TODO: fix this
-    # def iomap(self, stream, addr, size):
-    #     iova = self.iova_allocator[stream].malloc(size)
+    def iomap(self, ctx, addr, size, flags= None):
+        iova = self.get_allocator(ctx).malloc(size)
 
-    #     self.iomap_at(stream, iova, addr, size)
-    #     return iova
+        self.iomap_at(ctx, iova, addr, size, flags)
+        return iova
 
-    # def iomap_at(self, stream, iova, addr, size):
-    #     if size == 0:
-    #         return
+    def iomap_at(self, ctx, iova, addr, size, flags= None):
+        if size == 0:
+            return
 
-    #     if not (self.enabled_streams & (1 << stream)):
-    #         self.enabled_streams |= (1 << stream)
-    #         self.regs.ENABLED_STREAMS.val |= self.enabled_streams
+        if addr & (self.PAGE_SIZE - 1):
+            raise Exception(f"Unaligned PA {addr:#x}")
 
-    #     tcr = self.regs.TCR[stream].reg
+        if iova & (self.PAGE_SIZE - 1):
+            raise Exception(f"Unaligned IOVA {iova:#x}")
 
-    #     if addr & (self.PAGE_SIZE - 1):
-    #         raise Exception(f"Unaligned PA {addr:#x}")
+        if flags == None:
+            flags = {'OS': 1, 'AttrIndex': MemoryAttr.Normal, 'VALID': 1, 'TYPE': 1, 'AP': 1, 'AF': 1, 'UXN': 1}
 
-    #     if iova & (self.PAGE_SIZE - 1):
-    #         raise Exception(f"Unaligned IOVA {iova:#x}")
+        start_page = align_down(iova, self.PAGE_SIZE)
+        end = iova + size
+        end_page = align_up(end, self.PAGE_SIZE)
 
-    #     start_page = align_down(iova, self.PAGE_SIZE)
-    #     end = iova + size
-    #     end_page = align_up(end, self.PAGE_SIZE)
+        for page in range(start_page, end_page, self.PAGE_SIZE):
+            table_addr = self.ttbr + ctx * 16
+            for (offset, size, ptecls) in self.LEVELS:
+                if ptecls is Page_PTE:
+                    pte = Page_PTE(**flags)
+                    pte.set_offset(addr)
+                    self.write_pte(table_addr, page >> offset, size, pte)
+                    addr += self.PAGE_SIZE
+                else:
+                    pte = self.fetch_pte(table_addr, page >> offset, size, ptecls)
+                    if not pte.valid():
+                        pte.set_offset(self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE))
+                        if ptecls is not TTBR:
+                            pte.VALID = 1
+                            pte.TYPE = 1
+                            #pte.UNK0 = 1
+                        self.write_pte(table_addr, page >> offset, size, pte)
+                    table_addr = pte.offset()
 
-    #     dirty = set()
+        self.flush_dirty()
 
-    #     for page in range(start_page, end_page, self.PAGE_SIZE):
-    #         paddr = addr + page - start_page
-
-    #         l0 = page >> self.L0_OFF
-    #         assert l0 < self.L0_SIZE
-    #         ttbr = self.regs.TTBR[stream, l0].reg
-    #         if not ttbr.VALID:
-    #             l1addr = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
-    #             self.pt_cache[l1addr] = [0] * self.Lx_SIZE
-    #             ttbr.VALID = 1
-    #             ttbr.ADDR = l1addr >> 12
-    #             self.regs.TTBR[stream, l0].reg = ttbr
-
-    #         cached, l1 = self.get_pt(ttbr.ADDR << 12)
-    #         l1idx = (page >> self.L1_OFF) & self.IDX_MASK
-    #         l1pte = self.ptecls(l1[l1idx])
-    #         if not l1pte.VALID:
-    #             l2addr = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
-    #             self.pt_cache[l2addr] = [0] * self.Lx_SIZE
-    #             l1pte = self.ptecls(
-    #                 OFFSET=l2addr >> self.PAGE_BITS, VALID=1, SP_PROT_DIS=1)
-    #             l1[l1idx] = l1pte.value
-    #             dirty.add(ttbr.ADDR << 12)
-    #         else:
-    #             l2addr = l1pte.OFFSET << self.PAGE_BITS
-
-    #         dirty.add(l1pte.OFFSET << self.PAGE_BITS)
-    #         cached, l2 = self.get_pt(l2addr)
-    #         l2idx = (page >> self.L2_OFF) & self.IDX_MASK
-    #         self.pt_cache[l2addr][l2idx] = self.ptecls(
-    #             SP_START=0, SP_END=0xfff,
-    #             OFFSET=paddr >> self.PAGE_BITS, VALID=1, SP_PROT_DIS=1).value
-
-    #     for page in dirty:
-    #         self.flush_pt(page)
 
     def fetch_pte(self, offset, idx, size, ptecls):
         idx = idx & (size - 1)
 
-        cached, level = self.get_pt(offset, size=size)
-        pte = ptecls(level[idx])
+        cached, table = self.get_pt(offset, size=size)
+        pte = ptecls(table[idx])
         if not pte.valid() and cached:
-            cached, level = self.get_pt(offset, size=size, uncached=True)
-            pte = ptecls(level[idx])
-        #print(f"fetch_pte {size} {offset:#x} {idx:#x} {int(pte):#x}")
+            cached, table = self.get_pt(offset, size=size, uncached=True)
+            pte = ptecls(table[idx])
 
         return pte
+
+    def write_pte(self, offset, idx, size, pte):
+        idx = idx & (size - 1)
+
+        cached, table = self.get_pt(offset, size=size)
+
+        table[idx] = pte.value
+        self.dirty.add(offset)
 
 
     def iotranslate(self, ctx, start, size):
@@ -360,7 +377,14 @@ class UAT(Reloadable):
 
     def flush_pt(self, addr):
         assert addr in self.pt_cache
-        self.iface.writemem(addr, struct.pack(f"<{self.Lx_SIZE}Q", *self.pt_cache[addr]))
+        table = self.pt_cache[addr]
+        self.iface.writemem(addr, struct.pack(f"<{len(table)}Q", *table))
+
+    def flush_dirty(self):
+        for page in self.dirty:
+            self.flush_pt(page)
+
+        self.dirty.clear()
 
     def invalidate_cache(self):
         self.pt_cache = {}
