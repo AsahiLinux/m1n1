@@ -15,55 +15,57 @@ from m1n1.fw.dcp.manager import DCPManager
 from m1n1.fw.dcp.ipc import ByRef
 from m1n1.proxyutils import RegMonitor
 
+is_t8103 = u.adt["arm-io"].compatible[0] == "arm-io,t8103"
 mon = RegMonitor(u)
 
-#mon.add(0x230000000, 0x18000)
-#mon.add(0x230018000, 0x4000)
-#mon.add(0x230068000, 0x8000)
-#mon.add(0x2300b0000, 0x8000)
-#mon.add(0x2300f0000, 0x4000)
-#mon.add(0x230100000, 0x10000)
-#mon.add(0x230170000, 0x10000)
-#mon.add(0x230180000, 0x1c000)
-#mon.add(0x2301a0000, 0x10000)
-#mon.add(0x2301d0000, 0x4000)
-#mon.add(0x230230000, 0x10000)
-#mon.add(0x23038c000, 0x10000)
-#mon.add(0x230800000, 0x10000)
-#mon.add(0x230840000, 0xc000)
-#mon.add(0x230850000, 0x2000)
-##mon.add(0x230852000, 0x5000) # big curve / gamma table
-#mon.add(0x230858000, 0x18000)
-#mon.add(0x230870000, 0x4000)
-#mon.add(0x230880000, 0x8000)
-#mon.add(0x230894000, 0x4000)
-#mon.add(0x2308a8000, 0x8000)
-#mon.add(0x2308b0000, 0x8000)
-#mon.add(0x2308f0000, 0x4000)
-##mon.add(0x2308fc000, 0x4000) # stats / RGB color histogram
-#mon.add(0x230900000, 0x10000)
-#mon.add(0x230970000, 0x10000)
-#mon.add(0x230980000, 0x10000)
-#mon.add(0x2309a0000, 0x10000)
-#mon.add(0x2309d0000, 0x4000)
-#mon.add(0x230a30000, 0x20000)
-#mon.add(0x230b8c000, 0x10000)
-#mon.add(0x231100000, 0x8000)
-#mon.add(0x231180000, 0x4000)
-#mon.add(0x2311bc000, 0x10000)
-#mon.add(0x231300000, 0x8000)
-##mon.add(0x23130c000, 0x4000) # - DCP dart
-#mon.add(0x231310000, 0x8000)
-#mon.add(0x231340000, 0x8000)
-##mon.add(0x231800000, 0x8000) # breaks DCP
-##mon.add(0x231840000, 0x8000) # breaks DCP
-##mon.add(0x231850000, 0x8000) # something DCP?
-##mon.add(0x231920000, 0x8000) # breaks DCP
-##mon.add(0x231960000, 0x8000) # breaks DCP
-##mon.add(0x231970000, 0x10000) # breaks DCP
-##mon.add(0x231c00000, 0x10000) # DCP mailbox
+if is_t8103:
+    #mon.add(0x230000000, 0x18000)
+    #mon.add(0x230018000, 0x4000)
+    #mon.add(0x230068000, 0x8000)
+    #mon.add(0x2300b0000, 0x8000)
+    #mon.add(0x2300f0000, 0x4000)
+    #mon.add(0x230100000, 0x10000)
+    #mon.add(0x230170000, 0x10000)
+    #mon.add(0x230180000, 0x1c000)
+    #mon.add(0x2301a0000, 0x10000)
+    #mon.add(0x2301d0000, 0x4000)
+    #mon.add(0x230230000, 0x10000)
+    #mon.add(0x23038c000, 0x10000)
+    #mon.add(0x230800000, 0x10000)
+    #mon.add(0x230840000, 0xc000)
+    #mon.add(0x230850000, 0x2000)
+    ##mon.add(0x230852000, 0x5000) # big curve / gamma table
+    #mon.add(0x230858000, 0x18000)
+    #mon.add(0x230870000, 0x4000)
+    #mon.add(0x230880000, 0x8000)
+    #mon.add(0x230894000, 0x4000)
+    #mon.add(0x2308a8000, 0x8000)
+    #mon.add(0x2308b0000, 0x8000)
+    #mon.add(0x2308f0000, 0x4000)
+    ##mon.add(0x2308fc000, 0x4000) # stats / RGB color histogram
+    #mon.add(0x230900000, 0x10000)
+    #mon.add(0x230970000, 0x10000)
+    #mon.add(0x230980000, 0x10000)
+    #mon.add(0x2309a0000, 0x10000)
+    #mon.add(0x2309d0000, 0x4000)
+    #mon.add(0x230a30000, 0x20000)
+    #mon.add(0x230b8c000, 0x10000)
+    #mon.add(0x231100000, 0x8000)
+    #mon.add(0x231180000, 0x4000)
+    #mon.add(0x2311bc000, 0x10000)
+    #mon.add(0x231300000, 0x8000)
+    ##mon.add(0x23130c000, 0x4000) # - DCP dart
+    #mon.add(0x231310000, 0x8000)
+    #mon.add(0x231340000, 0x8000)
+    ##mon.add(0x231800000, 0x8000) # breaks DCP
+    ##mon.add(0x231840000, 0x8000) # breaks DCP
+    ##mon.add(0x231850000, 0x8000) # something DCP?
+    ##mon.add(0x231920000, 0x8000) # breaks DCP
+    ##mon.add(0x231960000, 0x8000) # breaks DCP
+    ##mon.add(0x231970000, 0x10000) # breaks DCP
+    ##mon.add(0x231c00000, 0x10000) # DCP mailbox
 
-mon.add(0x230845840, 0x40) # error regs
+    mon.add(0x230845840, 0x40) # error regs
 
 mon.poll()
 
@@ -101,11 +103,17 @@ assert mgr.setPowerState(1, False, ByRef(0)) == 0
 
 mon.poll()
 
-assert mgr.set_display_device(2) == 0
+if is_t8103:
+    assert mgr.set_display_device(2) == 0
+else:
+    assert mgr.set_display_device(0) == 2
 assert mgr.set_parameter_dcp(14, [0], 1) == 0
 #mgr.set_digital_out_mode(86, 38)
 
-assert mgr.set_display_device(2) == 0
+if is_t8103:
+    assert mgr.set_display_device(2) == 0
+else:
+    assert mgr.set_display_device(0) == 2
 assert mgr.set_parameter_dcp(14, [0], 1) == 0
 #mgr.set_digital_out_mode(89, 38)
 
@@ -114,7 +122,10 @@ assert mgr.get_gamma_table(t) == 2
 assert mgr.set_contrast(0) == 0
 assert mgr.setBrightnessCorrection(65536) == 0
 
-assert mgr.set_display_device(2) == 0
+if is_t8103:
+    assert mgr.set_display_device(2) == 0
+else:
+    assert mgr.set_display_device(0) == 2
 assert mgr.set_parameter_dcp(14, [0], 1) == 0
 #mgr.set_digital_out_mode(89, 72)
 
