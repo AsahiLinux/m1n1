@@ -4,6 +4,7 @@
 
 #include "adt.h"
 #include "aic.h"
+#include "clk.h"
 #include "cpufreq.h"
 #include "display.h"
 #include "exception.h"
@@ -144,6 +145,7 @@ void m1n1_main(void)
     aic_init();
     wdt_disable();
     pmgr_init();
+    clk_init();
     cpufreq_init();
 
     printf("Initialization complete.\n");

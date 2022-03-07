@@ -62,6 +62,7 @@ OBJECTS := \
 	asc.o \
 	bootlogo_128.o bootlogo_256.o \
 	chickens.o \
+	clk.o \
 	cpufreq.o \
 	dart.o \
 	dcp.o \
