@@ -154,6 +154,9 @@ mgr.setBrightnessCorrection(65536)
 mgr.set_parameter_dcp(3, [65536], 1)
 mgr.set_parameter_dcp(6, [65536], 1)
 
+width = mgr.display_width()
+height = mgr.display_height()
+
 surface_id = 3
 
 swap_rec = Container(
@@ -161,10 +164,10 @@ swap_rec = Container(
     flags2 = 0x04,
     swap_id = swapid.val,
     surf_ids = [surface_id, 0, 0, 0],
-    src_rect = [[0, 0, 1920, 1080],[0,0,0,0],[0,0,0,0],[0,0,0,0]],
+    src_rect = [[0, 0, width, height],[0,0,0,0],[0,0,0,0],[0,0,0,0]],
     surf_flags = [1, 0, 0, 0],
     surf_unk = [0, 0, 0, 0],
-    dst_rect = [[0, 0, 1920, 1080],[0,0,0,0],[0,0,0,0],[0,0,0,0]],
+    dst_rect = [[0, 0, width, height],[0,0,0,0],[0,0,0,0],[0,0,0,0]],
     swap_enabled = 0x80000007,
     swap_completed = 0x80000007,
 )
@@ -178,14 +181,14 @@ surf = Container(
     format = "BGRA",
     xfer_func = 13,
     colorspace = 1,
-    stride = 1920 * 4,
+    stride = width * 4,
     pix_size = 4,
     pel_w = 1,
     pel_h = 1,
     offset = 0,
-    width = 1920,
-    height = 1080,
-    buf_size = 1920 * 1080 * 4,
+    width = width,
+    height = height,
+    buf_size = width * height * 4,
     surface_id = surface_id,
     has_comp = True,
     has_planes = True,
@@ -204,13 +207,13 @@ compressed_surf = Container(
     unk_f = 0x00000000,
     xfer_func = 13,
     colorspace = 2,
-    stride = 1920,
+    stride = width,
     pix_size = 1,
     pel_w = 1,
     pel_h = 1,
     offset = 0,
-    width = 1920,
-    height = 1080,
+    width = width,
+    height = height,
     buf_size = 0x00A36000,
     unk_2d = 0,
     unk_31 = 0,
@@ -222,8 +225,8 @@ compressed_surf = Container(
     has_comp = True,
     planes = [
         Container(
-            width = 1920,
-            height = 1080,
+            width = width,
+            height = height,
             base = 0,
             offset = 0,
             stride = 0x1e000,
@@ -234,8 +237,8 @@ compressed_surf = Container(
             unk2 = 0x05,
         ),
         Container(
-            width = 1920,
-            height = 1080,
+            width = width,
+            height = height,
             base = 0x818000,
             offset = 0x818000,
             stride = 0x7800,
@@ -267,23 +270,24 @@ compressed_surf = Container(
 )
 
 
-iova = 0x420000
-
-surfaces = [surf, None, None, None]
-#surfaces = [compressed_surf, None, None, None]
-surfAddr = [iova, 0, 0, 0]
-
 outB = ByRef(False)
 
 swaps = mgr.swaps
 
 mon.poll()
 
-buf = u.memalign(0x4000, 16<<20)
+fb_size = align_up(width * height * 4, 8 * 0x4000)
+print(f"Dispaly {width}x{height}, fb size: {fb_size}")
+
+buf = u.memalign(0x4000, fb_size)
 
 iface.writemem(buf, open("asahi.bin", "rb").read())
 
-disp_dart.iomap_at(0, iova, buf, 16<<20)
+iova = disp_dart.iomap(0, buf, fb_size)
+
+surfaces = [surf, None, None, None]
+#surfaces = [compressed_surf, None, None, None]
+surfAddr = [iova, 0, 0, 0]
 
 def submit():
     swap_rec.swap_id = swapid.val
