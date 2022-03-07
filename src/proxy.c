@@ -334,6 +334,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_SMP_WAIT:
             reply->retval = smp_wait(request->args[0]);
             break;
+        case P_SMP_SET_WFE_MODE:
+            smp_set_wfe_mode(request->args[0]);
+            break;
 
         case P_HEAPBLOCK_ALLOC:
             reply->retval = (u64)heapblock_alloc(request->args[0]);

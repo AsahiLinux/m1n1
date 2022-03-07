@@ -82,6 +82,7 @@ typedef enum {
     P_SMP_CALL,
     P_SMP_CALL_SYNC,
     P_SMP_WAIT,
+    P_SMP_SET_WFE_MODE,
 
     P_HEAPBLOCK_ALLOC = 0x600, // Heap and memory management ops
     P_MALLOC,
