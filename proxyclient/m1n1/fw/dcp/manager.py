@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 import pprint
-import struct, functools
+import struct, functools, time
 from dataclasses import dataclass
 from enum import IntEnum
 
@@ -188,9 +188,16 @@ class DCPManager(DCPBaseManager):
     def powerstate_notify(self, unk1, unk2):
         print(f"powerstate_notify({unk1}, {unk2})")
 
+    def create_default_fb_surface(self, width, height):
+        print(f"create_default_fb_surface({width}x{height})")
+        return True
+
     def powerUpDART(self, unk):
         print(f"powerUpDART({unk})")
         return 0
+
+    def hotPlug_notify_gated(self, unk):
+        print(f"hotPlug_notify_gated({unk})")
 
     def is_waking_from_hibernate(self):
         return False
@@ -202,6 +209,9 @@ class DCPManager(DCPBaseManager):
 
     def match_backlight_service(self):
         return True
+
+    def get_calendar_time_ms(self):
+        return time.time_ns() // 1000_000
 
     def map_buf(self, buf, vaddr, dva, unk):
         print(f"map buf {buf}, {unk}")
@@ -227,6 +237,12 @@ class DCPManager(DCPBaseManager):
     def sr_get_uint_prop(self, obj, key, value):
         value.val = 0
         return False
+
+    def sr_set_uint_prop(self, obj, key, value):
+        print(f"sr_set_uint_prop({obj}, {key} = {value})")
+
+    def set_fx_prop(self, obj, key, value):
+        print(f"set_fx_prop({obj}, {key} = {value})")
 
     def sr_mapDeviceMemoryWithIndex(self, obj, index, flags, addr, length):
         assert obj == "PROV"
