@@ -281,7 +281,11 @@ print(f"Dispaly {width}x{height}, fb size: {fb_size}")
 
 buf = u.memalign(0x4000, fb_size)
 
-iface.writemem(buf, open("asahi.bin", "rb").read())
+img = open("asahi.bin", "rb")
+
+block = 512 * 1024
+for off in range(0, fb_size, block):
+    iface.writemem(buf + off, img.read(min(block, fb_size - off)))
 
 iova = disp_dart.iomap(0, buf, fb_size)
 
