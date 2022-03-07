@@ -615,6 +615,7 @@ class IOMobileFramebufferAP(IPCObject):
     D576 = Callback(void, "hotPlug_notify_gated", ulong)
     D577 = Callback(void, "powerstate_notify", bool_, bool_)
 
+    D582 = Callback(bool_, "create_default_fb_surface", uint, uint)
     D583 = Callback(bool_, "serializeDebugInfoCb", ulong, InPtr(uint64_t), uint)
 
     D589 = Callback(void, "swap_complete_ap_gated", uint, bool_, InPtr(SwapCompleteData), SwapInfoBlob, uint)
@@ -624,6 +625,8 @@ class IOMobileFramebufferAP(IPCObject):
 
 class ServiceRelay(IPCObject):
     D401 = Callback(bool_, "sr_get_uint_prop", obj=FourCC, key=string(0x40), value=InOutPtr(ulong))
+    D404 = Callback(void, "sr_set_uint_prop", obj=FourCC, key=string(0x40), value=uint)
+    D406 = Callback(void, "set_fx_prop", obj=FourCC, key=string(0x40), value=uint)
     D408 = Callback(uint64_t, "sr_getClockFrequency", obj=FourCC, arg=uint)
     D411 = Callback(IOMFBStatus, "sr_mapDeviceMemoryWithIndex", obj=FourCC, index=uint, flags=uint, addr=OutPtr(ulong), length=OutPtr(ulong))
     D413 = Callback(bool_, "sr_setProperty_dict", obj=FourCC, key=string(0x40), value=InPtr(Padded(0x1000, OSDictionary())))
