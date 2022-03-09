@@ -171,11 +171,13 @@ build/$(NAME).bin: build/$(NAME)-raw.elf
 	@$(OBJCOPY) -O binary --strip-debug $< $@
 
 update_tag:
+	@mkdir -p build
 	@echo "#define BUILD_TAG \"$$(git describe --always --dirty)\"" > build/build_tag.tmp
 	@cmp -s build/build_tag.h build/build_tag.tmp 2>/dev/null || \
 	( mv -f build/build_tag.tmp build/build_tag.h && echo "  TAG   build/build_tag.h" )
 
 update_cfg:
+	@mkdir -p build
 	@echo -ne "$(CFG)" > build/build_cfg.tmp
 	@cmp -s build/build_cfg.h build/build_cfg.tmp 2>/dev/null || \
 	( mv -f build/build_cfg.tmp build/build_cfg.h && echo "  CFG   build/build_cfg.h" )
@@ -185,14 +187,17 @@ build/build_cfg.h: update_cfg
 
 build/%.bin: data/%.png
 	@echo "  IMG   $@"
+	@mkdir -p "$(dir $@)"
 	@convert $< -background black -flatten -depth 8 rgba:$@
 
 build/%.o: build/%.bin
 	@echo "  BIN   $@"
+	@mkdir -p "$(dir $@)"
 	@$(OBJCOPY) -I binary -B aarch64 -O elf64-littleaarch64 $< $@
 
 build/%.bin: font/%.bin
 	@echo "  CP    $@"
+	@mkdir -p "$(dir $@)"
 	@cp $< $@
 
 build/main.o: build/build_tag.h build/build_cfg.h src/main.c
