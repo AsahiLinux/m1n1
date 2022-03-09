@@ -142,10 +142,15 @@ static void *load_kernel(void *p, size_t size)
     }
 }
 
-#define MAX_VAR_NAME 32
+#define MAX_VAR_NAME 64
 #define MAX_VAR_SIZE 1024
 
 #define IS_VAR(x) !strncmp((char *)*p, x, strlen(x))
+
+#define MAX_CHOSEN_VARS 16
+
+static size_t chosen_cnt = 0;
+static char *chosen[MAX_CHOSEN_VARS];
 
 static bool check_var(u8 **p)
 {
@@ -159,14 +164,18 @@ static bool check_var(u8 **p)
     if (!end)
         return false;
 
-    if (IS_VAR("boot-args=")) {
+    printf("Found a variable at %p: %s\n", *p, (char *)*p);
+
+    if (IS_VAR("chosen.")) {
         *end = 0;
-        kboot_set_chosen("bootargs", val);
+        if (chosen_cnt >= MAX_CHOSEN_VARS)
+            printf("Too many chosen vars, ignoring %s='%s'\n", *p, val);
+        else
+            chosen[chosen_cnt++] = (char *)*p;
     } else {
-        return false;
+        printf("Unknown variable %s\n", *p);
     }
 
-    printf("Found a variable at %p: %s\n", *p, (char *)*p);
     *p = (u8 *)(end + 1);
     return true;
 }
@@ -226,6 +235,8 @@ int payload_run(void)
         return -1;
     }
 
+    chosen_cnt = 0;
+
     void *p = _payload_start;
 
     while (p)
@@ -233,6 +244,15 @@ int payload_run(void)
 
     if (kernel && fdt) {
         smp_start_secondaries();
+
+        for (int i = 0; i < MAX_CHOSEN_VARS; i++) {
+            char *val = memchr(chosen[i], '=', MAX_VAR_NAME + 1);
+
+            assert(val);
+            val[-1] = 0; // Terminate var name
+            if (kboot_set_chosen(chosen[i] + 7, val) < 1)
+                printf("Failed to kboot set %s='%s'\n", chosen[i], val);
+        }
 
         if (kboot_prepare_dt(fdt)) {
             printf("Failed to prepare FDT!\n");
