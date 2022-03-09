@@ -15,11 +15,13 @@
 
 #include "libfdt/libfdt.h"
 
+#define MAX_CHOSEN_PARAMS 16
+
 static void *dt = NULL;
 static int dt_bufsize = 0;
-static char *bootargs = NULL;
 static void *initrd_start = NULL;
 static size_t initrd_size = 0;
+static char *chosen_params[MAX_CHOSEN_PARAMS][2];
 
 #define DT_ALIGN 16384
 
@@ -79,11 +81,15 @@ static int dt_set_chosen(void)
     if (node < 0)
         bail("FDT: /chosen node not found in devtree\n");
 
-    if (bootargs) {
-        if (fdt_setprop(dt, node, "bootargs", bootargs, strlen(bootargs) + 1) < 0)
-            bail("FDT: couldn't set chosen.bootargs property\n");
+    for (int i = 0; i < MAX_CHOSEN_PARAMS; i++) {
+        if (!chosen_params[i][0])
+            break;
 
-        printf("FDT: bootargs = '%s'\n", bootargs);
+        const char *name = chosen_params[i][0];
+        const char *value = chosen_params[i][1];
+        if (fdt_setprop(dt, node, name, value, strlen(value) + 1) < 0)
+            bail("FDT: couldn't set chosen.%s property\n", name);
+        printf("FDT: %s = '%s'\n", name, value);
     }
 
     if (initrd_start && initrd_size) {
@@ -536,18 +542,36 @@ void kboot_set_initrd(void *start, size_t size)
     initrd_size = size;
 }
 
-void kboot_set_bootargs(const char *ba)
+int kboot_set_chosen(const char *name, const char *value)
 {
-    if (bootargs)
-        free(bootargs);
+    int i = 0;
 
-    if (!ba) {
-        bootargs = NULL;
-        return;
+    if (!name)
+        return -1;
+
+    for (int i = 0; i < MAX_CHOSEN_PARAMS; i++) {
+        if (!chosen_params[i][0]) {
+            chosen_params[i][0] = malloc(strlen(name) + 1);
+            strcpy(chosen_params[i][0], name);
+            break;
+        }
+
+        if (!strcmp(name, chosen_params[i][0])) {
+            free(chosen_params[i][1]);
+            chosen_params[i][1] = NULL;
+            break;
+        }
     }
 
-    bootargs = malloc(strlen(ba) + 1);
-    strcpy(bootargs, ba);
+    if (i >= MAX_CHOSEN_PARAMS)
+        return -1;
+
+    if (value) {
+        chosen_params[i][1] = malloc(strlen(value) + 1);
+        strcpy(chosen_params[i][1], value);
+    }
+
+    return i;
 }
 
 int kboot_prepare_dt(void *fdt)

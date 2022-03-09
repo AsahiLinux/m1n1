@@ -160,7 +160,7 @@ static bool check_var(u8 **p)
 
     if (IS_VAR("boot-args=")) {
         *end = 0;
-        kboot_set_bootargs(val);
+        kboot_set_chosen("bootargs", val);
     } else {
         return false;
     }

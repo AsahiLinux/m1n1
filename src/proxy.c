@@ -355,8 +355,8 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             if (kboot_boot((void *)request->args[0]) == 0)
                 return 1;
             break;
-        case P_KBOOT_SET_BOOTARGS:
-            kboot_set_bootargs((void *)request->args[0]);
+        case P_KBOOT_SET_CHOSEN:
+            reply->retval = kboot_set_chosen((void *)request->args[0], (void *)request->args[1]);
             break;
         case P_KBOOT_SET_INITRD:
             kboot_set_initrd((void *)request->args[0], request->args[1]);

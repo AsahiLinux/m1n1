@@ -45,7 +45,7 @@ else:
 
 if args.bootargs is not None:
     print('Setting boot args: "{}"'.format(args.bootargs))
-    p.kboot_set_bootargs(args.bootargs)
+    p.kboot_set_chosen("bootargs", args.bootargs)
 
 if args.compression != 'none':
     compressed_size = len(payload)

@@ -538,7 +538,7 @@ class M1N1Proxy(Reloadable):
     P_FREE = 0x602
 
     P_KBOOT_BOOT = 0x700
-    P_KBOOT_SET_BOOTARGS = 0x701
+    P_KBOOT_SET_CHOSEN = 0x701
     P_KBOOT_SET_INITRD = 0x702
     P_KBOOT_PREPARE_DT = 0x703
 
@@ -920,8 +920,8 @@ class M1N1Proxy(Reloadable):
 
     def kboot_boot(self, kernel):
         self.request(self.P_KBOOT_BOOT, kernel)
-    def kboot_set_bootargs(self, bootargs):
-        self.request(self.P_KBOOT_SET_BOOTARGS, bootargs)
+    def kboot_set_chosen(self, name, value):
+        self.request(self.P_KBOOT_SET_CHOSEN, name, value)
     def kboot_set_initrd(self, base, size):
         self.request(self.P_KBOOT_SET_INITRD, base, size)
     def kboot_prepare_dt(self, dt_addr):
