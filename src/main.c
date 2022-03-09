@@ -168,8 +168,8 @@ void m1n1_main(void)
 
     printf("Vectoring to next stage...\n");
 
-    next_stage.entry(next_stage.args[0], next_stage.args[1], next_stage.args[2],
-                     next_stage.args[3]);
+    next_stage.entry(next_stage.args[0], next_stage.args[1], next_stage.args[2], next_stage.args[3],
+                     next_stage.args[4]);
 
     panic("Next stage returned!\n");
 }
