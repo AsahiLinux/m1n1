@@ -166,16 +166,15 @@ static bool check_var(u8 **p)
     if (!end)
         return false;
 
+    *end = 0;
     printf("Found a variable at %p: %s\n", *p, (char *)*p);
 
     if (IS_VAR("chosen.")) {
-        *end = 0;
         if (chosen_cnt >= MAX_CHOSEN_VARS)
             printf("Too many chosen vars, ignoring %s='%s'\n", *p, val);
         else
             chosen[chosen_cnt++] = (char *)*p;
     } else if (IS_VAR("chainload=")) {
-        *end = 0;
         chainload_spec = val;
     } else {
         printf("Unknown variable %s\n", *p);
@@ -254,7 +253,7 @@ int payload_run(void)
     if (kernel && fdt) {
         smp_start_secondaries();
 
-        for (int i = 0; i < MAX_CHOSEN_VARS; i++) {
+        for (size_t i = 0; i < chosen_cnt; i++) {
             char *val = memchr(chosen[i], '=', MAX_VAR_NAME + 1);
 
             assert(val);
