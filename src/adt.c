@@ -129,6 +129,20 @@ const void *adt_getprop(const void *adt, int nodeoffset, const char *name, u32 *
     return adt_getprop_namelen(adt, nodeoffset, name, strlen(name), lenp);
 }
 
+int adt_setprop(void *adt, int nodeoffset, const char *name, void *value, size_t len)
+{
+    u32 plen;
+    void *prop = (void *)adt_getprop(adt, nodeoffset, name, &plen);
+    if (!prop)
+        return -ADT_ERR_NOTFOUND;
+
+    if (len != plen)
+        return -ADT_ERR_BADLENGTH;
+
+    memcpy(prop, value, len);
+    return len;
+}
+
 int adt_getprop_copy(const void *adt, int nodeoffset, const char *name, void *out, size_t len)
 {
     u32 plen;
