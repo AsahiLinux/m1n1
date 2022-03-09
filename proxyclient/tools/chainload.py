@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser(description='Mach-O loader for m1n1')
 parser.add_argument('-q', '--quiet', action="store_true", help="Disable framebuffer")
 parser.add_argument('-n', '--no-sepfw', action="store_true", help="Do not preserve SEPFW")
 parser.add_argument('-c', '--call', action="store_true", help="Use call mode")
+parser.add_argument('-r', '--raw', action="store_true", help="Image is raw")
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
@@ -18,15 +19,19 @@ from m1n1.tgtypes import BootArgs
 from m1n1.macho import MachO
 from m1n1 import asm
 
-macho = MachO(args.payload.read_bytes())
-
-image = macho.prepare_image()
-
 new_base = u.base
 
-entry = macho.entry
-entry -= macho.vmin
-entry += new_base
+if args.raw:
+    image = args.payload.read_bytes()
+    entry = new_base + 0x800
+else:
+    macho = MachO(args.payload.read_bytes())
+    image = macho.prepare_image()
+    entry = macho.entry
+    entry -= macho.vmin
+    entry += new_base
+
+
 
 if args.quiet:
     p.iodev_set_usage(IODEV.FB, 0)
