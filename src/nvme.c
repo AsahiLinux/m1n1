@@ -442,6 +442,7 @@ void nvme_shutdown(void)
         printf("nvme: timeout while waiting for CSTS.RDY to clear\n");
 
     rtkit_sleep(nvme_rtkit);
+    asc_cpu_stop(nvme_asc);
     pmgr_reset("ANS2");
     rtkit_free(nvme_rtkit);
     sart_free(nvme_sart);

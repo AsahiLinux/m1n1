@@ -69,6 +69,11 @@ void asc_cpu_start(asc_dev_t *asc)
     set32(asc->cpu_base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
 }
 
+void asc_cpu_stop(asc_dev_t *asc)
+{
+    clear32(asc->cpu_base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
+}
+
 bool asc_can_recv(asc_dev_t *asc)
 {
     return !(read32(asc->base + ASC_MBOX_I2A_CONTROL) & ASC_MBOX_CONTROL_EMPTY);

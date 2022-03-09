@@ -18,6 +18,7 @@ void asc_free(asc_dev_t *asc);
 int asc_get_iop_node(asc_dev_t *asc);
 
 void asc_cpu_start(asc_dev_t *asc);
+void asc_cpu_stop(asc_dev_t *asc);
 
 bool asc_can_recv(asc_dev_t *asc);
 bool asc_can_send(asc_dev_t *asc);
