@@ -38,7 +38,7 @@ CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 
 CFG :=
 ifeq ($(RELEASE),1)
-CFG += \#define RELEASE\\n
+CFG += RELEASE
 endif
 
 # Required for no_std + alloc for now
@@ -46,7 +46,7 @@ export RUSTUP_TOOLCHAIN=nightly
 RUST_LIB := librust.a
 RUST_LIBS :=
 ifeq ($(CHAINLOADING),1)
-CFG += \#define CHAINLOADING\\n
+CFG += CHAINLOADING
 RUST_LIBS += $(RUST_LIB)
 endif
 
@@ -178,7 +178,7 @@ update_tag:
 
 update_cfg:
 	@mkdir -p build
-	@echo -ne "$(CFG)" > build/build_cfg.tmp
+	@for i in $(CFG); do echo "#define $$i"; done > build/build_cfg.tmp
 	@cmp -s build/build_cfg.h build/build_cfg.tmp 2>/dev/null || \
 	( mv -f build/build_cfg.tmp build/build_cfg.h && echo "  CFG   build/build_cfg.h" )
 
