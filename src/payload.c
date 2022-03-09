@@ -21,6 +21,7 @@ static const u8 fdt_magic[] = {0xd0, 0x0d, 0xfe, 0xed};
 static const u8 kernel_magic[] = {'A', 'R', 'M', 0x64};          // at 0x38
 static const u8 cpio_magic[] = {'0', '7', '0', '7', '0'};        // '1' or '2' next
 static const u8 img4_magic[] = {0x16, 0x04, 'I', 'M', 'G', '4'}; // IA5String 'IMG4'
+static const u8 sig_magic[] = {'m', '1', 'n', '1', '_', 's', 'i', 'g'};
 static const u8 empty[] = {0, 0, 0, 0};
 
 static char expect_compatible[256];
@@ -191,6 +192,12 @@ static void *load_one_payload(void *start, size_t size)
     } else if (!memcmp(p + 0x38, kernel_magic, sizeof kernel_magic)) {
         printf("Found a kernel at %p\n", p);
         return load_kernel(p, size);
+    } else if (!memcmp(p, sig_magic, sizeof sig_magic)) {
+        u32 size;
+        memcpy(&size, p + 8, 4);
+
+        printf("Found a m1n1 signature at %p, skipping 0x%x bytes\n", p, size);
+        return p + size;
     } else if (check_var(&p)) {
         return p;
     } else if (!memcmp(p, empty, sizeof empty) ||
