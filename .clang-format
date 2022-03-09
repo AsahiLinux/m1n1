@@ -17,6 +17,8 @@ IncludeIsMainRegex: '(_.*)?$'
 # - 3rd party code headers
 # - build artifact headers (stuff outside of src/)
 IncludeCategories:
+  - Regex:           '^"(\.\./)*build/build_.*\.h"$'
+    Priority:        -3
   - Regex:           '^"(\.\./)*config\.h"$'
     Priority:        -2
   - Regex:           '^<'

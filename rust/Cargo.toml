@@ -1,0 +1,26 @@
+[package]
+name = "rust"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/AsahiLinux/m1n1"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = [ "staticlib" ]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+fatfs = { path = "vendor/rust-fatfs", default-features = false, features = ["lfn", "alloc"] }
+cstr_core = "0.2.5"
+uuid = { version = "1.0.0-alpha.1", default-features = false }
+cty = "0.2.2"
+
+[patch.crates-io]
+uuid = { path = "vendor/uuid" }
+cty = { path = "vendor/cty" }
+cstr_core = { path = "vendor/cstr_core" }
+memchr = { path = "vendor/memchr" }
+log = { path = "vendor/log" }
+bitflags = { path = "vendor/bitflags" }
+cfg-if = { path = "vendor/cfg-if" }

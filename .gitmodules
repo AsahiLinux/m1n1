@@ -1,3 +1,27 @@
 [submodule "artwork"]
 	path = artwork
 	url = https://github.com/AsahiLinux/artwork.git
+[submodule "rust/vendor/rust-fatfs"]
+	path = rust/vendor/rust-fatfs
+	url = https://github.com/rafalh/rust-fatfs
+[submodule "rust/vendor/bitflags"]
+	path = rust/vendor/bitflags
+	url = https://github.com/bitflags/bitflags
+[submodule "rust/vendor/cfg-if"]
+	path = rust/vendor/cfg-if
+	url = https://github.com/alexcrichton/cfg-if
+[submodule "rust/vendor/cstr_core"]
+	path = rust/vendor/cstr_core
+	url = https://github.com/Amanieu/cstr_core
+[submodule "rust/vendor/cty"]
+	path = rust/vendor/cty
+	url = https://github.com/japaric/cty
+[submodule "rust/vendor/uuid"]
+	path = rust/vendor/uuid
+	url = https://github.com/uuid-rs/uuid
+[submodule "rust/vendor/log"]
+	path = rust/vendor/log
+	url = https://github.com/rust-lang/log
+[submodule "rust/vendor/memchr"]
+	path = rust/vendor/memchr
+	url = https://github.com/BurntSushi/memchr

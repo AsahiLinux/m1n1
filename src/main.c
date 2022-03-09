@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "../build/build_cfg.h"
+#include "../build/build_tag.h"
+
 #include "../config.h"
 
 #include "adt.h"
@@ -25,8 +28,6 @@
 #include "utils.h"
 #include "wdt.h"
 #include "xnuboot.h"
-
-#include "../build/build_tag.h"
 
 struct vector_args next_stage;
 

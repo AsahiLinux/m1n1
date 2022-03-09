@@ -7,6 +7,8 @@
  * - https://www.beyondlogic.org/usbnutshell/usb1.shtml
  */
 
+#include "../build/build_tag.h"
+
 #include "usb_dwc3.h"
 #include "dart.h"
 #include "malloc.h"
@@ -17,8 +19,6 @@
 #include "usb_dwc3_regs.h"
 #include "usb_types.h"
 #include "utils.h"
-
-#include "../build/build_tag.h"
 
 #define MAX_ENDPOINTS   16
 #define CDC_BUFFER_SIZE SZ_1M

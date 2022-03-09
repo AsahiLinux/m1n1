@@ -1,4 +1,5 @@
 ARCH ?= aarch64-linux-gnu-
+RUSTARCH ?= aarch64-unknown-none-softfloat
 
 ifeq ($(shell uname),Darwin)
 USE_CLANG ?= 1
@@ -35,8 +36,18 @@ CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-fno-stack-protector -mgeneral-regs-only -mstrict-align -march=armv8.2-a \
 	$(EXTRA_CFLAGS)
 
+CFG :=
 ifeq ($(RELEASE),1)
-CFLAGS += -DRELEASE
+CFG += \#define RELEASE\\n
+endif
+
+# Required for no_std + alloc for now
+export RUSTUP_TOOLCHAIN=nightly
+RUST_LIB := librust.a
+RUST_LIBS :=
+ifeq ($(CHAINLOADING),1)
+CFG += \#define CHAINLOADING\\n
+RUST_LIBS += $(RUST_LIB)
 endif
 
 LDFLAGS := -EL -maarch64elf --no-undefined -X -Bsymbolic \
@@ -102,7 +113,7 @@ OBJECTS := \
 	utils.o utils_asm.o \
 	vsprintf.o \
 	wdt.o \
-	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS)
+	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS) $(RUST_LIBS)
 
 DTS := t8103-j274.dts
 
@@ -115,14 +126,18 @@ TARGET_RAW := m1n1.bin
 
 DEPDIR := build/.deps
 
-.PHONY: all clean format update_tag
-all: build/$(TARGET) build/$(TARGET_RAW) $(DTBS)
+.PHONY: all clean format update_tag update_cfg
+all: update_tag update_cfg build/$(TARGET) build/$(TARGET_RAW) $(DTBS)
 clean:
 	rm -rf build/*
 format:
 	$(CLANG_FORMAT) -i src/*.c src/*.h sysinc/*.h
 format-check:
 	$(CLANG_FORMAT) --dry-run --Werror src/*.c src/*.h sysinc/*.h
+rustfmt:
+	cd rust && cargo fmt
+rustfmt-check:
+	cd rust && cargo fmt --check
 
 build/dtb/%.dts: dts/%.dts
 	@echo "  DTCPP $@"
@@ -133,6 +148,13 @@ build/dtb/%.dtb: build/dtb/%.dts
 	@echo "  DTC   $@"
 	@mkdir -p "$(dir $@)"
 	@dtc -I dts -i dts $< -o $@
+
+build/$(RUST_LIB): rust/src/* rust/*
+	@echo "  RS    $@"
+	@mkdir -p $(DEPDIR)
+	@mkdir -p "$(dir $@)"
+	@cargo build --target $(RUSTARCH) --lib --release --manifest-path rust/Cargo.toml --target-dir build
+	@cp "build/$(RUSTARCH)/release/${RUST_LIB}" "$@"
 
 build/%.o: src/%.S
 	@echo "  AS    $@"
@@ -167,7 +189,13 @@ update_tag:
 	@cmp -s build/build_tag.h build/build_tag.tmp 2>/dev/null || \
 	( mv -f build/build_tag.tmp build/build_tag.h && echo "  TAG   build/build_tag.h" )
 
+update_cfg:
+	@echo -ne "$(CFG)" > build/build_cfg.tmp
+	@cmp -s build/build_cfg.h build/build_cfg.tmp 2>/dev/null || \
+	( mv -f build/build_cfg.tmp build/build_cfg.h && echo "  CFG   build/build_cfg.h" )
+
 build/build_tag.h: update_tag
+build/build_cfg.h: update_cfg
 
 build/%.bin: data/%.png
 	@echo "  IMG   $@"
@@ -181,7 +209,8 @@ build/%.bin: font/%.bin
 	@echo "  CP    $@"
 	@cp $< $@
 
-build/main.o: build/build_tag.h src/main.c
+build/main.o: build/build_tag.h build/build_cfg.h src/main.c
 build/usb_dwc3.o: build/build_tag.h src/usb_dwc3.c
+build/chainload.o: build/build_cfg.h src/usb_dwc3.c
 
 -include $(DEPDIR)/*

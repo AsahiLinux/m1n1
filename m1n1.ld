@@ -150,6 +150,8 @@ SECTIONS {
         *(.rela.text.*)
         *(.rela.data)
         *(.rela.data.*)
+        *(.rela.rodata)
+        *(.rela.rodata*)
         *(.rela.dyn)
         _rela_end = .;
         . = ALIGN(0x4000);

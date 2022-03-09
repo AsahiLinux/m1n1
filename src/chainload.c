@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "../build/build_cfg.h"
+
 #include "chainload.h"
 #include "adt.h"
 #include "malloc.h"
@@ -9,6 +11,10 @@
 #include "types.h"
 #include "utils.h"
 #include "xnuboot.h"
+
+#ifdef CHAINLOADING
+int rust_load_image(const char *spec, void **image, size_t *size);
+#endif
 
 extern u8 _chainload_stub_start[];
 extern u8 _chainload_stub_end[];
@@ -107,6 +113,29 @@ int chainload_image(void *image, size_t size, char **vars, size_t var_cnt)
     return 0;
 }
 
+#ifdef CHAINLOADING
+
+int chainload_load(const char *spec, char **vars, size_t var_cnt)
+{
+    void *image;
+    size_t size;
+    int ret;
+
+    if (!nvme_init()) {
+        printf("chainload: NVME init failed\n");
+        return -1;
+    }
+
+    ret = rust_load_image(spec, &image, &size);
+    nvme_shutdown();
+    if (ret < 0)
+        return ret;
+
+    return chainload_image(image, size, vars, var_cnt);
+}
+
+#else
+
 int chainload_load(const char *spec, char **vars, size_t var_cnt)
 {
     UNUSED(spec);
@@ -116,3 +145,5 @@ int chainload_load(const char *spec, char **vars, size_t var_cnt)
     printf("Chainloading files not supported in this build!\n");
     return -1;
 }
+
+#endif

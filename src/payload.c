@@ -3,6 +3,7 @@
 #include "payload.h"
 #include "adt.h"
 #include "assert.h"
+#include "chainload.h"
 #include "heapblock.h"
 #include "kboot.h"
 #include "smp.h"
@@ -27,6 +28,7 @@ static const u8 empty[] = {0, 0, 0, 0};
 static char expect_compatible[256];
 static struct kernel_header *kernel = NULL;
 static void *fdt = NULL;
+static char *chainload_spec = NULL;
 
 static void *load_one_payload(void *start, size_t size);
 
@@ -172,6 +174,9 @@ static bool check_var(u8 **p)
             printf("Too many chosen vars, ignoring %s='%s'\n", *p, val);
         else
             chosen[chosen_cnt++] = (char *)*p;
+    } else if (IS_VAR("chainload=")) {
+        *end = 0;
+        chainload_spec = val;
     } else {
         printf("Unknown variable %s\n", *p);
     }
@@ -241,6 +246,10 @@ int payload_run(void)
 
     while (p)
         p = load_one_payload(p, 0);
+
+    if (chainload_spec) {
+        return chainload_load(chainload_spec, chosen, chosen_cnt);
+    }
 
     if (kernel && fdt) {
         smp_start_secondaries();
