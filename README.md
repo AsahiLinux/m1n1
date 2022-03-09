@@ -5,7 +5,7 @@
 ## Building
 
 You need an `aarch64-linux-gnu-gcc` cross-compiler toolchain (or a native one, if running on ARM64).
-You also need `dtc` (the devicetree compiler) and `convert` (from ImageMagick) for the boot logos.
+You also need `convert` (from ImageMagick) for the boot logos.
 
 ```shell
 $ git clone --recursive https://github.com/AsahiLinux/m1n1.git
@@ -21,7 +21,7 @@ Building on ARM64 macOS is supported with clang and LLVM; you need to use Homebr
 install the required dependencies:
 
 ```shell
-$ brew install llvm imagemagick dtc
+$ brew install llvm imagemagick
 ```
 
 After that, just type `make`.

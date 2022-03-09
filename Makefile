@@ -115,11 +115,7 @@ OBJECTS := \
 	wdt.o \
 	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS) $(RUST_LIBS)
 
-DTS := t8103-j274.dts
-
 BUILD_OBJS := $(patsubst %,build/%,$(OBJECTS))
-DTBS := $(patsubst %.dts,build/dtb/%.dtb,$(DTS))
-
 NAME := m1n1
 TARGET := m1n1.macho
 TARGET_RAW := m1n1.bin
@@ -127,7 +123,7 @@ TARGET_RAW := m1n1.bin
 DEPDIR := build/.deps
 
 .PHONY: all clean format update_tag update_cfg
-all: update_tag update_cfg build/$(TARGET) build/$(TARGET_RAW) $(DTBS)
+all: update_tag update_cfg build/$(TARGET) build/$(TARGET_RAW)
 clean:
 	rm -rf build/*
 format:
@@ -138,16 +134,6 @@ rustfmt:
 	cd rust && cargo fmt
 rustfmt-check:
 	cd rust && cargo fmt --check
-
-build/dtb/%.dts: dts/%.dts
-	@echo "  DTCPP $@"
-	@mkdir -p "$(dir $@)"
-	@$(CC) -E -nostdinc -I dts -x assembler-with-cpp -o $@ $<
-
-build/dtb/%.dtb: build/dtb/%.dts
-	@echo "  DTC   $@"
-	@mkdir -p "$(dir $@)"
-	@dtc -I dts -i dts $< -o $@
 
 build/$(RUST_LIB): rust/src/* rust/*
 	@echo "  RS    $@"

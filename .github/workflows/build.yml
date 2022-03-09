@@ -25,7 +25,7 @@ jobs:
       - name: Install aarch64-linux-gnu- toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y device-tree-compiler gcc-aarch64-linux-gnu
+          sudo apt-get install --no-install-recommends -y gcc-aarch64-linux-gnu
 
       - name: Install nightly rust
         run: |
@@ -40,4 +40,4 @@ jobs:
           name: m1n1
           path: |
             build/m1n1.macho
-            build/dtb/t8103-j274.dtb
+            build/m1n1.bin
