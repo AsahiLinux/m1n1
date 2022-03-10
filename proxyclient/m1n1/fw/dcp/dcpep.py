@@ -156,6 +156,7 @@ class DCPEndpoint(ASCBaseEndpoint):
 
     def initialize(self):
         self.shmem, self.shmem_dva = self.asc.ioalloc(0x100000)
+        self.asc.p.memset32(self.shmem, 0, 0x100000)
         self.send(DCPEp_SetShmem(DVA=self.shmem_dva))
         while not self.init_complete:
             self.asc.work()
