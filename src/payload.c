@@ -257,8 +257,8 @@ int payload_run(void)
             char *val = memchr(chosen[i], '=', MAX_VAR_NAME + 1);
 
             assert(val);
-            val[-1] = 0; // Terminate var name
-            if (kboot_set_chosen(chosen[i] + 7, val) < 1)
+            val[0] = 0; // Terminate var name
+            if (kboot_set_chosen(chosen[i] + 7, val + 1) < 0)
                 printf("Failed to kboot set %s='%s'\n", chosen[i], val);
         }
 
