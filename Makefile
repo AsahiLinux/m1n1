@@ -123,7 +123,7 @@ TARGET_RAW := m1n1.bin
 
 DEPDIR := build/.deps
 
-.PHONY: all clean format update_tag update_cfg
+.PHONY: all clean format update_tag update_cfg invoke_cc
 all: update_tag update_cfg build/$(TARGET) build/$(TARGET_RAW)
 clean:
 	rm -rf build/*
@@ -154,6 +154,10 @@ build/%.o: src/%.c
 	@mkdir -p $(DEPDIR)
 	@mkdir -p "$(dir $@)"
 	@$(CC) -c $(CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
+
+# special target for usage by m1n1.loadobjs
+invoke_cc:
+	@$(CC) -c $(CFLAGS) -Isrc -o $(OBJFILE) $(CFILE)
 
 build/$(NAME).elf: $(BUILD_OBJS) m1n1.ld
 	@echo "  LD    $@"
