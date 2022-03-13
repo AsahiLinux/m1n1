@@ -851,6 +851,17 @@ static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix
             }
         }
 
+        int phys_size;
+        const fdt32_t *phys = fdt_getprop(dt, node, "phys", &phys_size);
+        if (phys) {
+            if (phys_size & 7 || phys_size > 4 * 8) {
+                printf("FDT: bad phys property for /soc/%s\n", name);
+            } else {
+                for (int i = 0; i < phys_size / 8; i++)
+                    phandles[phcnt++] = fdt32_ld(&phys[i * 2]);
+            }
+        }
+
         const char *status = fdt_getprop(dt, node, "status", NULL);
         if (!status || strcmp(status, "disabled")) {
             printf("FDT: Disabling missing device /soc/%s\n", name);
