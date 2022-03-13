@@ -21,10 +21,11 @@ def tool_output_lines(progname, args):
             yield line.decode("ascii")
         proc.wait()
         if proc.returncode:
-            raise Exception(f"{repr(cmdline)} returned status {proc.returncode}")
+            raise Exception(f"{repr(cmdline)} exited with status {proc.returncode}")
 
-def run_tool(progname, args):
-    subprocess.check_call(_tool_cmdline(progname, args), shell=True)
+def run_tool(progname, args, silent=False):
+    subprocess.check_call(_tool_cmdline(progname, args), shell=True,
+                        stdout=subprocess.DEVNULL if silent else None)
 
 
 class LinkedProgram:
@@ -156,8 +157,26 @@ class LinkedProgram:
             return None, None
         return self.symbols[idx]
 
+    def load_inline_c(self, source):
+        tmp = tempfile.mkdtemp()
+        cfile = tmp + ".c"
+        objfile = tmp + ".o"
+        with open(cfile, "w") as f:
+            f.write(source)
+        run_tool("make", f"-C {self.SOURCE_ROOT} invoke_cc "
+                 f"OBJFILE={objfile} CFILE={cfile}", silent=True)
+        self.load_obj(objfile)
+
 
 if __name__ == "__main__":
     from m1n1.setup import *
     lp = LinkedProgram(u)
     lp.debug_printf("hello from the other side! (%d)\n", 42)
+    lp.load_inline_c('''
+        #include "utils.h"
+        int add(int a, int b) {
+            debug_printf("adding %d and %d\\n", a, b);
+            return a + b;
+        }
+    ''')
+    print(f"1 + 2 = {lp.add(1, 2)}")
