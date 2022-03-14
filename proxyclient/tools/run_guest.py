@@ -13,6 +13,7 @@ parser.add_argument('-S', '--shell', action="store_true")
 parser.add_argument('-e', '--hook-exceptions', action="store_true")
 parser.add_argument('-d', '--debug-xnu', action="store_true")
 parser.add_argument('-l', '--logfile', type=pathlib.Path)
+parser.add_argument('-C', '--cpus', default=None)
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
@@ -33,6 +34,18 @@ hv = HV(iface, p, u)
 hv.hook_exceptions = args.hook_exceptions
 
 hv.init()
+
+if args.cpus:
+    avail = [i.name for i in hv.adt["/cpus"]]
+    want = set(f"cpu{i}" for i in args.cpus)
+    for cpu in avail:
+        if cpu in want:
+            continue
+        try:
+            del hv.adt[f"/cpus/{cpu}"]
+            print(f"Disabled {cpu}")
+        except KeyError:
+            continue
 
 if args.debug_xnu:
     hv.adt["chosen"].debug_enabled = 1

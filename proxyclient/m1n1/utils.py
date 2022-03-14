@@ -121,6 +121,17 @@ def unhex(s):
     s = re.sub(r"/\*.*?\*/", "", s)
     return bytes.fromhex(s.replace(" ", "").replace("\n", ""))
 
+def parse_indexlist(s):
+    items = set()
+    for i in s.split(","):
+        if "-" in i:
+            a, b = map(int, i.split("-", 1))
+            for i in range(a, b + 1):
+                items.add(i)
+        else:
+            items.add(int(i))
+    return items
+
 FourCC = ExprAdapter(Int32ul,
                      lambda d, ctx: d.to_bytes(4, "big").decode("latin-1"),
                      lambda d, ctx: int.from_bytes(d.encode("latin-1"), "big"))
