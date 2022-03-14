@@ -249,19 +249,30 @@ static int dt_set_memory(void)
 
 static int dt_set_cpus(void)
 {
+    int ret = 0;
+
     int cpus = fdt_path_offset(dt, "/cpus");
     if (cpus < 0)
         bail("FDT: /cpus node not found in devtree\n");
 
+    uint32_t *pruned_phandles = malloc(MAX_CPUS * sizeof(uint32_t));
+    size_t pruned = 0;
+    if (!pruned_phandles)
+        bail("FDT: out of memory\n");
+
+    /* Prune CPU nodes */
     int node, cpu = 0;
     for (node = fdt_first_subnode(dt, cpus); node >= 0;) {
         const char *name = fdt_get_name(dt, node, NULL);
         if (strncmp(name, "cpu@", 4))
             goto next_node;
 
+        if (cpu > MAX_CPUS)
+            bail_cleanup("Maximum number of CPUs exceeded, consider increasing MAX_CPUS\n");
+
         const fdt64_t *prop = fdt_getprop(dt, node, "reg", NULL);
         if (!prop)
-            bail("FDT: failed to get reg property of CPU\n");
+            bail_cleanup("FDT: failed to get reg property of CPU\n");
 
         u64 dt_mpidr = fdt64_ld(prop);
 
@@ -270,6 +281,8 @@ static int dt_set_cpus(void)
 
         if (!smp_is_alive(cpu)) {
             printf("FDT: CPU %d is not alive, disabling...\n", cpu);
+            pruned_phandles[pruned++] = fdt_get_phandle(dt, node);
+
             int next = fdt_next_subnode(dt, node);
             fdt_nop_node(dt, node);
             cpu++;
@@ -280,11 +293,11 @@ static int dt_set_cpus(void)
         u64 mpidr = smp_get_mpidr(cpu);
 
         if (dt_mpidr != mpidr)
-            bail("FDT: DT CPU %d MPIDR mismatch: 0x%lx != 0x%lx\n", cpu, dt_mpidr, mpidr);
+            bail_cleanup("FDT: DT CPU %d MPIDR mismatch: 0x%lx != 0x%lx\n", cpu, dt_mpidr, mpidr);
 
         u64 release_addr = smp_get_release_addr(cpu);
         if (fdt_setprop_inplace_u64(dt, node, "cpu-release-addr", release_addr))
-            bail("FDT: couldn't set cpu-release-addr property\n");
+            bail_cleanup("FDT: couldn't set cpu-release-addr property\n");
 
         printf("FDT: CPU %d MPIDR=0x%lx release-addr=0x%lx\n", cpu, mpidr, release_addr);
 
@@ -295,10 +308,146 @@ static int dt_set_cpus(void)
     }
 
     if ((node < 0) && (node != -FDT_ERR_NOTFOUND)) {
-        bail("FDT: error iterating through CPUs\n");
+        bail_cleanup("FDT: error iterating through CPUs\n");
     }
 
+    /* Prune AIC PMU affinities */
+    int aic = fdt_node_offset_by_compatible(dt, -1, "apple,aic");
+    if (aic == -FDT_ERR_NOTFOUND)
+        aic = fdt_node_offset_by_compatible(dt, -1, "apple,aic2");
+    if (aic < 0)
+        bail_cleanup("FDT: Failed to find AIC node\n");
+
+    int affinities = fdt_subnode_offset(dt, aic, "affinities");
+    if (affinities < 0) {
+        printf("FDT: Failed to find AIC affinities node, ignoring...\n");
+    } else {
+        int node;
+        for (node = fdt_first_subnode(dt, affinities); node >= 0;
+             node = fdt_next_subnode(dt, node)) {
+            int len;
+            const fdt32_t *phs = fdt_getprop(dt, node, "cpus", &len);
+            if (!phs)
+                bail_cleanup("FDT: Failed to find cpus property under AIC affinity\n");
+
+            fdt32_t *new_phs = malloc(len);
+            size_t index = 0;
+            size_t count = len / sizeof(fdt32_t);
+
+            for (size_t i = 0; i < count; i++) {
+                uint32_t phandle = fdt32_ld(&phs[i]);
+                bool prune = false;
+
+                for (size_t j = 0; j < pruned; j++) {
+                    if (pruned_phandles[j] == phandle) {
+                        prune = true;
+                        break;
+                    }
+                }
+                if (!prune)
+                    new_phs[index++] = phs[i];
+            }
+
+            ret = fdt_setprop(dt, node, "cpus", new_phs, sizeof(fdt32_t) * index);
+            free(new_phs);
+
+            if (ret < 0)
+                bail_cleanup("FDT: Failed to set cpus property under AIC affinity\n");
+
+            const char *name = fdt_get_name(dt, node, NULL);
+            printf("FDT: Pruned %ld/%ld CPU references in [AIC]/affinities/%s\n", count - index,
+                   count, name);
+        }
+
+        if ((node < 0) && (node != -FDT_ERR_NOTFOUND))
+            bail_cleanup("FDT: Error iterating through affinity nodes\n");
+    }
+
+    /* Prune CPU-map */
+    int cpu_map = fdt_path_offset(dt, "/cpus/cpu-map");
+    if (cpu_map < 0) {
+        printf("FDT: /cpus/cpu-map node not found in devtree, ignoring...\n");
+        free(pruned_phandles);
+        return 0;
+    }
+
+    int cluster_idx = 0;
+    int cluster_node;
+    for (cluster_node = fdt_first_subnode(dt, cpu_map); cluster_node >= 0;) {
+        const char *name = fdt_get_name(dt, cluster_node, NULL);
+        int cpu_idx = 0;
+
+        if (strncmp(name, "cluster", 7))
+            goto next_cluster;
+
+        int cpu_node;
+        for (cpu_node = fdt_first_subnode(dt, cluster_node); cpu_node >= 0;) {
+            const char *cpu_name = fdt_get_name(dt, cpu_node, NULL);
+
+            if (strncmp(cpu_name, "core", 4))
+                goto next_map_cpu;
+
+            int len;
+            const fdt32_t *cpu_ph = fdt_getprop(dt, cpu_node, "cpu", &len);
+
+            if (!cpu_ph || len != sizeof(*cpu_ph))
+                bail_cleanup("FDT: Failed to get cpu prop for /cpus/cpu-map/%s/%s\n", name,
+                             cpu_name);
+
+            uint32_t phandle = fdt32_ld(cpu_ph);
+            bool prune = false;
+            for (size_t i = 0; i < pruned; i++) {
+                if (pruned_phandles[i] == phandle) {
+                    prune = true;
+                    break;
+                }
+            }
+
+            if (prune) {
+                printf("FDT: Pruning /cpus/cpu-map/%s/%s\n", name, cpu_name);
+
+                int next = fdt_next_subnode(dt, cpu_node);
+                fdt_nop_node(dt, cpu_node);
+                cpu_node = next;
+                continue;
+            } else {
+                char new_name[16];
+
+                snprintf(new_name, 16, "core%d", cpu_idx++);
+                fdt_set_name(dt, cpu_node, new_name);
+            }
+        next_map_cpu:
+            cpu_node = fdt_next_subnode(dt, cpu_node);
+        }
+
+        if ((cpu_node < 0) && (cpu_node != -FDT_ERR_NOTFOUND))
+            bail_cleanup("FDT: Error iterating through CPU nodes\n");
+
+        if (cpu_idx == 0) {
+            printf("FDT: Pruning /cpus/cpu-map/%s\n", name);
+
+            int next = fdt_next_subnode(dt, cluster_node);
+            fdt_nop_node(dt, cluster_node);
+            cluster_node = next;
+            continue;
+        } else {
+            char new_name[16];
+
+            snprintf(new_name, 16, "cluster%d", cluster_idx++);
+            fdt_set_name(dt, cluster_node, new_name);
+        }
+    next_cluster:
+        cluster_node = fdt_next_subnode(dt, cluster_node);
+    }
+
+    if ((cluster_node < 0) && (cluster_node != -FDT_ERR_NOTFOUND))
+        bail_cleanup("FDT: Error iterating through CPU clusters\n");
+
     return 0;
+
+err:
+    free(pruned_phandles);
+    return ret;
 }
 
 static const char *aliases[] = {
