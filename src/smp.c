@@ -73,6 +73,9 @@ static void smp_start_cpu(int index, int cluster, int core, u64 rvbar, u64 cpu_s
 {
     int i;
 
+    if (index >= MAX_CPUS)
+        return;
+
     if (spin_table[index].flag)
         return;
 
@@ -171,12 +174,18 @@ void smp_start_secondaries(void)
 
 void smp_send_ipi(int cpu)
 {
+    if (cpu >= MAX_CPUS)
+        return;
+
     u64 mpidr = spin_table[cpu].mpidr;
     msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, (mpidr & 0xff) | ((mpidr & 0xff00) << 8));
 }
 
 void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
 {
+    if (cpu >= MAX_CPUS)
+        return;
+
     struct spin_table *target = &spin_table[cpu];
 
     if (cpu == 0)
@@ -202,6 +211,9 @@ void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
 
 u64 smp_wait(int cpu)
 {
+    if (cpu >= MAX_CPUS)
+        return 0;
+
     struct spin_table *target = &spin_table[cpu];
 
     while (target->target)
@@ -224,17 +236,26 @@ void smp_set_wfe_mode(bool new_mode)
 
 bool smp_is_alive(int cpu)
 {
+    if (cpu >= MAX_CPUS)
+        return false;
+
     return spin_table[cpu].flag;
 }
 
 uint64_t smp_get_mpidr(int cpu)
 {
+    if (cpu >= MAX_CPUS)
+        return 0;
+
     return spin_table[cpu].mpidr;
 }
 
 u64 smp_get_release_addr(int cpu)
 {
     struct spin_table *target = &spin_table[cpu];
+
+    if (cpu >= MAX_CPUS)
+        return 0;
 
     target->args[0] = 0;
     target->args[1] = 0;
