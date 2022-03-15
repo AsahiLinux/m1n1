@@ -33,7 +33,6 @@ int chainload_image(void *image, size_t size, char **vars, size_t var_cnt)
     // pad to end payload
     image_size += 4;
     image_size = ALIGN_UP(image_size, SZ_16K);
-    size_t kernel_size = image_size;
 
     // SEPFW
     size_t sepfw_off = image_size;
@@ -93,7 +92,7 @@ int chainload_image(void *image, size_t size, char **vars, size_t var_cnt)
     // Copy bootargs
     struct boot_args *new_boot_args = new_image + bootargs_off;
     *new_boot_args = cur_boot_args;
-    new_boot_args->top_of_kernel_data = new_base + kernel_size;
+    new_boot_args->top_of_kernel_data = new_base + image_size;
 
     // Copy chainload stub
     void *stub = new_image + image_size;
