@@ -208,6 +208,20 @@ static int dt_set_chosen(void)
         printf("ADT: no random-seed available!\n");
     }
 
+    int ipd = adt_path_offset(adt, "/arm-io/spi3/ipd");
+    if (ipd < 0) {
+        printf("ADT: /arm-io/spi3/ipd not found, no keyboard\n");
+    } else {
+        u32 len;
+        const u8 *kblang = adt_getprop(adt, ipd, "kblang-calibration", &len);
+        if (kblang && len >= 2) {
+            if (fdt_setprop_u32(dt, node, "asahi,kblang-code", kblang[1]))
+                bail("FDT: couldn't set asahi,kblang-code");
+        } else {
+            printf("ADT: kblang-calibration not found, no keyboard layout\n");
+        }
+    }
+
     return 0;
 }
 
