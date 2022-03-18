@@ -7,6 +7,7 @@
 #include "malloc.h"
 #include "memory.h"
 #include "pcie.h"
+#include "sep.h"
 #include "smp.h"
 #include "types.h"
 #include "usb.h"
@@ -74,7 +75,28 @@ void get_notchless_fb(u64 *fb_base, u64 *fb_height)
     *fb_height = new_height;
 }
 
-static int dt_set_rng_seed(int node)
+static int dt_set_rng_seed_sep(int node)
+{
+    u64 kaslr_seed;
+    uint8_t rng_seed[128]; // same size used by Linux for kexec
+
+    if (sep_get_random(&kaslr_seed, sizeof(kaslr_seed)) != sizeof(kaslr_seed))
+        bail("SEP: couldn't get enough random bytes for KASLR seed");
+    if (sep_get_random(rng_seed, sizeof(rng_seed)) != sizeof(rng_seed))
+        bail("SEP: couldn't get enough random bytes for RNG seed");
+
+    if (fdt_setprop_u64(dt, node, "kaslr-seed", kaslr_seed))
+        bail("FDT: couldn't set kaslr-seed\n");
+    if (fdt_setprop(dt, node, "rng-seed", rng_seed, sizeof(rng_seed)))
+        bail("FDT: couldn't set rng-seed\n");
+
+    printf("FDT: Passing %ld bytes of KASLR seed and %ld bytes of random seed\n",
+           sizeof(kaslr_seed), sizeof(rng_seed));
+
+    return 0;
+}
+
+static int dt_set_rng_seed_adt(int node)
 {
     int anode = adt_path_offset(adt, "/chosen");
 
@@ -227,7 +249,10 @@ static int dt_set_chosen(void)
         }
     }
 
-    return dt_set_rng_seed(node);
+    if (dt_set_rng_seed_sep(node))
+        return dt_set_rng_seed_adt(node);
+
+    return 0;
 }
 
 static int dt_set_memory(void)
