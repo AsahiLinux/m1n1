@@ -101,6 +101,7 @@ OBJECTS := \
 	ringbuffer.o \
 	rtkit.o \
 	sart.o \
+	sep.o \
 	smp.o \
 	start.o \
 	startup.o \

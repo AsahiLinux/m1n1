@@ -20,6 +20,7 @@
 #include "payload.h"
 #include "pcie.h"
 #include "pmgr.h"
+#include "sep.h"
 #include "smp.h"
 #include "string.h"
 #include "uart.h"
@@ -148,6 +149,7 @@ void m1n1_main(void)
     pmgr_init();
     clk_init();
     cpufreq_init();
+    sep_init();
 
     printf("Initialization complete.\n");
 
