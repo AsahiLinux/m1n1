@@ -1287,10 +1287,16 @@ class HV(Reloadable):
         image = macho.prepare_image()
         sepfw_start, sepfw_length = self.u.adt["chosen"]["memory-map"].SEPFW
         tc_start, tc_size = self.u.adt["chosen"]["memory-map"].TrustCache
+        if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
+            preoslog_start, preoslog_size = self.u.adt["chosen"]["memory-map"].preoslog
+        else:
+            preoslog_size = 0
 
         image_size = align(len(image))
         sepfw_off = image_size
         image_size += align(sepfw_length)
+        preoslog_off = image_size
+        image_size += preoslog_size
         self.bootargs_off = image_size
         bootargs_size = 0x4000
         image_size += bootargs_size
@@ -1329,11 +1335,17 @@ class HV(Reloadable):
         print(f"Copying TrustCache (0x{tc_size:x} bytes)...")
         self.p.memcpy8(tc_base, tc_start, tc_size)
 
+        if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
+            print(f"Copying preoslog (0x{preoslog_size:x} bytes)...")
+            self.p.memcpy8(guest_base + preoslog_off, preoslog_start, preoslog_size)
+
         print(f"Adjusting addresses in ADT...")
         self.adt["chosen"]["memory-map"].SEPFW = (guest_base + sepfw_off, sepfw_length)
         self.adt["chosen"]["memory-map"].TrustCache = (tc_base, tc_size)
         self.adt["chosen"]["memory-map"].DeviceTree = (self.adt_base, align(self.u.ba.devtree_size))
         self.adt["chosen"]["memory-map"].BootArgs = (guest_base + self.bootargs_off, bootargs_size)
+        if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
+            self.adt["chosen"]["memory-map"].preoslog = (guest_base + preoslog_off, preoslog_size)
 
         print(f"Setting up bootargs at 0x{guest_base + self.bootargs_off:x}...")
 
