@@ -108,7 +108,10 @@ class BaseAsm(object):
 class ARMAsm(BaseAsm):
     ARCH = os.path.join(os.environ.get("ARCH", DEFAULT_ARCH))
     CFLAGS = "-pipe -Wall -march=armv8.4-a"
-    LDFLAGS = "-maarch64elf"
+    if use_clang:
+        LDFLAGS = "-maarch64elf"
+    else:
+        LDFLAGS = "-maarch64linux"
     HEADER = """
     .text
     .globl _start
