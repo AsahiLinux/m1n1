@@ -401,7 +401,7 @@ out_disable_ctrl:
     nvme_poll_syslog();
 out_shutdown:
     rtkit_sleep(nvme_rtkit);
-    pmgr_reset("ANS2");
+    pmgr_reset(0, "ANS2");
 out_rtkit:
     rtkit_free(nvme_rtkit);
 out_sart:
@@ -443,7 +443,7 @@ void nvme_shutdown(void)
 
     rtkit_sleep(nvme_rtkit);
     asc_cpu_stop(nvme_asc);
-    pmgr_reset("ANS2");
+    pmgr_reset(0, "ANS2");
     rtkit_free(nvme_rtkit);
     sart_free(nvme_sart);
     asc_free(nvme_asc);
