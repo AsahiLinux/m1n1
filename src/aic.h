@@ -5,7 +5,7 @@
 
 #include "types.h"
 
-extern u64 aic_base;
+#define AIC_MAX_DIES 4
 
 struct aic_regs {
     uint64_t reg_size;
@@ -18,7 +18,20 @@ struct aic_regs {
     uint64_t mask_clr;
 };
 
-extern const struct aic_regs *aic_regs;
+struct aic {
+    uint64_t base;
+    uint32_t version;
+
+    uint32_t nr_irq;
+    uint32_t nr_die;
+    uint32_t max_irq;
+    uint32_t max_die;
+    uint32_t die_stride;
+
+    struct aic_regs regs;
+};
+
+extern struct aic *aic;
 
 void aic_init(void);
 void aic_set_sw(int irq, bool active);

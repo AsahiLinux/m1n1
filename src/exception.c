@@ -2,6 +2,7 @@
 
 #include "exception.h"
 #include "aic.h"
+#include "aic_regs.h"
 #include "cpu_regs.h"
 #include "gxf.h"
 #include "iodev.h"
@@ -285,8 +286,9 @@ void exc_irq(u64 *regs)
 {
     u32 reason = aic_ack();
 
-    printf("Exception: IRQ (from %s) type: %d num: %d mpidr: %lx\n", get_exception_source(0),
-           reason >> 16, reason & 0xffff, mrs(MPIDR_EL1));
+    printf("Exception: IRQ (from %s) die: %lu type: %lu num: %lu mpidr: %lx\n",
+           get_exception_source(0), FIELD_GET(AIC_EVENT_DIE, reason),
+           FIELD_GET(AIC_EVENT_TYPE, reason), FIELD_GET(AIC_EVENT_NUM, reason), mrs(MPIDR_EL1));
 
     UNUSED(regs);
     // print_regs(regs);
