@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "display.h"
+#include "adt.h"
 #include "assert.h"
 #include "dcp.h"
 #include "dcp_iboot.h"
@@ -68,6 +69,84 @@ static void display_choose_color_mode(dcp_color_mode_t *modes, int cnt, dcp_colo
            best->colorimetry, best->eotf, best->encoding, best->bpp);
 }
 
+static int display_map_fb(uintptr_t iova, void *paddr, size_t size)
+{
+    int ret = dart_map(dcp->dart_disp, iova, paddr, size);
+    if (ret < 0) {
+        printf("display: failed to map fb to dart-disp0\n");
+        return -1;
+    }
+
+    ret = dart_map(dcp->dart_dcp, iova, paddr, size);
+    if (ret < 0) {
+        printf("display: failed to map fb to dart-dcp\n");
+        dart_unmap(dcp->dart_disp, iova, size);
+        return -1;
+    }
+
+    return 0;
+}
+
+static uintptr_t display_map_vram(void)
+{
+    int ret = 0;
+    u64 paddr, size;
+    int adt_path[4];
+    int node = adt_path_offset_trace(adt, "/vram", adt_path);
+
+    if (node < 0) {
+        printf("display: '/vram' not found\n");
+        return 0;
+    }
+
+    int pp = 0;
+    while (adt_path[pp])
+        pp++;
+    adt_path[pp + 1] = 0;
+
+    ret = adt_get_reg(adt, adt_path, "reg", 0, &paddr, &size);
+    if (ret < 0) {
+        printf("display: failed to read /vram/reg\n");
+        return 0;
+    }
+
+    if (paddr != cur_boot_args.video.base) {
+        printf("display: vram does not match boot_args.video.base\n");
+        return 0;
+    }
+
+    s64 iova_disp0 = 0;
+    s64 iova_dcp = 0;
+
+    iova_dcp = dart_find_iova(dcp->dart_dcp, iova_dcp, size);
+    if (iova_dcp < 0) {
+        printf("display: failed to find IOVA for fb of %06zx bytes (dcp)\n", size);
+        return 0;
+    }
+
+    // try to map the fb to the same IOVA on disp0
+    iova_disp0 = dart_find_iova(dcp->dart_dcp, iova_dcp, size);
+    if (iova_disp0 < 0) {
+        printf("display: failed to find IOVA for fb of %06zx bytes (disp0)\n", size);
+        return 0;
+    }
+
+    // assume this results in the same IOVA, not sure if this is required but matches what iboot
+    // does on other models.
+    if (iova_disp0 != iova_dcp) {
+        printf("display: IOVA mismatch for fb between dcp (%08lx) and disp0 (%08lx)\n",
+               (u64)iova_dcp, (u64)iova_disp0);
+        return 0;
+    }
+
+    uintptr_t iova = iova_dcp;
+    ret = display_map_fb(iova, (void *)paddr, size);
+    if (ret < 0)
+        return 0;
+
+    return iova;
+}
+
 static int display_start_dcp(void)
 {
     if (iboot)
@@ -81,6 +160,9 @@ static int display_start_dcp(void)
 
     // Find the framebuffer DVA
     fb_dva = dart_search(dcp->dart_disp, (void *)cur_boot_args.video.base);
+    // framebuffer is not mapped on the M1 Ultra Mac Studio
+    if (!fb_dva)
+        fb_dva = display_map_vram();
     if (!fb_dva) {
         printf("display: failed to find display DVA\n");
         dcp_shutdown(dcp);
