@@ -224,8 +224,13 @@ else:
         'RGB101010',
         'RGB565',
         'YUV10',
+        'YUV-linear',
     ]
     pixfmt = args.encode_pixelfmt
+
+    if pixfmt == 'YUV-linear' and args.encode_subsampling == '444':
+        # Driver doesn't support this either
+        print("WARNING: This combination does not appear to work!!!")
 
     image_data = b''
     with Image.open(args.input) as im:
@@ -245,12 +250,21 @@ else:
                     # for demonstration purposes only
                     y_, u_, v_ = rgb2yuv(r, g, b)
                     image_data += struct.pack("<I", (y_ << 2) | (u_ << 12) | (v_ << 22))
+                elif pixfmt == 'YUV-linear':
+                    # garbage color space conversion, garbage subsampling
+                    # for demonstration purposes only
+                    y_, u_, v_ = rgb2yuv(r, g, b)
+                    if x & 1 == 0:
+                        color = u_
+                    else:
+                        color = v_
+                    image_data += struct.pack("BB", y_, color)
                 else:
                     assert False
 
     if pixfmt in ['RGB888', 'RGB101010', 'YUV10']:
         BYTESPP = 4
-    elif pixfmt == 'RGB565':
+    elif pixfmt in ['RGB565', 'YUV-linear']:
         BYTESPP = 2
     else:
         assert False
@@ -873,15 +887,39 @@ if args.encode:
             jpeg.PX_PLANE1_TILING_V = 0
         else:
             assert False
+    elif pixfmt == 'YUV-linear':
+        if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 8
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 1
+        elif args.encode_subsampling == '422':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 8
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 1
+        elif args.encode_subsampling == '420':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 16
+            jpeg.PX_PLANE1_TILING_H = 0
+            jpeg.PX_PLANE1_TILING_V = 0
+        else:
+            assert False
     else:
         assert False
     jpeg.PX_PLANE0_STRIDE = surface_stride
     jpeg.PX_PLANE1_STRIDE = 0
 
-    if args.encode_subsampling in ['422', '420']:
-        jpeg.CHROMA_HALVE_H_TYPE1 = 1
-    if args.encode_subsampling == '420':
-        jpeg.CHROMA_HALVE_V_TYPE1 = 1
+    if pixfmt in ['RGB888', 'RGB101010', 'RGB565', 'YUV10']:
+        if args.encode_subsampling in ['422', '420']:
+            jpeg.CHROMA_HALVE_H_TYPE1 = 1
+        if args.encode_subsampling == '420':
+            jpeg.CHROMA_HALVE_V_TYPE1 = 1
+    elif pixfmt in ['YUV-linear']:
+        if args.encode_subsampling == '420':
+            jpeg.CHROMA_HALVE_V_TYPE1 = 1
+    else:
+        assert False
 
     # none of this seems to affect anything????
     jpeg.REG_0x94 = 0xc     # c/2 for 444; 8/2 for 422; 3/1 for 411; b/2 for 400
@@ -911,12 +949,20 @@ if args.encode:
         jpeg.ENCODE_PIXEL_FORMAT.set(FORMAT=E_ENCODE_PIXEL_FORMAT.RGB565)
     elif pixfmt == 'YUV10':
         jpeg.ENCODE_PIXEL_FORMAT.set(FORMAT=E_ENCODE_PIXEL_FORMAT.YUV10_linear)
+    elif pixfmt == 'YUV-linear':
+        jpeg.ENCODE_PIXEL_FORMAT.set(FORMAT=E_ENCODE_PIXEL_FORMAT.YUV_linear)
     else:
         assert False
-    jpeg.ENCODE_COMPONENT0_POS = 0
-    jpeg.ENCODE_COMPONENT1_POS = 1
-    jpeg.ENCODE_COMPONENT2_POS = 2
-    jpeg.ENCODE_COMPONENT3_POS = 3
+    if pixfmt == 'YUV-linear':
+        jpeg.ENCODE_COMPONENT0_POS = 0
+        jpeg.ENCODE_COMPONENT1_POS = 1
+        jpeg.ENCODE_COMPONENT2_POS = 3
+        jpeg.ENCODE_COMPONENT3_POS = 2
+    else:
+        jpeg.ENCODE_COMPONENT0_POS = 0
+        jpeg.ENCODE_COMPONENT1_POS = 1
+        jpeg.ENCODE_COMPONENT2_POS = 2
+        jpeg.ENCODE_COMPONENT3_POS = 3
 
     jpeg.INPUT_START1 = input_buf_iova
     jpeg.INPUT_START2 = 0xdeadbeef
