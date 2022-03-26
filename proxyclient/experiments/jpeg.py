@@ -18,6 +18,26 @@ def divroundup(val, div):
     return (val + div - 1) // div
 
 
+def yuv2rgb(y, u, v):
+    y -= 16
+    u -= 128
+    v -= 128
+
+    y /= 255
+    u /= 255
+    v /= 255
+
+    r = y + 1.13983 * v
+    g = y - 0.39465 * u - 0.58060 * v
+    b = y + 2.03211 * u
+
+    r = min(255, max(0, int(r * 255)))
+    g = min(255, max(0, int(g * 255)))
+    b = min(255, max(0, int(b * 255)))
+
+    return (r, g, b)
+
+
 ap = argparse.ArgumentParser(description='JPEG block experiment')
 ap.add_argument("--jpeg", dest='which_jpeg', type=str, default='jpeg0',
                 help='which JPEG instance (jpeg0/jpeg1)')
@@ -46,6 +66,9 @@ if args.decode:
         'RGB565',
         'YUV422-CbYCrY',
         'YUV422-YCbYCr',
+        'YUV422-planar',
+        'YUV420-planar',
+        'YUV444-planar',
     ]
     pixfmt = args.decode_pixelfmt
 
@@ -128,14 +151,39 @@ if args.decode:
         BYTESPP = 4
     elif pixfmt in ['RGB565', 'YUV422-CbYCrY', 'YUV422-YCbYCr']:
         BYTESPP = 2
+    elif pixfmt in ['YUV422-planar', 'YUV420-planar', 'YUV444-planar']:
+        BYTESPP = 1
     else:
         assert False
     surface_stride = surface_W * BYTESPP
+    surface_sz = surface_stride*surface_H
+
+    if pixfmt == 'YUV422-planar':
+        P1_MULW = 1     # FIXME UGLY
+        P1_DIVW = 1
+        P1_DIVH = 1
+    elif pixfmt == 'YUV420-planar':
+        P1_MULW = 1
+        P1_DIVW = 1
+        P1_DIVH = 2
+    elif pixfmt == 'YUV444-planar':
+        P1_MULW = 2
+        P1_DIVW = 1
+        P1_DIVH = 1
+    if pixfmt in ['YUV422-planar', 'YUV420-planar', 'YUV444-planar']:
+        surface_P1_W = surface_W * P1_MULW // P1_DIVW
+        surface_P1_H = surface_H // P1_DIVH
+        surface_P1_stride = surface_P1_W
+        surface_P1_off = surface_sz
+        surface_sz += surface_P1_stride*surface_P1_H
+    else:
+        surface_P1_stride = 0
+        surface_P1_off = 0
 
     input_mem_sz = align_up(len(jpeg_data))
     print(f"Using size {input_mem_sz:08X} for JPEG data")
 
-    output_mem_sz = align_up(surface_stride*surface_H)
+    output_mem_sz = align_up(surface_sz)
     print(f"Using size {output_mem_sz:08X} for output image")
 else:
     assert False
@@ -330,13 +378,23 @@ if args.decode:
         jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.RGB565)
     elif pixfmt == 'YUV422-CbYCrY' or pixfmt == 'YUV422-YCbYCr':
         jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.YUV422_linear)
+    elif pixfmt == 'YUV422-planar':
+        jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.YUV422_planar)
+    elif pixfmt == 'YUV420-planar':
+        jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.YUV420_planar)
+    elif pixfmt == 'YUV444-planar':
+        jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.YUV444_planar)
     else:
         assert False
 
-    jpeg.PX_USE_PLANE1 = 0
+    if pixfmt in ['YUV422-planar', 'YUV420-planar', 'YUV444-planar']:
+        jpeg.PX_USE_PLANE1 = 1
+        jpeg.PX_PLANE1_WIDTH = jpeg_W * P1_MULW // P1_DIVW // decode_scale - 1
+        jpeg.PX_PLANE1_HEIGHT = jpeg_H // P1_DIVH // decode_scale - 1
+    else:
+        jpeg.PX_USE_PLANE1 = 0
     jpeg.PX_PLANE0_WIDTH = jpeg_W*BYTESPP // decode_scale - 1
     jpeg.PX_PLANE0_HEIGHT = jpeg_H // decode_scale - 1
-    # TODO P1
     jpeg.TIMEOUT = 266000000
 
     jpeg.REG_0x94 = 0x1f
@@ -348,7 +406,8 @@ if args.decode:
         jpeg_W - divroundup(jpeg_W, macroblock_W)*macroblock_W + macroblock_W
     bot_edge_px = \
         jpeg_H - divroundup(jpeg_H, macroblock_H)*macroblock_H + macroblock_H
-    # XXX changing this does not seem to do anything
+    # XXX changing this does not seem to do anything.
+    # Does it possibly affect scaling down?
     jpeg.RIGHT_EDGE_PIXELS.val = right_edge_px
     jpeg.BOTTOM_EDGE_PIXELS.val = bot_edge_px
     jpeg.RIGHT_EDGE_SAMPLES.val = right_edge_px // (macroblock_W // 8)
@@ -356,7 +415,7 @@ if args.decode:
 
     jpeg.PX_TILES_H = divroundup(jpeg_H, macroblock_H)
     # FIXME explain this
-    if pixfmt in ['RGBA', 'BGRA', 'RGB565']:
+    if pixfmt in ['RGBA', 'BGRA', 'RGB565', 'YUV444-planar']:
         jpeg.PX_TILES_W = divroundup(jpeg_W // decode_scale, macroblock_W)
     else:
         jpeg.PX_TILES_W = divroundup(jpeg_W // decode_scale, max(macroblock_W, 16))
@@ -429,10 +488,82 @@ if args.decode:
             jpeg.PX_PLANE1_TILING_V = 0
         else:
             assert False
+    elif pixfmt == 'YUV422-planar':
+        if jpeg_MODE == '444' or jpeg_MODE == '400':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 2
+            jpeg.PX_PLANE1_TILING_V = 8 // decode_scale
+        elif jpeg_MODE == '422':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 2
+            jpeg.PX_PLANE1_TILING_V = 8 // decode_scale
+        elif jpeg_MODE == '420':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 16 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 2
+            jpeg.PX_PLANE1_TILING_V = 16 // decode_scale
+        elif jpeg_MODE == '411':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 4
+            jpeg.PX_PLANE1_TILING_V = 8 // decode_scale
+        else:
+            assert False
+    elif pixfmt == 'YUV420-planar':
+        if jpeg_MODE == '444' or jpeg_MODE == '400':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 2
+            jpeg.PX_PLANE1_TILING_V = 4 // decode_scale
+        elif jpeg_MODE == '422':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 2
+            jpeg.PX_PLANE1_TILING_V = 4 // decode_scale
+        elif jpeg_MODE == '420':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 16 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 2
+            jpeg.PX_PLANE1_TILING_V = 8 // decode_scale
+        elif jpeg_MODE == '411':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 4
+            jpeg.PX_PLANE1_TILING_V = 4 // decode_scale
+        else:
+            assert False
+    elif pixfmt == 'YUV444-planar':
+        if jpeg_MODE == '444' or jpeg_MODE == '400':
+            jpeg.PX_PLANE0_TILING_H = 1
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 2
+            jpeg.PX_PLANE1_TILING_V = 8 // decode_scale
+        elif jpeg_MODE == '422':
+            # The driver doesn't use this, but guessing seems to be fine?
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 4
+            jpeg.PX_PLANE1_TILING_V = 8 // decode_scale
+        elif jpeg_MODE == '420':
+            # The driver doesn't use this, but guessing seems to be fine?
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 16 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 4
+            jpeg.PX_PLANE1_TILING_V = 16 // decode_scale
+        elif jpeg_MODE == '411':
+            # The driver doesn't use this, but guessing seems to be fine?
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 8
+            jpeg.PX_PLANE1_TILING_V = 8 // decode_scale
+        else:
+            assert False
     else:
         assert False
 
-    if pixfmt in ['RGBA', 'BGRA', 'RGB565']:
+    if pixfmt in ['RGBA', 'BGRA', 'RGB565', 'YUV444-planar']:
         if jpeg_MODE in ['422', '420']:
             jpeg.CHROMA_DOUBLE_H = 1
 
@@ -441,7 +572,7 @@ if args.decode:
 
         if jpeg_MODE == '420':
             jpeg.CHROMA_DOUBLE_V = 1
-    elif pixfmt in ["YUV422-CbYCrY", "YUV422-YCbYCr"]:
+    elif pixfmt in ["YUV422-CbYCrY", "YUV422-YCbYCr", "YUV422-planar"]:
         if jpeg_MODE == '444':
             jpeg.CHROMA_HALVE_H_TYPE1 = 1
 
@@ -450,6 +581,17 @@ if args.decode:
 
         if jpeg_MODE == '420':
             jpeg.CHROMA_DOUBLE_V = 1
+    elif pixfmt in ["YUV420-planar"]:
+        if jpeg_MODE == '444':
+            jpeg.CHROMA_HALVE_H_TYPE1 = 1
+
+        if jpeg_MODE in ['444', '422', '411']:
+            jpeg.CHROMA_HALVE_V_TYPE1 = 1
+
+        if jpeg_MODE == '411':
+            jpeg.CHROMA_DOUBLE_H = 1
+    else:
+        assert False
 
     jpeg.MATRIX_MULT[0].val = 0x100
     jpeg.MATRIX_MULT[1].val = 0x0
@@ -482,11 +624,10 @@ if args.decode:
     jpeg.INPUT_START2 = 0xdeadbeef
     jpeg.INPUT_END = input_buf_iova + input_mem_sz
     jpeg.OUTPUT_START1 = output_buf_iova
-    # jpeg.OUTPUT_START2 = output_buf_iova + jpeg_W * 4   # HACK
-    jpeg.OUTPUT_START2 = 0xdeadbeef
+    jpeg.OUTPUT_START2 = output_buf_iova + surface_P1_off
     jpeg.OUTPUT_END = output_buf_iova + output_mem_sz
     jpeg.PX_PLANE0_STRIDE = surface_stride
-    # jpeg.PX_PLANE1_STRIDE = output_W * 4    # HACK
+    jpeg.PX_PLANE1_STRIDE = surface_P1_stride
 
     jpeg.REG_0x1ac = 0x0
     jpeg.REG_0x1b0 = 0x0
@@ -516,6 +657,7 @@ if args.decode:
         with open(args.raw_output, 'wb') as f:
             f.write(output_data)
 
+    # Just for demonstration purposes, wrangle everything back into RGB
     with Image.new(
             mode='RGBA',
             size=(jpeg_W // decode_scale, jpeg_H // decode_scale)) as im:
@@ -551,34 +693,43 @@ if args.decode:
                     elif pixfmt == "YUV422-YCbYCr":
                         y0, cb, y1, cr = block
 
-                    y0 -= 16
-                    y1 -= 16
-                    cb -= 128
-                    cr -= 128
-
-                    cb /= 255
-                    y0 /= 255
-                    cr /= 255
-                    y1 /= 255
-
-                    r0 = y0 + 1.13983 * cr
-                    g0 = y0 - 0.39465 * cb - 0.58060 * cr
-                    b0 = y0 + 2.03211 * cb
-                    r1 = y1 + 1.13983 * cr
-                    g1 = y1 - 0.39465 * cb - 0.58060 * cr
-                    b1 = y1 + 2.03211 * cb
-
-                    r0 = min(255, max(0, int(r0 * 255)))
-                    g0 = min(255, max(0, int(g0 * 255)))
-                    b0 = min(255, max(0, int(b0 * 255)))
-                    r1 = min(255, max(0, int(r1 * 255)))
-                    g1 = min(255, max(0, int(g1 * 255)))
-                    b1 = min(255, max(0, int(b1 * 255)))
+                    r0, g0, b0 = yuv2rgb(y0, cb, cr)
+                    r1, g1, b1 = yuv2rgb(y1, cb, cr)
 
                     im.putpixel((x, y), (r0, g0, b0, 255))
                     # XXX this really needs some fixing
                     if x+1 < jpeg_W // decode_scale:
                         im.putpixel((x+1, y), (r1, g1, b1, 255))
+        elif pixfmt == "YUV422-planar":
+            for y in range(jpeg_H // decode_scale):
+                for x in range(jpeg_W // decode_scale):
+                    y_ = output_data[y*surface_stride + x]
+                    cb = output_data[surface_P1_off + y*surface_P1_stride + x&~1]
+                    cr = output_data[surface_P1_off + y*surface_P1_stride + (x&~1)+1]
+
+                    r, g, b = yuv2rgb(y_, cb, cr)
+
+                    im.putpixel((x, y), (r, g, b, 255))
+        elif pixfmt == "YUV420-planar":
+            for y in range(jpeg_H // decode_scale):
+                for x in range(jpeg_W // decode_scale):
+                    y_ = output_data[y*surface_stride + x]
+                    cb = output_data[surface_P1_off + (y//2)*surface_P1_stride + x&~1]
+                    cr = output_data[surface_P1_off + (y//2)*surface_P1_stride + (x&~1)+1]
+
+                    r, g, b = yuv2rgb(y_, cb, cr)
+
+                    im.putpixel((x, y), (r, g, b, 255))
+        elif pixfmt == "YUV444-planar":
+            for y in range(jpeg_H // decode_scale):
+                for x in range(jpeg_W // decode_scale):
+                    y_ = output_data[y*surface_stride + x]
+                    cb = output_data[surface_P1_off + y*surface_P1_stride + x*2]
+                    cr = output_data[surface_P1_off + y*surface_P1_stride + x*2+1]
+
+                    r, g, b = yuv2rgb(y_, cb, cr)
+
+                    im.putpixel((x, y), (r, g, b, 255))
         else:
             assert False
         im.save(args.output)
