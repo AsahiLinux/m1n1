@@ -25,6 +25,7 @@ g = ap.add_mutually_exclusive_group(required=True)
 g.add_argument("-e", "--encode", action='store_true')
 g.add_argument("-d", "--decode", action='store_true')
 ap.add_argument("--raw-output", type=str, required=False)
+ap.add_argument("--decode-scale", type=int, required=False)
 ap.add_argument("input", type=str)
 ap.add_argument("output", type=str)
 args = ap.parse_args()
@@ -33,6 +34,13 @@ args = ap.parse_args()
 
 # Perform necessary pre-parsing
 if args.decode:
+    if args.decode_scale is not None:
+        assert args.decode_scale in [1, 2, 4, 8]
+        decode_scale = args.decode_scale
+    else:
+        decode_scale = 1
+    # TODO: finish implementing this
+
     with open(args.input, 'rb') as f:
         jpeg_data = f.read()
 
@@ -94,9 +102,7 @@ if args.decode:
     assert found_sof0
     print(f"JPEG is {jpeg_W}x{jpeg_H} with subsampling {jpeg_MODE}")
 
-    if jpeg_MODE == '444':
-        macroblock_W, macroblock_H = 8, 8
-    elif jpeg_MODE == '400':
+    if jpeg_MODE == '444' or jpeg_MODE == '400':
         macroblock_W, macroblock_H = 8, 8
     elif jpeg_MODE == '422':
         macroblock_W, macroblock_H = 16, 8
@@ -293,20 +299,31 @@ if args.decode:
     jpeg.REG_0x34 = 1
     jpeg.REG_0x2c = 0
     jpeg.REG_0x38 = 0
-    jpeg.CODEC.set(CODEC=E_CODEC._444)
+    if jpeg_MODE == '444':
+        jpeg.CODEC.set(CODEC=E_CODEC._444)
+    elif jpeg_MODE == '400':
+        jpeg.CODEC.set(CODEC=E_CODEC._400)
+    elif jpeg_MODE == '422':
+        jpeg.CODEC.set(CODEC=E_CODEC._422)
+    elif jpeg_MODE == '420':
+        jpeg.CODEC.set(CODEC=E_CODEC._420)
+    elif jpeg_MODE == '411':
+        jpeg.CODEC.set(CODEC=E_CODEC._411)
+    else:
+        assert False
     jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.RGBA8888)
 
     jpeg.PX_USE_PLANE1 = 0
     jpeg.PX_PLANE0_WIDTH = jpeg_W*BYTESPP - 1
     jpeg.PX_PLANE0_HEIGHT = jpeg_H - 1
     # TODO P1
-    jpeg.TIMEOUT.val = 266000000
+    jpeg.TIMEOUT = 266000000
 
     jpeg.REG_0x94 = 0x1f
     jpeg.REG_0x98 = 1
 
-    jpeg.DECODE_MACROBLOCKS_W.val = divroundup(jpeg_W, macroblock_W)
-    jpeg.DECODE_MACROBLOCKS_H.val = divroundup(jpeg_H, macroblock_H)
+    jpeg.DECODE_MACROBLOCKS_W = divroundup(jpeg_W, macroblock_W)
+    jpeg.DECODE_MACROBLOCKS_H = divroundup(jpeg_H, macroblock_H)
     # right_edge_px = jpeg_W - divroundup(jpeg_W, 8)*8 + 8
     # bot_edge_px = jpeg_H - divroundup(jpeg_H, 8)*8 + 8
     # # XXX changing this does not seem to do anything
@@ -315,12 +332,39 @@ if args.decode:
     # jpeg.RIGHT_EDGE_SAMPLES.val = right_edge_px // 2
     # jpeg.BOTTOM_EDGE_SAMPLES.val = bot_edge_px // 2
 
-    jpeg.PX_TILES_H.val = divroundup(jpeg_H, macroblock_W)
-    jpeg.PX_TILES_W.val = divroundup(jpeg_W, macroblock_H)
-    jpeg.PX_PLANE0_TILING_H.val = 4
-    jpeg.PX_PLANE0_TILING_V.val = 8
-    jpeg.PX_PLANE1_TILING_H.val = 1
-    jpeg.PX_PLANE1_TILING_V.val = 1
+    jpeg.PX_TILES_H = divroundup(jpeg_H, macroblock_H)
+    jpeg.PX_TILES_W = divroundup(jpeg_W, macroblock_W)
+    if jpeg_MODE == '444' or jpeg_MODE == '400':
+        jpeg.PX_PLANE0_TILING_H = 4
+        jpeg.PX_PLANE0_TILING_V = 8
+        jpeg.PX_PLANE1_TILING_H = 1
+        jpeg.PX_PLANE1_TILING_V = 1
+    elif jpeg_MODE == '422':
+        jpeg.PX_PLANE0_TILING_H = 8
+        jpeg.PX_PLANE0_TILING_V = 8
+        jpeg.PX_PLANE1_TILING_H = 1
+        jpeg.PX_PLANE1_TILING_V = 1
+    elif jpeg_MODE == '420':
+        jpeg.PX_PLANE0_TILING_H = 8
+        jpeg.PX_PLANE0_TILING_V = 16
+        jpeg.PX_PLANE1_TILING_H = 0
+        jpeg.PX_PLANE1_TILING_V = 0
+    elif jpeg_MODE == '411':
+        jpeg.PX_PLANE0_TILING_H = 16
+        jpeg.PX_PLANE0_TILING_V = 8
+        jpeg.PX_PLANE1_TILING_H = 0
+        jpeg.PX_PLANE1_TILING_V = 0
+    else:
+        assert False
+
+    if jpeg_MODE in ['422', '420']:  # TODO
+        jpeg.CHROMA_DOUBLE_H = 1
+
+    if jpeg_MODE == '411':  # TODO
+        jpeg.CHROMA_QUADRUPLE_H = 1
+
+    if jpeg_MODE == '420':  # TODO
+        jpeg.CHROMA_DOUBLE_V = 1
 
     jpeg.MATRIX_MULT[0].val = 0x100
     jpeg.MATRIX_MULT[1].val = 0x0
@@ -334,36 +378,36 @@ if args.decode:
     jpeg.MATRIX_MULT[9].val = 0x0
     jpeg.MATRIX_MULT[10].val = 0xffffff80
 
-    jpeg.RGBA_ALPHA.val = 0xff
-    jpeg.RGBA_ORDER.val = 1
+    jpeg.RGBA_ALPHA = 0xff
+    jpeg.RGBA_ORDER = 1
 
-    jpeg.SCALE_FACTOR.val = 0
+    jpeg.SCALE_FACTOR = 0
 
-    jpeg.INPUT_START1.val = input_buf_iova
-    jpeg.INPUT_START2.val = 0xdeadbeef
-    jpeg.INPUT_END.val = input_buf_iova + input_mem_sz
-    jpeg.OUTPUT_START1.val = output_buf_iova
-    # jpeg.OUTPUT_START2.val = output_buf_iova + jpeg_W * 4   # HACK
-    jpeg.OUTPUT_START2.val = 0xdeadbeef
-    jpeg.OUTPUT_END.val = output_buf_iova + output_mem_sz
-    jpeg.PX_PLANE0_STRIDE.val = surface_stride
-    # jpeg.PX_PLANE1_STRIDE.val = output_W * 4    # HACK
+    jpeg.INPUT_START1 = input_buf_iova
+    jpeg.INPUT_START2 = 0xdeadbeef
+    jpeg.INPUT_END = input_buf_iova + input_mem_sz
+    jpeg.OUTPUT_START1 = output_buf_iova
+    # jpeg.OUTPUT_START2 = output_buf_iova + jpeg_W * 4   # HACK
+    jpeg.OUTPUT_START2 = 0xdeadbeef
+    jpeg.OUTPUT_END = output_buf_iova + output_mem_sz
+    jpeg.PX_PLANE0_STRIDE = surface_stride
+    # jpeg.PX_PLANE1_STRIDE = output_W * 4    # HACK
 
-    jpeg.REG_0x1ac.val = 0x0
-    jpeg.REG_0x1b0.val = 0x0
-    jpeg.REG_0x1b4.val = 0x0
-    jpeg.REG_0x1bc.val = 0x0
-    jpeg.REG_0x1c0.val = 0x0
-    jpeg.REG_0x1c4.val = 0x0
+    jpeg.REG_0x1ac = 0x0
+    jpeg.REG_0x1b0 = 0x0
+    jpeg.REG_0x1b4 = 0x0
+    jpeg.REG_0x1bc = 0x0
+    jpeg.REG_0x1c0 = 0x0
+    jpeg.REG_0x1c4 = 0x0
 
-    jpeg.REG_0x118.val = 0x0
-    jpeg.REG_0x11c.val = 0x1
+    jpeg.REG_0x118 = 0x0
+    jpeg.REG_0x11c = 0x1
 
-    jpeg.MODE.val = 0x177
-    jpeg.REG_0x1028.val = 0x400
+    jpeg.MODE = 0x177
+    jpeg.REG_0x1028 = 0x400
 
-    jpeg.JPEG_IO_FLAGS.val = 0x3f
-    jpeg.REG_0x0.val = 0x1
+    jpeg.JPEG_IO_FLAGS = 0x3f
+    jpeg.REG_0x0 = 0x1
     jpeg.REG_0x1004 = 0x1
 
     # FIXME: we don't actually know when it's done
