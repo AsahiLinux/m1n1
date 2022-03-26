@@ -28,7 +28,7 @@ class R_CODEC(Register32):
 
 class E_ENCODE_PIXEL_FORMAT(IntEnum):
     RGB101010 = 0
-    YUV10_linear = 1    # partially tested, details not understood
+    YUV10_linear = 1
     RGB888 = 2
     RGB565 = 3
     YUV_planar = 4      # partially tested, details not understood
