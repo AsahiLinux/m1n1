@@ -49,6 +49,8 @@ ap.add_argument("--decode-scale", type=int, required=False, default=1)
 ap.add_argument("--decode-pixelfmt", type=str, required=False, default='RGBA')
 ap.add_argument("--decode-rgba-alpha", type=int, required=False, default=255)
 ap.add_argument("--encode-subsampling", type=str, required=False, default='444')
+ap.add_argument("--encode-rst-interval", type=int, required=False)
+ap.add_argument("--encode-pixelfmt", type=str, required=False, default='RGB888')
 ap.add_argument("input", type=str)
 ap.add_argument("output", type=str)
 args = ap.parse_args()
@@ -197,6 +199,13 @@ else:
     else:
         assert False
 
+    assert args.encode_pixelfmt in [
+        'RGB888',
+        'RGB101010',
+        'RGB565',
+    ]
+    pixfmt = args.encode_pixelfmt
+
     image_data = b''
     with Image.open(args.input) as im:
         im_W, im_H = im.size
@@ -204,9 +213,21 @@ else:
         for y in range(im_H):
             for x in range(im_W):
                 r, g, b = im.getpixel((x, y))
-                image_data += struct.pack("BBBB", r, g, b, 255)
+                if pixfmt == 'RGB888':
+                    image_data += struct.pack("BBBB", r, g, b, 255)
+                elif pixfmt == 'RGB101010':
+                    image_data += struct.pack("<I", (r << 2) | (g << 12) | (b << 22))
+                elif pixfmt == 'RGB565':
+                    image_data += struct.pack("<H", (r >> 3) | ((g >> 2) << 5) | ((b >> 3) << 11))
+                else:
+                    assert False
 
-    BYTESPP = 4
+    if pixfmt in ['RGB888', 'RGB101010']:
+        BYTESPP = 4
+    elif pixfmt == 'RGB565':
+        BYTESPP = 2
+    else:
+        assert False
     surface_stride = im_W * BYTESPP
     surface_sz = surface_stride * im_H
     input_mem_sz = align_up(surface_sz)
@@ -790,21 +811,42 @@ if args.encode:
 
     jpeg.PX_TILES_W = divroundup(im_W, macroblock_W)
     jpeg.PX_TILES_H = divroundup(im_H, macroblock_H)
-    if args.encode_subsampling == '444' or args.encode_subsampling == '400':
-        jpeg.PX_PLANE0_TILING_H = 4
-        jpeg.PX_PLANE0_TILING_V = 8
-        jpeg.PX_PLANE1_TILING_H = 1
-        jpeg.PX_PLANE1_TILING_V = 1
-    elif args.encode_subsampling == '422':
-        jpeg.PX_PLANE0_TILING_H = 8
-        jpeg.PX_PLANE0_TILING_V = 8
-        jpeg.PX_PLANE1_TILING_H = 1
-        jpeg.PX_PLANE1_TILING_V = 1
-    elif args.encode_subsampling == '420':
-        jpeg.PX_PLANE0_TILING_H = 8
-        jpeg.PX_PLANE0_TILING_V = 16
-        jpeg.PX_PLANE1_TILING_H = 0
-        jpeg.PX_PLANE1_TILING_V = 0
+    if pixfmt in ['RGB888', 'RGB101010']:
+        if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 8
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 1
+        elif args.encode_subsampling == '422':
+            jpeg.PX_PLANE0_TILING_H = 8
+            jpeg.PX_PLANE0_TILING_V = 8
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 1
+        elif args.encode_subsampling == '420':
+            jpeg.PX_PLANE0_TILING_H = 8
+            jpeg.PX_PLANE0_TILING_V = 16
+            jpeg.PX_PLANE1_TILING_H = 0
+            jpeg.PX_PLANE1_TILING_V = 0
+        else:
+            assert False
+    elif pixfmt == 'RGB565':
+        if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 8
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 1
+        elif args.encode_subsampling == '422':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 8
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 1
+        elif args.encode_subsampling == '420':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 16
+            jpeg.PX_PLANE1_TILING_H = 0
+            jpeg.PX_PLANE1_TILING_V = 0
+        else:
+            assert False
     else:
         assert False
     jpeg.PX_PLANE0_STRIDE = surface_stride
@@ -834,7 +876,14 @@ if args.encode:
     jpeg.MATRIX_MULT[9].val = 0x0
     jpeg.MATRIX_MULT[10].val = 0x80
 
-    jpeg.ENCODE_PIXEL_FORMAT = 2
+    if pixfmt == 'RGB888':
+        jpeg.ENCODE_PIXEL_FORMAT.set(FORMAT=E_ENCODE_PIXEL_FORMAT.RGB888)
+    elif pixfmt == 'RGB101010':
+        jpeg.ENCODE_PIXEL_FORMAT.set(FORMAT=E_ENCODE_PIXEL_FORMAT.RGB101010)
+    elif pixfmt == 'RGB565':
+        jpeg.ENCODE_PIXEL_FORMAT.set(FORMAT=E_ENCODE_PIXEL_FORMAT.RGB565)
+    else:
+        assert False
     jpeg.ENCODE_COMPONENT0_POS = 0
     jpeg.ENCODE_COMPONENT1_POS = 1
     jpeg.ENCODE_COMPONENT2_POS = 2
@@ -850,7 +899,7 @@ if args.encode:
     jpeg.REG_0x118 = 0x1
     jpeg.REG_0x11c = 0x0
 
-    jpeg.ENABLE_RST_LOGGING = 1
+    jpeg.ENABLE_RST_LOGGING = args.encode_rst_interval is not None
 
     jpeg.MODE = 0x16f
     if args.encode_subsampling == '444':
@@ -870,7 +919,10 @@ if args.encode:
     )
     jpeg.JPEG_WIDTH = im_W
     jpeg.JPEG_HEIGHT = im_H
-    jpeg.RST_INTERVAL = 0
+    if args.encode_rst_interval is not None:
+        jpeg.RST_INTERVAL = args.encode_rst_interval
+    else:
+        jpeg.RST_INTERVAL = 0
     jpeg.JPEG_OUTPUT_FLAGS = 0
 
     jpeg.QTBL[0].val =  0xa06e64a0
@@ -953,6 +1005,10 @@ if args.encode:
     print(jpeg.PERFCOUNTER.reg)
     jpeg_out_sz = jpeg.COMPRESSED_BYTES.val
     print(f"JPEG output is {jpeg_out_sz} bytes")
+
+    rst_log_n = jpeg.RST_LOG_ENTRIES.val
+    for i in range(rst_log_n):
+        print(f"RST log[{i}] = 0x{jpeg.RSTLOG[i].val:X}")
 
     output_data = iface.readmem(output_buf_phys, output_mem_sz)
     if args.raw_output is not None:
