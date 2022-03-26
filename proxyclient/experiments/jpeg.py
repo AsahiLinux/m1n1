@@ -25,7 +25,9 @@ g = ap.add_mutually_exclusive_group(required=True)
 g.add_argument("-e", "--encode", action='store_true')
 g.add_argument("-d", "--decode", action='store_true')
 ap.add_argument("--raw-output", type=str, required=False)
-ap.add_argument("--decode-scale", type=int, required=False)
+ap.add_argument("--decode-scale", type=int, required=False, default=1)
+ap.add_argument("--decode-pixelfmt", type=str, required=False, default='RGBA')
+ap.add_argument("--decode-rgba-alpha", type=int, required=False, default=255)
 ap.add_argument("input", type=str)
 ap.add_argument("output", type=str)
 args = ap.parse_args()
@@ -34,12 +36,16 @@ args = ap.parse_args()
 
 # Perform necessary pre-parsing
 if args.decode:
-    if args.decode_scale is not None:
-        assert args.decode_scale in [1, 2, 4, 8]
-        decode_scale = args.decode_scale
-    else:
-        decode_scale = 1
-    # TODO: finish implementing this
+    assert args.decode_scale in [1, 2, 4, 8]
+    decode_scale = args.decode_scale
+    # FIXME: verify behavior on non-evenly-divisible sizes
+
+    assert args.decode_pixelfmt in [
+        'RGBA',
+        'BGRA',
+        'RGB565',
+    ]
+    pixfmt = args.decode_pixelfmt
 
     with open(args.input, 'rb') as f:
         jpeg_data = f.read()
@@ -114,9 +120,14 @@ if args.decode:
         assert False
 
     # FIXME: Exactly how much extra memory do we need to allocate?
-    surface_W = divroundup(jpeg_W, macroblock_W) * macroblock_W
-    surface_H = divroundup(jpeg_H, macroblock_H) * macroblock_H
-    BYTESPP = 4
+    surface_W = divroundup(jpeg_W // decode_scale, macroblock_W) * macroblock_W
+    surface_H = divroundup(jpeg_H // decode_scale, macroblock_H) * macroblock_H
+    if pixfmt in ['RGBA', 'BGRA']:
+        BYTESPP = 4
+    elif pixfmt == 'RGB565':
+        BYTESPP = 2
+    else:
+        assert False
     surface_stride = surface_W * BYTESPP
 
     input_mem_sz = align_up(len(jpeg_data))
@@ -311,11 +322,14 @@ if args.decode:
         jpeg.CODEC.set(CODEC=E_CODEC._411)
     else:
         assert False
-    jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.RGBA8888)
+    if pixfmt == 'RGBA' or pixfmt == 'BGRA':
+        jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.RGBA8888)
+    elif pixfmt == 'RGB565':
+        jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.RGB565)
 
     jpeg.PX_USE_PLANE1 = 0
-    jpeg.PX_PLANE0_WIDTH = jpeg_W*BYTESPP - 1
-    jpeg.PX_PLANE0_HEIGHT = jpeg_H - 1
+    jpeg.PX_PLANE0_WIDTH = jpeg_W*BYTESPP // decode_scale - 1
+    jpeg.PX_PLANE0_HEIGHT = jpeg_H // decode_scale - 1
     # TODO P1
     jpeg.TIMEOUT = 266000000
 
@@ -324,38 +338,64 @@ if args.decode:
 
     jpeg.DECODE_MACROBLOCKS_W = divroundup(jpeg_W, macroblock_W)
     jpeg.DECODE_MACROBLOCKS_H = divroundup(jpeg_H, macroblock_H)
-    # right_edge_px = jpeg_W - divroundup(jpeg_W, 8)*8 + 8
-    # bot_edge_px = jpeg_H - divroundup(jpeg_H, 8)*8 + 8
-    # # XXX changing this does not seem to do anything
-    # jpeg.RIGHT_EDGE_PIXELS.val = right_edge_px
-    # jpeg.BOTTOM_EDGE_PIXELS.val = bot_edge_px
-    # jpeg.RIGHT_EDGE_SAMPLES.val = right_edge_px // 2
-    # jpeg.BOTTOM_EDGE_SAMPLES.val = bot_edge_px // 2
+    right_edge_px = \
+        jpeg_W - divroundup(jpeg_W, macroblock_W)*macroblock_W + macroblock_W
+    bot_edge_px = \
+        jpeg_H - divroundup(jpeg_H, macroblock_H)*macroblock_H + macroblock_H
+    # XXX changing this does not seem to do anything
+    jpeg.RIGHT_EDGE_PIXELS.val = right_edge_px
+    jpeg.BOTTOM_EDGE_PIXELS.val = bot_edge_px
+    jpeg.RIGHT_EDGE_SAMPLES.val = right_edge_px // (macroblock_W // 8)
+    jpeg.BOTTOM_EDGE_SAMPLES.val = bot_edge_px // (macroblock_H // 8)
 
     jpeg.PX_TILES_H = divroundup(jpeg_H, macroblock_H)
-    jpeg.PX_TILES_W = divroundup(jpeg_W, macroblock_W)
-    if jpeg_MODE == '444' or jpeg_MODE == '400':
-        jpeg.PX_PLANE0_TILING_H = 4
-        jpeg.PX_PLANE0_TILING_V = 8
-        jpeg.PX_PLANE1_TILING_H = 1
-        jpeg.PX_PLANE1_TILING_V = 1
-    elif jpeg_MODE == '422':
-        jpeg.PX_PLANE0_TILING_H = 8
-        jpeg.PX_PLANE0_TILING_V = 8
-        jpeg.PX_PLANE1_TILING_H = 1
-        jpeg.PX_PLANE1_TILING_V = 1
-    elif jpeg_MODE == '420':
-        jpeg.PX_PLANE0_TILING_H = 8
-        jpeg.PX_PLANE0_TILING_V = 16
-        jpeg.PX_PLANE1_TILING_H = 0
-        jpeg.PX_PLANE1_TILING_V = 0
-    elif jpeg_MODE == '411':
-        jpeg.PX_PLANE0_TILING_H = 16
-        jpeg.PX_PLANE0_TILING_V = 8
-        jpeg.PX_PLANE1_TILING_H = 0
-        jpeg.PX_PLANE1_TILING_V = 0
-    else:
-        assert False
+    jpeg.PX_TILES_W = divroundup(jpeg_W // decode_scale, macroblock_W)
+    if pixfmt == 'RGBA' or pixfmt == 'BGRA':
+        if jpeg_MODE == '444' or jpeg_MODE == '400':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 1
+        elif jpeg_MODE == '422':
+            jpeg.PX_PLANE0_TILING_H = 8
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 1
+        elif jpeg_MODE == '420':
+            jpeg.PX_PLANE0_TILING_H = 8
+            jpeg.PX_PLANE0_TILING_V = 16 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 0
+            jpeg.PX_PLANE1_TILING_V = 0
+        elif jpeg_MODE == '411':
+            jpeg.PX_PLANE0_TILING_H = 16
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 0
+            jpeg.PX_PLANE1_TILING_V = 0
+        else:
+            assert False
+    elif pixfmt == 'RGB565':
+        if jpeg_MODE == '444' or jpeg_MODE == '400':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 1
+        elif jpeg_MODE == '422':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 1
+        elif jpeg_MODE == '420':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 16 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 0
+            jpeg.PX_PLANE1_TILING_V = 0
+        elif jpeg_MODE == '411':
+            jpeg.PX_PLANE0_TILING_H = 8
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 0
+            jpeg.PX_PLANE1_TILING_V = 0
+        else:
+            assert False
 
     if jpeg_MODE in ['422', '420']:  # TODO
         jpeg.CHROMA_DOUBLE_H = 1
@@ -378,10 +418,19 @@ if args.decode:
     jpeg.MATRIX_MULT[9].val = 0x0
     jpeg.MATRIX_MULT[10].val = 0xffffff80
 
-    jpeg.RGBA_ALPHA = 0xff
-    jpeg.RGBA_ORDER = 1
+    jpeg.RGBA_ALPHA = args.decode_rgba_alpha
+    jpeg.RGBA_ORDER = pixfmt == "RGBA"
 
-    jpeg.SCALE_FACTOR = 0
+    if decode_scale == 1:
+        jpeg.SCALE_FACTOR.set(SCALE=E_SCALE.DIV1)
+    elif decode_scale == 2:
+        jpeg.SCALE_FACTOR.set(SCALE=E_SCALE.DIV2)
+    elif decode_scale == 4:
+        jpeg.SCALE_FACTOR.set(SCALE=E_SCALE.DIV4)
+    elif decode_scale == 8:
+        jpeg.SCALE_FACTOR.set(SCALE=E_SCALE.DIV8)
+    else:
+        assert False
 
     jpeg.INPUT_START1 = input_buf_iova
     jpeg.INPUT_START2 = 0xdeadbeef
@@ -421,13 +470,26 @@ if args.decode:
         with open(args.raw_output, 'wb') as f:
             f.write(output_data)
 
-    with Image.new(mode='RGBA', size=(jpeg_W, jpeg_H)) as im:
-        for y in range(jpeg_H):
-            for x in range(jpeg_W):
+    with Image.new(
+            mode='RGBA',
+            size=(jpeg_W // decode_scale, jpeg_H // decode_scale)) as im:
+        for y in range(jpeg_H // decode_scale):
+            for x in range(jpeg_W // decode_scale):
                 block = output_data[
                     y*surface_stride + x*BYTESPP:
                     y*surface_stride + (x+1)*BYTESPP]
 
-                r, g, b, a = block
+                if pixfmt == "RGBA":
+                    r, g, b, a = block
+                elif pixfmt == "BGRA":
+                    b, g, r, a = block
+                elif pixfmt == "RGB565":
+                    rgb = struct.unpack("<H", block)[0]
+                    b = (rgb & 0b11111) << 3
+                    g = ((rgb >> 5) & 0b111111) << 2
+                    r = ((rgb >> 11) & 0b11111) << 3
+                    a = 255
+                else:
+                    assert False
                 im.putpixel((x, y), (r, g, b, a))
         im.save(args.output)
