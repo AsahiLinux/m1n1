@@ -48,6 +48,7 @@ ap.add_argument("--raw-output", type=str, required=False)
 ap.add_argument("--decode-scale", type=int, required=False, default=1)
 ap.add_argument("--decode-pixelfmt", type=str, required=False, default='RGBA')
 ap.add_argument("--decode-rgba-alpha", type=int, required=False, default=255)
+ap.add_argument("--encode-subsampling", type=str, required=False, default='444')
 ap.add_argument("input", type=str)
 ap.add_argument("output", type=str)
 args = ap.parse_args()
@@ -186,6 +187,16 @@ if args.decode:
     output_mem_sz = align_up(surface_sz)
     print(f"Using size {output_mem_sz:08X} for output image")
 else:
+    assert args.encode_subsampling in ['444', '422', '420', '400']
+    if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+        macroblock_W, macroblock_H = 8, 8
+    elif args.encode_subsampling == '422':
+        macroblock_W, macroblock_H = 16, 8
+    elif args.encode_subsampling == '420':
+        macroblock_W, macroblock_H = 16, 16
+    else:
+        assert False
+
     image_data = b''
     with Image.open(args.input) as im:
         im_W, im_H = im.size
@@ -758,7 +769,17 @@ if args.encode:
     jpeg.REG_0x38 = 0x1     # if not set nothing happens
     jpeg.REG_0x2c = 0x1     # if not set only header is output
     jpeg.REG_0x34 = 0x0     # if set output is a JPEG but weird with no footer
-    jpeg.CODEC = 0
+
+    if args.encode_subsampling == '444':
+        jpeg.CODEC.set(CODEC=E_CODEC._444)
+    elif args.encode_subsampling == '422':
+        jpeg.CODEC.set(CODEC=E_CODEC._422)
+    elif args.encode_subsampling == '420':
+        jpeg.CODEC.set(CODEC=E_CODEC._420)
+    elif args.encode_subsampling == '400':
+        jpeg.CODEC.set(CODEC=E_CODEC._400)
+    else:
+        assert False
 
     jpeg.PX_USE_PLANE1 = 0x0
     jpeg.PX_PLANE0_WIDTH = im_W*BYTESPP - 1
@@ -767,12 +788,32 @@ if args.encode:
     jpeg.PX_PLANE1_HEIGHT = 0xffffffff
     jpeg.TIMEOUT = 266000000
 
-    jpeg.PX_TILES_W = divroundup(im_W, 8)
-    jpeg.PX_TILES_H = divroundup(im_H, 8)
-    jpeg.PX_PLANE0_TILING_H = 0x4
-    jpeg.PX_PLANE0_TILING_V = 0x8
+    jpeg.PX_TILES_W = divroundup(im_W, macroblock_W)
+    jpeg.PX_TILES_H = divroundup(im_H, macroblock_H)
+    if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+        jpeg.PX_PLANE0_TILING_H = 4
+        jpeg.PX_PLANE0_TILING_V = 8
+        jpeg.PX_PLANE1_TILING_H = 1
+        jpeg.PX_PLANE1_TILING_V = 1
+    elif args.encode_subsampling == '422':
+        jpeg.PX_PLANE0_TILING_H = 8
+        jpeg.PX_PLANE0_TILING_V = 8
+        jpeg.PX_PLANE1_TILING_H = 1
+        jpeg.PX_PLANE1_TILING_V = 1
+    elif args.encode_subsampling == '420':
+        jpeg.PX_PLANE0_TILING_H = 8
+        jpeg.PX_PLANE0_TILING_V = 16
+        jpeg.PX_PLANE1_TILING_H = 0
+        jpeg.PX_PLANE1_TILING_V = 0
+    else:
+        assert False
     jpeg.PX_PLANE0_STRIDE = surface_stride
     jpeg.PX_PLANE1_STRIDE = 0
+
+    if args.encode_subsampling in ['422', '420']:
+        jpeg.CHROMA_HALVE_H_TYPE1 = 1
+    if args.encode_subsampling == '420':
+        jpeg.CHROMA_HALVE_V_TYPE1 = 1
 
     # none of this seems to affect anything????
     jpeg.REG_0x94 = 0xc     # c/2 for 444; 8/2 for 422; 3/1 for 411; b/2 for 400
@@ -812,7 +853,21 @@ if args.encode:
     jpeg.ENABLE_RST_LOGGING = 1
 
     jpeg.MODE = 0x16f
-    jpeg.JPEG_IO_FLAGS = 0x30
+    if args.encode_subsampling == '444':
+        jpeg_subsampling = E_JPEG_IO_FLAGS_SUBSAMPLING._444
+    elif args.encode_subsampling == '422':
+        jpeg_subsampling = E_JPEG_IO_FLAGS_SUBSAMPLING._422
+    elif args.encode_subsampling == '420':
+        jpeg_subsampling = E_JPEG_IO_FLAGS_SUBSAMPLING._420
+    elif args.encode_subsampling == '400':
+        jpeg_subsampling = E_JPEG_IO_FLAGS_SUBSAMPLING._400
+    else:
+        assert False
+    jpeg.JPEG_IO_FLAGS.set(
+        OUTPUT_8BYTE_CHUNKS_CORRECTLY=1,
+        OUTPUT_MACROBLOCKS_UNFLIPPED_H=1,
+        SUBSAMPLING_MODE=jpeg_subsampling
+    )
     jpeg.JPEG_WIDTH = im_W
     jpeg.JPEG_HEIGHT = im_H
     jpeg.RST_INTERVAL = 0
