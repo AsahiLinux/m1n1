@@ -165,6 +165,7 @@ class JPEGRegs(RegMap):
     # RGB565: R, G, B = 0/1/2 = low/mid/high bits
     # YUV10: Y, U, V = 0/1/2 = low/mid/high bits
     # YUV linear: Y0 Cb Cr Y1 = byte pos
+    # YUV planar: Y U V = 0 for Y, 0/1 for U/V indicating position somehow
     ENCODE_COMPONENT0_POS = 0x104, Register32
     ENCODE_COMPONENT1_POS = 0x108, Register32
     ENCODE_COMPONENT2_POS = 0x10c, Register32
