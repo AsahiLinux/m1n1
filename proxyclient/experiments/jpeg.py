@@ -186,8 +186,24 @@ if args.decode:
     output_mem_sz = align_up(surface_sz)
     print(f"Using size {output_mem_sz:08X} for output image")
 else:
-    assert False
-    # TODO
+    image_data = b''
+    with Image.open(args.input) as im:
+        im_W, im_H = im.size
+
+        for y in range(im_H):
+            for x in range(im_W):
+                r, g, b = im.getpixel((x, y))
+                image_data += struct.pack("BBBB", r, g, b, 255)
+
+    BYTESPP = 4
+    surface_stride = im_W * BYTESPP
+    surface_sz = surface_stride * im_H
+    input_mem_sz = align_up(surface_sz)
+
+    output_mem_sz = input_mem_sz
+
+    print(f"Using size {input_mem_sz:08X} for input image")
+    print(f"Using size {output_mem_sz:08X} for output data")
 
 # Turn on the JPEG block
 p.pmgr_adt_clocks_enable(f'/arm-io/dart-{args.which_jpeg}')
@@ -733,3 +749,159 @@ if args.decode:
         else:
             assert False
         im.save(args.output)
+
+if args.encode:
+    iface.writemem(input_buf_phys, image_data)
+    print("Pixel data uploaded")
+
+    jpeg.MODE = 0x17f
+    jpeg.REG_0x38 = 0x1     # if not set nothing happens
+    jpeg.REG_0x2c = 0x1     # if not set only header is output
+    jpeg.REG_0x34 = 0x0     # if set output is a JPEG but weird with no footer
+    jpeg.CODEC = 0
+
+    jpeg.PX_USE_PLANE1 = 0x0
+    jpeg.PX_PLANE0_WIDTH = im_W*BYTESPP - 1
+    jpeg.PX_PLANE0_HEIGHT = im_H - 1
+    jpeg.PX_PLANE1_WIDTH = 0xffffffff
+    jpeg.PX_PLANE1_HEIGHT = 0xffffffff
+    jpeg.TIMEOUT = 266000000
+
+    jpeg.PX_TILES_W = divroundup(im_W, 8)
+    jpeg.PX_TILES_H = divroundup(im_H, 8)
+    jpeg.PX_PLANE0_TILING_H = 0x4
+    jpeg.PX_PLANE0_TILING_V = 0x8
+    jpeg.PX_PLANE0_STRIDE = surface_stride
+    jpeg.PX_PLANE1_STRIDE = 0
+
+    # none of this seems to affect anything????
+    jpeg.REG_0x94 = 0xc     # c/2 for 444; 8/2 for 422; 3/1 for 411; b/2 for 400
+    jpeg.REG_0x98 = 0x2
+    jpeg.REG_0x20c = im_W
+    jpeg.REG_0x210 = im_H
+
+    jpeg.CONVERT_COLOR_SPACE = 1
+    jpeg.MATRIX_MULT[0].val = 0x4d
+    jpeg.MATRIX_MULT[1].val = 0x96
+    jpeg.MATRIX_MULT[2].val = 0x1d
+    jpeg.MATRIX_MULT[3].val = 0xffffffd5
+    jpeg.MATRIX_MULT[4].val = 0xffffffab
+    jpeg.MATRIX_MULT[5].val = 0x80
+    jpeg.MATRIX_MULT[6].val = 0x80
+    jpeg.MATRIX_MULT[7].val = 0xffffff95
+    jpeg.MATRIX_MULT[8].val = 0xffffffeb
+    jpeg.MATRIX_MULT[9].val = 0x0
+    jpeg.MATRIX_MULT[10].val = 0x80
+
+    jpeg.ENCODE_PIXEL_FORMAT = 2
+    jpeg.ENCODE_COMPONENT0_POS = 0
+    jpeg.ENCODE_COMPONENT1_POS = 1
+    jpeg.ENCODE_COMPONENT2_POS = 2
+    jpeg.ENCODE_COMPONENT3_POS = 3
+
+    jpeg.INPUT_START1 = input_buf_iova
+    jpeg.INPUT_START2 = 0xdeadbeef
+    jpeg.INPUT_END = input_buf_iova + input_mem_sz + 7  # NOTE +7
+    jpeg.OUTPUT_START1 = output_buf_iova
+    jpeg.OUTPUT_START2 = 0xdeadbeef
+    jpeg.OUTPUT_END = output_buf_iova + output_mem_sz
+
+    jpeg.REG_0x118 = 0x1
+    jpeg.REG_0x11c = 0x0
+
+    jpeg.ENABLE_RST_LOGGING = 1
+
+    jpeg.MODE = 0x16f
+    jpeg.JPEG_IO_FLAGS = 0x30
+    jpeg.JPEG_WIDTH = im_W
+    jpeg.JPEG_HEIGHT = im_H
+    jpeg.RST_INTERVAL = 0
+    jpeg.JPEG_OUTPUT_FLAGS = 0
+
+    jpeg.QTBL[0].val =  0xa06e64a0
+    jpeg.QTBL[1].val =  0xf0ffffff
+    jpeg.QTBL[2].val =  0x78788cbe
+    jpeg.QTBL[3].val =  0xffffffff
+    jpeg.QTBL[4].val =  0x8c82a0f0
+    jpeg.QTBL[5].val =  0xffffffff
+    jpeg.QTBL[6].val =  0x8caadcff
+    jpeg.QTBL[7].val =  0xffffffff
+    jpeg.QTBL[8].val =  0xb4dcffff
+    jpeg.QTBL[9].val =  0xffffffff
+    jpeg.QTBL[10].val = 0xf0ffffff
+    jpeg.QTBL[11].val = 0xffffffff
+    jpeg.QTBL[12].val = 0xffffffff
+    jpeg.QTBL[13].val = 0xffffffff
+    jpeg.QTBL[14].val = 0xffffffff
+    jpeg.QTBL[15].val = 0xffffffff
+
+    jpeg.QTBL[16].val = 0xaab4f0ff
+    jpeg.QTBL[17].val = 0xffffffff
+    jpeg.QTBL[18].val = 0xb4d2ffff
+    jpeg.QTBL[19].val = 0xffffffff
+    jpeg.QTBL[20].val = 0xf0ffffff
+    jpeg.QTBL[21].val = 0xffffffff
+    jpeg.QTBL[22].val = 0xffffffff
+    jpeg.QTBL[23].val = 0xffffffff
+    jpeg.QTBL[24].val = 0xffffffff
+    jpeg.QTBL[25].val = 0xffffffff
+    jpeg.QTBL[26].val = 0xffffffff
+    jpeg.QTBL[27].val = 0xffffffff
+    jpeg.QTBL[28].val = 0xffffffff
+    jpeg.QTBL[29].val = 0xffffffff
+    jpeg.QTBL[30].val = 0xffffffff
+    jpeg.QTBL[31].val = 0xffffffff
+
+    jpeg.QTBL[32].val = 0x01010201
+    jpeg.QTBL[33].val = 0x01020202
+    jpeg.QTBL[34].val = 0x02030202
+    jpeg.QTBL[35].val = 0x03030604
+    jpeg.QTBL[36].val = 0x03030303
+    jpeg.QTBL[37].val = 0x07050804
+    jpeg.QTBL[38].val = 0x0608080a
+    jpeg.QTBL[39].val = 0x0908070b
+    jpeg.QTBL[40].val = 0x080a0e0d
+    jpeg.QTBL[41].val = 0x0b0a0a0c
+    jpeg.QTBL[42].val = 0x0a08080b
+    jpeg.QTBL[43].val = 0x100c0c0d
+    jpeg.QTBL[44].val = 0x0f0f0f0f
+    jpeg.QTBL[45].val = 0x090b1011
+    jpeg.QTBL[46].val = 0x0f0e110d
+    jpeg.QTBL[47].val = 0x0e0e0e01
+
+    jpeg.QTBL[48].val = 0x04040405
+    jpeg.QTBL[49].val = 0x04050905
+    jpeg.QTBL[50].val = 0x05090f0a
+    jpeg.QTBL[51].val = 0x080a0f1a
+    jpeg.QTBL[52].val = 0x13090913
+    jpeg.QTBL[53].val = 0x1a1a1a1a
+    jpeg.QTBL[54].val = 0x0d1a1a1a
+    jpeg.QTBL[55].val = 0x1a1a1a1a
+    jpeg.QTBL[56].val = 0x1a1a1a1a
+    jpeg.QTBL[57].val = 0x1a1a1a1a
+    jpeg.QTBL[58].val = 0x1a1a1a1a
+    jpeg.QTBL[59].val = 0x1a1a1a1a
+    jpeg.QTBL[60].val = 0x1a1a1a1a
+    jpeg.QTBL[61].val = 0x1a1a1a1a
+    jpeg.QTBL[62].val = 0x1a1a1a1a
+    jpeg.QTBL[63].val = 0x1a1a1a1a
+
+    jpeg.HUFFMAN_TABLE.val = 0x3c
+    jpeg.QTBL_SEL.val = 0xff
+    jpeg.REG_0x0.val = 0x1
+    jpeg.REG_0x1004.val = 0x1
+
+    # FIXME: we don't actually know when it's done
+    time.sleep(1)
+
+    print(jpeg.STATUS.reg)
+    print(jpeg.PERFCOUNTER.reg)
+    jpeg_out_sz = jpeg.COMPRESSED_BYTES.val
+    print(f"JPEG output is {jpeg_out_sz} bytes")
+
+    output_data = iface.readmem(output_buf_phys, output_mem_sz)
+    if args.raw_output is not None:
+        with open(args.raw_output, 'wb') as f:
+            f.write(output_data)
+    with open(args.output, 'wb') as f:
+        f.write(output_data[:jpeg_out_sz])
