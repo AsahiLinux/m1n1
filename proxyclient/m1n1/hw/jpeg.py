@@ -11,6 +11,7 @@ class R_STATUS(Register32):
     CODEC_BUF_OVERFLOW = 4
     SOME_KIND_OF_MACROBLOCK_SIZE_ERROR = 5
     AXI_ERROR = 6
+    UNKNOWN_FLAG = 7
 
 
 class E_CODEC(IntEnum):
