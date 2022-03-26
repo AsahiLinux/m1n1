@@ -177,10 +177,11 @@ class JPEGRegs(RegMap):
     REG_0x11c = 0x11c, Register32
 
     REG_0x120 = 0x120, Register32
-    # driver mentions surface tiling, but this doesn't seem to work???
-    REG_0x124 = 0x124, Register32
-    REG_0x128 = 0x128, Register32
-    REG_0x12c = 0x12c, Register32
+
+    # details not understood yet
+    TILING_ENABLE = 0x124, Register32
+    TILING_PLANE0 = 0x128, Register32
+    TILING_PLANE1 = 0x12c, Register32
 
     DECODE_MACROBLOCKS_W = 0x130, Register32
     DECODE_MACROBLOCKS_H = 0x134, Register32
@@ -198,7 +199,7 @@ class JPEGRegs(RegMap):
     RGBA_ORDER = 0x154, Register32
     RGBA_ALPHA = 0x158, Register32
 
-    REG_0x15c = 0x15c, Register32
+    PLANAR_CHROMA_HALVING = 0x15c, Register32
 
     REG_0x160 = 0x160, Register32
     REG_0x164 = 0x164, Register32
