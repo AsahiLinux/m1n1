@@ -44,6 +44,8 @@ if args.decode:
         'RGBA',
         'BGRA',
         'RGB565',
+        'YUV422-CbYCrY',
+        'YUV422-YCbYCr',
     ]
     pixfmt = args.decode_pixelfmt
 
@@ -124,7 +126,7 @@ if args.decode:
     surface_H = divroundup(jpeg_H // decode_scale, macroblock_H) * macroblock_H
     if pixfmt in ['RGBA', 'BGRA']:
         BYTESPP = 4
-    elif pixfmt == 'RGB565':
+    elif pixfmt in ['RGB565', 'YUV422-CbYCrY', 'YUV422-YCbYCr']:
         BYTESPP = 2
     else:
         assert False
@@ -326,6 +328,10 @@ if args.decode:
         jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.RGBA8888)
     elif pixfmt == 'RGB565':
         jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.RGB565)
+    elif pixfmt == 'YUV422-CbYCrY' or pixfmt == 'YUV422-YCbYCr':
+        jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.YUV422_linear)
+    else:
+        assert False
 
     jpeg.PX_USE_PLANE1 = 0
     jpeg.PX_PLANE0_WIDTH = jpeg_W*BYTESPP // decode_scale - 1
@@ -349,7 +355,11 @@ if args.decode:
     jpeg.BOTTOM_EDGE_SAMPLES.val = bot_edge_px // (macroblock_H // 8)
 
     jpeg.PX_TILES_H = divroundup(jpeg_H, macroblock_H)
-    jpeg.PX_TILES_W = divroundup(jpeg_W // decode_scale, macroblock_W)
+    # FIXME explain this
+    if pixfmt in ['RGBA', 'BGRA', 'RGB565']:
+        jpeg.PX_TILES_W = divroundup(jpeg_W // decode_scale, macroblock_W)
+    else:
+        jpeg.PX_TILES_W = divroundup(jpeg_W // decode_scale, max(macroblock_W, 16))
     if pixfmt == 'RGBA' or pixfmt == 'BGRA':
         if jpeg_MODE == '444' or jpeg_MODE == '400':
             jpeg.PX_PLANE0_TILING_H = 4
@@ -396,15 +406,50 @@ if args.decode:
             jpeg.PX_PLANE1_TILING_V = 0
         else:
             assert False
+    elif pixfmt == 'YUV422-CbYCrY' or pixfmt == 'YUV422-YCbYCr':
+        if jpeg_MODE == '444' or jpeg_MODE == '400':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 1
+        elif jpeg_MODE == '422':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 1
+        elif jpeg_MODE == '420':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 16 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 0
+            jpeg.PX_PLANE1_TILING_V = 0
+        elif jpeg_MODE == '411':
+            jpeg.PX_PLANE0_TILING_H = 8
+            jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
+            jpeg.PX_PLANE1_TILING_H = 0
+            jpeg.PX_PLANE1_TILING_V = 0
+        else:
+            assert False
+    else:
+        assert False
 
-    if jpeg_MODE in ['422', '420']:  # TODO
-        jpeg.CHROMA_DOUBLE_H = 1
+    if pixfmt in ['RGBA', 'BGRA', 'RGB565']:
+        if jpeg_MODE in ['422', '420']:
+            jpeg.CHROMA_DOUBLE_H = 1
 
-    if jpeg_MODE == '411':  # TODO
-        jpeg.CHROMA_QUADRUPLE_H = 1
+        if jpeg_MODE == '411':
+            jpeg.CHROMA_QUADRUPLE_H = 1
 
-    if jpeg_MODE == '420':  # TODO
-        jpeg.CHROMA_DOUBLE_V = 1
+        if jpeg_MODE == '420':
+            jpeg.CHROMA_DOUBLE_V = 1
+    elif pixfmt in ["YUV422-CbYCrY", "YUV422-YCbYCr"]:
+        if jpeg_MODE == '444':
+            jpeg.CHROMA_HALVE_H_TYPE1 = 1
+
+        if jpeg_MODE == '411':
+            jpeg.CHROMA_DOUBLE_H = 1
+
+        if jpeg_MODE == '420':
+            jpeg.CHROMA_DOUBLE_V = 1
 
     jpeg.MATRIX_MULT[0].val = 0x100
     jpeg.MATRIX_MULT[1].val = 0x0
@@ -420,6 +465,7 @@ if args.decode:
 
     jpeg.RGBA_ALPHA = args.decode_rgba_alpha
     jpeg.RGBA_ORDER = pixfmt == "RGBA"
+    jpeg.YUV422_ORDER = pixfmt == "YUV422-YCbYCr"
 
     if decode_scale == 1:
         jpeg.SCALE_FACTOR.set(SCALE=E_SCALE.DIV1)
@@ -473,23 +519,66 @@ if args.decode:
     with Image.new(
             mode='RGBA',
             size=(jpeg_W // decode_scale, jpeg_H // decode_scale)) as im:
-        for y in range(jpeg_H // decode_scale):
-            for x in range(jpeg_W // decode_scale):
-                block = output_data[
-                    y*surface_stride + x*BYTESPP:
-                    y*surface_stride + (x+1)*BYTESPP]
+        if pixfmt in ["RGBA", "BGRA", "RGB565"]:
+            for y in range(jpeg_H // decode_scale):
+                for x in range(jpeg_W // decode_scale):
+                    block = output_data[
+                        y*surface_stride + x*BYTESPP:
+                        y*surface_stride + (x+1)*BYTESPP]
 
-                if pixfmt == "RGBA":
-                    r, g, b, a = block
-                elif pixfmt == "BGRA":
-                    b, g, r, a = block
-                elif pixfmt == "RGB565":
-                    rgb = struct.unpack("<H", block)[0]
-                    b = (rgb & 0b11111) << 3
-                    g = ((rgb >> 5) & 0b111111) << 2
-                    r = ((rgb >> 11) & 0b11111) << 3
-                    a = 255
-                else:
-                    assert False
-                im.putpixel((x, y), (r, g, b, a))
+                    if pixfmt == "RGBA":
+                        r, g, b, a = block
+                    elif pixfmt == "BGRA":
+                        b, g, r, a = block
+                    elif pixfmt == "RGB565":
+                        rgb = struct.unpack("<H", block)[0]
+                        b = (rgb & 0b11111) << 3
+                        g = ((rgb >> 5) & 0b111111) << 2
+                        r = ((rgb >> 11) & 0b11111) << 3
+                        a = 255
+                    else:
+                        assert False
+                    im.putpixel((x, y), (r, g, b, a))
+        elif pixfmt in ["YUV422-CbYCrY", "YUV422-YCbYCr"]:
+            for y in range(jpeg_H // decode_scale):
+                for x in range(0, jpeg_W // decode_scale, 2):
+                    block = output_data[
+                        y*surface_stride + x*BYTESPP:
+                        y*surface_stride + (x+2)*BYTESPP]
+
+                    if pixfmt == "YUV422-CbYCrY":
+                        cb, y0, cr, y1 = block
+                    elif pixfmt == "YUV422-YCbYCr":
+                        y0, cb, y1, cr = block
+
+                    y0 -= 16
+                    y1 -= 16
+                    cb -= 128
+                    cr -= 128
+
+                    cb /= 255
+                    y0 /= 255
+                    cr /= 255
+                    y1 /= 255
+
+                    r0 = y0 + 1.13983 * cr
+                    g0 = y0 - 0.39465 * cb - 0.58060 * cr
+                    b0 = y0 + 2.03211 * cb
+                    r1 = y1 + 1.13983 * cr
+                    g1 = y1 - 0.39465 * cb - 0.58060 * cr
+                    b1 = y1 + 2.03211 * cb
+
+                    r0 = min(255, max(0, int(r0 * 255)))
+                    g0 = min(255, max(0, int(g0 * 255)))
+                    b0 = min(255, max(0, int(b0 * 255)))
+                    r1 = min(255, max(0, int(r1 * 255)))
+                    g1 = min(255, max(0, int(g1 * 255)))
+                    b1 = min(255, max(0, int(b1 * 255)))
+
+                    im.putpixel((x, y), (r0, g0, b0, 255))
+                    # XXX this really needs some fixing
+                    if x+1 < jpeg_W // decode_scale:
+                        im.putpixel((x+1, y), (r1, g1, b1, 255))
+        else:
+            assert False
         im.save(args.output)
