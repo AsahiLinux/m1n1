@@ -38,6 +38,26 @@ def yuv2rgb(y, u, v):
     return (r, g, b)
 
 
+def rgb2yuv(r, g, b):
+    r /= 255
+    g /= 255
+    b /= 255
+
+    y = 0.299*r + 0.587*g + 0.114*b
+    u = -0.14713*r - 0.28886*g + 0.436*b
+    v = 0.615*r - 0.51499*g - 0.10001*b
+
+    y = y * 255 + 16
+    u = u * 255 + 128
+    v = v * 255 + 128
+
+    y = min(255, max(0, int(y)))
+    u = min(255, max(0, int(u)))
+    v = min(255, max(0, int(v)))
+
+    return (y, u, v)
+
+
 ap = argparse.ArgumentParser(description='JPEG block experiment')
 ap.add_argument("--jpeg", dest='which_jpeg', type=str, default='jpeg0',
                 help='which JPEG instance (jpeg0/jpeg1)')
@@ -203,6 +223,7 @@ else:
         'RGB888',
         'RGB101010',
         'RGB565',
+        'YUV10',
     ]
     pixfmt = args.encode_pixelfmt
 
@@ -219,10 +240,15 @@ else:
                     image_data += struct.pack("<I", (r << 2) | (g << 12) | (b << 22))
                 elif pixfmt == 'RGB565':
                     image_data += struct.pack("<H", (r >> 3) | ((g >> 2) << 5) | ((b >> 3) << 11))
+                elif pixfmt == 'YUV10':
+                    # absolute garbage color space conversion
+                    # for demonstration purposes only
+                    y_, u_, v_ = rgb2yuv(r, g, b)
+                    image_data += struct.pack("<I", (y_ << 2) | (u_ << 12) | (v_ << 22))
                 else:
                     assert False
 
-    if pixfmt in ['RGB888', 'RGB101010']:
+    if pixfmt in ['RGB888', 'RGB101010', 'YUV10']:
         BYTESPP = 4
     elif pixfmt == 'RGB565':
         BYTESPP = 2
@@ -811,7 +837,7 @@ if args.encode:
 
     jpeg.PX_TILES_W = divroundup(im_W, macroblock_W)
     jpeg.PX_TILES_H = divroundup(im_H, macroblock_H)
-    if pixfmt in ['RGB888', 'RGB101010']:
+    if pixfmt in ['RGB888', 'RGB101010', 'YUV10']:
         if args.encode_subsampling == '444' or args.encode_subsampling == '400':
             jpeg.PX_PLANE0_TILING_H = 4
             jpeg.PX_PLANE0_TILING_V = 8
@@ -863,7 +889,8 @@ if args.encode:
     jpeg.REG_0x20c = im_W
     jpeg.REG_0x210 = im_H
 
-    jpeg.CONVERT_COLOR_SPACE = 1
+    if pixfmt in ['RGB888', 'RGB101010', 'RGB565']:
+        jpeg.CONVERT_COLOR_SPACE = 1
     jpeg.MATRIX_MULT[0].val = 0x4d
     jpeg.MATRIX_MULT[1].val = 0x96
     jpeg.MATRIX_MULT[2].val = 0x1d
@@ -882,6 +909,8 @@ if args.encode:
         jpeg.ENCODE_PIXEL_FORMAT.set(FORMAT=E_ENCODE_PIXEL_FORMAT.RGB101010)
     elif pixfmt == 'RGB565':
         jpeg.ENCODE_PIXEL_FORMAT.set(FORMAT=E_ENCODE_PIXEL_FORMAT.RGB565)
+    elif pixfmt == 'YUV10':
+        jpeg.ENCODE_PIXEL_FORMAT.set(FORMAT=E_ENCODE_PIXEL_FORMAT.YUV10_linear)
     else:
         assert False
     jpeg.ENCODE_COMPONENT0_POS = 0
