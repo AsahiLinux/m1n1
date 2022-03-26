@@ -55,7 +55,7 @@ class E_DECODE_PIXEL_FORMAT(IntEnum):
     YUV420_planar = 2
     YUV422_linear = 3
     _YUV10_broken_doesnt_work = 4
-    RGBA888 = 5
+    RGBA8888 = 5
     RGB565 = 6
     _RGB101010_broken_doesnt_work = 7
 
