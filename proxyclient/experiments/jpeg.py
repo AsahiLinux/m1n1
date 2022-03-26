@@ -225,32 +225,71 @@ else:
         'RGB565',
         'YUV10',
         'YUV-linear',
+        'YUV444-planar',
+        'YUV422-planar',
+        'YUV420-planar',
     ]
     pixfmt = args.encode_pixelfmt
 
+    # Driver doesn't support this either
     if pixfmt == 'YUV-linear' and args.encode_subsampling == '444':
-        # Driver doesn't support this either
+        print("WARNING: This combination does not appear to work!!!")
+    if pixfmt == 'YUV422-planar' and args.encode_subsampling == '444':
+        print("WARNING: This combination does not appear to work!!!")
+    if pixfmt == 'YUV420-planar' and args.encode_subsampling == '444':
         print("WARNING: This combination does not appear to work!!!")
 
     image_data = b''
+    image_data_P1 = b''
     with Image.open(args.input) as im:
         im_W, im_H = im.size
 
-        for y in range(im_H):
-            for x in range(im_W):
-                r, g, b = im.getpixel((x, y))
-                if pixfmt == 'RGB888':
-                    image_data += struct.pack("BBBB", r, g, b, 255)
-                elif pixfmt == 'RGB101010':
-                    image_data += struct.pack("<I", (r << 2) | (g << 12) | (b << 22))
-                elif pixfmt == 'RGB565':
-                    image_data += struct.pack("<H", (r >> 3) | ((g >> 2) << 5) | ((b >> 3) << 11))
-                elif pixfmt == 'YUV10':
-                    # absolute garbage color space conversion
-                    # for demonstration purposes only
-                    y_, u_, v_ = rgb2yuv(r, g, b)
-                    image_data += struct.pack("<I", (y_ << 2) | (u_ << 12) | (v_ << 22))
-                elif pixfmt == 'YUV-linear':
+        if pixfmt != 'YUV420-planar':
+            for y in range(im_H):
+                for x in range(im_W):
+                    r, g, b = im.getpixel((x, y))
+                    if pixfmt == 'RGB888':
+                        image_data += struct.pack("BBBB", r, g, b, 255)
+                    elif pixfmt == 'RGB101010':
+                        image_data += struct.pack("<I", (r << 2) | (g << 12) | (b << 22))
+                    elif pixfmt == 'RGB565':
+                        image_data += struct.pack("<H", (r >> 3) | ((g >> 2) << 5) | ((b >> 3) << 11))
+                    elif pixfmt == 'YUV10':
+                        # absolute garbage color space conversion
+                        # for demonstration purposes only
+                        y_, u_, v_ = rgb2yuv(r, g, b)
+                        image_data += struct.pack("<I", (y_ << 2) | (u_ << 12) | (v_ << 22))
+                    elif pixfmt == 'YUV-linear':
+                        # garbage color space conversion, garbage subsampling
+                        # for demonstration purposes only
+                        y_, u_, v_ = rgb2yuv(r, g, b)
+                        if x & 1 == 0:
+                            color = u_
+                        else:
+                            color = v_
+                        image_data += struct.pack("BB", y_, color)
+                    elif pixfmt == 'YUV444-planar':
+                        # garbage color space conversion
+                        # for demonstration purposes only
+                        y_, u_, v_ = rgb2yuv(r, g, b)
+                        image_data += struct.pack("B", y_)
+                        image_data_P1 += struct.pack("BB", u_, v_)
+                    elif pixfmt == 'YUV422-planar':
+                        # garbage color space conversion, garbage subsampling
+                        # for demonstration purposes only
+                        y_, u_, v_ = rgb2yuv(r, g, b)
+                        if x & 1 == 0:
+                            color = u_
+                        else:
+                            color = v_
+                        image_data += struct.pack("B", y_)
+                        image_data_P1 += struct.pack("B", color)
+                    else:
+                        assert False
+        else:
+            for y in range(im_H):
+                for x in range(im_W):
+                    r, g, b = im.getpixel((x, y))
                     # garbage color space conversion, garbage subsampling
                     # for demonstration purposes only
                     y_, u_, v_ = rgb2yuv(r, g, b)
@@ -258,18 +297,38 @@ else:
                         color = u_
                     else:
                         color = v_
-                    image_data += struct.pack("BB", y_, color)
-                else:
-                    assert False
+                    image_data += struct.pack("B", y_)
+                    if y & 1 == 0:
+                        image_data_P1 += struct.pack("B", color)
 
     if pixfmt in ['RGB888', 'RGB101010', 'YUV10']:
         BYTESPP = 4
+        BYTESPP_P1 = 0
+        P1_DIVH = 1
     elif pixfmt in ['RGB565', 'YUV-linear']:
         BYTESPP = 2
+        BYTESPP_P1 = 0
+        P1_DIVH = 1
+    elif pixfmt == 'YUV444-planar':
+        BYTESPP = 1
+        BYTESPP_P1 = 2
+        P1_DIVH = 1
+    elif pixfmt == 'YUV422-planar':
+        BYTESPP = 1
+        BYTESPP_P1 = 1
+        P1_DIVH = 1
+    elif pixfmt == 'YUV420-planar':
+        BYTESPP = 1
+        BYTESPP_P1 = 1
+        P1_DIVH = 2
     else:
         assert False
     surface_stride = im_W * BYTESPP
     surface_sz = surface_stride * im_H
+    surface_P1_off = surface_sz
+    print(f"Plane 1 offset at {surface_P1_off:08X}")
+    surface_P1_stride = im_W * BYTESPP_P1
+    surface_sz += surface_P1_stride * im_H // P1_DIVH
     input_mem_sz = align_up(surface_sz)
 
     output_mem_sz = input_mem_sz
@@ -824,6 +883,7 @@ if args.decode:
 
 if args.encode:
     iface.writemem(input_buf_phys, image_data)
+    iface.writemem(input_buf_phys + surface_P1_off, image_data_P1)
     print("Pixel data uploaded")
 
     jpeg.MODE = 0x17f
@@ -842,11 +902,16 @@ if args.encode:
     else:
         assert False
 
-    jpeg.PX_USE_PLANE1 = 0x0
+    if BYTESPP_P1 != 0:
+        jpeg.PX_USE_PLANE1 = 1
+        jpeg.PX_PLANE1_WIDTH = im_W*BYTESPP_P1 - 1
+        jpeg.PX_PLANE1_HEIGHT = im_H // P1_DIVH - 1
+    else:
+        jpeg.PX_USE_PLANE1 = 0
+        jpeg.PX_PLANE1_WIDTH = 0xffffffff
+        jpeg.PX_PLANE1_HEIGHT = 0xffffffff
     jpeg.PX_PLANE0_WIDTH = im_W*BYTESPP - 1
     jpeg.PX_PLANE0_HEIGHT = im_H - 1
-    jpeg.PX_PLANE1_WIDTH = 0xffffffff
-    jpeg.PX_PLANE1_HEIGHT = 0xffffffff
     jpeg.TIMEOUT = 266000000
 
     jpeg.PX_TILES_W = divroundup(im_W, macroblock_W)
@@ -905,19 +970,81 @@ if args.encode:
             jpeg.PX_PLANE1_TILING_V = 0
         else:
             assert False
+    elif pixfmt == 'YUV444-planar':
+        if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+            jpeg.PX_PLANE0_TILING_H = 1
+            jpeg.PX_PLANE0_TILING_V = 8
+            jpeg.PX_PLANE1_TILING_H = 2
+            jpeg.PX_PLANE1_TILING_V = 8
+        elif args.encode_subsampling == '422':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 8
+            jpeg.PX_PLANE1_TILING_H = 4
+            jpeg.PX_PLANE1_TILING_V = 8
+        elif args.encode_subsampling == '420':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 16
+            jpeg.PX_PLANE1_TILING_H = 4
+            jpeg.PX_PLANE1_TILING_V = 16
+        else:
+            assert False
+    elif pixfmt == 'YUV422-planar':
+        if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+            jpeg.PX_PLANE0_TILING_H = 1
+            jpeg.PX_PLANE0_TILING_V = 8
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 8
+        elif args.encode_subsampling == '422':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 8
+            jpeg.PX_PLANE1_TILING_H = 2
+            jpeg.PX_PLANE1_TILING_V = 8
+        elif args.encode_subsampling == '420':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 16
+            jpeg.PX_PLANE1_TILING_H = 2
+            jpeg.PX_PLANE1_TILING_V = 16
+        else:
+            assert False
+    elif pixfmt == 'YUV420-planar':
+        if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+            jpeg.PX_PLANE0_TILING_H = 1
+            jpeg.PX_PLANE0_TILING_V = 8
+            jpeg.PX_PLANE1_TILING_H = 1
+            jpeg.PX_PLANE1_TILING_V = 4
+        elif args.encode_subsampling == '422':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 8
+            jpeg.PX_PLANE1_TILING_H = 2
+            jpeg.PX_PLANE1_TILING_V = 4
+        elif args.encode_subsampling == '420':
+            jpeg.PX_PLANE0_TILING_H = 2
+            jpeg.PX_PLANE0_TILING_V = 16
+            jpeg.PX_PLANE1_TILING_H = 2
+            jpeg.PX_PLANE1_TILING_V = 8
+        elif args.encode_subsampling == '411':
+            jpeg.PX_PLANE0_TILING_H = 4
+            jpeg.PX_PLANE0_TILING_V = 8
+            jpeg.PX_PLANE1_TILING_H = 4
+            jpeg.PX_PLANE1_TILING_V = 4
+        else:
+            assert False
     else:
         assert False
     jpeg.PX_PLANE0_STRIDE = surface_stride
-    jpeg.PX_PLANE1_STRIDE = 0
+    jpeg.PX_PLANE1_STRIDE = surface_P1_stride
 
-    if pixfmt in ['RGB888', 'RGB101010', 'RGB565', 'YUV10']:
+    if pixfmt in ['RGB888', 'RGB101010', 'RGB565', 'YUV10', 'YUV444-planar']:
         if args.encode_subsampling in ['422', '420']:
             jpeg.CHROMA_HALVE_H_TYPE1 = 1
         if args.encode_subsampling == '420':
             jpeg.CHROMA_HALVE_V_TYPE1 = 1
-    elif pixfmt in ['YUV-linear']:
+    elif pixfmt in ['YUV-linear', 'YUV422-planar']:
         if args.encode_subsampling == '420':
             jpeg.CHROMA_HALVE_V_TYPE1 = 1
+    elif pixfmt == 'YUV420-planar':
+        if args.encode_subsampling in ['422', '444']:
+            jpeg.CHROMA_DOUBLE_V = 1
     else:
         assert False
 
@@ -951,6 +1078,8 @@ if args.encode:
         jpeg.ENCODE_PIXEL_FORMAT.set(FORMAT=E_ENCODE_PIXEL_FORMAT.YUV10_linear)
     elif pixfmt == 'YUV-linear':
         jpeg.ENCODE_PIXEL_FORMAT.set(FORMAT=E_ENCODE_PIXEL_FORMAT.YUV_linear)
+    elif pixfmt in ['YUV444-planar', 'YUV422-planar', 'YUV420-planar']:
+        jpeg.ENCODE_PIXEL_FORMAT.set(FORMAT=E_ENCODE_PIXEL_FORMAT.YUV_planar)
     else:
         assert False
     if pixfmt == 'YUV-linear':
@@ -960,12 +1089,12 @@ if args.encode:
         jpeg.ENCODE_COMPONENT3_POS = 2
     else:
         jpeg.ENCODE_COMPONENT0_POS = 0
-        jpeg.ENCODE_COMPONENT1_POS = 1
-        jpeg.ENCODE_COMPONENT2_POS = 2
+        jpeg.ENCODE_COMPONENT1_POS = 0
+        jpeg.ENCODE_COMPONENT2_POS = 1
         jpeg.ENCODE_COMPONENT3_POS = 3
 
     jpeg.INPUT_START1 = input_buf_iova
-    jpeg.INPUT_START2 = 0xdeadbeef
+    jpeg.INPUT_START2 = input_buf_iova + surface_P1_off
     jpeg.INPUT_END = input_buf_iova + input_mem_sz + 7  # NOTE +7
     jpeg.OUTPUT_START1 = output_buf_iova
     jpeg.OUTPUT_START2 = 0xdeadbeef
