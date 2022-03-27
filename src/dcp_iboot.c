@@ -54,7 +54,8 @@ enum IBootCmd {
 };
 
 struct get_hpd_resp {
-    u32 hpd;
+    u8 hpd;
+    u8 pad[3];
     u32 timing_cnt;
     u32 color_cnt;
 };
@@ -154,7 +155,7 @@ int dcp_ib_get_hpd(dcp_iboot_if_t *iboot, int *timing_cnt, int *color_cnt)
     if (color_cnt)
         *color_cnt = resp->color_cnt;
 
-    return resp->hpd;
+    return !!resp->hpd;
 }
 
 int dcp_ib_get_timing_modes(dcp_iboot_if_t *iboot, dcp_timing_mode_t **modes)
