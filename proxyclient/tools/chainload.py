@@ -23,10 +23,12 @@ new_base = u.base
 
 if args.raw:
     image = args.payload.read_bytes()
+    image += b"\x00\x00\x00\x00"
     entry = new_base + 0x800
 else:
     macho = MachO(args.payload.read_bytes())
     image = macho.prepare_image()
+    image += b"\x00\x00\x00\x00"
     entry = macho.entry
     entry -= macho.vmin
     entry += new_base
