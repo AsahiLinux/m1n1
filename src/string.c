@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
+#include <stdbool.h>
+
 #include "string.h"
 
 // Routines based on The Public Domain C Library
@@ -184,4 +186,24 @@ char *strrchr(const char *s, int c)
     } while (i);
 
     return NULL;
+}
+
+/* Very naive, no attempt to check for errors */
+long atol(const char *s)
+{
+    long val = 0;
+    bool neg = false;
+
+    if (*s == '-') {
+        neg = true;
+        s++;
+    }
+
+    while (*s >= '0' && *s <= '9')
+        val = (val * 10) + (*s++ - '0');
+
+    if (neg)
+        val = -val;
+
+    return val;
 }
