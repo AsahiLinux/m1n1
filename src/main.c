@@ -164,6 +164,7 @@ void m1n1_main(void)
     nvme_shutdown();
     exception_shutdown();
     usb_iodev_shutdown();
+    display_shutdown();
 #ifdef USE_FB
     fb_shutdown(next_stage.restore_logo);
 #endif

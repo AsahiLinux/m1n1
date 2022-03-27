@@ -4,6 +4,7 @@
 #include "adt.h"
 #include "assert.h"
 #include "chainload.h"
+#include "display.h"
 #include "heapblock.h"
 #include "kboot.h"
 #include "smp.h"
@@ -176,6 +177,8 @@ static bool check_var(u8 **p)
             chosen[chosen_cnt++] = (char *)*p;
     } else if (IS_VAR("chainload=")) {
         chainload_spec = val;
+    } else if (IS_VAR("display=")) {
+        display_configure(val);
     } else {
         printf("Unknown variable %s\n", *p);
     }

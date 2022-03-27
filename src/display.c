@@ -19,6 +19,10 @@
         continue;                                                                                  \
     }
 
+dcp_dev_t *dcp;
+dcp_iboot_if_t *iboot;
+u64 fb_dva;
+
 static void display_choose_timing_mode(dcp_timing_mode_t *modes, int cnt, dcp_timing_mode_t *best)
 {
     *best = modes[0];
@@ -54,33 +58,47 @@ static void display_choose_color_mode(dcp_color_mode_t *modes, int cnt, dcp_colo
            best->colorimetry, best->eotf, best->encoding, best->bpp);
 }
 
-static int display_configure(void)
+static int display_start_dcp(void)
 {
-    int ret = -1;
+    if (iboot)
+        return 0;
 
-    dcp_dev_t *dcp = dcp_init("/arm-io/dcp", "/arm-io/dart-dcp", "/arm-io/dart-disp0");
+    dcp = dcp_init("/arm-io/dcp", "/arm-io/dart-dcp", "/arm-io/dart-disp0");
     if (!dcp) {
         printf("display: failed to initialize DCP\n");
         return -1;
     }
 
     // Find the framebuffer DVA
-    u64 fb_dva = dart_search(dcp->dart_disp, (void *)cur_boot_args.video.base);
+    fb_dva = dart_search(dcp->dart_disp, (void *)cur_boot_args.video.base);
     if (!fb_dva) {
         printf("display: failed to find display DVA\n");
-        goto err_shutdown;
+        dcp_shutdown(dcp);
+        return -1;
     }
 
-    dcp_iboot_if_t *iboot = dcp_ib_init(dcp);
+    iboot = dcp_ib_init(dcp);
     if (!iboot) {
         printf("display: failed to initialize DCP iBoot interface\n");
-        goto err_shutdown;
+        dcp_shutdown(dcp);
+        return -1;
     }
+
+    return 0;
+}
+
+int display_configure(const char *config)
+{
+    UNUSED(config);
+
+    int ret = display_start_dcp();
+    if (ret < 0)
+        return ret;
 
     // Power on
     if ((ret = dcp_ib_set_power(iboot, true)) < 0) {
         printf("display: failed to set power\n");
-        goto err_iboot;
+        return ret;
     }
 
     // Detect if display is connected
@@ -102,19 +120,19 @@ static int display_configure(void)
     printf("display: waited %d ms for display status\n", (retries - 1) * DISPLAY_STATUS_DELAY);
     if (ret < 0) {
         printf("display: failed to get display status\n");
-        goto err_iboot;
+        return 0;
     }
 
     printf("display: connected:%d timing_cnt:%d color_cnt:%d\n", hpd, timing_cnt, color_cnt);
 
     if (!hpd || !timing_cnt || !color_cnt)
-        goto bail;
+        return 0;
 
     // Find best modes
     dcp_timing_mode_t *tmodes, tbest;
     if ((ret = dcp_ib_get_timing_modes(iboot, &tmodes)) < 0) {
         printf("display: failed to get timing modes\n");
-        goto err_iboot;
+        return -1;
     }
     assert(ret == timing_cnt);
     display_choose_timing_mode(tmodes, timing_cnt, &tbest);
@@ -122,7 +140,7 @@ static int display_configure(void)
     dcp_color_mode_t *cmodes, cbest;
     if ((ret = dcp_ib_get_color_modes(iboot, &cmodes)) < 0) {
         printf("display: failed to get color modes\n");
-        goto err_iboot;
+        return -1;
     }
     assert(ret == color_cnt);
     display_choose_color_mode(cmodes, color_cnt, &cbest);
@@ -130,14 +148,14 @@ static int display_configure(void)
     // Set mode
     if ((ret = dcp_ib_set_mode(iboot, &tbest, &cbest)) < 0) {
         printf("display: failed to set mode\n");
-        goto err_iboot;
+        return -1;
     }
 
     // Swap!
     int swap_id = ret = dcp_ib_swap_begin(iboot);
     if (swap_id < 0) {
         printf("display: failed to start swap\n");
-        goto err_iboot;
+        return -1;
     }
 
     dcp_layer_t layer = {
@@ -159,12 +177,12 @@ static int display_configure(void)
 
     if ((ret = dcp_ib_swap_set_layer(iboot, 0, &layer, &rect, &rect)) < 0) {
         printf("display: failed to set layer\n");
-        goto err_iboot;
+        return -1;
     }
 
     if ((ret = dcp_ib_swap_end(iboot)) < 0) {
         printf("display: failed to complete swap\n");
-        goto err_iboot;
+        return -1;
     }
 
     printf("display: swapped! (swap_id=%d)\n", swap_id);
@@ -177,13 +195,7 @@ static int display_configure(void)
     /* Update for python / subsequent stages */
     memcpy((void *)boot_args_addr, &cur_boot_args, sizeof(cur_boot_args));
 
-bail:
-    ret = 0;
-err_iboot:
-    dcp_ib_shutdown(iboot);
-err_shutdown:
-    dcp_shutdown(dcp);
-    return ret;
+    return 1;
 }
 
 int display_init(void)
@@ -191,10 +203,18 @@ int display_init(void)
     if (cur_boot_args.video.width == 640 && cur_boot_args.video.height == 1136) {
         printf("display: Dummy framebuffer found, initializing display\n");
 
-        return display_configure();
+        return display_configure(NULL);
     } else {
         printf("display: Display is already initialized (%ldx%ld)\n", cur_boot_args.video.width,
                cur_boot_args.video.height);
         return 0;
+    }
+}
+
+void display_shutdown(void)
+{
+    if (iboot) {
+        dcp_ib_shutdown(iboot);
+        dcp_shutdown(dcp);
     }
 }
