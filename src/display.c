@@ -11,6 +11,7 @@
 
 #define DISPLAY_STATUS_DELAY   100
 #define DISPLAY_STATUS_RETRIES 20
+#define DISPLAY_WAIT_DELAY     10
 
 #define COMPARE(a, b)                                                                              \
     if ((a) > (b)) {                                                                               \
@@ -97,11 +98,37 @@ static int display_start_dcp(void)
     return 0;
 }
 
-int display_parse_mode(const char *config, dcp_timing_mode_t *mode)
+int display_parse_mode(const char *config, dcp_timing_mode_t *mode, int *wait_delay)
 {
     memset(mode, 0, sizeof(*mode));
+    *wait_delay = 0;
 
-    if (!config || !strcmp(config, "auto"))
+    if (!config)
+        return 0;
+
+    if (!strncmp(config, "wait", sizeof("wait") - 1)) {
+        int delay = 0;
+        config += sizeof("wait") - 1;
+        if (*config == ':') {
+            config += 1;
+            for (char c = *config; '0' <= c && c <= '9'; c = *(++config)) {
+                delay = (delay * 10) + (c - '0');
+            }
+        }
+
+        if (delay <= 0) {
+            delay = DISPLAY_WAIT_DELAY;
+        }
+
+        printf("display: wait enabled (max delay %ds)\n", delay);
+        *wait_delay = delay;
+
+        if (*config == ',') {
+            config += 1;
+        }
+    }
+
+    if (!*config || !strcmp(config, "auto"))
         return 0;
 
     const char *s_w = config;
@@ -130,11 +157,53 @@ int display_parse_mode(const char *config, dcp_timing_mode_t *mode)
     return mode->valid;
 }
 
+int display_wait_connected(dcp_iboot_if_t *iboot, int *timing_cnt, int *color_cnt)
+{
+    int hpd;
+
+    for (int retries = 0; retries < DISPLAY_STATUS_RETRIES; retries += 1) {
+        hpd = dcp_ib_get_hpd(iboot, timing_cnt, color_cnt);
+        if ((hpd > 0) && *timing_cnt && *color_cnt) {
+            printf("display: waited %d ms for display connected\n", retries * DISPLAY_STATUS_DELAY);
+            return 1;
+        }
+
+        mdelay(DISPLAY_STATUS_DELAY);
+    }
+
+    // hpd is 0 if no display, negative if an error occurred
+    return hpd;
+}
+
+int display_wait_disconnected(dcp_iboot_if_t *iboot, int wait_delay)
+{
+    int hpd, timing_cnt, color_cnt;
+    int max_retries = wait_delay * 1000 / DISPLAY_STATUS_DELAY;
+
+    for (int retries = 0; retries < max_retries; retries += 1) {
+        hpd = dcp_ib_get_hpd(iboot, &timing_cnt, &color_cnt);
+        if (hpd < 0) {
+            return hpd;
+        }
+
+        if (!hpd) {
+            printf("display: waited %d ms for display disconnected\n",
+                   retries * DISPLAY_STATUS_DELAY);
+            return 1;
+        }
+
+        mdelay(DISPLAY_STATUS_DELAY);
+    }
+
+    return 0;
+}
+
 int display_configure(const char *config)
 {
     dcp_timing_mode_t want;
+    int wait_delay;
 
-    display_parse_mode(config, &want);
+    display_parse_mode(config, &want, &wait_delay);
 
     int ret = display_start_dcp();
     if (ret < 0)
@@ -148,29 +217,32 @@ int display_configure(const char *config)
 
     // Detect if display is connected
     int timing_cnt, color_cnt;
-    int hpd = 0, retries = 0;
+
+    if (wait_delay) {
+        // Some monitors disconnect when getting out of sleep mode.
+        // Wait a bit to see if that happens.
+        printf("display: waiting for monitor disconnect\n");
+        if ((ret = display_wait_disconnected(iboot, wait_delay)) < 0) {
+            printf("display: failed to wait for disconnect\n");
+            return -1;
+        }
+
+        if (!ret) {
+            printf("display: did not disconnect\n");
+        }
+    }
 
     /* After boot DCP does not immediately report a connected display. Retry getting display
      * information for 2 seconds.
      */
-    while (retries++ < DISPLAY_STATUS_RETRIES) {
-        hpd = dcp_ib_get_hpd(iboot, &timing_cnt, &color_cnt);
-        if (hpd < 0)
-            ret = hpd;
-        else if (hpd && timing_cnt && color_cnt)
-            break;
-        if (retries < DISPLAY_STATUS_RETRIES)
-            mdelay(DISPLAY_STATUS_DELAY);
-    }
-    printf("display: waited %d ms for display status\n", (retries - 1) * DISPLAY_STATUS_DELAY);
-    if (ret < 0) {
+    if ((ret = display_wait_connected(iboot, &timing_cnt, &color_cnt)) < 0) {
         printf("display: failed to get display status\n");
         return 0;
     }
 
-    printf("display: connected:%d timing_cnt:%d color_cnt:%d\n", hpd, timing_cnt, color_cnt);
+    printf("display: connected:%d timing_cnt:%d color_cnt:%d\n", ret, timing_cnt, color_cnt);
 
-    if (!hpd || !timing_cnt || !color_cnt)
+    if (!ret || !timing_cnt || !color_cnt)
         return 0;
 
     // Find best modes
