@@ -379,6 +379,13 @@ static void mmu_remap_ranges(void)
     }
 }
 
+void mmu_map_framebuffer(u64 addr, size_t size)
+{
+    printf("MMU: Adding UC mapping at 0x%lx (0x%zx) for framebuffer\n", addr, size);
+    dc_civac_range((void *)addr, size);
+    mmu_add_mapping(addr, addr, size, MAIR_IDX_FRAMEBUFFER, PERM_RW_EL0);
+}
+
 static void mmu_add_default_mappings(void)
 {
     mmu_map_mmio();
