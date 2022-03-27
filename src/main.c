@@ -135,7 +135,7 @@ void m1n1_main(void)
 
 #ifdef USE_FB
     display_init();
-    fb_init();
+    fb_init(false);
     fb_display_logo();
 #ifdef FB_SILENT_MODE
     fb_set_active(!cur_boot_args.video.display);

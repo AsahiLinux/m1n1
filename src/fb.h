@@ -28,8 +28,9 @@ static inline rgb_t int2rgb(u32 c)
     return (rgb_t){c >> 16, c >> 8, c};
 }
 
-void fb_init(void);
+void fb_init(bool clear);
 void fb_shutdown(bool restore_logo);
+void fb_reinit(void);
 void fb_update(void);
 void fb_set_active(bool active);
 

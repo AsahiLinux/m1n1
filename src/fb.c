@@ -315,7 +315,7 @@ static void fb_clear_console(void)
     fb_update();
 }
 
-void fb_init(void)
+void fb_init(bool clear)
 {
     fb.hwptr = (void *)cur_boot_args.video.base;
     fb.stride = cur_boot_args.video.stride / 4;
@@ -349,6 +349,9 @@ void fb_init(void)
         fb_unblit_image((fb.width - orig_logo.width) / 2, (fb.height - orig_logo.height) / 2,
                         &orig_logo);
     }
+
+    if (clear)
+        memset32(fb.ptr, 0, fb.size);
 
     console.margin.rows = 2;
     console.margin.cols = 4;
@@ -389,4 +392,14 @@ void fb_shutdown(bool restore_logo)
         orig_logo.ptr = NULL;
     }
     free(fb.ptr);
+}
+
+void fb_reinit(void)
+{
+    if (!console.initialized)
+        return;
+
+    fb_shutdown(false);
+    fb_init(true);
+    fb_display_logo();
 }

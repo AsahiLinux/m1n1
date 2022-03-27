@@ -463,7 +463,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
 
         case P_FB_INIT:
-            fb_init();
+            fb_init(request->args[0]);
             break;
         case P_FB_SHUTDOWN:
             fb_shutdown(request->args[0]);
