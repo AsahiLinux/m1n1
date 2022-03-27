@@ -1022,11 +1022,6 @@ if args.encode:
             jpeg.PX_PLANE0_TILING_V = 16
             jpeg.PX_PLANE1_TILING_H = 2
             jpeg.PX_PLANE1_TILING_V = 8
-        elif args.encode_subsampling == '411':
-            jpeg.PX_PLANE0_TILING_H = 4
-            jpeg.PX_PLANE0_TILING_V = 8
-            jpeg.PX_PLANE1_TILING_H = 4
-            jpeg.PX_PLANE1_TILING_V = 4
         else:
             assert False
     else:
@@ -1087,10 +1082,15 @@ if args.encode:
         jpeg.ENCODE_COMPONENT1_POS = 1
         jpeg.ENCODE_COMPONENT2_POS = 3
         jpeg.ENCODE_COMPONENT3_POS = 2
-    else:
+    elif pixfmt in ['YUV422-planar', 'YUV420-planar', 'YUV444-planar']:
         jpeg.ENCODE_COMPONENT0_POS = 0
         jpeg.ENCODE_COMPONENT1_POS = 0
         jpeg.ENCODE_COMPONENT2_POS = 1
+        jpeg.ENCODE_COMPONENT3_POS = 3
+    else:
+        jpeg.ENCODE_COMPONENT0_POS = 0
+        jpeg.ENCODE_COMPONENT1_POS = 1
+        jpeg.ENCODE_COMPONENT2_POS = 2
         jpeg.ENCODE_COMPONENT3_POS = 3
 
     jpeg.INPUT_START1 = input_buf_iova
