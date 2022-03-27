@@ -24,12 +24,21 @@ dcp_dev_t *dcp;
 dcp_iboot_if_t *iboot;
 u64 fb_dva;
 
-static void display_choose_timing_mode(dcp_timing_mode_t *modes, int cnt, dcp_timing_mode_t *best)
+#define abs(x) ((x) >= 0 ? (x) : -(x))
+
+static void display_choose_timing_mode(dcp_timing_mode_t *modes, int cnt, dcp_timing_mode_t *best,
+                                       dcp_timing_mode_t *want)
 {
     *best = modes[0];
 
     for (int i = 1; i < cnt; i++) {
         COMPARE(modes[i].valid, best->valid);
+        if (want && want->valid) {
+            COMPARE(modes[i].width == want->width && modes[i].height == want->height,
+                    best->width == want->width && best->height == want->height);
+            COMPARE(-abs((long)modes[i].fps - (long)want->fps),
+                    -abs((long)best->fps - (long)want->fps));
+        }
         COMPARE(modes[i].width <= 1920, best->width <= 1920);
         COMPARE(modes[i].height <= 1200, best->height <= 1200);
         COMPARE(modes[i].fps <= 60 << 16, best->fps <= 60 << 16);
@@ -39,7 +48,7 @@ static void display_choose_timing_mode(dcp_timing_mode_t *modes, int cnt, dcp_ti
     }
 
     printf("display: timing mode: valid=%d %dx%d %d.%02d Hz\n", best->valid, best->width,
-           best->height, best->fps >> 16, (best->fps & 0xffff) * 99 / 0xffff);
+           best->height, best->fps >> 16, ((best->fps & 0xffff) * 100 + 0x7fff) >> 16);
 }
 
 static void display_choose_color_mode(dcp_color_mode_t *modes, int cnt, dcp_color_mode_t *best)
@@ -88,9 +97,44 @@ static int display_start_dcp(void)
     return 0;
 }
 
+int display_parse_mode(const char *config, dcp_timing_mode_t *mode)
+{
+    memset(mode, 0, sizeof(*mode));
+
+    if (!config || !strcmp(config, "auto"))
+        return 0;
+
+    const char *s_w = config;
+    const char *s_h = strchr(config, 'x');
+    const char *s_fps = strchr(config, '@');
+
+    if (s_w && s_h) {
+        mode->width = atol(s_w);
+        mode->height = atol(s_h + 1);
+        mode->valid = mode->width && mode->height;
+    }
+
+    if (s_fps) {
+        mode->fps = atol(s_fps + 1) << 16;
+
+        const char *s_fps_frac = strchr(s_fps + 1, '.');
+        if (s_fps_frac) {
+            // Assumes two decimals...
+            mode->fps += (atol(s_fps_frac + 1) << 16) / 100;
+        }
+    }
+
+    printf("display: want mode: valid=%d %dx%d %d.%02d Hz\n", mode->valid, mode->width,
+           mode->height, mode->fps >> 16, ((mode->fps & 0xffff) * 100 + 0x7fff) >> 16);
+
+    return mode->valid;
+}
+
 int display_configure(const char *config)
 {
-    UNUSED(config);
+    dcp_timing_mode_t want;
+
+    display_parse_mode(config, &want);
 
     int ret = display_start_dcp();
     if (ret < 0)
@@ -136,7 +180,7 @@ int display_configure(const char *config)
         return -1;
     }
     assert(ret == timing_cnt);
-    display_choose_timing_mode(tmodes, timing_cnt, &tbest);
+    display_choose_timing_mode(tmodes, timing_cnt, &tbest, &want);
 
     dcp_color_mode_t *cmodes, cbest;
     if ((ret = dcp_ib_get_color_modes(iboot, &cmodes)) < 0) {
