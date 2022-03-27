@@ -26,6 +26,7 @@ static void display_choose_timing_mode(dcp_timing_mode_t *modes, int cnt, dcp_ti
     for (int i = 1; i < cnt; i++) {
         COMPARE(modes[i].valid, best->valid);
         COMPARE(modes[i].width <= 1920, best->width <= 1920);
+        COMPARE(modes[i].height <= 1200, best->height <= 1200);
         COMPARE(modes[i].fps <= 60 << 16, best->fps <= 60 << 16);
         COMPARE(modes[i].width, best->width);
         COMPARE(modes[i].height, best->height);
