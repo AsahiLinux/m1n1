@@ -4,6 +4,7 @@
 #include "assert.h"
 #include "dcp.h"
 #include "dcp_iboot.h"
+#include "fb.h"
 #include "string.h"
 #include "utils.h"
 #include "xnuboot.h"
@@ -187,10 +188,15 @@ int display_configure(const char *config)
 
     printf("display: swapped! (swap_id=%d)\n", swap_id);
 
-    cur_boot_args.video.stride = layer.planes[0].stride;
-    cur_boot_args.video.width = layer.width;
-    cur_boot_args.video.height = layer.height;
-    cur_boot_args.video.depth = 30;
+    if (cur_boot_args.video.stride != layer.planes[0].stride ||
+        cur_boot_args.video.width != layer.width || cur_boot_args.video.height != layer.height ||
+        cur_boot_args.video.depth != 30) {
+        cur_boot_args.video.stride = layer.planes[0].stride;
+        cur_boot_args.video.width = layer.width;
+        cur_boot_args.video.height = layer.height;
+        cur_boot_args.video.depth = 30;
+        fb_reinit();
+    }
 
     /* Update for python / subsequent stages */
     memcpy((void *)boot_args_addr, &cur_boot_args, sizeof(cur_boot_args));
