@@ -17,12 +17,14 @@ dcp_dev_t *dcp_init(const char *dcp_path, const char *dcp_dart_path, const char 
         printf("dcp: failed to initialize DCP DART\n");
         goto out_free;
     }
+    dart_setup_pt_region(dcp->dart_dcp, dcp_dart_path, 0);
 
     dcp->dart_disp = dart_init_adt(disp_dart_path, 0, 0, true);
     if (!dcp->dart_disp) {
         printf("dcp: failed to initialize DISP DART\n");
         goto out_dart_dcp;
     }
+    dart_setup_pt_region(dcp->dart_disp, disp_dart_path, 0);
 
     dcp->iovad_dcp = iovad_init(0x10000000, 0x20000000);
 
