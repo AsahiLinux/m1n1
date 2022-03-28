@@ -277,7 +277,8 @@ static void *dart_translate_internal(dart_dev_t *dart, uintptr_t iova, int silen
     u32 l1_index = (iova >> 25) & 0x7ff;
 
     if (!(dart->l1[ttbr][l1_index] & DART_PTE_VALID) && !silent) {
-        printf("dart: l1 translation failure %x %lx\n", l1_index, iova);
+        printf("dart[%lx %u]: l1 translation failure %x %lx\n", dart->regs, dart->device, l1_index,
+               iova);
         return NULL;
     }
 
@@ -286,7 +287,8 @@ static void *dart_translate_internal(dart_dev_t *dart, uintptr_t iova, int silen
         (u64 *)(FIELD_GET(dart->offset_mask, dart->l1[ttbr][l1_index]) << DART_PTE_OFFSET_SHIFT);
 
     if (!(l2[l2_index] & DART_PTE_VALID) && !silent) {
-        printf("dart: l2 translation failure\n");
+        printf("dart[%lx %u]: l2 translation failure %x:%x %lx\n", dart->regs, dart->device,
+               l1_index, l2_index, iova);
         return NULL;
     }
 
