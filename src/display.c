@@ -228,6 +228,45 @@ int display_parse_mode(const char *config, dcp_timing_mode_t *mode)
     return mode->valid;
 }
 
+static int display_swap(u64 iova, u32 stride, u32 width, u32 height)
+{
+    int ret;
+    int swap_id = ret = dcp_ib_swap_begin(iboot);
+    if (swap_id < 0) {
+        printf("display: failed to start swap\n");
+        return -1;
+    }
+
+    dcp_layer_t layer = {
+        .planes = {{
+            .addr = iova,
+            .stride = stride,
+            .addr_format = ADDR_PLANAR,
+        }},
+        .plane_cnt = 1,
+        .width = width,
+        .height = height,
+        .surface_fmt = FMT_w30r,
+        .colorspace = 2,
+        .eotf = EOTF_GAMMA_SDR,
+        .transform = XFRM_NONE,
+    };
+
+    dcp_rect_t rect = {width, height, 0, 0};
+
+    if ((ret = dcp_ib_swap_set_layer(iboot, 0, &layer, &rect, &rect)) < 0) {
+        printf("display: failed to set layer\n");
+        return -1;
+    }
+
+    if ((ret = dcp_ib_swap_end(iboot)) < 0) {
+        printf("display: failed to complete swap\n");
+        return -1;
+    }
+
+    return swap_id;
+}
+
 int display_configure(const char *config)
 {
     dcp_timing_mode_t want;
@@ -295,47 +334,18 @@ int display_configure(const char *config)
     }
 
     // Swap!
-    int swap_id = ret = dcp_ib_swap_begin(iboot);
-    if (swap_id < 0) {
-        printf("display: failed to start swap\n");
-        return -1;
-    }
+    u32 stride = tbest.width * 4;
+    ret = display_swap(fb_dva, stride, tbest.width, tbest.height);
+    if (ret < 0)
+        return ret;
 
-    dcp_layer_t layer = {
-        .planes = {{
-            .addr = fb_dva,
-            .stride = tbest.width * 4,
-            .addr_format = ADDR_PLANAR,
-        }},
-        .plane_cnt = 1,
-        .width = tbest.width,
-        .height = tbest.height,
-        .surface_fmt = FMT_w30r,
-        .colorspace = 2,
-        .eotf = EOTF_GAMMA_SDR,
-        .transform = XFRM_NONE,
-    };
+    printf("display: swapped! (swap_id=%d)\n", ret);
 
-    dcp_rect_t rect = {tbest.width, tbest.height, 0, 0};
-
-    if ((ret = dcp_ib_swap_set_layer(iboot, 0, &layer, &rect, &rect)) < 0) {
-        printf("display: failed to set layer\n");
-        return -1;
-    }
-
-    if ((ret = dcp_ib_swap_end(iboot)) < 0) {
-        printf("display: failed to complete swap\n");
-        return -1;
-    }
-
-    printf("display: swapped! (swap_id=%d)\n", swap_id);
-
-    if (cur_boot_args.video.stride != layer.planes[0].stride ||
-        cur_boot_args.video.width != layer.width || cur_boot_args.video.height != layer.height ||
-        cur_boot_args.video.depth != 30) {
-        cur_boot_args.video.stride = layer.planes[0].stride;
-        cur_boot_args.video.width = layer.width;
-        cur_boot_args.video.height = layer.height;
+    if (cur_boot_args.video.stride != stride || cur_boot_args.video.width != tbest.width ||
+        cur_boot_args.video.height != tbest.height || cur_boot_args.video.depth != 30) {
+        cur_boot_args.video.stride = stride;
+        cur_boot_args.video.width = tbest.width;
+        cur_boot_args.video.height = tbest.height;
         cur_boot_args.video.depth = 30;
         fb_reinit();
     }
