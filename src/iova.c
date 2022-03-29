@@ -12,11 +12,18 @@ struct iova_block {
 };
 
 struct iova_domain {
+    u64 base;
+    u64 limit;
     struct iova_block *free_list;
 };
 
 iova_domain_t *iovad_init(u64 base, u64 limit)
 {
+    if (base != ALIGN_UP(base, SZ_32M)) {
+        printf("iovad_init: base it not is not aligned to SZ_32M\n");
+        return NULL;
+    }
+
     iova_domain_t *iovad = malloc(sizeof(*iovad));
     if (!iovad)
         return NULL;
@@ -33,12 +40,14 @@ iova_domain_t *iovad_init(u64 base, u64 limit)
     blk->iova = base;
     blk->sz = limit - SZ_16K;
     blk->next = NULL;
+    iovad->base = base;
+    iovad->limit = limit;
     iovad->free_list = blk;
 
     return iovad;
 }
 
-void iovad_shutdown(iova_domain_t *iovad)
+void iovad_shutdown(iova_domain_t *iovad, dart_dev_t *dart)
 {
     struct iova_block *blk = iovad->free_list;
 
@@ -48,6 +57,10 @@ void iovad_shutdown(iova_domain_t *iovad)
 
         free(blk_free);
     }
+
+    if (dart)
+        for (u64 addr = iovad->base; addr < iovad->limit; addr += SZ_32M)
+            dart_free_l2(dart, addr);
 
     free(iovad);
 }

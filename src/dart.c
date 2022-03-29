@@ -271,6 +271,31 @@ void dart_unmap(dart_dev_t *dart, uintptr_t iova, size_t len)
     dart_tlb_invalidate(dart);
 }
 
+void dart_free_l2(dart_dev_t *dart, uintptr_t iova)
+{
+    if (iova & ((1 << 25) - 1)) {
+        printf("dart: %08lx is not at the start of L2 table\n", iova);
+        return;
+    }
+
+    u32 ttbr = (iova >> 36) & 0x3;
+    u32 l1_index = (iova >> 25) & 0x7ff;
+
+    if (!(dart->l1[ttbr][l1_index] & DART_PTE_VALID))
+        return;
+
+    u64 *l2 = dart_get_l2(dart, l1_index);
+
+    for (u32 idx = 0; idx < 2048; idx++) {
+        if (l2[idx] & DART_PTE_VALID) {
+            printf("dart: %08lx is still mapped\n", iova + (idx << 14));
+            return;
+        }
+    }
+    dart->l1[ttbr][l1_index] = 0;
+    free(l2);
+}
+
 static void *dart_translate_internal(dart_dev_t *dart, uintptr_t iova, int silent)
 {
     u32 ttbr = (iova >> 36) & 0x3;
