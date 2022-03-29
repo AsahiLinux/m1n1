@@ -3,6 +3,7 @@
 #include "hv.h"
 #include "assert.h"
 #include "cpu_regs.h"
+#include "display.h"
 #include "gxf.h"
 #include "memory.h"
 #include "pcie.h"
@@ -49,6 +50,7 @@ static struct hv_secondary_info_t hv_secondary_info;
 void hv_init(void)
 {
     pcie_shutdown();
+    display_shutdown();
     // reenable hpm interrupts for the guest for unused iodevs
     usb_hpm_restore_irqs(0);
     smp_start_secondaries();
