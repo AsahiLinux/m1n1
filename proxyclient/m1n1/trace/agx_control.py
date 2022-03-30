@@ -11,27 +11,29 @@ It seems like a common pattern is:
   5. Finish (3D or Compute)
   6. End
 
+Error messages call these as SKU commands
+
 """
-from re import A
-from telnetlib import SE
 from m1n1.constructutils import *
 
 from construct import *
-from construct.core import Int64ul, Int32ul
+from construct.core import Int64ul, Int32ul, Int32sl
+import textwrap
+
 
 class Start3DCmd(ConstructClass):
     subcon = Struct( # 0x194 bytes''''
         "magic" / Const(0x24, Int32ul),
         "unkptr_4" / Int64ul, # empty before run. Output? WorkCommand_1 + 0x3c0
         "unkptr_c" / Int64ul, # ??  WorkCommand_1 + 0x78
-        "unkptr_14" / Int64ul, # same as workcommand_1.unkptr_28
-        "unkptr_1c" / Int64ul,
+        "unkptr_14" / Int64ul, #  same as workcommand_1.unkptr_28.
+        "unkptr_1c" / Int64ul, # constant 0xffffffa00c33ec88, AKA initdata->unkptr_178+8
         "unkptr_24" / Int64ul, # 4 bytes
         "unkptr_2c" / Int64ul, # 0x3c bytes
         "unkptr_34" / Int64ul, # 0x34 bytes
         "cmdqueue_ptr" / Int64ul, # points back to the CommandQueueInfo that this command came from
         "workitem_ptr" / Int64ul, # points back at the WorkItem that this command came from
-        "unk_4c" / Int32ul, # 4
+        "context_id" / Int32ul, # 4
         "unk_50" / Int32ul, # 1
         "unk_54" / Int32ul, # 1
         "unk_58" / Int32ul, # 2
@@ -50,6 +52,9 @@ class Start3DCmd(ConstructClass):
         Padding(0x194 - 0x9c),
     )
 
+    def __repr__(self):
+        return super().__repr__(ignore=["cmdqueue_ptr", "workitem_ptr"])
+
 
 class Finalize3DCmd(ConstructClass):
     subcon = Struct( # 0x9c bytes
@@ -57,7 +62,7 @@ class Finalize3DCmd(ConstructClass):
         "uuid" / Int32ul, # uuid for tracking
         "unk_8" / Int32ul, # 0
         "unkptr_c" / Int64ul,
-        "unk_14" / Int64ul, # 200
+        "unk_14" / Int64ul, # multiple of 0x100, gets written to unkptr_c
         "unkptr_1c" / Int64ul, # Same as Start3DCmd.unkptr_14
         "unkptr_24" / Int64ul,
         "unk_2c" / Int64ul, # 1
@@ -73,25 +78,29 @@ class Finalize3DCmd(ConstructClass):
         "unk_7c" / Int64ul, # 0
         "unk_84" / Int64ul, # 0
         "unk_8c" / Int64ul, # 0
-        "unk_94" / Int32ul, # fffffe00
+        "startcmd_offset" / Int32sl, # realative offset from start of Finalize to StartComputeCmd
         "unk_98" / Int32ul, # 1
     )
 
+    def __repr__(self):
+        return super().__repr__(ignore=["cmdqueue_ptr", "workitem_ptr", "startcmd_offset"])
+
 
 class ComputeInfo(ConstructClass):
+    # Only the cmdlist and pipelinebase and cmdlist fields are strictly needed to launch a basic
+    # compute shader.
     subcon = Struct( # 0x1c bytes
         "unkptr_0" / Int64ul, # always 0 in my tests. Might be unforms?
-        "unkptr_8" / Int64ul, # CommandList from userspace
+        "cmdlist" / Int64ul, # CommandList from userspace
         "unkptr_10" / Int64ul, # size 8, null
         "unkptr_18" / Int64ul, # size 8, null
         "unkptr_20" / Int64ul, # size 8, null
-        "unkptr_28" / Int64ul,
-        "pipeline_base" / Int64ul, # 0x11_00000000: Used for certain "short" pointers like pipelines (and shader?)
-        "unkptr_34" / Int64ul, # always 0x8c60 ?
-        "unk_3c" / Int32ul, # 0
+        "unkptr_28" / Int64ul, #
+        "pipeline_base" / Int64ul, # 0x11_00000000: Used for certain "short" pointers like pipelines (and shaders?)
+        "unkptr_38" / Int64ul, # always 0x8c60.
         "unk_40" / Int32ul, # 0x41
         "unk_44" / Int32ul, # 0
-        "unkptr_48" / Int64ul,
+        "unkptr_48" / Int64ul, #
         "unk_50" / Int32ul, # 0x40 - Size?
         "unk_54" / Int32ul, # 0
         "unk_58" / Int32ul, # 1
@@ -108,7 +117,7 @@ class StartComputeCmd(ConstructClass):
         "computeinfo" / Pointer(this.computeinfo_addr, ComputeInfo),
         "unkptr_14" / Int64ul, # In gpu-asc's heap? Did this pointer come from the gfx firmware?
         "cmdqueue_ptr" / Int64ul, # points back to the submitinfo that this command came from
-        "unk_24" / Int32ul, # 4
+        "context_id" / Int32ul, # 4
         "unk_28" / Int32ul, # 1
         "unk_2c" / Int32ul, # 0
         "unk_30" / Int32ul,
@@ -129,19 +138,22 @@ class StartComputeCmd(ConstructClass):
         except AttributeError:
             pass
 
+    def __repr__(self):
+        return super().__repr__(ignore=["cmdqueue_ptr", "workitem_ptr"])
+
 
 class FinalizeComputeCmd(ConstructClass):
     subcon = Struct( # 0x64 bytes''''
         "magic" / Const(0x2a, Int32ul),
         "unkptr_4" / Int64ul, # same as ComputeStartCmd.unkptr_14
         "cmdqueue_ptr" / Int64ul, # points back to the submitinfo
-        "unk_14" / Int32ul,
+        "unk_14" / Int32ul, # Context ID?
         "unk_18" / Int32ul,
         "unkptr_1c" / Int64ul, # same as ComputeStartCmd.unkptr_3c
         "unk_24" / Int32ul,
         "uuid" / Int32ul,  # uuid for tracking?
         "unkptr_2c" / Int64ul,
-        "unk_34" / Int32ul, # Size?
+        "unk_34" / Int32ul, # Gets written to unkptr_2c (after completion?)
         "unk_38" / Int32ul,
         "unk_3c" / Int32ul,
         "unk_40" / Int32ul,
@@ -151,9 +163,12 @@ class FinalizeComputeCmd(ConstructClass):
         "unk_50" / Int32ul,
         "unk_54" / Int32ul,
         "unk_58" / Int32ul,
-        "unk_5c" / Int32ul,
+        "startcmd_offset" / Int32sl, # realative offset from start of Finalize to StartComputeCmd
         "unk_60" / Int32ul,
     )
+
+    def __repr__(self):
+        return super().__repr__(ignore=["cmdqueue_ptr", "workitem_ptr", "startcmd_offset"])
 
 class EndCmd(ConstructClass):
     subcon = Struct(
@@ -195,6 +210,7 @@ class WaitForInterruptCmd(ConstructClass):
         return f"WaitForInterrupt({self.unk_1}, {self.unk_2}, {self.unk_3})"
 
 class NopCmd(ConstructClass):
+    # This doesn't exist
     subcon = Struct(
         "magic" / Const(0x00, Int32ul),
     )
@@ -206,7 +222,7 @@ class NopCmd(ConstructClass):
 class ControlList(ConstructClass):
     subcon = GreedyRange(
         Select(
-            NopCmd,
+            #NopCmd,
             WaitForInterruptCmd,
 
             EndCmd,
@@ -222,7 +238,7 @@ class ControlList(ConstructClass):
     def __repr__(self):
         str = ""
         for cmd in self.value:
-            str += f"\t{cmd}\n"
+            str += repr(cmd) + '\n'
             if isinstance(cmd, EndCmd):
                 break
         return str

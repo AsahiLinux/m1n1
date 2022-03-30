@@ -1,10 +1,13 @@
 # SPDX-License-Identifier: MIT
 from ...utils import *
+from ...malloc import Heap
 
 from ..asc import StandardASC
 from ..asc.base import ASCBaseEndpoint, msg_handler
 
 from ...hw.uat import UAT
+
+from .initdata import InitData, IOMapping
 
 
 class PongMsg(Register64):
@@ -59,6 +62,21 @@ class Agx(StandardASC):
         ttbr1_addr = getattr(self.sgx_dev, 'gfx-shared-region-base')
         self.uat.initilize(ttbr_base, ttbr1_addr, kernel_base_va)
 
+        # create some heaps
+        shared_size = 2 * 1024 * 1024
+        shared_paddr, shared_dva = self.ioalloc(shared_size, ctx=0)
+        self.sharedHeap = Heap(shared_dva, shared_dva + shared_size)
+
+        print("shared heap:", hex(shared_dva), hex(shared_size))
+
+        normal_size = 2 * 1024 * 1024
+        normal_paddr, normal_dva = self.ioalloc(shared_size, ctx=0)
+        self.normalHeap = Heap(normal_dva, normal_dva + normal_size)
+
+        print("normal heap:", hex(normal_dva), hex(normal_size))
+
+        self.initdata = None
+
 
     def iomap(self, addr, size, ctx=0):
         dva = self.uat.iomap(ctx, addr, size)
@@ -76,3 +94,21 @@ class Agx(StandardASC):
 
     def iowrite(self, dva, data, ctx=0):
         return self.uat.iowrite(ctx, dva & 0xFFFFFFFFFF, data)
+
+    def build_initdata(self):
+        if self.initdata is None:
+            self.initdata_addr = self.normalHeap.malloc(InitData.sizeof())
+
+            io_mappings = [IOMapping() for _ in range(0x14)]
+
+            self.initdata = InitData(self.normalHeap, self.sharedHeap, {"io_mappings": io_mappings})
+            self.initdata.build_stream(stream = self.uat.iostream(0, self.initdata_addr))
+
+        return self.initdata_addr
+
+    def boot(self):
+        # boot asc
+        super().boot()
+
+        initdata_addr = self.build_initdata()
+        self.agx.send_initdata(self.initdata_addr)

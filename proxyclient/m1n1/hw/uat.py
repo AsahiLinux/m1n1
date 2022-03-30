@@ -135,6 +135,7 @@ class UatStream(Reloadable):
         self.uat.iowrite(self.ctx, self.pos, bytes)
         self.pos += len(bytes)
         self.cache = None
+        return len(bytes)
 
     def writable(self):
         return True
@@ -389,7 +390,7 @@ class UAT(Reloadable):
     def invalidate_cache(self):
         self.pt_cache = {}
 
-    def dump_level(self, level, base, table):
+    def recurse_level(self, level, base, table, page_fn=None, table_fn=None):
         def extend(addr):
             if addr >= 0x80_00000000:
                 addr |= 0xf00_00000000
@@ -398,30 +399,40 @@ class UAT(Reloadable):
         offset, size, ptecls = self.LEVELS[level]
 
         cached, tbl = self.get_pt(table, size)
-        unmapped = False
+        sparse = False
         for i, pte in enumerate(tbl):
             pte = ptecls(pte)
             if not pte.valid():
-                if not unmapped:
-                    print("  ...")
-                    unmapped = True
+                sparse = True
                 continue
-            unmapped = False
 
             range_size = 1 << offset
             start = extend(base + i * range_size)
             end = start + range_size - 1
-            addr = pte.offset()
-            type = " page" if level + 1 == len(self.LEVELS) else "table"
-            print(f"{'  ' * level}{type} ({i:03}): {start:011x} ... {end:011x}"
-                       f" -> {pte.describe()}")
 
-            if level + 1 != len(self.LEVELS):
-                self.dump_level(level + 1, start, addr)
+            if level + 1 == len(self.LEVELS):
+                if page_fn:
+                    page_fn(start, end, i, pte, level, sparse=sparse)
+            else:
+                if table_fn:
+                    table_fn(start, end, i, pte, level, sparse=sparse)
+                self.recurse_level(level + 1, start, pte.offset(), page_fn, table_fn)
+
+            sparse = False
+
+    def foreach_page(self, ctx, page_fn):
+        self.recurse_level(0, 0, self.ttbr + ctx * 16, page_fn)
 
     def dump(self, ctx):
         if not self.ttbr:
             print("No translation table")
             return
 
-        self.dump_level(0, 0, self.ttbr + ctx * 16)
+        def print_fn(start, end, i, pte, level, sparse):
+            type = "page" if level+1 == len(self.LEVELS) else "table"
+            if sparse:
+                print(f"{'  ' * level}...")
+            print(f"{'  ' * level}{type}({i:03}): {start:011x} ... {end:011x}"
+                       f" -> {pte.describe()}")
+
+        self.recurse_level(0, 0, self.ttbr + ctx * 16, print_fn, print_fn)

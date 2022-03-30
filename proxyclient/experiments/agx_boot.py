@@ -15,6 +15,8 @@ p.pmgr_adt_clocks_enable("/arm-io/sgx")
 agx = Agx(u)
 agx.verbose = 10
 
-agx.boot()
+#agx.uat.dump(0)
+
+agx.build_initdata()
 
 run_shell(globals(), msg="Have fun!")

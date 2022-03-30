@@ -1,7 +1,10 @@
 
+import textwrap
 from .asc import *
 from .agx_control import ControlList
-from ..hw.uat import UAT
+from ..hw.uat import UAT, MemoryAttr
+
+from ..fw.agx.initdata import InitData as NewInitData
 
 from m1n1.proxyutils import RegMonitor
 from m1n1.constructutils import *
@@ -23,7 +26,7 @@ class WorkCommand_4(ConstructClass):
     subcon = Struct(
         "magic" / Const(0x4, Int32ul),
         "ptr" / Int64ul, # These appare to be shared over multiple contexes
-        "unk_c" / Int32ul, # Counts up by 0x100 each frame
+        "unk_c" / Int32ul, # Counts up by 0x100 each frame, gets written to ptr? (on completion?)
         "flag" / Int32ul, # 2, 4 or 6
         "unk_14" / Int32ul,  # Counts up by 0x100 each frame? starts at diffrent point?
         "uuid" / Int32ul,
@@ -86,15 +89,13 @@ class WorkCommand_3(ConstructClass):
         # offset 000001e8
         "controllist_ptr" / Int64ul,
         "controllist_size" / Int32ul,
-        "controllist_data" / Pointer(this.controllist_ptr, Bytes(this.controllist_size)),
+        "controllist" / Pointer(this.controllist_ptr, ControlList),
     )
 
-    def parsed(self, ctx):
-        self.controllist = ControlList.parse(self.controllist_data)
-
     def __repr__(self) -> str:
-        str = super().__repr__(ignore=['magic', 'controllist_data'])
-        str += f"\nControl List:\n{repr(self.controllist)}"
+        str = super().__repr__(ignore=['magic', 'controllist_ptr', 'controllist_size'])
+        # str += f"   Control List - {self.controllist_size:#x} bytes @ {self.controllist_ptr:#x}:\n"
+        # str += textwrap.indent(repr(self.controllist), ' ' * 3)
         return str
 
 
@@ -130,7 +131,7 @@ class WorkCommand_1(ConstructClass):
         "unk_8" / Int32ul,
         "controllist_ptr" / Int64ul, # Command list
         "controllist_size" / Int32ul,
-        "controllist_data" / Pointer(this.controllist_ptr, Bytes(this.controllist_size)),
+        "controllist" / Pointer(this.controllist_ptr, ControlList),
         "unkptr_18" / Int64ul,
         "unkptr_20" / Int64ul, # Size: 0x100
         "unkptr_28" / Int64ul, # Size: 0x8c0
@@ -147,12 +148,10 @@ class WorkCommand_1(ConstructClass):
         "unk_70" / Int64ul,
     )
 
-    def parsed(self, ctx):
-        self.controllist = ControlList.parse(self.controllist_data)
-
     def __repr__(self) -> str:
-        str = super().__repr__(ignore=['magic', 'controllist_data'])
-        str += f"\nControl List:\n{repr(self.controllist)}"
+        str = super().__repr__(ignore=['magic', 'controllist_ptr', 'controllist_size'])
+        # str += f"   Control List - {self.controllist_size:#x} bytes @ {self.controllist_ptr:#x}:\n"
+        # str += textwrap.indent(repr(self.controllist), ' ' * 3)
         return str
 
 
@@ -252,7 +251,7 @@ class CommandQueueInfo(ConstructClass):
         Padding(0x20),
         "unk_84" / Int32ul, # Set to 1 by gpu after work complete. Reset to zero by cpu
         Padding(0x18),
-        "unkptr_a0" / Int64ul, # Size 0x40
+        "unkptr_a0" / Int64ul, # Size 0x40 ; Also seen in DeviceControl_17
 
         # End of struct
     )
@@ -292,12 +291,12 @@ class CommandQueueInfo(ConstructClass):
 
 class NotifyCmdQueueWork(ConstructClass):
     subcon = Struct (
-        "queue_type" / Select(Const(0, Int32ul), Const(1, Int32ul), Const(2, Int32ul)),
-        "cmdqueue_addr" / Int64ul,
+        "queue_type" / Default(Select(Const(0, Int32ul), Const(1, Int32ul), Const(2, Int32ul)), 0),
+        "cmdqueue_addr" / Default(Int64ul, 0),
         "cmdqueue" / Pointer(this.cmdqueue_addr, CommandQueueInfo),
-        "head" / Int32ul,
-        "unk_10" / Int32ul,
-        "unk_14" / Int32ul,
+        "head" / Default(Int32ul, 0),
+        "unk_10" / Default(Int32ul, 0),
+        "unk_14" / Default(Int32ul, 0),
         "padding" / Bytes(0x18),
     )
 
@@ -316,9 +315,9 @@ class NotifyCmdQueueWork(ConstructClass):
 
     def __repr__(self):
         str = f"{self.TYPES[self.queue_type]}(0x{self.cmdqueue_addr & 0xfff_ffffffff:x}, {self.head}, {self.unk_10}, {self.unk_14})"
-        str += "\n  WorkItems:"
+        str += "\n   WorkItems:"
         for work in self.get_workitems():
-            str += f"\n\t{work}"
+            str += f"\n{textwrap.indent(repr(work), ' ' * 6)}"
         return str
 
 
@@ -420,8 +419,6 @@ InitData = Struct(
     "unk_30" / Int32ul
 )
 
-
-
 class InitMsg(Register64):
     TYPE    = 59, 52
 
@@ -448,9 +445,6 @@ class InitEp(EP):
     def init_resp(self, msg):
         print(f"  CPU Sent Init Response {msg.UNK1:x}, ADDR: {msg.ADDR:x}")
 
-        # monitor whatever is at this address
-        self.tracer.mon_addva(0, msg.ADDR, 0x4000, "init_region")
-        self.tracer.mon.poll()
         return True
 
 class GpuMsg(Register64):
@@ -506,7 +500,7 @@ class AGXTracer(ASCTracer):
 
     def __init__(self, hv, devpath, verbose=False):
         super().__init__(hv, devpath, verbose)
-        self.uat = UAT(hv.iface, hv.u)
+        self.uat = UAT(hv.iface, hv.u, hv)
         self.mon = RegMonitor(hv.u, ascii=True)
         self.dev_sgx = hv.u.adt["/arm-io/sgx"]
         self.gpu_region = getattr(self.dev_sgx, "gpu-region-base")
@@ -544,13 +538,17 @@ class AGXTracer(ASCTracer):
         self.channels_read_ptr[channel] = (self.channels_read_ptr[channel] + 1) % 256
         msg = ChannelMessage.parse_stream(self.uat.iostream(0, addr))
 
+        return
+
         if isinstance(msg, NotifyCmdQueueWork) and (msg.cmdqueue_addr & 0xfff_ffffffff) in self.ignorelist:
             return
 
         print(f"Channel[{self.channelNames[channel]}]: {msg}")
         self.last_msg = msg
 
-    def ignore(self, addr):
+    def ignore(self, addr=None):
+        if addr is None:
+            addr = self.last_msg.cmdqueue_addr
         self.ignorelist += [addr & 0xfff_ffffffff]
 
     def kick(self, val):
@@ -580,17 +578,23 @@ class AGXTracer(ASCTracer):
             self.print_ringmsg(channel)
 
         # if val not in [0x0, 0x1, 0x10, 0x11]:
-        if self.last_msg and isinstance(self.last_msg, NotifyCmdQueueWork):
+        if self.last_msg and isinstance(self.last_msg, (NotifyCmdQueueWork, DeviceControl_17)):
             self.hv.run_shell()
 
             self.last_msg = None
 
     def pong(self):
-        self.mon.poll()
+        #print("pong")
+        try:
+            self.mon.poll()
+        except:
+            pass
+
+        #self.hv.run_shell()
 
         # check the gfx -> cpu channels
-        for i in range(13, 17):
-           state = self.initdata.channels[i].state()
+        #for i in range(13, 17):
+        #   state = self.initdata.channels[i].state()
 
 
 
@@ -601,16 +605,42 @@ class AGXTracer(ASCTracer):
             if start:
                 self.hv.trace_range(irange(start, size), mode=TraceMode.SYNC)
 
+    def dump_va(self, ctx):
+        data = b''
+        dataStart = 0
+
+        def dump_page(start, end, i, pte, level, sparse):
+            if i == 0 or sparse:
+                if len(data):
+                    chexdump32(data, dataStart)
+                data = b''
+                dataStart = 0
+            if MemoryAttr(pte.AttrIndex) != MemoryAttr.Device and pte.OS:
+                if dataStart == 0:
+                    dataStart = start
+                data += self.uat.ioread(0, start, 0x4000)
+
+        self.uat.foreach_page(0, dump_page)
+        if len(data):
+            chexdump32(data, dataStart)
 
     def pong_init(self, addr):
         self.initdata_addr = addr
         self.initdata = InitData.parse_stream(self.uat.iostream(0, addr))
 
+
+
+
+
+
+        self.initdata2 = NewInitData.parse_stream(self.uat.iostream(0, addr))
+        #self.initdata2.regionB.mon(lambda addr, size, name: self.mon_addva(0, addr, size, name))
+
         # for i, chan in list(enumerate(self.initdata.channels))[13:16]:
         #     self.mon_addva(0, chan.state_addr, 0x40, f"chan[{i}]->state")
         #     self.mon_addva(0, chan.ringbuffer_addr, 256 * 0x30, f"chan[{i}]->ringbuffer")
 
-        self.mon.poll()
+        #self.mon.poll()
 
         self.hv.run_shell()
 
