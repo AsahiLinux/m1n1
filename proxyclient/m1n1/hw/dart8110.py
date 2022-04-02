@@ -133,42 +133,42 @@ class DART8110(Reloadable):
         dart = cls(u.iface, regs, u)
         return dart
 
-#     def ioread(self, stream, base, size):
-#         if size == 0:
-#             return b""
+    def ioread(self, stream, base, size):
+        if size == 0:
+            return b""
 
-#         ranges = self.iotranslate(stream, base, size)
+        ranges = self.iotranslate(stream, base, size)
 
-#         iova = base
-#         data = []
-#         for addr, size in ranges:
-#             if addr is None:
-#                 raise Exception(f"Unmapped page at iova {iova:#x}")
-#             data.append(self.iface.readmem(addr, size))
-#             iova += size
+        iova = base
+        data = []
+        for addr, size in ranges:
+            if addr is None:
+                raise Exception(f"Unmapped page at iova {iova:#x}")
+            data.append(self.iface.readmem(addr, size))
+            iova += size
 
-#         return b"".join(data)
+        return b"".join(data)
 
-#     def iowrite(self, stream, base, data):
-#         if len(data) == 0:
-#             return
+    def iowrite(self, stream, base, data):
+        if len(data) == 0:
+            return
 
-#         ranges = self.iotranslate(stream, base, len(data))
+        ranges = self.iotranslate(stream, base, len(data))
 
-#         iova = base
-#         p = 0
-#         for addr, size in ranges:
-#             if addr is None:
-#                 raise Exception(f"Unmapped page at iova {iova:#x}")
-#             self.iface.writemem(addr, data[p:p + size])
-#             p += size
-#             iova += size
+        iova = base
+        p = 0
+        for addr, size in ranges:
+            if addr is None:
+                raise Exception(f"Unmapped page at iova {iova:#x}")
+            self.iface.writemem(addr, data[p:p + size])
+            p += size
+            iova += size
 
-#     def iomap(self, stream, addr, size):
-#         iova = self.iova_allocator[stream].malloc(size)
+    def iomap(self, stream, addr, size):
+        iova = self.iova_allocator[stream].malloc(size)
 
-#         self.iomap_at(stream, iova, addr, size)
-#         return iova
+        self.iomap_at(stream, iova, addr, size)
+        return iova
 
     def iomap_at(self, stream, iova, addr, size):
         if size == 0:
