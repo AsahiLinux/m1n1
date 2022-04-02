@@ -305,14 +305,14 @@ class DART8110(Reloadable):
 
 #         return ranges
 
-#     def get_pt(self, addr, uncached=False):
-#         cached = True
-#         if addr not in self.pt_cache or uncached:
-#             cached = False
-#             self.pt_cache[addr] = list(
-#                 struct.unpack(f"<{self.Lx_SIZE}Q", self.iface.readmem(addr, self.PAGE_SIZE)))
+    def get_pt(self, addr, uncached=False):
+        cached = True
+        if addr not in self.pt_cache or uncached:
+            cached = False
+            self.pt_cache[addr] = list(
+                struct.unpack(f"<{self.Lx_SIZE}Q", self.iface.readmem(addr, self.PAGE_SIZE)))
 
-#         return cached, self.pt_cache[addr]
+        return cached, self.pt_cache[addr]
 
 #     def flush_pt(self, addr):
 #         assert addr in self.pt_cache
@@ -392,33 +392,34 @@ class DART8110(Reloadable):
 #         if next_pte.VALID:
 #             print_block(base, next_pte, start, 2048)
 
-#     def dump_table(self, base, l1_addr):
-#         cached, tbl = self.get_pt(l1_addr)
+    def dump_table(self, base, l1_addr):
+        cached, tbl = self.get_pt(l1_addr)
 
-#         unmapped = False
-#         for i, pte in enumerate(tbl):
-#             pte = self.ptecls(pte)
-#             if not pte.VALID:
-#                 if not unmapped:
-#                     print("  ...")
-#                     unmapped = True
-#                 continue
+        unmapped = False
+        for i, pte in enumerate(tbl):
+            pte = PTE(pte)
+            if not pte.VALID:
+                if not unmapped:
+                    print("  ...")
+                    unmapped = True
+                continue
 
-#             unmapped = False
+            unmapped = False
 
-#             print("  table (%d): %08x ... %08x -> %016x [%d%d]" % (
-#                 i, base + i*0x2000000, base + (i+1)*0x2000000,
-#                 pte.OFFSET << self.PAGE_BITS, pte.SP_PROT_DIS, pte.VALID))
-#             self.dump_table2(base + i*0x2000000, pte.OFFSET << self.PAGE_BITS)
+            print("  table (%d): %09x ... %09x -> %016x [%d%d%d%d]" % (
+                i, base + i*0x2000000, base + (i+1)*0x2000000,
+                pte.OFFSET << self.PAGE_BITS,
+                pte.RDPROT, pte.WRPROT, pte.UNCACHABLE, pte.VALID))
+            # self.dump_table2(base + i*0x2000000, pte.OFFSET << self.PAGE_BITS)
 
-#     def dump_ttbr(self, idx, ttbr):
-#         if not ttbr.VALID:
-#             return
+    def dump_ttbr(self, ttbr):
+        if not ttbr.VALID:
+            return
 
-#         l1_addr = (ttbr.ADDR) << 12
-#         print("  TTBR%d: %09x" % (idx, l1_addr))
+        l1_addr = (ttbr.ADDR) << self.PAGE_BITS
+        print("  TTBR: %011x" % (l1_addr))
 
-#         self.dump_table(0, l1_addr)
+        self.dump_table(0, l1_addr)
 
     def dump_device(self, idx):
         tcr = self.regs.TCR[idx].reg
@@ -430,8 +431,7 @@ class DART8110(Reloadable):
         elif tcr.TRANSLATE_ENABLE:
             print("  mode: TRANSLATE")
 
-            # for idx, ttbr in enumerate(ttbrs):
-            #     self.dump_ttbr(idx, ttbr.reg)
+            self.dump_ttbr(ttbr.reg)
         elif tcr.BYPASS_DART:
             print("  mode: BYPASS")
         else:
