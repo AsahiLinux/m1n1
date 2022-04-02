@@ -170,140 +170,137 @@ class DART8110(Reloadable):
 #         self.iomap_at(stream, iova, addr, size)
 #         return iova
 
-#     def iomap_at(self, stream, iova, addr, size):
-#         if size == 0:
-#             return
+    def iomap_at(self, stream, iova, addr, size):
+        if size == 0:
+            return
 
-#         if not (self.enabled_streams & (1 << stream)):
-#             self.enabled_streams |= (1 << stream)
-#             self.regs.ENABLED_STREAMS.val |= self.enabled_streams
+        if not (self.enabled_streams & (1 << stream)):
+            self.enabled_streams |= (1 << stream)
+            self.regs.ENABLE_STREAMS[stream // 32].val |= (1 << (stream % 32))
 
-#         tcr = self.regs.TCR[stream].reg
+        tcr = self.regs.TCR[stream].reg
 
-#         if tcr.BYPASS_DART and not tcr.TRANSLATE_ENABLE:
-#             raise Exception("Stream is bypassed in DART")
+        if tcr.BYPASS_DART and not tcr.TRANSLATE_ENABLE:
+            raise Exception("Stream is bypassed in DART")
 
-#         if tcr.BYPASS_DART or not tcr.TRANSLATE_ENABLE:
-#             raise Exception(f"Unknown DART mode {tcr}")
+        if tcr.BYPASS_DART or not tcr.TRANSLATE_ENABLE:
+            raise Exception(f"Unknown DART mode {tcr}")
 
-#         if addr & (self.PAGE_SIZE - 1):
-#             raise Exception(f"Unaligned PA {addr:#x}")
+        if addr & (self.PAGE_SIZE - 1):
+            raise Exception(f"Unaligned PA {addr:#x}")
 
-#         if iova & (self.PAGE_SIZE - 1):
-#             raise Exception(f"Unaligned IOVA {iova:#x}")
+        if iova & (self.PAGE_SIZE - 1):
+            raise Exception(f"Unaligned IOVA {iova:#x}")
 
-#         start_page = align_down(iova, self.PAGE_SIZE)
-#         end = iova + size
-#         end_page = align_up(end, self.PAGE_SIZE)
+        start_page = align_down(iova, self.PAGE_SIZE)
+        end = iova + size
+        end_page = align_up(end, self.PAGE_SIZE)
 
-#         dirty = set()
+        dirty = set()
 
-#         for page in range(start_page, end_page, self.PAGE_SIZE):
-#             paddr = addr + page - start_page
+        for page in range(start_page, end_page, self.PAGE_SIZE):
+            paddr = addr + page - start_page
 
-#             l0 = page >> self.L0_OFF
-#             assert l0 < self.L0_SIZE
-#             ttbr = self.regs.TTBR[stream, l0].reg
-#             if not ttbr.VALID:
-#                 l1addr = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
-#                 self.pt_cache[l1addr] = [0] * self.Lx_SIZE
-#                 ttbr.VALID = 1
-#                 ttbr.ADDR = l1addr >> 12
-#                 self.regs.TTBR[stream, l0].reg = ttbr
+            ttbr = self.regs.TTBR[stream].reg
+            if not ttbr.VALID:
+                l1addr = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
+                self.pt_cache[l1addr] = [0] * self.Lx_SIZE
+                ttbr.VALID = 1
+                ttbr.ADDR = l1addr >> self.PAGE_BITS
+                self.regs.TTBR[stream].reg = ttbr
 
-#             cached, l1 = self.get_pt(ttbr.ADDR << 12)
-#             l1idx = (page >> self.L1_OFF) & self.IDX_MASK
-#             l1pte = self.ptecls(l1[l1idx])
-#             if not l1pte.VALID:
-#                 l2addr = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
-#                 self.pt_cache[l2addr] = [0] * self.Lx_SIZE
-#                 l1pte = self.ptecls(
-#                     OFFSET=l2addr >> self.PAGE_BITS, VALID=1, SP_PROT_DIS=1)
-#                 l1[l1idx] = l1pte.value
-#                 dirty.add(ttbr.ADDR << 12)
-#             else:
-#                 l2addr = l1pte.OFFSET << self.PAGE_BITS
+            cached, l1 = self.get_pt(ttbr.ADDR << self.PAGE_BITS)
+            l1idx = (page >> self.L1_OFF) & self.IDX_MASK
+            l1pte = PTE(l1[l1idx])
+            if not l1pte.VALID:
+                l2addr = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
+                self.pt_cache[l2addr] = [0] * self.Lx_SIZE
+                l1pte = PTE(
+                    OFFSET=l2addr >> self.PAGE_BITS, VALID=1)
+                l1[l1idx] = l1pte.value
+                dirty.add(ttbr.ADDR << self.PAGE_BITS)
+            else:
+                l2addr = l1pte.OFFSET << self.PAGE_BITS
 
-#             dirty.add(l1pte.OFFSET << self.PAGE_BITS)
-#             cached, l2 = self.get_pt(l2addr)
-#             l2idx = (page >> self.L2_OFF) & self.IDX_MASK
-#             self.pt_cache[l2addr][l2idx] = self.ptecls(
-#                 SP_START=0, SP_END=0xfff,
-#                 OFFSET=paddr >> self.PAGE_BITS, VALID=1, SP_PROT_DIS=1).value
+            dirty.add(l1pte.OFFSET << self.PAGE_BITS)
+            cached, l2 = self.get_pt(l2addr)
+            l2idx = (page >> self.L2_OFF) & self.IDX_MASK
+            self.pt_cache[l2addr][l2idx] = PTE(
+                SP_START=0, SP_END=0xfff,
+                OFFSET=paddr >> self.PAGE_BITS, VALID=1).value
 
-#         for page in dirty:
-#             self.flush_pt(page)
+        for page in dirty:
+            self.flush_pt(page)
 
-#     def iotranslate(self, stream, start, size):
-#         if size == 0:
-#             return []
+    def iotranslate(self, stream, start, size):
+        if size == 0:
+            return []
 
-#         tcr = self.regs.TCR[stream].reg
+        tcr = self.regs.TCR[stream].reg
 
-#         if tcr.BYPASS_DART and not tcr.TRANSLATE_ENABLE:
-#             return [(start, size)]
+        if tcr.BYPASS_DART and not tcr.TRANSLATE_ENABLE:
+            # FIXME this may not be correct
+            return [(start, size)]
 
-#         if tcr.BYPASS_DART or not tcr.TRANSLATE_ENABLE:
-#             raise Exception(f"Unknown DART mode {tcr}")
+        if tcr.BYPASS_DART or not tcr.TRANSLATE_ENABLE:
+            raise Exception(f"Unknown DART mode {tcr}")
 
-#         start = start & 0xffffffff
+        start = start & 0xfffffffff
 
-#         start_page = align_down(start, self.PAGE_SIZE)
-#         start_off = start - start_page
-#         end = start + size
-#         end_page = align_up(end, self.PAGE_SIZE)
-#         end_size = end - (end_page - self.PAGE_SIZE)
+        start_page = align_down(start, self.PAGE_SIZE)
+        start_off = start - start_page
+        end = start + size
+        end_page = align_up(end, self.PAGE_SIZE)
+        end_size = end - (end_page - self.PAGE_SIZE)
 
-#         pages = []
+        pages = []
 
-#         for page in range(start_page, end_page, self.PAGE_SIZE):
-#             l0 = page >> self.L0_OFF
-#             assert l0 < self.L0_SIZE
-#             ttbr = self.regs.TTBR[stream, l0].reg
-#             if not ttbr.VALID:
-#                 pages.append(None)
-#                 continue
+        for page in range(start_page, end_page, self.PAGE_SIZE):
+            ttbr = self.regs.TTBR[stream].reg
+            if not ttbr.VALID:
+                pages.append(None)
+                continue
 
-#             cached, l1 = self.get_pt(ttbr.ADDR << 12)
-#             l1pte = self.ptecls(l1[(page >> self.L1_OFF) & self.IDX_MASK])
-#             if not l1pte.VALID and cached:
-#                 cached, l1 = self.get_pt(ttbr.ADDR << 12, uncached=True)
-#                 l1pte = self.ptecls(l1[(page >> self.L1_OFF) & self.IDX_MASK])
-#             if not l1pte.VALID:
-#                 pages.append(None)
-#                 continue
+            cached, l1 = self.get_pt(ttbr.ADDR << self.PAGE_BITS)
+            l1pte = PTE(l1[(page >> self.L1_OFF) & self.IDX_MASK])
+            if not l1pte.VALID and cached:
+                cached, l1 = self.get_pt(ttbr.ADDR << self.PAGE_BITS, uncached=True)
+                l1pte = PTE(l1[(page >> self.L1_OFF) & self.IDX_MASK])
+            if not l1pte.VALID:
+                pages.append(None)
+                continue
 
-#             cached, l2 = self.get_pt(l1pte.OFFSET << self.PAGE_BITS)
-#             l2pte = self.ptecls(l2[(page >> self.L2_OFF) & self.IDX_MASK])
-#             if not l2pte.VALID and cached:
-#                 cached, l2 = self.get_pt(l1pte.OFFSET << self.PAGE_BITS, uncached=True)
-#                 l2pte = self.ptecls(l2[(page >> self.L2_OFF) & self.IDX_MASK])
-#             if not l2pte.VALID:
-#                 pages.append(None)
-#                 continue
+            cached, l2 = self.get_pt(l1pte.OFFSET << self.PAGE_BITS)
+            l2pte = PTE(l2[(page >> self.L2_OFF) & self.IDX_MASK])
+            if not l2pte.VALID and cached:
+                cached, l2 = self.get_pt(l1pte.OFFSET << self.PAGE_BITS, uncached=True)
+                l2pte = PTE(l2[(page >> self.L2_OFF) & self.IDX_MASK])
+            if not l2pte.VALID:
+                pages.append(None)
+                continue
 
-#             pages.append(l2pte.OFFSET << self.PAGE_BITS)
+            pages.append(l2pte.OFFSET << self.PAGE_BITS)
 
-#         ranges = []
+        ranges = []
 
-#         for page in pages:
-#             if not ranges:
-#                 ranges.append((page, self.PAGE_SIZE))
-#                 continue
-#             laddr, lsize = ranges[-1]
-#             if ((page is None and laddr is None) or
-#                 (page is not None and laddr == (page - lsize))):
-#                 ranges[-1] = laddr, lsize + self.PAGE_SIZE
-#             else:
-#                 ranges.append((page, self.PAGE_SIZE))
+        for page in pages:
+            if not ranges:
+                ranges.append((page, self.PAGE_SIZE))
+                continue
+            laddr, lsize = ranges[-1]
+            if ((page is None and laddr is None) or
+                (page is not None and laddr == (page - lsize))):
+                ranges[-1] = laddr, lsize + self.PAGE_SIZE
+            else:
+                ranges.append((page, self.PAGE_SIZE))
 
-#         ranges[-1] = (ranges[-1][0], ranges[-1][1] - self.PAGE_SIZE + end_size)
+        ranges[-1] = (ranges[-1][0], ranges[-1][1] - self.PAGE_SIZE + end_size)
 
-#         if start_off:
-#             ranges[0] = (ranges[0][0] + start_off if ranges[0][0] else None,
-#                          ranges[0][1] - start_off)
+        if start_off:
+            ranges[0] = (ranges[0][0] + start_off if ranges[0][0] else None,
+                         ranges[0][1] - start_off)
 
-#         return ranges
+        return ranges
 
     def get_pt(self, addr, uncached=False):
         cached = True
