@@ -38,29 +38,52 @@ class R_PARAMS_C(Register32):
     NUM_CLIENTS = 24, 16
     NUM_SIDS = 8, 0
 
-# class R_ERROR(Register32):
-#     FLAG = 31
-#     STREAM = 27, 24
-#     CODE = 23, 0
-#     NO_DAPF_MATCH = 11
-#     WRITE = 10
-#     SUBPAGE_PROT = 7
-#     PTE_READ_FAULT = 6
-#     READ_FAULT = 4
-#     WRITE_FAULT = 3
-#     NO_PTE = 2
-#     NO_PMD = 1
-#     NO_TTBR = 0
+class R_ERROR(Register32):
+    # bit31 unk
+    FLAG = 31
+    SMMU = 30
+    REGION_PROTECT = 29
+    WRITE_nREAD = 28
+    SID = 23, 20
+    SECONDARY = 19
+    FILL_REGION = 18
+    BPF_REJECT = 14
+    EXTERNAL = 13
+    STT_FLUSH = 12
+    STT_MISMATCH = 11
+    APF_REJECT = 10
+    DROP_PROTECT = 9
+    CTRR_WRITE_PROTECT = 8
+    AXI_ERROR = 7
+    AXI_DECODE = 6
+    READ_FAULT = 5
+    WRITE_FAULT = 4
+    NO_PTE = 3
+    NO_PMD = 2  # "STE"
+    NO_PGD = 1  # "CTE"
+    NO_TTBR = 0
 
 class R_TLB_OP(Register32):
     BUSY = 31
-    # there are more bits here that may not be supported on hwrev 1
+
+    # None of these bits are supported on hwrev 1
+    HARDWARE_FLUSH = 30
+    FLUSH_VA_RANGE = 14
+    ENABLE_STT_FLUSH = 13
+    DISABLE_STC_FLUSH = 12
+
     # 0 = flush all
     # 1 = flush SID
     # 2 = TLB read
     # 3 = TLB write????
+    # 4 = flush unlock, definitely not supported on hwrev 1
     OP = 10, 8
     STREAM = 7, 0
+
+class R_TLB_OP_IDX(Register32):
+    SET = 13, 8
+    WAY = 6, 4
+    TE = 2, 0
 
 class R_PROTECT(Register32):
     LOCK_TZ_SELECT = 4
@@ -69,6 +92,11 @@ class R_PROTECT(Register32):
     _BIT2 = 2
     _BIT1 = 1
     LOCK_TCR_TTBR = 0
+
+class R_DIAG_LOCK(Register32):
+    # FIXME: how does this work exactly?
+    LOCK_ON_ERR = 1
+    LOCK = 0
 
 class R_TCR(Register32):
     REMAP = 11, 8
@@ -97,13 +125,33 @@ class DART8110Regs(RegMap):
     PARAMS_8 = 0x008, R_PARAMS_8
     PARAMS_C = 0x00C, R_PARAMS_C
 
-    TLB_OP = 0x080, R_TLB_OP
-    # More regs here
+    REG_0x10 = 0x010, Register32
+    REG_0x14 = 0x014, Register32    # hwrev 2 only
 
-    # TODO: Errors around here
-    REG_0x100   = 0x100, Register32
+    TLB_OP      = 0x080, R_TLB_OP
+    TLP_OP_IDX  = 0x084, R_TLB_OP_IDX
+    TLB_TAG_LO  = 0x088, Register32
+    TLB_TAG_HI  = 0x08c, Register32    # hwrev 2 only
+    TLB_PA_LO   = 0x090, Register32
+    TLB_PA_HI   = 0x094, Register32
+    TLB_START_DVA_PAGE  = 0x098, Register32    # hwrev 2 only
+    TLB_END_DVA_PAGE    = 0x0a0, Register32    # hwrev 2 only
+
+    ERROR       = 0x100, R_ERROR
     REG_0x104   = 0x100, Register32
-    REG_0x1c0   = 0x1c0, Register32
+
+    # 0x160, 0x180, 0x1a0 all accessed by interrupt handler
+    REG_0x160   = 0x160, Register32
+    REG_0x164   = 0x164, Register32
+    ERROR_ADDR_LO   = 0x170, Register32
+    ERROR_ADDR_HI   = 0x174, Register32
+    REG_0x178   = 0x178, Register32     # hwrev 2 only
+
+    REG_0x180   = irange(0x180, 4, 4), Register32
+
+    REG_0x1a0   = irange(0x1a0, 8, 4), Register32
+
+    ERR_SECONDARY   = irange(0x1c0, 8, 4), Register32
 
     # Write bits to _PROTECT to protect them.
     # They can be unprotected by writing to _UNPROTECT unless _LOCK is written.
@@ -114,14 +162,35 @@ class DART8110Regs(RegMap):
 
     REG_0x20c       = 0x20c, Register32     # Tunables touch this
 
-    REG_DIAG_LOCK   = 0x210, Register32     # what does this do?
+    DIAG_LOCK   = 0x210, R_DIAG_LOCK
 
     # Unknown
+    REG_0x218   = 0x218, Register32
     REG_0x220   = 0x220, Register32     # Tunables touch this
     REG_0x224   = 0x224, Register32     # Tunables touch this
     TLIMIT      = 0x228, Register32
     TEQRESERVE  = 0x22c, Register32
-    REG_0x230   = 0x230, Register32
+    TRANS       = irange(0x230, 4, 4), Register32
+
+    # hwrev 2 only for all of these
+    REG_0x300   = 0x300, Register32
+    REG_0x308   = 0x308, Register32
+    REG_0x310   = 0x310, Register32
+    REG_0x318   = 0x318, Register32
+    REG_0x320   = 0x320, Register32
+    REG_0x328   = 0x328, Register32
+    REG_0x330   = 0x330, Register32
+    REG_0x338   = 0x338, Register32
+    REG_0x340   = 0x340, Register32
+    REG_0x348   = 0x348, Register32
+    REG_0x350   = 0x350, Register32
+    REG_0x358   = 0x358, Register32
+
+    # Unknown
+    REG_0x400   = 0x400, Register32
+    REG_0x404   = 0x404, Register32
+    REG_0x408   = 0x408, Register32
+    REG_0x410   = 0x410, Register32
 
     # These registers exist even though it's "not supported"
     TZ_CONFIG           = 0x500, Register32     # 3 bits
@@ -138,6 +207,10 @@ class DART8110Regs(RegMap):
 
     PERF_INTR_ENABLE    = 0x700, Register32     # guessed
     PERF_INTR_STATUS    = 0x704, Register32
+
+    PERF_UNK1   = irange(0x720, 8, 4), Register32
+    PERF_UNK2   = irange(0x740, 8, 4), Register32
+
     PERF_TLB_MISS       = 0x760, Register32
     PERF_TLB_FILL       = 0x764, Register32
     PERF_TLB_HIT        = 0x768, Register32
@@ -149,7 +222,7 @@ class DART8110Regs(RegMap):
     PERF_CTC_FILL       = 0x784, Register32
     PERF_CTC_HIT        = 0x788, Register32
 
-    UNK_TUNABLES    = irange(0x800, 16, 4), Register32
+    UNK_TUNABLES    = irange(0x800, 256, 4), Register32
 
     ENABLE_STREAMS  = irange(0xc00, 8, 4), Register32
     DISABLE_STREAMS = irange(0xc20, 8, 4), Register32
