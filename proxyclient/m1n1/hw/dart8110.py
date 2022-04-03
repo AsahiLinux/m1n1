@@ -62,6 +62,14 @@ class R_TLB_OP(Register32):
     OP = 10, 8
     STREAM = 7, 0
 
+class R_PROTECT(Register32):
+    LOCK_TZ_SELECT = 4
+    LOCK_TZ_CONFIG = 3
+    # These bits can be set, but unknown what they protect
+    _BIT2 = 2
+    _BIT1 = 1
+    LOCK_TCR_TTBR = 0
+
 class R_TCR(Register32):
     REMAP = 11, 8
     REMAP_EN = 7
@@ -90,10 +98,58 @@ class DART8110Regs(RegMap):
     PARAMS_C = 0x00C, R_PARAMS_C
 
     TLB_OP = 0x080, R_TLB_OP
+    # More regs here
 
-#     ERROR           = 0x40, R_ERROR
-#     ERROR_ADDR_LO   = 0x50, Register32
-#     ERROR_ADDR_HI   = 0x54, Register32
+    # TODO: Errors around here
+    REG_0x100   = 0x100, Register32
+    REG_0x104   = 0x100, Register32
+    REG_0x1c0   = 0x1c0, Register32
+
+    # Write bits to _PROTECT to protect them.
+    # They can be unprotected by writing to _UNPROTECT unless _LOCK is written.
+    # If _LOCK is written, protection can be enabled but not disabled. 
+    REG_PROTECT         = 0x200, R_PROTECT
+    REG_UNPROTECT       = 0x204, R_PROTECT
+    REG_PROTECT_LOCK    = 0x208, R_PROTECT
+
+    REG_0x20c       = 0x20c, Register32     # Tunables touch this
+
+    REG_DIAG_LOCK   = 0x210, Register32     # what does this do?
+
+    # Unknown
+    REG_0x220   = 0x220, Register32     # Tunables touch this
+    REG_0x224   = 0x224, Register32     # Tunables touch this
+    TLIMIT      = 0x228, Register32
+    TEQRESERVE  = 0x22c, Register32
+    REG_0x230   = 0x230, Register32
+
+    # These registers exist even though it's "not supported"
+    TZ_CONFIG           = 0x500, Register32     # 3 bits
+    TZ_SELECT           = 0x504, Register32     # 1 bit
+    TZ_REGION0_START    = 0x508, Register32
+    TZ_REGION0_END      = 0x510, Register32
+    TZ_REGION0_OFFSET   = 0x518, Register32
+    TZ_REGION1_START    = 0x520, Register32
+    TZ_REGION1_END      = 0x528, Register32
+    TZ_REGION1_OFFSET   = 0x530, Register32
+    TZ_REGION2_START    = 0x538, Register32
+    TZ_REGION2_END      = 0x540, Register32
+    TZ_REGION2_OFFSET   = 0x548, Register32
+
+    PERF_INTR_ENABLE    = 0x700, Register32     # guessed
+    PERF_INTR_STATUS    = 0x704, Register32
+    PERF_TLB_MISS       = 0x760, Register32
+    PERF_TLB_FILL       = 0x764, Register32
+    PERF_TLB_HIT        = 0x768, Register32
+    PERF_ST_MISS        = 0x770, Register32
+    PERF_ST_FILL        = 0x774, Register32
+    PERF_ST_HIT         = 0x778, Register32
+    # hwrev 1 doesn't have these
+    PERF_CTC_MISS       = 0x780, Register32
+    PERF_CTC_FILL       = 0x784, Register32
+    PERF_CTC_HIT        = 0x788, Register32
+
+    UNK_TUNABLES    = irange(0x800, 16, 4), Register32
 
     ENABLE_STREAMS  = irange(0xc00, 8, 4), Register32
     DISABLE_STREAMS = irange(0xc20, 8, 4), Register32
