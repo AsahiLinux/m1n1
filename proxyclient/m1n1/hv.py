@@ -1167,21 +1167,25 @@ class HV(Reloadable):
             self.log(f"CPUSTART W {base:x}+{off:x}:{width} = 0x{data:x}")
             if off >= 8:
                 assert width == 32
+                die = base // 0x20_0000_0000
                 cluster = (off - 8) // 4
                 for i in range(32):
                     if data & (1 << i):
-                        self.start_secondary(cluster, i)
+                        self.start_secondary(die, cluster, i)
 
-        PMGR_CPU_START = 0x54000
-        zone = irange(pmgr0_start + PMGR_CPU_START, 0x20)
-        self.map_hook(pmgr0_start + PMGR_CPU_START, 0x20, write=cpustart_wh)
-        self.add_tracer(zone, "CPU_START", TraceMode.RESERVED)
+        die_count = self.adt["/arm-io"].die_count if hasattr(self.adt["/arm-io"], "die-count") else 1
 
-    def start_secondary(self, cluster, cpu):
-        self.log(f"Starting guest secondary {cluster}:{cpu}")
+        for die in range(0, die_count):
+            PMGR_CPU_START = 0x54000 + die * 0x20_0000_0000
+            zone = irange(pmgr0_start + PMGR_CPU_START, 0x20)
+            self.map_hook(pmgr0_start + PMGR_CPU_START, 0x20, write=cpustart_wh)
+            self.add_tracer(zone, "CPU_START", TraceMode.RESERVED)
+
+    def start_secondary(self, die, cluster, cpu):
+        self.log(f"Starting guest secondary {die}:{cluster}:{cpu}")
 
         for node in list(self.adt["cpus"]):
-            if ((cluster << 8) | cpu) == node.reg:
+            if ((die << 11) | (cluster << 8) | cpu) == node.reg:
                 break
         else:
             self.log("CPU not found!")
