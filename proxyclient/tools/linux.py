@@ -87,11 +87,12 @@ if args.u_boot:
     bootenv = list(filter(lambda x: not (x.startswith("baudrate") or x.startswith("boot_") or x.startswith("distro_bootcmd")), bootenv))
 
     if initramfs is not None:
-        bootcmd = "distro_bootcmd=booti 0x%x 0x%x:0x%x 0x%x" % (kernel_base, initramfs_base, initramfs_size, dtb_addr)
+        bootcmd = "distro_bootcmd=booti 0x%x 0x%x:0x%x $fdtcontroladdr" % (kernel_base, initramfs_base, initramfs_size)
     else:
-        bootcmd = "distro_bootcmd=booti 0x%x - 0x%x" % (kernel_base, dtb_addr)
+        bootcmd = "distro_bootcmd=booti 0x%x - $fdtcontroladdr" % (kernel_base)
 
-    bootenv.append("baudrate=%d" % tty_dev.baudrate)
+    if tty_dev is not None:
+        bootenv.append("baudrate=%d" % tty_dev.baudrate)
     bootenv.append(bootcmd)
     if args.bootargs is not None:
         bootenv.append("bootargs=" + args.bootargs)
