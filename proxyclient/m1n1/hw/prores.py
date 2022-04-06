@@ -1,13 +1,81 @@
 # SPDX-License-Identifier: MIT
 from ..utils import *
+from collections import namedtuple
 from enum import IntEnum
+
+
+EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
+    'flags',                                # +0x000
+    'flags2',                               # +0x004
+    'output_iova',                          # +0x008
+    'unk_0x10_',                            # +0x010
+    'unk_0x14_',                            # +0x014
+    'unk_0x16_',                            # +0x016
+    'pix_surface_w_2_',                     # +0x018
+    'pix_surface_h_2_',                     # +0x01a
+    'pix_surface_w',                        # +0x01c
+    'pix_surface_h',                        # +0x01e
+    'pix_plane0_bytesperrow_div',           # +0x020
+    'pix_plane1_bytesperrow_div',           # +0x022
+    'pix_plane2_bytesperrow_div',           # +0x024
+    'unk_pad_0x26_',                        # +0x026
+    'pix_plane0_iova',                      # +0x028
+    'pix_plane0_tileheader_thing_',         # +0x030
+    'pix_plane1_iova',                      # +0x038
+    'pix_plane1_tileheader_thing_',         # +0x040
+    'pix_plane2_iova',                      # +0x048
+    'pix_plane2_tileheader_thing_',         # +0x050
+    'unk_0x58_',                            # +0x058
+    'unk_pad_0x5a_',                        # +0x05a
+    'unk_0x5b_',                            # +0x05b
+    'unk_0x5c_',                            # +0x05c    contains 'apl0'
+    'pix_surface_w_byteswap_',              # +0x060
+    'pix_surface_h_byteswap_',              # +0x062
+    'unk_0x64_',                            # +0x064
+    'unk_0x65_',                            # +0x065
+    'unk_0x66_',                            # +0x066
+    'unk_0x67_',                            # +0x067
+    'unk_0x68_',                            # +0x068
+    'unk_0x69_',                            # +0x069
+    'unk_pad_0x6a_',                        # +0x06a
+    'unk_0x6b_',                            # +0x06b
+    'unk_pad_0x6c_',                        # +0x06c
+    'unk_0xec_',                            # +0x0ec
+    'unk_0xee_',                            # +0x0ee
+    'unk_0xf0_',                            # +0x0f0
+    'unk_0xf2_',                            # +0x0f2
+    'unk_0xf4_',                            # +0x0f4
+    'unk_0xfc_',                            # +0x0fc
+    'unk_0x100_0_',                         # +0x100
+    'unk_0x100_1_',                         # +0x104
+    'unk_0x100_2_',                         # +0x108
+    'unk_0x100_3_',                         # +0x10c
+    'unk_0x110_0_',                         # +0x110
+    'unk_0x110_1_',                         # +0x114
+    'unk_0x110_2_',                         # +0x118
+    'unk_0x110_3_',                         # +0x11c
+    'unk_0x110_4_',                         # +0x120
+    'unk_0x110_5_',                         # +0x124
+    'unk_0x110_6_',                         # +0x128
+    'unk_0x110_7_',                         # +0x12c
+    'unk_0x110_8_',                         # +0x130
+    'unk_0x110_9_',                         # +0x134
+    'unk_0x110_10_',                        # +0x138
+    'unk_0x110_11_',                        # +0x13c
+    'unk_0x110_12_',                        # +0x140
+    'unk_0x110_13_',                        # +0x144
+    'unk_0x110_14_',                        # +0x148
+    'unk_0x110_15_',                        # +0x14c
+    'unk_0x150_',                           # +0x150
+    'unk_pad_0x154_',                       # +0x154
+])
+ENCODE_NOT_RAW_STRUCT = "<IIQIHHHHHHHHH2sQQQQQQH1sbIHHbbbbbb1sb128sH2sHHQIIIIIIIIIIIIIIIIIIIIII44s"
 
 
 class ProResRegs(RegMap):
     # something reads
     REG_0x0     = 0x000, Register32
-    # activate writes
-    REG_0x8     = 0x008, Register32     # 4 bits
+    MODE        = 0x008, Register32     # 4 bits
     IRQ_ENABLE  = 0x00c, Register32     # 2 bits
     IRQ_STATUS  = 0x010, Register32
 
