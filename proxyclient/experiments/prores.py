@@ -543,7 +543,7 @@ apr.DC_QUANT_SCALE[111].val     = 0x1fc
 print("Set matrices")
 
 # dunno how this gets calculated
-OUT_SZ = 0x4000000
+OUT_SZ = 0x1000000
 out_buf_phys = u.heap.memalign(0x4000, OUT_SZ)
 iface.writemem(out_buf_phys, b'\xAA' * OUT_SZ)
 out_buf_iova = dart.iomap(0, out_buf_phys, OUT_SZ)
@@ -551,15 +551,11 @@ print(f"Output buffer @ phys {out_buf_phys:016X} iova {out_buf_iova:016X}")
 
 IN_SZ_LUMA = align_up(im_W*2*im_H)
 in_buf_luma_phys = u.heap.memalign(0x4000, IN_SZ_LUMA)
-# iface.writemem(in_buf_luma_phys, b'\xff' * IN_SZ_LUMA)
 iface.writemem(in_buf_luma_phys, image_data_luma + b'\xaa' * (IN_SZ_LUMA - len(image_data_luma)))
 in_buf_luma_iova = dart.iomap(0, in_buf_luma_phys, IN_SZ_LUMA)
 print(f"Input buffer luma @ phys {in_buf_luma_phys:016X} iova {in_buf_luma_iova:016X}")
-# IN_SZ_CHROMA = align_up(im_W*2*im_H)
-IN_SZ_CHROMA = 0x400000
+IN_SZ_CHROMA = align_up(im_W*2*im_H)
 in_buf_chroma_phys = u.heap.memalign(0x4000, IN_SZ_CHROMA)
-# iface.writemem(in_buf_chroma_phys, b'\x00' * IN_SZ_CHROMA)
-# FIXME: dunno why uncommenting chroma stuff breaks
 iface.writemem(in_buf_chroma_phys, image_data_chroma + b'\xaa' * (IN_SZ_CHROMA - len(image_data_chroma)))
 in_buf_chroma_iova = dart.iomap(0, in_buf_chroma_phys, IN_SZ_CHROMA)
 print(f"Input buffer chroma @ phys {in_buf_chroma_phys:016X} iova {in_buf_chroma_iova:016X}")
