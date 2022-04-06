@@ -2,6 +2,7 @@ from m1n1.trace import ADTDevTracer
 from m1n1.trace.dart8110 import DART8110Tracer
 from m1n1.hw.prores import *
 from m1n1.utils import *
+import struct
 
 p.pmgr_adt_clocks_enable('/arm-io/dart-apr0')
 p.pmgr_adt_clocks_enable('/arm-io/dart-apr1')
@@ -32,6 +33,10 @@ class ProResTracer(ADTDevTracer):
     def w_DR_ADDR_LO(self, val):
         self._dr_addr_lo = val
 
+    def w_DR_TAIL(self, val):
+        self.log(f"DR_TAIL = {val}")
+        self._dr_tail = val
+
     def w_DR_HEAD(self, val):
         self.log(f"DR_HEAD = {val}")
         self.dart_tracer.dart.dump_all()
@@ -42,6 +47,32 @@ class ProResTracer(ADTDevTracer):
 
         dr = self.dart_tracer.dart.ioread(0, dr_addr, dr_size)
         chexdump(dr)
+
+        # FIXME there are other descriptor types
+        # also, what if there are multiple in the ring?
+        dr_head = int(val)
+        dr_tail = int(self._dr_tail)
+
+        if dr_head - dr_tail == 0x180:
+            desc = EncodeNotRawDescriptor._make(struct.unpack(ENCODE_NOT_RAW_STRUCT, dr[dr_tail:dr_head]))
+            print(desc)
+
+            p0_iova = desc.pix_plane0_iova
+            p1_iova = desc.pix_plane1_iova
+            p2_iova = desc.pix_plane2_iova
+
+            if p0_iova:
+                print(f"P0 iova {p0_iova:016X}")
+                data = self.dart_tracer.dart.ioread(0, p0_iova, 0x1000)
+                chexdump(data)
+            if p1_iova:
+                print(f"P1 iova {p1_iova:016X}")
+                data = self.dart_tracer.dart.ioread(0, p1_iova, 0x1000)
+                chexdump(data)
+            if p2_iova:
+                print(f"P2 iova {p2_iova:016X}")
+                data = self.dart_tracer.dart.ioread(0, p2_iova, 0x1000)
+                chexdump(data)
 
 
 ProResTracer = ProResTracer._reloadcls()
