@@ -16,12 +16,12 @@ def divroundup(val, div):
 def bswp16(x):
     return (x >> 8) | ((x & 0xFF) << 8)
 
-# ffmpeg -y -i prores-encode-large.png -c:v rawvideo -pix_fmt yuv422p16le prores-encode-large.yuv
+# ffmpeg -y -i prores-encode-large.png -c:v rawvideo -pix_fmt yuv444p16le prores-encode-large.yuv
 im_W = 1920
 im_H = 1080
 with open('prores-encode-large.yuv', 'rb') as f:
     im_data = f.read()
-# assert len(im_data) == (im_W*2*im_H) * 2
+# assert len(im_data) == (im_W*2*im_H) * 3
 image_data_luma = im_data[:im_W*2*im_H]
 image_data_chroma = im_data[im_W*2*im_H:]
 
@@ -556,6 +556,7 @@ in_buf_luma_iova = dart.iomap(0, in_buf_luma_phys, IN_SZ_LUMA)
 print(f"Input buffer luma @ phys {in_buf_luma_phys:016X} iova {in_buf_luma_iova:016X}")
 IN_SZ_CHROMA = align_up(im_W*2*im_H)
 in_buf_chroma_phys = u.heap.memalign(0x4000, IN_SZ_CHROMA)
+# iface.writemem(in_buf_chroma_phys, b'\x00' * IN_SZ_CHROMA)
 iface.writemem(in_buf_chroma_phys, image_data_chroma + b'\xaa' * (IN_SZ_CHROMA - len(image_data_chroma)))
 in_buf_chroma_iova = dart.iomap(0, in_buf_chroma_phys, IN_SZ_CHROMA)
 print(f"Input buffer chroma @ phys {in_buf_chroma_phys:016X} iova {in_buf_chroma_iova:016X}")
@@ -572,8 +573,8 @@ desc = EncodeNotRawDescriptor(
     pix_surface_h_2_=im_H,
     pix_surface_w=im_W,     # changing this seems ok at least if luma is broken
     pix_surface_h=im_H,
-    pix_plane0_bytesperrow_div=divroundup(im_W, 64),    # changing this breaks somehow
-    pix_plane1_bytesperrow_div=divroundup(im_W, 64),    # FIXME is this fully correct?
+    pix_plane0_bytesperrow_div=divroundup(im_W*2, 64),  # this is a stride of some kind
+    pix_plane1_bytesperrow_div=divroundup(im_W*2, 64),  # FIXME is this fully correct?
     pix_plane2_bytesperrow_div=0,
     unk_pad_0x26_=b'\x00\x00',
     # fixme not right, planes and stuff
