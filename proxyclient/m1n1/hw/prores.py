@@ -41,7 +41,7 @@ EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
     'unk_pad_0x6c_',                        # +0x06c
     'deprecated_number_of_slices',          # +0x0ec
     'log2_desired_slice_size_in_mb',        # +0x0ee
-    'unk_0xef_',                            # +0x0ef
+    'quantization_index',                   # +0x0ef
     'unk_0xf0_',                            # +0x0f0
     'unk_0xf2_',                            # +0x0f2
     'unk_0xf4_',                            # +0x0f4
