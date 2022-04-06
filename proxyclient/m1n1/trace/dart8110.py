@@ -36,10 +36,8 @@ class DART8110Tracer(ADTDevTracer):
         if tlb_op.OP == 0:
             self.log(f"Invalidate all")
             self.dart.invalidate_cache()
-            self.dart.dump_all()
         elif tlb_op.OP == 1:
             self.log(f"Invalidate Stream: {tlb_op.STREAM}")
             self.dart.invalidate_cache()
-            self.dart.dump_all()
         else:
             self.log(f"Unknown TLB op {tlb_op}")
