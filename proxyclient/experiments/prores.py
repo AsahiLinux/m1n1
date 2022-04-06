@@ -575,7 +575,7 @@ desc = EncodeNotRawDescriptor(
     unk_pad_0x5a_=b'\x00',
     bitstream_version=0,
     encoder_identifier=0xcafeface,
-    # cannot change arbitrily
+    # cannot change arbitrily, will break
     pix_surface_w_byteswap_=bswp16(1920),
     pix_surface_h_byteswap_=bswp16(1080),
     # seemingly can change arbitrarily
@@ -585,11 +585,13 @@ desc = EncodeNotRawDescriptor(
     transfer_characteristic=2,
     matrix_coefficients=1,
     alpha_channel_type=0x30,
+    # tables will still be output even if bits not set here
     frame_hdr_reserved14=b'\x00\x03',
     unk_pad_0x6c_=b'\xaa' * 128,
     deprecated_number_of_slices=bswp16(0x3fc),
     # this one affects the encoding not just the header
     log2_desired_slice_size_in_mb=0x30,
+
     unk_0xef_=0x2,
     unk_0xf0_=0x248,
     unk_0xf2_=0x298,
