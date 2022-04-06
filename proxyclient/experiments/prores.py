@@ -16,14 +16,23 @@ def divroundup(val, div):
 def bswp16(x):
     return (x >> 8) | ((x & 0xFF) << 8)
 
-# ffmpeg -y -i prores-encode-large.png -c:v rawvideo -pix_fmt yuv444p16le prores-encode-large.yuv
-im_W = 1920
-im_H = 1080
-with open('prores-encode-large.yuv', 'rb') as f:
+# ffmpeg -y -i prores-encode-large.png -c:v rawvideo -pix_fmt yuv422p16le prores-encode-large.yuv
+im_W = 800
+im_H = 600
+with open('prores-encode-smol.yuv', 'rb') as f:
     im_data = f.read()
-# assert len(im_data) == (im_W*2*im_H) * 3
+assert len(im_data) == (im_W*2*im_H) * 2
 image_data_luma = im_data[:im_W*2*im_H]
-image_data_chroma = im_data[im_W*2*im_H:]
+
+chroma_half = im_data[im_W*2*im_H:]
+chroma_cb = chroma_half[:im_W*im_H]
+chroma_cr = chroma_half[im_W*im_H:]
+# image_data_chroma = im_data[im_W*2*im_H:]
+image_data_chroma = b''
+for y in range(im_H):
+    for x in range(im_W // 2):
+        image_data_chroma += chroma_cb[y*im_W+x*2:y*im_W+(x+1)*2]
+        image_data_chroma += chroma_cr[y*im_W+x*2:y*im_W+(x+1)*2]
 
 p.pmgr_adt_clocks_enable(f'/arm-io/dart-apr0')
 p.pmgr_adt_clocks_enable(f'/arm-io/apr0')
