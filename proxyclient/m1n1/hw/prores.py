@@ -69,7 +69,7 @@ EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
     'unk_0x150_',                           # +0x150
     'unk_pad_0x154_',                       # +0x154
 ])
-ENCODE_NOT_RAW_STRUCT = "<IIQIHHHHHHHHH2sQQQQQQH1sbIHHbbbbbb1sb128sH2sHHQIIIIIIIIIIIIIIIIIIIIII44s"
+ENCODE_NOT_RAW_STRUCT = "<IIQIHHHHHHHHH2sQQQQQQH1sBIHHBBBBBB1sB128sHHHHQIIIIIIIIIIIIIIIIIIIIII44s"
 
 
 class ProResRegs(RegMap):
