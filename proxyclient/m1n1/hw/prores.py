@@ -25,20 +25,19 @@ EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
     'pix_plane1_tileheader_thing_',         # +0x040
     'pix_plane2_iova',                      # +0x048
     'pix_plane2_tileheader_thing_',         # +0x050
-    'unk_0x58_',                            # +0x058
+    'frame_header_sz',                      # +0x058
     'unk_pad_0x5a_',                        # +0x05a
-    'unk_0x5b_',                            # +0x05b
-    'unk_0x5c_',                            # +0x05c    contains 'apl0'
+    'bitstream_version',                    # +0x05b
+    'encoder_identifier',                   # +0x05c
     'pix_surface_w_byteswap_',              # +0x060
     'pix_surface_h_byteswap_',              # +0x062
-    'unk_0x64_',                            # +0x064
-    'unk_0x65_',                            # +0x065
-    'unk_0x66_',                            # +0x066
-    'unk_0x67_',                            # +0x067
-    'unk_0x68_',                            # +0x068
-    'unk_0x69_',                            # +0x069
-    'unk_pad_0x6a_',                        # +0x06a
-    'unk_0x6b_',                            # +0x06b
+    'chroma_format_interlace_mode',         # +0x064
+    'aspect_ratio_frame_rate',              # +0x065
+    'color_primaries',                      # +0x066
+    'transfer_characteristic',              # +0x067
+    'matrix_coefficients',                  # +0x068
+    'alpha_channel_type',                   # +0x069
+    'frame_hdr_reserved14',                 # +0x06a
     'unk_pad_0x6c_',                        # +0x06c
     'unk_0xec_',                            # +0x0ec
     'unk_0xee_',                            # +0x0ee
@@ -69,7 +68,7 @@ EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
     'unk_0x150_',                           # +0x150
     'unk_pad_0x154_',                       # +0x154
 ])
-ENCODE_NOT_RAW_STRUCT = "<IIQIHHHHHHHHH2sQQQQQQH1sBIHHBBBBBB1sB128sHHHHQIIIIIIIIIIIIIIIIIIIIII44s"
+ENCODE_NOT_RAW_STRUCT = "<IIQIHHHHHHHHH2sQQQQQQH1sBIHHBBBBBB2s128sHHHHQIIIIIIIIIIIIIIIIIIIIII44s"
 
 
 class ProResRegs(RegMap):
