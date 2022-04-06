@@ -3,10 +3,13 @@
 #include "dart.h"
 #include "adt.h"
 #include "assert.h"
+#include "devicetree.h"
 #include "malloc.h"
 #include "memory.h"
 #include "string.h"
 #include "utils.h"
+
+#include "libfdt/libfdt.h"
 
 #define DART_T8020_CONFIG      0x60
 #define DART_T8020_CONFIG_LOCK BIT(15)
@@ -314,6 +317,47 @@ dart_dev_t *dart_init_adt(const char *path, int instance, int device, bool keep_
                    dart->l1[i]);
         }
     }
+
+    return dart;
+}
+
+dart_dev_t *dart_init_fdt(void *dt, u32 phandle, int device, bool keep_pts)
+{
+    int node = fdt_node_offset_by_phandle(dt, phandle);
+    if (node < 0) {
+        printf("FDT: node for phandle %u not found\n", phandle);
+        return NULL;
+    }
+
+    u64 base = dt_get_address(dt, node);
+    if (!base)
+        return NULL;
+
+    enum dart_type_t type;
+    const char *type_s;
+    const char *name = fdt_get_name(dt, node, NULL);
+
+    if (fdt_node_check_compatible(dt, node, "apple,t8103-dart") == 0) {
+        type = DART_T8020;
+        type_s = "t8020";
+    } else if (fdt_node_check_compatible(dt, node, "apple,t6000-dart") == 0) {
+        type = DART_T6000;
+        type_s = "t6000";
+    } else if (fdt_node_check_compatible(dt, node, "apple,t8110-dart") == 0) {
+        type = DART_T8110;
+        type_s = "t8110";
+    } else {
+        printf("dart: dart %s at 0x%lx is of an unknown type\n", name, base);
+        return NULL;
+    }
+
+    dart_dev_t *dart = dart_init(base, device, keep_pts, type);
+
+    if (!dart)
+        return NULL;
+
+    printf("dart: dart %s at 0x%lx is a %s%s\n", name, base, type_s,
+           dart->locked ? " (locked)" : "");
 
     return dart;
 }
