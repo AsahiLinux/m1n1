@@ -9,15 +9,19 @@ from m1n1.hw.prores import *
 from m1n1.utils import *
 
 
+def divroundup(val, div):
+    return (val + div - 1) // div
+
+
 def bswp16(x):
     return (x >> 8) | ((x & 0xFF) << 8)
 
 # ffmpeg -y -i prores-encode-large.png -c:v rawvideo -pix_fmt yuv422p16le prores-encode-large.yuv
-im_W = 1920
-im_H = 1080
+im_W = 800
+im_H = 600
 with open('prores-encode-large.yuv', 'rb') as f:
     im_data = f.read()
-assert len(im_data) == (im_W*2*im_H) * 2
+# assert len(im_data) == (im_W*2*im_H) * 2
 image_data_luma = im_data[:im_W*2*im_H]
 image_data_chroma = im_data[im_W*2*im_H:]
 
@@ -568,12 +572,12 @@ desc = EncodeNotRawDescriptor(
     unk_0x10_=0xb8ccc,  # changing this doesn't initially do anything
     unk_0x14_=0,        # changing this crashes
     unk_0x16_=0,        # changing this crashes
-    pix_surface_w_2_=1920,
-    pix_surface_h_2_=1080,
-    pix_surface_w=1920,
-    pix_surface_h=1080,
-    pix_plane0_bytesperrow_div=60,
-    pix_plane1_bytesperrow_div=60,
+    pix_surface_w_2_=im_W,  # changing this crashes
+    pix_surface_h_2_=im_H,
+    pix_surface_w=im_W,     # changing this seems ok at least if luma is broken
+    pix_surface_h=im_H,
+    pix_plane0_bytesperrow_div=divroundup(im_W, 64),    # changing this breaks somehow
+    pix_plane1_bytesperrow_div=divroundup(im_W, 64),    # FIXME is this fully correct?
     pix_plane2_bytesperrow_div=0,
     unk_pad_0x26_=b'\x00\x00',
     # fixme not right, planes and stuff
@@ -590,8 +594,8 @@ desc = EncodeNotRawDescriptor(
     bitstream_version=0,
     encoder_identifier=0xcafeface,
     # cannot change arbitrily, will break
-    pix_surface_w_byteswap_=bswp16(1920),
-    pix_surface_h_byteswap_=bswp16(1080),
+    pix_surface_w_byteswap_=bswp16(im_W),
+    pix_surface_h_byteswap_=bswp16(im_H),
     # seemingly can change arbitrarily
     chroma_format_interlace_mode=0x80,
     aspect_ratio_frame_rate=0,
