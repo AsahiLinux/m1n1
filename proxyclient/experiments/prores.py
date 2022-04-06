@@ -574,7 +574,7 @@ desc = EncodeNotRawDescriptor(
     frame_header_sz=bswp16(0x94),
     unk_pad_0x5a_=b'\x00',
     bitstream_version=0,
-    encoder_identifier=0xcafefade,
+    encoder_identifier=0xcafeface,
     # cannot change arbitrily
     pix_surface_w_byteswap_=bswp16(1920),
     pix_surface_h_byteswap_=bswp16(1080),
@@ -587,8 +587,10 @@ desc = EncodeNotRawDescriptor(
     alpha_channel_type=0x30,
     frame_hdr_reserved14=b'\x00\x03',
     unk_pad_0x6c_=b'\xaa' * 128,
-    unk_0xec_=0xfc03,
-    unk_0xee_=0x230,
+    deprecated_number_of_slices=bswp16(0x3fc),
+    # this one affects the encoding not just the header
+    log2_desired_slice_size_in_mb=0x30,
+    unk_0xef_=0x2,
     unk_0xf0_=0x248,
     unk_0xf2_=0x298,
     unk_0xf4_=0x8000402015100c0c,
