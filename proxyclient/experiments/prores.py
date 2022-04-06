@@ -627,6 +627,7 @@ print(f"ST1 = {apr.ST1}")
 print(f"REG_0x1c = {apr.REG_0x1c}")
 print(f"REG_0x3c = {apr.REG_0x3c}")
 print(f"REG_0x44 = {apr.REG_0x44}")
+apr.IRQ_STATUS = apr.IRQ_STATUS.val
 
 dr_memory_new = iface.readmem(desc_ring_phys, DESC_RING_SZ)
 chexdump(dr_memory_new)
