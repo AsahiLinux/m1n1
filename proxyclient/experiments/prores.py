@@ -9,6 +9,10 @@ from m1n1.hw.prores import *
 from m1n1.utils import *
 
 
+def bswp16(x):
+    return (x >> 8) | ((x & 0xFF) << 8)
+
+
 p.pmgr_adt_clocks_enable(f'/arm-io/dart-apr0')
 p.pmgr_adt_clocks_enable(f'/arm-io/apr0')
 
@@ -86,7 +90,6 @@ apr.DR_ADDR_LO = desc_ring_iova & 0xFFFFFFFF
 apr.DR_ADDR_HI = desc_ring_iova >> 32
 
 apr.MODE = 0xd  # FIXME: dunno what this means
-# don't enable IRQs
 
 # MATRICES
 apr.QUANT_LUMA_EHQ[0].val       = 0x802802
@@ -566,21 +569,24 @@ desc = EncodeNotRawDescriptor(
     pix_plane1_tileheader_thing_=0,
     pix_plane2_iova=in_buf_iova,
     pix_plane2_tileheader_thing_=0,
-    unk_0x58_=0x9400,
+
+    # changing this does add extra 0 bytes
+    frame_header_sz=bswp16(0x94),
     unk_pad_0x5a_=b'\x00',
-    unk_0x5b_=0,
-    unk_0x5c_=0x306c7061,
-    pix_surface_w_byteswap_=0x8007, # hack
-    pix_surface_h_byteswap_=0x3804, # hack
-    unk_0x64_=0x80,
-    unk_0x65_=0,
-    unk_0x66_=2,
-    unk_0x67_=2,
-    unk_0x68_=1,
-    unk_0x69_=0x30,
-    unk_pad_0x6a_=b'\x00',
-    unk_0x6b_=3,
-    unk_pad_0x6c_=b'\x00' * 128,
+    bitstream_version=0,
+    encoder_identifier=0xcafefade,
+    # cannot change arbitrily
+    pix_surface_w_byteswap_=bswp16(1920),
+    pix_surface_h_byteswap_=bswp16(1080),
+    # seemingly can change arbitrarily
+    chroma_format_interlace_mode=0x80,
+    aspect_ratio_frame_rate=0,
+    color_primaries=2,
+    transfer_characteristic=2,
+    matrix_coefficients=1,
+    alpha_channel_type=0x30,
+    frame_hdr_reserved14=b'\x00\x03',
+    unk_pad_0x6c_=b'\xaa' * 128,
     unk_0xec_=0xfc03,
     unk_0xee_=0x230,
     unk_0xf0_=0x248,
@@ -621,12 +627,25 @@ apr.DR_HEAD = len(desc_bytes)
 while apr.IRQ_STATUS.val == 0:
     ...
 
+# BIG FAT FIXME: why does it seem to lag a frame behind?
+
 print(f"Done, IRQ status is {apr.IRQ_STATUS}")
 print(f"ST0 = {apr.ST0}")
 print(f"ST1 = {apr.ST1}")
 print(f"REG_0x1c = {apr.REG_0x1c}")
 print(f"REG_0x3c = {apr.REG_0x3c}")
 print(f"REG_0x44 = {apr.REG_0x44}")
+
+print(f"DR_HEAD = {apr.DR_HEAD}")
+print(f"DR_TAIL = {apr.DR_TAIL}")
+
+print(f"unk REG_0x38 = {apr.REG_0x38}")
+print(f"unk REG_0x40 = {apr.REG_0x40}")
+print(f"unk REG_0x48 = {apr.REG_0x48}")
+print(f"unk REG_0x3c = {apr.REG_0x3c}")
+print(f"unk REG_0x50 = {apr.REG_0x50}")
+print(f"unk REG_0x54 = {apr.REG_0x54}")
+
 apr.IRQ_STATUS = apr.IRQ_STATUS.val
 
 dr_memory_new = iface.readmem(desc_ring_phys, DESC_RING_SZ)
