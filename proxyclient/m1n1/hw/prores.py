@@ -39,8 +39,9 @@ EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
     'alpha_channel_type',                   # +0x069
     'frame_hdr_reserved14',                 # +0x06a
     'unk_pad_0x6c_',                        # +0x06c
-    'unk_0xec_',                            # +0x0ec
-    'unk_0xee_',                            # +0x0ee
+    'deprecated_number_of_slices',          # +0x0ec
+    'log2_desired_slice_size_in_mb',        # +0x0ee
+    'unk_0xef_',                            # +0x0ef
     'unk_0xf0_',                            # +0x0f0
     'unk_0xf2_',                            # +0x0f2
     'unk_0xf4_',                            # +0x0f4
@@ -68,7 +69,7 @@ EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
     'unk_0x150_',                           # +0x150
     'unk_pad_0x154_',                       # +0x154
 ])
-ENCODE_NOT_RAW_STRUCT = "<IIQIHHHHHHHHH2sQQQQQQH1sBIHHBBBBBB2s128sHHHHQIIIIIIIIIIIIIIIIIIIIII44s"
+ENCODE_NOT_RAW_STRUCT = "<IIQIHHHHHHHHH2sQQQQQQH1sBIHHBBBBBB2s128sHBBHHQIIIIIIIIIIIIIIIIIIIIII44s"
 
 
 class ProResRegs(RegMap):
