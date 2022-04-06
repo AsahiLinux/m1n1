@@ -630,8 +630,6 @@ apr.DR_HEAD = len(desc_bytes)
 while apr.IRQ_STATUS.val == 0:
     ...
 
-# BIG FAT FIXME: why does it seem to lag a frame behind?
-
 print(f"Done, IRQ status is {apr.IRQ_STATUS}")
 print(f"ST0 = {apr.ST0}")
 print(f"ST1 = {apr.ST1}")
