@@ -17,23 +17,24 @@ def divroundup(val, div):
 def bswp16(x):
     return (x >> 8) | ((x & 0xFF) << 8)
 
-# ffmpeg -y -i prores-encode-large.png -c:v rawvideo -pix_fmt yuv422p16le prores-encode-large.yuv
-im_W = 800
-im_H = 600
-with open('prores-encode-smol.yuv', 'rb') as f:
+# ffmpeg -y -i prores-encode-large.png -c:v rawvideo -pix_fmt nv24 prores-encode-large.yuv
+im_W = 1920
+im_H = 1080
+with open('prores-encode-large.yuv', 'rb') as f:
     im_data = f.read()
-assert len(im_data) == (im_W*2*im_H) * 2
-image_data_luma = im_data[:im_W*2*im_H]
+assert len(im_data) == (im_W*im_H) * 3
+image_data_luma = im_data[:im_W*im_H]
 
-chroma_half = im_data[im_W*2*im_H:]
-chroma_cb = chroma_half[:im_W*im_H]
-chroma_cr = chroma_half[im_W*im_H:]
-# image_data_chroma = im_data[im_W*2*im_H:]
-image_data_chroma = b''
-for y in range(im_H):
-    for x in range(im_W // 2):
-        image_data_chroma += chroma_cb[y*im_W+x*2:y*im_W+(x+1)*2]
-        image_data_chroma += chroma_cr[y*im_W+x*2:y*im_W+(x+1)*2]
+image_data_chroma = im_data[im_W*im_H:]
+# chroma_half = im_data[im_W*2*im_H:]
+# chroma_cb = chroma_half[:im_W*im_H]
+# chroma_cr = chroma_half[im_W*im_H:]
+# # image_data_chroma = im_data[im_W*2*im_H:]
+# image_data_chroma = b''
+# for y in range(im_H):
+#     for x in range(im_W // 2):
+#         image_data_chroma += chroma_cb[y*im_W+x*2:y*im_W+(x+1)*2]
+#         image_data_chroma += chroma_cr[y*im_W+x*2:y*im_W+(x+1)*2]
 
 p.pmgr_adt_clocks_enable(f'/arm-io/dart-apr0')
 p.pmgr_adt_clocks_enable(f'/arm-io/apr0')
@@ -559,7 +560,7 @@ iface.writemem(out_buf_phys, b'\xAA' * OUT_SZ)
 out_buf_iova = dart.iomap(0, out_buf_phys, OUT_SZ)
 print(f"Output buffer @ phys {out_buf_phys:016X} iova {out_buf_iova:016X}")
 
-IN_SZ_LUMA = align_up(im_W*2*im_H)
+IN_SZ_LUMA = align_up(im_W*im_H)
 in_buf_luma_phys = u.heap.memalign(0x4000, IN_SZ_LUMA)
 iface.writemem(in_buf_luma_phys, image_data_luma + b'\xaa' * (IN_SZ_LUMA - len(image_data_luma)))
 in_buf_luma_iova = dart.iomap(0, in_buf_luma_phys, IN_SZ_LUMA)
@@ -573,7 +574,7 @@ print(f"Input buffer chroma @ phys {in_buf_chroma_phys:016X} iova {in_buf_chroma
 
 # out_buf_iova = 0xaaaaa
 desc = EncodeNotRawDescriptor(
-    flags=0x3629,
+    flags=0x362c,
     flags2=0,
     output_iova=out_buf_iova,
     unk_0x10_=0xb8ccc,  # changing this doesn't initially do anything
@@ -583,16 +584,16 @@ desc = EncodeNotRawDescriptor(
     pix_surface_h_2_=im_H,
     pix_surface_w=im_W,     # changing this seems ok at least if luma is broken
     pix_surface_h=im_H,
-    pix_plane0_bytesperrow_div=divroundup(im_W*2, 64),  # this is a stride of some kind
+    pix_plane0_bytesperrow_div=divroundup(im_W, 64),    # this is a stride of some kind
     pix_plane1_bytesperrow_div=divroundup(im_W*2, 64),  # FIXME is this fully correct?
-    pix_plane2_bytesperrow_div=0,
+    pix_plane2_bytesperrow_div=divroundup(im_W, 64),
     unk_pad_0x26_=b'\x00\x00',
 
     pix_plane0_iova=in_buf_luma_iova,
     pix_plane0_tileheader_thing_=0,
     pix_plane1_iova=in_buf_chroma_iova,
     pix_plane1_tileheader_thing_=0,
-    pix_plane2_iova=0xdeadbeef,
+    pix_plane2_iova=in_buf_luma_iova,
     pix_plane2_tileheader_thing_=0,
 
     # changing this does add extra 0 bytes
@@ -604,7 +605,7 @@ desc = EncodeNotRawDescriptor(
     pix_surface_w_byteswap_=bswp16(im_W),
     pix_surface_h_byteswap_=bswp16(im_H),
     # seemingly can change arbitrarily
-    chroma_format_interlace_mode=0x80,
+    chroma_format_interlace_mode=0xc0,
     aspect_ratio_frame_rate=0,
     color_primaries=2,
     transfer_characteristic=2,
@@ -618,7 +619,7 @@ desc = EncodeNotRawDescriptor(
     log2_desired_slice_size_in_mb=0x30,
     quantization_index=0x2,
 
-    unk_0xf0_=0x248,
+    unk_0xf0_=0x248,    # this impacts the quality somehow, not quite understood
     unk_0xf2_=0x298,
     unk_0xf4_=0x8000402015100c0c,
     unk_0xfc_=0x2c8080,
@@ -626,7 +627,7 @@ desc = EncodeNotRawDescriptor(
     unk_0x100_1_=0x4e00c5,
     unk_0x100_2_=0x9000d0,
     unk_0x100_3_=0x200122,
-    unk_0x110_0_=0x400200,
+    unk_0x110_0_=0x400200,  # looks like a quant table, but ??? not used ???
     unk_0x110_1_=0x400200,
     unk_0x110_2_=0x400200,
     unk_0x110_3_=0x400200,
@@ -642,7 +643,7 @@ desc = EncodeNotRawDescriptor(
     unk_0x110_13_=0x400200,
     unk_0x110_14_=0x400200,
     unk_0x110_15_=0x400200,
-    unk_0x150_=0x23,    # changing to 0xaa breaks quant tables
+    unk_0x150_=0x23,    # upper nibble: quality / table index, lower nibble unknown
     unk_pad_0x154_=b'\x00' * 44,
 )
 desc_bytes = struct.pack(ENCODE_NOT_RAW_STRUCT, *desc)
