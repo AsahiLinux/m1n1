@@ -7,6 +7,7 @@ from m1n1.setup import *
 from m1n1.hw.dart8110 import DART8110, DART8110Regs
 from m1n1.hw.prores import *
 from m1n1.utils import *
+import time
 
 
 def divroundup(val, div):
@@ -576,8 +577,8 @@ desc = EncodeNotRawDescriptor(
     flags2=0,
     output_iova=out_buf_iova,
     unk_0x10_=0xb8ccc,  # changing this doesn't initially do anything
-    unk_0x14_=0,        # changing this crashes
-    unk_0x16_=0,        # changing this crashes
+    offset_x=0,
+    offset_y=0,
     pix_surface_w_2_=im_W,  # changing this crashes
     pix_surface_h_2_=im_H,
     pix_surface_w=im_W,     # changing this seems ok at least if luma is broken
@@ -586,7 +587,7 @@ desc = EncodeNotRawDescriptor(
     pix_plane1_bytesperrow_div=divroundup(im_W*2, 64),  # FIXME is this fully correct?
     pix_plane2_bytesperrow_div=0,
     unk_pad_0x26_=b'\x00\x00',
-    # fixme not right, planes and stuff
+
     pix_plane0_iova=in_buf_luma_iova,
     pix_plane0_tileheader_thing_=0,
     pix_plane1_iova=in_buf_chroma_iova,
@@ -612,7 +613,7 @@ desc = EncodeNotRawDescriptor(
     # tables will still be output even if bits not set here
     frame_hdr_reserved14=b'\x00\x03',
     unk_pad_0x6c_=b'\x00' * 128,
-    deprecated_number_of_slices=bswp16(0x3fc),
+    deprecated_number_of_slices=0,
     # this one affects the encoding not just the header
     log2_desired_slice_size_in_mb=0x30,
     quantization_index=0x2,
@@ -652,8 +653,11 @@ iface.writemem(desc_ring_phys, desc_bytes)
 # let's go
 apr.DR_HEAD = len(desc_bytes)
 
+start_time = time.time()
 while apr.IRQ_STATUS.val == 0:
-    ...
+    if time.time() - start_time > 5:
+        print("TIMED OUT!!!")
+        break
 
 print(f"Done, IRQ status is {apr.IRQ_STATUS}")
 print(f"ST0 = {apr.ST0}")
@@ -668,7 +672,6 @@ print(f"DR_TAIL = {apr.DR_TAIL}")
 print(f"unk REG_0x38 = {apr.REG_0x38}")
 print(f"unk REG_0x40 = {apr.REG_0x40}")
 print(f"unk REG_0x48 = {apr.REG_0x48}")
-print(f"unk REG_0x3c = {apr.REG_0x3c}")
 print(f"unk REG_0x50 = {apr.REG_0x50}")
 print(f"unk REG_0x54 = {apr.REG_0x54}")
 
