@@ -23,9 +23,11 @@ EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
         #   11 -> 4:4:4
         # [1:0] - input bpp
         #   00 -> 8bpp
-        #   01 -> 16bpp
+        #   01 -> 16bpp?
         #   10 -> 16bpp?
         #   11 -> 16bpp?
+        #       the last three all produce slightly differnet outputs
+        #       so might be 10/12/14/16?????
     'flags2',                               # +0x004
     'output_iova',                          # +0x008
     'max_out_sz',                           # +0x010
@@ -86,7 +88,9 @@ EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
     'unk_0x110_13_',                        # +0x144
     'unk_0x110_14_',                        # +0x148
     'unk_0x110_15_',                        # +0x14c
-    'unk_0x150_',                           # +0x150
+    'quant_table_sel',                      # +0x150
+        # upper nibble: quality / table index
+        # lower nibble UNKNOWN!
     'unk_pad_0x154_',                       # +0x154
 ])
 ENCODE_NOT_RAW_STRUCT = "<IIQIHHHHHHHHH2sQQQQQQH1sBIHHBBBBBB2s128sHBBHHQIIIIIIIIIIIIIIIIIIIIII44s"

@@ -24,17 +24,7 @@ with open('prores-encode-large.yuv', 'rb') as f:
     im_data = f.read()
 assert len(im_data) == (im_W*im_H) * 3
 image_data_luma = im_data[:im_W*im_H]
-
 image_data_chroma = im_data[im_W*im_H:]
-# chroma_half = im_data[im_W*2*im_H:]
-# chroma_cb = chroma_half[:im_W*im_H]
-# chroma_cr = chroma_half[im_W*im_H:]
-# # image_data_chroma = im_data[im_W*2*im_H:]
-# image_data_chroma = b''
-# for y in range(im_H):
-#     for x in range(im_W // 2):
-#         image_data_chroma += chroma_cb[y*im_W+x*2:y*im_W+(x+1)*2]
-#         image_data_chroma += chroma_cr[y*im_W+x*2:y*im_W+(x+1)*2]
 
 p.pmgr_adt_clocks_enable(f'/arm-io/dart-apr0')
 p.pmgr_adt_clocks_enable(f'/arm-io/apr0')
@@ -567,7 +557,6 @@ in_buf_luma_iova = dart.iomap(0, in_buf_luma_phys, IN_SZ_LUMA)
 print(f"Input buffer luma @ phys {in_buf_luma_phys:016X} iova {in_buf_luma_iova:016X}")
 IN_SZ_CHROMA = align_up(im_W*2*im_H)
 in_buf_chroma_phys = u.heap.memalign(0x4000, IN_SZ_CHROMA)
-# iface.writemem(in_buf_chroma_phys, b'\x00' * IN_SZ_CHROMA)
 iface.writemem(in_buf_chroma_phys, image_data_chroma + b'\xaa' * (IN_SZ_CHROMA - len(image_data_chroma)))
 in_buf_chroma_iova = dart.iomap(0, in_buf_chroma_phys, IN_SZ_CHROMA)
 print(f"Input buffer chroma @ phys {in_buf_chroma_phys:016X} iova {in_buf_chroma_iova:016X}")
@@ -579,11 +568,14 @@ desc = EncodeNotRawDescriptor(
     max_out_sz=OUT_SZ,
     offset_x=0,
     offset_y=0,
-    pix_surface_w_2_=im_W,  # changing this crashes
+    # this is the important set
+    pix_surface_w_2_=im_W,
     pix_surface_h_2_=im_H,
-    pix_surface_w=im_W,     # changing this seems ok at least if luma is broken
+    # changing this doesn't seem to break anything
+    pix_surface_w=im_W,
     pix_surface_h=im_H,
-    luma_stride=divroundup(im_W, 64),   # XXX how does the div work exactly?
+    # XXX how does the div work exactly? it's different in "tiled" mode
+    luma_stride=divroundup(im_W, 64),
     chroma_stride=divroundup(im_W*2, 64),
     alpha_stride=divroundup(im_W, 64),
     unk_pad_0x26_=b'\x00\x00',
@@ -618,8 +610,12 @@ desc = EncodeNotRawDescriptor(
     log2_desired_slice_size_in_mb=0x30,
     quantization_index=0x2,
 
-    unk_0xf0_=0x248,    # this impacts the quality somehow, not quite understood
-    unk_0xf2_=0x298,
+    # this impacts the quality somehow, not quite understood
+    # might be a target bitrate
+    unk_0xf0_=0xffff,
+    unk_0xf2_=0xffff,
+
+    # none of this stuff is understood, and it never seems to change
     unk_0xf4_=0x8000402015100c0c,
     unk_0xfc_=0x2c8080,
     unk_0x100_0_=0x880080,
@@ -642,7 +638,8 @@ desc = EncodeNotRawDescriptor(
     unk_0x110_13_=0x400200,
     unk_0x110_14_=0x400200,
     unk_0x110_15_=0x400200,
-    unk_0x150_=0x23,    # upper nibble: quality / table index, lower nibble unknown
+
+    quant_table_sel=0x23,
     unk_pad_0x154_=b'\x00' * 44,
 )
 desc_bytes = struct.pack(ENCODE_NOT_RAW_STRUCT, *desc)
