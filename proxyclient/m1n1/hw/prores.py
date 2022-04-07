@@ -29,15 +29,15 @@ EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
     'pix_surface_h_2_',                     # +0x01a
     'pix_surface_w',                        # +0x01c
     'pix_surface_h',                        # +0x01e
-    'pix_plane0_bytesperrow_div',           # +0x020
-    'pix_plane1_bytesperrow_div',           # +0x022
-    'pix_plane2_bytesperrow_div',           # +0x024
+    'luma_stride',                          # +0x020
+    'chroma_stride',                        # +0x022
+    'alpha_stride',                         # +0x024
     'unk_pad_0x26_',                        # +0x026
-    'pix_plane0_iova',                      # +0x028
+    'luma_iova',                            # +0x028
     'pix_plane0_tileheader_thing_',         # +0x030
-    'pix_plane1_iova',                      # +0x038
+    'chroma_iova',                          # +0x038
     'pix_plane1_tileheader_thing_',         # +0x040
-    'pix_plane2_iova',                      # +0x048
+    'alpha_iova',                           # +0x048
     'pix_plane2_tileheader_thing_',         # +0x050
     'frame_header_sz',                      # +0x058
     'unk_pad_0x5a_',                        # +0x05a
