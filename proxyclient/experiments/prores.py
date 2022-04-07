@@ -584,16 +584,16 @@ desc = EncodeNotRawDescriptor(
     pix_surface_h_2_=im_H,
     pix_surface_w=im_W,     # changing this seems ok at least if luma is broken
     pix_surface_h=im_H,
-    pix_plane0_bytesperrow_div=divroundup(im_W, 64),    # this is a stride of some kind
-    pix_plane1_bytesperrow_div=divroundup(im_W*2, 64),  # FIXME is this fully correct?
-    pix_plane2_bytesperrow_div=divroundup(im_W, 64),
+    luma_stride=divroundup(im_W, 64),   # XXX how does the div work exactly?
+    chroma_stride=divroundup(im_W*2, 64),
+    alpha_stride=divroundup(im_W, 64),
     unk_pad_0x26_=b'\x00\x00',
 
-    pix_plane0_iova=in_buf_luma_iova,
+    luma_iova=in_buf_luma_iova,
     pix_plane0_tileheader_thing_=0,
-    pix_plane1_iova=in_buf_chroma_iova,
+    chroma_iova=in_buf_chroma_iova,
     pix_plane1_tileheader_thing_=0,
-    pix_plane2_iova=in_buf_luma_iova,
+    alpha_iova=in_buf_luma_iova,
     pix_plane2_tileheader_thing_=0,
 
     # changing this does add extra 0 bytes
