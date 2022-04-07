@@ -6,10 +6,16 @@ from enum import IntEnum
 
 EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
     'flags',                                # +0x000
+        # [31:16] ?????
+        # 13 ?????
+        # 12 ?????
+        # [11:9] ?????
         # 8 - enable alpha
         # 7 - alpha channel bpp
         #   0 -> 8bpp
         #   1 -> 16bpp
+        # 6 - something unknown about tiling
+        # [5:4] ?????
         # [3:2] - chroma subsampling
         #   00 -> broken?
         #   01 -> broken?
@@ -22,7 +28,7 @@ EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
         #   11 -> 16bpp?
     'flags2',                               # +0x004
     'output_iova',                          # +0x008
-    'unk_0x10_',                            # +0x010
+    'max_out_sz',                           # +0x010
     'offset_x',                             # +0x014
     'offset_y',                             # +0x016
     'pix_surface_w_2_',                     # +0x018

@@ -572,12 +572,11 @@ iface.writemem(in_buf_chroma_phys, image_data_chroma + b'\xaa' * (IN_SZ_CHROMA -
 in_buf_chroma_iova = dart.iomap(0, in_buf_chroma_phys, IN_SZ_CHROMA)
 print(f"Input buffer chroma @ phys {in_buf_chroma_phys:016X} iova {in_buf_chroma_iova:016X}")
 
-# out_buf_iova = 0xaaaaa
 desc = EncodeNotRawDescriptor(
-    flags=0x372c,
+    flags=0x373c,
     flags2=0,
     output_iova=out_buf_iova,
-    unk_0x10_=0xb8ccc,  # changing this doesn't initially do anything
+    max_out_sz=OUT_SZ,
     offset_x=0,
     offset_y=0,
     pix_surface_w_2_=im_W,  # changing this crashes
