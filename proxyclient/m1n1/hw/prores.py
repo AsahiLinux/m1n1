@@ -9,8 +9,8 @@ EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
     'flags2',                               # +0x004
     'output_iova',                          # +0x008
     'unk_0x10_',                            # +0x010
-    'unk_0x14_',                            # +0x014
-    'unk_0x16_',                            # +0x016
+    'offset_x',                             # +0x014
+    'offset_y',                             # +0x016
     'pix_surface_w_2_',                     # +0x018
     'pix_surface_h_2_',                     # +0x01a
     'pix_surface_w',                        # +0x01c
