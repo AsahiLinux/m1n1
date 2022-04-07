@@ -6,6 +6,10 @@ from enum import IntEnum
 
 EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
     'flags',                                # +0x000
+        # 8 - enable alpha
+        # 7 - alpha channel bpp
+        #   0 -> 8bpp
+        #   1 -> 16bpp
         # [3:2] - chroma subsampling
         #   00 -> broken?
         #   01 -> broken?

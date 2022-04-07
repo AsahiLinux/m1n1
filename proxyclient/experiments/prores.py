@@ -574,7 +574,7 @@ print(f"Input buffer chroma @ phys {in_buf_chroma_phys:016X} iova {in_buf_chroma
 
 # out_buf_iova = 0xaaaaa
 desc = EncodeNotRawDescriptor(
-    flags=0x362c,
+    flags=0x372c,
     flags2=0,
     output_iova=out_buf_iova,
     unk_0x10_=0xb8ccc,  # changing this doesn't initially do anything
@@ -610,7 +610,7 @@ desc = EncodeNotRawDescriptor(
     color_primaries=2,
     transfer_characteristic=2,
     matrix_coefficients=1,
-    alpha_channel_type=0x30,
+    alpha_channel_type=1,
     # tables will still be output even if bits not set here
     frame_hdr_reserved14=b'\x00\x03',
     unk_pad_0x6c_=b'\x00' * 128,
