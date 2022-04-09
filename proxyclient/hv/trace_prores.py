@@ -57,9 +57,9 @@ class ProResTracer(ADTDevTracer):
             desc = EncodeNotRawDescriptor._make(struct.unpack(ENCODE_NOT_RAW_STRUCT, dr[dr_tail:dr_head]))
             print(desc)
 
-            p0_iova = desc.pix_plane0_iova
-            p1_iova = desc.pix_plane1_iova
-            p2_iova = desc.pix_plane2_iova
+            p0_iova = desc.luma_iova
+            p1_iova = desc.chroma_iova
+            p2_iova = desc.alpha_iova
 
             if p0_iova:
                 print(f"P0 iova {p0_iova:016X}")
