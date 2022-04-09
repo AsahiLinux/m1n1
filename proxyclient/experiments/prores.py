@@ -560,6 +560,7 @@ in_buf_chroma_phys = u.heap.memalign(0x4000, IN_SZ_CHROMA)
 iface.writemem(in_buf_chroma_phys, image_data_chroma + b'\xaa' * (IN_SZ_CHROMA - len(image_data_chroma)))
 in_buf_chroma_iova = dart.iomap(0, in_buf_chroma_phys, IN_SZ_CHROMA)
 print(f"Input buffer chroma @ phys {in_buf_chroma_phys:016X} iova {in_buf_chroma_iova:016X}")
+dart.dump_all()
 
 desc = EncodeNotRawDescriptor(
     flags=0x373c,
