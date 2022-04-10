@@ -238,6 +238,8 @@ class BTTracer(MemRangeTracer):
             hook('crTIA', context.crTIA, 12)
             hook('trHIA', context.trHIA, 18)
             hook('trTIA', context.trTIA, 18)
+            hook('mcr', context.mcr, 0x800)     # no idea size
+            hook('mtr', context.mtr, 0x800)     # i _think_ this is correct
 
         except Exception as e:
             print(e)
