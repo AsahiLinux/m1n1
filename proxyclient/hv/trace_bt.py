@@ -64,6 +64,36 @@ ClosePipeMessage = namedtuple('ClosePipeMessage', [
 CLOSEPIPE_STR = "<B1sH48s"
 
 
+OpenCompletionRingMessage = namedtuple('OpenCompletionRingMessage', [
+    'type',
+    'head_size',
+    'foot_size',
+    'pad_0x3_',
+    'cr_idx',
+    'cr_idx_',
+    'ring_iova',
+    'ring_count',
+    'unk_0x12_',
+    'pad_0x16_',
+    'msi',
+    'intmod_delay',
+    'intmod_bytes',
+    'accum_delay',
+    'accum_bytes',
+    'pad_0x2a_',
+])
+OPENCOMPLETIONRING_STR = "<BBB1sHHQHI6sHHIHI10s"
+
+
+CloseCompletionRingMessage = namedtuple('CloseCompletionRingMessage', [
+    'type',
+    'pad_0x1_',
+    'cr_idx',
+    'pad_0x4_'
+])
+CLOSECOMPLETIONRING_STR = "<B1sH48s"
+
+
 class BTBAR0Regs(RegMap):
     IMG_DOORBELL = 0x140, Register32
     RTI_CONTROL = 0x144, Register32
@@ -261,16 +291,26 @@ class BTTracer(MemRangeTracer):
                 self.trace(physaddr, sz, TraceMode.SYNC, prefix=name)
 
             hook('perInfo', context.perInfo, 0x10)
-            hook('crHIA', context.crHIA, 12)
-            hook('crTIA', context.crTIA, 12)
-            hook('trHIA', context.trHIA, 18)
-            hook('trTIA', context.trTIA, 18)
-            hook('mcr', context.mcr, 0x800)     # no idea size
-            hook('mtr', context.mtr, 0x800)     # i _think_ this is correct
+            # hook('crHIA', context.crHIA, 12)
+            # hook('crTIA', context.crTIA, 12)
+            # hook('trHIA', context.trHIA, 18)
+            # hook('trTIA', context.trTIA, 18)
+            # hook('mcr', context.mcr, 0x800)     # no idea size
+            # hook('mtr', context.mtr, 0x800)     # i _think_ this is correct
+
+            crhia_physaddr = self.dart_tracer.dart.iotranslate(STREAM, context.crHIA, 1)[0][0]
+            self.hv.add_tracer(
+                irange(crhia_physaddr, 4),
+                self.ident,
+                TraceMode.SYNC,
+                self.completion_hax_event,
+                None
+            )
 
             self._ctx = context
             self._last_ring_idx = {}
             self._open_pipes = {}
+            self._open_crs = {}
 
         except Exception as e:
             print(e)
@@ -306,25 +346,64 @@ class BTTracer(MemRangeTracer):
                             print(open_pipe)
 
                             self._open_pipes[open_pipe.pipe_idx] = open_pipe
+                        elif msg_type == 2:
+                            open_cr = OpenCompletionRingMessage._make(struct.unpack(OPENCOMPLETIONRING_STR, data))
+                            print(open_cr)
+
+                            self._open_crs[open_cr.cr_idx] = open_cr
                         elif msg_type == 3:
                             close_pipe = ClosePipeMessage._make(struct.unpack(CLOSEPIPE_STR, data))
                             print(close_pipe)
 
                             del self._open_pipes[close_pipe.pipe_idx]
                             self._last_ring_idx[close_pipe.pipe_idx] = 0
+                        elif msg_type == 4:
+                            close_cr = CloseCompletionRingMessage._make(struct.unpack(CLOSECOMPLETIONRING_STR, data))
+                            print(close_cr)
+
+                            del self._open_crs[close_cr.cr_idx]
+
                 elif pipe in self._open_pipes:
                     tr_iova = self._open_pipes[pipe].ring_iova
+                    tr_ent_sz = self._open_pipes[pipe].foot_size * 4 + 0x10
 
                     for i in range(self._last_ring_idx[pipe], ring_idx):
-                        # FIXME where does this size come from?
-                        tr_data_addr = tr_iova + 0x118 * i
+                        tr_data_addr = tr_iova + tr_ent_sz * i
                         print(f"TR idx {i} @ iova {tr_data_addr:016X}")
-                        tr_data = self.dart_tracer.dart.ioread(STREAM, tr_data_addr, 0x118)
+                        tr_data = self.dart_tracer.dart.ioread(STREAM, tr_data_addr, tr_ent_sz)
                         chexdump(tr_data)
             except Exception as e:
                 print(e)
 
             self._last_ring_idx[pipe] = ring_idx
+
+    def completion_hax_event(self, evt):
+        print("Checking completion rings!")
+        try:
+            cr_heads = struct.unpack("<HHHHHH", self.dart_tracer.dart.ioread(STREAM, self._ctx.crHIA, 12))
+            cr_tails = struct.unpack("<HHHHHH", self.dart_tracer.dart.ioread(STREAM, self._ctx.crTIA, 12))
+
+            for cr_idx in range(6):
+                print(f"CR {cr_idx} head {cr_heads[cr_idx]} tail {cr_tails[cr_idx]}")
+
+                if cr_idx == 0:
+                    cr_iova_base = self._ctx.mcr
+                    cr_ent_sz = 0x10
+                else:
+                    if cr_idx not in self._open_crs:
+                        print(f"CR {cr_idx} not open")
+                        continue
+
+                    cr_iova_base = self._open_crs[cr_idx].ring_iova
+                    cr_ent_sz = self._open_crs[cr_idx].foot_size * 4 + 0x10
+
+                for cr_ring_idx in range(cr_tails[cr_idx], cr_heads[cr_idx]):
+                    cr_data_addr = cr_iova_base + cr_ent_sz * cr_ring_idx
+                    print(f"CR idx {cr_ring_idx} @ iova {cr_data_addr:016X}")
+                    cr_data = self.dart_tracer.dart.ioread(STREAM, cr_data_addr, cr_ent_sz)
+                    chexdump(cr_data)
+        except Exception as e:
+            print(e)
 
 
 BTTracer = BTTracer._reloadcls()
