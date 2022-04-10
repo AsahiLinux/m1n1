@@ -241,8 +241,40 @@ class BTTracer(MemRangeTracer):
             hook('mcr', context.mcr, 0x800)     # no idea size
             hook('mtr', context.mtr, 0x800)     # i _think_ this is correct
 
+            self._ctx = context
+            self._last_ring_idx = {}
+
         except Exception as e:
             print(e)
+
+    def w_DOORBELL_05(self, val):
+        val = int(val)
+        if val & 0x20 != 0x20:
+            print(f"UNKNOWN write to doorbell {val:X}")
+        else:
+            pipe = (val >> 8) & 0xFF
+            ring_idx = (val >> 16) & 0xFFFF
+            print(f"doorbell rung for pipe {pipe} @ {ring_idx}")
+
+            if pipe not in self._last_ring_idx:
+                self._last_ring_idx[pipe] = 0
+
+            try:
+                if pipe == 0:
+                    for i in range(self._last_ring_idx[pipe], ring_idx):
+                        tr_data_addr = self._ctx.mtr + 0x10 * i
+                        print(f"TR idx {i} @ iova {tr_data_addr:016X}")
+                        tr_data = self.dart_tracer.dart.ioread(STREAM, tr_data_addr, 0x10)
+                        chexdump(tr_data)
+
+                        _, buf_addr, _ = struct.unpack("<IQI", tr_data)
+                        print(f"buf iova {buf_addr:016X}")
+                        data = self.dart_tracer.dart.ioread(STREAM, buf_addr, 0x34)
+                        chexdump(data)
+            except Exception as e:
+                print(e)
+
+            self._last_ring_idx[pipe] = ring_idx
 
 
 BTTracer = BTTracer._reloadcls()
