@@ -264,12 +264,12 @@ void dart_unmap(dart_dev_t *dart, uintptr_t iova, size_t len)
     dart_tlb_invalidate(dart);
 }
 
-void *dart_translate(dart_dev_t *dart, uintptr_t iova)
+static void *dart_translate_internal(dart_dev_t *dart, uintptr_t iova, int silent)
 {
     u32 ttbr = (iova >> 36) & 0x3;
     u32 l1_index = (iova >> 25) & 0x7ff;
 
-    if (!(dart->l1[ttbr][l1_index] & DART_PTE_VALID)) {
+    if (!(dart->l1[ttbr][l1_index] & DART_PTE_VALID) && !silent) {
         printf("dart: l1 translation failure %x %lx\n", l1_index, iova);
         return NULL;
     }
@@ -278,7 +278,7 @@ void *dart_translate(dart_dev_t *dart, uintptr_t iova)
     u64 *l2 =
         (u64 *)(FIELD_GET(dart->offset_mask, dart->l1[ttbr][l1_index]) << DART_PTE_OFFSET_SHIFT);
 
-    if (!(l2[l2_index] & DART_PTE_VALID)) {
+    if (!(l2[l2_index] & DART_PTE_VALID) && !silent) {
         printf("dart: l2 translation failure\n");
         return NULL;
     }
@@ -287,6 +287,11 @@ void *dart_translate(dart_dev_t *dart, uintptr_t iova)
     void *base = (void *)(FIELD_GET(dart->offset_mask, l2[l2_index]) << DART_PTE_OFFSET_SHIFT);
 
     return base + offset;
+}
+
+void *dart_translate(dart_dev_t *dart, uintptr_t iova)
+{
+    return dart_translate_internal(dart, iova, 0);
 }
 
 u64 dart_search(dart_dev_t *dart, void *paddr)
@@ -312,6 +317,35 @@ u64 dart_search(dart_dev_t *dart, void *paddr)
     }
 
     return 0;
+}
+
+s64 dart_find_iova(dart_dev_t *dart, s64 start, size_t len)
+{
+    if (len % SZ_16K)
+        return -1;
+    if (start < 0 || start % SZ_16K)
+        return -1;
+
+    uintptr_t end = 1LLU << 32;
+    uintptr_t iova = start;
+
+    while (iova + len <= end) {
+
+        if (dart_translate_internal(dart, iova, 1) == NULL) {
+            size_t size;
+            for (size = SZ_16K; size < len; size += SZ_16K) {
+                if (dart_translate_internal(dart, iova + size, 1) != NULL)
+                    break;
+            }
+            if (size == len)
+                return iova;
+
+            iova += size + SZ_16K;
+        } else
+            iova += SZ_16K;
+    }
+
+    return -1;
 }
 
 void dart_shutdown(dart_dev_t *dart)
