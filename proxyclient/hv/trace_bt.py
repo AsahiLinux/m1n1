@@ -311,14 +311,15 @@ class BTTracer(MemRangeTracer):
                             print(close_pipe)
 
                             del self._open_pipes[close_pipe.pipe_idx]
+                            self._last_ring_idx[close_pipe.pipe_idx] = 0
                 elif pipe in self._open_pipes:
                     tr_iova = self._open_pipes[pipe].ring_iova
 
                     for i in range(self._last_ring_idx[pipe], ring_idx):
-                        # FIXME XXX what's going on here?
-                        tr_data_addr = tr_iova
+                        # FIXME where does this size come from?
+                        tr_data_addr = tr_iova + 0x118 * i
                         print(f"TR idx {i} @ iova {tr_data_addr:016X}")
-                        tr_data = self.dart_tracer.dart.ioread(STREAM, tr_data_addr, 0x200)
+                        tr_data = self.dart_tracer.dart.ioread(STREAM, tr_data_addr, 0x118)
                         chexdump(tr_data)
             except Exception as e:
                 print(e)
