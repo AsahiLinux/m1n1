@@ -1,7 +1,40 @@
 from m1n1.trace import Tracer
 from m1n1.trace.dart import DARTTracer
 from m1n1.utils import *
+from collections import namedtuple
 import struct
+
+
+ContextStruct = namedtuple('ContextStruct', [
+    'version',
+    'sz',
+    'enabled_caps',
+    'perInfo',
+    'crHIA',
+    'trTIA',
+    'crTIA',
+    'trHIA',
+    'crIAEntry',
+    'trIAEntry',
+    'mcr',
+    'mtr',
+    'mtrEntry',
+    'mcrEntry',
+    'mtrDb',
+    'mcrDb',
+    'mtrMsi',
+    'mcrMsi',
+    'mtrOptHeadSize',
+    'mtrOptFootSize',
+    'mcrOptHeadSize',
+    'mcrOptFootSize',
+    'res_inPlaceComp_oOOComp',
+    'piMsi',
+    'scratchPa',
+    'scratchSize',
+    'res',
+])
+CONTEXTSTRUCT_STR = "<HHIQQQQQHHQQHHHHHHBBBBHHQII"
 
 
 class BTBAR0Regs(RegMap):
@@ -87,6 +120,10 @@ class MemRangeTracer(Tracer):
             self.trace_regmap(start, size, regmap, name=name, prefix=prefix)
 
 
+# FIXME how do we get stream IDs without hardcoding?
+STREAM = 2
+
+
 class BTTracer(MemRangeTracer):
     DEFAULT_MODE = TraceMode.SYNC
     REGMAPS = [BTBAR0Regs, BTBAR1Regs]
@@ -133,9 +170,8 @@ class BTTracer(MemRangeTracer):
 
         self.dart_tracer.dart.dump_all()
 
-        # FIXME how do we get stream IDs without hardcoding?
         try:
-            data = self.dart_tracer.dart.ioread(2, host_window_iova, host_window_sz)
+            data = self.dart_tracer.dart.ioread(STREAM, host_window_iova, host_window_sz)
             with open(f'bt_dump_{self._dump_idx}.bin', 'wb') as f:
                 f.write(data)
             chexdump(data[:0x400])
@@ -172,9 +208,8 @@ class BTTracer(MemRangeTracer):
 
         self.dart_tracer.dart.dump_all()
 
-        # FIXME how do we get stream IDs without hardcoding?
         try:
-            data = self.dart_tracer.dart.ioread(2, host_window_iova, host_window_sz)
+            data = self.dart_tracer.dart.ioread(STREAM, host_window_iova, host_window_sz)
             with open(f'bt_dump_{self._dump_idx}.bin', 'wb') as f:
                 f.write(data)
             chexdump(data[:0x400])
@@ -183,11 +218,27 @@ class BTTracer(MemRangeTracer):
             print(e)
 
         try:
-            data = self.dart_tracer.dart.ioread(2, rti_context_iova, 0x100)
+            data = self.dart_tracer.dart.ioread(STREAM, rti_context_iova, 0x68)
             with open(f'bt_dump_{self._dump_idx}.bin', 'wb') as f:
                 f.write(data)
             chexdump(data)
             self._dump_idx += 1
+
+            print("Got context data now")
+            context = ContextStruct._make(struct.unpack(CONTEXTSTRUCT_STR, data))
+            print(context)
+
+            def hook(name, iova, sz):
+                physaddr = self.dart_tracer.dart.iotranslate(STREAM, iova, sz)[0][0]
+                print(f"hooking {name} @ IOVA {iova:016X} phys {physaddr:016X}")
+                self.trace(physaddr, sz, TraceMode.SYNC, prefix=name)
+
+            hook('perInfo', context.perInfo, 0x10)
+            hook('crHIA', context.crHIA, 12)
+            hook('crTIA', context.crTIA, 12)
+            hook('trHIA', context.trHIA, 18)
+            hook('trTIA', context.trTIA, 18)
+
         except Exception as e:
             print(e)
 
