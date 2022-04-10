@@ -37,6 +37,33 @@ ContextStruct = namedtuple('ContextStruct', [
 CONTEXTSTRUCT_STR = "<HHIQQQQQHHQQHHHHHHBBBBHHQII"
 
 
+OpenPipeMessage = namedtuple('OpenPipeMessage', [
+    'type',
+    'head_size',
+    'foot_size',
+    'pad_0x3_',
+    'pipe_idx',
+    'pipe_idx_',
+    'ring_iova',
+    'pad_0x10_',
+    'ring_count',
+    'completion_ring_index',
+    'doorbell_idx',
+    'flags',
+    'pad_0x20_',
+])
+OPENPIPE_STR = "<BBB1sHHQ8sHHHH20s"
+
+
+ClosePipeMessage = namedtuple('ClosePipeMessage', [
+    'type',
+    'pad_0x1_',
+    'pipe_idx',
+    'pad_0x4_'
+])
+CLOSEPIPE_STR = "<B1sH48s"
+
+
 class BTBAR0Regs(RegMap):
     IMG_DOORBELL = 0x140, Register32
     RTI_CONTROL = 0x144, Register32
@@ -243,6 +270,7 @@ class BTTracer(MemRangeTracer):
 
             self._ctx = context
             self._last_ring_idx = {}
+            self._open_pipes = {}
 
         except Exception as e:
             print(e)
@@ -271,6 +299,27 @@ class BTTracer(MemRangeTracer):
                         print(f"buf iova {buf_addr:016X}")
                         data = self.dart_tracer.dart.ioread(STREAM, buf_addr, 0x34)
                         chexdump(data)
+
+                        msg_type = data[0]
+                        if msg_type == 1:
+                            open_pipe = OpenPipeMessage._make(struct.unpack(OPENPIPE_STR, data))
+                            print(open_pipe)
+
+                            self._open_pipes[open_pipe.pipe_idx] = open_pipe
+                        elif msg_type == 3:
+                            close_pipe = ClosePipeMessage._make(struct.unpack(CLOSEPIPE_STR, data))
+                            print(close_pipe)
+
+                            del self._open_pipes[close_pipe.pipe_idx]
+                elif pipe in self._open_pipes:
+                    tr_iova = self._open_pipes[pipe].ring_iova
+
+                    for i in range(self._last_ring_idx[pipe], ring_idx):
+                        # FIXME XXX what's going on here?
+                        tr_data_addr = tr_iova
+                        print(f"TR idx {i} @ iova {tr_data_addr:016X}")
+                        tr_data = self.dart_tracer.dart.ioread(STREAM, tr_data_addr, 0x200)
+                        chexdump(tr_data)
             except Exception as e:
                 print(e)
 
