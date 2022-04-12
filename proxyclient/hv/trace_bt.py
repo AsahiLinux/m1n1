@@ -2,6 +2,7 @@ from m1n1.trace import Tracer
 from m1n1.trace.dart import DARTTracer
 from m1n1.utils import *
 from collections import namedtuple
+import itertools
 import struct
 
 
@@ -134,7 +135,7 @@ class BTBAR1Regs(RegMap):
 
     IMG_ADDR_LO = 0x200478, Register32
     IMG_ADDR_HI = 0x20047c, Register32
-    IMG_ADDR_SZ = 0x200480, Register32
+    IMG_SZ = 0x200480, Register32
     BTI_EXITCODE_RTI_IMG_RESPONSE = 0x200488, Register32
     RTI_CONTEXT_LO = 0x20048c, Register32
     RTI_CONTEXT_HI = 0x200490, Register32
@@ -290,7 +291,7 @@ class BTTracer(MemRangeTracer):
                 print(f"hooking {name} @ IOVA {iova:016X} phys {physaddr:016X}")
                 self.trace(physaddr, sz, TraceMode.SYNC, prefix=name)
 
-            hook('perInfo', context.perInfo, 0x10)
+            # hook('perInfo', context.perInfo, 0x10)
             # hook('crHIA', context.crHIA, 12)
             # hook('crTIA', context.crTIA, 12)
             # hook('trHIA', context.trHIA, 18)
@@ -307,8 +308,8 @@ class BTTracer(MemRangeTracer):
                 None
             )
 
+            self._crhia_physaddr = crhia_physaddr
             self._ctx = context
-            self._last_ring_idx = {}
             self._open_pipes = {}
             self._open_crs = {}
 
@@ -320,90 +321,117 @@ class BTTracer(MemRangeTracer):
         if val & 0x20 != 0x20:
             print(f"UNKNOWN write to doorbell {val:X}")
         else:
-            pipe = (val >> 8) & 0xFF
+            db_idx = (val >> 8) & 0xFF
             ring_idx = (val >> 16) & 0xFFFF
-            print(f"doorbell rung for pipe {pipe} @ {ring_idx}")
-
-            if pipe not in self._last_ring_idx:
-                self._last_ring_idx[pipe] = 0
+            print(f"doorbell #{db_idx} rung @ {ring_idx}")
 
             try:
-                if pipe == 0:
-                    for i in range(self._last_ring_idx[pipe], ring_idx):
-                        tr_data_addr = self._ctx.mtr + 0x10 * i
-                        print(f"TR idx {i} @ iova {tr_data_addr:016X}")
-                        tr_data = self.dart_tracer.dart.ioread(STREAM, tr_data_addr, 0x10)
-                        chexdump(tr_data)
-
-                        _, buf_addr, _ = struct.unpack("<IQI", tr_data)
-                        print(f"buf iova {buf_addr:016X}")
-                        data = self.dart_tracer.dart.ioread(STREAM, buf_addr, 0x34)
-                        chexdump(data)
-
-                        msg_type = data[0]
-                        if msg_type == 1:
-                            open_pipe = OpenPipeMessage._make(struct.unpack(OPENPIPE_STR, data))
-                            print(open_pipe)
-
-                            self._open_pipes[open_pipe.pipe_idx] = open_pipe
-                        elif msg_type == 2:
-                            open_cr = OpenCompletionRingMessage._make(struct.unpack(OPENCOMPLETIONRING_STR, data))
-                            print(open_cr)
-
-                            self._open_crs[open_cr.cr_idx] = open_cr
-                        elif msg_type == 3:
-                            close_pipe = ClosePipeMessage._make(struct.unpack(CLOSEPIPE_STR, data))
-                            print(close_pipe)
-
-                            del self._open_pipes[close_pipe.pipe_idx]
-                            self._last_ring_idx[close_pipe.pipe_idx] = 0
-                        elif msg_type == 4:
-                            close_cr = CloseCompletionRingMessage._make(struct.unpack(CLOSECOMPLETIONRING_STR, data))
-                            print(close_cr)
-
-                            del self._open_crs[close_cr.cr_idx]
-
-                elif pipe in self._open_pipes:
-                    tr_iova = self._open_pipes[pipe].ring_iova
-                    tr_ent_sz = self._open_pipes[pipe].foot_size * 4 + 0x10
-
-                    for i in range(self._last_ring_idx[pipe], ring_idx):
-                        tr_data_addr = tr_iova + tr_ent_sz * i
-                        print(f"TR idx {i} @ iova {tr_data_addr:016X}")
-                        tr_data = self.dart_tracer.dart.ioread(STREAM, tr_data_addr, tr_ent_sz)
-                        chexdump(tr_data)
+                tr_heads = struct.unpack("<HHHHHHHHH", self.dart_tracer.dart.ioread(STREAM, self._ctx.trHIA, 18))
+                tr_tails = struct.unpack("<HHHHHHHHH", self.dart_tracer.dart.ioread(STREAM, self._ctx.trTIA, 18))
             except Exception as e:
                 print(e)
+                return
 
-            self._last_ring_idx[pipe] = ring_idx
+            for pipe_idx in range(9):
+                try:
+                    if pipe_idx == 0:
+                        tr_iova_base = self._ctx.mtr
+                        tr_ent_sz = 0x10
+                        tr_ring_sz = self._ctx.mtrEntry
+                    elif pipe_idx in self._open_pipes:
+                        tr_iova_base = self._open_pipes[pipe_idx].ring_iova
+                        tr_ent_sz = self._open_pipes[pipe_idx].foot_size * 4 + 0x10
+                        tr_ring_sz = self._open_pipes[pipe_idx].ring_count
+                    else:
+                        # print(f"TR{pipe_idx} not open")
+                        continue
+
+                    print(f"TR{pipe_idx} head {tr_heads[pipe_idx]} tail {tr_tails[pipe_idx]}")
+
+                    if tr_heads[pipe_idx] >= tr_tails[pipe_idx]:
+                        range_ = range(tr_tails[pipe_idx], tr_heads[pipe_idx])
+                    else:
+                        range_ = itertools.chain(range(tr_tails[pipe_idx], tr_ring_sz), range(0, tr_heads[pipe_idx]))
+
+                    for i in range_:
+                        tr_data_addr = tr_iova_base + tr_ent_sz * i
+                        print(f"TR{pipe_idx} idx {i} @ iova {tr_data_addr:016X}")
+                        tr_data = self.dart_tracer.dart.ioread(STREAM, tr_data_addr, tr_ent_sz)
+                        chexdump(tr_data)
+
+                        if tr_data[0] & 3 == 1:
+                            buf_addr = struct.unpack("<Q", tr_data[4:12])[0]
+                            print(f"buf iova {buf_addr:016X}")
+                            payload = self.dart_tracer.dart.ioread(STREAM, buf_addr, 0x34)
+                            chexdump(payload)
+                        elif tr_data[0] & 3 == 2:
+                            payload = tr_data[0x10:]
+                        else:
+                            print("***** ERROR UNKNOWN WHAT TO DO HERE *****")
+                            payload = b''
+
+                        if pipe_idx == 0:
+                            msg_type = payload[0]
+                            if msg_type == 1:
+                                open_pipe = OpenPipeMessage._make(struct.unpack(OPENPIPE_STR, payload))
+                                print(open_pipe)
+                                self._open_pipes[open_pipe.pipe_idx] = open_pipe
+                            elif msg_type == 2:
+                                open_cr = OpenCompletionRingMessage._make(struct.unpack(OPENCOMPLETIONRING_STR, payload))
+                                print(open_cr)
+                                self._open_crs[open_cr.cr_idx] = open_cr
+                            elif msg_type == 3:
+                                close_pipe = ClosePipeMessage._make(struct.unpack(CLOSEPIPE_STR, payload))
+                                print(close_pipe)
+                                del self._open_pipes[close_pipe.pipe_idx]
+                            elif msg_type == 4:
+                                close_cr = CloseCompletionRingMessage._make(struct.unpack(CLOSECOMPLETIONRING_STR, payload))
+                                print(close_cr)
+                                del self._open_crs[close_cr.cr_idx]
+                except Exception as e:
+                    print(e)
+
 
     def completion_hax_event(self, evt):
+        if evt.addr != self._crhia_physaddr:
+            return
+
         print("Checking completion rings!")
         try:
             cr_heads = struct.unpack("<HHHHHH", self.dart_tracer.dart.ioread(STREAM, self._ctx.crHIA, 12))
             cr_tails = struct.unpack("<HHHHHH", self.dart_tracer.dart.ioread(STREAM, self._ctx.crTIA, 12))
+        except Exception as e:
+            print(e)
+            return
 
-            for cr_idx in range(6):
-                print(f"CR {cr_idx} head {cr_heads[cr_idx]} tail {cr_tails[cr_idx]}")
-
+        for cr_idx in range(6):
+            try:
                 if cr_idx == 0:
                     cr_iova_base = self._ctx.mcr
                     cr_ent_sz = 0x10
-                else:
-                    if cr_idx not in self._open_crs:
-                        print(f"CR {cr_idx} not open")
-                        continue
-
+                    cr_ring_sz = self._ctx.mcrEntry
+                elif cr_idx in self._open_crs:
                     cr_iova_base = self._open_crs[cr_idx].ring_iova
                     cr_ent_sz = self._open_crs[cr_idx].foot_size * 4 + 0x10
+                    cr_ring_sz = self._open_crs[cr_idx].ring_count
+                else:
+                    # print(f"CR{cr_idx} not open")
+                    continue
 
-                for cr_ring_idx in range(cr_tails[cr_idx], cr_heads[cr_idx]):
-                    cr_data_addr = cr_iova_base + cr_ent_sz * cr_ring_idx
-                    print(f"CR idx {cr_ring_idx} @ iova {cr_data_addr:016X}")
+                print(f"CR{cr_idx} head {cr_heads[cr_idx]} tail {cr_tails[cr_idx]}")
+
+                if cr_heads[cr_idx] >= cr_tails[cr_idx]:
+                    range_ = range(cr_tails[cr_idx], cr_heads[cr_idx])
+                else:
+                    range_ = itertools.chain(range(cr_tails[cr_idx], cr_ring_sz), range(0, cr_heads[cr_idx]))
+
+                for i in range_:
+                    cr_data_addr = cr_iova_base + cr_ent_sz * i
+                    print(f"CR{cr_idx} idx {i} @ iova {cr_data_addr:016X}")
                     cr_data = self.dart_tracer.dart.ioread(STREAM, cr_data_addr, cr_ent_sz)
                     chexdump(cr_data)
-        except Exception as e:
-            print(e)
+            except Exception as e:
+                print(e)
 
 
 BTTracer = BTTracer._reloadcls()
