@@ -322,9 +322,12 @@ class ADMACChannel(Reloadable):
     def status(self):
         return self.regs.CHAN_STATUS[self.ch, 0].reg
 
-    def poll(self):
+    def poll(self, wait=True):
         while not (self.status.DESC_DONE or self.status.RING_ERR):
             time.sleep(0.001)
+
+            if not wait:
+                break
 
         self.regs.CHAN_STATUS[self.ch,0].reg = R_CHAN_STATUS(DESC_DONE=1)
 
