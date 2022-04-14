@@ -207,7 +207,10 @@ class ProxyUtils(Reloadable):
         lines = list(c.disassemble())
         if pc is not None:
             idx = (pc - start) // 4
-            lines[idx] = " *" + lines[idx][2:]
+            try:
+                lines[idx] = " *" + lines[idx][2:]
+            except IndexError:
+                pass
         for i in lines:
             print(" " + i)
 
