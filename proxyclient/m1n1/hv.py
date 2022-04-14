@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-import sys, traceback, struct, array, bisect, os, signal, runpy
+import io, sys, traceback, struct, array, bisect, os, signal, runpy
 from construct import *
 from enum import Enum, IntEnum, IntFlag
 
@@ -229,6 +229,25 @@ class HV(Reloadable):
             assert False
 
         assert self.p.hv_map(ipa, (index << 2) | flags | t, size, 0) >= 0
+
+    def readmem(self, va, size):
+        '''read from virtual memory'''
+        with io.BytesIO() as buffer:
+            while size > 0:
+                pa = self.p.hv_translate(va, False, False)
+                if pa == 0:
+                    break
+
+                size_in_page = 4096 - (va % 4096)
+                if size < size_in_page:
+                    buffer.write(self.iface.readmem(pa, size))
+                    break
+
+                buffer.write(self.iface.readmem(pa, size_in_page))
+                va += size_in_page
+                size -= size_in_page
+
+            return buffer.getvalue()
 
     def trace_irq(self, device, num, count, flags):
         for n in range(num, num + count):
