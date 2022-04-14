@@ -50,6 +50,7 @@ class R_SERDES_CONF(Register32):
     UNK1 = 12
     UNK2 = 13
     IDLE_UNDRIVEN = 14 # TX only
+    NO_DATA_FEEDBACK = 15 # RX only
 
     SYNC_SEL = 18, 16
 
