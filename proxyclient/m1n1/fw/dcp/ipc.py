@@ -417,7 +417,7 @@ IOMFBParameterName = Int32ul
 BufferDescriptor = uint64_t
 
 SwapCompleteData = Bytes(0x12)
-SwapInfoBlob = Bytes(0x680)
+SwapInfoBlob = Bytes(0x6c4)
 
 SWAP_SURFACES = 4
 
@@ -520,7 +520,7 @@ class PropID(IntEnum):
 class UPPipeAP_H13P(IPCObject):
     A000 = Call(bool_, "late_init_signal")
     A029 = Call(void, "setup_video_limits")
-    A034 = Call(void, "update_notify_clients_dcp", Array(13, uint))
+    A034 = Call(void, "update_notify_clients_dcp", Array(14, uint))
     A036 = Call(bool_, "apt_supported")
 
     D000 = Callback(bool_, "did_boot_signal")
