@@ -37,7 +37,6 @@ p.pmgr_adt_clocks_enable("/arm-io/i2c1")
 p.pmgr_adt_clocks_enable("/arm-io/admac-sio")
 p.pmgr_adt_clocks_enable("/arm-io/dart-sio")
 p.pmgr_adt_clocks_enable("/arm-io/mca-switch")
-p.pmgr_adt_clocks_enable("/arm-io/mca0")
 
 # reset AUDIO_P
 PS_AUDIO_P = PMGR(u).regs[0].PS4[10]
