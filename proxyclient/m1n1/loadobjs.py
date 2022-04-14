@@ -142,9 +142,9 @@ class LinkedProgram:
             yield args_copied
 
     def _wrap_call_to(self, addr):
-        def call_symbol(*args):
+        def call_symbol(*args, call=self.u.proxy.call):
             with self._copy_args_to_target(args) as args_copied:
-                return self.u.proxy.call(addr, *args_copied)
+                return call(addr, *args_copied)
         return call_symbol
 
     def lookup(self, addr):
