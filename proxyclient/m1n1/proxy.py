@@ -1004,7 +1004,7 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_FB_BLIT, x, y, w, h, ptr, stride)
     def fb_unblit(self, x, y, w, h, ptr, stride):
         return self.request(self.P_FB_UNBLIT, x, y, w, h, ptr, stride)
-    def fb_fill(self, color):
+    def fb_fill(self, x, y, w, h, color):
         return self.request(self.P_FB_FILL, x, y, w, h, color)
     def fb_clear(self, color):
         return self.request(self.P_FB_CLEAR, color)
