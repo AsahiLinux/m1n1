@@ -350,12 +350,15 @@ class ADMAC(Reloadable):
         self.p = u.proxy
         self.debug = debug
 
-        adt_node = u.adt[devpath]
+        if type(devpath) is str:
+            adt_node = u.adt[devpath]
+            # ADT's #dma-channels counts pairs of RX/TX channel, so multiply by two
+            self.nchans = adt_node._properties["#dma-channels"] * 2
+            self.base, _ = adt_node.get_reg(0)
+        else:
+            self.base = devpath
+            self.nchans = 26
 
-        # ADT's #dma-channels counts pairs of RX/TX channel, so multiply by two
-        self.nchans = adt_node._properties["#dma-channels"] * 2
-
-        self.base, _ = adt_node.get_reg(0)
         self.regs = ADMACRegs(u, self.base)
         self.dart, self.dart_stream = dart, dart_stream
 
