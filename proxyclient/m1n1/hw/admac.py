@@ -150,6 +150,7 @@ class ADMACDescriptor(Reloadable):
 class ADMACReportFlags(Register32):
     UNK1 = 24
     UNK2 = 25
+    UNK4 = 26 # memory access fault?
     UNK3 = 27
     DESC_ID = 7, 0
 
