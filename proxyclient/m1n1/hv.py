@@ -52,12 +52,13 @@ class TraceMode(IntEnum):
 Different types of Tracing '''
 
     OFF = 0
-    ASYNC = 1
-    UNBUF = 2
-    WSYNC = 3
-    SYNC = 4
-    HOOK = 5
-    RESERVED = 6
+    BYPASS = 1
+    ASYNC = 2
+    UNBUF = 3
+    WSYNC = 4
+    SYNC = 5
+    HOOK = 6
+    RESERVED = 7
 
 class HV(Reloadable):
     PAC_MASK = 0xfffff00000000000
@@ -243,7 +244,7 @@ class HV(Reloadable):
         assert self.p.hv_trace_irq(self.AIC_EVT_TYPE_HW, num, count, flags) > 0
 
     def add_tracer(self, zone, ident, mode=TraceMode.ASYNC, read=None, write=None, **kwargs):
-        assert mode in (TraceMode.RESERVED, TraceMode.OFF) or read or write
+        assert mode in (TraceMode.RESERVED, TraceMode.OFF, TraceMode.BYPASS) or read or write
         self.mmio_maps[zone, ident] = (mode, ident, read, write, kwargs)
         self.dirty_maps.set(zone)
 
@@ -313,7 +314,7 @@ class HV(Reloadable):
                     flags = self.SPTE_TRACE_READ if need_read else 0
                     self.map_hook_idx(mzone.start, mzone.stop - mzone.start, 0,
                                       False, need_write, flags=flags)
-                elif mode in (TraceMode.UNBUF, TraceMode.ASYNC):
+                elif mode in (TraceMode.UNBUF, TraceMode.ASYNC, TraceMode.BYPASS):
                     pa = mzone.start
                     if mode == TraceMode.UNBUF:
                         pa |= self.SPTE_TRACE_UNBUF
