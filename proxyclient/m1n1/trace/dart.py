@@ -14,9 +14,9 @@ class DARTTracer(ADTDevTracer):
     NAMES = ["regs"]
 
     @classmethod
-    def _reloadcls(cls):
+    def _reloadcls(cls, force=False):
         global DART
-        DART = DART._reloadcls()
+        DART = DART._reloadcls(force)
         return super()._reloadcls()
 
     def start(self):

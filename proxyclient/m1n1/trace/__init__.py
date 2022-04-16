@@ -177,9 +177,9 @@ class ADTDevTracer(Tracer):
         self.dev = hv.adt[devpath]
 
     @classmethod
-    def _reloadcls(cls):
-        cls.REGMAPS = [i._reloadcls() if i else None for i in cls.REGMAPS]
-        return super()._reloadcls()
+    def _reloadcls(cls, force=False):
+        cls.REGMAPS = [i._reloadcls(force) if i else None for i in cls.REGMAPS]
+        return super()._reloadcls(force)
 
     def start(self):
         for i in range(len(self.dev.reg)):

@@ -162,7 +162,7 @@ class ReloadableMeta(type):
 
 class Reloadable(metaclass=ReloadableMeta):
     @classmethod
-    def _reloadcls(cls):
+    def _reloadcls(cls, force=False):
         mods = []
         for c in cls.mro():
             mod = sys.modules[c.__module__]
@@ -178,7 +178,7 @@ class Reloadable(metaclass=ReloadableMeta):
             if not source:
                 continue
             newest = max(newest, os.stat(source).st_mtime, pcls._load_time)
-            if (reloaded or pcls._load_time < newest) and mod.__name__ not in reloaded:
+            if (force or reloaded or pcls._load_time < newest) and mod.__name__ not in reloaded:
                 print(f"Reload: {mod.__name__}")
                 mod = importlib.reload(mod)
                 reloaded.add(mod.__name__)
