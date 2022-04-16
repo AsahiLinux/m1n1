@@ -288,9 +288,15 @@ class HV(Reloadable):
         for zone in self.dirty_maps:
             if zone.stop <= top:
                 continue
+            top = max(top, zone.start)
+
             for mzone, maps in self.mmio_maps.overlaps(zone):
                 if mzone.stop <= top:
                     continue
+                if top < mzone.start:
+                    self.map_hw(top, top, mzone.start - top)
+                    self.log(f"PT[{top:09x}:{mzone.start:09x}] -> HW")
+
                 top = mzone.stop
                 if not maps:
                     continue
@@ -301,7 +307,7 @@ class HV(Reloadable):
                 need_write = any(m[3] for m in maps)
 
                 if mode == TraceMode.RESERVED:
-                    print(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> RESERVED {ident}")
+                    self.log(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> RESERVED {ident}")
                     continue
                 elif mode in (TraceMode.HOOK, TraceMode.SYNC):
                     self.map_hook_idx(mzone.start, mzone.stop - mzone.start, 0,
@@ -309,7 +315,7 @@ class HV(Reloadable):
                     if mode == TraceMode.HOOK:
                         for m2, i2, r2, w2, k2 in maps[1:]:
                             if m2 == TraceMode.HOOK:
-                                print(f"!! Conflict: HOOK {i2}")
+                                self.log(f"!! Conflict: HOOK {i2}")
                 elif mode == TraceMode.WSYNC:
                     flags = self.SPTE_TRACE_READ if need_read else 0
                     self.map_hook_idx(mzone.start, mzone.stop - mzone.start, 0,
@@ -325,7 +331,7 @@ class HV(Reloadable):
                     self.map_sw(mzone.start, pa, mzone.stop - mzone.start)
                 elif mode == TraceMode.OFF:
                     self.map_hw(mzone.start, mzone.start, mzone.stop - mzone.start)
-                    print(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> HW")
+                    self.log(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> HW")
                     continue
 
                 rest = [m[1] for m in maps[1:] if m[0] != TraceMode.OFF]
@@ -334,7 +340,11 @@ class HV(Reloadable):
                 else:
                     rest = ""
 
-                print(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> {mode.name}.{'R' if read else ''}{'W' if read else ''} {ident}{rest}")
+                self.log(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> {mode.name}.{'R' if read else ''}{'W' if read else ''} {ident}{rest}")
+
+            if top < zone.stop:
+                self.map_hw(top, top, zone.stop - top)
+                self.log(f"PT[{top:09x}:{zone.stop:09x}] -> HW")
 
         self.u.inst(0xd50c83df) # tlbi vmalls12e1is
         self.dirty_maps.clear()
