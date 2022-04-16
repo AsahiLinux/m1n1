@@ -155,7 +155,7 @@ class PrintTracer(Tracer):
         dev, zone = self.device_addr_tbl.lookup(evt.addr)
         t = "W" if evt.flags.WRITE else "R"
         m = "+" if evt.flags.MULTI else " "
-        logline = (f"[cpu{evt.flags.CPU}][0x{evt.pc:016x}] MMIO: {t}.{1<<evt.flags.WIDTH:<2}{m} " +
+        logline = (f"[cpu{evt.flags.CPU}] [0x{evt.pc:016x}] MMIO: {t}.{1<<evt.flags.WIDTH:<2}{m} " +
                    f"0x{evt.addr:x} ({dev}, offset {evt.addr - zone.start:#04x}) = 0x{evt.data:x}")
         print(logline)
         if self.log_file:
