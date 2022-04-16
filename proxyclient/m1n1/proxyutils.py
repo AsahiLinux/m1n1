@@ -347,7 +347,7 @@ class LazyADT:
         return iter(self._adt)
 
 class RegMonitor(Reloadable):
-    def __init__(self, utils, bufsize=0x100000, ascii=False):
+    def __init__(self, utils, bufsize=0x100000, ascii=False, log=None):
         self.utils = utils
         self.proxy = utils.proxy
         self.iface = self.proxy.iface
@@ -355,6 +355,7 @@ class RegMonitor(Reloadable):
         self.last = []
         self.bufsize = bufsize
         self.ascii = ascii
+        self.log = log or print
 
         if bufsize:
             self.scratch = utils.malloc(bufsize)
@@ -374,6 +375,11 @@ class RegMonitor(Reloadable):
         self.ranges.append((start, size, name, offset))
         self.last.append(None)
 
+    def show_regions(self, log=print):
+        for start, size, name, offset, readfn in sorted(self.ranges):
+            end = start + size - 1
+            log(f"{start:#x}..{end:#x} ({size:#x})\t{name}")
+
     def poll(self):
         if not self.ranges:
             return
@@ -383,7 +389,7 @@ class RegMonitor(Reloadable):
             block = self.readmem(start, size)
             if block is None:
                 if last is not None:
-                    print(f"# Lost: {name} ({start:#x}..{start + size - 1:#x})")
+                    self.log(f"# Lost: {name} ({start:#x}..{start + size - 1:#x})")
                 cur.append(None)
                 continue
 
@@ -391,26 +397,29 @@ class RegMonitor(Reloadable):
             cur.append(words)
             if last == words:
                 continue
+            out = []
             if name:
-                print(f"# {name} ({start:#x}..{start + size - 1:#x})")
+                out.append(f"# {name} ({start:#x}..{start + size - 1:#x})\n")
+            else:
+                out.append(f"# ({start:#x}..{start + size - 1:#x})\n")
             row = 8
             skipping = False
             for i in range(0, count, row):
                 if not last:
                     if i != 0 and words[i:i+row] == words[i-row:i]:
                         if not skipping:
-                            print("%016x *" % (offset + i * 4))
+                            out.append("%016x *\n" % (offset + i * 4))
                         skipping = True
                     else:
-                        print("%016x" % (offset + i * 4), end=" ")
+                        out.append("%016x " % (offset + i * 4))
                         for new in words[i:i+row]:
-                            print("%08x" % new, end=" ")
+                            out.append("%08x " % new)
                         if self.ascii:
-                            print("| " + _ascii(block[4*i:4*(i+row)]), end="")
-                        print()
+                            out.append("| " + _ascii(block[4*i:4*(i+row)]))
+                        out.append("\n")
                         skipping = False
                 elif last[i:i+row] != words[i:i+row]:
-                    print("%016x" % (offset + i * 4), end=" ")
+                    out.append("%016x " % (offset + i * 4))
                     for old, new in zip(last[i:i+row], words[i:i+row]):
                         so = "%08x" % old
                         sn = s = "%08x" % new
@@ -424,10 +433,11 @@ class RegMonitor(Reloadable):
                                     ld = d
                                 s += b
                             s += "\x1b[m"
-                        print(s, end=" ")
+                        out.append(s + " ")
                     if self.ascii:
-                        print("| " + _ascii(block[4*i:4*(i+row)]), end="")
-                    print()
+                        out.append("| " + _ascii(block[4*i:4*(i+row)]))
+                    out.append("\n")
+            self.log("".join(out))
         self.last = cur
 
 class GuardedHeap:
