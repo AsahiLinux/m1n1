@@ -597,11 +597,16 @@ class HV(Reloadable):
             VMSA_LOCK_EL1,
             #SPRR_UNK1_EL1,
             #SPRR_UNK2_EL1,
+            MDSCR_EL1,
         }
         ro = {
             ACC_CFG_EL1,
             ACC_OVRD_EL1,
         }
+        for i in range(len(self._bps)):
+            shadow.add(DBGBCRn_EL1(i))
+            shadow.add(DBGBVRn_EL1(i))
+
         value = 0
         if enc in shadow:
             if iss.DIR == MSR_DIR.READ:
