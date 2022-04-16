@@ -16,6 +16,7 @@
 
 #define PAGE_SIZE       0x4000
 #define CACHE_LINE_SIZE 64
+#define CACHE_LINE_LOG2 6
 
 #define PTE_ACCESS            BIT(10)
 #define PTE_SH_NS             (0b11L << 8)
@@ -502,11 +503,12 @@ union simd_reg {
     u8 b[16];
 };
 
-static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width)
+static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u64 *vaddr)
 {
     u64 Rt = insn & 0x1f;
     u64 Rn = (insn >> 5) & 0x1f;
     u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
+    u64 imm7 = EXT((insn >> 15) & 0x7f, 7);
     u64 *regs = ctx->regs;
 
     union simd_reg simd[32];
@@ -563,11 +565,23 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width)
     } else if ((insn & 0xffc00000) == 0xa9400000) {
         // LDP (Signed offset, 64-bit)
         *width = 4;
+        *vaddr = regs[Rn] + (imm7 * 8);
         DECODE_OK;
-        CHECK_RN;
         u64 Rt2 = (insn >> 10) & 0x1f;
         regs[Rt] = val[0];
         regs[Rt2] = val[1];
+    } else if ((insn & 0xffc00000) == 0xad400000) {
+        // LDP (SIMD&FP, 128-bit) Signed offset
+        *width = 5;
+        *vaddr = regs[Rn] + (imm7 * 16);
+        DECODE_OK;
+        u64 Rt2 = (insn >> 10) & 0x1f;
+        get_simd_state(simd);
+        simd[Rt].d[0] = val[0];
+        simd[Rt].d[1] = val[1];
+        simd[Rt2].d[0] = val[2];
+        simd[Rt2].d[1] = val[3];
+        put_simd_state(simd);
     } else if ((insn & 0x3fc00000) == 0x3d400000) {
         // LDR (immediate, SIMD&FP) Unsigned offset
         DECODE_OK;
@@ -631,12 +645,15 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width)
     return true;
 }
 
-static bool emulate_store(struct exc_info *ctx, u32 insn, u64 *val, u64 *width)
+static bool emulate_store(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u64 *vaddr)
 {
     u64 Rt = insn & 0x1f;
     u64 Rn = (insn >> 5) & 0x1f;
     u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
+    u64 imm7 = EXT((insn >> 15) & 0x7f, 7);
     u64 *regs = ctx->regs;
+
+    union simd_reg simd[32];
 
     *width = insn >> 30;
 
@@ -660,16 +677,63 @@ static bool emulate_store(struct exc_info *ctx, u32 insn, u64 *val, u64 *width)
     } else if ((insn & 0x3fe04c00) == 0x38204800) {
         // STRx (register)
         *val = regs[Rt] & mask;
-    } else if ((insn & 0xffc00000) == 0xa9000000) {
-        // STP (Signed offset, 64-bit)
-        CHECK_RN;
+    } else if ((insn & 0xfec00000) == 0x28000000) {
+        // ST[N]P (Signed offset, 32-bit)
+        *vaddr = regs[Rn] + (imm7 * 4);
+        u64 Rt2 = (insn >> 10) & 0x1f;
+        val[0] = (regs[Rt] & 0xffffffff) | (regs[Rt2] << 32);
+        *width = 3;
+    } else if ((insn & 0xfec00000) == 0xa8000000) {
+        // ST[N]P (Signed offset, 64-bit)
+        *vaddr = regs[Rn] + (imm7 * 8);
         u64 Rt2 = (insn >> 10) & 0x1f;
         val[0] = regs[Rt];
         val[1] = regs[Rt2];
         *width = 4;
+    } else if ((insn & 0x3fc00000) == 0x3d000000) {
+        // STR (immediate, SIMD&FP) Unsigned offset, 8..64-bit
+        get_simd_state(simd);
+        *val = simd[Rt].d[0];
+    } else if ((insn & 0x3fe04c00) == 0x3c204800) {
+        // STR (register, SIMD&FP) 8..64-bit
+        get_simd_state(simd);
+        *val = simd[Rt].d[0];
+    } else if ((insn & 0xffe04c00) == 0x3ca04800) {
+        // STR (register, SIMD&FP) 128-bit
+        get_simd_state(simd);
+        val[0] = simd[Rt].d[0];
+        val[1] = simd[Rt].d[1];
+        *width = 4;
+    } else if ((insn & 0xffc00000) == 0x3d800000) {
+        // STR (immediate, SIMD&FP) Unsigned offset, 128-bit
+        get_simd_state(simd);
+        val[0] = simd[Rt].d[0];
+        val[1] = simd[Rt].d[1];
+        *width = 4;
+    } else if ((insn & 0xffe00000) == 0x3c800000) {
+        // STUR (immediate, SIMD&FP) 128-bit
+        get_simd_state(simd);
+        val[0] = simd[Rt].d[0];
+        val[1] = simd[Rt].d[1];
+        *width = 4;
+    } else if ((insn & 0xffc00000) == 0xad000000) {
+        // STP (SIMD&FP, 128-bit) Signed offset
+        *vaddr = regs[Rn] + (imm7 * 16);
+        u64 Rt2 = (insn >> 10) & 0x1f;
+        get_simd_state(simd);
+        val[0] = simd[Rt].d[0];
+        val[1] = simd[Rt].d[1];
+        val[2] = simd[Rt2].d[0];
+        val[3] = simd[Rt2].d[1];
+        *width = 5;
     } else if ((insn & 0x3fe00c00) == 0x38000000) {
         // STURx (unscaled)
         *val = regs[Rt] & mask;
+    } else if ((insn & 0xffffffe0) == 0xd50b7420) {
+        // DC ZVA
+        *vaddr = regs[Rt];
+        memset(val, 0, CACHE_LINE_SIZE);
+        *width = CACHE_LINE_LOG2;
     } else {
         return false;
     }
@@ -722,8 +786,10 @@ bool hv_pa_write(struct exc_info *ctx, u64 addr, u64 *val, int width)
             write64(addr, val[0]);
             break;
         case 4:
-            write64(addr, val[0]);
-            write64(addr + 8, val[1]);
+        case 5:
+        case 6:
+            for (u64 i = 0; i < (1UL << (width - 3)); i++)
+                write64(addr + 8 * i, val[i]);
             break;
         default:
             dprintf("HV: unsupported write width %ld\n", width);
@@ -765,6 +831,12 @@ bool hv_pa_read(struct exc_info *ctx, u64 addr, u64 *val, int width)
             val[0] = read64(addr);
             val[1] = read64(addr + 8);
             break;
+        case 5:
+            val[0] = read64(addr);
+            val[1] = read64(addr + 8);
+            val[2] = read64(addr + 16);
+            val[3] = read64(addr + 24);
+            break;
         default:
             dprintf("HV: unsupported read width %ld\n", width);
             exc_guard = GUARD_OFF;
@@ -790,13 +862,186 @@ bool hv_pa_rw(struct exc_info *ctx, u64 addr, u64 *val, bool write, int width)
         return hv_pa_read(ctx, addr, val, width);
 }
 
+static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 ipa, u64 *val,
+                                  bool is_write, u64 width, u64 elr)
+{
+    assert(pte);
+    assert(((ipa & 0x3fff) + (1 << width)) <= 0x4000);
+
+    u64 target = pte & PTE_TARGET_MASK_L4;
+    u64 paddr = target | (vaddr & MASK(VADDR_L4_OFFSET_BITS));
+
+    // For split ops, treat hardware mapped pages as SPTE_MAP
+    if (IS_HW(pte))
+        pte = target | FIELD_PREP(PTE_TYPE, PTE_BLOCK) | FIELD_PREP(SPTE_TYPE, SPTE_MAP);
+
+    if (is_write) {
+        // Write
+        hv_wdt_breadcrumb('3');
+
+        if (pte & SPTE_TRACE_WRITE)
+            emit_mmiotrace(elr, ipa, val, width, MMIO_EVT_WRITE, pte & SPTE_TRACE_UNBUF);
+
+        hv_wdt_breadcrumb('4');
+
+        switch (FIELD_GET(SPTE_TYPE, pte)) {
+            case SPTE_PROXY_HOOK_R:
+                paddr = ipa;
+                // fallthrough
+            case SPTE_MAP:
+                hv_wdt_breadcrumb('5');
+                dprintf("HV: SPTE_MAP[W] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr, far, paddr,
+                        1 << width, val[0]);
+                if (!hv_pa_write(ctx, paddr, val, width))
+                    return false;
+                break;
+            case SPTE_HOOK: {
+                hv_wdt_breadcrumb('6');
+                hv_hook_t *hook = (hv_hook_t *)target;
+                if (!hook(ctx, ipa, val, true, width))
+                    return false;
+                dprintf("HV: SPTE_HOOK[W] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr, far, ipa,
+                        1 << width, hook, wval);
+                break;
+            }
+            case SPTE_PROXY_HOOK_RW:
+            case SPTE_PROXY_HOOK_W: {
+                hv_wdt_breadcrumb('7');
+                struct hv_vm_proxy_hook_data hook = {
+                    .flags = FIELD_PREP(MMIO_EVT_WIDTH, width) | MMIO_EVT_WRITE,
+                    .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
+                    .addr = ipa,
+                    .data = {0},
+                };
+                memcpy(hook.data, val, 1 << width);
+                hv_exc_proxy(ctx, START_HV, HV_HOOK_VM, &hook);
+                break;
+            }
+            default:
+                printf("HV: invalid SPTE 0x%016lx for IPA 0x%lx\n", pte, ipa);
+                return false;
+        }
+    } else {
+        hv_wdt_breadcrumb('3');
+        switch (FIELD_GET(SPTE_TYPE, pte)) {
+            case SPTE_PROXY_HOOK_W:
+                paddr = ipa;
+                // fallthrough
+            case SPTE_MAP:
+                hv_wdt_breadcrumb('4');
+                if (!hv_pa_read(ctx, paddr, val, width))
+                    return false;
+                dprintf("HV: SPTE_MAP[R] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr, far, paddr,
+                        1 << width, val[0]);
+                break;
+            case SPTE_HOOK: {
+                hv_wdt_breadcrumb('5');
+                hv_hook_t *hook = (hv_hook_t *)target;
+                if (!hook(ctx, ipa, val, false, width))
+                    return false;
+                dprintf("HV: SPTE_HOOK[R] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr, far, ipa,
+                        1 << width, hook, val);
+                break;
+            }
+            case SPTE_PROXY_HOOK_RW:
+            case SPTE_PROXY_HOOK_R: {
+                hv_wdt_breadcrumb('6');
+                struct hv_vm_proxy_hook_data hook = {
+                    .flags = FIELD_PREP(MMIO_EVT_WIDTH, width),
+                    .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
+                    .addr = ipa,
+                };
+                hv_exc_proxy(ctx, START_HV, HV_HOOK_VM, &hook);
+                memcpy(val, hook.data, 1 << width);
+                break;
+            }
+            default:
+                printf("HV: invalid SPTE 0x%016lx for IPA 0x%lx\n", pte, ipa);
+                return false;
+        }
+
+        hv_wdt_breadcrumb('7');
+        if (pte & SPTE_TRACE_READ)
+            emit_mmiotrace(elr, ipa, val, width, 0, pte & SPTE_TRACE_UNBUF);
+    }
+
+    hv_wdt_breadcrumb('*');
+
+    return true;
+}
+
+static bool hv_emulate_rw(struct exc_info *ctx, u64 pte, u64 vaddr, u64 ipa, u8 *val, bool is_write,
+                          u64 bytes, u64 elr)
+{
+    u64 aval[HV_MAX_RW_WORDS];
+    memset(aval, 0, sizeof(aval));
+
+    bool advance = (IS_HW(pte) || (IS_SW(pte) && FIELD_GET(SPTE_TYPE, pte) == SPTE_MAP)) ? 1 : 0;
+    u64 off = 0;
+    u64 width;
+
+    bool first = true;
+
+    u64 left = bytes;
+
+    while (left > 0) {
+        if (left >= 64 && (ipa & 63) == 0)
+            width = 6;
+        else if (left >= 32 && (ipa & 31) == 0)
+            width = 5;
+        else if (left >= 16 && (ipa & 15) == 0)
+            width = 4;
+        else if (left >= 8 && (ipa & 7) == 0)
+            width = 3;
+        else if (left >= 4 && (ipa & 3) == 0)
+            width = 2;
+        else if (left >= 2 && (ipa & 1) == 0)
+            width = 1;
+        else
+            width = 0;
+
+        u64 chunk = 1 << width;
+
+        /*
+        if (chunk != bytes)
+            printf("HV: Splitting unaligned %ld-byte %s: %ld bytes @ 0x%lx\n", bytes,
+                is_write ? "write" : "read", chunk, vaddr);
+        */
+
+        if (is_write)
+            memcpy(aval, val + off, chunk);
+
+        if (!hv_emulate_rw_aligned(ctx, pte, vaddr, ipa, aval, is_write, width, elr)) {
+            if (!first)
+                printf("HV: WARNING: Failed to emulate split op but part of it did commit!\n");
+            return false;
+        }
+
+        if (!is_write)
+            memcpy(val + off, aval, chunk);
+
+        left -= chunk;
+        off += chunk;
+
+        ipa += chunk;
+        vaddr += chunk;
+        if (advance)
+            pte += chunk;
+
+        first = 0;
+    }
+
+    return true;
+}
+
 bool hv_handle_dabort(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('0');
     u64 esr = hv_get_esr();
+    bool is_write = esr & ESR_ISS_DABORT_WnR;
 
     u64 far = hv_get_far();
-    u64 ipa = hv_translate(far, true, esr & ESR_ISS_DABORT_WnR);
+    u64 ipa = hv_translate(far, true, is_write);
 
     dprintf("hv_handle_abort(): stage 1 0x%0lx -> 0x%lx\n", far, ipa);
 
@@ -826,9 +1071,6 @@ bool hv_handle_dabort(struct exc_info *ctx)
 
     assert(IS_SW(pte));
 
-    u64 target = pte & PTE_TARGET_MASK_L4;
-    u64 paddr = target | (far & MASK(VADDR_L4_OFFSET_BITS));
-
     u64 elr = ctx->elr;
     u64 elr_pa = hv_translate(elr, false, false);
     if (!elr_pa) {
@@ -837,120 +1079,123 @@ bool hv_handle_dabort(struct exc_info *ctx)
     }
 
     u32 insn = read32(elr_pa);
-    u64 val[2] = {0, 0};
     u64 width;
 
     hv_wdt_breadcrumb('2');
 
-    if (esr & ESR_ISS_DABORT_WnR) {
+    u64 vaddr = far;
+
+    u8 val[HV_MAX_RW_SIZE] ALIGNED(HV_MAX_RW_SIZE);
+    memset(val, 0, sizeof(val));
+
+    if (is_write) {
         hv_wdt_breadcrumb('W');
 
-        if (!emulate_store(ctx, insn, val, &width)) {
+        if (!emulate_store(ctx, insn, (u64 *)val, &width, &vaddr)) {
             printf("HV: store not emulated: 0x%08x at 0x%lx\n", insn, ipa);
             return false;
-        }
-
-        hv_wdt_breadcrumb('3');
-
-        if (pte & SPTE_TRACE_WRITE)
-            emit_mmiotrace(elr, ipa, val, width, MMIO_EVT_WRITE, pte & SPTE_TRACE_UNBUF);
-
-        hv_wdt_breadcrumb('4');
-
-        switch (FIELD_GET(SPTE_TYPE, pte)) {
-            case SPTE_PROXY_HOOK_R:
-                paddr = ipa;
-                // fallthrough
-            case SPTE_MAP:
-                hv_wdt_breadcrumb('5');
-                dprintf("HV: SPTE_MAP[W] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr_pa, far, paddr,
-                        1 << width, val[0]);
-                if (!hv_pa_write(ctx, paddr, val, width))
-                    return false;
-                break;
-            case SPTE_HOOK: {
-                hv_wdt_breadcrumb('6');
-                hv_hook_t *hook = (hv_hook_t *)target;
-                if (!hook(ctx, ipa, val, true, width))
-                    return false;
-                dprintf("HV: SPTE_HOOK[W] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr_pa, far,
-                        ipa, 1 << width, hook, val);
-                break;
-            }
-            case SPTE_PROXY_HOOK_RW:
-            case SPTE_PROXY_HOOK_W: {
-                hv_wdt_breadcrumb('7');
-                struct hv_vm_proxy_hook_data hook = {
-                    .flags = FIELD_PREP(MMIO_EVT_WIDTH, width) | MMIO_EVT_WRITE,
-                    .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
-                    .addr = ipa,
-                    .data = {val[0], val[1]},
-                };
-                hv_exc_proxy(ctx, START_HV, HV_HOOK_VM, &hook);
-                break;
-            }
-            default:
-                printf("HV: invalid SPTE 0x%016lx for IPA 0x%lx\n", pte, ipa);
-                return false;
         }
     } else {
         hv_wdt_breadcrumb('R');
 
-        if (!emulate_load(ctx, insn, NULL, &width)) {
+        if (!emulate_load(ctx, insn, NULL, &width, &vaddr)) {
             printf("HV: load not emulated: 0x%08x at 0x%lx\n", insn, ipa);
             return false;
         }
-
-        hv_wdt_breadcrumb('3');
-        switch (FIELD_GET(SPTE_TYPE, pte)) {
-            case SPTE_PROXY_HOOK_W:
-                paddr = ipa;
-                // fallthrough
-            case SPTE_MAP:
-                hv_wdt_breadcrumb('4');
-                if (!hv_pa_read(ctx, paddr, val, width))
-                    return false;
-                dprintf("HV: SPTE_MAP[R] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr_pa, far, paddr,
-                        1 << width, val[0]);
-                break;
-            case SPTE_HOOK: {
-                hv_wdt_breadcrumb('5');
-                hv_hook_t *hook = (hv_hook_t *)target;
-                if (!hook(ctx, ipa, val, false, width))
-                    return false;
-                dprintf("HV: SPTE_HOOK[R] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr_pa, far,
-                        ipa, 1 << width, hook, val);
-                break;
-            }
-            case SPTE_PROXY_HOOK_RW:
-            case SPTE_PROXY_HOOK_R: {
-                hv_wdt_breadcrumb('6');
-                struct hv_vm_proxy_hook_data hook = {
-                    .flags = FIELD_PREP(MMIO_EVT_WIDTH, width),
-                    .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
-                    .addr = ipa,
-                };
-                hv_exc_proxy(ctx, START_HV, HV_HOOK_VM, &hook);
-                memcpy(val, hook.data, sizeof(val));
-                break;
-            }
-            default:
-                printf("HV: invalid SPTE 0x%016lx for IPA 0x%lx\n", pte, ipa);
-                return false;
-        }
-
-        hv_wdt_breadcrumb('7');
-        if (pte & SPTE_TRACE_READ)
-            emit_mmiotrace(elr, ipa, val, width, 0, pte & SPTE_TRACE_UNBUF);
-
-        hv_wdt_breadcrumb('8');
-        if (!emulate_load(ctx, insn, val, &width))
-            return false;
-
-        hv_wdt_breadcrumb('9');
     }
 
-    hv_wdt_breadcrumb('*');
+    /*
+     Check for HW page-straddling conditions
+     Right now we only support the case where the page boundary is exactly halfway
+     through the read/write.
+    */
+    u64 bytes = 1 << width;
+    u64 vaddrp0 = vaddr & ~MASK(VADDR_L3_OFFSET_BITS);
+    u64 vaddrp1 = (vaddr + bytes - 1) & ~MASK(VADDR_L3_OFFSET_BITS);
+
+    if (vaddrp0 == vaddrp1) {
+        // Easy case, no page straddle
+        if (far != vaddr) {
+            printf("HV: faulted at 0x%lx, but expecting 0x%lx\n", far, vaddr);
+            return false;
+        }
+
+        if (!hv_emulate_rw(ctx, pte, vaddr, ipa, val, is_write, bytes, elr))
+            return false;
+    } else {
+        // Oops, we're straddling a page boundary
+        // Treat it as two separate loads or stores
+
+        assert(bytes > 1);
+        hv_wdt_breadcrumb('s');
+
+        u64 off = vaddrp1 - vaddr;
+
+        u64 vaddr2;
+        const char *other;
+        if (far == vaddr) {
+            other = "upper";
+            vaddr2 = vaddrp1;
+        } else {
+            if (far != vaddrp1) {
+                printf("HV: faulted at 0x%lx, but expecting 0x%lx\n", far, vaddrp1);
+                return false;
+            }
+            other = "lower";
+            vaddr2 = vaddr;
+        }
+
+        u64 ipa2 = hv_translate(vaddr2, true, esr & ESR_ISS_DABORT_WnR);
+        if (!ipa2) {
+            printf("HV: %s half stage 1 translation failed at VA 0x%0lx\n", other, vaddr2);
+            return false;
+        }
+        if (ipa2 >= BIT(vaddr_bits)) {
+            printf("hv_handle_abort(): %s half IPA out of bounds: 0x%0lx -> 0x%lx\n", other, vaddr2,
+                   ipa2);
+            return false;
+        }
+
+        u64 pte2 = hv_pt_walk(ipa2);
+        if (!pte2) {
+            printf("HV: Unmapped %s half IPA 0x%lx\n", other, ipa2);
+            return false;
+        }
+
+        hv_wdt_breadcrumb('S');
+
+        printf("HV: Emulating %s straddling page boundary as two ops @ 0x%lx (%ld bytes)\n",
+               is_write ? "write" : "read", vaddr, bytes);
+
+        bool upper_ret;
+        if (far == vaddr) {
+            if (!hv_emulate_rw(ctx, pte, vaddr, ipa, val, is_write, off, elr))
+                return false;
+            upper_ret =
+                hv_emulate_rw(ctx, pte2, vaddr2, ipa2, val + off, is_write, bytes - off, elr);
+        } else {
+            if (!hv_emulate_rw(ctx, pte2, vaddr2, ipa2, val, is_write, off, elr))
+                return false;
+            upper_ret =
+                hv_emulate_rw(ctx, pte, vaddrp1, ipa, val + off, is_write, bytes - off, elr);
+        }
+
+        if (!upper_ret) {
+            printf("HV: WARNING: Failed to emulate upper half but lower half did commit!\n");
+            return false;
+        }
+    }
+
+    if (vaddrp0 != vaddrp1) {
+        printf("HV: Straddled r/w data:\n");
+        hexdump(val, bytes);
+    }
+
+    hv_wdt_breadcrumb('8');
+    if (!is_write && !emulate_load(ctx, insn, (u64 *)val, &width, &vaddr))
+        return false;
+
+    hv_wdt_breadcrumb('9');
 
     return true;
 }

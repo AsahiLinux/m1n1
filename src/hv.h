@@ -29,11 +29,14 @@ struct hv_evt_irqtrace {
     u16 num;
 };
 
+#define HV_MAX_RW_SIZE  64
+#define HV_MAX_RW_WORDS (HV_MAX_RW_SIZE >> 3)
+
 struct hv_vm_proxy_hook_data {
     u32 flags;
     u32 id;
     u64 addr;
-    u64 data[2];
+    u64 data[HV_MAX_RW_WORDS];
 };
 
 typedef enum _hv_entry_type {

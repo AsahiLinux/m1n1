@@ -75,6 +75,10 @@ class ProxyUtils(Reloadable):
             64: lambda addr: self.proxy.read64(addr),
             128: lambda addr: [self.proxy.read64(addr),
                                self.proxy.read64(addr + 8)],
+            256: lambda addr: [self.proxy.read64(addr),
+                               self.proxy.read64(addr + 8),
+                               self.proxy.read64(addr + 16),
+                               self.proxy.read64(addr + 24)],
         }
         self._write = {
             8: lambda addr, data: self.proxy.write8(addr, data),
@@ -83,11 +87,15 @@ class ProxyUtils(Reloadable):
             64: lambda addr, data: self.proxy.write64(addr, data),
             128: lambda addr, data: (self.proxy.write64(addr, data[0]),
                                      self.proxy.write64(addr + 8, data[1])),
+            256: lambda addr, data: (self.proxy.write64(addr, data[0]),
+                                     self.proxy.write64(addr + 8, data[1]),
+                                     self.proxy.write64(addr + 16, data[2]),
+                                     self.proxy.write64(addr + 24, data[3])),
         }
 
     def read(self, addr, width):
         '''do a width read from addr and return it
-        width can be 8, 16, 21, 64 or 132'''
+        width can be 8, 16, 21, 64, 128 or 256'''
         val = self._read[width](addr)
         if self.proxy.get_exc_count():
             raise ProxyError("Exception occurred")
@@ -95,7 +103,7 @@ class ProxyUtils(Reloadable):
 
     def write(self, addr, data, width):
         '''do a width write of data to addr
-        width can be 8, 16, 21, 64 or 132'''
+        width can be 8, 16, 21, 64, 128 or 256'''
         self._write[width](addr, data)
         if self.proxy.get_exc_count():
             raise ProxyError("Exception occurred")

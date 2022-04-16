@@ -44,7 +44,7 @@ VMProxyHookData = Struct(
     "flags" / RegAdapter(MMIOTraceFlags),
     "id" / Int32ul,
     "addr" / Hex(Int64ul),
-    "data" / Array(2, Hex(Int64ul)),
+    "data" / Array(8, Hex(Int64ul)),
 )
 
 class TraceMode(IntEnum):
