@@ -127,6 +127,8 @@ class HV(Reloadable):
         self.want_vbar = None
         self.vectors = [None]
         self._bps = [None, None, None, None, None]
+        self._wps = [None, None, None, None]
+        self._wpcs = [0, 0, 0, 0]
         self.sym_offset = 0
         self.symbols = []
         self.symbol_dict = {}
@@ -644,6 +646,9 @@ class HV(Reloadable):
         for i in range(len(self._bps)):
             shadow.add(DBGBCRn_EL1(i))
             shadow.add(DBGBVRn_EL1(i))
+        for i in range(len(self._wps)):
+            shadow.add(DBGWCRn_EL1(i))
+            shadow.add(DBGWVRn_EL1(i))
 
         value = 0
         if enc in shadow:
@@ -779,6 +784,10 @@ class HV(Reloadable):
                 continue
             self.u.msr(DBGBCRn_EL1(i), DBGBCR(E=1, PMC=0b11, BAS=0xf).value)
 
+        # enable all watchpoints again
+        for i, wpc in enumerate(self._wpcs):
+            self.u.msr(DBGWCRn_EL1(i), wpc)
+
         return True
 
     def handle_break(self, ctx):
@@ -787,6 +796,15 @@ class HV(Reloadable):
             self.u.msr(DBGBCRn_EL1(i), 0)
 
         # we'll need to single step to enable these breakpoints again
+        self.u.msr(MDSCR_EL1, MDSCR(SS=1, MDE=1).value)
+        self.ctx.spsr.SS = 1
+
+    def handle_watch(self, ctx):
+        # disable all watchpoints so that we don't get stuck
+        for i in range(len(self._wps)):
+            self.u.msr(DBGWCRn_EL1(i), 0)
+
+        # we'll need to single step to enable these watchpoints again
         self.u.msr(MDSCR_EL1, MDSCR(SS=1, MDE=1).value)
         self.ctx.spsr.SS = 1
 
@@ -843,6 +861,9 @@ class HV(Reloadable):
 
         if ctx.esr.EC == ESR_EC.BKPT_LOWER:
             return self.handle_break(ctx)
+
+        if ctx.esr.EC == ESR_EC.WATCH_LOWER:
+            return self.handle_watch(ctx)
 
         if ctx.esr.EC == ESR_EC.BRK:
             return self.handle_brk(ctx)
@@ -1059,6 +1080,33 @@ class HV(Reloadable):
 
     def remove_sym_bp(self, name):
         return self.remove_hw_bp(self.resolve_symbol(name))
+
+    def add_hw_wp(self, vaddr, bas, lsc):
+        for i, i_vaddr in enumerate(self._wps):
+            if i_vaddr is None:
+                self._wps[i] = vaddr
+                self._wpcs[i] = DBGWCR(E=1, PAC=0b11, BAS=bas, LSC=lsc).value
+                cpu_id = self.ctx.cpu_id
+                try:
+                    for cpu in self.cpus():
+                        self.u.msr(DBGWCRn_EL1(i), self._wpcs[i])
+                        self.u.msr(DBGWVRn_EL1(i), vaddr)
+                finally:
+                    self.cpu(cpu_id)
+                return
+        raise ValueError("Cannot add more HW watchpoints")
+
+    def remove_hw_wp(self, vaddr):
+        idx = self._wps.index(vaddr)
+        self._wps[idx] = None
+        self._wpcs[idx] = 0
+        cpu_id = self.ctx.cpu_id
+        try:
+            for cpu in self.cpus():
+                self.u.msr(DBGWCRn_EL1(idx), 0)
+                self.u.msr(DBGWVRn_EL1(idx), 0)
+        finally:
+            self.cpu(cpu_id)
 
     def exit(self):
         raise shell.ExitConsole(EXC_RET.EXIT_GUEST)
