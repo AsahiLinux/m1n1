@@ -126,7 +126,6 @@ class HV(Reloadable):
         self.vbar_el1 = None
         self.want_vbar = None
         self.vectors = [None]
-        self._stepping = False
         self._bps = [None, None, None, None, None]
         self.sym_offset = 0
         self.symbols = []
@@ -780,9 +779,7 @@ class HV(Reloadable):
                 continue
             self.u.msr(DBGBCRn_EL1(i), DBGBCR(E=1, PMC=0b11, BAS=0xf).value)
 
-        if not self._stepping:
-            return True
-        self._stepping = False
+        return True
 
     def handle_break(self, ctx):
         # disable all breakpoints so that we don't get stuck
@@ -998,8 +995,9 @@ class HV(Reloadable):
     def step(self):
         self.u.msr(MDSCR_EL1, MDSCR(SS=1, MDE=1).value)
         self.ctx.spsr.SS = 1
-        self._stepping = True
-        raise shell.ExitConsole(EXC_RET.HANDLED)
+        self.p.hv_pin_cpu(self.ctx.cpu_id)
+        self._switch_context()
+        self.p.hv_pin_cpu(0xffffffffffffffff)
 
     def _switch_context(self, exit=EXC_RET.HANDLED):
         # Flush current CPU context out to HV
