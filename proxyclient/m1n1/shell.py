@@ -188,8 +188,8 @@ def run_shell(locals, msg=None, exitmsg=None):
                 if isinstance(clist, dict):
                     clist[obj_name] = desc
 
+        con = HistoryConsole(locals)
         try:
-            con = HistoryConsole(locals)
             con.interact(msg, exitmsg)
         except ExitConsole as e:
             if len(e.args):
