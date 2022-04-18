@@ -23,6 +23,7 @@ extern char _hv_vectors_start[0];
 
 u64 hv_tick_interval;
 
+int hv_pinned_cpu;
 int hv_want_cpu;
 
 static bool hv_should_exit;
@@ -118,6 +119,7 @@ void hv_start(void *entry, u64 regs[4])
     hv_secondary_info.gxf_config = mrs(SYS_IMP_APL_GXF_CONFIG_EL1);
 
     hv_arm_tick();
+    hv_pinned_cpu = -1;
     hv_want_cpu = -1;
     hv_cpus_in_guest = 1;
 
@@ -233,6 +235,11 @@ bool hv_switch_cpu(int cpu)
     return true;
 }
 
+void hv_pin_cpu(int cpu)
+{
+    hv_pinned_cpu = cpu;
+}
+
 void hv_write_hcr(u64 val)
 {
     if (gxf_enabled() && !in_gl12())
@@ -315,7 +322,8 @@ void hv_tick(struct exc_info *ctx)
     hv_wdt_pet();
     iodev_handle_events(uartproxy_iodev);
     if (iodev_can_read(uartproxy_iodev)) {
-        hv_exc_proxy(ctx, START_HV, HV_USER_INTERRUPT, NULL);
+        if (hv_pinned_cpu == -1 || hv_pinned_cpu == smp_id())
+            hv_exc_proxy(ctx, START_HV, HV_USER_INTERRUPT, NULL);
     }
     hv_vuart_poll();
 }

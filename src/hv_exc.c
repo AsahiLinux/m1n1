@@ -37,6 +37,7 @@ static u64 stolen_time = 0;
 static u64 exc_entry_time;
 
 extern u32 hv_cpus_in_guest;
+extern int hv_pinned_cpu;
 extern int hv_want_cpu;
 
 static bool time_stealing = true;
@@ -111,10 +112,22 @@ static void hv_maybe_switch_cpu(struct exc_info *ctx, uartproxy_boot_reason_t re
 void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type, void *extra)
 {
     /*
-     * If we end up in the proxy due to an event while the host is trying to switch CPUs,
-     * handle it as a CPU switch first. We still tell the host the real reason code, though.
+     * Wait while another CPU is pinned or being switched to.
+     * If a CPU switch is requested, handle it before actually handling the
+     * exception. We still tell the host the real reason code, though.
      */
-    hv_maybe_switch_cpu(ctx, reason, type, extra);
+    while ((hv_pinned_cpu != -1 && hv_pinned_cpu != smp_id()) || hv_want_cpu != -1) {
+        if (hv_want_cpu == smp_id()) {
+            hv_want_cpu = -1;
+            _hv_exc_proxy(ctx, reason, type, extra);
+        } else {
+            // Unlock the HV so the target CPU can get into the proxy
+            spin_unlock(&bhl);
+            while ((hv_pinned_cpu != -1 && hv_pinned_cpu != smp_id()) || hv_want_cpu != -1)
+                sysop("dmb sy");
+            spin_lock(&bhl);
+        }
+    }
 
     /* Handle the actual exception */
     _hv_exc_proxy(ctx, reason, type, extra);
@@ -424,8 +437,12 @@ void hv_exc_fiq(struct exc_info *ctx)
         tick = true;
     }
 
-    if (mrs(TPIDR_EL2) != 0 && !(mrs(ISR_EL1) & 0x40) && hv_want_cpu == -1) {
-        // Secondary CPU and it was just a timer tick (or spurious), so just update FIQs
+    int interruptible_cpu = hv_pinned_cpu;
+    if (interruptible_cpu == -1)
+        interruptible_cpu = 0;
+
+    if (smp_id() != interruptible_cpu && !(mrs(ISR_EL1) & 0x40) && hv_want_cpu == -1) {
+        // Non-interruptible CPU and it was just a timer tick (or spurious), so just update FIQs
         hv_update_fiq();
         hv_arm_tick();
         return;
@@ -435,9 +452,9 @@ void hv_exc_fiq(struct exc_info *ctx)
     hv_wdt_breadcrumb('F');
     hv_exc_entry(ctx);
 
-    // Only poll for HV events in CPU 0
+    // Only poll for HV events in the interruptible CPU
     if (tick) {
-        if (mrs(TPIDR_EL2) == 0)
+        if (smp_id() == interruptible_cpu)
             hv_tick(ctx);
         hv_arm_tick();
     }
