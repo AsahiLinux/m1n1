@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 import json, os, re
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, IntFlag
 from .utils import Register, Register64, Register32
 
 __all__ = ["sysreg_fwd", "sysreg_rev"]
@@ -42,6 +42,12 @@ def DBGBCRn_EL1(n):
 
 def DBGBVRn_EL1(n):
     return (2,0,0,n,4)
+
+def DBGWCRn_EL1(n):
+    return (2,0,0,n,7)
+
+def DBGWVRn_EL1(n):
+    return (2,0,0,n,6)
 
 class ESR_EC(IntEnum):
     UNKNOWN        = 0b000000
@@ -285,6 +291,22 @@ class DBGBCR(Register32):
     HMC = 13
     BAS = 8,5
     PMC = 2,1
+    E = 0
+
+class DBGWCR_LSC(IntFlag):
+    L = 1
+    S = 2
+
+class DBGWCR(Register32):
+    SSCE = 29
+    MASK = 28, 24
+    WT = 20
+    LBN = 19, 16
+    SSC = 15, 14
+    HMC = 13
+    BAS = 12, 5
+    LSC = 4, 3
+    PAC = 2, 1
     E = 0
 
 # TCR_EL1
