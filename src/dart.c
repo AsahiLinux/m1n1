@@ -157,6 +157,13 @@ dart_dev_t *dart_init_adt(const char *path, int instance, int device, bool keep_
         dart->offset_mask = DART_PTE_OFFSET_T6000;
     }
 
+    if (adt_getprop(adt, node, "real-time", NULL)) {
+        for (int i = 0; i < 4; i++) {
+            printf("dart: dart %s.%d.%d L1 %d is real-time at %p\n", path, instance, device, i,
+                   dart->l1[i]);
+        }
+    }
+
     return dart;
 }
 
