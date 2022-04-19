@@ -345,7 +345,7 @@ static void mmu_map_mmio(void)
     }
 }
 
-static void mmu_remap_pcie(void)
+static void mmu_remap_ranges(void)
 {
 
     int node = adt_path_offset(adt, "/defaults");
@@ -359,7 +359,7 @@ static void mmu_remap_pcie(void)
         printf("MMU: Failed to get pmap-io-ranges property!\n");
         return;
     }
-    int range_cnt = ranges_len / 20;
+    int range_cnt = ranges_len / 24;
     while (range_cnt--) {
         u64 addr = ranges[0] | ((u64)ranges[1] << 32);
         u64 size = ranges[2] | ((u64)ranges[3] << 32);
@@ -369,6 +369,10 @@ static void mmu_remap_pcie(void)
         if ((flags >> 28) == 8) {
             printf("MMU: Adding nGnRE mapping at 0x%lx (0x%lx)\n", addr, size);
             mmu_add_mapping(addr, addr, size, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
+        } else if (flags == 0x60004016) {
+            printf("MMU: Adding UC mapping at 0x%lx (0x%lx)\n", addr, size);
+            dc_civac_range((void *)addr, size);
+            mmu_add_mapping(addr, addr, size, MAIR_IDX_FRAMEBUFFER, PERM_RW_EL0);
         }
 
         ranges += 6;
@@ -378,7 +382,6 @@ static void mmu_remap_pcie(void)
 static void mmu_add_default_mappings(void)
 {
     mmu_map_mmio();
-    mmu_remap_pcie();
 
     ram_base = ALIGN_DOWN(cur_boot_args.phys_base, BIT(32));
     uint64_t ram_size = cur_boot_args.mem_size + cur_boot_args.phys_base - ram_base;
@@ -432,6 +435,11 @@ static void mmu_add_default_mappings(void)
      */
     mmu_add_mapping(0xe000000000, 0x0000000000, 0x0800000000, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
     mmu_add_mapping(0xf000000000, 0x0000000000, 0x0800000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
+
+    /*
+     * Handle pmap-ranges
+     */
+    mmu_remap_ranges();
 }
 
 static void mmu_configure(void)
