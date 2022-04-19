@@ -41,6 +41,14 @@ static char *chosen_params[MAX_CHOSEN_PARAMS][2];
         goto err;                                                                                  \
     } while (0)
 
+struct adt_tunable_info {
+    const char *adt_name;
+    const char *fdt_name;
+    size_t reg_offset;
+    size_t reg_size;
+    bool required;
+};
+
 void get_notchless_fb(u64 *fb_base, u64 *fb_height)
 {
     *fb_base = cur_boot_args.video.base;
@@ -631,15 +639,7 @@ struct atc_tunable {
 } PACKED;
 static_assert(sizeof(struct atc_tunable) == 12, "Invalid atc_tunable size");
 
-struct atc_tunable_info {
-    const char *adt_name;
-    const char *fdt_name;
-    size_t reg_offset;
-    size_t reg_size;
-    bool required;
-};
-
-static const struct atc_tunable_info atc_tunables[] = {
+static const struct adt_tunable_info atc_tunables[] = {
     /* global tunables applied after power on or reset */
     {"tunable_ATC0AXI2AF", "apple,tunable-axi2af", 0x0, 0x4000, true},
     {"tunable_ATC_FABRIC", "apple,tunable-common", 0x45000, 0x4000, true},
@@ -673,7 +673,7 @@ static const struct atc_tunable_info atc_tunables[] = {
 };
 
 static int dt_append_atc_tunable(int adt_node, int fdt_node,
-                                 const struct atc_tunable_info *tunable_info)
+                                 const struct adt_tunable_info *tunable_info)
 {
     u32 tunables_len;
     const struct atc_tunable *tunable_adt =
