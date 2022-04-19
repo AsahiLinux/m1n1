@@ -380,6 +380,7 @@ void hv_exc_fiq(struct exc_info *ctx)
     if (mrs(TPIDR_EL2) != 0 && !(mrs(ISR_EL1) & 0x40) && !hv_want_rendezvous()) {
         // Secondary CPU and it was just a timer tick (or spurious), so just update FIQs
         hv_update_fiq();
+        hv_arm_tick();
         return;
     }
 
@@ -388,8 +389,9 @@ void hv_exc_fiq(struct exc_info *ctx)
     hv_exc_entry(ctx);
 
     // Only poll for HV events in CPU 0
-    if (tick && mrs(TPIDR_EL2) == 0) {
-        hv_tick(ctx);
+    if (tick) {
+        if (mrs(TPIDR_EL2) == 0)
+            hv_tick(ctx);
         hv_arm_tick();
     }
 
