@@ -120,6 +120,7 @@ static_assert(sizeof(struct nvme_completion) == 16, "invalid nvme_completion siz
 static_assert(sizeof(struct apple_nvmmu_tcb) == 128, "invalid apple_nvmmu_tcb size");
 
 static bool nvme_initialized = false;
+static u8 nvme_die;
 
 static asc_dev_t *nvme_asc = NULL;
 static rtkit_dev_t *nvme_rtkit = NULL;
@@ -300,6 +301,14 @@ bool nvme_init(void)
         return NULL;
     }
 
+    u32 cg;
+    if (ADT_GETPROP(adt, node, "clock-gates", &cg) < 0) {
+        printf("nvme: Error getting NVMe clock-gates\n");
+        return NULL;
+    }
+    nvme_die = FIELD_GET(PMGR_DIE_ID, cg);
+    printf("nvme: ANS is on die %d\n", nvme_die);
+
     if (adt_get_reg(adt, adt_path, "reg", 3, &nvme_base, NULL) < 0) {
         printf("nvme: Error getting NVMe base address.\n");
         return NULL;
@@ -401,7 +410,7 @@ out_disable_ctrl:
     nvme_poll_syslog();
 out_shutdown:
     rtkit_sleep(nvme_rtkit);
-    pmgr_reset(0, "ANS2");
+    pmgr_reset(nvme_die, "ANS2");
 out_rtkit:
     rtkit_free(nvme_rtkit);
 out_sart:
@@ -443,7 +452,7 @@ void nvme_shutdown(void)
 
     rtkit_sleep(nvme_rtkit);
     asc_cpu_stop(nvme_asc);
-    pmgr_reset(0, "ANS2");
+    pmgr_reset(nvme_die, "ANS2");
     rtkit_free(nvme_rtkit);
     sart_free(nvme_sart);
     asc_free(nvme_asc);
