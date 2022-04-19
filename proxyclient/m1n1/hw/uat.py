@@ -196,7 +196,7 @@ class UAT(Reloadable):
         self.VA_MASK |= self.PAGE_SIZE - 1
 
     # Implements the OS side of UAT initilzion
-    def initilize(self, ttbr, ttbr1_addr, kernel_va_base):
+    def initialize(self, ttbr, ttbr1_addr, kernel_va_base):
         self.ttbr = ttbr
         # create the ttbr1 allocator at ctx 0
         self.get_allocator(0, (kernel_va_base, kernel_va_base + 0x1_00000000))
@@ -423,16 +423,16 @@ class UAT(Reloadable):
     def foreach_page(self, ctx, page_fn):
         self.recurse_level(0, 0, self.ttbr + ctx * 16, page_fn)
 
-    def dump(self, ctx):
+    def dump(self, ctx, log=print):
         if not self.ttbr:
-            print("No translation table")
+            log("No translation table")
             return
 
         def print_fn(start, end, i, pte, level, sparse):
             type = "page" if level+1 == len(self.LEVELS) else "table"
             if sparse:
-                print(f"{'  ' * level}...")
-            print(f"{'  ' * level}{type}({i:03}): {start:011x} ... {end:011x}"
+                log(f"{'  ' * level}...")
+            log(f"{'  ' * level}{type}({i:03}): {start:011x} ... {end:011x}"
                        f" -> {pte.describe()}")
 
         self.recurse_level(0, 0, self.ttbr + ctx * 16, print_fn, print_fn)

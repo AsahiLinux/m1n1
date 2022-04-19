@@ -26,7 +26,6 @@ trace_range(irange(gfx_tracer.gpu_region, gfx_tracer.gpu_region_size), mode=Trac
 trace_range(irange(gfx_tracer.gfx_shared_region, gfx_tracer.gfx_shared_region_size), mode=TraceMode.SYNC)
 trace_range(irange(gfx_tracer.gfx_handoff, gfx_tracer.gfx_handoff_size), mode=TraceMode.SYNC)
 
-
 # Trace the entire mmio range around the GPU
 # node = hv.adt["/arm-io/sgx"]
 # addr, size = node.get_reg(0)

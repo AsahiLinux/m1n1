@@ -152,14 +152,14 @@ class InitData_RegionB(ConstructClass):
         "unkptr_178" / Int64ul, # size: 0x1c0, has random negative 1s, Needed for login screen
         "unkptr_180" / Int64ul, # size: 0x140, Empty
         "unkptr_188_addr" / Int64ul, # size: 0x3b80, few floats, few ints, needed for init
-        "unkptr_188" / Pointer(this.unkptr_188_addr, RegionB_unkprt_188)
+        "unkptr_188" / Pointer(this.unkptr_188_addr, RegionB_unkprt_188),
         "unkptr_190" / Int64ul, # size: 0x80, empty
         "unkptr_198_addr" / Int64ul, # size: 0xc0, fw writes timestamps into this
         "unkptr_198" / Pointer(this.unkptr_198_addr, Bytes(0xc0)),
         "unkptr_1a0_addr" / Int64ul, # size: 0xb80, io stuff
         "unkptr_1a0" / Pointer(this.unkptr_1a0_addr, RegionB_unkprt_1a0),
         "unkptr_1a8" / Int64ul, # repeat of 1a0
-        "unkptr_1b0" / Int64ul, # Points into RegionC, Empty
+        "fwlog_ring2" / Int64ul, #
         "unkptr_1b8" / Int64ul, # Unallocated, Size 0x1000
         "unkptr_1c0" / Int64ul, # Unallocated, size 0x300
         "unkptr_1c8" / Int64ul, # Unallocated, unknown size
@@ -180,7 +180,7 @@ class InitData_RegionB(ConstructClass):
         self.unkptr_198 = b"\x25" + b"\x00"*0xbf
         self.unkptr_1a0_addr = self.unkptr_1a8 = heap.malloc(0xb80)
         self.unkptr_1a0 = RegionB_unkprt_1a0(heap, shared_heap, info)
-        self.unkptr_1b0 = shared_heap.malloc(0x1000)
+        self.fwlog_ring2 = shared_heap.malloc(0x1000)
         self.unkptr_1b8 = heap.malloc(0x1000)
         self.unkptr_1c0 = heap.malloc(0x300)
         self.unkptr_1c8 = heap.malloc(0x1000)
@@ -194,13 +194,13 @@ class InitData_RegionB(ConstructClass):
         add_fn(self.unkptr_190, 0x80, "unkptr_190")
         add_fn(self.unkptr_198_addr, 0xc0, "unkptr_198")
         add_fn(self.unkptr_1a0_addr, 0xb80, "unkptr_1a0")
-        add_fn(self.unkptr_1b0, 0x1000, "unkptr_1b0")
+        add_fn(self.fwlog_ring2, 0x51000, "fwlog_ring2")
         add_fn(self.unkptr_214, 0x4000, "unkptr_214")
 
         # Unallocated during init
-        add_fn(self.unkptr_1b8, 0x1000, "unkptr_1b8")
-        add_fn(self.unkptr_1c0, 0x300, "unkptr_1c0")
-        add_fn(self.unkptr_1c8, 0x1000, "unkptr_1c8")
+        #add_fn(self.unkptr_1b8, 0x1000, "unkptr_1b8")
+        #add_fn(self.unkptr_1c0, 0x300, "unkptr_1c0")
+        #add_fn(self.unkptr_1c8, 0x1000, "unkptr_1c8")
 
 class UatLevelInfo(ConstructClass):
     subcon = Struct(

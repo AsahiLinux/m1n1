@@ -52,8 +52,8 @@ class Start3DCmd(ConstructClass):
         Padding(0x194 - 0x9c),
     )
 
-    def __repr__(self):
-        return super().__repr__(ignore=["cmdqueue_ptr", "workitem_ptr"])
+    def __str__(self):
+        return super().__str__(ignore=["cmdqueue_ptr", "workitem_ptr"])
 
 
 class Finalize3DCmd(ConstructClass):
@@ -82,8 +82,8 @@ class Finalize3DCmd(ConstructClass):
         "unk_98" / Int32ul, # 1
     )
 
-    def __repr__(self):
-        return super().__repr__(ignore=["cmdqueue_ptr", "workitem_ptr", "startcmd_offset"])
+    def __str__(self):
+        return super().__str__(ignore=["cmdqueue_ptr", "workitem_ptr", "startcmd_offset"])
 
 
 class ComputeInfo(ConstructClass):
@@ -138,8 +138,8 @@ class StartComputeCmd(ConstructClass):
         except AttributeError:
             pass
 
-    def __repr__(self):
-        return super().__repr__(ignore=["cmdqueue_ptr", "workitem_ptr"])
+    def __str__(self):
+        return super().__str__(ignore=["cmdqueue_ptr", "workitem_ptr"])
 
 
 class FinalizeComputeCmd(ConstructClass):
@@ -167,8 +167,8 @@ class FinalizeComputeCmd(ConstructClass):
         "unk_60" / Int32ul,
     )
 
-    def __repr__(self):
-        return super().__repr__(ignore=["cmdqueue_ptr", "workitem_ptr", "startcmd_offset"])
+    def __str__(self):
+        return super().__str__(ignore=["cmdqueue_ptr", "workitem_ptr", "startcmd_offset"])
 
 class EndCmd(ConstructClass):
     subcon = Struct(
@@ -178,7 +178,7 @@ class EndCmd(ConstructClass):
         "unk_3" / Byte,
     )
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"End({self.unk_1}, {self.unk_2}, {self.unk_3})"
 
 class TimestampCmd(ConstructClass):
@@ -206,7 +206,7 @@ class WaitForInterruptCmd(ConstructClass):
         "unk_3" / Byte,
     )
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"WaitForInterrupt({self.unk_1}, {self.unk_2}, {self.unk_3})"
 
 class NopCmd(ConstructClass):
@@ -215,11 +215,11 @@ class NopCmd(ConstructClass):
         "magic" / Const(0x00, Int32ul),
     )
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return "Nop"
 
 
-class ControlList(ConstructClass):
+class ControlList(ConstructValueClass):
     subcon = GreedyRange(
         Select(
             #NopCmd,
@@ -235,10 +235,11 @@ class ControlList(ConstructClass):
         )
     )
 
-    def __repr__(self):
-        str = ""
+    def __str__(self):
+        s = ""
         for cmd in self.value:
-            str += repr(cmd) + '\n'
+            s += str(cmd) + '\n'
             if isinstance(cmd, EndCmd):
                 break
-        return str
+        return s
+
