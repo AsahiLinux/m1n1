@@ -713,12 +713,14 @@ static int dt_append_atc_tunable(int adt_node, int fdt_node,
             return -1;
         }
 
-        if (fdt_appendprop_u32(dt, fdt_node, tunable_info->fdt_name,
+        if (fdt_appendprop_u64(dt, fdt_node, tunable_info->fdt_name,
                                tunable->offset + tunable_info->reg_offset) < 0)
             return -1;
-        if (fdt_appendprop_u32(dt, fdt_node, tunable_info->fdt_name, tunable->mask) < 0)
+        if (fdt_appendprop_u64(dt, fdt_node, tunable_info->fdt_name, tunable->size / 8) < 0)
             return -1;
-        if (fdt_appendprop_u32(dt, fdt_node, tunable_info->fdt_name, tunable->value) < 0)
+        if (fdt_appendprop_u64(dt, fdt_node, tunable_info->fdt_name, tunable->mask) < 0)
+            return -1;
+        if (fdt_appendprop_u64(dt, fdt_node, tunable_info->fdt_name, tunable->value) < 0)
             return -1;
     }
 
@@ -853,12 +855,14 @@ static int dt_append_acio_tunable(int adt_node, int fdt_node,
             return -1;
         }
 
-        if (fdt_appendprop_u32(dt, fdt_node, tunable_info->fdt_name,
+        if (fdt_appendprop_u64(dt, fdt_node, tunable_info->fdt_name,
                                tunable->offset + tunable_info->reg_offset) < 0)
             return -1;
-        if (fdt_appendprop_u32(dt, fdt_node, tunable_info->fdt_name, tunable->mask) < 0)
+        if (fdt_appendprop_u64(dt, fdt_node, tunable_info->fdt_name, tunable->size) < 0)
             return -1;
-        if (fdt_appendprop_u32(dt, fdt_node, tunable_info->fdt_name, tunable->value) < 0)
+        if (fdt_appendprop_u64(dt, fdt_node, tunable_info->fdt_name, tunable->mask) < 0)
+            return -1;
+        if (fdt_appendprop_u64(dt, fdt_node, tunable_info->fdt_name, tunable->value) < 0)
             return -1;
     }
 
