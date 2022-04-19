@@ -97,7 +97,9 @@ void hv_rendezvous(void);
 void hv_switch_cpu(int cpu);
 void hv_arm_tick(void);
 void hv_rearm(void);
-void hv_check_rendezvous(struct exc_info *ctx);
+bool hv_want_rendezvous(void);
+void hv_do_rendezvous(struct exc_info *ctx);
+void hv_maybe_exit(void);
 void hv_tick(struct exc_info *ctx);
 
 #endif

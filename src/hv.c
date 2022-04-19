@@ -307,7 +307,12 @@ void hv_rearm(void)
     msr(CNTP_CTL_EL0, CNTx_CTL_ENABLE);
 }
 
-void hv_check_rendezvous(struct exc_info *ctx)
+bool hv_want_rendezvous(void)
+{
+    return hv_want_cpu != -1;
+}
+
+void hv_do_rendezvous(struct exc_info *ctx)
 {
     if (hv_want_cpu == smp_id()) {
         hv_want_cpu = -1;
@@ -323,12 +328,15 @@ void hv_check_rendezvous(struct exc_info *ctx)
     }
 }
 
-void hv_tick(struct exc_info *ctx)
+void hv_maybe_exit(void)
 {
     if (hv_should_exit) {
-        spin_unlock(&bhl);
         hv_exit_guest();
     }
+}
+
+void hv_tick(struct exc_info *ctx)
+{
     hv_wdt_pet();
     iodev_handle_events(uartproxy_iodev);
     if (iodev_can_read(uartproxy_iodev)) {

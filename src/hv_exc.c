@@ -19,15 +19,17 @@ extern spinlock_t bhl;
      ((op2) << ESR_ISS_MSR_OP2_SHIFT))
 #define SYSREG_ISS(...) _SYSREG_ISS(__VA_ARGS__)
 
-#define D_PERCPU(t, x) t x[MAX_CPUS]
-#define PERCPU(x)      x[mrs(TPIDR_EL2)]
+#define PERCPU(x) pcpu[mrs(TPIDR_EL2)].x
 
-D_PERCPU(static bool, ipi_queued);
-D_PERCPU(static bool, ipi_pending);
-D_PERCPU(static bool, pmc_pending);
-D_PERCPU(static u64, pmc_irq_mode);
+struct hv_pcpu_data {
+    u32 ipi_queued;
+    u32 ipi_pending;
+    u32 pmc_pending;
+    u64 pmc_irq_mode;
+    u64 exc_entry_pmcr0_cnt;
+} ALIGNED(64);
 
-D_PERCPU(static u64, exc_entry_pmcr0_cnt);
+struct hv_pcpu_data pcpu[MAX_CPUS];
 
 void hv_exit_guest(void) __attribute__((noreturn));
 
@@ -216,7 +218,7 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
             msr(SYS_IMP_APL_IPI_RR_LOCAL_EL1, regs[rt]);
             for (int i = 0; i < MAX_CPUS; i++)
                 if (mpidr == smp_get_mpidr(i))
-                    ipi_queued[i] = true;
+                    pcpu[i].ipi_queued = true;
             return true;
         }
         case SYSREG_ISS(SYS_IMP_APL_IPI_RR_GLOBAL_EL1):
@@ -225,7 +227,7 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
             msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, regs[rt]);
             for (int i = 0; i < MAX_CPUS; i++) {
                 if (mpidr == (smp_get_mpidr(i) & 0xffff))
-                    ipi_queued[i] = true;
+                    pcpu[i].ipi_queued = true;
             }
             return true;
         case SYSREG_ISS(SYS_IMP_APL_IPI_SR_EL1):
@@ -366,10 +368,27 @@ void hv_exc_irq(struct exc_info *ctx)
 
 void hv_exc_fiq(struct exc_info *ctx)
 {
-    hv_wdt_breadcrumb('F');
-    hv_exc_entry(ctx);
+    bool tick = false;
+
+    hv_maybe_exit();
+
     if (mrs(CNTP_CTL_EL0) == (CNTx_CTL_ISTATUS | CNTx_CTL_ENABLE)) {
         msr(CNTP_CTL_EL0, CNTx_CTL_ISTATUS | CNTx_CTL_IMASK | CNTx_CTL_ENABLE);
+        tick = true;
+    }
+
+    if (mrs(TPIDR_EL2) != 0 && !(mrs(ISR_EL1) & 0x40) && !hv_want_rendezvous()) {
+        // Secondary CPU and it was just a timer tick (or spurious), so just update FIQs
+        hv_update_fiq();
+        return;
+    }
+
+    // Slow (single threaded) path
+    hv_wdt_breadcrumb('F');
+    hv_exc_entry(ctx);
+
+    // Only poll for HV events in CPU 0
+    if (tick && mrs(TPIDR_EL2) == 0) {
         hv_tick(ctx);
         hv_arm_tick();
     }
@@ -403,7 +422,7 @@ void hv_exc_fiq(struct exc_info *ctx)
         msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
         sysop("isb");
     }
-    hv_check_rendezvous(ctx);
+    hv_do_rendezvous(ctx);
 
     // Handles guest timers
     hv_exc_exit(ctx);
