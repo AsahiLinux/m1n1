@@ -411,6 +411,8 @@ IOUserClient = Struct(
     Padding(2)
 )
 
+IOMobileFramebufferUserClient = IOUserClient
+
 IOMFBStatus = Int32ul
 IOMFBParameterName = Int32ul
 
@@ -521,19 +523,27 @@ class UPPipeAP_H13P(IPCObject):
     A000 = Call(bool_, "late_init_signal")
     A029 = Call(void, "setup_video_limits")
     A034 = Call(void, "update_notify_clients_dcp", Array(14, uint))
+    A035 = Call(bool_, "is_hilo")
     A036 = Call(bool_, "apt_supported")
+    A037 = Call(uint, "get_dfb_info", InOutPtr(uint), InOutPtr(Array(4, ulong)), InOutPtr(uint))
+    A038 = Call(uint, "get_dfb_compression_info", InOutPtr(uint))
 
     D000 = Callback(bool_, "did_boot_signal")
     D001 = Callback(bool_, "did_power_on_signal")
     D002 = Callback(void, "will_power_off_signal")
     D003 = Callback(void, "rt_bandwidth_setup_ap", config=OutPtr(rt_bw_config_t))
 
+IdleCachingState = uint32_t
+
 class UnifiedPipeline2(IPCObject):
+    A352 = Call(bool_, "applyProperty", uint, uint)
+    A353 = Call(uint, "get_system_type")
     A357 = Call(void, "set_create_DFB")
     A358 = Call(IOMFBStatus, "vi_set_temperature_hint")
 
     D100 = Callback(void, "match_pmu_service")
     D101 = Callback(uint32_t, "UNK_get_some_field")
+    D102 = Callback(void, "set_number_property", key=string(0x40), value=uint)
     D103 = Callback(void, "set_boolean_property", key=string(0x40), value=bool_)
     D106 = Callback(void, "removeProperty", key=string(0x40))
     D107 = Callback(bool_, "create_provider_service")
@@ -541,7 +551,9 @@ class UnifiedPipeline2(IPCObject):
     D109 = Callback(bool_, "create_PMU_service")
     D110 = Callback(bool_, "create_iomfb_service")
     D111 = Callback(bool_, "create_backlight_service")
+    D112 = Callback(void, "set_idle_caching_state_ap", IdleCachingState, uint)
     D116 = Callback(bool_, "start_hardware_boot")
+    D117 = Callback(bool_, "is_dark_boot")
     D118 = Callback(bool_, "is_waking_from_hibernate")
     D120 = Callback(bool_, "read_edt_data", key=string(0x40), count=uint, value=InOut(Lazy(SizedArray(8, "count", uint32_t))))
 
@@ -550,14 +562,21 @@ class UnifiedPipeline2(IPCObject):
     D124 = Callback(bool_, "setDCPAVPropEnd", key=string(0x40))
 
 class UPPipe2(IPCObject):
-    A103 = Call(uint64_t, "test_control", cmd=uint64_t, arg=uint)
+    A102 = Call(uint64_t, "test_control", cmd=uint64_t, arg=uint)
+    A103 = Call(void, "get_config_frame_size", width=InOutPtr(uint), height=InOutPtr(uint))
+    A104 = Call(void, "set_config_frame_size", width=uint, height=uint)
+    A105 = Call(void, "program_config_frame_size")
+    A130 = Call(bool_, "init_ca_pmu")
     A131 = Call(bool_, "pmu_service_matched")
+    A132 = Call(bool_, "backlight_service_matched")
 
     D201 = Callback(uint32_t, "map_buf", buf=InPtr(BufferDescriptor), vaddr=OutPtr(ulong), dva=OutPtr(ulong), unk=bool_)
+    D202 = Callback(void, "unmap_buf", buf=InPtr(BufferDescriptor), unk1=uint, unk2=ulong, unkB=uint)
 
     D206 = Callback(bool_, "match_pmu_service_2")
     D207 = Callback(bool_, "match_backlight_service")
     D208 = Callback(uint64_t, "get_calendar_time_ms")
+    D211 = Callback(void, "update_backlight_factor_prop", int_)
 
 class PropRelay(IPCObject):
     D300 = Callback(void, "pr_publish", prop_id=uint32_t, value=int_)
@@ -581,6 +600,8 @@ class IOMobileFramebufferAP(IPCObject):
 #"A438": "IOMobileFramebufferAP::swap_set_color_matrix(IOMFBColorFixedMatrix*, IOMFBColorMatrixFunction, unsigned int)",
 
     A412 = Call(uint32_t, "set_digital_out_mode", uint, uint)
+    A413 = Call(uint32_t, "get_digital_out_state", InOutPtr(uint))
+    A414 = Call(uint32_t, "get_display_area", InOutPtr(ulong))
     A419 = Call(uint32_t, "get_gamma_table", InOutPtr(Bytes(0xc0c)))
     A422 = Call(uint32_t, "set_matrix", uint, InPtr(Array(3, Array(3, ulong))))
     A423 = Call(uint32_t, "set_contrast", InOutPtr(Float32l))
@@ -597,10 +618,15 @@ class IOMobileFramebufferAP(IPCObject):
     A444 = Call(void, "printRegs")
     A447 = Call(int_, "enable_disable_video_power_savings", uint)
     A454 = Call(void, "first_client_open")
+    A455 = Call(void, "last_client_close_dcp", OutPtr(uint))
     A456 = Call(bool_, "writeDebugInfo", ulong)
+    A457 = Call(void, "flush_debug_flags", uint)
     A458 = Call(bool_, "io_fence_notify", uint, uint, ulong, IOMFBStatus)
     A460 = Call(bool_, "setDisplayRefreshProperties")
     A463 = Call(void, "flush_supportsPower", bool_)
+    A464 = Call(uint, "abort_swaps_dcp", InOutPtr(IOMobileFramebufferUserClient))
+
+    A467 = Call(uint, "update_dfb", surf=InPtr(IOSurface))
     A468 = Call(uint32_t, "setPowerState", ulong, bool_, OutPtr(uint))
     A469 = Call(bool_, "isKeepOnScreen")
 
@@ -612,18 +638,30 @@ class IOMobileFramebufferAP(IPCObject):
 
     D574 = Callback(IOMFBStatus, "powerUpDART", bool_)
 
+    D575 = Callback(bool_, "get_dot_pitch", OutPtr(uint))
     D576 = Callback(void, "hotPlug_notify_gated", ulong)
     D577 = Callback(void, "powerstate_notify", bool_, bool_)
+    D578 = Callback(bool_, "idle_fence_create", IdleCachingState)
+    D579 = Callback(void, "idle_fence_complete")
 
+    D581 = Callback(void, "swap_complete_head_of_line", uint, bool_, uint, bool_)
     D582 = Callback(bool_, "create_default_fb_surface", uint, uint)
     D583 = Callback(bool_, "serializeDebugInfoCb", ulong, InPtr(uint64_t), uint)
+    D584 = Callback(void, "clear_default_surface")
 
+    D588 = Callback(void, "resize_default_fb_surface_gated")
     D589 = Callback(void, "swap_complete_ap_gated", swap_id=uint, unkBool=bool_, swap_data=InPtr(SwapCompleteData), swap_info=SwapInfoBlob, unkUint=uint)
 
     D591 = Callback(void, "swap_complete_intent_gated", swap_id=uint, unkB=bool_, unkInt=uint32_t, width=uint, height=uint)
+    D593 = Callback(void, "enable_backlight_message_ap_gated", bool_)
+    D594 = Callback(void, "setSystemConsoleMode", bool_)
+
+    D596 = Callback(bool_, "isDFBAllocated")
+    D597 = Callback(bool_, "preserveContents")
     D598 = Callback(void, "find_swap_function_gated")
 
 class ServiceRelay(IPCObject):
+    D400 = Callback(void, "get_property", obj=FourCC, key=string(0x40), value=OutPtr(Bytes(0x200)), lenght=InOutPtr(uint))
     D401 = Callback(bool_, "sr_get_uint_prop", obj=FourCC, key=string(0x40), value=InOutPtr(ulong))
     D404 = Callback(void, "sr_set_uint_prop", obj=FourCC, key=string(0x40), value=uint)
     D406 = Callback(void, "set_fx_prop", obj=FourCC, key=string(0x40), value=uint)
@@ -638,6 +676,10 @@ mem_desc_id = uint
 class MemDescRelay(IPCObject):
     D451 = Callback(mem_desc_id, "allocate_buffer", uint, ulong, uint, OutPtr(ulong), OutPtr(ulong), OutPtr(ulong))
     D452 = Callback(mem_desc_id, "map_physical", paddr=ulong, size=ulong, flags=uint, dva=OutPtr(ulong), dvasize=OutPtr(ulong))
+    D453 = Callback(mem_desc_id, "withAddressRange", ulong, ulong, uint, uint64_t, OutPtr(uint), OutPtr(ulong))
+    D454 = Callback(IOMFBStatus, "prepare", uint, uint)
+    D455 = Callback(IOMFBStatus, "complete", uint, uint)
+    D456 = Callback(bool_, "release_descriptor", uint)
 
 ALL_CLASSES = [
     UPPipeAP_H13P,
