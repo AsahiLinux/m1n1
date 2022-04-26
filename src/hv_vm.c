@@ -562,6 +562,14 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         regs[Rt] = (s64)EXT(*val, (8 << *width));
         if (insn & (1 << 22))
             regs[Rt] &= 0xffffffff;
+    } else if ((insn & 0xffc00000) == 0x29400000) {
+        // LDP (Signed offset, 32-bit)
+        *width = 3;
+        *vaddr = regs[Rn] + (imm7 * 4);
+        DECODE_OK;
+        u64 Rt2 = (insn >> 10) & 0x1f;
+        regs[Rt] = val[0] & 0xffffffff;
+        regs[Rt2] = val[0] >> 32;
     } else if ((insn & 0xffc00000) == 0xa9400000) {
         // LDP (Signed offset, 64-bit)
         *width = 4;
