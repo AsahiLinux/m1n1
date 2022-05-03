@@ -213,9 +213,20 @@ StatsMsg = FixedSized(0x30, Select(
 class FWLogMsg(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x03, Int32ul)),
-        Padding(4), # Not written
+        "seq_no" / Hex(Int32ul),
         "timestamp" / Hex(Int64ul),
         "msg" / PaddedString(0xc8, "ascii")
+    )
+
+class EventMsg(ConstructClass):
+    subcon = Struct (
+        "msg_type" / Hex(Const(1, Int32ul)),
+        "firing" / Hex(Int32ul),
+        "unk_8" / Hex(Int32ul),
+        "unk_c" / Hex(Int32ul),
+        "unk_10" / Hex(Int32ul),
+        "unk_14" / Hex(Int16ul),
+        "unkpad_16" / HexDump(Bytes(0x38 - 0x16)),
     )
 
 channelNames = [
@@ -230,7 +241,7 @@ channelNames = [
 channelRings = (
     [[(NotifyCmdQueueWork, 0x30, 0x100)]] * 12 + [
         [(DeviceControlMsg, 0x30, 0x100)],
-        [(HexDump(Bytes(0x38)), 0x38, 0x100)],
+        [(EventMsg, 0x38, 0x100)],
         [
             (FWLogMsg, 0xd8, 0x100),                # unk 0
             (FWLogMsg, 0xd8, 0x100),                # init log
