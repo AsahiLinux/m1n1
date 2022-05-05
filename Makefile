@@ -186,10 +186,10 @@ update_cfg:
 build/build_tag.h: update_tag
 build/build_cfg.h: update_cfg
 
-build/%.bin: data/%.png
+build/%.bin: data/%.bin
 	@echo "  IMG   $@"
 	@mkdir -p "$(dir $@)"
-	@convert $< -background black -flatten -depth 8 rgba:$@
+	@cp $< $@
 
 build/%.o: build/%.bin
 	@echo "  BIN   $@"
