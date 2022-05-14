@@ -782,6 +782,52 @@ static int dt_set_atc_tunables(void)
     return 0;
 }
 
+#define MAX_RANGES 8
+
+struct ranges_tbl {
+    u64 start;
+    u64 parent;
+    u64 size;
+};
+
+static void parse_ranges(int soc, struct ranges_tbl *ranges)
+{
+    int len;
+    const struct fdt_property *ranges_prop = fdt_get_property(dt, soc, "ranges", &len);
+    if (ranges_prop && len > 0) {
+        int idx = 0;
+        int num_entries = len / sizeof(fdt64_t);
+        if (num_entries > MAX_RANGES)
+            num_entries = MAX_RANGES;
+
+        const fdt64_t *entry = (const fdt64_t *)ranges_prop->data;
+        for (int i = 0; i < num_entries; ++i) {
+            u64 start = fdt64_ld(entry++);
+            u64 parent = fdt64_ld(entry++);
+            u64 size = fdt64_ld(entry++);
+            if (size) {
+                ranges[idx].start = start;
+                ranges[idx].parent = parent;
+                ranges[idx].size = size;
+                idx++;
+            }
+        }
+    }
+}
+
+static u64 translate(struct ranges_tbl *ranges, const fdt64_t *reg)
+{
+    u64 addr = fdt64_ld(reg);
+    for (int idx = 0; idx < MAX_RANGES; ++idx) {
+        if (ranges[idx].size == 0)
+            break;
+        if (addr >= ranges[idx].start && addr < ranges[idx].start + ranges[idx].size)
+            return ranges[idx].parent - ranges[idx].start + addr;
+    }
+
+    return addr;
+}
+
 static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix, int max_devs)
 {
     int ret = -1;
@@ -804,6 +850,16 @@ static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix
         pp++;
     path[pp + 1] = 0;
 
+    u32 die_count;
+    if (ADT_GETPROP(adt, node, "die-count", &die_count) < 0) {
+        printf("ADT: missing die-count property handling device as single die device\n");
+        die_count = 1;
+    }
+    if (die_count > 8) {
+        printf("ADT: limiting die-count from %u to 8\n", die_count);
+        die_count = 8;
+    }
+
     /* Find ADT registers */
     ADT_FOREACH_CHILD(adt, node)
     {
@@ -816,80 +872,91 @@ static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix
             bail_cleanup("Error getting /arm-io/%s regs\n", name);
     }
 
-    int soc = fdt_path_offset(dt, "/soc");
-    if (soc < 0)
-        bail("FDT: /soc node not found in devtree\n");
+    for (u32 die = 0; die < die_count; ++die) {
+        char path[16] = "/soc";
 
-    /* Disable primary devices */
-    fdt_for_each_subnode(node, dt, soc)
-    {
-        const char *name = fdt_get_name(dt, node, NULL);
-        if (strncmp(name, dt_prefix, dt_prefix_len))
-            continue;
+        if (die_count > 1)
+            snprintf(path, sizeof(path), "/soc/die%u", die);
 
-        const fdt64_t *reg = fdt_getprop(dt, node, "reg", NULL);
-        if (!reg)
-            bail_cleanup("FDT: failed to get reg property of %s\n", name);
+        int soc = fdt_path_offset(dt, path);
+        if (soc < 0)
+            bail("FDT: %s node not found in devtree\n", path);
 
-        u64 addr = fdt64_ld(reg);
+        // parse ranges for address translation
+        struct ranges_tbl ranges[MAX_RANGES] = {0};
+        parse_ranges(soc, ranges);
 
-        int i;
-        for (i = 0; i < acnt; i++)
-            if (addrs[i] == addr)
-                break;
-        if (i < acnt)
-            continue;
-
-        int iommus_size;
-        const fdt32_t *iommus = fdt_getprop(dt, node, "iommus", &iommus_size);
-        if (iommus) {
-            if (iommus_size & 7 || iommus_size > 4 * 8) {
-                printf("FDT: bad iommus property for /soc/%s\n", name);
-            } else {
-                for (int i = 0; i < iommus_size / 8; i++)
-                    phandles[phcnt++] = fdt32_ld(&iommus[i * 2]);
-            }
-        }
-
-        int phys_size;
-        const fdt32_t *phys = fdt_getprop(dt, node, "phys", &phys_size);
-        if (phys) {
-            if (phys_size & 7 || phys_size > 4 * 8) {
-                printf("FDT: bad phys property for /soc/%s\n", name);
-            } else {
-                for (int i = 0; i < phys_size / 8; i++)
-                    phandles[phcnt++] = fdt32_ld(&phys[i * 2]);
-            }
-        }
-
-        const char *status = fdt_getprop(dt, node, "status", NULL);
-        if (!status || strcmp(status, "disabled")) {
-            printf("FDT: Disabling missing device /soc/%s\n", name);
-
-            if (fdt_setprop_string(dt, node, "status", "disabled") < 0)
-                bail_cleanup("FDT: failed to set status property of /soc/%s\n", name);
-        }
-    }
-
-    /* Disable secondary devices */
-    fdt_for_each_subnode(node, dt, soc)
-    {
-        const char *name = fdt_get_name(dt, node, NULL);
-        u32 phandle = fdt_get_phandle(dt, node);
-
-        for (int i = 0; i < phcnt; i++) {
-            if (phandles[i] != phandle)
+        /* Disable primary devices */
+        fdt_for_each_subnode(node, dt, soc)
+        {
+            const char *name = fdt_get_name(dt, node, NULL);
+            if (strncmp(name, dt_prefix, dt_prefix_len))
                 continue;
+
+            const fdt64_t *reg = fdt_getprop(dt, node, "reg", NULL);
+            if (!reg)
+                bail_cleanup("FDT: failed to get reg property of %s\n", name);
+
+            u64 addr = translate(ranges, reg);
+
+            int i;
+            for (i = 0; i < acnt; i++)
+                if (addrs[i] == addr)
+                    break;
+            if (i < acnt)
+                continue;
+
+            int iommus_size;
+            const fdt32_t *iommus = fdt_getprop(dt, node, "iommus", &iommus_size);
+            if (iommus) {
+                if (iommus_size & 7 || iommus_size > 4 * 8) {
+                    printf("FDT: bad iommus property for %s/%s\n", path, name);
+                } else {
+                    for (int i = 0; i < iommus_size / 8; i++)
+                        phandles[phcnt++] = fdt32_ld(&iommus[i * 2]);
+                }
+            }
+
+            int phys_size;
+            const fdt32_t *phys = fdt_getprop(dt, node, "phys", &phys_size);
+            if (phys) {
+                if (phys_size & 7 || phys_size > 4 * 8) {
+                    printf("FDT: bad phys property for %s/%s\n", path, name);
+                } else {
+                    for (int i = 0; i < phys_size / 8; i++)
+                        phandles[phcnt++] = fdt32_ld(&phys[i * 2]);
+                }
+            }
 
             const char *status = fdt_getprop(dt, node, "status", NULL);
-            if (status && !strcmp(status, "disabled"))
-                continue;
+            if (!status || strcmp(status, "disabled")) {
+                printf("FDT: Disabling missing device %s/%s\n", path, name);
 
-            printf("FDT: Disabling secondary device /soc/%s\n", name);
+                if (fdt_setprop_string(dt, node, "status", "disabled") < 0)
+                    bail_cleanup("FDT: failed to set status property of %s/%s\n", path, name);
+            }
+        }
 
-            if (fdt_setprop_string(dt, node, "status", "disabled") < 0)
-                bail_cleanup("FDT: failed to set status property of /soc/%s\n", name);
-            break;
+        /* Disable secondary devices */
+        fdt_for_each_subnode(node, dt, soc)
+        {
+            const char *name = fdt_get_name(dt, node, NULL);
+            u32 phandle = fdt_get_phandle(dt, node);
+
+            for (int i = 0; i < phcnt; i++) {
+                if (phandles[i] != phandle)
+                    continue;
+
+                const char *status = fdt_getprop(dt, node, "status", NULL);
+                if (status && !strcmp(status, "disabled"))
+                    continue;
+
+                printf("FDT: Disabling secondary device %s/%s\n", path, name);
+
+                if (fdt_setprop_string(dt, node, "status", "disabled") < 0)
+                    bail_cleanup("FDT: failed to set status property of %s/%s\n", path, name);
+                break;
+            }
         }
     }
 
