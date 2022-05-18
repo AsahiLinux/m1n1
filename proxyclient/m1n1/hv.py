@@ -266,13 +266,15 @@ class HV(Reloadable):
             addr, size = node.get_reg(index)
             self.trace_range(irange(addr, size), mode)
 
-    def trace_range(self, zone, mode=TraceMode.ASYNC, read=True, write=True):
+    def trace_range(self, zone, mode=TraceMode.ASYNC, read=True, write=True, name=None):
         if mode is True:
             mode = TraceMode.ASYNC
         if mode and mode != TraceMode.OFF:
             self.add_tracer(zone, "PrintTracer", mode,
                             self.print_tracer.event_mmio if read else None,
-                            self.print_tracer.event_mmio if write else None)
+                            self.print_tracer.event_mmio if write else None,
+                            zone=zone,
+                            name=name)
         else:
             self.del_tracer(zone, "PrintTracer")
 

@@ -151,20 +151,24 @@ class PrintTracer(Tracer):
         self.device_addr_tbl = device_addr_tbl
         self.log_file = None
 
-    def event_mmio(self, evt):
-        dev, zone = self.device_addr_tbl.lookup(evt.addr)
+    def event_mmio(self, evt, name=None, start=None):
+        dev, zone2 = self.device_addr_tbl.lookup(evt.addr)
+        if name is None:
+            name = dev
+        if start is None:
+            start = zone2.start
         t = "W" if evt.flags.WRITE else "R"
         m = "+" if evt.flags.MULTI else " "
         logline = (f"[cpu{evt.flags.CPU}] [0x{evt.pc:016x}] MMIO: {t}.{1<<evt.flags.WIDTH:<2}{m} " +
-                   f"0x{evt.addr:x} ({dev}, offset {evt.addr - zone.start:#04x}) = 0x{evt.data:x}")
+                   f"0x{evt.addr:x} ({name}, offset {evt.addr - start:#04x}) = 0x{evt.data:x}")
         print(logline)
         if self.log_file:
             self.log_file.write(f"# {logline}\n")
             width = 8 << evt.flags.WIDTH
             if evt.flags.WRITE:
-                stmt = f"p.write{width}({zone.start:#x} + {evt.addr - zone.start:#x}, {evt.data:#x})\n"
+                stmt = f"p.write{width}({start:#x} + {evt.addr - start:#x}, {evt.data:#x})\n"
             else:
-                stmt = f"p.read{width}({zone.start:#x} + {evt.addr - zone.start:#x})\n"
+                stmt = f"p.read{width}({start:#x} + {evt.addr - start:#x})\n"
             self.log_file.write(stmt)
 
 class ADTDevTracer(Tracer):
