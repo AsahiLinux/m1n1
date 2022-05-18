@@ -148,6 +148,7 @@ class HV(Reloadable):
         self.started_cpus = set()
         self.started = False
         self.ctx = None
+        self.hvcall_handlers = {}
 
     def _reloadme(self):
         super()._reloadme()
@@ -743,6 +744,26 @@ class HV(Reloadable):
         self.u.msr(MDSCR_EL1, MDSCR(SS=1, MDE=1).value)
         self.ctx.spsr.SS = 1
 
+    def add_hvcall(self, callid, handler):
+        self.hvcall_handlers[callid] = handler
+
+    def handle_brk(self, ctx):
+        iss = ctx.esr.ISS
+        if iss != 0x4242:
+            return self._lower()
+
+        # HV call from EL0/1
+        callid = ctx.regs[0]
+        handler = self.hvcall_handlers.get(callid, None)
+        if handler is None:
+            self.log(f"Undefined HV call #{callid}")
+            return False
+
+        ok = handler(ctx)
+        if ok:
+            ctx.elr += 4
+        return ok
+
     def handle_sync(self, ctx):
         if ctx.esr.EC == ESR_EC.MSR:
             return self.handle_msr(ctx)
@@ -760,7 +781,7 @@ class HV(Reloadable):
             return self.handle_break(ctx)
 
         if ctx.esr.EC == ESR_EC.BRK:
-            return self._lower()
+            return self.handle_brk(ctx)
 
     def handle_exception(self, reason, code, info):
         self._in_handler = True
