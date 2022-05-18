@@ -578,8 +578,8 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         u64 Rt2 = (insn >> 10) & 0x1f;
         regs[Rt] = val[0];
         regs[Rt2] = val[1];
-    } else if ((insn & 0xffc00000) == 0xad400000) {
-        // LDP (SIMD&FP, 128-bit) Signed offset
+    } else if ((insn & 0xfec00000) == 0xac400000) {
+        // LD[N]P (SIMD&FP, 128-bit) Signed offset
         *width = 5;
         *vaddr = regs[Rn] + (imm7 * 16);
         DECODE_OK;
@@ -718,12 +718,29 @@ static bool emulate_store(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, 
         val[0] = simd[Rt].d[0];
         val[1] = simd[Rt].d[1];
         *width = 4;
+    } else if ((insn & 0xffe00000) == 0xbc000000) {
+        // STUR (immediate, SIMD&FP) 32-bit
+        get_simd_state(simd);
+        val[0] = simd[Rt].s[0];
+        *width = 2;
+    } else if ((insn & 0xffe00000) == 0xfc000000) {
+        // STUR (immediate, SIMD&FP) 64-bit
+        get_simd_state(simd);
+        val[0] = simd[Rt].d[0];
+        *width = 3;
     } else if ((insn & 0xffe00000) == 0x3c800000) {
         // STUR (immediate, SIMD&FP) 128-bit
         get_simd_state(simd);
         val[0] = simd[Rt].d[0];
         val[1] = simd[Rt].d[1];
         *width = 4;
+    } else if ((insn & 0xffc00000) == 0x2d000000) {
+        // STP (SIMD&FP, 128-bit) Signed offset
+        *vaddr = regs[Rn] + (imm7 * 4);
+        u64 Rt2 = (insn >> 10) & 0x1f;
+        get_simd_state(simd);
+        val[0] = simd[Rt].s[0] | (((u64)simd[Rt2].s[0]) << 32);
+        *width = 3;
     } else if ((insn & 0xffc00000) == 0xad000000) {
         // STP (SIMD&FP, 128-bit) Signed offset
         *vaddr = regs[Rn] + (imm7 * 16);
