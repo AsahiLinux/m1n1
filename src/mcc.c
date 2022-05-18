@@ -4,6 +4,7 @@
 #include "adt.h"
 #include "hv.h"
 #include "memory.h"
+#include "string.h"
 #include "utils.h"
 
 static bool mcc_initialized = false;
@@ -60,6 +61,9 @@ static bool mcc_initialized = false;
 #define T6000_DCC_DRAMCFG_DEFAULT 0x55551555
 #define T6000_DCC_DRAMCFG_FAST    0xffff0000
 
+size_t mcc_carveout_count;
+struct mcc_carveout mcc_carveouts[PLANE_TZ_REGS + 1];
+
 struct mcc_regs {
     u64 plane_base;
     u64 plane_stride;
@@ -110,6 +114,8 @@ static void mcc_enable_cache(void)
 
 int mcc_unmap_carveouts(void)
 {
+    mcc_carveout_count = 0;
+    memset(mcc_carveouts, 0, sizeof mcc_carveouts);
     // All MCCs and planes should have identical configs
     for (int i = 0; i < PLANE_TZ_REGS; i++) {
         uint64_t start = ((uint64_t)plane_read32(0, 0, PLANE_TZ_START(i))) << 12;
@@ -119,23 +125,9 @@ int mcc_unmap_carveouts(void)
             end |= ram_base;
             printf("MMU: Unmapping TZ%d region at 0x%lx..0x%lx\n", i, start, end);
             mmu_rm_mapping(start, end - start);
-        }
-    }
-
-    return 0;
-}
-
-int mcc_hv_unmap_carveouts(void)
-{
-    // All MCCs and planes should have identical configs
-    for (int i = 0; i < PLANE_TZ_REGS; i++) {
-        uint64_t start = ((uint64_t)plane_read32(0, 0, PLANE_TZ_START(i))) << 12;
-        uint64_t end = ((uint64_t)(1 + plane_read32(0, 0, PLANE_TZ_END(i)))) << 12;
-        if (start && start != end) {
-            start |= ram_base;
-            end |= ram_base;
-            printf("HV: MMU: Unmapping TZ%d region at 0x%lx..0x%lx\n", i, start, end);
-            hv_unmap(start, end - start);
+            mcc_carveouts[mcc_carveout_count].base = start;
+            mcc_carveouts[mcc_carveout_count].size = end - start;
+            mcc_carveout_count++;
         }
     }
 

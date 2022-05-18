@@ -513,8 +513,8 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->retval = nvme_flush(request->args[0]);
             break;
 
-        case P_MCC_HV_UNMAP_CARVEOUTS:
-            reply->retval = mcc_hv_unmap_carveouts();
+        case P_MCC_GET_CARVEOUTS:
+            reply->retval = mcc_carveouts;
             break;
 
         default:

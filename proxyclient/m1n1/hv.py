@@ -296,8 +296,8 @@ class HV(Reloadable):
                 if mzone.stop <= top:
                     continue
                 if top < mzone.start:
-                    self.map_hw(top, top, mzone.start - top)
-                    self.log(f"PT[{top:09x}:{mzone.start:09x}] -> HW")
+                    self.unmap(top, mzone.start - top)
+                    self.log(f"PT[{top:09x}:{mzone.start:09x}] -> *UNMAPPED*")
 
                 top = mzone.stop
                 if not maps:
@@ -333,7 +333,7 @@ class HV(Reloadable):
                     self.map_sw(mzone.start, pa, mzone.stop - mzone.start)
                 elif mode == TraceMode.OFF:
                     self.map_hw(mzone.start, mzone.start, mzone.stop - mzone.start)
-                    self.log(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> HW")
+                    self.log(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> HW:{ident}")
                     continue
 
                 rest = [m[1] for m in maps[1:] if m[0] != TraceMode.OFF]
@@ -345,8 +345,8 @@ class HV(Reloadable):
                 self.log(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> {mode.name}.{'R' if read else ''}{'W' if read else ''} {ident}{rest}")
 
             if top < zone.stop:
-                self.map_hw(top, top, zone.stop - top)
-                self.log(f"PT[{top:09x}:{zone.stop:09x}] -> HW")
+                self.unmap(top, zone.stop - top)
+                self.log(f"PT[{top:09x}:{zone.stop:09x}] -> *UNMAPPED*")
 
         self.u.inst(0xd50c83df) # tlbi vmalls12e1is
         self.dirty_maps.clear()
@@ -1257,6 +1257,19 @@ class HV(Reloadable):
         print(f"Setting boot arguments to {boot_args!r}")
         self.tba.cmdline = boot_args
 
+    def unmap_carveouts(self):
+        print(f"Unmapping TZ carveouts...")
+        carveout_p = self.p.mcc_get_carveouts()
+        while True:
+            base = self.p.read64(carveout_p)
+            size = self.p.read64(carveout_p + 8)
+            if not base:
+                break
+            print(f"  Unmap [{base:#x}..{base + size - 1:#x}]")
+            self.del_tracer(irange(base, size), "RAM-LOW")
+            self.del_tracer(irange(base, size), "RAM-HIGH")
+            carveout_p += 16
+
     def load_macho(self, data, symfile=None):
         if isinstance(data, str):
             data = open(data, "rb")
@@ -1321,6 +1334,8 @@ class HV(Reloadable):
         print(f"Total region size: 0x{image_size:x} bytes")
 
         self.phys_base = phys_base = guest_base = self.u.heap_top
+        self.ram_base = self.phys_base & ~0xffffffff
+        self.ram_size = self.u.ba.mem_size_actual
         guest_base += 16 << 20 # ensure guest starts within a 16MB aligned region of mapped RAM
         self.adt_base = guest_base
         guest_base += align(self.u.ba.devtree_size)
@@ -1336,10 +1351,9 @@ class HV(Reloadable):
         self.entry = macho.entry - macho.vmin + guest_base
 
         print(f"Mapping guest physical memory...")
-        ram_base = self.u.ba.phys_base & ~0xffffffff
-        self.map_hw(ram_base, ram_base, self.u.ba.phys_base - ram_base)
-        self.map_hw(phys_base, phys_base, self.u.ba.mem_size_actual - phys_base + ram_base)
-        self.p.mcc_hv_unmap_carveouts()
+        self.add_tracer(irange(self.ram_base, self.u.ba.phys_base - self.ram_base), "RAM-LOW", TraceMode.OFF)
+        self.add_tracer(irange(phys_base, self.u.ba.mem_size_actual - phys_base + self.ram_base), "RAM-HIGH", TraceMode.OFF)
+        self.unmap_carveouts()
 
         print(f"Loading kernel image (0x{len(image):x} bytes)...")
         self.u.compressed_writemem(guest_base, image, True)
