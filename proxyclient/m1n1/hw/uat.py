@@ -12,6 +12,7 @@ import struct
 from ..utils import *
 from ..malloc import Heap
 from enum import IntEnum
+import traceback
 
 class MemoryAttr(IntEnum):
     Normal = 0 # Only accessed by the gfx-asc coprocessor
@@ -125,7 +126,11 @@ class UatStream(Reloadable):
         remaining_in_page = self.uat.PAGE_SIZE - (self.pos % self.uat.PAGE_SIZE)
         to_cache = min(remaining_in_page, self.CACHE_SIZE)
 
-        self.cache = self.uat.ioread(self.ctx, self.pos, max(size, to_cache))
+        try:
+            self.cache = self.uat.ioread(self.ctx, self.pos, max(size, to_cache))
+        except:
+            traceback.print_exc()
+            raise
         return data + self.read(size)
 
     def readable(self):
