@@ -578,6 +578,15 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         u64 Rt2 = (insn >> 10) & 0x1f;
         regs[Rt] = val[0];
         regs[Rt2] = val[1];
+    } else if ((insn & 0xfec00000) == 0xa8c00000) {
+        // LDP (pre/post-increment, 64-bit)
+        *width = 4;
+        *vaddr = regs[Rn] + ((insn & BIT(24)) ? (imm7 * 8) : 0);
+        DECODE_OK;
+        regs[Rn] += imm7 * 8;
+        u64 Rt2 = (insn >> 10) & 0x1f;
+        regs[Rt] = val[0];
+        regs[Rt2] = val[1];
     } else if ((insn & 0xfec00000) == 0xac400000) {
         // LD[N]P (SIMD&FP, 128-bit) Signed offset
         *width = 5;
@@ -694,6 +703,15 @@ static bool emulate_store(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, 
     } else if ((insn & 0xfec00000) == 0xa8000000) {
         // ST[N]P (Signed offset, 64-bit)
         *vaddr = regs[Rn] + (imm7 * 8);
+        u64 Rt2 = (insn >> 10) & 0x1f;
+        val[0] = regs[Rt];
+        val[1] = regs[Rt2];
+        *width = 4;
+    } else if ((insn & 0xfec00000) == 0xa8800000) {
+        // ST[N]P (immediate, 64-bit, pre/post-index)
+        CHECK_RN;
+        *vaddr = regs[Rn] + ((insn & BIT(24)) ? (imm7 * 8) : 0);
+        regs[Rn] += (imm7 * 8);
         u64 Rt2 = (insn >> 10) & 0x1f;
         val[0] = regs[Rt];
         val[1] = regs[Rt2];
