@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+import datetime
 
 from m1n1.utils import *
 
@@ -19,12 +20,26 @@ channels.Channel = channels.Channel._reloadcls()
 from m1n1.trace.agx import AGXTracer
 AGXTracer = AGXTracer._reloadcls(True)
 
-gfx_tracer = AGXTracer(hv, "/arm-io/gfx-asc", verbose=False)
-gfx_tracer.start()
+agx_tracer = AGXTracer(hv, "/arm-io/gfx-asc", verbose=False)
+agx_tracer.start()
 
-trace_range(irange(gfx_tracer.gpu_region, gfx_tracer.gpu_region_size), mode=TraceMode.SYNC)
-trace_range(irange(gfx_tracer.gfx_shared_region, gfx_tracer.gfx_shared_region_size), mode=TraceMode.SYNC)
-trace_range(irange(gfx_tracer.gfx_handoff, gfx_tracer.gfx_handoff_size), mode=TraceMode.SYNC)
+def resume_tracing(ctx):
+    fname = f"{datetime.datetime.now().isoformat()}.log"
+    hv.set_logfile(open(f"gfxlogs/{fname}", "a"))
+    agx_tracer.resume()
+    return True
+
+def pause_tracing(ctx):
+    agx_tracer.pause()
+    hv.set_logfile(None)
+    return True
+
+hv.add_hvcall(100, resume_tracing)
+hv.add_hvcall(101, pause_tracing)
+
+#trace_range(irange(gfx_tracer.gpu_region, gfx_tracer.gpu_region_size), mode=TraceMode.SYNC)
+#trace_range(irange(gfx_tracer.gfx_shared_region, gfx_tracer.gfx_shared_region_size), mode=TraceMode.SYNC)
+#trace_range(irange(gfx_tracer.gfx_handoff, gfx_tracer.gfx_handoff_size), mode=TraceMode.SYNC)
 
 # Trace the entire mmio range around the GPU
 # node = hv.adt["/arm-io/sgx"]
