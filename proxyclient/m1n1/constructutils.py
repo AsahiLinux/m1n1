@@ -159,6 +159,7 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
 
     @classmethod
     def _parse(cls, stream, context, path):
+        #print(f"parse {cls} @ {stream.tell():#x} {path}")
         addr = stream.tell()
         obj = cls.subcon._parse(stream, context, path)
 
