@@ -12,8 +12,8 @@ class NotifyCmdQueueWork(ConstructClass):
         "cmdqueue_addr" / Default(Hex(Int64ul), 0),
         "cmdqueue" / Lazy(Pointer(this.cmdqueue_addr, CommandQueueInfo)),
         "head" / Default(Int32ul, 0),
-        "unk_10" / Default(Int32ul, 0),
-        "unk_14" / Default(Int32ul, 0),
+        "event_number" / Default(Int32ul, 0),
+        "new_queue" / Default(Int32ul, 0),
         "data" / HexDump(Bytes(0x18)),
     )
 
@@ -31,14 +31,16 @@ class NotifyCmdQueueWork(ConstructClass):
             return self.workItems
 
     def __str__(self):
-        if (self.cmdqueue_addr == 0):
-            return "<Empty NotifyCmdQueueWork>"
+        s = super().__str__() + "\n"
 
-        str = f"{self.TYPES[self.queue_type]}(0x{self.cmdqueue_addr & 0xfff_ffffffff:x}, {self.head}, {self.unk_10}, {self.unk_14})"
-        str += "\n  WorkItems:"
+        if (self.cmdqueue_addr == 0):
+            return s + "<Empty NotifyCmdQueueWork>"
+
+        s += f"{self.TYPES[self.queue_type]}(0x{self.cmdqueue_addr & 0xfff_ffffffff:x}, {self.head}, ev={self.event_number}, new={self.new_queue})"
+        s += "\n  WorkItems:"
         for work in self.get_workitems():
-            str += f"\n\t{work}"
-        return str
+            s += f"\n\t{work}"
+        return s
 
 class DeviceControl_17(ConstructClass):
     subcon =  Struct (
