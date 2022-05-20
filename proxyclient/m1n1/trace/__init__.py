@@ -142,8 +142,8 @@ class Tracer(Reloadable):
     def stop(self):
         self.hv.clear_tracers(self.ident)
 
-    def log(self, msg):
-        self.hv.log(f"[{self.ident}] {msg}")
+    def log(self, msg, show_cpu=True):
+        self.hv.log(f"[{self.ident}] {msg}", show_cpu=show_cpu)
 
 class PrintTracer(Tracer):
     def __init__(self, hv, device_addr_tbl):
