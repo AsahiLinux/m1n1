@@ -233,6 +233,7 @@ class RegisterMeta(ReloadableMeta):
         return m
 
 class Register(Reloadable, metaclass=RegisterMeta):
+    _Constant = Constant
     def __init__(self, v=None, **kwargs):
         if v is not None:
             self._value = v
@@ -242,7 +243,7 @@ class Register(Reloadable, metaclass=RegisterMeta):
             self._value = 0
             for k in self._fields_list:
                 field = getattr(self.__class__, k)
-                if isinstance(field, tuple) and len(field) >= 3 and isinstance(field[2], Constant):
+                if isinstance(field, tuple) and len(field) >= 3 and isinstance(field[2], self._Constant):
                     setattr(self, k, field[2].value)
 
         for k,v in kwargs.items():
