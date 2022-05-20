@@ -764,6 +764,24 @@ class HV(Reloadable):
             ctx.elr += 4
         return ok
 
+    def handle_dabort(self, ctx):
+        insn = self.p.read32(ctx.elr_phys)
+        far_phys = self.p.hv_translate(ctx.far, True, False)
+
+        if insn & 0x3b200300 == 0x38200000:
+            page = far_phys & ~0x3fff
+            self.log(f"Unhandled atomic instruction in tracer, unmapping page at {page:#x}...")
+            self.add_tracer(irange(page, 0x4000), "**auto-bypassed:atomic**", TraceMode.RESERVED)
+            self.map_hw(page, page, 0x4000)
+            return True
+
+        if insn & 0x3f000000 == 0x08000000:
+            page = far_phys & ~0x3fff
+            self.log(f"Unhandled exclusive instruction in tracer, unmapping page at {page:#x}...")
+            self.add_tracer(irange(page, 0x4000), "**auto-bypassed:excl**", TraceMode.RESERVED)
+            self.map_hw(page, page, 0x4000)
+            return True
+
     def handle_sync(self, ctx):
         if ctx.esr.EC == ESR_EC.MSR:
             return self.handle_msr(ctx)
@@ -782,6 +800,9 @@ class HV(Reloadable):
 
         if ctx.esr.EC == ESR_EC.BRK:
             return self.handle_brk(ctx)
+
+        if ctx.esr.EC == ESR_EC.DABORT_LOWER:
+            return self.handle_dabort(ctx)
 
     def handle_exception(self, reason, code, info):
         self._in_handler = True
