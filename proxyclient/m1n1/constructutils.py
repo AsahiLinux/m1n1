@@ -16,6 +16,16 @@ def recusive_reload(obj):
                 if isinstance(item, Construct):
                     recusive_reload(item)
 
+    if isinstance(obj, Construct) and hasattr(obj, 'cases'):
+        # Construct types that have lists
+        for i, item in obj.cases.items():
+            if inspect.isclass(item):
+                if issubclass(item, Reloadable):
+                    obj.cases[i] = item._reloadcls()
+            else:
+                if isinstance(item, Construct):
+                    recusive_reload(item)
+
     for field in dir(obj):
         value = getattr(obj, field)
         if inspect.isclass(value):
