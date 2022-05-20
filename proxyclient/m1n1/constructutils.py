@@ -24,11 +24,11 @@ def recusive_reload(obj):
             if isinstance(value, Construct):
                 recusive_reload(value)
 
-def repr_value(value):
+def str_value(value):
     if isinstance(value, int):
         return f"{value:#x}"
     else:
-        return repr(value)
+        return str(value)
 
 
 class ConstructClassException(Exception):
@@ -172,7 +172,7 @@ class ConstructClass(ConstructClassBase, Container):
                 )
     """
 
-    def __repr__(self, ignore=[]) -> str:
+    def __str__(self, ignore=[]) -> str:
 
         str = f"{self.__class__.__name__} @ 0x{self._addr:x}:\n"
 
@@ -180,7 +180,7 @@ class ConstructClass(ConstructClassBase, Container):
             if key in ignore or key.startswith('_'):
                 continue
             value = getattr(self, key)
-            val_repr = repr_value(value)
+            val_repr = str_value(value)
             if '\n' in val_repr:
                 val_repr = textwrap.indent(val_repr, ' ' * 6)
                 if not val_repr.endswith('\n'):
@@ -201,9 +201,9 @@ class ConstructValueClass(ConstructClassBase):
         the value is stored as .value
     """
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         str = f"{self.__class__.__name__} @ 0x{self._addr:x}:"
-        str += f"\t{repr_value(self.value)}"
+        str += f"\t{str_value(self.value)}"
         return str
 
     @classmethod
