@@ -1496,6 +1496,8 @@ class HV(Reloadable):
         self.iface.dev.timeout = None
         self.default_sigint = signal.signal(signal.SIGINT, self._handle_sigint)
 
+        set_sigquit_stackdump_handler()
+
         if self.wdt_cpu is not None:
             self.p.hv_wdt_start(self.wdt_cpu)
         # Does not return

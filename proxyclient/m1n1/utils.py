@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 from enum import Enum
-import bisect, copy, heapq, importlib, sys, itertools, time, os, functools, struct, re
+import threading, traceback, bisect, copy, heapq, importlib, sys, itertools, time, os, functools, struct, re, signal
 from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul, ExprAdapter, GreedyRange, ListContainer, StopFieldError, ExplicitError, StreamError
 
 __all__ = ["FourCC"]
@@ -120,6 +120,21 @@ def chexdump32(s, st=0, abbreviate=True):
 def unhex(s):
     s = re.sub(r"/\*.*?\*/", "", s)
     return bytes.fromhex(s.replace(" ", "").replace("\n", ""))
+
+def dumpstacks(signal, frame):
+    id2name = dict([(th.ident, th.name) for th in threading.enumerate()])
+    code = []
+    for threadId, stack in sys._current_frames().items():
+        code.append("\n# Thread: %s(%d)" % (id2name.get(threadId,""), threadId))
+        for filename, lineno, name, line in traceback.extract_stack(stack):
+            code.append('File: "%s", line %d, in %s' % (filename, lineno, name))
+            if line:
+                code.append("  %s" % (line.strip()))
+    print("\n".join(code))
+    sys.exit(1)
+
+def set_sigquit_stackdump_handler():
+    signal.signal(signal.SIGQUIT, dumpstacks)
 
 def parse_indexlist(s):
     items = set()
