@@ -308,69 +308,14 @@ class Channel(Reloadable):
             data = obj.build()
         self.uat.iowrite(0, self.rb_base[ring] + index * size, data)
 
-Channel = Channel._reloadcls()
-
-ChannelInfo = Struct(
-    "state_addr" / Hex(Int64ul),
-    "ringbuffer_addr" / Hex(Int64ul),
-)
+class ChannelInfo(ConstructClass):
+    subcon = Struct(
+        "state_addr" / Hex(Int64ul),
+        "ringbuffer_addr" / Hex(Int64ul),
+    )
 
 class Channels(ConstructClass):
     CHAN_COUNT = len(channelNames)
 
     subcon = Struct(*[ name / ChannelInfo for name in channelNames])
 
-    def __init__(self, heap, shared_heap):
-        for i in range(12):
-            setattr(self, channelNames[i], Container(
-                state_addr = shared_heap.malloc(ChannelState.sizeof()),
-                ringbuffer_addr = heap.malloc(256 * NotifyCmdQueueWork.sizeof()),
-                ringbuffer = [Container()] * 256,
-            ))
-
-        self.DevCtrl = Container(
-            state_addr = shared_heap.malloc(ChannelState.sizeof()),
-            ringbuffer_addr = heap.malloc(256 * UnknownMsg.sizeof()),
-            ringbuffer = [UnknownMsg()] * 256,
-        )
-
-        self.Return0 = Container(
-            state_addr = heap.malloc(ChannelState.sizeof()),
-            ringbuffer_addr = heap.malloc(256 * 0x38),
-            ringbuffer = [b"\0" * 0x38] * 256
-        )
-
-        self.Return1 = Container(
-            state_addr = heap.malloc(ChannelState.sizeof()),
-            ringbuffer_addr = heap.malloc(256 * UnknownMsg.sizeof()),
-            ringbuffer = [UnknownMsg()] * 256,
-        )
-
-        self.Return2 = Container(
-            state_addr = heap.malloc(ChannelState.sizeof()),
-            ringbuffer_addr = heap.malloc(256 * UnknownMsg.sizeof()),
-            ringbuffer = [UnknownMsg()] * 256,
-        )
-
-        self.Return3 = Container(
-            state_addr = heap.malloc(ChannelState.sizeof()),
-            ringbuffer_addr = heap.malloc(256 * UnknownMsg.sizeof()),
-            ringbuffer = [UnknownMsg()] * 256,
-        )
-
-    def __str__(self):
-        str = "Channels:\n"
-        for name in channelNames:
-            channel = getattr(self, name)
-            str += f"   {name}: head:{channel.state.head} tail:{channel.state.tail} "
-            str += f"ringbuffer: {channel.ringbuffer_addr:#x}\n"
-
-        return str
-
-    def __len__(self):
-        return self.CHAN_COUNT
-
-    def __getitem__(self, item):
-        if isinstance(item, int):
-            item = channelNames[item]
-        return super().__getitem__(item)
