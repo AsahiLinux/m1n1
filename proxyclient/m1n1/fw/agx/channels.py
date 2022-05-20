@@ -1,4 +1,6 @@
 
+import random
+
 from m1n1.utils import *
 from m1n1.constructutils import ConstructClass
 from construct import *
@@ -23,23 +25,14 @@ class NotifyCmdQueueWork(ConstructClass):
         2: "SubmitCompute",
     }
 
-    def get_workitems(self):
-        try:
-            return self.workItems
-        except AttributeError:
-            self.workItems = self.cmdqueue().getSubmittedWork(self.head)
-            return self.workItems
-
     def __str__(self):
         s = super().__str__() + "\n"
 
         if (self.cmdqueue_addr == 0):
             return s + "<Empty NotifyCmdQueueWork>"
 
-        s += f"{self.TYPES[self.queue_type]}(0x{self.cmdqueue_addr & 0xfff_ffffffff:x}, {self.head}, ev={self.event_number}, new={self.new_queue})"
-        s += "\n  WorkItems:"
-        for work in self.get_workitems():
-            s += f"\n\t{work}"
+        r = random.randrange(2**64)
+        s += f"{self.TYPES[self.queue_type]}(0x{self.cmdqueue_addr & 0xfff_ffffffff:x}, {self.head}, ev={self.event_number}, new={self.new_queue}) //{r:x}"
         return s
 
 class DC_DestroyContext(ConstructClass):

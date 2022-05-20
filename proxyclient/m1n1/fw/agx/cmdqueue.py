@@ -3,6 +3,8 @@ from m1n1.constructutils import *
 from construct import *
 from .controllist import *
 
+ControlList = ControlList._reloadcls()
+
 class WorkCommand_4(ConstructClass):
     """
         sent before WorkCommand_1 on the Submit3d queue.
@@ -277,23 +279,49 @@ class CmdBufWork(ConstructClass):
         })
     )
 
+class ContextInfo(ConstructClass):
+    subcon = Struct(
+        "unkptr_0" / Int64ul,
+        "unkptr_8" / Int64ul,
+        "unkptr_10" / Int64ul,
+    )
+
+class CommandQueuePointers(ConstructClass):
+    subcon = Struct(
+        "gpu_doneptr" / Int32ul,
+        Padding(12),
+        "unk_10" / Int32ul,
+        Padding(12),
+        "unk_20" / Int32ul,
+        Padding(12),
+        "gpu_rptr" / Int32ul,
+        Padding(12),
+        "cpu_wptr" / Int32ul,
+        Padding(12),
+        "rb_size" / Int32ul,
+        Padding(12),
+    )
+
 class CommandQueueInfo(ConstructClass):
     """ Structure type shared by Submit3D, SubmitTA and SubmitCompute
         Applications have multiple of these, one of each submit type
         TODO: Can applications have more than one of each type? One per encoder?
+        Mostly managed by GPU, only intialize by CPU
 
     """
     subcon = Struct(
-        "unkptr_0" / Hex(Int64ul), # data at this pointer seems to match the current offests below
+        "pointers_addr" / Hex(Int64ul),
+        "pointers" / Pointer(this.pointers_addr, CommandQueuePointers),
         "RingBuffer_addr" / Hex(Int64ul), # 0x4ff pointers
-        "Ringbuffer_count" / Computed(0x4ff),
-        "ContextInfo" / Hex(Int64ul), # ffffffa000000000, size 0x18 (shared by 3D and TA)
-        "unkptr_18" / Hex(Int64ul), # eventually leads to userspace VAs
-        "cpu_tail" / Hex(Int32ul), # controled by cpu, tail
-        "gpu_tail" / Hex(Int32ul), # controled by gpu
-        "offset3" / Hex(Int32ul), # controled by gpu
-        "unk_2c" / Int32sl, # touched by both cpu and gpu, cpu likes -1, gpu likes 3. Might be a return value?
-        "unk_30" / Hex(Int64ul), # zero
+        "ContextInfo_addr" / Hex(Int64ul), # ffffffa000000000, size 0x18 (shared by 3D and TA)
+        "ContextInfo" / Pointer(this.ContextInfo_addr, ContextInfo),
+        "gpu_buf" / Hex(Int64ul), # GPU space for this queue, 0x2c18 bytes?
+        "gpu_rptr1" / Hex(Int32ul),
+        "gpu_rptr2" / Hex(Int32ul),
+        "gpu_rptr3" / Hex(Int32ul),
+        "unk_2c" / Int32ul, # busy flags?
+        "unk_30" / Hex(Int32ul), # read by CPU
+        "unk_34" / Hex(Int32ul),
         "unk_38" / Hex(Int64ul), # 0xffffffffffff0000, page mask?
         "unk_40" / Hex(Int32ul), # 1
         "unk_44" / Hex(Int32ul), # 0
@@ -302,44 +330,13 @@ class CommandQueueInfo(ConstructClass):
         "unk_50" / Hex(Int32ul), # Counts up for each new process or command queue
         "unk_54" / Hex(Int32ul), # always 0x04
         "unk_58" / Hex(Int64ul), # 0
-        "unk_60" / Hex(Int32ul), # Set to 1 by gpu after work complete. Reset to zero by cpu
+        "unk_60" / Hex(Int32ul), # 1 = gpu busy
         Padding(0x20),
         "unk_84" / Hex(Int32ul), # Set to 1 by gpu after work complete. Reset to zero by cpu
         Padding(0x18),
-        "unkptr_a0" / Hex(Int64ul), # Size 0x40 ; Also seen in DeviceControl_17
+        "contextinfo2_addr" / Hex(Int64ul), # GPU managed context, shared between 3D and TA. Passed to DC_DestroyContext
+        "contextinfo2" / HexDump(Pointer(this.contextinfo2_addr, Bytes(0x40))),
 
         # End of struct
     )
 
-    def getTail(self):
-        return self.cpu_tail
-        try:
-            return CommandQueueRingbufferTail[self._addr]
-        except KeyError:
-            return self.cpu_tail
-
-    def setTail(self, new_tail):
-        CommandQueueRingbufferTail[self._addr] = new_tail
-
-    def getSubmittedWork(self, head):
-        Work = []
-        orig_tail = tail = self.getTail()
-        count = 0
-
-        while tail != head:
-            count += 1
-            stream = self._stream
-            stream.seek(self.RingBuffer_addr + tail * 8, 0)
-            pointer = Hex(Int64ul).parse_stream(stream)
-            stream.seek(pointer, 0)
-
-            Work.append(CmdBufWork.parse_stream(stream))
-
-            tail = (tail + 1) % self.Ringbuffer_count
-
-        #print(f"Parsed {count} items from {orig_tail} to {head}")
-
-        #self.setTail(tail)
-        return Work
-
-CommandQueueInfo = CommandQueueInfo._reloadcls()
