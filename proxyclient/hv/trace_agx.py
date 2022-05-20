@@ -13,8 +13,11 @@ ASCTracer = ASCTracer._reloadcls()
 # gfx_tracer = ASCTracer(hv, "/arm-io/gfx-asc", verbose=True)
 # gfx_tracer.start()
 
+from m1n1.fw.agx import channels, initdata
+channels.Channel = channels.Channel._reloadcls()
+
 from m1n1.trace.agx import AGXTracer
-AGXTracer = AGXTracer._reloadcls()
+AGXTracer = AGXTracer._reloadcls(True)
 
 gfx_tracer = AGXTracer(hv, "/arm-io/gfx-asc", verbose=False)
 gfx_tracer.start()
