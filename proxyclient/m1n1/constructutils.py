@@ -167,6 +167,25 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
         # Skip calling the __init__ constructor, so that it can be used for building
         # Use parsed instead, if you need a post-parsing constructor
         self = cls.__new__(cls)
+        self._off = {}
+        self._meta = {}
+
+        if isinstance(cls.subcon, Struct):
+            subaddr = addr
+            for subcon in cls.subcon.subcons:
+                try:
+                    sizeof = subcon.sizeof()
+                except:
+                    break
+                if isinstance(subcon, Renamed):
+                    name = subcon.name
+                    subcon = subcon.subcon
+                    self._off[name] = subaddr - addr, sizeof
+                    if getattr(stream, "meta_fn", None):
+                        meta = stream.meta_fn(subaddr, sizeof)
+                        if meta is not None:
+                            self._meta[name] = meta
+                subaddr += sizeof
 
         # These might be useful later
         self._stream = stream
@@ -218,13 +237,20 @@ class ConstructClass(ConstructClassBase, Container):
                 continue
             value = getattr(self, key)
             val_repr = str_value(value)
+            off = ""
+            meta = ""
+            if key in self._off:
+                offv, sizeof = self._off[key]
+                off = f"\x1b[32m[{offv:3x}.{sizeof:3x}]\x1b[m "
+            if key in self._meta:
+                meta = f" \x1b[34m{self._meta[key]}\x1b[m"
             if '\n' in val_repr:
                 val_repr = textwrap.indent(val_repr, ' ' * 6)
                 if not val_repr.endswith('\n'):
                     val_repr += '\n'
-                str += f"   {key} =\n{val_repr}"
+                str += f"   {off}\x1b[95m{key}\x1b[m ={meta}\n{val_repr}"
             else:
-                str += f"   {key} = {val_repr}\n"
+                str += f"   {off}\x1b[95m{key}\x1b[m = {val_repr}{meta}\n"
 
         return str
 

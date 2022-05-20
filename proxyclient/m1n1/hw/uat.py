@@ -104,6 +104,7 @@ class UatStream(Reloadable):
         self.ctx = ctx
         self.pos = addr
         self.cache = None
+        self.meta_fn = None
 
     def read(self, size):
         assert size >= 0
