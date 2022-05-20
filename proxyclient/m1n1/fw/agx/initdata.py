@@ -95,7 +95,7 @@ class IOMapping(ConstructClass):
         self.range_size = range_size
         self.readwrite = readwrite
 
-    def __repr__(self):
+    def __str__(self):
         if self.virt_addr == 0:
             return "\n<IOMapping: Invalid>"
 

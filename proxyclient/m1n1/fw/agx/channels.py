@@ -47,7 +47,7 @@ class NotifyCmdQueueWork(ConstructClass):
             self.workItems = self.cmdqueue.getSubmittedWork(self.head)
             return self.workItems
 
-    def __repr__(self):
+    def __str__(self):
         if (self.cmdqueue_addr == 0):
             return "<Empty NotifyCmdQueueWork>"
 
@@ -70,18 +70,12 @@ class DeviceControl_17(ConstructClass):
         Padding(0xc)
     )
 
-    # def __repr__(self):
-    #     return f"DeviceControl_17()"
-
 class DeviceControl_19(ConstructClass):
     subcon =  Struct (
         "msg_type" / Const(0x19, Int32ul),
         Padding(0x2c)
     )
 
-
-    def __repr__(self):
-        return f"DeviceControl_19()"
 
 class DeviceControl_1e(ConstructClass):
     subcon =  Struct (
@@ -90,26 +84,10 @@ class DeviceControl_1e(ConstructClass):
         Padding(0x2c)
     )
 
-    def __repr__(self):
-        return f"DeviceControl_17()"
-
 class DeviceControl_23(ConstructClass):
     subcon = Struct (
         "msg_type" / Const(0x23, Int32ul),
     )
-
-    def __repr__(self):
-        return f"DeviceControl_23()"
-
-# class DeviceControl_dummy(ConstructClass):
-#     subcon =  Struct (
-#         "msg_type" / Const(0xcc, Int32ul),
-#         Padding(0x2c)
-#     )
-
-#     def __init__(self):
-#         self.msg_type = 0xcc
-
 
 class UnknownMsg(ConstructClass):
     subcon = Struct (
@@ -121,7 +99,7 @@ class UnknownMsg(ConstructClass):
         self.msg_type = 0xcc
         self.data = b"\0"*0x2c
 
-    def __repr__(self):
+    def __str__(self):
         return f"Unknown(type={self.msg_type:x}, data={hexdump32(self.data)})"
 
 
@@ -193,7 +171,7 @@ class Channels(ConstructClass):
             ringbuffer = [UnknownMsg()] * 256,
         )
 
-    def __repr__(self):
+    def __str__(self):
         str = "Channels:\n"
         for name in channelNames:
             channel = getattr(self, name)
