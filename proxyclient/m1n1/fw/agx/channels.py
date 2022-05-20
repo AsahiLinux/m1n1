@@ -42,7 +42,7 @@ class NotifyCmdQueueWork(ConstructClass):
             s += f"\n\t{work}"
         return s
 
-class DeviceControl_17(ConstructClass):
+class DC_DestroyContext(ConstructClass):
     subcon =  Struct (
         "msg_type" / Const(0x17, Int32ul),
         "unk_4" / Hex(Int32ul),
@@ -51,7 +51,7 @@ class DeviceControl_17(ConstructClass):
         "unk_10" / Hex(Int32ul),
         "unk_14" / Hex(Int32ul),
         "unk_18" / Hex(Int32ul),
-        "unkptr_1c" / Hex(Int64ul),
+        "context_addr" / Hex(Int64ul),
         "rest" / HexDump(Bytes(0xc))
     )
 
@@ -89,7 +89,7 @@ class UnknownMsg(ConstructClass):
 
 
 DeviceControlMsg = FixedSized(0x30, Select(
-    DeviceControl_17,
+    DC_DestroyContext,
     DeviceControl_19,
     DeviceControl_23,
     UnknownMsg,
