@@ -7,7 +7,7 @@ from .mgmt import ASCManagementEndpoint
 from .kdebug import ASCKDebugEndpoint
 from .ioreporting import ASCIOReportingEndpoint
 from .oslog import ASCOSLogEndpoint
-from .base import ASCBaseEndpoint
+from .base import ASCBaseEndpoint, ASCTimeout
 from ...hw.asc import ASC
 
 __all__ = []
@@ -83,17 +83,25 @@ class StandardASC(ASC):
         self.mgmt.start()
         self.mgmt.wait_boot()
 
-    def stop(self):
+    def stop(self, state=0x10):
         for ep in list(self.epmap.values())[::-1]:
             if ep.epnum < 0x10:
                 continue
             ep.stop()
-        self.mgmt.stop()
+        self.mgmt.stop(state=state)
 
     def boot(self):
         print("Booting ASC...")
         super().boot()
         self.mgmt.wait_boot()
+
+    def boot_or_start(self):
+        super().boot()
+        try:
+            self.mgmt.wait_boot(0.2)
+        except ASCTimeout:
+            self.mgmt.start()
+            self.mgmt.wait_boot(0.2)
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

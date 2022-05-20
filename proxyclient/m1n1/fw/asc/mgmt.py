@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: MIT
+import time
+
 from .base import *
 from ...utils import *
 
@@ -107,10 +109,14 @@ class ASCManagementEndpoint(ASCBaseEndpoint):
         self.log("Starting via message")
         self.send(Mgmt_SetIOPPower(STATE=0x220))
 
-    def wait_boot(self):
+    def wait_boot(self, timeout=None):
+        if timeout is not None:
+            timeout += time.time()
         while self.iop_power_state != 0x20 or self.ap_power_state != 0x20:
             self.asc.work()
-        self.log("startup complete")
+            if timeout and time.time() > timeout:
+                raise ASCTimeout("Boot timed out")
+        self.log("Startup complete")
 
     def start_ep(self, epno):
         self.send(Mgmt_StartEP(EP=epno, FLAG=2))
