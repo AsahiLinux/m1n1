@@ -1,5 +1,6 @@
 from construct import *
 from construct.core import evaluate
+from construct.lib import HexDisplayedInteger
 from .utils import Reloadable, ReloadableMeta
 import inspect
 import textwrap
@@ -25,11 +26,37 @@ def recusive_reload(obj):
                 recusive_reload(value)
 
 def str_value(value):
+    if isinstance(value, DecDisplayedInteger):
+        return str(value)
     if isinstance(value, int):
         return f"{value:#x}"
-    else:
-        return str(value)
+    if isinstance(value, ListContainer):
+        if len(value) <= 16:
+            return "[" + ", ".join(map(str_value, value)) + "]"
+        else:
+            sv = ["[\n"]
+            for off in range(0, len(value), 16):
+                sv.append("  " + ", ".join(map(str_value, value[off:off+16])) + ",\n")
+            sv.append("]\n")
+            return "".join(sv)
 
+    return str(value)
+
+class DecDisplayedInteger(int):
+    @staticmethod
+    def new(intvalue):
+        obj = DecDisplayedInteger(intvalue)
+        return obj
+
+class Dec(Adapter):
+    def _decode(self, obj, context, path):
+        try:
+            if isinstance(obj, int):
+                return DecDisplayedInteger.new(obj)
+            return obj
+        except Exception as e:
+            print(e)
+            raise
 
 class ConstructClassException(Exception):
     pass
@@ -213,4 +240,4 @@ class ConstructValueClass(ConstructClassBase):
     def _apply(self, obj):
         self.value = obj
 
-__all__ = ["ConstructClass", "ConstructValueClass"]
+__all__ = ["ConstructClass", "ConstructValueClass", "Dec"]
