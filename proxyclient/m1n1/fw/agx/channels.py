@@ -291,12 +291,13 @@ class Channel(Reloadable):
             self.rb_maps.append(m)
             p += size * count
 
-    def get_message(self, ring, index):
+    def get_message(self, ring, index, meta_fn=None):
         msgcls, size, count = self.ring_defs[ring]
 
         assert index < count
         addr = self.rb_base[ring] + index * size
         stream = self.uat.iostream(0, addr)
+        stream.meta_fn = meta_fn
         return msgcls.parse_stream(stream)
 
     def clear_message(self, ring, index):
