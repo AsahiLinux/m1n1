@@ -193,7 +193,7 @@ class UAT(Reloadable):
         self.hv = hv
         self.pt_cache = {}
         self.dirty = set()
-        self.ctx_allocator = {}
+        self.allocator = None
         self.ttbr = None
 
         self.VA_MASK = 0
@@ -201,27 +201,13 @@ class UAT(Reloadable):
             self.VA_MASK |= (size - 1) << off
         self.VA_MASK |= self.PAGE_SIZE - 1
 
-    # Implements the OS side of UAT initilzion
-    def initialize(self, ttbr, ttbr1_addr, kernel_va_base):
-        self.ttbr = ttbr
-        # create the ttbr1 allocator at ctx 0
-        self.get_allocator(0, (kernel_va_base, kernel_va_base + 0x1_00000000))
 
-        # set ttbr0 and ttbr1, which are needed for gfx_asc to start
-        ttbr0_addr = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
-        self.write_pte(ttbr, 0, 2, TTBR(BADDR = ttbr0_addr >> 1, ASID = 0))
-        self.write_pte(ttbr, 1, 2, TTBR(BADDR = ttbr1_addr >> 1, ASID = 0))
-
-        self.flush_dirty()
-
+    def set_l0(self, ctx, off, base, asid=0):
+        self.write_pte(self.ttbr + ctx * 16, off, 2,
+                       TTBR(BADDR = base >> 1, ASID = asid))
 
     def set_ttbr(self, addr):
         self.ttbr = addr
-
-    def get_allocator(self, ctx, range=(0x16_00000000, 0x17_00000000)):
-        if ctx not in self.ctx_allocator:
-            self.ctx_allocator[ctx] = Heap(range[0], range[1], self.PAGE_SIZE)
-        return self.ctx_allocator[ctx]
 
     def ioread(self, ctx, base, size):
         if size == 0:
@@ -258,13 +244,13 @@ class UAT(Reloadable):
     def iostream(self, ctx, base):
         return UatStream(self, ctx, base)
 
-    def iomap(self, ctx, addr, size, flags= None):
-        iova = self.get_allocator(ctx).malloc(size)
+    def iomap(self, ctx, addr, size, **flags):
+        iova = self.allocator.malloc(size)
 
-        self.iomap_at(ctx, iova, addr, size, flags)
+        self.iomap_at(ctx, iova, addr, size, **flags)
         return iova
 
-    def iomap_at(self, ctx, iova, addr, size, flags= None):
+    def iomap_at(self, ctx, iova, addr, size, **flags):
         if size == 0:
             return
 
@@ -274,8 +260,8 @@ class UAT(Reloadable):
         if iova & (self.PAGE_SIZE - 1):
             raise Exception(f"Unaligned IOVA {iova:#x}")
 
-        if flags == None:
-            flags = {'OS': 1, 'AttrIndex': MemoryAttr.Normal, 'VALID': 1, 'TYPE': 1, 'AP': 1, 'AF': 1, 'UXN': 1}
+        map_flags = {'OS': 1, 'AttrIndex': MemoryAttr.Normal, 'VALID': 1, 'TYPE': 1, 'AP': 1, 'AF': 1, 'UXN': 1}
+        map_flags.update(flags)
 
         start_page = align_down(iova, self.PAGE_SIZE)
         end = iova + size
@@ -285,7 +271,7 @@ class UAT(Reloadable):
             table_addr = self.ttbr + ctx * 16
             for (offset, size, ptecls) in self.LEVELS:
                 if ptecls is Page_PTE:
-                    pte = Page_PTE(**flags)
+                    pte = Page_PTE(**map_flags)
                     pte.set_offset(addr)
                     self.write_pte(table_addr, page >> offset, size, pte)
                     addr += self.PAGE_SIZE
@@ -428,6 +414,9 @@ class UAT(Reloadable):
 
     def foreach_page(self, ctx, page_fn):
         self.recurse_level(0, 0, self.ttbr + ctx * 16, page_fn)
+
+    def foreach_table(self, ctx, table_fn):
+        self.recurse_level(0, 0, self.ttbr + ctx * 16, table_fn=table_fn)
 
     def dump(self, ctx, log=print):
         if not self.ttbr:
