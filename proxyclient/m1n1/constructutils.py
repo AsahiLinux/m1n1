@@ -110,8 +110,8 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
         return cls.subcon._sizeof(context, f"{path} -> {cls.name}")
 
     @classmethod
-    def _reloadcls(cls):
-        newcls = super()._reloadcls()
+    def _reloadcls(cls, force=False):
+        newcls = super()._reloadcls(force)
         recusive_reload(newcls.subcon)
         return newcls
 
