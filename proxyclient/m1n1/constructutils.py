@@ -122,6 +122,8 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
 
     @classmethod
     def _build(cls, obj, stream, context, path):
+        cls._build_prepare(obj)
+
         addr = stream.tell()
         try:
             new_obj = cls.subcon._build(obj, stream, context, f"{path} -> {cls.name}")
@@ -195,6 +197,10 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
 
         return self
 
+    @classmethod
+    def _build_prepare(cls, obj):
+        pass
+
     def build_stream(self, obj=None, stream=None, **contextkw):
         assert stream != None
         if obj is None:
@@ -207,6 +213,10 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
             obj = self
 
         return Construct.build(self, obj, **contextkw)
+
+class ROPointer(Pointer):
+    def _build(self, obj, stream, context, path):
+        return obj
 
 class ConstructClass(ConstructClassBase, Container):
     """ Offers two benifits over regular construct
@@ -253,6 +263,23 @@ class ConstructClass(ConstructClassBase, Container):
                 str += f"   {off}\x1b[95m{key}\x1b[m = {val_repr}{meta}\n"
 
         return str
+
+    @classmethod
+    def _build_prepare(cls, obj):
+        if isinstance(cls.subcon, Struct):
+            for subcon in cls.subcon.subcons:
+                if not isinstance(subcon, Renamed):
+                    continue
+                name = subcon.name
+                subcon = subcon.subcon
+                if not isinstance(subcon, Pointer):
+                    continue
+                try:
+                    addr = getattr(obj, name)._addr
+                    if addr is not None:
+                        setattr(obj, subcon.offset.__getfield__(), addr)
+                except:
+                    pass
 
     def _apply(self, obj):
         self.update(obj)
