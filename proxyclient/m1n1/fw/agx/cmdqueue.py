@@ -14,10 +14,11 @@ class WorkCommand_4(ConstructClass):
     """
     subcon = Struct(
         "magic" / Const(0x4, Hex(Int32ul)),
-        "ptr" / Hex(Int64ul), # These appare to be shared over multiple contexes
-        "unk_c" / Hex(Int32ul), # Counts up by 0x100 each frame, gets written to ptr? (on completion?)
+        "completion_buf_addr" / Hex(Int64ul), # These appare to be shared over multiple contexes
+        "completion_buf" / Pointer(this.completion_buf_addr, Hex(Int32ul)),
+        "complete_tag1" / Hex(Int32ul), # Counts up by 0x100 each frame, gets written to ptr? (on completion?)
         "flag" / Hex(Int32ul), # 2, 4 or 6
-        "unk_14" / Hex(Int32ul),  # Counts up by 0x100 each frame? starts at diffrent point?
+        "complete_tag2" / Hex(Int32ul),  # Counts up by 0x100 each frame? starts at diffrent point?
         "uuid" / Hex(Int32ul),
     )
 
@@ -31,14 +32,22 @@ class WorkCommand_6(ConstructClass):
     """
     subcon = Struct(
         "magic" / Const(0x6, Hex(Int32ul)),
-        "unk_4" / Hex(Int32ul), # Might be context?
+        "context_id" / Hex(Int32ul), # Might be context?
         "unk_8" / Hex(Int32ul), # 0
         "unk_c" / Hex(Int32ul), # 0
         "unk_10" / Hex(Int32ul), # 0x30
-        "unkptr_14" / Hex(Int64ul), # same as unkptr_20 of the previous worckcommand_1, has some userspace VAs
-        "size" / Hex(Int32ul),  # 0x100
+        "unkptr_14" / Hex(Int64ul), # WorkCommandSub20
+        "complete_tag" / Hex(Int32ul),  # 0x100
     )
 
+class WorkCommandSubC(ConstructClass):
+    subcon = Struct(
+        "unkptr_0" / Hex(Int64ul),
+        "unk_8" / Hex(Int32ul),
+        "unk_c" / Hex(Int32ul),
+        "unk_10" / Hex(Int64ul),
+        "unk_18" / Hex(Int64ul),
+    )
 
 class WorkCommand_3(ConstructClass):
     """
@@ -66,10 +75,12 @@ class WorkCommand_3(ConstructClass):
     """
 
     subcon = Struct(
+        "addr" / Tell,
         "magic" / Const(0x3, Hex(Int32ul)),
         "unk_4" / Hex(Int32ul),
         "context_id" / Hex(Int32ul),
         "unkptr_c" / Hex(Int64ul),
+        "unk_c" / Pointer(this.unkptr_c, WorkCommandSubC),
 
         # This struct embeeds some data that the Control List has pointers back to, but doesn't
         # seem to be actually part of this struct
@@ -82,11 +93,49 @@ class WorkCommand_3(ConstructClass):
     )
 
     def __str__(self) -> str:
-        str = super().__str__(ignore=['magic', 'controllist_ptr', 'controllist_size'])
-        # str += f"   Control List - {self.controllist_size:#x} bytes @ {self.controllist_ptr:#x}:\n"
-        # str += textwrap.indent(repr(self.controllist), ' ' * 3)
+        str = super().__str__(ignore=['magic'])
+        str += f"   Control List - {self.controllist_size:#x} bytes @ {self.controllist_ptr:#x}:\n"
+        str += textwrap.indent(repr(self.controllist), ' ' * 3)
         return str
 
+
+class WorkCommandSub20(ConstructClass):
+    subcon = Struct(
+        "unk_0" / Int64ul,
+        "unk_8" / Int32ul,
+        "unk_c" / Int32ul,
+        "unk_10" / Int64ul,
+        "unk_18" / Int64ul,
+        "unkptr_20" / Int64ul,
+        "unk_28" / Int32ul,
+        "unk_2c" / Int32ul,
+        "unk_30" / Int32ul,
+        "unk_34" / Int32ul,
+        "unk_38" / Int32ul,
+        "unkptr_3c" / Int64ul,
+        "ring_control_addr" / Int64ul, # points to two u32s
+        "unk_4c" / Int32ul,
+        "unk_50" / Int64ul,
+        "unk_58" / Int32ul,
+        "unk_5c" / Int32ul,
+        "unk_60" / Int64ul,
+        "unkptr_68" / Int64ul,
+        "unk_70" / Int64ul,
+        "unk_78" / Int64ul,
+        "unk_80" / Int32ul,
+        "unk_84" / Int32ul,
+        "unk_88" / Int32ul,
+        "unk_8c" / Int32ul,
+        "unk_90" / HexDump(Bytes(0x30)),
+        "unk_c0" / Int32ul,
+        "unk_c4" / HexDump(Bytes(0x14)),
+        "unkptr_d8" / Int64ul,
+        "unk_e0" / Int32ul,
+        "unkptr_e4" / Int64ul, # like unkptr_24 in Start3DStruct3
+        "unk_ec" / Int32ul,
+        "unk_f0" / Int64ul,
+        "unk_f8" / Int64ul,
+    )
 
 class WorkCommand_1(ConstructClass):
     """
@@ -115,6 +164,7 @@ class WorkCommand_1(ConstructClass):
     """
 
     subcon = Struct(
+        "addr" / Tell,
         "magic" / Const(0x1, Hex(Int32ul)),
         "context_id" / Hex(Int32ul),
         "unk_8" / Hex(Int32ul),
@@ -122,10 +172,12 @@ class WorkCommand_1(ConstructClass):
         "controllist_size" / Hex(Int32ul),
         "controllist" / Pointer(this.controllist_ptr, ControlList),
         "unkptr_18" / Hex(Int64ul),
+        "unk_18" / Pointer(this.unkptr_18, WorkCommandSubC),
         "unkptr_20" / Hex(Int64ul), # Size: 0x100
-        "unkptr_28" / Hex(Int64ul), # Size: 0x8c0
+        "unk_20" / Pointer(this.unkptr_20, WorkCommandSub20),
+        "unkptr_28" / Hex(Int64ul), # Size: 0x8c0, array of Start3DStruct3
         "unkptr_30" / Hex(Int64ul),
-        "unkptr_38" / Hex(Int64ul),
+        "tvb_addr" / Hex(Int64ul),
         "unk_40" / Hex(Int64ul),
         "unk_48" / Hex(Int32ul),
         "unk_4c" / Hex(Int32ul),
@@ -138,7 +190,7 @@ class WorkCommand_1(ConstructClass):
     )
 
     def __str__(self) -> str:
-        str = super().__str__(ignore=['magic', 'controllist_ptr', 'controllist_size'])
+        str = super().__str__()
         # str += f"   Control List - {self.controllist_size:#x} bytes @ {self.controllist_ptr:#x}:\n"
         # str += textwrap.indent(repr(self.controllist), ' ' * 3)
         return str
@@ -148,6 +200,7 @@ class WorkCommand_0(ConstructClass):
     """
     For TA
 
+    Example:
     00000000  00000000 00000004 00000000 0c3d80c0 ffffffa0 00000002 00000000 0c3e0000
     00000020  ffffffa0 0c3e0100 ffffffa0 0c3e09c0 ffffffa0 00000000 00000200 00000000
     00000040  1e3ce508 1e3ce508 01cb0000 00000015 00000000 00000000 00970000 00000015
@@ -165,25 +218,40 @@ class WorkCommand_0(ConstructClass):
     000003c0  00000088 00000202 04af063f 00025031 00404030 00303024 000000c0 00000180
     000003e0  00000100 00008000 00000000 00000000 00000000 00000000 00000000 00000000
     """
+
     subcon = Struct(
+        "addr" / Tell,
         "magic" / Const(0x0, Hex(Int32ul)),
         "context_id" / Hex(Int32ul),
         "unk_8" / Hex(Int32ul),
         "unkptr_c" / Hex(Int64ul),
+        "unk_c" / Pointer(this.unkptr_c, WorkCommandSubC),
         "unk_14" / Hex(Int64ul),
         "unkptr_1c" / Hex(Int64ul),
-        "unkptr_24" / Hex(Int64ul),
-        "unkptr_2c" / Hex(Int64ul),
-        "unk_34" / Hex(Int64ul),
-        "unk_3c" / Hex(Int32ul),
-        "uuid1" / Hex(Int32ul),
-        "uuid2" / Hex(Int32ul),
-        "unkptr_48" / Hex(Int64ul),
-        "unkptr_50" / Hex(Int64ul),
-        "unkptr_58" / Hex(Int64ul),
-        "unkptr_60" / Hex(Int64ul),
+        "unk_1c" / Pointer(this.unkptr_1c, WorkCommandSub20),
+        "unkptr_24" / Hex(Int64ul), # like Start3DCmd.unkptr_14 and WorkCommand_1.unkptr_28
+        "unkptr_2c" / Hex(Int64ul), # like WorkCommand_1.unkptr_30
+        "unk_34" / Hex(Int32ul),
+
+        # This struct embeeds some data that the Control List has pointers back to, but doesn't
+        # seem to be actually part of this struct
+        Padding(0x45c - 0x38),
+
+        "unkptr_45c" / Int64ul,
+        "tvb_size" / Int64ul,
+        "controllist_ptr" / Hex(Int64ul),
+        "controllist_size" / Hex(Int32ul),
+        "controllist" / Pointer(this.controllist_ptr, ControlList),
+        "unk_478" / Int32ul,
+        "complete_tag" / Int32ul,
 
     )
+
+    def __str__(self) -> str:
+        str = super().__str__(ignore=['magic'])
+        #str += f"   Control List - {self.controllist_size:#x} bytes @ {self.controllist_ptr:#x}:\n"
+        #str += textwrap.indent(repr(self.controllist), ' ' * 3)
+        return str
 
 class UnknownWorkCommand(ConstructClass):
     subcon = Struct(
@@ -197,16 +265,16 @@ class UnknownWorkCommand(ConstructClass):
         "unk_1c" / Hex(Int32ul),
     )
 
-
 class CmdBufWork(ConstructClass):
-    subcon = Select(
-        WorkCommand_0,
-        WorkCommand_1,
-        WorkCommand_3,
-        WorkCommand_4,
-        WorkCommand_6,
-
-        UnknownWorkCommand
+    subcon = Struct(
+        "cmdid" / Peek(Int32ul),
+        "cmd" / Switch(this.cmdid, {
+            0: WorkCommand_0,
+            1: WorkCommand_1,
+            3: WorkCommand_3,
+            4: WorkCommand_4,
+            6: WorkCommand_6,
+        })
     )
 
 class CommandQueueInfo(ConstructClass):
