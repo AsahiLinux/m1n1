@@ -274,7 +274,7 @@ class HV(Reloadable):
             self.add_tracer(zone, "PrintTracer", mode,
                             self.print_tracer.event_mmio if read else None,
                             self.print_tracer.event_mmio if write else None,
-                            zone=zone,
+                            start=zone,
                             name=name)
         else:
             self.del_tracer(zone, "PrintTracer")
