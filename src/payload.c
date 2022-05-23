@@ -157,13 +157,13 @@ static char *chosen[MAX_CHOSEN_VARS];
 
 static bool check_var(u8 **p)
 {
-    char *val = memchr(*p, '=', MAX_VAR_NAME + 1);
+    char *val = memchr(*p, '=', strnlen((char *)*p, MAX_VAR_NAME + 1));
     if (!val)
         return false;
 
     val++;
 
-    char *end = memchr(val, '\n', MAX_VAR_SIZE + 1);
+    char *end = memchr(val, '\n', strnlen(val, MAX_VAR_SIZE + 1));
     if (!end)
         return false;
 
