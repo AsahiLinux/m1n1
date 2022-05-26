@@ -33,6 +33,7 @@ bool rtkit_boot(rtkit_dev_t *rtk);
 
 int rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg);
 bool rtkit_send(rtkit_dev_t *rtk, const struct rtkit_message *msg);
+int rtkit_drain(rtkit_dev_t *rtk, int timeout);
 
 bool rtkit_map(rtkit_dev_t *rtk, void *phys, size_t sz, u64 *dva);
 bool rtkit_unmap(rtkit_dev_t *rtk, u64 dva, size_t sz);

@@ -460,6 +460,29 @@ int rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
     return 0;
 }
 
+int rtkit_drain(rtkit_dev_t *rtk, int timeout)
+{
+    while (asc_can_recv(rtk->asc)) {
+        struct rtkit_message msg;
+        int ret = rtkit_recv(rtk, &msg);
+        if (ret < 0)
+            return ret;
+        if (ret == 1) {
+            rtkit_printf("WARNING: unexpected message for endpoint 0x%02x\n", msg.ep);
+            return msg.ep;
+        }
+    }
+
+    while (timeout > 0) {
+        if (asc_can_send(rtk->asc))
+            return 0;
+        udelay(10);
+        timeout -= 10;
+    }
+
+    return asc_can_send(rtk->asc) ? 0 : -2;
+}
+
 bool rtkit_start_ep(rtkit_dev_t *rtk, u8 ep)
 {
     struct asc_message msg;

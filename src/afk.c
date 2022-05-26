@@ -459,8 +459,18 @@ err:
     return NULL;
 }
 
+#define ASC_TIMEOUT_US 50
+
 int afk_epic_shutdown(afk_epic_ep_t *epic)
 {
+    // drain rtkit of pending syslog messages, the mailbox is apparently blocked for ~35 us after
+    // sending RBEP_SHUTDOWN.
+    int ret = rtkit_drain(epic->rtk, ASC_TIMEOUT_US);
+    if (ret == -2) {
+        printf("EPIC: ASC send not ready after drain\n");
+        udelay(ASC_TIMEOUT_US);
+    }
+
     struct rtkit_message msg = {epic->ep, FIELD_PREP(RBEP_TYPE, RBEP_SHUTDOWN)};
     if (!rtkit_send(epic->rtk, &msg)) {
         printf("EPIC: failed to send shutdown message\n");
