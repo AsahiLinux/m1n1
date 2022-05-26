@@ -24,8 +24,15 @@
 dcp_dev_t *dcp;
 dcp_iboot_if_t *iboot;
 u64 fb_dva;
+u64 fb_size;
 
 #define abs(x) ((x) >= 0 ? (x) : -(x))
+
+u64 display_mode_fb_size(dcp_timing_mode_t *mode)
+{
+    // assume 4 byte per pixel (either BGRA x2r10b10g10)
+    return mode->width * mode->height * 4;
+}
 
 static void display_choose_timing_mode(dcp_timing_mode_t *modes, int cnt, dcp_timing_mode_t *best,
                                        dcp_timing_mode_t *want)
@@ -34,6 +41,7 @@ static void display_choose_timing_mode(dcp_timing_mode_t *modes, int cnt, dcp_ti
 
     for (int i = 1; i < cnt; i++) {
         COMPARE(modes[i].valid, best->valid);
+        COMPARE(display_mode_fb_size(&modes[i]) <= fb_size, display_mode_fb_size(best) <= fb_size);
         if (want && want->valid) {
             COMPARE(modes[i].width == want->width && modes[i].height == want->height,
                     best->width == want->width && best->height == want->height);
@@ -69,34 +77,15 @@ static void display_choose_color_mode(dcp_color_mode_t *modes, int cnt, dcp_colo
            best->colorimetry, best->eotf, best->encoding, best->bpp);
 }
 
-static int display_map_fb(uintptr_t iova, void *paddr, size_t size)
-{
-    int ret = dart_map(dcp->dart_disp, iova, paddr, size);
-    if (ret < 0) {
-        printf("display: failed to map fb to dart-disp0\n");
-        return -1;
-    }
-
-    ret = dart_map(dcp->dart_dcp, iova, paddr, size);
-    if (ret < 0) {
-        printf("display: failed to map fb to dart-dcp\n");
-        dart_unmap(dcp->dart_disp, iova, size);
-        return -1;
-    }
-
-    return 0;
-}
-
-static uintptr_t display_map_vram(void)
+int display_get_vram(u64 *paddr, u64 *size)
 {
     int ret = 0;
-    u64 paddr, size;
     int adt_path[4];
     int node = adt_path_offset_trace(adt, "/vram", adt_path);
 
     if (node < 0) {
         printf("display: '/vram' not found\n");
-        return 0;
+        return -1;
     }
 
     int pp = 0;
@@ -104,16 +93,23 @@ static uintptr_t display_map_vram(void)
         pp++;
     adt_path[pp + 1] = 0;
 
-    ret = adt_get_reg(adt, adt_path, "reg", 0, &paddr, &size);
+    ret = adt_get_reg(adt, adt_path, "reg", 0, paddr, size);
     if (ret < 0) {
         printf("display: failed to read /vram/reg\n");
-        return 0;
+        return -1;
     }
 
-    if (paddr != cur_boot_args.video.base) {
+    if (*paddr != cur_boot_args.video.base) {
         printf("display: vram does not match boot_args.video.base\n");
-        return 0;
+        return -1;
     }
+
+    return 0;
+}
+
+static uintptr_t display_map_fb(u64 paddr, u64 size)
+{
+    int ret = 0;
 
     s64 iova_disp0 = 0;
     s64 iova_dcp = 0;
@@ -140,9 +136,19 @@ static uintptr_t display_map_vram(void)
     }
 
     uintptr_t iova = iova_dcp;
-    ret = display_map_fb(iova, (void *)paddr, size);
-    if (ret < 0)
+
+    ret = dart_map(dcp->dart_disp, iova, (void *)paddr, size);
+    if (ret < 0) {
+        printf("display: failed to map fb to dart-disp0\n");
         return 0;
+    }
+
+    ret = dart_map(dcp->dart_dcp, iova, (void *)paddr, size);
+    if (ret < 0) {
+        printf("display: failed to map fb to dart-dcp\n");
+        dart_unmap(dcp->dart_disp, iova, size);
+        return 0;
+    }
 
     return iova;
 }
@@ -158,11 +164,21 @@ static int display_start_dcp(void)
         return -1;
     }
 
+    // determine frame buffer PA and size from "/vram"
+    u64 pa, size;
+    if (display_get_vram(&pa, &size)) {
+        // use a safe fb_size
+        fb_size = cur_boot_args.video.stride * cur_boot_args.video.height *
+                  ((cur_boot_args.video.depth + 7) / 8);
+    } else {
+        fb_size = size;
+    }
+
     // Find the framebuffer DVA
     fb_dva = dart_search(dcp->dart_disp, (void *)cur_boot_args.video.base);
     // framebuffer is not mapped on the M1 Ultra Mac Studio
     if (!fb_dva)
-        fb_dva = display_map_vram();
+        fb_dva = display_map_fb(pa, size);
     if (!fb_dva) {
         printf("display: failed to find display DVA\n");
         dcp_shutdown(dcp);
