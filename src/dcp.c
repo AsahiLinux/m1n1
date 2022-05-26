@@ -24,7 +24,7 @@ dcp_dev_t *dcp_init(const char *dcp_path, const char *dcp_dart_path, const char 
         goto out_dart_dcp;
     }
 
-    dcp->iovad_dcp = iovad_init(0x10000000, 0xf0000000);
+    dcp->iovad_dcp = iovad_init(0x10000000, 0x20000000);
 
     dcp->asc = asc_init(dcp_path);
     if (!dcp->asc) {
