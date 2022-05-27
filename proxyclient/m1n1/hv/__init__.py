@@ -1,65 +1,20 @@
 # SPDX-License-Identifier: MIT
 import io, sys, traceback, struct, array, bisect, os, signal, runpy
 from construct import *
-from enum import Enum, IntEnum, IntFlag
 
-from .asm import ARMAsm
-from .tgtypes import *
-from .proxy import IODEV, START, EVENT, EXC, EXC_RET, ExcInfo
-from .utils import *
-from .sysreg import *
-from .macho import MachO
-from .adt import load_adt
-from . import xnutools, shell
+from ..asm import ARMAsm
+from ..tgtypes import *
+from ..proxy import IODEV, START, EVENT, EXC, EXC_RET, ExcInfo
+from ..utils import *
+from ..sysreg import *
+from ..macho import MachO
+from ..adt import load_adt
+from .. import xnutools, shell
+
+from .gdbserver import *
+from .types import *
 
 __all__ = ["HV"]
-
-class MMIOTraceFlags(Register32):
-    CPU = 23, 16
-    WIDTH = 4, 0
-    WRITE = 5
-    MULTI = 6
-
-EvtMMIOTrace = Struct(
-    "flags" / RegAdapter(MMIOTraceFlags),
-    "reserved" / Int32ul,
-    "pc" / Hex(Int64ul),
-    "addr" / Hex(Int64ul),
-    "data" / Hex(Int64ul),
-)
-
-EvtIRQTrace = Struct(
-    "flags" / Int32ul,
-    "type" / Hex(Int16ul),
-    "num" / Int16ul,
-)
-
-class HV_EVENT(IntEnum):
-    HOOK_VM = 1
-    VTIMER = 2
-    USER_INTERRUPT = 3
-    WDT_BARK = 4
-    CPU_SWITCH = 5
-
-VMProxyHookData = Struct(
-    "flags" / RegAdapter(MMIOTraceFlags),
-    "id" / Int32ul,
-    "addr" / Hex(Int64ul),
-    "data" / Array(8, Hex(Int64ul)),
-)
-
-class TraceMode(IntEnum):
-    '''
-Different types of Tracing '''
-
-    OFF = 0
-    BYPASS = 1
-    ASYNC = 2
-    UNBUF = 3
-    WSYNC = 4
-    SYNC = 5
-    HOOK = 6
-    RESERVED = 7
 
 class HV(Reloadable):
     PAC_MASK = 0xfffff00000000000
@@ -136,6 +91,8 @@ class HV(Reloadable):
         self.novm = False
         self._in_handler = False
         self._sigint_pending = False
+        self._in_shell = False
+        self._gdbserver = None
         self.vm_hooks = [None]
         self.interrupt_map = {}
         self.mmio_maps = DictRangeMap()
@@ -428,7 +385,44 @@ class HV(Reloadable):
                 update()
 
     def run_shell(self, entry_msg="Entering shell", exit_msg="Continuing"):
-        return shell.run_shell(self.shell_locals, entry_msg, exit_msg)
+        def handle_sigusr1(signal, stack):
+            raise shell.ExitConsole(EXC_RET.HANDLED)
+
+        def handle_sigusr2(signal, stack):
+            raise shell.ExitConsole(EXC_RET.EXIT_GUEST)
+
+        default_sigusr1 = signal.signal(signal.SIGUSR1, handle_sigusr1)
+        try:
+            default_sigusr2 = signal.signal(signal.SIGUSR2, handle_sigusr2)
+            try:
+                self._in_shell = True
+                try:
+                    if not self._gdbserver is None:
+                        self._gdbserver.notify_in_shell()
+                    return shell.run_shell(self.shell_locals, entry_msg, exit_msg)
+                finally:
+                    self._in_shell = False
+            finally:
+                signal.signal(signal.SIGUSR2, default_sigusr2)
+        finally:
+            signal.signal(signal.SIGUSR1, default_sigusr1)
+
+    @property
+    def in_shell(self):
+        return self._in_shell
+
+    def gdbserver(self, address="/tmp/.m1n1-unix", log=None):
+        '''activate gdbserver'''
+        if not self._gdbserver is None:
+            raise Exception("gdbserver is already running")
+
+        self._gdbserver = GDBServer(self, address, log)
+        self._gdbserver.activate()
+
+    def shutdown_gdbserver(self):
+        '''shutdown gdbserver'''
+        self._gdbserver.shutdown()
+        self._gdbserver = None
 
     def handle_mmiotrace(self, data):
         evt = EvtMMIOTrace.parse(data)
@@ -967,10 +961,10 @@ class HV(Reloadable):
 
     def skip(self):
         self.ctx.elr += 4
-        raise shell.ExitConsole(EXC_RET.HANDLED)
+        self.cont()
 
     def cont(self):
-        raise shell.ExitConsole(EXC_RET.HANDLED)
+        os.kill(os.getpid(), signal.SIGUSR1)
 
     def _lower(self):
         if not self.is_fault:
@@ -1011,7 +1005,7 @@ class HV(Reloadable):
         elif step:
             self.step()
         else:
-            raise shell.ExitConsole(EXC_RET.HANDLED)
+            self.cont()
 
     def step(self):
         self.u.msr(MDSCR_EL1, MDSCR(SS=1, MDE=1).value)
@@ -1096,6 +1090,11 @@ class HV(Reloadable):
                 return
         raise ValueError("Cannot add more HW watchpoints")
 
+    def get_wp_bas(self, vaddr):
+        for i, i_vaddr in enumerate(self._wps):
+            if i_vaddr == vaddr:
+                return self._wpcs[i].BAS
+
     def remove_hw_wp(self, vaddr):
         idx = self._wps.index(vaddr)
         self._wps[idx] = None
@@ -1109,7 +1108,7 @@ class HV(Reloadable):
             self.cpu(cpu_id)
 
     def exit(self):
-        raise shell.ExitConsole(EXC_RET.EXIT_GUEST)
+        os.kill(os.getpid(), signal.SIGUSR2)
 
     def reboot(self):
         print("Hard rebooting the system")
@@ -1644,7 +1643,9 @@ class HV(Reloadable):
 
     def _handle_sigint(self, signal=None, stack=None):
         self._sigint_pending = True
+        self.interrupt()
 
+    def interrupt(self):
         if self._in_handler:
             return
 
@@ -1703,4 +1704,4 @@ class HV(Reloadable):
         self.started_cpus.add(0)
         self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)
 
-from . import trace
+from .. import trace
