@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<!-- SPDX-License-Identifier: MIT -->
+<!DOCTYPE target SYSTEM "gdb-target.dtd">
+<target version="1.0">
+  <architecture>aarch64</architecture>
+  <xi:include href="aarch64-core.xml" />
+  <xi:include href="aarch64-fpu.xml" />
+</target>
