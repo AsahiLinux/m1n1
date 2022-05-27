@@ -249,6 +249,26 @@ class HV(Reloadable):
 
             return buffer.getvalue()
 
+    def writemem(self, va, data):
+        '''write to virtual memory'''
+        written = 0
+        while written < len(data):
+            pa = self.p.hv_translate(va, False, True)
+            if pa == 0:
+                break
+
+            size_in_page = 4096 - (va % 4096)
+            if len(data) - written < size_in_page:
+                self.iface.writemem(pa, data[written:])
+                written = len(data)
+                break
+
+            self.iface.writemem(pa, data[written:written + size_in_page])
+            va += size_in_page
+            written += size_in_page
+
+        return written
+
     def trace_irq(self, device, num, count, flags):
         for n in range(num, num + count):
             if flags & self.IRQTRACE_IRQ:
