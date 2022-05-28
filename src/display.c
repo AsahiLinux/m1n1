@@ -199,7 +199,11 @@ static int display_start_dcp(void)
     return 0;
 }
 
-int display_parse_mode(const char *config, dcp_timing_mode_t *mode)
+struct display_options {
+    bool retina;
+};
+
+int display_parse_mode(const char *config, dcp_timing_mode_t *mode, struct display_options *opts)
 {
     memset(mode, 0, sizeof(*mode));
 
@@ -224,6 +228,13 @@ int display_parse_mode(const char *config, dcp_timing_mode_t *mode)
             // Assumes two decimals...
             mode->fps += (atol(s_fps_frac + 1) << 16) / 100;
         }
+    }
+
+    const char *option = config;
+    while (option && opts) {
+        if (!strncmp(option + 1, "retina", 6))
+            opts->retina = true;
+        option = strchr(option + 1, ',');
     }
 
     printf("display: want mode: valid=%d %dx%d %d.%02d Hz\n", mode->valid, mode->width,
@@ -274,8 +285,9 @@ static int display_swap(u64 iova, u32 stride, u32 width, u32 height)
 int display_configure(const char *config)
 {
     dcp_timing_mode_t want;
+    struct display_options opts = {0};
 
-    display_parse_mode(config, &want);
+    display_parse_mode(config, &want, &opts);
 
     int ret = display_start_dcp();
     if (ret < 0)
@@ -422,7 +434,7 @@ int display_configure(const char *config)
         cur_boot_args.video.stride = stride;
         cur_boot_args.video.width = tbest.width;
         cur_boot_args.video.height = tbest.height;
-        cur_boot_args.video.depth = 30;
+        cur_boot_args.video.depth = 30 | (opts.retina ? FB_DEPTH_FLAG_RETINA : 0);
         fb_reinit();
     }
 

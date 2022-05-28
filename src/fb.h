@@ -5,6 +5,8 @@
 
 #include "types.h"
 
+#define FB_DEPTH_FLAG_RETINA 0x10000
+
 typedef struct {
     u32 *ptr;   /* pointer to the start of the framebuffer */
     u32 *hwptr; /* pointer to the start of the real framebuffer */

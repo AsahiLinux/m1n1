@@ -10,8 +10,7 @@
 #include "utils.h"
 #include "xnuboot.h"
 
-#define FB_DEPTH_FLAG_RETINA 0x10000
-#define FB_DEPTH_MASK        0xff
+#define FB_DEPTH_MASK 0xff
 
 fb_t fb;
 
