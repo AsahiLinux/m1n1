@@ -122,7 +122,7 @@ def run_shell(locals, msg=None, exitmsg=None):
     saved_display = sys.displayhook
     try:
         def display(val):
-            if isinstance(val, int):
+            if isinstance(val, int) and not isinstance(val, bool):
                 builtins._ = val
                 print(hex(val))
             elif callable(val):
