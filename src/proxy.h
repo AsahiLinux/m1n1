@@ -126,6 +126,7 @@ typedef enum {
     P_HV_WDT_START,
     P_HV_START_SECONDARY,
     P_HV_SWITCH_CPU,
+    P_HV_SET_TIME_STEALING,
 
     P_FB_INIT = 0xd00,
     P_FB_SHUTDOWN,

@@ -1312,6 +1312,12 @@ class HV(Reloadable):
             self.del_tracer(irange(base, size), "RAM-HIGH")
             carveout_p += 16
 
+    def enable_time_stealing(self):
+        self.p.hv_set_time_stealing(True)
+
+    def disable_time_stealing(self):
+        self.p.hv_set_time_stealing(False)
+
     def load_macho(self, data, symfile=None):
         if isinstance(data, str):
             data = open(data, "rb")

@@ -38,18 +38,22 @@ static u64 exc_entry_time;
 
 extern u32 hv_cpus_in_guest;
 
+static bool time_stealing = true;
+
 void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type, void *extra)
 {
     int from_el = FIELD_GET(SPSR_M, ctx->spsr) >> 2;
 
     hv_wdt_breadcrumb('P');
 
-#ifdef TIME_ACCOUNTING
-    /* Wait until all CPUs have entered the HV (max 1ms), to ensure they exit with an
-     * updated timer offset. */
-    hv_rendezvous();
+    /*
+     * Get all the CPUs into the HV before running the proxy, to make sure they all exit to
+     * the guest with a consistent time offset.
+     */
+    if (time_stealing)
+        hv_rendezvous();
+
     u64 entry_time = mrs(CNTPCT_EL0);
-#endif
 
     ctx->elr_phys = hv_translate(ctx->elr, false, false);
     ctx->far_phys = hv_translate(ctx->far, false, false);
@@ -69,10 +73,10 @@ void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type
     switch (ret) {
         case EXC_RET_HANDLED:
             hv_wdt_breadcrumb('p');
-#ifdef TIME_ACCOUNTING
-            u64 lost = mrs(CNTPCT_EL0) - entry_time;
-            stolen_time += lost;
-#endif
+            if (time_stealing) {
+                u64 lost = mrs(CNTPCT_EL0) - entry_time;
+                stolen_time += lost;
+            }
             return;
         case EXC_EXIT_GUEST:
             spin_unlock(&bhl);
@@ -82,6 +86,11 @@ void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type
             print_regs(ctx->regs, 0);
             flush_and_reboot();
     }
+}
+
+void hv_set_time_stealing(bool enabled)
+{
+    time_stealing = enabled;
 }
 
 static void hv_update_fiq(void)
