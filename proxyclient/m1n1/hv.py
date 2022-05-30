@@ -371,7 +371,7 @@ class HV(Reloadable):
 
             self.shell_locals["skip"] = lambda: do_exit(1)
             self.shell_locals["cont"] = lambda: do_exit(0)
-            ret = shell.run_shell(self.shell_locals, "Entering debug shell", "Returning to tracer")
+            ret = self.run_shell("Entering debug shell", "Returning to tracer")
             self.shell_locals["skip"] = self.skip
             self.shell_locals["cont"] = self.cont
 
@@ -898,7 +898,7 @@ class HV(Reloadable):
         self._sigint_pending = False
 
         signal.signal(signal.SIGINT, self.default_sigint)
-        ret = shell.run_shell(self.shell_locals, "Entering panic shell", "Exiting")
+        ret = self.run_shell("Entering panic shell", "Exiting")
         signal.signal(signal.SIGINT, self._handle_sigint)
 
         self.p.exit(0)
