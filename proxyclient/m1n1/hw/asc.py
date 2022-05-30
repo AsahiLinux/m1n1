@@ -2,14 +2,14 @@
 from ..utils import *
 import time
 
-class R_OUTBOX_CTRL(Register32):
+class R_MBOX_CTRL(Register32):
+    FIFOCNT = 23, 20
+    OVERFLOW = 18
     EMPTY = 17
     FULL  = 16
-
-class R_INBOX_CTRL(Register32):
-    EMPTY = 17
-    FULL  = 16
-    ENABLE = 1
+    RPTR = 15, 12
+    WPTR = 11, 8
+    ENABLE = 0
 
 class R_CPU_CONTROL(Register32):
     RUN    = 4
@@ -28,8 +28,8 @@ class ASCRegs(RegMap):
     CPU_CONTROL = 0x0044, R_CPU_CONTROL
     CPU_STATUS  = 0x0048, Register32
 
-    INBOX_CTRL  = 0x8110, R_INBOX_CTRL
-    OUTBOX_CTRL = 0x8114, R_OUTBOX_CTRL
+    INBOX_CTRL  = 0x8110, R_MBOX_CTRL
+    OUTBOX_CTRL = 0x8114, R_MBOX_CTRL
     INBOX0      = 0x8800, Register64
     INBOX1      = 0x8808, R_INBOX1
     OUTBOX0     = 0x8830, Register64
