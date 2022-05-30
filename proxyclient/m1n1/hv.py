@@ -911,6 +911,10 @@ class HV(Reloadable):
         raise shell.ExitConsole(EXC_RET.HANDLED)
 
     def _lower(self):
+        if not self.is_fault:
+            print("Cannot lower non-fault exception")
+            return False
+
         self.u.msr(ELR_EL12, self.ctx.elr)
         self.u.msr(SPSR_EL12, self.ctx.spsr.value)
         self.u.msr(ESR_EL12, self.ctx.esr.value)
