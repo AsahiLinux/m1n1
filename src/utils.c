@@ -133,8 +133,10 @@ void spin_lock(spinlock_t *lock)
     s64 free = -1;
 
     while (!__atomic_compare_exchange_n(&lock->lock, &free, me, false, __ATOMIC_ACQUIRE,
-                                        __ATOMIC_RELAXED))
+                                        __ATOMIC_RELAXED)) {
         free = -1;
+        sysop("wfe");
+    }
 
     assert(__atomic_load_n(&lock->lock, __ATOMIC_RELAXED) == me);
     lock->count++;
@@ -147,6 +149,7 @@ void spin_unlock(spinlock_t *lock)
     assert(lock->count > 0);
     if (!--lock->count)
         __atomic_store_n(&lock->lock, -1L, __ATOMIC_RELEASE);
+    sysop("sev");
 }
 
 bool is_heap(void *addr)
