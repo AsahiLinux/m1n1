@@ -849,7 +849,7 @@ class HV(Reloadable):
                     handled = self.handle_sync(ctx)
                 elif code == EXC.FIQ:
                     self.u.msr(CNTV_CTL_EL0, 0)
-                    self.u.print_exception(code, ctx)
+                    self.u.print_context(ctx, False)
                     handled = True
             elif reason == START.HV:
                 code = HV_EVENT(code)
@@ -870,7 +870,7 @@ class HV(Reloadable):
         else:
             self.log(f"Guest exception: {reason.name}/{code.name}")
             self.update_pac_mask()
-            self.u.print_exception(code, ctx)
+            self.u.print_context(ctx, self.is_fault)
 
         if self._sigint_pending or not handled or user_interrupt:
             self._sigint_pending = False
@@ -1021,6 +1021,12 @@ class HV(Reloadable):
 
     def decode_panic_call(self):
         xnutools.decode_panic_call(self.u, self.ctx)
+
+    def context(self):
+        f = f" (orig: #{self.exc_orig_cpu})" if self.ctx.cpu_id != self.exc_orig_cpu else ""
+        print(f"  == On CPU #{self.ctx.cpu_id}{f} ==")
+        print(f"  Reason: {self.exc_reason.name}/{self.exc_code.name}")
+        self.u.print_context(self.ctx, self.is_fault)
 
     def bt(self, frame=None, lr=None):
         if frame is None:

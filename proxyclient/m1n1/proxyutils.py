@@ -223,14 +223,15 @@ class ProxyUtils(Reloadable):
         self.msr(L2C_ERR_STS_EL1, l2c_err_sts) # Clear the flag bits
         self.msr(DAIF, self.mrs(DAIF) | 0x100) # Re-enable SError exceptions
 
-    def print_exception(self, code, ctx, addr=lambda a: f"0x{a:x}"):
+    def print_context(self, ctx, is_fault=True, addr=lambda a: f"0x{a:x}"):
         print(f"  == Exception taken from {ctx.spsr.M.name} ==")
         el = ctx.spsr.M >> 2
         print(f"  SPSR   = {ctx.spsr}")
         print(f"  ELR    = {addr(ctx.elr)}" + (f" (0x{ctx.elr_phys:x})" if ctx.elr_phys else ""))
-        print(f"  ESR    = {ctx.esr}")
-        print(f"  FAR    = {addr(ctx.far)}" + (f" (0x{ctx.far_phys:x})" if ctx.far_phys else ""))
         print(f"  SP_EL{el} = 0x{ctx.sp[el]:x}" + (f" (0x{ctx.sp_phys:x})" if ctx.sp_phys else ""))
+        if is_fault:
+            print(f"  ESR    = {ctx.esr}")
+            print(f"  FAR    = {addr(ctx.far)}" + (f" (0x{ctx.far_phys:x})" if ctx.far_phys else ""))
 
         for i in range(0, 31, 4):
             j = min(30, i + 3)
@@ -238,11 +239,11 @@ class ProxyUtils(Reloadable):
 
         if ctx.elr_phys:
             print()
-            print("  == Faulting code ==")
+            print("  == Code context ==")
 
             self.disassemble_at(ctx.elr_phys - 4 * 4, 9 * 4, ctx.elr_phys)
 
-        if code == EXC.SYNC:
+        if is_fault:
             if ctx.esr.EC == ESR_EC.MSR or ctx.esr.EC == ESR_EC.IMPDEF and ctx.esr.ISS == 0x20:
                 print()
                 print("  == MRS/MSR fault decoding ==")
@@ -272,7 +273,6 @@ class ProxyUtils(Reloadable):
                 if iss.DFSC == DABORT_DFSC.ECC_ERROR:
                     self.print_l2c_regs()
 
-        elif code == EXC.SERROR:
             if ctx.esr.EC == ESR_EC.SERROR and ctx.esr.ISS == 0:
                 self.print_l2c_regs()
 
