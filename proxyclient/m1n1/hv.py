@@ -39,6 +39,7 @@ class HV_EVENT(IntEnum):
     VTIMER = 2
     USER_INTERRUPT = 3
     WDT_BARK = 4
+    CPU_SWITCH = 5
 
 VMProxyHookData = Struct(
     "flags" / RegAdapter(MMIOTraceFlags),
@@ -149,6 +150,7 @@ class HV(Reloadable):
         self.started = False
         self.ctx = None
         self.hvcall_handlers = {}
+        self.switching_context = False
 
     def _reloadme(self):
         super()._reloadme()
@@ -372,6 +374,9 @@ class HV(Reloadable):
             ret = shell.run_shell(self.shell_locals, "Entering debug shell", "Returning to tracer")
             self.shell_locals["skip"] = self.skip
             self.shell_locals["cont"] = self.cont
+
+            if self.ctx:
+                self.cpu() # Return to the original CPU to avoid confusing things
 
             if ret == 1:
                 if needs_ret:
@@ -804,13 +809,36 @@ class HV(Reloadable):
         if ctx.esr.EC == ESR_EC.DABORT_LOWER:
             return self.handle_dabort(ctx)
 
+    def _load_context(self):
+        self._info_data = self.iface.readmem(self.exc_info, ExcInfo.sizeof())
+        self.ctx = ExcInfo.parse(self._info_data)
+        return self.ctx
+
+    def _commit_context(self):
+        new_info = ExcInfo.build(self.ctx)
+        if new_info != self._info_data:
+            self.iface.writemem(self.exc_info, new_info)
+            self._info_data = new_info
+
     def handle_exception(self, reason, code, info):
+        self.exc_info = info
+        self.exc_reason = reason
+        if reason in (START.EXCEPTION_LOWER, START.EXCEPTION):
+            code = EXC(code)
+        elif reason == START.HV:
+            code = HV_EVENT(code)
+        self.exc_code = code
+        self.is_fault = reason == START.EXCEPTION_LOWER and code in (EXC.SYNC, EXC.SERROR)
+
+        # Nested context switch is handled by the caller
+        if self.switching_context:
+            self.switching_context = False
+            return
+
         self._in_handler = True
 
-        info_data = self.iface.readmem(info, ExcInfo.sizeof())
-        self.exc_reason = reason
-        self.exc_code = code
-        self.ctx = ctx = ExcInfo.parse(info_data)
+        ctx = self._load_context()
+        self.exc_orig_cpu = self.ctx.cpu_id
 
         handled = False
         user_interrupt = False
@@ -848,7 +876,7 @@ class HV(Reloadable):
             self._sigint_pending = False
 
             signal.signal(signal.SIGINT, self.default_sigint)
-            ret = shell.run_shell(self.shell_locals, "Entering hypervisor shell", "Returning from exception")
+            ret = self.run_shell("Entering hypervisor shell", "Returning from exception")
             signal.signal(signal.SIGINT, self._handle_sigint)
 
             if ret is None:
@@ -856,11 +884,9 @@ class HV(Reloadable):
 
         self.pt_update()
 
-        new_info = ExcInfo.build(self.ctx)
-        if new_info != info_data:
-            self.iface.writemem(info, new_info)
-
+        self._commit_context()
         self.ctx = None
+        self.exc_orig_cpu = None
         self.p.exit(ret)
 
         self._in_handler = False
@@ -912,6 +938,8 @@ class HV(Reloadable):
         return True
 
     def lower(self, step=False):
+        self.cpu() # Return to exception CPU
+
         if not self._lower():
             return
         elif step:
@@ -925,9 +953,35 @@ class HV(Reloadable):
         self._stepping = True
         raise shell.ExitConsole(EXC_RET.HANDLED)
 
-    def cpu(self, cpu):
-        self.p.hv_switch_cpu(cpu)
-        raise shell.ExitConsole(EXC_RET.HANDLED)
+    def _switch_context(self, exit=EXC_RET.HANDLED):
+        # Flush current CPU context out to HV
+        self._commit_context()
+        self.exc_info = None
+        self.ctx = None
+
+        self.switching_context = True
+        # Exit out of the proxy
+        self.p.exit(exit)
+        # Wait for next proxy entry
+        self.iface.wait_and_handle_boot()
+        if self.switching_context:
+            raise Exception(f"Failed to switch context")
+
+        # Fetch new context
+        self._load_context()
+
+    def cpu(self, cpu=None):
+        if cpu is None:
+            cpu = self.exc_orig_cpu
+        if cpu == self.ctx.cpu_id:
+            return
+
+        if not self.p.hv_switch_cpu(cpu):
+            raise ValueError(f"Invalid or inactive CPU #{cpu}")
+
+        self._switch_context()
+        if self.ctx.cpu_id != cpu:
+            raise Exception(f"Switching to CPU #{cpu} but ended on #{self.ctx.cpu_id}")
 
     def add_hw_bp(self, vaddr):
         for i, i_vaddr in enumerate(self._bps):
@@ -988,6 +1042,11 @@ class HV(Reloadable):
                 break
             lr = self.unpac(self.p.read64(lrp))
             frame = self.p.read64(fpp)
+
+    def cpus(self):
+        for i in sorted(self.started_cpus):
+            self.cpu(i)
+            yield i
 
     def patch_exception_handling(self):
         if self.ctx.cpu_id != 0:
@@ -1082,6 +1141,7 @@ class HV(Reloadable):
         self.iface.set_handler(START.HV, HV_EVENT.HOOK_VM, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.VTIMER, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.WDT_BARK, self.handle_bark)
+        self.iface.set_handler(START.HV, HV_EVENT.CPU_SWITCH, self.handle_exception)
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
         self.iface.set_event_handler(EVENT.IRQTRACE, self.handle_irqtrace)
 
@@ -1530,6 +1590,7 @@ class HV(Reloadable):
         # Does not return
 
         self.started = True
+        self.started_cpus.add(0)
         self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)
 
 from . import trace

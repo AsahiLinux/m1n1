@@ -44,6 +44,7 @@ typedef enum _hv_entry_type {
     HV_VTIMER,
     HV_USER_INTERRUPT,
     HV_WDT_BARK,
+    HV_CPU_SWITCH,
 } hv_entry_type;
 
 /* VM */
@@ -95,11 +96,9 @@ void hv_init(void);
 void hv_start(void *entry, u64 regs[4]);
 void hv_start_secondary(int cpu, void *entry, u64 regs[4]);
 void hv_rendezvous(void);
-void hv_switch_cpu(int cpu);
+bool hv_switch_cpu(int cpu);
 void hv_arm_tick(void);
 void hv_rearm(void);
-bool hv_want_rendezvous(void);
-void hv_do_rendezvous(struct exc_info *ctx);
 void hv_maybe_exit(void);
 void hv_tick(struct exc_info *ctx);
 

@@ -327,6 +327,9 @@ class UartInterface(Reloadable):
                 raise UartTimeout("Reconnection timed out")
             print(" Connected")
 
+    def wait_and_handle_boot(self):
+        self.handle_boot(self.wait_boot())
+
     def nop(self):
         features = Feature.get_all()
 

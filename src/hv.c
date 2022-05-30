@@ -219,16 +219,16 @@ void hv_rendezvous(void)
         ;
 }
 
-void hv_switch_cpu(int cpu)
+bool hv_switch_cpu(int cpu)
 {
     if (cpu > MAX_CPUS || cpu < 0 || !hv_started_cpus[cpu]) {
         printf("HV: CPU #%d is inactive or invalid\n", cpu);
-        return;
+        return false;
     }
-    hv_rendezvous();
     printf("HV: switching to CPU #%d\n", cpu);
     hv_want_cpu = cpu;
-    hv_rearm();
+    hv_rendezvous();
+    return true;
 }
 
 void hv_write_hcr(u64 val)
@@ -299,33 +299,6 @@ void hv_arm_tick(void)
 {
     msr(CNTP_TVAL_EL0, hv_tick_interval);
     msr(CNTP_CTL_EL0, CNTx_CTL_ENABLE);
-}
-
-void hv_rearm(void)
-{
-    msr(CNTP_TVAL_EL0, 0);
-    msr(CNTP_CTL_EL0, CNTx_CTL_ENABLE);
-}
-
-bool hv_want_rendezvous(void)
-{
-    return hv_want_cpu != -1;
-}
-
-void hv_do_rendezvous(struct exc_info *ctx)
-{
-    if (hv_want_cpu == smp_id()) {
-        hv_want_cpu = -1;
-        hv_exc_proxy(ctx, START_HV, HV_USER_INTERRUPT, NULL);
-    } else if (hv_want_cpu != -1) {
-        // Unlock the HV so the target CPU can get into the proxy
-        spin_unlock(&bhl);
-        while (hv_want_cpu != -1)
-            sysop("dmb sy");
-        spin_lock(&bhl);
-        // Make sure we tick at least once more before running the guest
-        hv_rearm();
-    }
 }
 
 void hv_maybe_exit(void)

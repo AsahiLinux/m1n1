@@ -37,10 +37,12 @@ static u64 stolen_time = 0;
 static u64 exc_entry_time;
 
 extern u32 hv_cpus_in_guest;
+extern int hv_want_cpu;
 
 static bool time_stealing = true;
 
-void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type, void *extra)
+static void _hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type,
+                          void *extra)
 {
     int from_el = FIELD_GET(SPSR_M, ctx->spsr) >> 2;
 
@@ -77,15 +79,51 @@ void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type
                 u64 lost = mrs(CNTPCT_EL0) - entry_time;
                 stolen_time += lost;
             }
-            return;
+            break;
         case EXC_EXIT_GUEST:
+            hv_rendezvous();
             spin_unlock(&bhl);
-            hv_exit_guest();
+            hv_exit_guest(); // does not return
         default:
             printf("Guest exception not handled, rebooting.\n");
             print_regs(ctx->regs, 0);
-            flush_and_reboot();
+            flush_and_reboot(); // does not return
     }
+}
+
+static void hv_maybe_switch_cpu(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type,
+                                void *extra)
+{
+    while (hv_want_cpu != -1) {
+        if (hv_want_cpu == smp_id()) {
+            hv_want_cpu = -1;
+            _hv_exc_proxy(ctx, reason, type, extra);
+        } else {
+            // Unlock the HV so the target CPU can get into the proxy
+            spin_unlock(&bhl);
+            while (hv_want_cpu != -1)
+                sysop("dmb sy");
+            spin_lock(&bhl);
+        }
+    }
+}
+
+void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type, void *extra)
+{
+    /*
+     * If we end up in the proxy due to an event while the host is trying to switch CPUs,
+     * handle it as a CPU switch first. We still tell the host the real reason code, though.
+     */
+    hv_maybe_switch_cpu(ctx, reason, type, extra);
+
+    /* Handle the actual exception */
+    _hv_exc_proxy(ctx, reason, type, extra);
+
+    /*
+     * If as part of handling this exception we want to switch CPUs, handle it without returning
+     * to the guest.
+     */
+    hv_maybe_switch_cpu(ctx, reason, type, extra);
 }
 
 void hv_set_time_stealing(bool enabled)
@@ -386,7 +424,7 @@ void hv_exc_fiq(struct exc_info *ctx)
         tick = true;
     }
 
-    if (mrs(TPIDR_EL2) != 0 && !(mrs(ISR_EL1) & 0x40) && !hv_want_rendezvous()) {
+    if (mrs(TPIDR_EL2) != 0 && !(mrs(ISR_EL1) & 0x40) && hv_want_cpu == -1) {
         // Secondary CPU and it was just a timer tick (or spurious), so just update FIQs
         hv_update_fiq();
         hv_arm_tick();
@@ -433,7 +471,8 @@ void hv_exc_fiq(struct exc_info *ctx)
         msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
         sysop("isb");
     }
-    hv_do_rendezvous(ctx);
+
+    hv_maybe_switch_cpu(ctx, START_HV, HV_CPU_SWITCH, NULL);
 
     // Handles guest timers
     hv_exc_exit(ctx);

@@ -459,7 +459,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             hv_start_secondary(request->args[0], (void *)request->args[1], &request->args[2]);
             break;
         case P_HV_SWITCH_CPU:
-            hv_switch_cpu(request->args[0]);
+            reply->retval = hv_switch_cpu(request->args[0]);
             break;
         case P_HV_SET_TIME_STEALING:
             hv_set_time_stealing(request->args[0]);
