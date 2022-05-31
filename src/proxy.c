@@ -378,6 +378,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_PMGR_ADT_POWER_DISABLE:
             reply->retval = pmgr_adt_power_disable((const char *)request->args[0]);
             break;
+        case P_PMGR_RESET:
+            reply->retval = pmgr_reset(request->args[0], (const char *)request->args[1]);
+            break;
 
         case P_IODEV_SET_USAGE:
             iodev_set_usage(request->args[0], request->args[1]);

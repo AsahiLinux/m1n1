@@ -549,6 +549,7 @@ class M1N1Proxy(Reloadable):
     P_PMGR_CLOCK_DISABLE = 0x801
     P_PMGR_ADT_CLOCKS_ENABLE = 0x802
     P_PMGR_ADT_CLOCKS_DISABLE = 0x803
+    P_PMGR_RESET = 0x804
 
     P_IODEV_SET_USAGE = 0x900
     P_IODEV_CAN_READ = 0x901
@@ -943,6 +944,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_PMGR_ADT_CLOCKS_ENABLE, path)
     def pmgr_adt_clocks_disable(self, path):
         return self.request(self.P_PMGR_ADT_CLOCKS_DISABLE, path)
+    def pmgr_reset(self, die, name):
+        return self.request(self.P_PMGR_RESET, die, name)
 
     def iodev_set_usage(self, iodev, usage):
         return self.request(self.P_IODEV_SET_USAGE, iodev, usage)
