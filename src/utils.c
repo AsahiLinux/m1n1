@@ -97,6 +97,18 @@ void udelay(u32 d)
     sysop("isb");
 }
 
+u64 ticks_to_msecs(u64 ticks)
+{
+    // NOTE: only accurate if freq is even kHz
+    return ticks / (mrs(CNTFRQ_EL0) / 1000);
+}
+
+u64 ticks_to_usecs(u64 ticks)
+{
+    // NOTE: only accurate if freq is even MHz
+    return ticks / (mrs(CNTFRQ_EL0) / 1000000);
+}
+
 u64 timeout_calculate(u32 usec)
 {
     u64 delay = ((u64)usec) * mrs(CNTFRQ_EL0) / 1000000;

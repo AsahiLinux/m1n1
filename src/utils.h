@@ -372,6 +372,14 @@ void regdump(u64 addr, size_t len);
 int snprintf(char *str, size_t size, const char *fmt, ...);
 int debug_printf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void udelay(u32 d);
+
+static inline u64 get_ticks(void)
+{
+    return mrs(CNTPCT_EL0);
+}
+u64 ticks_to_msecs(u64 ticks);
+u64 ticks_to_usecs(u64 ticks);
+
 void reboot(void) __attribute__((noreturn));
 void flush_and_reboot(void) __attribute__((noreturn));
 

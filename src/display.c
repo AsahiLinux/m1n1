@@ -290,6 +290,8 @@ int display_configure(const char *config)
 
     display_parse_mode(config, &want, &opts);
 
+    u64 start_time = get_ticks();
+
     int ret = display_start_dcp();
     if (ret < 0)
         return ret;
@@ -448,6 +450,9 @@ int display_configure(const char *config)
         dart_unmap(dcp->dart_dcp, tmp_dva, size);
         iova_free(dcp->iovad_dcp, tmp_dva, size);
     }
+
+    u64 msecs = ticks_to_msecs(get_ticks() - start_time);
+    printf("display: Modeset took %ld ms\n", msecs);
 
     return 1;
 }
