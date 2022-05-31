@@ -147,7 +147,7 @@ class DCPIBootService(EPICService):
 
     def getModeCount(self):
         buf = self.send_cmd(3, b"", 12)
-        hpd, timing_cnt, color_cnt = struct.unpack("<III", buf)
+        hpd, timing_cnt, color_cnt = struct.unpack("<B3xII", buf)
         return bool(hpd), timing_cnt, color_cnt
 
     def getTimingModes(self):
