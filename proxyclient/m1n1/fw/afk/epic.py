@@ -90,11 +90,11 @@ class EPICService:
             self.ep.asc.work()
 
     def handle_report(self, category, type, seq, fd):
-        self.log(f"Report {category:#x}/{type:#x} #{seq}")
+        self.log(f"Report {category}/{type} #{seq}")
         chexdump(fd.read())
 
     def handle_notify(self, category, type, seq, fd):
-        self.log(f"Notify {category:#x}/{type:#x} #{seq}")
+        self.log(f"Notify {category}/{type} #{seq}")
         chexdump(fd.read())
 
     def handle_reply(self, category, type, seq, fd):
@@ -168,14 +168,20 @@ class EPICEndpoint(AFKRingBufEndpoint):
     def handle_report(self, hdr, sub, fd):
         if sub.type == 0x30:
             init = EPICAnnounce.parse_stream(fd)
-            if init.name in self.serv_map:
-                self.serv_map[init.name].init(init.props)
-                self.serv_map[init.name].chan = hdr.channel
-                self.chan_map[hdr.channel] = self.serv_map[init.name]
+            key = init.name
+            if "EPICName" in init.props:
+                key = init.props["EPICName"]
+            if key in self.serv_map:
+                self.serv_map[key].init(init.props)
+                self.serv_map[key].chan = hdr.channel
+                self.chan_map[hdr.channel] = self.serv_map[key]
             else:
-                self.log("Unknown service {init.name}")
+                self.log(f"Unknown service {key} on channel {hdr.channel}")
         else:
-            self.chan_map[hdr.channel].handle_report(sub.category, sub.type, fd)
+            if hdr.channel not in self.chan_map:
+                self.log(f"Ignoring report on channel {hdr.channel}")
+            else:
+                self.chan_map[hdr.channel].handle_report(sub.category, sub.type, sub.seq, fd)
 
     def handle_notify(self, hdr, sub, fd):
         self.chan_map[hdr.channel].handle_notify(sub.category, sub.type, sub.seq, fd)
