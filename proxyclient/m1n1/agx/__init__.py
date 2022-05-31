@@ -64,7 +64,7 @@ class AGX:
         self.agx.send_initdata(self.initdata_addr)
 
     def start(self):
-        self.asc.boot_or_start()
+        self.asc.start()
 
         self.initdata = build_initdata(self)
 

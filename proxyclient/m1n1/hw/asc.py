@@ -14,6 +14,13 @@ class R_MBOX_CTRL(Register32):
 class R_CPU_CONTROL(Register32):
     RUN    = 4
 
+class R_CPU_STATUS(Register32):
+    IDLE            = 5
+    FIQ_NOT_PEND    = 3 # guess
+    IRQ_NOT_PEND    = 2 # guess
+    STOPPED         = 1
+    RUNNING         = 0
+
 class R_INBOX1(Register64):
     EP      = 7, 0
 
@@ -26,7 +33,7 @@ class R_OUTBOX1(Register64):
 
 class ASCRegs(RegMap):
     CPU_CONTROL = 0x0044, R_CPU_CONTROL
-    CPU_STATUS  = 0x0048, Register32
+    CPU_STATUS  = 0x0048, R_CPU_STATUS
 
     INBOX_CTRL  = 0x8110, R_MBOX_CTRL
     OUTBOX_CTRL = 0x8114, R_MBOX_CTRL
@@ -34,9 +41,6 @@ class ASCRegs(RegMap):
     INBOX1      = 0x8808, R_INBOX1
     OUTBOX0     = 0x8830, Register64
     OUTBOX1     = 0x8838, R_OUTBOX1
-
-    NMI1        = 0x10004, Register32
-    NMI2        = 0x10024, Register32
 
 class ASC:
     def __init__(self, u, asc_base):
@@ -46,14 +50,6 @@ class ASC:
         self.asc = ASCRegs(u, asc_base)
         self.verbose = 0
         self.epmap = {}
-
-    def send_nmi(self):
-        print("send nmi")
-        #self.asc.NMI1.val = 0x11
-        #self.asc.NMI2.val = 0x1
-
-    def get_status(self):
-        return self.asc.CPU_STATUS.val
 
     def recv(self):
         if self.asc.OUTBOX_CTRL.reg.EMPTY:
@@ -78,8 +74,10 @@ class ASC:
         while self.asc.INBOX_CTRL.reg.FULL:
             pass
 
+    def is_running(self):
+        return not self.asc.CPU_STATUS.reg.STOPPED
+
     def boot(self):
-        #self.send_nmi()
         self.asc.CPU_CONTROL.set(RUN=1)
         self.asc.CPU_CONTROL.set(RUN=0)
 

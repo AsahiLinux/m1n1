@@ -80,8 +80,11 @@ class StandardASC(ASC):
         ep.start()
 
     def start(self):
-        self.mgmt.start()
-        self.mgmt.wait_boot()
+        if self.is_running():
+            self.mgmt.start()
+        else:
+            self.boot()
+        self.mgmt.wait_boot(1)
 
     def stop(self, state=0x10):
         for ep in list(self.epmap.values())[::-1]:
@@ -89,19 +92,13 @@ class StandardASC(ASC):
                 continue
             ep.stop()
         self.mgmt.stop(state=state)
+        self.epmap = {}
+        self.add_ep(0, ASCManagementEndpoint(self, 0))
 
     def boot(self):
         print("Booting ASC...")
         super().boot()
         self.mgmt.wait_boot()
-
-    def boot_or_start(self):
-        super().boot()
-        try:
-            self.mgmt.wait_boot(0.2)
-        except ASCTimeout:
-            self.mgmt.start()
-            self.mgmt.wait_boot(0.2)
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
