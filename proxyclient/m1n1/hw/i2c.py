@@ -169,22 +169,24 @@ class I2C:
         if timeout == 0:
             raise Exception("timeout")
 
-    def write_reg(self, addr, reg, data):
+    def write_reg(self, addr, reg, data, regaddrlen=1):
         self.clear_fifos()
         self.clear_status()
 
         self.regs.CTL.set(ENABLE=1, CLK=0x4)
         self.regs.MTXFIFO.set(DATA=addr << 1, START=1)
-        self._fifo_write(bytes([reg]) + bytes(data), stop=True)
+        regbytes = int.to_bytes(reg, regaddrlen, byteorder="big")
+        self._fifo_write(regbytes + bytes(data), stop=True)
         self.regs.CTL.set(ENABLE=0, CLK=0x4)
 
-    def read_reg(self, addr, reg, nbytes):
+    def read_reg(self, addr, reg, nbytes, regaddrlen=1):
         self.clear_fifos()
         self.clear_status()
 
         self.regs.CTL.set(ENABLE=1, CLK=0x4)
         self.regs.MTXFIFO.set(DATA=addr << 1, START=1)
-        self._fifo_write(bytes([reg]), stop=True)
+        regbytes = int.to_bytes(reg, regaddrlen, byteorder="big")
+        self._fifo_write(regbytes, stop=False)
         self.regs.MTXFIFO.set(DATA=(addr << 1) | 1, START=1)
         self.regs.MTXFIFO.set(DATA=nbytes, STOP=1, READ=1)
         data = self._fifo_read(nbytes)
