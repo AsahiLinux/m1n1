@@ -102,4 +102,6 @@ dcp.iboot.disp0.swapEnd()
 
 run_shell(globals(), msg="Have fun!")
 
-dcp.stop()
+# full shutdown!
+dcp.stop(1)
+p.pmgr_reset(0, "DISP0_CPU0")
