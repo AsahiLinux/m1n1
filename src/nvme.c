@@ -329,7 +329,6 @@ bool nvme_init(void)
     nvme_asc = asc_init("/arm-io/ans");
     if (!nvme_asc)
         goto out_ioq;
-    asc_cpu_start(nvme_asc);
 
     nvme_sart = sart_init("/arm-io/sart-ans");
     if (!nvme_sart)
@@ -451,7 +450,6 @@ void nvme_shutdown(void)
         printf("nvme: timeout while waiting for CSTS.RDY to clear\n");
 
     rtkit_sleep(nvme_rtkit);
-    asc_cpu_stop(nvme_asc);
     pmgr_reset(nvme_die, "ANS2");
     rtkit_free(nvme_rtkit);
     sart_free(nvme_sart);

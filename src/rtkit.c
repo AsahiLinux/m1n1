@@ -481,6 +481,8 @@ bool rtkit_boot(rtkit_dev_t *rtk)
 {
     struct asc_message msg;
 
+    /* boot the IOP if it isn't already */
+    asc_cpu_start(rtk->asc);
     /* can be sent unconditionally to wake up a possibly sleeping IOP */
     msg.msg0 = FIELD_PREP(MGMT_TYPE, MGMT_MSG_IOP_PWR_STATE) |
                FIELD_PREP(MGMT_PWR_STATE, RTKIT_POWER_INIT);

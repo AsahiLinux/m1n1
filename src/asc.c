@@ -51,6 +51,8 @@ asc_dev_t *asc_init(const char *path)
     asc->iop_node = adt_first_child_offset(adt, node);
     asc->cpu_base = base;
     asc->base = base + 0x8000;
+
+    clear32(base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
     return asc;
 }
 
@@ -67,10 +69,7 @@ int asc_get_iop_node(asc_dev_t *asc)
 void asc_cpu_start(asc_dev_t *asc)
 {
     set32(asc->cpu_base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
-}
-
-void asc_cpu_stop(asc_dev_t *asc)
-{
+    udelay(10);
     clear32(asc->cpu_base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
 }
 
