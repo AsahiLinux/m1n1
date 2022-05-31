@@ -1032,8 +1032,13 @@ class HV(Reloadable):
     def add_hw_bp(self, vaddr):
         for i, i_vaddr in enumerate(self._bps):
             if i_vaddr is None:
-                self.u.msr(DBGBCRn_EL1(i), DBGBCR(E=1, PMC=0b11, BAS=0xf).value)
-                self.u.msr(DBGBVRn_EL1(i), vaddr)
+                cpu_id = self.ctx.cpu_id
+                try:
+                    for cpu in self.cpus():
+                        self.u.msr(DBGBCRn_EL1(i), DBGBCR(E=1, PMC=0b11, BAS=0xf).value)
+                        self.u.msr(DBGBVRn_EL1(i), vaddr)
+                finally:
+                    self.cpu(cpu_id)
                 self._bps[i] = vaddr
                 return
         raise ValueError("Cannot add more HW breakpoints")
@@ -1041,8 +1046,13 @@ class HV(Reloadable):
     def remove_hw_bp(self, vaddr):
         idx = self._bps.index(vaddr)
         self._bps[idx] = None
-        self.u.msr(DBGBCRn_EL1(idx), 0)
-        self.u.msr(DBGBVRn_EL1(idx), 0)
+        cpu_id = self.ctx.cpu_id
+        try:
+            for cpu in self.cpus():
+                self.u.msr(DBGBCRn_EL1(idx), 0)
+                self.u.msr(DBGBVRn_EL1(idx), 0)
+        finally:
+            self.cpu(cpu_id)
 
     def add_sym_bp(self, name):
         return self.add_hw_bp(self.resolve_symbol(name))
