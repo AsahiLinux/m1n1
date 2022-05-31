@@ -147,6 +147,11 @@ typedef enum {
     P_NVME_FLUSH,
 
     P_MCC_GET_CARVEOUTS = 0x1000,
+
+    P_DISPLAY_INIT = 0x1100,
+    P_DISPLAY_CONFIGURE = 0x1101,
+    P_DISPLAY_SHUTDOWN = 0x1102,
+
 } ProxyOp;
 
 #define S_OK     0

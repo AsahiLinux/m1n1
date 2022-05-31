@@ -2,6 +2,7 @@
 
 #include "proxy.h"
 #include "dart.h"
+#include "display.h"
 #include "exception.h"
 #include "fb.h"
 #include "gxf.h"
@@ -518,6 +519,16 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
 
         case P_MCC_GET_CARVEOUTS:
             reply->retval = (u64)mcc_carveouts;
+            break;
+
+        case P_DISPLAY_INIT:
+            reply->retval = display_init();
+            break;
+        case P_DISPLAY_CONFIGURE:
+            reply->retval = display_configure((char *)request->args[0]);
+            break;
+        case P_DISPLAY_SHUTDOWN:
+            display_shutdown();
             break;
 
         default:

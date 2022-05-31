@@ -598,6 +598,10 @@ class M1N1Proxy(Reloadable):
 
     P_MCC_GET_CARVEOUTS = 0x1000
 
+    P_DISPLAY_INIT = 0x1100
+    P_DISPLAY_CONFIGURE = 0x1101
+    P_DISPLAY_SHUTDOWN = 0x1102
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
@@ -1031,6 +1035,13 @@ class M1N1Proxy(Reloadable):
 
     def mcc_get_carveouts(self):
         return self.request(self.P_MCC_GET_CARVEOUTS)
+
+    def display_init(self):
+        return self.request(self.P_DISPLAY_INIT)
+    def display_configure(self, cfg):
+        return self.request(self.P_DISPLAY_CONFIGURE, cfg)
+    def display_shutdown(self):
+        return self.request(self.P_DISPLAY_SHUTDOWN)
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
