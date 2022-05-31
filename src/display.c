@@ -469,5 +469,6 @@ void display_shutdown(void)
     if (iboot) {
         dcp_ib_shutdown(iboot);
         dcp_shutdown(dcp);
+        iboot = NULL;
     }
 }
