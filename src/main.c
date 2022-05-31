@@ -132,9 +132,15 @@ void m1n1_main(void)
     gxf_init();
     mcc_init();
     mmu_init();
+    aic_init();
+    wdt_disable();
+    pmgr_init();
 
 #ifdef USE_FB
     display_init();
+    // Kick DCP to sleep, so dodgy monitors which cause reconnect cycles don't cause us to lose the
+    // framebuffer.
+    display_shutdown(DCP_SLEEP_IF_EXTERNAL);
     fb_init(false);
     fb_display_logo();
 #ifdef FB_SILENT_MODE
@@ -144,9 +150,6 @@ void m1n1_main(void)
 #endif
 #endif
 
-    aic_init();
-    wdt_disable();
-    pmgr_init();
     clk_init();
     cpufreq_init();
     sep_init();
@@ -164,7 +167,7 @@ void m1n1_main(void)
     nvme_shutdown();
     exception_shutdown();
     usb_iodev_shutdown();
-    display_shutdown();
+    display_shutdown(DCP_SLEEP_IF_EXTERNAL);
 #ifdef USE_FB
     fb_shutdown(next_stage.restore_logo);
 #endif

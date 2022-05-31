@@ -531,7 +531,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->retval = display_configure((char *)request->args[0]);
             break;
         case P_DISPLAY_SHUTDOWN:
-            display_shutdown();
+            display_shutdown(request->args[0]);
             break;
 
         default:

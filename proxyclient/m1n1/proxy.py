@@ -66,6 +66,11 @@ class EXC_RET(IntEnum):
     EXIT_GUEST = 3
     STEP = 4
 
+class DCP_SHUTDOWN_MODE(IntEnum):
+    QUIESCED = 0
+    SLEEP_IF_EXTERNAL = 1
+    SLEEP = 2
+
 ExcInfo = Struct(
     "regs" / Array(32, Int64ul),
     "spsr" / RegAdapter(SPSR),
@@ -1043,8 +1048,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_DISPLAY_INIT)
     def display_configure(self, cfg):
         return self.request(self.P_DISPLAY_CONFIGURE, cfg)
-    def display_shutdown(self):
-        return self.request(self.P_DISPLAY_SHUTDOWN)
+    def display_shutdown(self, mode):
+        return self.request(self.P_DISPLAY_SHUTDOWN, mode)
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

@@ -22,10 +22,11 @@
         continue;                                                                                  \
     }
 
-dcp_dev_t *dcp;
-dcp_iboot_if_t *iboot;
-u64 fb_dva;
-u64 fb_size;
+static dcp_dev_t *dcp;
+static dcp_iboot_if_t *iboot;
+static u64 fb_dva;
+static u64 fb_size;
+static bool display_is_external;
 
 #define abs(x) ((x) >= 0 ? (x) : -(x))
 
@@ -157,7 +158,7 @@ static uintptr_t display_map_fb(uintptr_t iova, u64 paddr, u64 size)
     return iova;
 }
 
-static int display_start_dcp(void)
+int display_start_dcp(void)
 {
     if (iboot)
         return 0;
@@ -185,14 +186,14 @@ static int display_start_dcp(void)
         fb_dva = display_map_fb(0, pa, size);
     if (!fb_dva) {
         printf("display: failed to find display DVA\n");
-        dcp_shutdown(dcp);
+        dcp_shutdown(dcp, false);
         return -1;
     }
 
     iboot = dcp_ib_init(dcp);
     if (!iboot) {
         printf("display: failed to initialize DCP iBoot interface\n");
-        dcp_shutdown(dcp);
+        dcp_shutdown(dcp, false);
         return -1;
     }
 
@@ -453,9 +454,24 @@ int display_configure(const char *config)
 
 int display_init(void)
 {
+    int node = adt_path_offset(adt, "/arm-io/disp0");
+
+    if (node < 0) {
+        printf("DISP0 node not found!\n");
+        return -1;
+    }
+
+    display_is_external = adt_getprop(adt, node, "external", NULL);
+    if (display_is_external)
+        printf("display: Display is external\n");
+    else
+        printf("display: Display is internal\n");
+
     if (cur_boot_args.video.width == 640 && cur_boot_args.video.height == 1136) {
         printf("display: Dummy framebuffer found, initializing display\n");
-
+        return display_configure(NULL);
+    } else if (display_is_external) {
+        printf("display: External display found, reconfiguring\n");
         return display_configure(NULL);
     } else {
         printf("display: Display is already initialized (%ldx%ld)\n", cur_boot_args.video.width,
@@ -464,11 +480,27 @@ int display_init(void)
     }
 }
 
-void display_shutdown(void)
+void display_shutdown(dcp_shutdown_mode mode)
 {
     if (iboot) {
         dcp_ib_shutdown(iboot);
-        dcp_shutdown(dcp);
+        switch (mode) {
+            case DCP_QUIESCED:
+                printf("display: Quiescing DCP (unconditional)\n");
+                dcp_shutdown(dcp, false);
+                break;
+            case DCP_SLEEP_IF_EXTERNAL:
+                if (!display_is_external)
+                    printf("display: Quiescing DCP (internal)\n");
+                else
+                    printf("display: Sleeping DCP (external)\n");
+                dcp_shutdown(dcp, display_is_external);
+                break;
+            case DCP_SLEEP:
+                printf("display: Sleeping DCP (unconditional)\n");
+                dcp_shutdown(dcp, true);
+                break;
+        }
         iboot = NULL;
     }
 }

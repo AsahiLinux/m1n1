@@ -3,6 +3,7 @@
 #include "dcp.h"
 #include "adt.h"
 #include "malloc.h"
+#include "pmgr.h"
 #include "rtkit.h"
 #include "utils.h"
 
@@ -59,9 +60,14 @@ out_free:
     return NULL;
 }
 
-int dcp_shutdown(dcp_dev_t *dcp)
+int dcp_shutdown(dcp_dev_t *dcp, bool sleep)
 {
-    rtkit_quiesce(dcp->rtkit);
+    if (sleep) {
+        rtkit_sleep(dcp->rtkit);
+        pmgr_reset(0, "DISP0_CPU0");
+    } else {
+        rtkit_quiesce(dcp->rtkit);
+    }
     rtkit_free(dcp->rtkit);
     dart_shutdown(dcp->dart_disp);
     iovad_shutdown(dcp->iovad_dcp, dcp->dart_dcp);

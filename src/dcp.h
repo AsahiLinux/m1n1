@@ -17,6 +17,6 @@ typedef struct {
 
 dcp_dev_t *dcp_init(const char *dcp_path, const char *dcp_dart_path, const char *disp_dart_path);
 
-int dcp_shutdown(dcp_dev_t *dcp);
+int dcp_shutdown(dcp_dev_t *dcp, bool sleep);
 
 #endif
