@@ -188,8 +188,8 @@ int dart_setup_pt_region(dart_dev_t *dart, const char *path, int device)
             printf("dart: dart %s ignoring large pt-region-0, %lu L2 tables\n", path, tbl_count);
             return -1;
         }
-        /* first index is the l1 table */
-        tbl_count -= 1;
+        /* first index is the l1 table, cap at 2 or else macOS hates it */
+        tbl_count = min(2, tbl_count - 1);
         u64 l2_start = region[0] + SZ_16K;
         for (u64 index = 0; index < tbl_count; index++) {
             int ttbr = index >> 11;
@@ -204,6 +204,7 @@ int dart_setup_pt_region(dart_dev_t *dart, const char *path, int device)
                            off, l2tbl);
                 continue;
             } else {
+                printf("dart: allocating L2 tbl at %d, %d to 0x%lx\n", ttbr, idx, l2tbl);
                 memset((void *)l2tbl, 0, SZ_16K);
             }
 
