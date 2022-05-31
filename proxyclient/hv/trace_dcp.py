@@ -96,7 +96,7 @@ class AFKEp(EP):
         for data in self.txbuf.read():
             if self.state.verbose >= 3:
                 self.log(f">TX rptr={self.txbuf.state.rptr:#x}")
-                chexdump(data)
+                chexdump(data, print_fn=self.log)
             self.handle_ipc(data, dir=">")
         return True
 
@@ -107,7 +107,7 @@ class AFKEp(EP):
         for data in self.rxbuf.read():
             if self.state.verbose >= 3:
                 self.log(f"<RX rptr={self.rxbuf.state.rptr:#x}")
-                chexdump(data)
+                chexdump(data, print_fn=self.log)
             self.handle_ipc(data, dir="<")
         return True
 
@@ -136,7 +136,7 @@ class EPICEp(AFKEp):
 
         self.log(f"{dir}Ch {hdr.channel} Type {hdr.type} Ver {hdr.version} Tag {hdr.seq}")
         self.log(f"  Len {sub.length} Ver {sub.version} Cat {sub.category} Type {sub.type:#x} Seq {sub.seq}")
-        chexdump(data)
+        chexdump(data, print_fn=self.log)
 
         if sub.category == EPICCategory.REPORT:
             self.handle_report(hdr, sub, fd)
@@ -154,11 +154,11 @@ class EPICEp(AFKEp):
             self.log(f"  Props: {init.props}")
         else:
             self.log(f"Report {sub.type:#x}")
-            chexdump(fd.read())
+            chexdump(fd.read(), print_fn=self.log)
 
     def handle_notify(self, hdr, sub, fd):
         self.log(f"Notify:")
-        chexdump(fd.read())
+        chexdump(fd.read(), print_fn=self.log)
 
     def handle_reply(self, hdr, sub, fd):
         cmd = EPICCmd.parse_stream(fd)
@@ -166,20 +166,20 @@ class EPICEp(AFKEp):
         self.log(f"Response {sub.type:#x}: {cmd.retcode:#x}")
         if payload:
             self.log("Inline payload:")
-            chexdump(payload)
+            chexdump(payload, print_fn=self.log)
         if cmd.rxbuf:
             self.log(f"RX buf @ {cmd.rxbuf:#x} ({cmd.rxlen:#x} bytes):")
-            chexdump(self.dart.ioread(0, cmd.rxbuf, cmd.rxlen))
+            chexdump(self.dart.ioread(0, cmd.rxbuf, cmd.rxlen), print_fn=self.log)
 
     def handle_cmd(self, hdr, sub, fd):
         cmd = EPICCmd.parse_stream(fd)
         payload = fd.read()
         self.log(f"Command {sub.type:#x}: {cmd.retcode:#x}")
         if payload:
-            chexdump(payload)
+            chexdump(payload, print_fn=self.log)
         if cmd.txbuf:
             self.log(f"TX buf @ {cmd.txbuf:#x} ({cmd.txlen:#x} bytes):")
-            chexdump(self.dart.ioread(0, cmd.txbuf, cmd.txlen))
+            chexdump(self.dart.ioread(0, cmd.txbuf, cmd.txlen), print_fn=self.log)
 
 KNOWN_MSGS = {
     "A000": "IOMFB::UPPipeAP_H13P::late_init_signal()",
