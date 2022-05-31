@@ -27,13 +27,29 @@ dcp.dva_offset = getattr(u.adt["/arm-io/dcp"][0], "asc_dram_mask", 0)
 
 dcp.start()
 dcp.start_ep(0x23)
+dcp.start_ep(0x24)
 
 dcp.iboot.disp0.wait()
-dcp.iboot.disp0.setPower(True)
+dcp.dcpav.controller.wait()
 
-hpd, ntim, ncolor = dcp.iboot.disp0.getModeCount()
+#dcp.dcpav.controller.setPower(False)
+#dcp.dcpav.controller.forceHotPlugDetect()
+#dcp.dcpav.controller.setVirtualDeviceMode(0)
+#dcp.dcpav.controller.setPower(True)
+#dcp.dcpav.controller.wakeDisplay()
+#dcp.dcpav.controller.sleepDisplay()
+#dcp.dcpav.controller.wakeDisplay()
+
+print("Waiting for HPD...")
+while True:
+    hpd, ntim, ncolor = dcp.iboot.disp0.getModeCount()
+    if hpd:
+        break
+
+print("HPD asserted")
 
 print(f"Connected:{hpd} Timing modes:{ntim} Color modes:{ncolor}")
+dcp.iboot.disp0.setPower(True)
 
 timing_modes = dcp.iboot.disp0.getTimingModes()
 print("Timing modes:")

@@ -4,6 +4,7 @@ from construct import *
 from ...utils import *
 from ..asc import StandardASC
 from ..afk.epic import *
+from .dcpav import *
 
 EOTF = "EOTF" / Enum(Int32ul,
     GAMMA_SDR = 1,
@@ -195,6 +196,7 @@ class DCPIBootClient(StandardASC):
 
     ENDPOINTS = {
         0x23: DCPIBootEndpoint,
+        0x24: DCPAVEndpoint,
     }
 
     def __init__(self, u, asc_base, dart=None, disp_dart=None):
