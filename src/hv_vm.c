@@ -507,6 +507,7 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
 {
     u64 Rt = insn & 0x1f;
     u64 Rn = (insn >> 5) & 0x1f;
+    u64 imm12 = EXT((insn >> 10) & 0xfff, 12);
     u64 imm9 = EXT((insn >> 12) & 0x1ff, 9);
     u64 imm7 = EXT((insn >> 15) & 0x7f, 7);
     u64 *regs = ctx->regs;
@@ -601,6 +602,7 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         put_simd_state(simd);
     } else if ((insn & 0x3fc00000) == 0x3d400000) {
         // LDR (immediate, SIMD&FP) Unsigned offset
+        *vaddr = regs[Rn] + (imm12 << *width);
         DECODE_OK;
         get_simd_state(simd);
         simd[Rt].d[0] = val[0];
@@ -609,6 +611,16 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
     } else if ((insn & 0xffc00000) == 0x3dc00000) {
         // LDR (immediate, SIMD&FP) Unsigned offset, 128-bit
         *width = 4;
+        *vaddr = regs[Rn] + (imm12 << *width);
+        DECODE_OK;
+        get_simd_state(simd);
+        simd[Rt].d[0] = val[0];
+        simd[Rt].d[1] = val[1];
+        put_simd_state(simd);
+    } else if ((insn & 0xffe00c00) == 0x3cc00000) {
+        // LDURx (unscaled, SIMD&FP, 128-bit)
+        *width = 4;
+        *vaddr = regs[Rn] + (imm9 << *width);
         DECODE_OK;
         get_simd_state(simd);
         simd[Rt].d[0] = val[0];
