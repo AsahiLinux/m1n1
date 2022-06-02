@@ -62,6 +62,13 @@ class AGXASC(StandardASC):
         self.agx = agx
         self.uat = uat
 
+    def addr(self, addr):
+        base, obj = self.agx.find_object(addr)
+        if base is None:
+            return super().addr(addr)
+
+        return f"{addr:#x} ({obj._name} [{obj._size:#x}] @ {base:#x} + {addr - base:#x})"
+
     def iomap(self, addr, size):
         return self.uat.iomap(0, addr, size)
 
@@ -75,6 +82,9 @@ class AGXASC(StandardASC):
 
     def iowrite(self, dva, data, ctx=0):
         return self.uat.iowrite(ctx, dva & 0xFFFFFFFFFF, data)
+
+    def iotranslate(self, dva, size, ctx=0):
+        return self.uat.iotranslate(ctx, dva & 0xFFFFFFFFFF, size)
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
