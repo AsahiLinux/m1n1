@@ -43,6 +43,9 @@ class StandardASC(ASC):
                 if k not in self.epcls:
                     self.epcls[k] = v
 
+    def addr(self, addr):
+        return f"{addr:#x}"
+
     def iomap(self, addr, size):
         if self.dart is None:
             return addr
@@ -67,6 +70,12 @@ class StandardASC(ASC):
             return self.dart.iowrite(0, dva & 0xFFFFFFFF, data)
         else:
             return self.iface.writemem(dva, data)
+
+    def iotranslate(self, dva, size):
+        if self.dart:
+            return self.dart.iotranslate(0, dva & 0xFFFFFFFF, size)
+        else:
+            return self.iface.readmem(dva, size)
 
     def start_ep(self, epno):
         if epno not in self.epcls:
