@@ -928,8 +928,9 @@ class AGXTracer(ASCTracer):
             queue.set_active(False)
         for info_addr in self.state.queues:
             self.state.queues[info_addr].rptr = None
-        self.untrace_uatrange(0, self.state.initdata.regionB_addr, 0x34000)
-        self.untrace_uatrange(0, self.state.initdata.regionC_addr, 0x10000)
+        self.untrace_uatrange(0, self.state.initdata.regionA_addr, 0x4000)
+        self.untrace_uatrange(0, self.state.initdata.regionB_addr, 0x6bc0)
+        self.untrace_uatrange(0, self.state.initdata.regionC_addr, 0x11d40)
 
     def resume(self):
         self.add_gpuvm_tracers()
@@ -943,8 +944,9 @@ class AGXTracer(ASCTracer):
             chan.set_active(True)
         for queue in self.cmdqueues.values():
             queue.set_active(True)
-        self.trace_uatrange(0, self.state.initdata.regionB_addr, 0x34000, name="regionB")
-        self.trace_uatrange(0, self.state.initdata.regionC_addr, 0x10000, name="regionC")
+        self.trace_uatrange(0, self.state.initdata.regionA_addr, 0x4000, name="regionA")
+        self.trace_uatrange(0, self.state.initdata.regionB_addr, 0x6bc0, name="regionB")
+        self.trace_uatrange(0, self.state.initdata.regionC_addr, 0x11d40, name="regionC")
 
     def add_mon_regions(self):
         initdata = self.state.initdata
