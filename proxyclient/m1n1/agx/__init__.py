@@ -20,6 +20,8 @@ class AGX:
 
     def __init__(self, u):
         self.u = u
+        self.p = u.proxy
+
         self.iface = u.iface
 
         self.asc_dev = u.adt["/arm-io/gfx-asc"]
