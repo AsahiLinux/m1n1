@@ -70,7 +70,11 @@ def recusive_reload(obj, token=None):
 
     g_depth -= 1
 
-def str_value(value):
+def str_value(value, repr=False):
+    if isinstance(value, bytes) and value == bytes(len(value)):
+        return f"bytes({len(value):#x})"
+    if isinstance(value, bytes) and repr:
+        return f"bytes.fromhex('{value.hex()}')"
     if isinstance(value, DecDisplayedInteger):
         return str(value)
     if isinstance(value, int):
