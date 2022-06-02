@@ -303,6 +303,8 @@ class AGXTracer(ASCTracer):
         self.pause_after_init = True
         self.shell_after_init = False
 
+        self.add_mon_regions()
+
     def get_cmdqueue(self, info_addr):
         if info_addr in self.cmdqueues:
             return self.cmdqueues[info_addr]
@@ -931,6 +933,13 @@ class AGXTracer(ASCTracer):
         self.trace_uatrange(0, self.state.initdata.regionB_addr, 0x34000, name="regionB")
         self.trace_uatrange(0, self.state.initdata.regionC_addr, 0x10000, name="regionC")
 
+    def add_mon_regions(self):
+        initdata = self.state.initdata
+        if initdata is not None:
+            self.mon_addva(0, initdata.regionA_addr, 0x4000, "RegionA")
+            self.mon_addva(0, initdata.regionB_addr, 0x6bc0, "RegionB")
+            self.mon_addva(0, initdata.regionC_addr, 0x11d40, "RegionC")
+
     def pong_init(self, addr):
         self.log("UAT at init time:")
         self.uat.invalidate_cache()
@@ -941,9 +950,7 @@ class AGXTracer(ASCTracer):
         self.log("Initdata:")
         self.log(initdata)
 
-        #self.mon_addva(0, self.initdata.regionB_addr, 0x34000, "initdata.RegionB")
-        #self.mon_addva(0, self.initdata.regionC_addr, 0x88000, "initdata.RegionC")
-
+        self.add_mon_regions()
 
         #self.initdata.regionB.mon(lambda addr, size, name: self.mon_addva(0, addr, size, name))
 
