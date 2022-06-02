@@ -87,3 +87,9 @@ class AGX:
 
     def stop(self):
         self.asc.stop()
+
+    def work(self):
+        self.asc.work()
+
+    def log(self, msg):
+       print("[AGX] " + msg)
