@@ -79,6 +79,7 @@ class ProxyUtils(Reloadable):
                                self.proxy.read64(addr + 8),
                                self.proxy.read64(addr + 16),
                                self.proxy.read64(addr + 24)],
+            512: lambda addr: [self.proxy.read64(addr + i) for i in range(0, 64, 8)],
         }
         self._write = {
             8: lambda addr, data: self.proxy.write8(addr, data),
@@ -91,6 +92,8 @@ class ProxyUtils(Reloadable):
                                      self.proxy.write64(addr + 8, data[1]),
                                      self.proxy.write64(addr + 16, data[2]),
                                      self.proxy.write64(addr + 24, data[3])),
+            512: lambda addr, data: [self.proxy.write64(addr + 8 * i, data[i])
+                                     for i in range(8)],
         }
 
     def read(self, addr, width):
