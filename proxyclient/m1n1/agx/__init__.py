@@ -51,7 +51,7 @@ class AGX:
                                     AttrIndex=MemoryAttr.Shared, AP=1)
         self.kshared2 = GPUAllocator(self, "kshared2",
                                      self.kern_va_base + 0x30000000, 0x10000,
-                                     AttrIndex=MemoryAttr.Shared, AP=0)
+                                     AttrIndex=MemoryAttr.Shared, AP=0, PXN=1)
 
         self.io_allocator = Heap(self.kern_va_base + 0x38000000,
                                  self.kern_va_base + 0x40000000,
