@@ -136,6 +136,11 @@ PMGREvents = SafeGreedyRange(Struct(
     "name" / PaddedString(16, "ascii"),
 ))
 
+GPUPerfState = Struct(
+    "freq" / Int32ul,
+    "volt" / Int32ul,
+)
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -179,6 +184,16 @@ DEV_PROPERTIES = {
         "*": {
             "required-functions": ADTStringList,
         },
+    },
+    "sgx": {
+        "*": {
+            "perf-states": SafeGreedyRange(GPUPerfState),
+            "*-kp": Float32l,
+            "*-ki": Float32l,
+            "*-ki-*": Float32l,
+            "*-gain*": Float32l,
+            "*-scale*": Float32l,
+        }
     },
     "arm-io": {
         "*": {
