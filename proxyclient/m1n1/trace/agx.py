@@ -959,7 +959,7 @@ class AGXTracer(ASCTracer):
         self.log("UAT at init time:")
         self.uat.invalidate_cache()
         self.uat.dump(0, log=self.log)
-
+        addr |= 0xfffff000_00000000
         initdata = NewInitData.parse_stream(self.get_stream(0, addr))
 
         self.log("Initdata:")
