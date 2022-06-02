@@ -458,7 +458,7 @@ class ConstructValueClass(ConstructClassBase):
 
     @classmethod
     def _build(cls, obj, stream, context, path):
-        return super()._build(cls, obj.value, stream, context, path)
+        return super()._build(obj.value, stream, context, path)
 
     def _apply(self, obj):
         self.value = obj
