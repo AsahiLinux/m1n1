@@ -90,18 +90,19 @@ class GPUObject:
         return f"GPUObject {self._name} ({self._size:#x} @ {self._addr:#x}): " + s_val
 
 class GPUAllocator:
-    PAGE_SIZE = 16384
-
-    def __init__(self, agx, name, start, size, **kwargs):
+    def __init__(self, agx, name, start, size,
+                 ctx=0, page_size=16384, **kwargs):
+        self.page_size = page_size
         self.agx = agx
+        self.ctx = ctx
         self.name = name
-        self.heap = Heap(start, start + size, block=self.PAGE_SIZE)
+        self.heap = Heap(start, start + size, block=self.page_size)
         self.verbose = 1
         self.objects = {}
         self.flags = kwargs
 
     def make_stream(self, base):
-        return self.agx.uat.iostream(0, base)
+        return self.agx.uat.iostream(self.ctx, base)
 
     def new(self, objtype, name=None, **kwargs):
         obj = GPUObject(self, objtype)
@@ -109,20 +110,26 @@ class GPUAllocator:
         if name is not None:
             obj._name = name
 
-        size_align = align_up(obj._size, self.PAGE_SIZE)
-        addr = self.heap.malloc(size_align + self.PAGE_SIZE * 2)
-        obj._addr = addr + self.PAGE_SIZE
-
-        obj._paddr = self.agx.u.memalign(self.PAGE_SIZE, size_align)
-
-        print(f"[{self.name}] Alloc {name} size {obj._size:#x} @ {obj._addr:#x} ({obj._paddr:#x})")
+        size_align = align_up(obj._size, self.page_size)
+        addr = self.heap.malloc(size_align + self.page_size * 2)
+        paddr = self.agx.u.memalign(self.page_size, size_align)
+        off = size_align - obj._size
 
         flags = dict(self.flags)
         flags.update(kwargs)
 
-        self.agx.uat.iomap_at(0, obj._addr, obj._paddr, size_align, **flags)
+        self.agx.uat.iomap_at(self.ctx, addr + self.page_size, paddr, size_align, **flags)
+        obj._set_addr(addr + off + self.page_size, paddr + off)
+
         self.objects[obj._addr] = obj
+
+        print(f"[{self.name}] Alloc {obj._name} size {obj._size:#x} @ {obj._addr:#x} ({obj._paddr:#x})")
+
+        self.agx.reg_object(obj)
         return obj
 
+    def new_buf(self, size, name):
+        return self.new(HexDump(Bytes(size)), name=name).push()
+
     def buf(self, size, name):
-        return self.new(Bytes(size), name=name).push()._addr
+        return self.new_buf(size, name)._addr
