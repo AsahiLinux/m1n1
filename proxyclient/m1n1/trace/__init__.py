@@ -155,7 +155,6 @@ class PrintTracer(Tracer):
         dev, zone2 = self.device_addr_tbl.lookup(evt.addr)
         if name is None:
             name = dev
-        if start is None:
             start = zone2.start
         t = "W" if evt.flags.WRITE else "R"
         m = "+" if evt.flags.MULTI else " "
