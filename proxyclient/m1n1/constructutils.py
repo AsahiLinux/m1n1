@@ -1,7 +1,7 @@
 from construct import *
 from construct.core import evaluate
 from construct.lib import HexDisplayedInteger
-from .utils import Reloadable, ReloadableMeta
+from .utils import *
 import inspect
 import textwrap
 
@@ -184,6 +184,9 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
     def __init__(self):
         self._addr = None
         self._meta = {}
+
+    def regmap(self):
+        return ConstructRegMap(type(self), self._stream.to_accessor(), self._addr)
 
     @classmethod
     def sizeof(cls, **contextkw):
@@ -459,6 +462,43 @@ class ConstructValueClass(ConstructClassBase):
 
     def _apply(self, obj):
         self.value = obj
+
+class ConstructRegMap(BaseRegMap):
+    TYPE_MAP = {
+        Int8ul: Register8,
+        Int16ul: Register16,
+        Int32ul: Register32,
+        Int64ul: Register64,
+    }
+
+    def __init__(self, cls, backend, base):
+        self._addrmap = {}
+        self._rngmap = SetRangeMap()
+        self._namemap = {}
+        assert isinstance(cls.subcon, Struct)
+        for subcon in cls.subcon.subcons:
+            if not isinstance(subcon, Renamed):
+                continue
+            name = subcon.name
+            subcon = subcon.subcon
+            if subcon not in self.TYPE_MAP:
+                continue
+            rtype = self.TYPE_MAP[subcon]
+            addr, size = cls._off[name]
+            self._addrmap[addr] = name, rtype
+            self._namemap[name] = addr, rtype
+        super().__init__(backend, base)
+
+    def __getattr__(self, k):
+        if k.startswith("_"):
+            return self.__dict__[k]
+        return self._accessor[k]
+
+    def __setattr__(self, k, v):
+        if k.startswith("_"):
+            self.__dict__[k] = v
+            return
+        self._accessor[k].val = v
 
 def show_struct_trace(log=print):
     for addr, desc in sorted(list(g_struct_trace)):
