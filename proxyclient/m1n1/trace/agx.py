@@ -522,25 +522,38 @@ class AGXTracer(ASCTracer):
             return
         elif isinstance(msg, RunCmdQueueMsg):
             self.log(f"== Work notification (type {msg.queue_type})==")
-            for wi in self.get_cmdqueue(msg.cmdqueue_addr).get_workitems(msg):
+            queue = self.get_cmdqueue(msg.cmdqueue_addr)
+            for wi in queue.get_workitems(msg):
                 self.log(str(wi))
                 if msg.queue_type == 2:
                     pass
                     #return self.handle_compute(wi)
                 elif msg.queue_type == 1:
                     self.handle_3d(wi)
+                    self.queue_3d = queue
                 elif msg.queue_type == 0:
                     self.handle_ta(wi)
+                    self.queue_ta = queue
         return True
 
     def handle_event(self, msg):
         if self.last_ta:
             self.log("Redumping TA...")
-            self.handle_ta(self.last_ta)
+            stream = self.get_stream(0, self.last_ta._addr)
+            last_ta = CmdBufWork.parse_stream(stream)
+            self.log(str(last_ta))
+            self.handle_ta(last_ta)
+            self.queue_ta.update_info()
+            self.log(f"Queue info: {self.queue_ta.info}")
             self.last_ta = None
         if self.last_3d:
             self.log("Redumping 3D...")
-            self.handle_3d(self.last_3d)
+            stream = self.get_stream(0, self.last_3d._addr)
+            last_3d = CmdBufWork.parse_stream(stream)
+            self.log(str(last_3d))
+            self.handle_3d(last_3d)
+            self.queue_3d.update_info()
+            self.log(f"Queue info: {self.queue_3d.info}")
             self.last_3d = None
 
     def handle_ta(self, wi):
