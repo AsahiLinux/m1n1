@@ -381,14 +381,22 @@ class ConstructClass(ConstructClassBase, Container):
                     continue
                 name = subcon.name
                 subcon = subcon.subcon
+                if isinstance(subcon, Lazy):
+                    subcon = subcon.subcon
                 if not isinstance(subcon, Pointer):
                     continue
-                try:
-                    addr = getattr(obj, name)._addr
+                addr_field = subcon.offset.__getfield__()
+                if not hasattr(obj, name) and hasattr(obj, addr_field):
+                    # No need for building
+                    setattr(obj, name, None)
+                elif hasattr(obj, name):
+                    subobj = getattr(obj, name)
+                    try:
+                        addr = subobj._addr
+                    except (AttributeError, KeyError):
+                        addr = None
                     if addr is not None:
-                        setattr(obj, subcon.offset.__getfield__(), addr)
-                except:
-                    pass
+                        setattr(obj, addr_field, addr)
 
     def _apply(self, obj):
         self.update(obj)
