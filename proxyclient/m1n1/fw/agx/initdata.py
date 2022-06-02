@@ -480,11 +480,20 @@ class IOMapping(ConstructClass):
         if self.virt_addr == 0:
             return "\n<IOMapping: Invalid>"
 
-        hv = self._stream.uat.hv
-        dev, range = hv.device_addr_tbl.lookup(self.phys_addr)
-        offset = self.phys_addr - range.start
-        return f"\nIO Mapping: {['RO', 'RW'][self.readwrite]} {self.virt_addr:#x} -> " \
-               f"{dev}+{offset:#x} ({self.size:#x} / {self.range_size:#x})"
+        try:
+            hv = self._stream.uat.hv
+        except AttributeError:
+            hv = None
+
+        if hv:
+            dev, range = hv.device_addr_tbl.lookup(self.phys_addr)
+            offset = self.phys_addr - range.start
+            return f"\nIO Mapping: {['RO', 'RW'][self.readwrite]} {self.virt_addr:#x} -> " \
+                f"{dev}+{offset:#x} ({self.size:#x} / {self.range_size:#x})"
+        else:
+            return f"\nIO Mapping: {['RO', 'RW'][self.readwrite]} {self.virt_addr:#x} -> " \
+                f"{self.phys_addr:#x} ({self.size:#x} / {self.range_size:#x})"
+
 
 class AGXHWDataB(ConstructClass):
     subcon = Struct(
