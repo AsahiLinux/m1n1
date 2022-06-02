@@ -139,8 +139,24 @@ class ReloadableConstructMeta(ReloadableMeta, Construct):
 
         cls.docs = None
 
-        return cls
+        cls._off = {}
+        if "subcon" not in attrs:
+            return cls
 
+        subcon = attrs["subcon"]
+        if isinstance(subcon, Struct):
+            off = 0
+            for subcon in subcon.subcons:
+                try:
+                    sizeof = subcon.sizeof()
+                except:
+                    break
+                if isinstance(subcon, Renamed):
+                    name = subcon.name
+                    subcon = subcon.subcon
+                    cls._off[name] = off, sizeof
+                off += sizeof
+        return cls
 
 class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
     """ Offers two benifits over regular construct
@@ -165,6 +181,10 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
 
     parsed = None
 
+    def __init__(self):
+        self._addr = None
+        self._meta = {}
+
     def Apply(self, dict=None, **kwargs):
         if dict is None:
             dict = kwargs
@@ -173,6 +193,12 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
             if not key.startswith('_'):
                 setattr(self, key, dict[key])
                 self._keys += [key]
+
+    def set_addr(self, addr=None, stream=None):
+        #print("set_addr", type(self), addr)
+        if addr is not None:
+            self._addr = addr
+        self._set_meta(self, stream)
 
     @classmethod
     def _build(cls, obj, stream, context, path):
@@ -196,6 +222,7 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
         obj._apply(new_obj)
 
         obj._addr = addr
+        cls._set_meta(obj, stream)
         return obj
 
     @classmethod
@@ -214,10 +241,45 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
         raise NotImplementedError()
 
     @classmethod
+    def _set_meta(cls, self, stream=None):
+        if stream is not None:
+            self._meta = {}
+            self._stream = stream
+
+        if isinstance(cls.subcon, Struct):
+            subaddr = int(self._addr)
+            for subcon in cls.subcon.subcons:
+                try:
+                    sizeof = subcon.sizeof()
+                except:
+                    break
+                if isinstance(subcon, Renamed):
+                    name = subcon.name
+                    #print(name, subcon)
+                    subcon = subcon.subcon
+                    if stream is not None and getattr(stream, "meta_fn", None):
+                        meta = stream.meta_fn(subaddr, sizeof)
+                        if meta is not None:
+                            self._meta[name] = meta
+                    if isinstance(subcon, Pointer):
+                        continue
+                    try:
+                        #print(name, subcon)
+                        val = self[name]
+                    except:
+                        pass
+                    else:
+                        if isinstance(val, ConstructClassBase):
+                            val.set_addr(subaddr)
+
+                subaddr += sizeof
+
+    @classmethod
     def _parse(cls, stream, context, path):
         #print(f"parse {cls} @ {stream.tell():#x} {path}")
         addr = stream.tell()
         obj = cls.subcon._parse(stream, context, path)
+        size = stream.tell() - addr
 
         # Don't instance Selects
         if isinstance(cls.subcon, Select):
@@ -226,29 +288,10 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
         # Skip calling the __init__ constructor, so that it can be used for building
         # Use parsed instead, if you need a post-parsing constructor
         self = cls.__new__(cls)
-        self._off = {}
-        self._meta = {}
-
-        if isinstance(cls.subcon, Struct):
-            subaddr = addr
-            for subcon in cls.subcon.subcons:
-                try:
-                    sizeof = subcon.sizeof()
-                except:
-                    break
-                if isinstance(subcon, Renamed):
-                    name = subcon.name
-                    subcon = subcon.subcon
-                    self._off[name] = subaddr - addr, sizeof
-                    if getattr(stream, "meta_fn", None):
-                        meta = stream.meta_fn(subaddr, sizeof)
-                        if meta is not None:
-                            self._meta[name] = meta
-                subaddr += sizeof
-
-        # These might be useful later
-        self._stream = stream
         self._addr = addr
+        self._path = path
+        self._meta = {}
+        cls._set_meta(self, stream)
 
         self._apply(obj)
 
