@@ -11,44 +11,50 @@ from .initdata import InitData, IOMapping
 
 __all__ = []
 
-class PongMsg(Register64):
-    TYPE    = 59, 52
-    UNK     = 47, 0
-
 class GpuMsg(Register64):
-    TYPE    = 55, 48
+    TYPE    = 63, 48
 
-class KickMsg(GpuMsg):
-    TYPE    = 55, 48, Constant(0x83)
-    KICK    = 15, 0
+class InitMsg(GpuMsg):
+    TYPE        = 63, 48, Constant(0x81)
+    UNK         = 47, 44, Constant(0)
+    INITDATA    = 43, 0
 
+class EventMsg(GpuMsg):
+    TYPE        = 63, 48, Constant(0x42)
+    UNK         = 47, 0, Constant(0)
 
-class AgxEP(ASCBaseEndpoint):
-    BASE_MESSAGE = PongMsg
-    SHORT = "pong"
+class DoorbellMsg(GpuMsg):
+    TYPE        = 63, 48, Constant(0x83)
+    CHANNEL     = 15, 0
 
-    @msg_handler(0x1)
-    def pong(self, msg):
-        print("received pong")
+class FirmwareEP(ASCBaseEndpoint):
+    BASE_MESSAGE = GpuMsg
+    SHORT = "fw"
+
+    @msg_handler(0x42)
+    def event(self, msg):
+        self.log("Received event")
+        self.asc.agx.poll_channels()
+        return True
 
     def send_initdata(self, addr):
-        msg = PongMsg(TYPE=0x81, UNK=addr)
-        print(msg)
+        self.log(f"Sending initdata @ {addr:#x}")
+        msg = InitMsg(INITDATA=addr)
         self.send(msg)
 
-class KickEP(ASCBaseEndpoint):
-    BASE_MESSAGE = KickMsg
-    SHORT = "kick"
+class DoorbellEP(ASCBaseEndpoint):
+    BASE_MESSAGE = DoorbellMsg
+    SHORT = "db"
 
-    def kick(self, kick_type):
-        msg = KickMsg(KICK = kick_type)
-        print(msg)
+    def doorbell(self, channel):
+        self.log(f"Sending doorbell ch={channel}")
+        msg = DoorbellMsg(CHANNEL = channel)
         self.send(msg)
 
 class AGXASC(StandardASC):
     ENDPOINTS = {
-        0x20: AgxEP,
-        0x21: KickEP
+        0x20: FirmwareEP,
+        0x21: DoorbellEP,
     }
 
     def __init__(self, u, base, agx, uat):
