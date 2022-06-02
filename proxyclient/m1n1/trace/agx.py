@@ -282,19 +282,21 @@ class AGXTracer(ASCTracer):
         # self.mon.add(self.gfx_shared_region, self.gfx_shared_region_size, "gfx-shared")
         # self.mon.add(self.gfx_handoff, self.gfx_handoff_size, "gfx-handoff")
 
-        self.uat.set_ttbr(self.gpu_region)
-
+        self.clear_ttbr_tracers()
         self.clear_uatmap_tracers()
+        self.add_ttbr_tracers()
         self.add_uatmap_tracers()
         self.clear_gpuvm_tracers()
         self.vmcnt = 0
         self.readlog = {}
         self.writelog = {}
         self.cmdqueues = {}
+        self.va_to_pa = {}
 
         self.last_ta = None
         self.last_3d = None
 
+        self.trace_userva = False
         self.pause_after_init = True
         self.shell_after_init = False
 
@@ -307,11 +309,10 @@ class AGXTracer(ASCTracer):
 
         return cmdqueue
 
-    def clear_uatmap_tracers(self):
-        self.hv.clear_tracers("UATMapTracer")
-        self.hv.clear_tracers("UATTTBRTracer")
+    def clear_ttbr_tracers(self):
+        self.hv.clear_tracers(f"UATTTBRTracer")
 
-    def add_uatmap_tracers(self):
+    def add_ttbr_tracers(self):
         self.hv.add_tracer(irange(self.gpu_region, 16 * 16),
                         f"UATTTBRTracer",
                         mode=TraceMode.WSYNC,
@@ -320,71 +321,140 @@ class AGXTracer(ASCTracer):
                         base=self.gpu_region,
                         level=3)
 
+    def clear_uatmap_tracers(self, ctx=None):
+        if ctx is None:
+            for i in range(16):
+                self.clear_uatmap_tracers(i)
+        else:
+            self.hv.clear_tracers(f"UATMapTracer/{ctx}")
+
+    def add_uatmap_tracers(self, ctx=None):
+        self.log(f"add_uatmap_tracers({ctx})")
+        if ctx is None:
+            for i in range(16):
+                self.add_uatmap_tracers(i)
+            return
+
         def trace_pt(start, end, idx, pte, level, sparse):
+            if start >= 0xf8000000000 and ctx != 0:
+                return
             self.hv.add_tracer(irange(pte.offset(), 0x4000),
-                            f"UATMapTracer",
+                            f"UATMapTracer/{ctx}",
                             mode=TraceMode.WSYNC,
                             write=self.uat_write,
                             iova=start,
                             base=pte.offset(),
-                            level=2 - level)
+                            level=2 - level,
+                            ctx=ctx)
 
-        self.uat.foreach_table(0, trace_pt)
+        self.uat.foreach_table(ctx, trace_pt)
 
-    def clear_gpuvm_tracers(self):
-        self.hv.clear_tracers("GPUVM")
+    def clear_gpuvm_tracers(self, ctx=None):
+        if ctx is None:
+            for i in range(16):
+                self.clear_gpuvm_tracers(i)
+        else:
+            self.hv.clear_tracers(f"GPUVM/{ctx}")
 
-    def add_gpuvm_tracers(self):
+    def add_gpuvm_tracers(self, ctx=None):
+        self.log(f"add_gpuvm_tracers({ctx})")
+        if ctx is None:
+            for i in range(16):
+                self.add_gpuvm_tracers(i)
+            return
+
         def trace_page(start, end, idx, pte, level, sparse):
-            self.uat_page_mapped(start, pte)
+            self.uat_page_mapped(start, pte, ctx)
 
-        self.uat.foreach_page(0, trace_page)
+        self.uat.foreach_page(ctx, trace_page)
 
-    def uat_write(self, evt, level=3, base=0, iova=0):
+    def uat_write(self, evt, level=3, base=0, iova=0, ctx=None):
         off = (evt.addr - base) // 8
-        #self.log(f"UAT write L{level} at {iova:#x} (#{off:#x}) -> {evt.data}")
+        self.log(f"UAT write L{level} at {ctx}:{iova:#x} (#{off:#x}) -> {evt.data}")
 
         if level == 3:
-            if off != 1: # only trace kernel for now
-                return
-            context = off // 2
+            ctx = off // 2
             is_kernel = off & 1
+            if ctx != 0 and is_kernel:
+                return
+
             if is_kernel:
                 iova += 0xf8000000000
             pte = TTBR(evt.data)
+            if not pte.valid():
+                self.log(f"Context {ctx} invalidated")
+                self.uat.invalidate_cache()
+                self.clear_uatmap_tracers(ctx)
+                self.clear_gpuvm_tracers(ctx)
+                return
+            self.log(f"Dumping UAT for context {ctx}")
+            self.uat.invalidate_cache()
+            _, pt = self.uat.get_pt(self.uat.gpu_region + ctx * 16, 8)
+            pt[off & 1] = evt.data
+            self.uat.dump(ctx, log=self.log)
+            self.add_uatmap_tracers(ctx)
+            self.add_gpuvm_tracers(ctx)
         else:
+            is_kernel = iova >= 0xf8000000000
             iova += off << (level * 11 + 14)
             if level == 0:
                 pte = Page_PTE(evt.data)
-                self.uat_page_mapped(iova, pte)
+                self.uat_page_mapped(iova, pte, ctx)
                 return
             else:
                 pte = PTE(evt.data)
 
-        level -= 1
+        if not pte.valid():
+            try:
+                paddr = self.va_to_pa[(ctx, level, iova)]
+            except KeyError:
+                return
+            self.hv.del_tracer(irange(paddr, 0x4000),
+                               f"UATMapTracer/{ctx}")
+            del self.va_to_pa[(ctx, level, iova)]
+            return
 
+        self.va_to_pa[(ctx, level, iova)] = pte.offset()
+        level -= 1
         self.hv.add_tracer(irange(pte.offset(), 0x4000),
-                           f"UATMapTracer",
+                           f"UATMapTracer/{ctx}",
                            mode=TraceMode.WSYNC,
                            write=self.uat_write,
                            iova=iova,
                            base=pte.offset(),
-                           level=level)
+                           level=level,
+                           ctx=ctx)
 
-    def uat_page_mapped(self, iova, pte):
+    def uat_page_mapped(self, iova, pte, ctx=0):
+        if iova >= 0xf8000000000 and ctx != 0:
+            return
+        if not self.trace_userva and ctx != 0:
+            return
+
+        if not pte.valid():
+            try:
+                paddr = self.va_to_pa[(ctx, iova)]
+            except KeyError:
+                return
+            self.hv.del_tracer(irange(paddr, 0x4000), f"GPUVM/{ctx}")
+            del self.va_to_pa[(ctx, iova)]
+            return
+
         paddr = pte.offset()
-        self.log(f"UAT map {iova:#x} -> {paddr:#x}")
+        self.log(f"UAT map {ctx}:{iova:#x} -> {paddr:#x}")
         if paddr < 0x800000000:
             return # MMIO, ignore
+        self.va_to_pa[(ctx, iova)] = paddr
         self.hv.add_tracer(irange(paddr, 0x4000),
-                           f"GPUVM",
+                           f"GPUVM/{ctx}",
                            mode=TraceMode.ASYNC,
                            read=self.event_gpuvm,
                            write=self.event_gpuvm,
                            iova=iova,
-                           paddr=paddr)
+                           paddr=paddr,
+                           ctx=ctx)
 
-    def event_gpuvm(self, evt, iova, paddr, name=None, base=None):
+    def event_gpuvm(self, evt, iova, paddr, name=None, base=None, ctx=None):
         off = evt.addr - paddr
         iova += off
 
@@ -397,10 +467,11 @@ class AGXTracer(ASCTracer):
         dinfo = ""
         if name is not None and base is not None:
             dinfo = f"[{name} + {iova - base:#x}]"
-        logline = (f"[cpu{evt.flags.CPU}] GPUVM[{self.vmcnt:5}]: {t}.{1<<evt.flags.WIDTH:<2}{m} " +
+        logline = (f"[cpu{evt.flags.CPU}] GPUVM[{ctx}/{self.vmcnt:5}]: {t}.{1<<evt.flags.WIDTH:<2}{m} " +
                    f"{iova:#x}({evt.addr:#x}){dinfo} = {evt.data:#x}")
         self.log(logline, show_cpu=False)
         self.vmcnt += 1
+        #self.mon.poll()
 
     def meta_gpuvm(self, iova, size):
         meta = ""
@@ -830,6 +901,7 @@ class AGXTracer(ASCTracer):
         if self.state.initdata is None:
             return
         self.clear_uatmap_tracers()
+        self.clear_ttbr_tracers()
         self.log("Pausing tracing")
         self.state.active = False
         for chan in self.channels:
@@ -844,6 +916,7 @@ class AGXTracer(ASCTracer):
     def resume(self):
         self.add_gpuvm_tracers()
         self.add_uatmap_tracers()
+        self.add_ttbr_tracers()
         if self.state.initdata is None:
             return
         self.log("Resuming tracing")
