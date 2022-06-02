@@ -185,6 +185,7 @@ class ChannelTracer(Reloadable):
         self.state.active = active
 
 ChannelTracer = ChannelTracer._reloadcls()
+CommandQueueInfo = CommandQueueInfo._reloadcls()
 
 class CommandQueueTracer(Reloadable):
     def __init__(self, tracer, info_addr):
@@ -252,7 +253,9 @@ class CommandQueueTracer(Reloadable):
             self.state.rptr = None
         self.state.active = active
 
+CmdBufWork = CmdBufWork._reloadcls()
 CommandQueueTracer = CommandQueueTracer._reloadcls()
+NewInitData = NewInitData._reloadcls(True)
 
 class AGXTracer(ASCTracer):
     ENDPOINTS = {
