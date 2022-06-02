@@ -6,6 +6,8 @@ from ..hw.uat import UAT, MemoryAttr, PTE, Page_PTE, TTBR
 
 from ..fw.agx.initdata import InitData as NewInitData
 from ..fw.agx.channels import *
+from ..fw.agx.cmdqueue import *
+from ..fw.agx.controllist import *
 
 from m1n1.proxyutils import RegMonitor
 from m1n1.constructutils import *

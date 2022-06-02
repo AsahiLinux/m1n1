@@ -2,8 +2,10 @@
 from m1n1.constructutils import *
 from construct import *
 from .controllist import *
+from ...utils import RegMap, Register32
 
-ControlList = ControlList._reloadcls()
+__all__ = []
+
 
 class WorkCommand_4(ConstructClass):
     """
@@ -340,3 +342,5 @@ class CommandQueueInfo(ConstructClass):
         # End of struct
     )
 
+__all__.extend(k for k, v in globals().items()
+               if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

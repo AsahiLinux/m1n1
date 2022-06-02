@@ -20,6 +20,8 @@ from construct import *
 from construct.core import Int64ul, Int32ul, Int32sl
 import textwrap
 
+__all__ = []
+
 class Start3DClearPipelineBinding(ConstructClass):
     subcon = Struct(
         "unk_0" / Int64ul,
@@ -597,3 +599,5 @@ class ControlList(ConstructValueClass):
             s += "?\n"
         return s
 
+__all__.extend(k for k, v in globals().items()
+               if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

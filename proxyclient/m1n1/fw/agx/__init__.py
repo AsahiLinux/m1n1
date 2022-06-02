@@ -9,6 +9,7 @@ from ...hw.uat import UAT
 
 from .initdata import InitData, IOMapping
 
+__all__ = []
 
 class PongMsg(Register64):
     TYPE    = 59, 52
@@ -68,3 +69,6 @@ class AGXASC(StandardASC):
 
     def iowrite(self, dva, data, ctx=0):
         return self.uat.iowrite(ctx, dva & 0xFFFFFFFFFF, data)
+
+__all__.extend(k for k, v in globals().items()
+               if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

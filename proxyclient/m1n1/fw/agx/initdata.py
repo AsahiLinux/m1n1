@@ -4,6 +4,8 @@ from construct import *
 
 from .channels import Channels
 
+__all__ = []
+
 class InitData_unkptr20(ConstructClass):
     subcon = Struct(
         "unkptr_0" / Int64ul,
@@ -224,3 +226,5 @@ class InitData(ConstructClass):
         Padding(0x1000) # For safety
     )
 
+__all__.extend(k for k, v in globals().items()
+               if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

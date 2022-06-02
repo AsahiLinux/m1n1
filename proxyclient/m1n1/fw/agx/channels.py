@@ -6,6 +6,8 @@ from m1n1.constructutils import ConstructClass
 from construct import *
 from .cmdqueue import *
 
+__all__ = ["channelNames", "channelRings", "DeviceControlMsg", "EventMsg", "StatsMsg"]
+
 CommandQueueInfo = CommandQueueInfo._reloadcls(True)
 
 class NotifyCmdQueueWork(ConstructClass):
@@ -319,3 +321,5 @@ class Channels(ConstructClass):
 
     subcon = Struct(*[ name / ChannelInfo for name in channelNames])
 
+__all__.extend(k for k, v in globals().items()
+               if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

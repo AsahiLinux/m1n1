@@ -2,6 +2,7 @@
 
 from .object import GPUObject, GPUAllocator
 from .initdata import build_initdata
+from .channels import *
 from ..malloc import Heap
 from ..hw.uat import UAT, MemoryAttr
 from ..fw.agx import AGXASC
