@@ -2,7 +2,7 @@ from m1n1.utils import *
 from m1n1.constructutils import ConstructClass, ConstructValueClass, ROPointer
 from construct import *
 
-from .channels import Channels
+from .channels import ChannelInfoSet
 
 __all__ = []
 
@@ -143,7 +143,7 @@ class RegionB_unkprt_1a0(ConstructClass):
 
 class InitData_RegionB(ConstructClass):
     subcon = Struct(
-        "channels" / Channels,
+        "channels" / ChannelInfoSet,
         Padding(0x60),
         "unkptr_170" / Int64ul, # size 0xc0, Empty
         "unkptr_178" / Int64ul, # size: 0x1c0, has random negative 1s, Needed for login screen

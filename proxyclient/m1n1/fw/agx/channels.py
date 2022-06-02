@@ -2,23 +2,21 @@
 import random
 
 from m1n1.utils import *
-from m1n1.constructutils import ConstructClass
+from m1n1.constructutils import *
 from construct import *
 from .cmdqueue import *
 
 __all__ = ["channelNames", "channelRings", "DeviceControlMsg", "EventMsg", "StatsMsg"]
 
-CommandQueueInfo = CommandQueueInfo._reloadcls(True)
-
-class NotifyCmdQueueWork(ConstructClass):
+class RunCmdQueueMsg(ConstructClass):
     subcon = Struct (
         "queue_type" / Default(Int32ul, 0),
         "cmdqueue_addr" / Default(Hex(Int64ul), 0),
-        "cmdqueue" / Lazy(Pointer(this.cmdqueue_addr, CommandQueueInfo)),
+        "cmdqueue" / Lazy(ROPointer(this.cmdqueue_addr, CommandQueueInfo)),
         "head" / Default(Int32ul, 0),
         "event_number" / Default(Int32ul, 0),
         "new_queue" / Default(Int32ul, 0),
-        "data" / HexDump(Bytes(0x18)),
+        "data" / HexDump(Default(Bytes(0x18), bytes(0x18))),
     )
 
     TYPES = {
@@ -30,8 +28,8 @@ class NotifyCmdQueueWork(ConstructClass):
     def __str__(self):
         s = super().__str__() + "\n"
 
-        if (self.cmdqueue_addr == 0):
-            return s + "<Empty NotifyCmdQueueWork>"
+        if self.cmdqueue_addr == 0:
+            return s + "<Empty RunCmdQueueMsg>"
 
         r = random.randrange(2**64)
         s += f"{self.TYPES[self.queue_type]}(0x{self.cmdqueue_addr & 0xfff_ffffffff:x}, {self.head}, ev={self.event_number}, new={self.new_queue}) //{r:x}"
@@ -53,7 +51,7 @@ class DC_DestroyContext(ConstructClass):
 class DeviceControl_19(ConstructClass):
     subcon =  Struct (
         "msg_type" / Const(0x19, Int32ul),
-        "data" / HexDump(Bytes(0x2c))
+        "data" / HexDump(Default(Bytes(0x2c), bytes(0x2c)))
     )
 
 
@@ -66,7 +64,7 @@ class DeviceControl_1e(ConstructClass):
 class DeviceControl_23(ConstructClass):
     subcon = Struct (
         "msg_type" / Const(0x23, Int32ul),
-        "data" / HexDump(Bytes(0x2c)),
+        "data" / HexDump(Default(Bytes(0x2c), bytes(0x2c))),
     )
 
 class UnknownMsg(ConstructClass):
@@ -74,14 +72,6 @@ class UnknownMsg(ConstructClass):
         "msg_type" / Hex(Int32ul),
         "data" / HexDump(Bytes(0x2c)),
     )
-
-    def __init__(self):
-        self.msg_type = 0xcc
-        self.data = b"\0"*0x2c
-
-    def __str__(self):
-        return f"Unknown(type={self.msg_type:x}, data={hexdump32(self.data)})"
-
 
 DeviceControlMsg = FixedSized(0x30, Select(
     DC_DestroyContext,
@@ -215,7 +205,7 @@ class FWLogMsg(ConstructClass):
         "msg" / PaddedString(0xc8, "ascii")
     )
 
-class EventMsg(ConstructClass):
+class FlagMsg(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(1, Int32ul)),
         "firing" / Hex(Int32ul),
@@ -224,6 +214,25 @@ class EventMsg(ConstructClass):
         "unk_10" / Hex(Int32ul),
         "unk_14" / Hex(Int16ul),
         "unkpad_16" / HexDump(Bytes(0x38 - 0x16)),
+    )
+
+class FaultMsg(ConstructClass):
+    subcon = Struct (
+        "msg_type" / Hex(Const(4, Int32ul)),
+        "index" / Hex(Int32ul),
+        "unk_8" / Hex(Int32ul),
+        "queue" / Hex(Int32ul),
+        "unkpad_16" / HexDump(Bytes(0x38 - 0x10)),
+    )
+
+EventMsg = FixedSized(0x38, Select(
+    FlagMsg,
+    HexDump(Bytes(0x38)),
+))
+
+class KTraceMsg(ConstructClass):
+    subcon = Struct (
+        "unk" / HexDump(Bytes(0x70)),
     )
 
 channelNames = [
@@ -236,7 +245,7 @@ channelNames = [
 ]
 
 channelRings = (
-    [[(NotifyCmdQueueWork, 0x30, 0x100)]] * 12 + [
+    [[(RunCmdQueueMsg, 0x30, 0x100)]] * 12 + [
         [(DeviceControlMsg, 0x30, 0x100)],
         [(EventMsg, 0x38, 0x100)],
         [
@@ -247,7 +256,7 @@ channelRings = (
             (FWLogMsg, 0xd8, 0x100),                # unk 4
             (FWLogMsg, 0xd8, 0x100),                # unk 5
         ],
-        [(HexDump(Bytes(0x70)), 0x70, 0x100)],
+        [(KTraceMsg, 0x70, 0x100)],
         [(StatsMsg, 0x30, 0x100)]
     ]
 )
@@ -316,7 +325,7 @@ class ChannelInfo(ConstructClass):
         "ringbuffer_addr" / Hex(Int64ul),
     )
 
-class Channels(ConstructClass):
+class ChannelInfoSet(ConstructClass):
     CHAN_COUNT = len(channelNames)
 
     subcon = Struct(*[ name / ChannelInfo for name in channelNames])
