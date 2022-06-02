@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: MIT
 from ..fw.agx.initdata import *
-from ..fw.agx.channels import channelNames, ChannelInfo, Channel
 from ..hw.uat import MemoryAttr
 
 def build_iomappings(agx):
@@ -12,88 +11,100 @@ def build_iomappings(agx):
 
     # for t8103
     return [
-        iomap(0x204d00000, 0x1c000, 0x1c000, 1),
-        iomap(0x20e100000, 0x4000, 0x4000, 0),
-        iomap(0x23b104000, 0x4000, 0x4000, 1),
-        iomap(0x204000000, 0x20000, 0x20000, 1),
-        IOMapping(),
-        IOMapping(),
-        IOMapping(),
-        iomap(0x23b2e8000, 0x1000, 0x1000, 0),
-        iomap(0x23bc00000, 0x1000, 0x1000, 1),
-        iomap(0x204d80000, 0x5000, 0x5000, 1),
-        iomap(0x204d61000, 0x1000, 0x1000, 1),
-        iomap(0x200000000, 0xd6400, 0xd6400, 1),
-        IOMapping(),
-        iomap(0x23b738000, 0x1000, 0x1000, 1),
-        IOMapping(),
-        IOMapping(),
-        IOMapping(),
-        IOMapping(),
-        IOMapping(),
-        IOMapping(),
+        iomap(0x204d00000, 0x1c000, 0x1c000, 1), # Fender
+        iomap(0x20e100000, 0x4000, 0x4000, 0), # AICTimer
+        iomap(0x23b104000, 0x4000, 0x4000, 1), # AICSWInt
+        iomap(0x204000000, 0x20000, 0x20000, 1), # RGX
+        IOMapping(), # UVD
+        IOMapping(), # unused
+        IOMapping(), # DisplayUnderrunWA
+        iomap(0x23b2e8000, 0x1000, 0x1000, 0), # AnalogTempSensorControllerRegs
+        iomap(0x23bc00000, 0x1000, 0x1000, 1), # PMPDoorbell
+        iomap(0x204d80000, 0x5000, 0x5000, 1), # MetrologySensorRegs
+        iomap(0x204d61000, 0x1000, 0x1000, 1), # GMGIFAFRegs
+        iomap(0x200000000, 0xd6400, 0xd6400, 1), # MCache registers
+        IOMapping(), # AICBankedRegisters
+        iomap(0x23b738000, 0x1000, 0x1000, 1), # PMGRScratch
+        IOMapping(), # NIA Special agent idle register die 0
+        IOMapping(), # NIA Special agent idle register die 1
+        IOMapping(), # CRE registers
+        IOMapping(), # Streaming codec registers
+        IOMapping(), #
+        IOMapping(), #
     ]
 
 def build_initdata(agx):
-    initdata = agx.kobj.new(InitData)
+    sgx = agx.u.adt["/arm-io/sgx"]
+    chosen = agx.u.adt["/chosen"]
 
-    initdata.regionA = agx.kobj.new(Bytes(12), name="InitData_RegionA").push()
+    initdata = agx.kshared.new(InitData)
+
+    initdata.regionA = agx.kshared.new_buf(0x4000, "InitData_RegionA").push()
 
     regionB = agx.kobj.new(InitData_RegionB)
 
-    regionB.channels = Channels()
-    for name in channelNames:
-        chan = ChannelInfo()
-        chan.state_addr = 0xdeadbeef # kshared
-        chan.ringbuffer_addr = 0xdeadbeef # kshared for gpu->gpu
-        regionB.channels[name] = chan
+    regionB.channels = agx.ch_info
 
     # size 0xc0, empty
-    regionB.unkptr_170 = agx.kobj.buf(0x140, "RegionB.unkptr_170")
+    regionB.unk_170 = agx.kobj.new_buf(0xc0, "RegionB.unkptr_170").push()
 
     # size: 0x1c0, has random negative 1s, Needed for login screen
-    regionB.unkptr_178 = agx.kobj.buf(0x1c0, "RegionB.unkptr_178")
-
-    # 0xffffffff -> +0x108
-    # 0xffffffff -> +0x120
+    unk_178 = agx.kobj.new_buf(0x1c0, "RegionB.unkptr_178")
+    unk_178.val = b"\x00" * 0x108 + b"\xff" * 4 + b"\x00" * 0x14 + b"\xff" * 4 + b"\x00" * 0x9c
+    regionB.unk_178 = unk_178
 
     # size: 0x140, Empty
-    regionB.unkptr_180 = agx.kobj.buf(0x140, "RegionB.unkptr_180")
+    regionB.unk_180 = agx.kobj.new_buf(0x140, "RegionB.unkptr_180").push()
 
     # size: 0x3b80, few floats, few ints, needed for init
-    regionB.unkptr_188 = agx.kobj.new(RegionB_unkprt_188).push()
+    regionB.hwdata_a = agx.kobj.new(AGXHWDataA).push()
 
     # size: 0x80, empty
-    regionB.unkptr_190 = agx.kobj.buf(0x80, "RegionB.unkptr_190")
+    regionB.unk_190 = agx.kobj.new_buf(0x80, "RegionB.unkptr_190").push()
 
     # size: 0xc0, fw writes timestamps into this
-    regionB.unkptr_198 = agx.kobj.new(Bytes(0xc0), name="RegionB.unkptr_198").push()
+    regionB.unk_198 = agx.kobj.new_buf(0xc0, "RegionB.unkptr_198").push()
 
     # size: 0xb80, io stuff
-    unk1a0 = agx.kobj.new(RegionB_unkprt_1a0)
-    unk1a0.io_mappings = build_iomappings(agx)
+    hwdata = agx.kobj.new(AGXHWDataB)
+    hwdata.io_mappings = build_iomappings(agx)
+    hwdata.chip_id = chosen.chip_id
 
-    regionB.unkptr_1a0 = unk1a0.push()
-    regionB.unkptr_1a8 = unk1a0._addr
+    hwdata.num_pstates = sgx.perf_state_count
+    hwdata.min_volt = 850
+    # how is this computed?
+    perf_levels = [0, 19, 26, 38, 60, 87, 100]
+    k = 1.02 #?
+    for i, ps in enumerate(sgx.perf_states):
+        hwdata.frequencies[i] = ps.freq // 1000000
+        hwdata.voltages[i] = [ps.volt] * 8
+        vm = max(hwdata.min_volt, ps.volt)
+        hwdata.voltages_sram[i] = [vm] + [0] * 7
+        regionB.hwdata_a.unk_74[i] = k
+        hwdata.unk_9b4[i] = k
+        hwdata.perf_levels[i] = perf_levels[i]
 
-    regionB.fwlog_ring2 = agx.kshared.buf(0x51000, "Firmware log rings")
+    regionB.hwdata_b = hwdata.push()
+    regionB.hwdata_b_addr2 = hwdata._addr
+
+    regionB.fwlog_ring2 = agx.fwlog_ring
 
     # Unallocated, Size 0x1000
-    regionB.unkptr_1b8 = agx.kobj.buf(0x1000, "RegionB.unkptr_1b8")
+    regionB.unk_1b8 = agx.kobj.new_buf(0x1000, "RegionB.unkptr_1b8").push()
 
     # Unallocated, size 0x300
-    regionB.unkptr_1c0 = agx.kobj.buf(0x300, "RegionB.unkptr_1c0")
+    regionB.unk_1c0 = agx.kobj.new_buf(0x300, "RegionB.unkptr_1c0").push()
 
     # Unallocated, unknown size
-    regionB.unkptr_1c8 = agx.kobj.buf(0x1000, "RegionB.unkptr_1c8")
+    regionB.unk_1c8 = agx.kobj.new_buf(0x1000, "RegionB.unkptr_1c8").push()
 
     # Size: 0x4000
-    regionB.unkptr_214 = agx.kobj.buf(0x4000, "Shared AP=0 region")
-    regionB.unkptr_21c = regionB.unkptr_214
+    regionB.unk_214 = agx.kshared2.new_buf(0x4000, "Shared AP=0 region").push()
+    regionB.unkptr_21c = regionB.unk_214._addr
 
     initdata.regionB = regionB.push()
 
-    initdata.regionC_addr = agx.kshared.buf(0x88000, "RegionC")
+    initdata.regionC = agx.kshared.new(InitData_RegionC).push()
 
     #self.regionC_addr = agx.ksharedshared_heap.malloc(0x88000)
 
@@ -119,4 +130,6 @@ def build_initdata(agx):
     initdata.host_mapped_fw_allocations = 1
 
     initdata.push()
+
+    print(initdata.val)
     return initdata
