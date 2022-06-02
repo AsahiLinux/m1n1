@@ -350,9 +350,16 @@ class ConstructClass(ConstructClassBase, Container):
 
     def __str__(self, ignore=[]) -> str:
 
-        str = f"{self.__class__.__name__} @ 0x{self._addr:x}:\n"
+        str = self.__class__.__name__
+        if self._addr is not None:
+            str += f" @ 0x{self._addr:x}:"
 
-        for key in self:
+        str += "\n"
+
+        keys = list(self)
+        keys.sort(key = lambda x: self._off.get(x, (-1, 0))[0])
+
+        for key in keys:
             if key in ignore or key.startswith('_'):
                 continue
             value = getattr(self, key)
@@ -373,6 +380,21 @@ class ConstructClass(ConstructClassBase, Container):
                 str += f"   {off}\x1b[95m{key}\x1b[m = {val_repr}{meta}\n"
 
         return str
+
+    def _dump(self):
+        print(f"# {self.__class__.__name__}")
+        if self._addr is not None:
+            print(f"#  Address: 0x{self._addr:x}")
+
+        keys = list(self)
+        keys.sort(key = lambda x: self._off.get(x, (-1, 0))[0])
+        for key in keys:
+            if key.startswith('_'):
+                continue
+            value = getattr(self, key)
+            val_repr = str_value(value, repr=True)
+            print(f"self.{key} = {val_repr}")
+
 
     @classmethod
     def _build_prepare(cls, obj):
