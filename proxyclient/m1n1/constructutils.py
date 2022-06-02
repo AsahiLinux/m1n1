@@ -5,35 +5,70 @@ from .utils import Reloadable, ReloadableMeta
 import inspect
 import textwrap
 
-def recusive_reload(obj):
+g_struct_trace = set()
+g_depth = 0
+
+def recusive_reload(obj, token=None):
+    global g_depth
+
+    if token is None:
+        g_depth = 0
+        token = object()
+
+    cur_token = getattr(obj, "_token", None)
+    if cur_token is token:
+        return
+
+    g_depth += 1
+    #print("  " * g_depth + f"> {obj}", id(obj), id(token))
+    if isinstance(obj, Construct) and hasattr(obj, 'subcon'):
+        # Single subcon types
+        if inspect.isclass(obj.subcon):
+            #print("> isclass")
+            if hasattr(obj.subcon, "_reloadcls"):
+                #print("> Recursive (subcon)")
+                obj.subcon = obj.subcon._reloadcls(token=token)
+        else:
+            if isinstance(obj.subcon, Construct):
+                recusive_reload(obj.subcon, token)
     if isinstance(obj, Construct) and hasattr(obj, 'subcons'):
         # Construct types that have lists
+        new_subcons = []
         for i, item in enumerate(obj.subcons):
             if inspect.isclass(item):
-                if issubclass(item, Reloadable):
-                    obj.subcons[i] = item._reloadcls()
+                if hasattr(item, "_reloadcls"):
+                    #print("> Recursive (subcons)")
+                    item = item._reloadcls()
             else:
                 if isinstance(item, Construct):
-                    recusive_reload(item)
+                    recusive_reload(item, token)
+            new_subcons.append(item)
+            obj.subcons = new_subcons
 
     if isinstance(obj, Construct) and hasattr(obj, 'cases'):
         # Construct types that have lists
-        for i, item in obj.cases.items():
+        for i, item in list(obj.cases.items()):
             if inspect.isclass(item):
-                if issubclass(item, Reloadable):
-                    obj.cases[i] = item._reloadcls()
+                if hasattr(item, "_reloadcls"):
+                    #print("> Recursive (cases)")
+                    obj.cases[i] = item._reloadcls(token=token)
             else:
                 if isinstance(item, Construct):
-                    recusive_reload(item)
+                    recusive_reload(item, token)
 
     for field in dir(obj):
         value = getattr(obj, field)
         if inspect.isclass(value):
-            if issubclass(value, Reloadable):
-                setattr(obj, field, value._reloadcls())
+            if hasattr(value, "_reloadcls"):
+                #print("> Recursive (value)")
+                setattr(obj, field, value._reloadcls(token=token))
         else:
             if isinstance(value, Construct):
-                recusive_reload(value)
+                recusive_reload(value, token)
+
+    obj._token = token
+
+    g_depth -= 1
 
 def str_value(value):
     if isinstance(value, DecDisplayedInteger):
@@ -149,9 +184,11 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
         return cls.subcon._sizeof(context, f"{path} -> {cls.name}")
 
     @classmethod
-    def _reloadcls(cls, force=False):
-        newcls = super()._reloadcls(force)
-        recusive_reload(newcls.subcon)
+    def _reloadcls(cls, force=False, token=None):
+        #print(f"_reloadcls({cls})", id(cls))
+        newcls = Reloadable._reloadcls.__func__(cls, force)
+        if hasattr(newcls, "subcon"):
+            recusive_reload(newcls.subcon, token)
         return newcls
 
     def _apply(self, obj):
