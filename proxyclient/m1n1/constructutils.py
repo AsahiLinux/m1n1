@@ -185,6 +185,15 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
         self._addr = None
         self._meta = {}
 
+    @classmethod
+    def sizeof(cls, **contextkw):
+        context = Container(**contextkw)
+        context._parsing = False
+        context._building = False
+        context._sizing = True
+        context._params = context
+        return cls._sizeof(context, "(sizeof)")
+
     def Apply(self, dict=None, **kwargs):
         if dict is None:
             dict = kwargs
