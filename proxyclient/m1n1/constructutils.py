@@ -107,6 +107,21 @@ class Dec(Adapter):
             print(e)
             raise
 
+    def _encode(self, obj, context, path):
+        return obj
+
+    def _emitparse(self, code):
+        return self.subcon._compileparse(code)
+
+    def _emitseq(self, ksy, bitwise):
+        return self.subcon._compileseq(ksy, bitwise)
+
+    def _emitprimitivetype(self, ksy, bitwise):
+        return self.subcon._compileprimitivetype(ksy, bitwise)
+
+    def _emitfulltype(self, ksy, bitwise):
+        return self.subcon._compilefulltype(ksy, bitwise)
+
 class ConstructClassException(Exception):
     pass
 
