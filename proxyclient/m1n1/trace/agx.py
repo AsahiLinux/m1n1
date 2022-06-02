@@ -440,11 +440,11 @@ class AGXTracer(ASCTracer):
         self.mon.add(va, size, name, readfn= lambda a, s: self.uat.ioread(ctx, a, s))
 
     def handle_ringmsg(self, msg):
-        if isinstance(msg, EventMsg):
-            self.log(f"== Event notification ==")
+        if isinstance(msg, FlagMsg):
+            self.log(f"== Event flag notification ==")
             self.handle_event(msg)
             return
-        elif isinstance(msg, NotifyCmdQueueWork):
+        elif isinstance(msg, RunCmdQueueMsg):
             self.log(f"== Work notification (type {msg.queue_type})==")
             for wi in self.get_cmdqueue(msg.cmdqueue_addr).get_workitems(msg):
                 self.log(str(wi))
@@ -740,7 +740,7 @@ class AGXTracer(ASCTracer):
         self.channels[channel].poll()
 
         ## if val not in [0x0, 0x1, 0x10, 0x11]:
-        #if self.last_msg and isinstance(self.last_msg, (NotifyCmdQueueWork, DeviceControl_17)):
+        #if self.last_msg and isinstance(self.last_msg, (RunCmdQueue, DeviceControl_17)):
             #self.hv.run_shell()
 
             #self.last_msg = None
@@ -876,7 +876,7 @@ class AGXTracer(ASCTracer):
         self.state.channel_info = []
         self.state.fwlog_ring2 = initdata.regionB.fwlog_ring2
         channels = initdata.regionB.channels
-        for i in range(len(channels)):
+        for i in channelNames:
             chan_info = channels[i]
             self.state.channel_info.append(chan_info)
 
