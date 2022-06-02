@@ -791,7 +791,7 @@ class RegArrayAccessor(Reloadable):
         else:
             return [RegAccessor(self.cls, self.rd, self.wr, self.addr + i) for i in off]
 
-class RegMap(Reloadable, metaclass=RegMapMeta):
+class BaseRegMap(Reloadable):
     def __init__(self, backend, base):
         self._base = base
         self._backend = backend
@@ -806,8 +806,7 @@ class RegMap(Reloadable, metaclass=RegMapMeta):
             else:
                 self._accessor[name] = RegAccessor(rcls, rd, wr, base + addr)
 
-    @classmethod
-    def lookup_offset(cls, offset):
+    def _lookup_offset(cls, offset):
         reg = cls._addrmap.get(offset, None)
         if reg is not None:
             name, rcls = reg
@@ -818,6 +817,7 @@ class RegMap(Reloadable, metaclass=RegMapMeta):
                 if offset in rng:
                     return name, rng.index(offset), rcls
         return None, None, None
+    lookup_offset = classmethod(_lookup_offset)
 
     def lookup_addr(self, addr):
         return self.lookup_offset(addr - self._base)
@@ -829,9 +829,9 @@ class RegMap(Reloadable, metaclass=RegMapMeta):
         else:
             return name
 
-    @classmethod
-    def lookup_name(cls, name):
+    def _lookup_name(cls, name):
         return cls._namemap.get(name, None)
+    lookup_name = classmethod(_lookup_name)
 
     def _scalar_regs(self):
         for addr, (name, rtype) in self._addrmap.items():
@@ -855,6 +855,9 @@ class RegMap(Reloadable, metaclass=RegMapMeta):
     def dump_regs(self):
         for addr, name, acc, rtype in heapq.merge(sorted(self._scalar_regs()), self._array_regs()):
             print(f"{self._base:#x}+{addr:06x} {name} = {acc.reg}")
+
+class RegMap(BaseRegMap, metaclass=RegMapMeta):
+    pass
 
 def irange(start, count, step=1):
     return range(start, start + count * step, step)
