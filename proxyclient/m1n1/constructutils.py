@@ -304,6 +304,7 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
 
         self._apply(obj)
 
+        g_struct_trace.add((self._addr, f"{cls.name} (end: {self._addr + size:#x})"))
         return self
 
     @classmethod
@@ -398,6 +399,23 @@ class ConstructClass(ConstructClassBase, Container):
                     if addr is not None:
                         setattr(obj, addr_field, addr)
 
+    @classmethod
+    def _parse(cls, stream, context, path):
+        self = ConstructClassBase._parse.__func__(cls, stream, context, path)
+
+        for key in self:
+            if key.startswith('_'):
+                continue
+            try:
+                val = int(self[key])
+            except:
+                continue
+            if (0x1000000000 <= val <= 0x1f00000000 or
+                0xf8000000000 <= val <= 0xff000000000 or
+                0xffffff8000000000 <= val <= 0xfffffff000000000):
+                g_struct_trace.add((val, f"{cls.name}.{key}"))
+        return self
+
     def _apply(self, obj):
         self.update(obj)
 
@@ -420,4 +438,8 @@ class ConstructValueClass(ConstructClassBase):
     def _apply(self, obj):
         self.value = obj
 
-__all__ = ["ConstructClass", "ConstructValueClass", "Dec"]
+def show_struct_trace(log=print):
+    for addr, desc in sorted(list(g_struct_trace)):
+        log(f"{addr:>#18x}: {desc}")
+
+__all__ = ["ConstructClass", "ConstructValueClass", "Dec", "ROPointer", "show_struct_trace"]
