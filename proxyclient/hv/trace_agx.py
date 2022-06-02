@@ -1,26 +1,17 @@
 # SPDX-License-Identifier: MIT
 import datetime
 
+from m1n1.constructutils import show_struct_trace
 from m1n1.utils import *
 
 trace_device("/arm-io/sgx", False)
 trace_device("/arm-io/pmp", False)
 trace_device("/arm-io/gfx-asc", False)
 
-from m1n1.trace.asc import ASCTracer
-
-ASCTracer = ASCTracer._reloadcls()
-
-# gfx_tracer = ASCTracer(hv, "/arm-io/gfx-asc", verbose=True)
-# gfx_tracer.start()
-
-from m1n1.fw.agx import channels, initdata
-channels.Channel = channels.Channel._reloadcls()
-
 from m1n1.trace.agx import AGXTracer
 AGXTracer = AGXTracer._reloadcls(True)
 
-agx_tracer = AGXTracer(hv, "/arm-io/gfx-asc", verbose=False)
+agx_tracer = AGXTracer(hv, "/arm-io/gfx-asc", verbose=1)
 agx_tracer.start()
 
 def resume_tracing(ctx):
@@ -37,14 +28,17 @@ def pause_tracing(ctx):
 hv.add_hvcall(100, resume_tracing)
 hv.add_hvcall(101, pause_tracing)
 
-#trace_range(irange(gfx_tracer.gpu_region, gfx_tracer.gpu_region_size), mode=TraceMode.SYNC)
-#trace_range(irange(gfx_tracer.gfx_shared_region, gfx_tracer.gfx_shared_region_size), mode=TraceMode.SYNC)
-#trace_range(irange(gfx_tracer.gfx_handoff, gfx_tracer.gfx_handoff_size), mode=TraceMode.SYNC)
+mode = TraceMode.OFF
+trace_range(irange(agx_tracer.gpu_region, agx_tracer.gpu_region_size), mode=mode, name="gpu_region")
+trace_range(irange(agx_tracer.gfx_shared_region, agx_tracer.gfx_shared_region_size), mode=mode, name="gfx_shared_region")
+trace_range(irange(agx_tracer.gfx_handoff, agx_tracer.gfx_handoff_size), mode=mode, name="gfx_handoff")
 
-# Trace the entire mmio range around the GPU
-# node = hv.adt["/arm-io/sgx"]
-# addr, size = node.get_reg(0)
-# hv.trace_range(irange(addr, 0x1000000), TraceMode.SYNC)
+## Trace the entire mmio range around the GPU
+node = hv.adt["/arm-io/sgx"]
+addr, size = node.get_reg(0)
+#hv.trace_range(irange(addr, 0x1000000), TraceMode.SYNC, name="sgx")
+hv.trace_range(irange(addr, 0x1000000), TraceMode.OFF, name="sgx")
+hv.trace_range(irange(0x204017030, 8), TraceMode.SYNC, name="faultcode")
 
 def trace_all_gfx_io():
     # These are all the IO ranges that get mapped into the UAT iommu pagetable
