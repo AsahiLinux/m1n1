@@ -25,10 +25,10 @@ class MemoryAttr(IntEnum):
 class TTBR(Register64):
     ASID = 63, 48
     BADDR = 47, 1
-    CnP = 0
+    VALID = 0
 
     def valid(self):
-        return self.BADDR != 0
+        return self.VALID == 1
 
     def offset(self):
         return self.BADDR << 1
@@ -37,7 +37,7 @@ class TTBR(Register64):
         self.BADDR = offset >> 1
 
     def describe(self):
-        return f"{self.offset():x} [ASID={self.ASID}, CnP={self.CnP}]"
+        return f"{self.offset():x} [ASID={self.ASID}, VALID={self.VALID}]"
 
 class PTE(Register64):
     OFFSET = 47, 14
@@ -94,8 +94,9 @@ class Page_PTE(Register64):
             return f"<invalid> [{int(self)}:x]"
 
         return f"{self.offset():x} [EL1={self.access(1)}, EL0={self.access(0)}, " \
+               f"PXN={self.PXN}, UXN={self.UXN}, AP={self.AP}, " \
                f"{MemoryAttr(self.AttrIndex).name}, {['Global', 'Local'][self.nG]}, " \
-               f"Owner={['FW', 'OS'][self.OS]}, AF={self.AF}]"
+               f"Owner={['FW', 'OS'][self.OS]}, AF={self.AF}] ({self.value:#x})"
 
 
 class UatStream(Reloadable):
@@ -192,24 +193,35 @@ class UAT(Reloadable):
     def __init__(self, iface, util=None, hv=None):
         self.iface = iface
         self.u = util
+        self.p = util.proxy
         self.hv = hv
         self.pt_cache = {}
         self.dirty = set()
         self.allocator = None
         self.ttbr = None
+        self.initialized = False
+        self.sgx_dev = self.u.adt["/arm-io/sgx"]
+        self.handoff = self.sgx_dev.gfx_handoff_base
+        self.shared_region = self.sgx_dev.gfx_shared_region_base
+        self.gpu_region = self.sgx_dev.gpu_region_base
+        self.ttbr0_base = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
+        self.ttbr1_base = self.sgx_dev.gfx_shared_region_base
 
         self.VA_MASK = 0
         for (off, size, _) in self.LEVELS:
             self.VA_MASK |= (size - 1) << off
         self.VA_MASK |= self.PAGE_SIZE - 1
 
+    def early_init(self):
+        # Unknown init (needed?)
+        self.sgx_base = self.sgx_dev.get_reg(0)[0]
+        self.p.read32(self.sgx_base + 0xd14000)
+        self.p.write32(self.sgx_base + 0xd14000, 0x70001)
 
     def set_l0(self, ctx, off, base, asid=0):
-        self.write_pte(self.ttbr + ctx * 16, off, 2,
-                       TTBR(BADDR = base >> 1, ASID = asid))
-
-    def set_ttbr(self, addr):
-        self.ttbr = addr
+        ttbr = TTBR(BADDR = base >> 1, ASID = asid, VALID=(base != 0))
+        print(f"[UAT] Set L0 ctx={ctx} off={off:#x} base={base:#x} asid={asid} ({ttbr})")
+        self.write_pte(self.gpu_region + ctx * 16, off, 2, ttbr)
 
     def ioread(self, ctx, base, size):
         if size == 0:
@@ -262,6 +274,8 @@ class UAT(Reloadable):
         if iova & (self.PAGE_SIZE - 1):
             raise Exception(f"Unaligned IOVA {iova:#x}")
 
+        self.init_handoff()
+
         map_flags = {'OS': 1, 'AttrIndex': MemoryAttr.Normal, 'VALID': 1, 'TYPE': 1, 'AP': 1, 'AF': 1, 'UXN': 1}
         map_flags.update(flags)
 
@@ -270,7 +284,7 @@ class UAT(Reloadable):
         end_page = align_up(end, self.PAGE_SIZE)
 
         for page in range(start_page, end_page, self.PAGE_SIZE):
-            table_addr = self.ttbr + ctx * 16
+            table_addr = self.gpu_region + ctx * 16
             for (offset, size, ptecls) in self.LEVELS:
                 if ptecls is Page_PTE:
                     pte = Page_PTE(**map_flags)
@@ -326,7 +340,7 @@ class UAT(Reloadable):
         pages = []
 
         for page in range(start_page, end_page, self.PAGE_SIZE):
-            table_addr = self.ttbr + ctx * 16
+            table_addr = self.gpu_region + ctx * 16
             for (offset, size, ptecls) in self.LEVELS:
                 pte = self.fetch_pte(table_addr, page >> offset, size, ptecls)
                 if not pte.valid():
@@ -415,16 +429,77 @@ class UAT(Reloadable):
             sparse = False
 
     def foreach_page(self, ctx, page_fn):
-        self.recurse_level(0, 0, self.ttbr + ctx * 16, page_fn)
+        self.recurse_level(0, 0, self.gpu_region + ctx * 16, page_fn)
 
     def foreach_table(self, ctx, table_fn):
-        self.recurse_level(0, 0, self.ttbr + ctx * 16, table_fn=table_fn)
+        self.recurse_level(0, 0, self.gpu_region + ctx * 16, table_fn=table_fn)
 
-    def dump(self, ctx, log=print):
-        if not self.ttbr:
-            log("No translation table")
+    def init_handoff(self):
+        if self.initialized:
             return
 
+        print("[UAT] Initializing...")
+
+        MAGIC = 0x4b1d000000000002
+
+        self.p.write64(self.handoff + 0, MAGIC)
+        self.p.write32(self.handoff + 0x18, 0xffffffff)
+        self.p.write64(self.handoff + 0x640, 0)
+        self.p.write8(self.handoff + 0x10, 1)
+        assert self.p.read8(self.handoff + 0x11) == 0
+        print("[UAT] Waiting for handoff...")
+        while self.p.read64(self.handoff + 0x8) != MAGIC:
+            pass
+        self.p.write32(self.handoff + 0x14, 1)
+        self.p.write8(self.handoff + 0x10, 0)
+
+        for i in range(0x20, 0x640, 0x18):
+            self.p.write32(self.handoff + i, 0)
+            self.p.write64(self.handoff + i + 0x28, 0)
+            self.p.write64(self.handoff + i + 0x30, 0)
+
+        self.p.write8(self.handoff + 0x10, 1)
+        assert self.p.read8(self.handoff + 0x11) == 0
+
+        # read TTBRs here
+
+        self.p.write32(self.handoff + 0x14, 1)
+        self.p.write8(self.handoff + 0x10, 0)
+        self.p.write8(self.handoff + 0x10, 1)
+        assert self.p.read8(self.handoff + 0x11) == 0
+
+        print(f"[UAT] TTBR0[0] = {self.ttbr0_base:#x}")
+        print(f"[UAT] TTBR1[0] = {self.ttbr1_base:#x}")
+        self.set_l0(0, 0, self.ttbr0_base)
+        self.set_l0(0, 1, self.ttbr1_base)
+        self.flush_dirty()
+        self.invalidate_cache()
+
+        self.p.write32(self.handoff + 0x14, 1)
+        self.p.write8(self.handoff + 0x10, 0)
+        print("[UAT] Init complete")
+
+        self.initialized = True
+
+    def bind_context(self, ctx, ttbr0_base):
+        assert ctx != 0
+
+        self.p.write8(self.handoff + 0x10, 1)
+        assert self.p.read8(self.handoff + 0x11) == 0
+        # read TTBRs here
+        self.p.write32(self.handoff + 0x14, 1)
+        self.p.write8(self.handoff + 0x10, 0)
+
+        self.p.write8(self.handoff + 0x10, 1)
+        assert self.p.read8(self.handoff + 0x11) == 0
+        self.set_l0(ctx, 0, ttbr0_base, ctx)
+        self.set_l0(ctx, 1, self.ttbr1_base, ctx)
+        self.flush_dirty()
+        self.invalidate_cache()
+        self.p.write32(self.handoff + 0x14, 1)
+        self.p.write8(self.handoff + 0x10, 0)
+
+    def dump(self, ctx, log=print):
         def print_fn(start, end, i, pte, level, sparse):
             type = "page" if level+1 == len(self.LEVELS) else "table"
             if sparse:
@@ -432,7 +507,7 @@ class UAT(Reloadable):
             log(f"{'  ' * level}{type}({i:03}): {start:011x} ... {end:011x}"
                        f" -> {pte.describe()}")
 
-        self.recurse_level(0, 0, self.ttbr + ctx * 16, print_fn, print_fn)
+        self.recurse_level(0, 0, self.gpu_region + ctx * 16, print_fn, print_fn)
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
