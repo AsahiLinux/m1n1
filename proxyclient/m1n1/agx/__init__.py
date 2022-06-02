@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+import bisect
 
 from .object import GPUObject, GPUAllocator
 from .initdata import build_initdata
@@ -16,6 +17,10 @@ class AGX:
 
         self.asc_dev = u.adt["/arm-io/gfx-asc"]
         self.sgx_dev = u.adt["/arm-io/sgx"]
+
+        self.log("Initializing allocations")
+
+        self.all_objects = []
 
         # Memory areas
         self.fw_va_base = self.sgx_dev.rtkit_private_vm_region_base
@@ -51,6 +56,22 @@ class AGX:
         self.io_allocator = Heap(self.kern_va_base + 0x38000000,
                                  self.kern_va_base + 0x40000000,
                                  block=self.PAGE_SIZE)
+
+        self.mon = None
+
+    def find_object(self, addr):
+        self.all_objects.sort()
+
+        idx = bisect.bisect_left(self.all_objects, (addr + 1, "")) - 1
+        if idx < 0 or idx >= len(self.all_objects):
+            return None, None
+
+        return self.all_objects[idx]
+
+    def reg_object(self, obj):
+        self.all_objects.append((obj._addr, obj))
+        if self.mon is not None:
+            obj.add_to_mon(self.mon)
 
     def boot(self):
         # boot asc
