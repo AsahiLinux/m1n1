@@ -98,6 +98,38 @@ class Page_PTE(Register64):
                f"{MemoryAttr(self.AttrIndex).name}, {['Global', 'Local'][self.nG]}, " \
                f"Owner={['FW', 'OS'][self.OS]}, AF={self.AF}] ({self.value:#x})"
 
+class UatAccessor(Reloadable):
+    def __init__(self, uat, ctx=0):
+        self.uat = uat
+        self.ctx = ctx
+
+    def translate(self, addr, width):
+        paddr, _ = self.uat.iotranslate(self.ctx, addr, width)[0]
+        if paddr is None:
+            raise Exception(f"UAT Failed to translate {addr:#x}")
+        return paddr
+
+    def read(self, addr, width):
+        return self.uat.u.read(self.translate(addr, width), width)
+    def read8(self, addr):
+        return self.uat.p.read8(self.translate(addr, 1))
+    def read16(self, addr):
+        return self.uat.p.read16(self.translate(addr, 2))
+    def read32(self, addr):
+        return self.uat.p.read32(self.translate(addr, 4))
+    def read64(self, addr):
+        return self.uat.p.read64(self.translate(addr, 8))
+
+    def write(self, addr, data, width):
+        self.uat.u.write(self.translate(addr, width), data, width)
+    def write8(self, addr, data):
+        self.uat.p.write8(self.translate(addr, 1), daat)
+    def write16(self, addr, data):
+        self.uat.p.write6(self.translate(addr, 2), data)
+    def write32(self, addr, data):
+        self.uat.p.write32(self.translate(addr, 4), data)
+    def write64(self, addr, data):
+        self.uat.p.write64(self.translate(addr, 8), data)
 
 class UatStream(Reloadable):
     CACHE_SIZE = 0x1000
@@ -108,6 +140,9 @@ class UatStream(Reloadable):
         self.pos = addr
         self.cache = None
         self.meta_fn = None
+
+    def to_accessor(self):
+        return UatAccessor(self.uat, self.ctx)
 
     def read(self, size):
         assert size >= 0
@@ -257,6 +292,10 @@ class UAT(Reloadable):
     # A stream interface that can be used for random access by Construct
     def iostream(self, ctx, base):
         return UatStream(self, ctx, base)
+
+    # A read/write register interface like proxy/utils objects that can be used by RegMap
+    def ioaccessor(self, ctx, base):
+        return UatAccessor(self, ctx)
 
     def iomap(self, ctx, addr, size, **flags):
         iova = self.allocator.malloc(size)
