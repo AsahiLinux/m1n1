@@ -6,8 +6,7 @@ from ...utils import RegMap, Register32
 
 __all__ = []
 
-
-class WorkCommand_4(ConstructClass):
+class WorkCommandBarrier(ConstructClass):
     """
         sent before WorkCommand_1 on the Submit3d queue.
         Might be for initilzing the tile buckets?
@@ -17,16 +16,17 @@ class WorkCommand_4(ConstructClass):
     00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
     """
     subcon = Struct(
-        "magic" / Const(0x4, Hex(Int32ul)),
-        "completion_buf_addr" / Hex(Int64ul), # These appare to be shared over multiple contexes
-        "completion_buf" / Pointer(this.completion_buf_addr, Hex(Int32ul)),
-        "complete_tag1" / Hex(Int32ul), # Counts up by 0x100 each frame, gets written to ptr? (on completion?)
-        "flag" / Hex(Int32ul), # 2, 4 or 6
-        "complete_tag2" / Hex(Int32ul),  # Counts up by 0x100 each frame? starts at diffrent point?
-        "uuid" / Hex(Int32ul),
+        "magic" / Const(0x4, Int32ul),
+        "barrier_addr" / Int64ul,
+        "barrier" / ROPointer(this.barrier_addr, Int32ul),
+        "barrier_tag1" / Int32ul,
+        "event" / Int32ul, # Event number that signals a barrier check
+        "barrier_tag2" / Int32ul,
+        "uuid" / Int32ul,
+        "unk" / Default(Int32ul, 0),
     )
 
-class WorkCommand_6(ConstructClass):
+class WorkCommandInitBM(ConstructClass):
     """
         occationally sent before WorkCommand_0 on the SubmitTA queue.
 
@@ -40,8 +40,9 @@ class WorkCommand_6(ConstructClass):
         "unk_8" / Hex(Int32ul), # 0
         "unk_c" / Hex(Int32ul), # 0
         "unk_10" / Hex(Int32ul), # 0x30
-        "unkptr_14" / Hex(Int64ul), # WorkCommandSub20
-        "complete_tag" / Hex(Int32ul),  # 0x100
+        "buffer_mgr_addr" / Int64ul,
+        "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
+        "barrier_tag" / Hex(Int32ul),  # 0x100
     )
 
 class WorkCommandSubC(ConstructClass):
@@ -51,6 +52,10 @@ class WorkCommandSubC(ConstructClass):
         "unk_c" / Hex(Int32ul),
         "unk_10" / Hex(Int64ul),
         "unk_18" / Hex(Int64ul),
+        "unk_20" / Hex(Int32ul),
+        "unk_24" / Hex(Int32ul),
+        "unk_28" / HexDump(Bytes(0xa0 - 0x28)),
+        "context_ptr" / Int64ul,
     )
 
 class WorkCommand_3(ConstructClass):
@@ -84,7 +89,7 @@ class WorkCommand_3(ConstructClass):
         "unk_4" / Hex(Int32ul),
         "context_id" / Hex(Int32ul),
         "unkptr_c" / Hex(Int64ul),
-        "unk_c" / Pointer(this.unkptr_c, WorkCommandSubC),
+        "unk_c" / ROPointer(this.unkptr_c, WorkCommandSubC),
 
         # This struct embeeds some data that the Control List has pointers back to, but doesn't
         # seem to be actually part of this struct
@@ -93,7 +98,7 @@ class WorkCommand_3(ConstructClass):
         # offset 000001e8
         "controllist_ptr" / Hex(Int64ul),
         "controllist_size" / Hex(Int32ul),
-        "controllist" / Pointer(this.controllist_ptr, ControlList),
+        "controllist" / ROPointer(this.controllist_ptr, ControlList),
     )
 
     def __str__(self) -> str:
@@ -102,43 +107,23 @@ class WorkCommand_3(ConstructClass):
         str += textwrap.indent(repr(self.controllist), ' ' * 3)
         return str
 
+class WorkCommand0_UnkBuf(ConstructValueClass):
+    subcon = HexDump(Bytes(0x18))
 
-class WorkCommandSub20(ConstructClass):
+    def __init__(self):
+        self.value = bytes(0x18)
+
+class WorkCommand1_UnkBuf(ConstructValueClass):
+    subcon = HexDump(Bytes(0x118))
+
+    def __init__(self):
+        self.value = bytes(0x118)
+
+class WorkCommand1_UnkBuf2(ConstructClass):
     subcon = Struct(
         "unk_0" / Int64ul,
-        "unk_8" / Int32ul,
-        "unk_c" / Int32ul,
+        "unk_8" / Int64ul,
         "unk_10" / Int64ul,
-        "unk_18" / Int64ul,
-        "unkptr_20" / Int64ul,
-        "unk_28" / Int32ul,
-        "unk_2c" / Int32ul,
-        "unk_30" / Int32ul,
-        "unk_34" / Int32ul,
-        "unk_38" / Int32ul,
-        "unkptr_3c" / Int64ul,
-        "ring_control_addr" / Int64ul, # points to two u32s
-        "unk_4c" / Int32ul,
-        "unk_50" / Int64ul,
-        "unk_58" / Int32ul,
-        "unk_5c" / Int32ul,
-        "unk_60" / Int64ul,
-        "unkptr_68" / Int64ul,
-        "unk_70" / Int64ul,
-        "unk_78" / Int64ul,
-        "unk_80" / Int32ul,
-        "unk_84" / Int32ul,
-        "unk_88" / Int32ul,
-        "unk_8c" / Int32ul,
-        "unk_90" / HexDump(Bytes(0x30)),
-        "unk_c0" / Int32ul,
-        "unk_c4" / HexDump(Bytes(0x14)),
-        "unkptr_d8" / Int64ul,
-        "unk_e0" / Int32ul,
-        "unkptr_e4" / Int64ul, # like unkptr_24 in Start3DStruct3
-        "unk_ec" / Int32ul,
-        "unk_f0" / Int64ul,
-        "unk_f8" / Int64ul,
     )
 
 class WorkCommand_1(ConstructClass):
@@ -174,13 +159,14 @@ class WorkCommand_1(ConstructClass):
         "unk_8" / Hex(Int32ul),
         "controllist_ptr" / Hex(Int64ul), # Command list
         "controllist_size" / Hex(Int32ul),
-        "controllist" / Pointer(this.controllist_ptr, ControlList),
+        "controllist" / ROPointer(this.controllist_ptr, ControlList),
         "unkptr_18" / Hex(Int64ul),
-        "unk_18" / Pointer(this.unkptr_18, WorkCommandSubC),
-        "unkptr_20" / Hex(Int64ul), # Size: 0x100
-        "unk_20" / Pointer(this.unkptr_20, WorkCommandSub20),
-        "unkptr_28" / Hex(Int64ul), # Size: 0x8c0, array of Start3DStruct3
-        "unkptr_30" / Hex(Int64ul),
+        "unk_18" / ROPointer(this.unkptr_18, WorkCommandSubC),
+        "buffer_mgr_addr" / Int64ul,
+        "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
+        "buf_thing_addr" / Int64ul,
+        "buf_thing" / ROPointer(this.buf_thing_addr, BufferThing),
+        "unk_emptybuf_addr" / Hex(Int64ul),
         "tvb_addr" / Hex(Int64ul),
         "unk_40" / Hex(Int64ul),
         "unk_48" / Hex(Int32ul),
@@ -191,6 +177,23 @@ class WorkCommand_1(ConstructClass):
         "uuid2" / Hex(Int32ul), # same across repeated submits
         "unk_68" / Hex(Int64ul),
         "unk_70" / Hex(Int64ul),
+
+        # Embedded structures that are also pointed to by other stuff
+        "struct_2" / Start3DStruct2,
+        "struct_1" / Start3DStruct1,
+        "unk_buf" / WorkCommand1_UnkBuf,
+        "unk_word" / BarrierCounter,
+        "struct_6" / Start3DStruct6,
+        "struct_7" / Start3DStruct7,
+        "unk_buf2" / WorkCommand1_UnkBuf2,
+        "ts1" / Timestamp,
+        "ts2" / Timestamp,
+        "ts3" / Timestamp,
+        "unk_914" / Int32ul,
+        "unk_918" / Int64ul,
+        "unk_920" / Int32ul,
+        "unk_924" / Int32ul,
+        "pad_928" / Default(HexDump(Bytes(0x18)), bytes(0x18)),
     )
 
     def __str__(self) -> str:
@@ -199,6 +202,11 @@ class WorkCommand_1(ConstructClass):
         # str += textwrap.indent(repr(self.controllist), ' ' * 3)
         return str
 
+class WorkCommand0_UnkBuf(ConstructValueClass):
+    subcon = HexDump(Bytes(0x18))
+
+    def __init__(self):
+        self.value = bytes(0x18)
 
 class WorkCommand_0(ConstructClass):
     """
@@ -229,26 +237,43 @@ class WorkCommand_0(ConstructClass):
         "context_id" / Hex(Int32ul),
         "unk_8" / Hex(Int32ul),
         "unkptr_c" / Hex(Int64ul),
-        "unk_c" / Pointer(this.unkptr_c, WorkCommandSubC),
+        "unk_c" / ROPointer(this.unkptr_c, WorkCommandSubC),
         "unk_14" / Hex(Int64ul),
-        "unkptr_1c" / Hex(Int64ul),
-        "unk_1c" / Pointer(this.unkptr_1c, WorkCommandSub20),
-        "unkptr_24" / Hex(Int64ul), # like Start3DCmd.unkptr_14 and WorkCommand_1.unkptr_28
-        "unkptr_2c" / Hex(Int64ul), # like WorkCommand_1.unkptr_30
+        "buffer_mgr_addr" / Int64ul,
+        "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
+        "buf_thing_addr" / Int64ul,
+        "buf_thing" / ROPointer(this.buf_thing_addr, BufferThing),
+        "unk_emptybuf_addr" / Hex(Int64ul),
         "unk_34" / Hex(Int32ul),
 
-        # This struct embeeds some data that the Control List has pointers back to, but doesn't
-        # seem to be actually part of this struct
-        Padding(0x45c - 0x38),
+        # Embedded structures that are also pointed to by other stuff
+        "struct_2" / StartTACmdStruct2, # 0x11c bytes
+        "unk_154" / HexDump(Bytes(0x268)), # unknown
+        "tiling_params" / TilingParameters, # 0x2c bytes
+        "unk_3e8" / HexDump(Bytes(0x74)), # unknown
 
         "unkptr_45c" / Int64ul,
         "tvb_size" / Int64ul,
         "controllist_ptr" / Hex(Int64ul),
         "controllist_size" / Hex(Int32ul),
-        "controllist" / Pointer(this.controllist_ptr, ControlList),
+        "controllist" / ROPointer(this.controllist_ptr, ControlList),
         "unk_478" / Int32ul,
-        "complete_tag" / Int32ul,
+        "barrier_tag" / Int32ul,
 
+        "struct_3" / StartTACmdStruct3, # 0x114 bytes
+
+        "unk_594" / WorkCommand0_UnkBuf,
+
+        "ts1" / Timestamp,
+        "ts2" / Timestamp,
+        "ts3" / Timestamp,
+
+        "unk_5c4" / Int32ul,
+        "unk_5c8" / Int32ul,
+        "unk_5cc" / Int32ul,
+        "unk_5d0" / Int32ul,
+        "unk_5d4" / Int8ul,
+        "pad_5d5" / Default(HexDump(Bytes(0xb)), bytes(0xb)),
     )
 
     def __str__(self) -> str:
@@ -276,17 +301,42 @@ class CmdBufWork(ConstructClass):
             0: WorkCommand_0,
             1: WorkCommand_1,
             3: WorkCommand_3,
-            4: WorkCommand_4,
-            6: WorkCommand_6,
+            4: WorkCommandBarrier,
+            6: WorkCommandInitBM,
         })
     )
 
 class ContextInfo(ConstructClass):
     subcon = Struct(
-        "unkptr_0" / Int64ul,
-        "unkptr_8" / Int64ul,
-        "unkptr_10" / Int64ul,
+        "fb_ptr" / Default(Int64ul, 0),
+        "self" / Int64ul,
+        "unkptr_10" / Default(Int64ul, 0),
     )
+
+class GPUContextData(ConstructClass):
+    subcon = Struct(
+        "unk_0" / Int16ul,
+        Padding(3),
+        "unk_5" / Int8ul,
+        Padding(0x1e - 6),
+        "unk_1e" / Int8ul,
+        "unk_1f" / Int8ul,
+        Padding(3),
+        "unk_23" / Int8ul,
+        Padding(0x1c),
+    )
+
+    def __init__(self):
+        self.unk_0 = 0xffff
+        self.unk_5 = 1
+        self.unk_1e = 0xff
+        self.unk_1f = 0
+        self.unk_23 = 2
+
+class CommandQueuePointerMap(RegMap):
+    GPU_DONEPTR = 0x00, Register32
+    GPU_RPTR = 0x30, Register32
+    CPU_WPTR = 0x40, Register32
 
 class CommandQueuePointers(ConstructClass):
     subcon = Struct(
@@ -302,7 +352,17 @@ class CommandQueuePointers(ConstructClass):
         Padding(12),
         "rb_size" / Int32ul,
         Padding(12),
+        "unk" / Default(Bytes(0x2800), bytes(0x2800)),
     )
+
+    def __init__(self):
+        super().__init__()
+        self.gpu_doneptr = 0
+        self.unk_10 = 0
+        self.unk_20 = 0
+        self.gpu_rptr = 0
+        self.cpu_wptr = 0
+        self.rb_size = 0x500
 
 class CommandQueueInfo(ConstructClass):
     """ Structure type shared by Submit3D, SubmitTA and SubmitCompute
@@ -313,11 +373,12 @@ class CommandQueueInfo(ConstructClass):
     """
     subcon = Struct(
         "pointers_addr" / Hex(Int64ul),
-        "pointers" / Pointer(this.pointers_addr, CommandQueuePointers),
-        "RingBuffer_addr" / Hex(Int64ul), # 0x4ff pointers
-        "ContextInfo_addr" / Hex(Int64ul), # ffffffa000000000, size 0x18 (shared by 3D and TA)
-        "ContextInfo" / Pointer(this.ContextInfo_addr, ContextInfo),
-        "gpu_buf" / Hex(Int64ul), # GPU space for this queue, 0x2c18 bytes?
+        "pointers" / ROPointer(this.pointers_addr, CommandQueuePointers),
+        "rb_addr" / Hex(Int64ul), # 0x4ff pointers
+        "context_info_addr" / Hex(Int64ul), # ffffffa000000000, size 0x18 (shared by 3D and TA)
+        "context_info" / ROPointer(this.context_info_addr, ContextInfo),
+        "gpu_buf_addr" / Hex(Int64ul), # GPU space for this queue, 0x2c18 bytes?
+        "gpu_buf" / ROPointer(this.gpu_buf_addr, HexDump(Bytes(0x2c18))),
         "gpu_rptr1" / Hex(Int32ul),
         "gpu_rptr2" / Hex(Int32ul),
         "gpu_rptr3" / Hex(Int32ul),
@@ -332,15 +393,34 @@ class CommandQueueInfo(ConstructClass):
         "unk_50" / Hex(Int32ul), # Counts up for each new process or command queue
         "unk_54" / Hex(Int32ul), # always 0x04
         "unk_58" / Hex(Int64ul), # 0
-        "unk_60" / Hex(Int32ul), # 1 = gpu busy
+        "busy" / Hex(Int32ul), # 1 = gpu busy
         Padding(0x20),
-        "unk_84" / Hex(Int32ul), # Set to 1 by gpu after work complete. Reset to zero by cpu
+        "blocked_on_barrier" / Hex(Int32ul),
         Padding(0x18),
-        "contextinfo2_addr" / Hex(Int64ul), # GPU managed context, shared between 3D and TA. Passed to DC_DestroyContext
-        "contextinfo2" / HexDump(Pointer(this.contextinfo2_addr, Bytes(0x40))),
+        "gpu_context_addr" / Hex(Int64ul), # GPU managed context, shared between 3D and TA. Passed to DC_DestroyContext
+        "gpu_context" / ROPointer(this.gpu_context_addr, GPUContextData),
 
         # End of struct
     )
+
+    def __init__(self):
+        super().__init__()
+        self.gpu_rptr1 = 0
+        self.gpu_rptr2 = 0
+        self.gpu_rptr3 = 0
+        self.unk_2c = 0xffffffff
+        self.unk_30 = 0x0
+        self.unk_34 = 0x0
+        self.unk_38 = 0xffffffffffff0000
+        self.unk_40 = 0x1
+        self.unk_44 = 0x0
+        self.unk_48 = 0x1
+        self.unk_4c = -0x1
+        self.unk_50 = 0x96
+        self.unk_54 = 0xffffffff
+        self.unk_58 = 0x0
+        self.busy = 0x0
+        self.blocked_on_barrier = 0x0
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

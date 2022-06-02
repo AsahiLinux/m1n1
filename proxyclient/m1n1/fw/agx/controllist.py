@@ -22,6 +22,118 @@ import textwrap
 
 __all__ = []
 
+class Timestamp(ConstructValueClass):
+    subcon = Int64ul
+
+    def __init__(self):
+        self.value = 0
+
+class BarrierCounter(ConstructValueClass):
+    subcon = Hex(Int32ul)
+
+    def __init__(self):
+        self.value = 0
+
+class BufferManagerBlockControl(ConstructClass):
+    subcon = Struct(
+        "total" / Int32ul,
+        "wptr" / Int32ul,
+        "unk" / Int32ul,
+        "pad" / Padding(0x34)
+    )
+
+class BufferManagerCounter(ConstructClass):
+    subcon = Struct(
+        "count" / Int32ul,
+        "pad" / Padding(0x3c)
+    )
+
+class BufferManagerMisc(ConstructClass):
+    subcon = Struct(
+        "gpu_0" / Default(Int32ul, 0),
+        "gpu_4" / Default(Int32ul, 0),
+        "gpu_8" / Default(Int32ul, 0),
+        "gpu_c" / Default(Int32ul, 0),
+        "pad_10" / Padding(0x10),
+        "cpu_flag" / Int32ul,
+        "pad_24" / Padding(0x1c),
+    )
+
+class BufferManagerInfo(ConstructClass):
+    subcon = Struct(
+        "gpu_counter" / Int32ul,
+        "unk_4" / Int32ul,
+        "active" / Int32ul,
+        "unk_c" / Int32ul,
+        "unk_10" / Int32ul,
+        "gpu_counter2" / Int32ul,
+        "unk_18" / Int32ul,
+        "unk_1c" / Int32ul,
+        "page_list_addr" / Int64ul,
+        "page_list_size" / Int32ul,
+        "page_count" / Int32ul,
+        "unk_30" / Int32ul,
+        "block_count" / Int32ul,
+        "unk_38" / Int32ul,
+        "block_list_addr" / Int64ul,
+        "block_ctl_addr" / Int64ul, # points to two u32s
+        "block_ctl" / ROPointer(this.block_ctl_addr, BufferManagerBlockControl),
+        "last_page" / Int32ul,
+        "gpu_page_ptr1" / Int32ul,
+        "gpu_page_ptr2" / Int32ul,
+        "unk_58" / Int32ul,
+        "block_size" / Int32ul,
+        "unk_60" / Int64ul,
+        "counter_addr" / Int64ul,
+        "counter" / ROPointer(this.counter_addr, BufferManagerCounter),
+        "unk_70" / Int64ul,
+        "unk_78" / Int64ul,
+        "unk_80" / Int32ul,
+        "unk_84" / Int32ul,
+        "unk_88" / Int32ul,
+        "unk_8c" / Int32ul,
+        "unk_90" / HexDump(Bytes(0x30)),
+        "unk_c0" / Int32ul, # written by GPU
+        "unk_c4" / HexDump(Bytes(0x14)),
+        "unkptr_d8" / Int64ul,
+        "unk_e0" / Int32ul,
+        "misc_addr" / Int64ul, # like unkptr_24 in Start3DStruct3
+        "misc" / ROPointer(this.misc_addr, BufferManagerMisc),
+        "unk_ec" / Int32ul,
+        "unk_f0" / Int64ul,
+        "unk_f8" / Int64ul,
+    )
+
+    def __init__(self):
+        super().__init__()
+        self.gpu_counter = 0x0
+        self.unk_4 = 0
+        self.active = 0x0
+        self.unk_c = 0xffffffff
+        self.unk_10 = 0x0
+        self.gpu_counter2 = 0x0
+        self.unk_18 = 0x0
+        self.unk_1c = 0x0
+        self.unk_30 = 0xd1a
+        self.unk_38 = 0x0
+        self.gpu_page_ptr1 = 0x0
+        self.gpu_page_ptr2 = 0x0
+        self.unk_58 = 0x0
+        self.unk_60 = 0x0
+        self.unk_70 = 0x0
+        self.unk_78 = 0x0
+        self.unk_80 = 0x1
+        self.unk_84 = 0x3468
+        self.unk_88 = 0x1178
+        self.unk_8c = 0x0
+        self.unk_90 = bytes(0x30)
+        self.unk_c0 = 0x0
+        self.unk_c4 = bytes(0x14)
+        self.unk_e0 = 0x0
+        self.unk_ec = 0x0
+        self.unk_f0 = 0x0
+        self.unk_f8 = 0x0
+
 class Start3DClearPipelineBinding(ConstructClass):
     subcon = Struct(
         "unk_0" / Int64ul,
@@ -29,6 +141,13 @@ class Start3DClearPipelineBinding(ConstructClass):
         "pipeline_bind" / Int64ul,
         "address" / Int64ul,
     )
+
+    def __init__(self, pipeline_bind=None, address=None):
+        super().__init__()
+        self.unk_0 = 0
+        self.unk_4 = 0
+        self.pipeline_bind = pipeline_bind
+        self.address = address
 
 class Start3DStorePipelineBinding(ConstructClass):
     subcon = Struct(
@@ -41,11 +160,26 @@ class Start3DStorePipelineBinding(ConstructClass):
         "unk_1c_padding" / Int32ul,
     )
 
+    def __init__(self, pipeline_bind=None, address=None):
+        super().__init__()
+        self.unk_0 = 0
+        self.unk_8 = 0
+        self.pipeline_bind = pipeline_bind
+        self.unk_10 = 0
+        self.address = address
+        self.unk_18 = 0
+        self.unk_1c_padding = 0
+
 class Start3DArrayAddr(ConstructClass):
     subcon = Struct(
         "ptr" / Int64ul,
         "unk_padding" / Int64ul,
     )
+
+    def __init__(self, ptr=None):
+        super().__init__()
+        self.ptr = ptr
+        self.unk_padding = 0
 
 class AuxFBInfo(ConstructClass):
     subcon = Struct(
@@ -54,6 +188,13 @@ class AuxFBInfo(ConstructClass):
         "width" / Dec(Int32ul),
         "height" / Dec(Int32ul),
     )
+
+    def __init__(self, unk1, unk2, width, height):
+        super().__init__()
+        self.unk1 = unk1
+        self.unk2 = unk2
+        self.width = width
+        self.height = height
 
 class Start3DStruct1(ConstructClass):
     subcon = Struct(
@@ -70,12 +211,12 @@ class Start3DStruct1(ConstructClass):
         "unk_2c" / Int32ul,
         "depth_clear_val1" / Float32l,
         "stencil_clear_val1" / Int8ul,
-        "unk_375" / Int8ul,
+        "context_id" / Int8ul,
         "unk_376" / Int16ul,
         "unk_38" / Int64ul,
         "unk_40_padding" / HexDump(Bytes(0xb0)),
         "depth_bias_array" / Start3DArrayAddr,
-        "scissor_aray" / Start3DArrayAddr,
+        "scissor_array" / Start3DArrayAddr,
         "unk_110" / Int64ul,
         "unk_118" / Int64ul,
         "unk_120" / Array(35, Int64ul),
@@ -105,7 +246,7 @@ class Start3DStruct1(ConstructClass):
         "depth_store_pipeline" / Start3DStorePipelineBinding,
         "depth_clear_val2" / Float32l,
         "stencil_clear_val2" / Int8ul,
-        "unk_375" / Int8ul,
+        "context_id" / Int8ul,
         "unk_376" / Int16ul,
         "unk_378" / Int32ul,
         "unk_37c" / Int32ul,
@@ -146,14 +287,14 @@ class Start3DStruct2(ConstructClass):
         "unk_160_padding" / HexDump(Bytes(0x1e8)),
     )
 
-class Start3DStruct3(ConstructClass):
+class BufferThing(ConstructClass):
     subcon = Struct(
         "unk_0" / Int64ul,
         "unk_8" / Int64ul,
         "unk_10" / Int64ul,
         "unkptr_18" / Int64ul,
         "unk_20" / Int32ul,
-        "unkptr_24" / Int64ul,
+        "bm_misc_addr" / Int64ul,
         "unk_2c" / Int32ul,
         "unk_30" / Int64ul,
         "unk_38" / Int64ul,
@@ -175,62 +316,64 @@ class Start3DStruct6(ConstructClass):
 class Start3DStruct7(ConstructClass):
     subcon = Struct(
         "unk_0" / Int64ul,
-        "completion1_addr" / Int64ul, # same contents as below
-        "completion1" / Pointer(this.completion1_addr, Hex(Int32ul)),
-        "completion2_addr" / Int64ul, # same as FinalizeComputeCmd.completion - some kind of fence/token
-        "completion2" / Pointer(this.completion2_addr, Hex(Int32ul)),
-        "complete_tag" / Int32ul,
+        "barrier1_addr" / Int64ul, # same contents as below
+        "barrier1" / ROPointer(this.barrier1_addr, BarrierCounter),
+        "barrier2_addr" / Int64ul, # same as FinalizeComputeCmd.barrier - some kind of fence/token
+        "barrier2" / ROPointer(this.barrier2_addr, BarrierCounter),
+        "barrier_tag" / Int32ul,
         "unk_1c" / Int32ul,
         "unk_20" / Int32ul,
         "unk_24" / Int32ul,
         "uuid" / Int32ul,
-        "prev_completion_tag" / Int32ul,
+        "prev_barrier_tag" / Int32ul,
         "unk_30" / Int32ul,
     )
 
 class Start3DCmd(ConstructClass):
     subcon = Struct( # 0x194 bytes''''
         "magic" / Const(0x24, Int32ul),
-        "unkptr_4" / Int64ul, # empty before run. Output? WorkCommand_1 + 0x3c0
-        "unk_4" / Pointer(this.unkptr_4, Start3DStruct1),
-        "unkptr_c" / Int64ul, # ??  WorkCommand_1 + 0x78
-        "unk_c" / Pointer(this.unkptr_c, Start3DStruct2),
-        "unkptr_14" / Int64ul, #  same as workcommand_1.unkptr_28.
-        "unk_14" / Pointer(this.unkptr_14, Array(35, Start3DStruct3)),
+        "struct1_addr" / Int64ul, # empty before run. Output? WorkCommand_1 + 0x3c0
+        "struct1" / ROPointer(this.struct1_addr, Start3DStruct1),
+        "struct2_addr" / Int64ul, # ??  WorkCommand_1 + 0x78
+        "struct2" / ROPointer(this.struct2_addr, Start3DStruct2),
+        "buf_thing_addr" / Int64ul,
+        "buf_thing" / ROPointer(this.buf_thing_addr, BufferThing),
         "unkptr_1c" / Int64ul, # constant 0xffffffa00c33ec88, AKA initdata->unkptr_178+8
+        "unk_1c" / ROPointer(this.unkptr_1c, HexDump(Bytes(0x4))),
         "unkptr_24" / Int64ul, # 4 bytes
-        "unk_24" / Pointer(this.unkptr_24, Int32ul),
-        "unkptr_2c" / Int64ul, # 0x3c bytes
-        "unk_2c" / Pointer(this.unkptr_2c, Start3DStruct6),
-        "unkptr_34" / Int64ul, # 0x34 bytes
-        "unk_34" / Pointer(this.unkptr_34, Start3DStruct7),
+        "unk_24" / ROPointer(this.unkptr_24, Int32ul),
+        "struct6_addr" / Int64ul, # 0x3c bytes
+        "struct6" / ROPointer(this.struct6_addr, Start3DStruct6),
+        "struct7_addr" / Int64ul, # 0x34 bytes
+        "struct7" / ROPointer(this.struct7_addr, Start3DStruct7),
         "cmdqueue_ptr" / Int64ul, # points back to the CommandQueueInfo that this command came from
         "workitem_ptr" / Int64ul, # points back at the WorkItem that this command came from
         "context_id" / Int32ul,
-        "unk_50" / Int64ul, # 1
-        "unk_58" / Int64ul, # 2
-        "prev_completion_tag" / Int64ul, # 0
+        "unk_50" / Int32ul,
+        "unk_54" / Int32ul,
+        "unk_58" / Int32ul,
+        "unk_5c" / Int32ul,
+        "prev_barrier_tag" / Int64ul, # 0
         "unk_68" / Int32ul, # 0
-        "unkptr_6c" / Int64ul,
-        "unkptr_74" / Int64ul, # 0x18 bytes
+        "unk_buf_ptr" / Int64ul,
+        "unk_buf2_ptr" / Int64ul, # 0x18 bytes
         "unk_7c" / Int32ul,
-        "unk_80" / Int64ul,
+        "unk_80" / Int32ul,
+        "unk_84" / Int32ul,
         "uuid" / Int32ul, # uuid for tracking
         "unkptr_8c" / Int64ul, # Userspace VA
         "unk_94" / Int64ul, # 0x000100170000ed80
-        "unk_9c_pad" / Int32ul,
+        "unk_9c" / Int32ul,
         "unk_a0" / Array(26, Int64ul),
         "unk_170" / Int32ul,
         "unk_174" / Int32ul,
         "unk_178" / Int64ul,
         "unk_180" / Int32ul,
         "unk_184" / Int32ul,
-        "unk_188" / Int64ul,
+        "unk_188" / Int32ul,
+        "unk_18c" / Int32ul,
         "unk_190" / Int32ul
     )
-
-    def __str__(self):
-        return super().__str__(ignore=["cmdqueue_ptr", "workitem_ptr"])
 
 
 class Finalize3DCmd(ConstructClass):
@@ -238,32 +381,33 @@ class Finalize3DCmd(ConstructClass):
         "magic" / Const(0x25, Int32ul),
         "uuid" / Int32ul, # uuid for tracking
         "unk_8" / Int32ul, # 0
-        "completion" / Int64ul,
-        "complete_tag" / Int32ul,
+        "barrier_addr" / Int64ul,
+        "barrier" / ROPointer(this.barrier_addr, BarrierCounter),
+        "barrier_tag" / Int32ul,
         "unk_18" / Int32ul,
-        "unkptr_1c" / Int64ul, # Same as Start3DCmd.unkptr_14 -> initdata.regionB.unkptr_178 + 8
-        "unkptr_24" / Int64ul,
+        "buf_thing_addr" / Int64ul,
+        "buf_thing" / ROPointer(this.buf_thing_addr, BufferThing),
+        "buffer_mgr_addr" / Int64ul,
+        "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
         "unk_2c" / Int64ul, # 1
         "unkptr_34" / Int64ul, # Same as Start3DCmd.unkptr_1c
-        "unkptr_3c" / Int64ul, # Same as Start3DCmd.unkptr_34
+        "struct7_addr" / Int64ul,
+        "struct7" / ROPointer(this.struct7_addr, Start3DStruct7),
         "unkptr_44" / Int64ul, # Same as Start3DCmd.unkptr_24
         "cmdqueue_ptr" / Int64ul,
         "workitem_ptr" / Int64ul,
         "unk_5c" / Int64ul,
-        "unkptr_64" / Int64ul, # Same as Start3DCmd.unkptr_6c
+        "unk_buf_ptr" / Int64ul, # Same as Start3DCmd.unkptr_6c
         "unk_6c" / Int64ul, # 0
         "unk_74" / Int64ul, # 0
         "unk_7c" / Int64ul, # 0
         "unk_84" / Int64ul, # 0
         "unk_8c" / Int64ul, # 0
-        "startcmd_offset" / Int32sl, # realative offset from start of Finalize to StartComputeCmd
+        "startcmd_offset" / Int32sl, # relative offset from start of Finalize to StartComputeCmd
         "unk_98" / Int32ul, # 1
     )
 
-    def __str__(self):
-        return super().__str__(ignore=["cmdqueue_ptr", "workitem_ptr", "startcmd_offset"])
-
-class StartTACmdStruct1(ConstructClass):
+class TilingParameters(ConstructClass):
     subcon = Struct(
         "unk_0" / Int32ul,
         "unk_4" / Int32ul,
@@ -278,36 +422,36 @@ class StartTACmdStruct1(ConstructClass):
 
 class StartTACmdStruct2(ConstructClass):
     subcon = Struct(
-        "unk_38" / Hex(Int64ul),
-        "uuid1" / Hex(Int32ul),
-        "uuid2" / Hex(Int32ul),
+        "unk_0" / Hex(Int64ul),
+        "unk_8" / Hex(Int32ul),
+        "unk_c" / Hex(Int32ul),
         "tvb_start_addr" / Hex(Int64ul), # like Start3DStruct2.tvb_start_addr
-        "unkptr_50" / Hex(Int64ul),
-        "unkptr_58" / Hex(Int64ul),
+        "unkptr_18" / Hex(Int64ul),
+        "unkptr_20" / Hex(Int64ul),
         "tvb_end_addr" / Hex(Int64ul), # like Start3DStruct2.tvb_end_addr with bit 63 set?
         "iogpu_unk_54" / Int32ul,
         "iogpu_unk_55" / Int32ul,
         "iogpu_unk_56" / Int64ul,
-        "unk_78" / Int64ul,
-        "unk_80" / Int64ul,
-        "unk_88" / Int64ul,
+        "unk_40" / Int64ul,
+        "unk_48" / Int64ul,
+        "unk_50" / Int64ul,
         "tvb_tilemap_addr" / Int64ul, # like Start3DStruct2.unkptr_e0/f0
-        "unk_98" / Int64ul,
-        "unk_a0" / Int64ul,
+        "unk_60" / Int64ul,
+        "unk_68" / Int64ul,
         "iogpu_deflake_1" / Int64ul,
         "iogpu_deflake_2" / Int64ul,
-        "unk_b8" / Int64ul,
+        "unk_80" / Int64ul,
         "iogpu_deflake_3" / Int64ul, # context_id in bits 55:48
         "encoder_addr" / Int64ul,
-        "unk_d0" / Array(2, Hex(Int64ul)),
-        "unk_e0" / Int64ul,
-        "unk_e8" / Array(6, Hex(Int64ul)),
+        "unk_98" / Array(2, Hex(Int64ul)),
+        "unk_a8" / Int64ul,
+        "unk_b0" / Array(6, Hex(Int64ul)),
         "pipeline_base" / Int64ul,
-        "unk_120" / Int64ul,
-        "unk_128" / Int64ul,
-        "unk_130" / Int64ul,
-        "unk_134" / Array(3, Hex(Int64ul)),
-        "unk_150" / Int32ul,
+        "unk_e8" / Int64ul,
+        "unk_f0" / Int64ul,
+        "unk_f8" / Int64ul,
+        "unk_100" / Array(3, Hex(Int64ul)),
+        "unk_118" / Int32ul,
     )
 
 class StartTACmdStruct3(ConstructClass):
@@ -334,11 +478,11 @@ class StartTACmdStruct3(ConstructClass):
         "unknown_buffer" / Int64ul,
         "unk_548" / Int64ul,
         "unk_550" / Array(6, Int32ul),
-        "completion1_addr" / Int64ul, # same contents as below
-        "completion1" / Pointer(this.completion1_addr, Hex(Int32ul)),
-        "completion2_addr" / Int64ul, # same as FinalizeComputeCmd.completion - some kind of fence/token
-        "completion2" / Pointer(this.completion2_addr, Hex(Int32ul)),
-        "complete_tag" / Int32ul,
+        "barrier1_addr" / Int64ul, # same contents as below
+        "barrier1" / ROPointer(this.barrier1_addr, BarrierCounter),
+        "barrier2_addr" / Int64ul, # same as FinalizeComputeCmd.barrier - some kind of fence/token
+        "barrier2" / ROPointer(this.barrier2_addr, BarrierCounter),
+        "barrier_tag" / Int32ul,
         "unk_57c" / Int32ul,
         "unk_580" / Int32ul,
         "unk_584" / Int32ul,
@@ -349,24 +493,28 @@ class StartTACmdStruct3(ConstructClass):
 class StartTACmd(ConstructClass):
     subcon = Struct(
         "magic" / Const(0x22, Int32ul),
-        "unkptr_4" / Int64ul,
-        "unk_4" / Pointer(this.unkptr_4, StartTACmdStruct1),
-        "unkptr_c" / Int64ul,
-        "unk_c" / Pointer(this.unkptr_c, StartTACmdStruct2),
-        "unkptr_14" / Int64ul, # WorkCommandSub20
-        "unkptr_1c" / Int64ul, # Size: 0x8c0, array of Start3DStruct3
+        "tiling_params_addr" / Int64ul,
+        "tiling_params" / ROPointer(this.tiling_params_addr, TilingParameters),
+        "struct2_addr" / Int64ul,
+        "struct2" / ROPointer(this.struct2_addr, StartTACmdStruct2),
+        "buffer_mgr_addr" / Int64ul,
+        "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
+        "buf_thing_addr" / Int64ul,
+        "buf_thing" / ROPointer(this.buf_thing_addr, BufferThing),
         "unkptr_24" / Int64ul,
         # unkptr_1c in Start3DCmd comes after this struct
-        "unk_24" / Pointer(this.unkptr_24, HexDump(Bytes(0xc4))),
+        "unk_24" / ROPointer(this.unkptr_24, HexDump(Bytes(0x4))),
         "cmdqueue_ptr" / Int64ul,
         "context_id" / Int32ul,
-        "unk_38" / Int64ul,
+        "unk_38" / Int32ul,
+        "unk_3c" / Int32ul,
         "unk_40" / Int64ul,
         "unk_48" / Int64ul,
         "unk_50" / Int32ul,
-        "unkptr_54" / Int64ul,
-        "unk_54" / Pointer(this.unkptr_54, StartTACmdStruct3),
+        "struct3_addr" / Int64ul,
+        "struct3" / ROPointer(this.struct3_addr, StartTACmdStruct3),
         "unkptr_5c" / Int64ul,
+        "unk_5c" / ROPointer(this.unkptr_5c, HexDump(Bytes(0x18))),
         "unk_64" / Int64ul,
         "uuid" / Int32ul,
         "unk_70" / Int32ul,
@@ -382,26 +530,30 @@ class StartTACmd(ConstructClass):
 class FinalizeTACmd(ConstructClass):
     subcon = Struct(
         "magic" / Const(0x23, Int32ul),
-        "unkptr_1ec" / Int64ul, # Size: 0x8c0, array of Start3DStruct3
-        "unkptr_1f4" / Int64ul, # WorkCommandSub20
-        "unkptr_1fc" / Int64ul, # StartTACmd.unkptr_24
+        "buf_thing_addr" / Int64ul,
+        "buf_thing" / ROPointer(this.buf_thing_addr, BufferThing),
+        "buffer_mgr_addr" / Int64ul,
+        "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
+        "unkptr_14" / Int64ul, # StartTACmd.unkptr_24
         "cmdqueue_ptr" / Int64ul, #
         "context_id" / Int32ul,
-        "unk_210" / Int32ul,
-        "unkptr_214" / Int64ul, # StartTACmdStruct3, like StartTACmd.unk_54
-        "unk_21c" / Int32ul,
+        "unk_28" / Int32ul,
+        "struct3_addr" / Int64ul,
+        "struct3" / ROPointer(this.struct3_addr, StartTACmdStruct3),
+        "unk_34" / Int32ul,
         "uuid" / Int32ul,
-        "completion_buf_addr" / Int64ul,
-        "completion_buf" / Pointer(this.completion_buf_addr, Hex(Int32ul)),
-        "complete_tag" / Int32ul,
-        "unk_230" / Int64ul,
-        "unk_238" / Int32ul,
-        "unk_23c" / Int32ul,
-        "unk_240" / Int64ul,
-        "unk_248" / Int32ul,
-        "unk_24c" / Int32ul,
-        "unkptr_250" / Int64ul,
-        "unk_258" / Int32ul,
+        "barrier_addr" / Int64ul,
+        "barrier" / ROPointer(this.barrier_addr, BarrierCounter),
+        "barrier_tag" / Int32ul,
+        "unk_48" / Int64ul,
+        "unk_50" / Int32ul,
+        "unk_54" / Int32ul,
+        "unk_58" / Int64ul,
+        "unk_60" / Int32ul,
+        "unk_64" / Int32ul,
+        "unk_68" / Int32ul,
+        "startcmd_offset" / Int32sl,
+        "unk_70" / Int32ul,
     )
 
 class ComputeArgs(ConstructClass):
@@ -448,11 +600,11 @@ class ComputeInfo2(ConstructClass):
         unk_80 = Int32ul,
         unk_84 = Int32ul,
         unk_88 = Int32ul,
-        completion1_addr = Int64ul, # same contents as below
-        completion1 = Pointer(this.completion1_addr, Hex(Int32ul)),
-        completion2_addr = Int64ul, # same as FinalizeComputeCmd.completion - some kind of fence/token
-        completion2 = Pointer(this.completion2_addr, Hex(Int32ul)),
-        complete_tag = Int32ul,
+        barrier1_addr = Int64ul, # same contents as below
+        barrier1 = ROPointer(this.barrier1_addr, Hex(Int32ul)),
+        barrier2_addr = Int64ul, # same as FinalizeComputeCmd.barrier - some kind of fence/token
+        barrier2 = ROPointer(this.barrier2_addr, Hex(Int32ul)),
+        barrier_tag = Int32ul,
         unk_a0 = Int32ul,
         unk_a4 = Int32ul,
         unk_a8 = Int32ul,
@@ -465,7 +617,7 @@ class StartComputeCmd(ConstructClass):
         "magic" / Const(0x29, Int32ul),
         "unkptr_4" / Int64ul, # empty: WorkCommand_3 + 0x14, size: 0x54
         "computeinfo_addr" / Int64ul, # List of userspace VAs: WorkCommand_3 + 0x68
-        "computeinfo" / Pointer(this.computeinfo_addr, ComputeInfo),
+        "computeinfo" / ROPointer(this.computeinfo_addr, ComputeInfo),
         "unkptr_14" / Int64ul, # In gpu-asc's heap? Did this pointer come from the gfx firmware?
         "cmdqueue_ptr" / Int64ul, # points back to the submitinfo that this command came from
         "context_id" / Int32ul, # 4
@@ -475,7 +627,7 @@ class StartComputeCmd(ConstructClass):
         "unk_34" / Int32ul,
         "unk_38" / Int32ul,
         "computeinfo2_addr" / Int64ul, # WorkCommand_3 + 0x1f4
-        "computeinfo2" / Pointer(this.computeinfo2_addr, ComputeInfo2),
+        "computeinfo2" / ROPointer(this.computeinfo2_addr, ComputeInfo2),
         "unk_44" / Int32ul,
         "uuid" / Int32ul, # uuid for tracking?
         "padding" / Bytes(0x154 - 0x4c),
@@ -490,9 +642,6 @@ class StartComputeCmd(ConstructClass):
         except AttributeError:
             pass
 
-    def __str__(self):
-        return super().__str__(ignore=["cmdqueue_ptr", "workitem_ptr"])
-
 
 class FinalizeComputeCmd(ConstructClass):
     subcon = Struct( # 0x64 bytes''''
@@ -504,8 +653,8 @@ class FinalizeComputeCmd(ConstructClass):
         "unkptr_1c" / Int64ul, # same as ComputeStartCmd.unkptr_3c
         "unk_24" / Int32ul,
         "uuid" / Int32ul,  # uuid for tracking?
-        "completion" / Int64ul,
-        "complete_tag" / Int32ul, # Gets written to unkptr_2c (after completion?)
+        "barrier" / Int64ul,
+        "barrier_tag" / Int32ul, # Gets written to unkptr_2c (after barrier?)
         "unk_38" / Int32ul,
         "unk_3c" / Int32ul,
         "unk_40" / Int32ul,
@@ -519,30 +668,33 @@ class FinalizeComputeCmd(ConstructClass):
         "unk_60" / Int32ul,
     )
 
-    def __str__(self):
-        return super().__str__(ignore=["cmdqueue_ptr", "workitem_ptr", "startcmd_offset"])
-
 class EndCmd(ConstructClass):
     subcon = Struct(
-        "magic" / Const(0x18, Byte),
-        "unk_1" / Byte,
-        "unk_2" / Byte,
-        "unk_3" / Byte,
+        "magic" / Const(0x18, Int8ul),
+        "unk_1" / Int8ul,
+        "unk_2" / Int8ul,
+        "flags" / Int8ul,
     )
 
-    def __str__(self) -> str:
-        return f"End({self.unk_1}, {self.unk_2}, {self.unk_3})"
+    def __init__(self):
+        super().__init__()
+        self.unk_1 = 0
+        self.unk_2 = 0
+        self.flags = 0x40
 
 class TimestampCmd(ConstructClass):
     subcon = Struct( # 0x34 bytes
-        "magic" / Const(0x19, Byte),
-        "unk_1" / Byte,
-        "unk_2" / Byte,
-        "unk_3" / Byte, # Sometimes 0x80
+        "magic" / Const(0x19, Int8ul),
+        "unk_1" / Int8ul,
+        "unk_2" / Int8ul,
+        "unk_3" / Int8ul, # Sometimes 0x80
         # all these pointers point to 0xfa0... addresses. Might be where the timestamp should be writen?
-        "unkptr_4" / Int64ul, # Size: 8 bytes, points to 0
-        "unkptr_c" / Int64ul, # Size: 8 bytes, points to single pointer
-        "unkptr_14" / Int64ul, # Size: 8 bytes, sometimes a repeate of unkptr_c, points to single pointer
+        "ts0_addr" / Int64ul,
+        "ts0" / ROPointer(this.ts0_addr, Timestamp),
+        "ts1_addr" / Int64ul,
+        "ts1" / ROPointer(this.ts0_addr, Timestamp),
+        "ts2_addr" / Int64ul,
+        "ts2" / ROPointer(this.ts0_addr, Timestamp),
         "cmdqueue_ptr" / Int64ul,
         "unk_24" / Int64ul,
         "uuid" / Int32ul,
@@ -551,14 +703,17 @@ class TimestampCmd(ConstructClass):
 
 class WaitForInterruptCmd(ConstructClass):
     subcon = Struct(
-        "magic" / Const(0x01, Byte),
-        "unk_1" / Byte,
-        "unk_2" / Byte,
-        "unk_3" / Byte,
+        "magic" / Const(0x01, Int8ul),
+        "unk_1" / Int8ul,
+        "unk_2" / Int8ul,
+        "unk_3" / Int8ul,
     )
 
-    def __str__(self) -> str:
-        return f"WaitForInterrupt({self.unk_1}, {self.unk_2}, {self.unk_3})"
+    def __init__(self, unk_1, unk_2, unk_3):
+        super().__init__()
+        self.unk_1 = unk_1
+        self.unk_2 = unk_2
+        self.unk_3 = unk_3
 
 class NopCmd(ConstructClass):
     # This doesn't exist
@@ -584,7 +739,7 @@ class ControlList(ConstructValueClass):
                 0x25: Finalize3DCmd,
                 0x29: StartComputeCmd,
                 0x2a: FinalizeComputeCmd,
-            })
+            }, default=Error)
         )
     )
 
