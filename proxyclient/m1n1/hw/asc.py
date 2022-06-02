@@ -105,3 +105,8 @@ class ASC:
     def work_forever(self):
         while self.work():
             pass
+
+    def work_for(self, timeout):
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            self.work()
