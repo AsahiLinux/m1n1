@@ -230,14 +230,14 @@ class CommandQueueTracer(Reloadable):
         assert self.state.rptr < self.rb_size
         assert workmsg.head < self.rb_size
 
-        stream = self.tracer.get_stream(0, self.info.RingBuffer_addr)
+        stream = self.tracer.get_stream(0, self.info.rb_addr)
 
         count = 0
         orig_rptr = rptr = self.state.rptr
         while rptr != workmsg.head:
             self.log(f"WI item @{rptr:#x}")
             count += 1
-            stream.seek(self.info.RingBuffer_addr + rptr * 8, 0)
+            stream.seek(self.info.rb_addr + rptr * 8, 0)
             pointer = Int64ul.parse_stream(stream)
             if pointer:
                 stream.seek(pointer, 0)
@@ -556,6 +556,18 @@ class AGXTracer(ASCTracer):
             self.log(f"Queue info: {self.queue_3d.info}")
             self.last_3d = None
 
+    def dump_buffer_manager(self, buffer_mgr, kread, read):
+            self.log(f"  buffer_mgr @ {buffer_mgr._addr:#x}: {buffer_mgr!s}")
+            self.log(f"    page_list @ {buffer_mgr.page_list_addr:#x}:")
+            chexdump(read(buffer_mgr.page_list_addr,
+                          buffer_mgr.page_list_size), print_fn=self.log)
+            self.log(f"    block_list @ {buffer_mgr.block_list_addr:#x}:")
+            chexdump(read(buffer_mgr.block_list_addr,
+                          0x8000), print_fn=self.log)
+            self.log(f"    unkptr_d8 @ {buffer_mgr.unkptr_d8:#x}:")
+            chexdump(read(buffer_mgr.unkptr_d8, 0x4000), print_fn=self.log)
+
+
     def handle_ta(self, wi):
         self.log(f"Got TA WI{wi.cmd.magic:d}")
         self.last_ta = wi
@@ -565,8 +577,8 @@ class AGXTracer(ASCTracer):
 
         if wi.cmd.magic == 6:
             wi6 = wi.cmd
-            self.log(f"  unkptr_14 @ {wi6.unkptr_14:#x}:")
-            chexdump(kread(wi6.unkptr_14, 0x100), print_fn=self.log)
+            #self.log(f"  unkptr_14 @ {wi6.unkptr_14:#x}:")
+            #chexdump(kread(wi6.unkptr_14, 0x100), print_fn=self.log)
 
         elif wi.cmd.magic == 0:
             wi0 = wi.cmd
@@ -577,28 +589,12 @@ class AGXTracer(ASCTracer):
 
             chexdump(kread(wi0.addr, 0x600), print_fn=self.log)
             self.log(f"  context_id = {context:#x}")
-            self.log(f"  unkptr_c @ {wi0.unkptr_c:#x}:")
-            chexdump(kread(wi0.unkptr_c, 0x1000), print_fn=self.log)
-            self.log(f"  unk_1c @ {wi0.unkptr_1c:#x}: {wi0.unk_1c!s}")
-            self.log(f"    unkptr_20 @ {wi0.unk_1c.unkptr_20:#x}:")
-            chexdump(read(wi0.unk_1c.unkptr_20, 0x10000), print_fn=self.log)
-
-            self.log(f"    unkptr_3c @ {wi0.unk_1c.unkptr_3c:#x}:")
-            chexdump(read(wi0.unk_1c.unkptr_3c, 0x8000), print_fn=self.log)
-            self.log(f"    unkptr_44 @ {wi0.unk_1c.ring_control_addr:#x}:")
-            chexdump(kread(wi0.unk_1c.ring_control_addr, 0x40), print_fn=self.log)
-            self.log(f"    unkptr_68 @ {wi0.unk_1c.unkptr_68:#x}:")
-            chexdump(kread(wi0.unk_1c.unkptr_68, 0x40), print_fn=self.log)
-            self.log(f"    unkptr_d8 @ {wi0.unk_1c.unkptr_d8:#x}:")
-            chexdump(read(wi0.unk_1c.unkptr_d8, 0x4000), print_fn=self.log)
-            self.log(f"    unkptr_e4 @ {wi0.unk_1c.unkptr_e4:#x}:")
-            chexdump(kread(wi0.unk_1c.unkptr_e4, 0x1000), print_fn=self.log)
-            #self.log(f"  unkptr_28 @ {wi1.unkptr_28:#x}:")
-            #chexdump(kread(wi1.unkptr_28, 0x8c0), print_fn=self.log)
-            #self.log(f"  unkptr_24 @ {wi0.unkptr_24:#x}:")
-            #chexdump(kread(wi0.unkptr_24, 0x1000), print_fn=self.log)
-            self.log(f"  unkptr_2c @ {wi0.unkptr_2c:#x}:")
-            chexdump(kread(wi0.unkptr_2c, 0x1000), print_fn=self.log)
+            self.log(f"  unk_c @ {wi0.unkptr_c:#x}: {wi0.unk_c!s}")
+            self.log(f"    unkptr_0 @ {wi0.unk_c.unkptr_0:#x}:")
+            chexdump(kread(wi0.unk_c.unkptr_0, 0x100), print_fn=self.log)
+            self.dump_buffer_manager(wi0.buffer_mgr, kread, read)
+            self.log(f"  unk_emptybuf @ {wi0.unk_emptybuf_addr:#x}:")
+            chexdump(kread(wi0.unk_emptybuf_addr, 0x1000), print_fn=self.log)
 
             #self.log(f"  unkptr_48 @ {wi0.unkptr_48:#x}:")
             #chexdump(read(wi0.unkptr_48, 0x1000), print_fn=self.log)
@@ -607,8 +603,24 @@ class AGXTracer(ASCTracer):
             #self.log(f"  unkptr_60 @ {wi0.unkptr_60:#x}:")
             #chexdump(read(wi0.unkptr_60, 0x4000), print_fn=self.log)
 
-            self.log(f"  unkptr_45c")
+            self.log(f"  unkptr_45c @ {wi0.unkptr_45c:#x}:")
             chexdump(read(wi0.unkptr_45c, 0x1800), print_fn=self.log)
+
+            for i in wi0.controllist.value:
+                i = i.cmd
+                if isinstance(i, StartTACmd):
+                    self.log(f"  # StartTACmd")
+                    self.log(f"    buf_thing @ {i.buf_thing_addr:#x}: {i.buf_thing!s}")
+                    self.log(f"      unkptr_18 @ {i.buf_thing.unkptr_18:#x}:")
+                    chexdump(read(i.buf_thing.unkptr_18, 0x1000), print_fn=self.log)
+                    self.log(f"    unkptr_24 @ {i.unkptr_24:#x}:")
+                    chexdump(read(i.unkptr_24, 0x100), print_fn=self.log)
+                    self.log(f"    unk_5c @ {i.unkptr_5c:#x}:")
+                    chexdump(read(i.unkptr_5c, 0x100), print_fn=self.log)
+
+                elif isinstance(i, FinalizeTACmd):
+                    self.log(f"  # FinalizeTACmd")
+
 
             #self.uat.dump(context, self.log)
 
@@ -621,7 +633,7 @@ class AGXTracer(ASCTracer):
 
         if wi.cmd.magic == 4:
             wi4 = wi.cmd
-            self.log(f" completion_buf @ {wi4.completion_buf_addr:#x}: {wi4.completion_buf!s} ")
+            #self.log(f" completion_buf @ {wi4.completion_buf_addr:#x}: {wi4.completion_buf!s} ")
             #chexdump(kread(wi4.completion_buf_addr, 0x1000), print_fn=self.log)
         elif wi.cmd.magic == 1:
             wi1 = wi.cmd
@@ -630,53 +642,35 @@ class AGXTracer(ASCTracer):
                 return self.uat.ioread(context, off, size)
 
             self.log(f" context_id = {context:#x}")
-            #self.log(f" unk_c @ {wi.unkptr_c:#x}: {wi.unk_c!s} ")
-            #chexdump(kread(wi.unkptr_c, 0x100), print_fn=self.log)
-            #self.log(f"   unkptr_0:")
-            #chexdump(kread(wi.unk_c.unkptr_0, 0x1000), print_fn=self.log)
-
             cmd3d = wi1.controllist.value[0].cmd
 
             self.log(f" 3D:")
-            self.log(f"  unk_4 @ {cmd3d.unkptr_4:#x}: {cmd3d.unk_4!s}")
-            self.log(f"  unk_c @ {cmd3d.unkptr_c:#x}: {cmd3d.unk_c!s}")
-            #self.log(f"    unkptr_20 @ {cmd3d.unk_c.unkptr_20:#x}:")
-            #chexdump(read(cmd3d.unk_c.unkptr_20, 0x1000), print_fn=self.log)
-            #self.log(f"    unkptr_28 @ {cmd3d.unk_c.unkptr_28:#x}:")
-            #chexdump(read(cmd3d.unk_c.unkptr_28, 0x1000), print_fn=self.log)
-            self.log(f"    tvb_start_addr @ {cmd3d.unk_c.tvb_start_addr:#x}:")
-            if cmd3d.unk_c.tvb_start_addr:
-                chexdump(read(cmd3d.unk_c.tvb_start_addr, 0x1000), print_fn=self.log)
-            self.log(f"    tvb_tilemap_addr @ {cmd3d.unk_c.tvb_tilemap_addr:#x}:")
-            if cmd3d.unk_c.tvb_tilemap_addr:
-                chexdump(read(cmd3d.unk_c.tvb_tilemap_addr, 0x1000), print_fn=self.log)
-            self.log(f"    aux_fb_ptr @ {cmd3d.unk_c.aux_fb_ptr:#x}:")
-            chexdump(read(cmd3d.unk_c.aux_fb_ptr, 0x100), print_fn=self.log)
-            self.log(f"    pipeline_base @ {cmd3d.unk_c.pipeline_base:#x}:")
-            chexdump(read(cmd3d.unk_c.pipeline_base, 0x100), print_fn=self.log)
-            #chexdump(read(cmd3d.unk_c.pipeline_base + 0x18000, 0x1000), print_fn=self.log)
+            self.log(f"  struct1 @ {cmd3d.struct1_addr:#x}: {cmd3d.struct1!s}")
+            self.log(f"  struct2 @ {cmd3d.struct2_addr:#x}: {cmd3d.struct2!s}")
+            self.log(f"    tvb_start_addr @ {cmd3d.struct2.tvb_start_addr:#x}:")
+            if cmd3d.struct2.tvb_start_addr:
+                chexdump(read(cmd3d.struct2.tvb_start_addr, 0x1000), print_fn=self.log)
+            self.log(f"    tvb_tilemap_addr @ {cmd3d.struct2.tvb_tilemap_addr:#x}:")
+            if cmd3d.struct2.tvb_tilemap_addr:
+                chexdump(read(cmd3d.struct2.tvb_tilemap_addr, 0x1000), print_fn=self.log)
+            #self.log(f"    aux_fb_ptr @ {cmd3d.struct2.aux_fb_ptr:#x}:")
+            #chexdump(read(cmd3d.struct2.aux_fb_ptr, 0x100), print_fn=self.log)
+            self.log(f"    pipeline_base @ {cmd3d.struct2.pipeline_base:#x}:")
+            chexdump(read(cmd3d.struct2.pipeline_base, 0x100), print_fn=self.log)
 
-            if False: # some static data?
-                self.log(f"  unk_14 @ {cmd3d.unkptr_14:#x}:")
-                chexdump(kread(cmd3d.unkptr_14, 0x3000), print_fn=self.log)
-                for i, v in enumerate(cmd3d.unk_14):
-                    self.log(f"    [{i}]: {v!s}:")
-                    if v.unkptr_18:
-                        self.log(f"      unkptr_18:")
-                        chexdump(read(v.unkptr_18, 0x1000), print_fn=self.log)
-                    if i == 0 and v.unkptr_24:
-                        self.log(f"      unkptr_24:")
-                        chexdump(kread(v.unkptr_24, 0x1000), print_fn=self.log)
+            self.log(f"  buf_thing @ {cmd3d.buf_thing_addr:#x}: {cmd3d.buf_thing!s}")
+            self.log(f"    unkptr_18 @ {cmd3d.buf_thing.unkptr_18:#x}:")
+            chexdump(read(cmd3d.buf_thing.unkptr_18, 0x1000), print_fn=self.log)
 
             self.log(f"  unkptr_1c @ {cmd3d.unkptr_1c:#x}:")
             chexdump(kread(cmd3d.unkptr_1c, 0x400), print_fn=self.log)
             self.log(f"  unk_24 @ {cmd3d.unkptr_24:#x}: {cmd3d.unk_24!s}")
-            self.log(f"  unk_2c @ {cmd3d.unkptr_2c:#x}: {cmd3d.unk_2c!s}")
-            self.log(f"    unknown_buffer @ {cmd3d.unk_2c.unknown_buffer:#x}:")
-            chexdump(read(cmd3d.unk_2c.unknown_buffer, 0x1000), print_fn=self.log)
-            self.log(f"  unk_34 @ {cmd3d.unkptr_34:#x}: {cmd3d.unk_34!s}")
-            self.log(f"  unkptr_6c @ {cmd3d.unkptr_6c:#x}:")
-            chexdump(kread(cmd3d.unkptr_6c, 0x11c), print_fn=self.log)
+            self.log(f"  struct6 @ {cmd3d.struct6_addr:#x}: {cmd3d.struct6!s}")
+            self.log(f"    unknown_buffer @ {cmd3d.struct6.unknown_buffer:#x}:")
+            chexdump(read(cmd3d.struct6.unknown_buffer, 0x1000), print_fn=self.log)
+            self.log(f"  struct7 @ {cmd3d.struct7_addr:#x}: {cmd3d.struct7!s}")
+            self.log(f"  unk_buf_ptr @ {cmd3d.unk_buf_ptr:#x}:")
+            chexdump(kread(cmd3d.unk_buf_ptr, 0x11c), print_fn=self.log)
             self.log(f"  unkptr_74 @ {cmd3d.unkptr_74:#x}:")
             chexdump(kread(cmd3d.unkptr_74, 0x18), print_fn=self.log)
 
@@ -686,12 +680,12 @@ class AGXTracer(ASCTracer):
                     continue
                 self.log(f" Finalize:")
                 cmdfin = i
-                self.log(f"  completion:")
-                chexdump(kread(cmdfin.completion, 0x4), print_fn=self.log)
+                #self.log(f"  completion:")
+                #chexdump(kread(cmdfin.completion, 0x4), print_fn=self.log)
                 self.log(f"  unkptr_1c @ {cmdfin.unkptr_1c:#x}:")
                 chexdump(kread(cmdfin.unkptr_1c, 0x1000), print_fn=self.log)
-                self.log(f"  unkptr_24 @ {cmdfin.unkptr_24:#x}:")
-                chexdump(kread(cmdfin.unkptr_24, 0x100), print_fn=self.log)
+                #self.log(f"  unkptr_24 @ {cmdfin.unkptr_24:#x}:")
+                #chexdump(kread(cmdfin.unkptr_24, 0x100), print_fn=self.log)
                 self.log(f"  unkptr_34 @ {cmdfin.unkptr_34:#x}:")
                 chexdump(kread(cmdfin.unkptr_34, 0x1000), print_fn=self.log)
                 self.log(f"  unkptr_3c @ {cmdfin.unkptr_3c:#x}:")
@@ -701,26 +695,12 @@ class AGXTracer(ASCTracer):
                 self.log(f"  unkptr_64 @ {cmdfin.unkptr_64:#x}:")
                 chexdump(kread(cmdfin.unkptr_64, 0x118), print_fn=self.log)
 
-            self.log(f"  unk_18 @ {wi1.unkptr_18:#x}: {wi1.unk_18!s}")
-            self.log(f"    unkptr_0 @ {wi1.unk_18.unkptr_0:#x}:")
-            chexdump(kread(wi1.unk_18.unkptr_0, 0x1000), print_fn=self.log)
-            self.log(f"  unk_20 @ {wi1.unkptr_20:#x}: {wi1.unk_20!s}")
-            self.log(f"    unkptr_20 @ {wi1.unk_20.unkptr_20:#x}:")
-            chexdump(read(wi1.unk_20.unkptr_20, 0x10000), print_fn=self.log)
-            self.log(f"    unkptr_3c @ {wi1.unk_20.unkptr_3c:#x}:")
-            chexdump(read(wi1.unk_20.unkptr_3c, 0x8000), print_fn=self.log)
-            self.log(f"    ring_control_addr @ {wi1.unk_20.ring_control_addr:#x}:")
-            chexdump(kread(wi1.unk_20.ring_control_addr, 0x40), print_fn=self.log)
-            self.log(f"    unkptr_68 @ {wi1.unk_20.unkptr_68:#x}:")
-            chexdump(kread(wi1.unk_20.unkptr_68, 0x40), print_fn=self.log)
-            self.log(f"    unkptr_d8 @ {wi1.unk_20.unkptr_d8:#x}:")
-            chexdump(read(wi1.unk_20.unkptr_d8, 0x400), print_fn=self.log)
-            self.log(f"    unkptr_e4 @ {wi1.unk_20.unkptr_e4:#x}:")
-            chexdump(kread(wi1.unk_20.unkptr_e4, 0x400), print_fn=self.log)
-            #self.log(f"  unkptr_28 @ {wi1.unkptr_28:#x}:")
-            #chexdump(kread(wi1.unkptr_28, 0x8c0), print_fn=self.log)
-            self.log(f"  unkptr_30 @ {wi1.unkptr_30:#x}:")
-            chexdump(kread(wi1.unkptr_30, 0x1000), print_fn=self.log)
+            self.log(f"  buf_thing @ {wi1.buf_thing_addr:#x}: {wi1.buf_thing!s}")
+            self.log(f"    unkptr_18 @ {wi1.buf_thing.unkptr_18:#x}:")
+            chexdump(read(wi1.buf_thing.unkptr_18, 0x1000), print_fn=self.log)
+            self.dump_buffer_manager(wi1.buffer_mgr, kread, read)
+            self.log(f"  unk_emptybuf @ {wi1.unk_emptybuf_addr:#x}:")
+            chexdump(kread(wi1.unk_emptybuf_addr, 0x1000), print_fn=self.log)
             self.log(f"  tvb_addr @ {wi1.tvb_addr:#x}:")
             chexdump(read(wi1.tvb_addr, 0x1000), print_fn=self.log)
 
