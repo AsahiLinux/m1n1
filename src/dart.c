@@ -559,10 +559,10 @@ u64 dart_search(dart_dev_t *dart, void *paddr)
         }
     }
 
-    return 0;
+    return DART_PTR_ERR;
 }
 
-s64 dart_find_iova(dart_dev_t *dart, s64 start, size_t len)
+u64 dart_find_iova(dart_dev_t *dart, s64 start, size_t len)
 {
     if (len % SZ_16K)
         return -1;
@@ -588,7 +588,7 @@ s64 dart_find_iova(dart_dev_t *dart, s64 start, size_t len)
             iova += SZ_16K;
     }
 
-    return -1;
+    return DART_PTR_ERR;
 }
 
 void dart_shutdown(dart_dev_t *dart)
