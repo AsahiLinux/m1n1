@@ -5,6 +5,9 @@
 
 #include "types.h"
 
+#define DART_PTR_ERR     BIT(63)
+#define DART_IS_ERR(val) FIELD_GET(DART_PTR_ERR, val)
+
 typedef struct dart_dev dart_dev_t;
 
 enum dart_type_t {
@@ -21,7 +24,7 @@ void dart_unmap(dart_dev_t *dart, uintptr_t iova, size_t len);
 void dart_free_l2(dart_dev_t *dart, uintptr_t iova);
 void *dart_translate(dart_dev_t *dart, uintptr_t iova);
 u64 dart_search(dart_dev_t *dart, void *paddr);
-s64 dart_find_iova(dart_dev_t *dart, s64 start, size_t len);
+u64 dart_find_iova(dart_dev_t *dart, s64 start, size_t len);
 void dart_shutdown(dart_dev_t *dart);
 
 #endif

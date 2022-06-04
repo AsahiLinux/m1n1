@@ -115,20 +115,20 @@ int display_get_vram(u64 *paddr, u64 *size)
 static uintptr_t display_map_fb(uintptr_t iova, u64 paddr, u64 size)
 {
     if (iova == 0) {
-        s64 iova_disp0 = 0;
-        s64 iova_dcp = 0;
+        u64 iova_disp0 = 0;
+        u64 iova_dcp = 0;
 
         iova_dcp = dart_find_iova(dcp->dart_dcp, iova_dcp, size);
-        if (iova_dcp < 0) {
+        if (DART_IS_ERR(iova_dcp)) {
             printf("display: failed to find IOVA for fb of %06zx bytes (dcp)\n", size);
-            return 0;
+            return iova_dcp;
         }
 
         // try to map the fb to the same IOVA on disp0
         iova_disp0 = dart_find_iova(dcp->dart_dcp, iova_dcp, size);
-        if (iova_disp0 < 0) {
+        if (DART_IS_ERR(iova_disp0)) {
             printf("display: failed to find IOVA for fb of %06zx bytes (disp0)\n", size);
-            return 0;
+            return iova_disp0;
         }
 
         // assume this results in the same IOVA, not sure if this is required but matches what iboot
@@ -136,7 +136,7 @@ static uintptr_t display_map_fb(uintptr_t iova, u64 paddr, u64 size)
         if (iova_disp0 != iova_dcp) {
             printf("display: IOVA mismatch for fb between dcp (%08lx) and disp0 (%08lx)\n",
                    (u64)iova_dcp, (u64)iova_disp0);
-            return 0;
+            return DART_PTR_ERR;
         }
 
         iova = iova_dcp;
@@ -145,14 +145,14 @@ static uintptr_t display_map_fb(uintptr_t iova, u64 paddr, u64 size)
     int ret = dart_map(dcp->dart_disp, iova, (void *)paddr, size);
     if (ret < 0) {
         printf("display: failed to map fb to dart-disp0\n");
-        return 0;
+        return DART_PTR_ERR;
     }
 
     ret = dart_map(dcp->dart_dcp, iova, (void *)paddr, size);
     if (ret < 0) {
         printf("display: failed to map fb to dart-dcp\n");
         dart_unmap(dcp->dart_disp, iova, size);
-        return 0;
+        return DART_PTR_ERR;
     }
 
     return iova;
@@ -182,10 +182,11 @@ int display_start_dcp(void)
     // Find the framebuffer DVA
     fb_dva = dart_search(dcp->dart_disp, (void *)cur_boot_args.video.base);
     // framebuffer is not mapped on the M1 Ultra Mac Studio
-    if (!fb_dva)
+    if (DART_IS_ERR(fb_dva))
         fb_dva = display_map_fb(0, pa, size);
-    if (!fb_dva) {
+    if (DART_IS_ERR(fb_dva)) {
         printf("display: failed to find display DVA\n");
+        fb_dva = 0;
         dcp_shutdown(dcp, false);
         return -1;
     }
@@ -377,8 +378,8 @@ int display_configure(const char *config)
 
         tmp_dva = iova_alloc(dcp->iovad_dcp, size);
 
-        ret = display_map_fb(tmp_dva, fb_pa, size);
-        if (ret < 0) {
+        tmp_dva = display_map_fb(tmp_dva, fb_pa, size);
+        if (DART_IS_ERR(tmp_dva)) {
             printf("display: failed to map new fb\n");
             return -1;
         }
@@ -395,9 +396,10 @@ int display_configure(const char *config)
         dart_unmap(dcp->dart_disp, fb_dva, fb_size);
         dart_unmap(dcp->dart_dcp, fb_dva, fb_size);
 
-        ret = display_map_fb(fb_dva, fb_pa, size);
-        if (ret < 0) {
+        fb_dva = display_map_fb(fb_dva, fb_pa, size);
+        if (DART_IS_ERR(fb_dva)) {
             printf("display: failed to map new fb\n");
+            fb_dva = 0;
             return -1;
         }
 
