@@ -3,6 +3,8 @@ import struct
 
 from ..utils import *
 
+__all__ = ["SPMI"]
+
 CMD_EXT_WRITE   = 0x00
 CMD_EXT_READ    = 0x20
 CMD_EXT_WRITEL  = 0x30

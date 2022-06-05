@@ -23,6 +23,7 @@ from m1n1.proxyutils import *
 from m1n1.utils import *
 from m1n1.shell import run_shell
 from m1n1.hv import HV
+from m1n1.hw.pmu import PMU
 
 iface = UartInterface()
 p = M1N1Proxy(iface, debug=False)
@@ -61,6 +62,8 @@ symfile = None
 if args.symbols:
     symfile = args.symbols.open("rb")
 hv.load_macho(args.payload.open("rb"), symfile=symfile)
+
+PMU(u).reset_panic_counter()
 
 for i in args.script:
     try:

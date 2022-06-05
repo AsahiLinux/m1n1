@@ -7,11 +7,9 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 from m1n1.setup import *
 from m1n1.shell import run_shell
 
-from m1n1.hw.spmi import SPMI
+from m1n1.hw.pmu import PMU
 
-s = SPMI(u, "/arm-io/nub-spmi")
-leg_scrpad = 0x9f00
-s.write8(15, leg_scrpad + 2, 0) # error counts
+PMU(u).reset_panic_counter()
 
 from m1n1.agx import AGX
 from m1n1.agx.context import *
