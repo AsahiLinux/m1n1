@@ -4,6 +4,7 @@ from construct.lib import HexDisplayedInteger
 from .utils import *
 import inspect
 import textwrap
+import re
 
 g_struct_trace = set()
 g_depth = 0
@@ -132,6 +133,13 @@ class ReloadableConstructMeta(ReloadableMeta, Construct):
     def __new__(cls, name, bases, attrs):
         cls = super().__new__(cls, name, bases, attrs)
         cls.name = name
+        if cls.SHORT_NAME is not None:
+            cls.short_name = cls.SHORT_NAME
+        else:
+            cls.short_name = re.sub('[a-z]', '', cls.name)
+            if len(cls.short_name) > 5:
+                cls.short_name = cls.short_name[:3] + cls.short_name[-2:]
+
         try:
             cls.flagbuildnone = cls.subcon.flagbuildnone
         except AttributeError:
@@ -178,6 +186,7 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
                 )
 
     """
+    SHORT_NAME = None
 
     parsed = None
 
@@ -375,12 +384,12 @@ class ConstructClass(ConstructClassBase, Container):
             if key in self._meta:
                 meta = f" \x1b[34m{self._meta[key]}\x1b[m"
             if '\n' in val_repr:
-                val_repr = textwrap.indent(val_repr, ' ' * 6)
+                val_repr = textwrap.indent(val_repr, f'\x1b[90m{self.short_name:>5s}.\x1b[m')
                 if not val_repr.endswith('\n'):
                     val_repr += '\n'
-                str += f"   {off}\x1b[95m{key}\x1b[m ={meta}\n{val_repr}"
+                str += f"\x1b[90m{self.short_name:>5s}.{off}\x1b[95m{key}\x1b[m ={meta}\n{val_repr}"
             else:
-                str += f"   {off}\x1b[95m{key}\x1b[m = {val_repr}{meta}\n"
+                str += f"\x1b[90m{self.short_name:>5s}.{off}\x1b[95m{key}\x1b[m = {val_repr}{meta}\n"
 
         return str
 
