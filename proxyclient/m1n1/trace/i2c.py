@@ -6,6 +6,7 @@ from ..hw import i2c
 from . import ADTDevTracer
 
 class I2CTracer(ADTDevTracer):
+    DEFAULT_MODE = TraceMode.ASYNC
     REGMAPS = [i2c.I2CRegs]
     NAMES = ["i2c"]
 
@@ -89,12 +90,16 @@ class I2CTracer(ADTDevTracer):
         self.state.devices[addr] = device
 
 class I2CDevTracer(Reloadable):
-    def __init__(self, addr=None):
+    def __init__(self, addr=None, name=None, verbose=True):
         self.addr = addr
+        self.name = name
+        self.verbose = verbose
         self.txn = []
 
-    def log(self, *args, **kwargs):
-        self.i2c_tracer.log(*args, **kwargs)
+    def log(self, msg, *args, **kwargs):
+        if self.name:
+            msg = f"[{self.name}] {msg}"
+        self.i2c_tracer.log(msg, *args, **kwargs)
 
     def start(self, addr, read):
         self.txn.append("S")
@@ -105,7 +110,8 @@ class I2CDevTracer(Reloadable):
 
     def stop(self):
         self.txn.append("P")
-        self.log(f"Txn: {' '.join(self.txn)}")
+        if self.verbose:
+            self.log(f"Txn: {' '.join(self.txn)}")
         self.txn = []
 
     def read(self, data):
@@ -113,3 +119,103 @@ class I2CDevTracer(Reloadable):
 
     def write(self, data):
         self.txn.append(f"{data:02x}")
+
+class I2CRegCache:
+    def __init__(self):
+        self.cache = {}
+
+    def update(self, addr, data):
+        self.cache[addr] = data
+
+    def read(self, addr, width):
+        data = self.cache.get(addr, None)
+        if data is None:
+            print(f"I2CRegCache: no cache for {addr:#x}")
+        return data
+
+    def write(self, addr, data, width):
+        raise NotImplementedError("No write on I2CRegCache")
+
+class I2CRegMapTracer(I2CDevTracer):
+    REGMAP = RegMap
+    ADDRESSING = (0, 1)
+
+    def __init__(self, verbose=False, **kwargs):
+        super().__init__(verbose=verbose, **kwargs)
+        self._cache = I2CRegCache()
+        self.regmap = self.REGMAP(self._cache, 0)
+        self.page = 0x0
+        self.reg = None
+        self.regbytes = []
+
+        self.npagebytes, nimmbytes = self.ADDRESSING
+        self.pageshift = 8 * nimmbytes
+        self.paged = self.npagebytes != 0
+
+    def _reloadme(self):
+        self.regmap._reloadme()
+        return super()._reloadme()
+
+    def start(self, addr, read):
+        if not read:
+            self.reg = None
+            self.regbytes = []
+        super().start(addr, read)
+
+    def stop(self):
+        super().stop()
+
+    def handle_addressing(self, data):
+        if self.reg is not None:
+            return False
+
+        self.regbytes.append(data)
+        if len(self.regbytes)*8 >= self.pageshift:
+            subreg = int.from_bytes(bytes(self.regbytes),
+                                    byteorder="big")
+            self.reg = self.page << self.pageshift | subreg
+        return True
+
+    def handle_page_register(self, data):
+        if not self.paged:
+            return False
+
+        subreg = self.reg & ~(~0 << self.pageshift)
+        if subreg >= self.npagebytes:
+            return False
+
+        shift = 8 * subreg
+        self.page &= ~(0xff << shift)
+        self.page |= data << shift
+        return True
+
+    def write(self, data):
+        if self.handle_addressing(data):
+            return
+        if self.handle_page_register(data):
+            pass
+        else:
+            self.regwrite(self.reg, data)
+
+        self.reg += 1
+        super().write(data)
+
+    def read(self, data):
+        if self.reg & 0xff != 0:
+            self.regread(self.reg, data)
+        self.reg += 1
+        super().read(data)
+
+    def regwrite(self, reg, val):
+        self.regevent(reg, val, False)
+
+    def regread(self, reg, val):
+        self.regevent(reg, val, True)
+
+    def regevent(self, reg, val, read):
+        self._cache.update(reg, val)
+        r, index, rcls = self.regmap.lookup_addr(reg)
+        val = rcls(val) if rcls is not None else f"{val:#x}"
+        regname = self.regmap.get_name(reg) if r else f"{reg:#x}"
+        t = "R" if read else "W"
+        self.log(f"REG: {t.upper()}.8  {regname} = {val!s}")
