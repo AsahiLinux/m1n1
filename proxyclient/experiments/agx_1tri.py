@@ -168,14 +168,14 @@ try:
 
     ##### TVB allocations
 
-    tvb_something_size = 0x6000
+    tvb_something_size = 0x1000
     tvb_something = ctx.uobj.buf(tvb_something_size, "TVB Something")
 
     tvb_list_size = 0x4000
-    tvb_list = ctx.uobj.buf(tvb_something_size, "TVB List")
+    tvb_list = ctx.uobj.buf(tvb_list_size, "TVB List")
 
     tvb_tilemap_size = 0x4000
-    tvb_tilemap = ctx.uobj.buf(tvb_something_size, "TVB Tilemap")
+    tvb_tilemap = ctx.uobj.buf(tvb_tilemap_size, "TVB Tilemap")
 
     ##### Buffer stuff?
 
@@ -316,7 +316,7 @@ try:
         wc_3d.struct_2.stencil_buffer_ptr2 = 0x0
         wc_3d.struct_2.unk_68 = [0] * 12
         wc_3d.struct_2.tvb_start_addr = tvb_list
-        wc_3d.struct_2.tvb_end_addr = tvb_list + tvb_list_size
+        wc_3d.struct_2.tvb_end_addr = tvb_tilemap
         wc_3d.struct_2.unk_e8 = 0xa0000000
         wc_3d.struct_2.tvb_tilemap_addr = tvb_tilemap
         wc_3d.struct_2.unk_f8 = 0x10280
@@ -528,7 +528,7 @@ try:
         wc_ta.struct_2.tvb_start_addr = tvb_list
         wc_ta.struct_2.unkptr_18 = 0x0
         wc_ta.struct_2.unkptr_20 = tvb_something
-        wc_ta.struct_2.tvb_end_addr = (tvb_list + tvb_list_size) | 0x8000000000000000
+        wc_ta.struct_2.tvb_end_addr = tvb_tilemap | 0x8000000000000000
         wc_ta.struct_2.iogpu_unk_54 = 0x6b0003 # fixed
         wc_ta.struct_2.iogpu_unk_55 = 0x3a0012 # fixed
         wc_ta.struct_2.iogpu_unk_56 = 0x1 # fixed
