@@ -4,6 +4,7 @@ import sys, pathlib, traceback
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 import argparse, pathlib
+from io import BytesIO
 
 parser = argparse.ArgumentParser(description='Run a Mach-O payload under the hypervisor')
 parser.add_argument('-s', '--symbols', type=pathlib.Path)
@@ -15,6 +16,7 @@ parser.add_argument('-d', '--debug-xnu', action="store_true")
 parser.add_argument('-l', '--logfile', type=pathlib.Path)
 parser.add_argument('-C', '--cpus', default=None)
 parser.add_argument('-r', '--raw', action="store_true")
+parser.add_argument('-a', '--append-payload', type=pathlib.Path, action="append", default=[])
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
@@ -62,10 +64,21 @@ if len(args.boot_args) > 0:
 symfile = None
 if args.symbols:
     symfile = args.symbols.open("rb")
+
+payload = args.payload.open("rb")
+
+if args.append_payload:
+    concat = BytesIO()
+    concat.write(payload.read())
+    for part in args.append_payload:
+        concat.write(part.open("rb").read())
+    concat.seek(0)
+    payload = concat
+
 if args.raw:
-    hv.load_raw(args.payload.read_bytes())
+    hv.load_raw(payload.read())
 else:
-    hv.load_macho(args.payload.open("rb"), symfile=symfile)
+    hv.load_macho(payload, symfile=symfile)
 
 PMU(u).reset_panic_counter()
 
