@@ -164,11 +164,6 @@ try:
     fb_buf.unk_8 = 0
     fb_buf.unk_c = 0
     fb_buf.unk_10 = 0x50
-    fb_buf.unk_18 = 0
-    fb_buf.unk_20 = 0
-    fb_buf.unk_24 = 0
-    fb_buf.unk_28 = bytes(0x78)
-    fb_buf.context_ptr = 0
     fb_buf.push()
 
     ##### TVB allocations

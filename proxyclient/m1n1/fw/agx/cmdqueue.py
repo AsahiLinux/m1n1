@@ -47,17 +47,38 @@ class WorkCommandInitBM(ConstructClass):
 
 class WorkCommandSubC(ConstructClass):
     subcon = Struct(
-        "unkptr_0" / Hex(Int64ul),
-        "unk_8" / Hex(Int32ul),
-        "unk_c" / Hex(Int32ul),
-        "unk_10" / Hex(Int64ul),
-        "unk_18" / Hex(Int64ul),
-        "unk_20" / Hex(Int32ul),
-        "unk_24" / Hex(Int32ul),
-        "unk_28" / HexDump(Bytes(0xa0 - 0x28)),
+        "unkptr_0" / Int64ul,
+        "unk_8" / Int32ul,
+        "unk_c" / Int32ul,
+        "unk_10" / Int64ul,
+        "unk_18" / Int64ul,
+        "unk_20" / Int32ul,
+        "unk_24" / Int32ul,
+        "unk_28" / Int32ul,
+        "unkptr_2c" / Int64ul,
+        "unk_34" / HexDump(Bytes(24)),
+        "unk_4c" / Int32ul,
+        "unkptr_50" / Int64ul,
+        "unk_58" / HexDump(Bytes(0x94 - 0x58)),
+        "unk_94" / Int32ul,
+        "unk_98" / Int64ul,
         "context_ptr" / Int64ul,
     )
 
+    def __init__(self):
+        super().__init__()
+        self.unk_18 = 0
+        self.unk_20 = 0
+        self.unk_24 = 0
+        self.unk_28 = 0
+        self.unkptr_2c = 0
+        self.unk_34 = bytes(24)
+        self.unk_4c = 0
+        self.unkptr_50 = 0
+        self.unk_58 = bytes(0x94 - 0x58)
+        self.unk_94 = 0
+        self.unk_98 = 0
+        self.context_ptr = 0
 class WorkCommand_3(ConstructClass):
     """
     For compute
