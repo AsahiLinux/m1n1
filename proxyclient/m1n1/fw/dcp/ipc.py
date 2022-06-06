@@ -571,7 +571,7 @@ class UPPipe2(IPCObject):
     A132 = Call(bool_, "backlight_service_matched")
 
     D201 = Callback(uint32_t, "map_buf", buf=InPtr(BufferDescriptor), vaddr=OutPtr(ulong), dva=OutPtr(ulong), unk=bool_)
-    D202 = Callback(void, "unmap_buf", buf=InPtr(BufferDescriptor), unk1=uint, unk2=ulong, unkB=uint)
+    D202 = Callback(void, "unmap_buf", buf=InPtr(BufferDescriptor), vaddr=ulong, dva=ulong, unkB=bool_)
 
     D206 = Callback(bool_, "match_pmu_service_2")
     D207 = Callback(bool_, "match_backlight_service")
