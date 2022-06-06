@@ -62,7 +62,8 @@ def unswizzle(addr, w, h, psize):
                 ((j & 8) << 3) | ((i & 8) << 4) |
                 ((j & 16) << 4) | ((i & 16) << 5) |
                 ((j & 32) << 5) | ((i & 32) << 6))
-            new_data.append(data[toff + psize*off: toff + psize*(off+1)])
+            r,g,b,a = data[toff + psize*off: toff + psize*(off+1)]
+            new_data.append(bytes([b, g, r, a]))
     data = b"".join(new_data)
     iface.writemem(addr, data)
 
