@@ -135,26 +135,31 @@ try:
 
     ##### TA barriers
 
+    #Message 1: DAG: Non Sequential Stamp Updates seen entryIdx 0x41 roots.dag 0x1 stampIdx 0x7 stampValue 0x4100 channel 0xffffffa000163f58 channelRingCommandIndex 0x1
+
+    prev_barrier_tag = 0x4000
+    barrier_tag = 0x4100
+
     # start?
     barrier_ta1 = agx.kshared.new(BarrierCounter, name="TA barrier 1")
-    barrier_ta1.value = 0
+    barrier_ta1.value = prev_barrier_tag
     barrier_ta1.push()
 
     # complete?
     barrier_ta2 = agx.kobj.new(BarrierCounter, name="TA barrier 2")
-    barrier_ta2.value = 0
+    barrier_ta2.value = prev_barrier_tag
     barrier_ta2.push()
 
     ##### 3D barriers
 
     # start?
     barrier_3d1 = agx.kshared.new(BarrierCounter, name="3D barrier 1")
-    barrier_3d1.value = 0
+    barrier_3d1.value = prev_barrier_tag
     barrier_3d1.push()
 
     # complete?
     barrier_3d2 = agx.kobj.new(BarrierCounter, name="3D barrier 2")
-    barrier_3d2.value = 0
+    barrier_3d2.value = prev_barrier_tag
     barrier_3d2.push()
 
     ##### Some kind of feedback/status buffer, GPU managed?
@@ -192,14 +197,22 @@ try:
     buf_desc.unk_38 = 0x0
     buf_desc.push()
 
+    uuid_3d = 0x4000a14
+    uuid_ta = 0x4000a15
+    encoder_id = 0x30009fb
+
     ##### 3D barrier command
+
+    ev_ta = 6
+    ev_3d = 7
 
     barrier_cmd = agx.kobj.new(WorkCommandBarrier)
     barrier_cmd.barrier = barrier_ta2
-    barrier_cmd.barrier_tag1 = 0x100
-    barrier_cmd.barrier_tag2 = 0x100
-    barrier_cmd.event = 0
-    barrier_cmd.uuid = 0x1000032
+    barrier_cmd.barrier_tag1 = 0x4100
+    barrier_cmd.barrier_tag2 = 0x4100
+    barrier_cmd.event = ev_ta
+    barrier_cmd.uuid = uuid_3d
+
 
     #barrier.add_to_mon(mon)
     #barrier2.add_to_mon(mon)
@@ -210,7 +223,7 @@ try:
 
     ##### 3D execution
 
-    wc_3d = agx.kobj.new(WorkCommand_1)
+    wc_3d = agx.kobj.new(WorkCommand3D)
     wc_3d.context_id = ctx_id
     wc_3d.unk_8 = 0
     wc_3d.unk_18 = fb_buf
@@ -242,14 +255,14 @@ try:
     wc_3d.unk_920 = 0
     wc_3d.unk_924 = 1
 
-    # Structures embedded in WorkCommand_1
+    # Structures embedded in WorkCommand3D
     if True:
         wc_3d.struct_1 = Start3DStruct1()
         wc_3d.struct_1.unk_4 = 0x14004
         wc_3d.struct_1.unk_8 = 0x0
         wc_3d.struct_1.unk_c = 0x0
-        wc_3d.struct_1.flt_10 = 0.0027063298039138317
-        wc_3d.struct_1.flt_14 = 0.0036084395833313465
+        wc_3d.struct_1.uuid1 = wc_3d.uuid1
+        wc_3d.struct_1.uuid2 = wc_3d.uuid2
         wc_3d.struct_1.unk_18 = 0x0
         wc_3d.struct_1.unk_20 = 0x80004
         wc_3d.struct_1.unk_24 = 0x0
@@ -334,7 +347,7 @@ try:
         wc_3d.struct_6.unk_0 = 0x0
         wc_3d.struct_6.unk_8 = 0x0
         wc_3d.struct_6.unk_10 = 0x0
-        wc_3d.struct_6.encoder_id = 0x3000820
+        wc_3d.struct_6.encoder_id = encoder_id
         wc_3d.struct_6.unk_1c = 0xffffffff
         wc_3d.struct_6.unknown_buffer = 0x150001a000
         wc_3d.struct_6.unk_28 = 0x0
@@ -346,11 +359,11 @@ try:
         wc_3d.struct_7.unk_0 = 0x0
         wc_3d.struct_7.barrier1 = barrier_3d1
         wc_3d.struct_7.barrier2 = barrier_3d2
-        wc_3d.struct_7.barrier_tag = 0x100
-        wc_3d.struct_7.unk_1c = 0x7 # check
+        wc_3d.struct_7.barrier_tag = barrier_tag
+        wc_3d.struct_7.unk_1c = ev_3d
         wc_3d.struct_7.unk_20 = 0x0
         wc_3d.struct_7.unk_24 = 0x0 # check
-        wc_3d.struct_7.uuid = 0x4000837
+        wc_3d.struct_7.uuid = uuid_3d
         wc_3d.struct_7.prev_barrier_tag = 0x0
         wc_3d.struct_7.unk_30 = 0x0
 
@@ -385,7 +398,7 @@ try:
     start_3d.unk_7c = 0x0
     start_3d.unk_80 = 0x0
     start_3d.unk_84 = 0x0
-    start_3d.uuid = 0x4000837
+    start_3d.uuid = uuid_3d
     start_3d.unkptr_8c = 0x1500200000
     start_3d.unk_94 = 0x1001700002800
     start_3d.unk_9c = 0x0
@@ -410,7 +423,7 @@ try:
     ts1.ts2_addr = wc_3d.ts2._addr
     ts1.cmdqueue_ptr = wq_3d.info._addr
     ts1.unk_24 = 0x0
-    ts1.uuid = 0x4000837
+    ts1.uuid = uuid_3d
     ts1.unk_30_padding = 0x0
     ms.append(ts1)
 
@@ -425,15 +438,15 @@ try:
     ts2.ts2_addr = wc_3d.ts3._addr
     ts2.cmdqueue_ptr = wq_3d.info._addr
     ts2.unk_24 = 0x0
-    ts2.uuid = 0x4000837
+    ts2.uuid = uuid_3d
     ts2.unk_30_padding = 0x0
     ms.append(ts2)
 
     finish_3d = Finalize3DCmd()
-    finish_3d.uuid = 0x4000837
+    finish_3d.uuid = uuid_3d
     finish_3d.unk_8 = 0
     finish_3d.barrier = barrier_3d2
-    finish_3d.barrier_tag = 0x100
+    finish_3d.barrier_tag = barrier_tag
     finish_3d.unk_18 = 0
     finish_3d.buf_thing = buf_desc
     finish_3d.buffer_mgr = buffer_mgr.info
@@ -443,7 +456,7 @@ try:
     finish_3d.unkptr_44 = wc_3d.unk_word._addr
     finish_3d.cmdqueue_ptr = wq_3d.info._addr
     finish_3d.workitem_ptr = wc_3d._addr
-    finish_3d.unk_5c = 3
+    finish_3d.unk_5c = ctx_id
     finish_3d.unk_buf_ptr = wc_3d.unk_buf._addr
     finish_3d.unk_6c = 0
     finish_3d.unk_74 = 0
@@ -473,9 +486,9 @@ try:
     wc_initbm.context_id = ctx_id
     wc_initbm.unk_8 = ctx_something
     wc_initbm.unk_c = 0
-    wc_initbm.unk_10 = 0x10
+    wc_initbm.unk_10 = buffer_mgr.info.block_count
     wc_initbm.buffer_mgr = buffer_mgr.info
-    wc_initbm.barrier_tag = 0x100
+    wc_initbm.barrier_tag = barrier_tag
     wc_initbm.push()
 
     print(wc_initbm)
@@ -483,7 +496,7 @@ try:
 
     ##### TA execution
 
-    wc_ta = agx.kobj.new(WorkCommand_0)
+    wc_ta = agx.kobj.new(WorkCommandTA)
     wc_ta.context_id = ctx_id
     wc_ta.unk_8 = 0
     wc_ta.unk_c = fb_buf
@@ -506,7 +519,7 @@ try:
     wc_ta.unk_5d0 = 0
     wc_ta.unk_5d4 = 1
 
-    # Structures embedded in WorkCommand_0
+    # Structures embedded in WorkCommandTA
     if True:
         # same for 1tri and boot
         wc_ta.tiling_params = TilingParameters()
@@ -571,7 +584,7 @@ try:
         wc_ta.struct_3.unk_528 = 0x0 # fixed
         wc_ta.struct_3.unk_52c = 0x0 # fixed
         wc_ta.struct_3.unk_530 = 0x0 # fixed
-        wc_ta.struct_3.uuid1 = 0x3c1770e1
+        wc_ta.struct_3.encoder_id = encoder_id
         wc_ta.struct_3.unk_538 = 0x0 # fixed
         wc_ta.struct_3.unk_53c = 0xffffffff
         wc_ta.struct_3.unknown_buffer = 0x150001a000
@@ -582,11 +595,11 @@ try:
             0x0, 0x0, 0x0] # fixed
         wc_ta.struct_3.barrier1 = barrier_ta1
         wc_ta.struct_3.barrier2 = barrier_ta2
-        wc_ta.struct_3.barrier_tag = 0x100
-        wc_ta.struct_3.unk_57c = 0x6 # 0 for boot stuff?
+        wc_ta.struct_3.barrier_tag = barrier_tag
+        wc_ta.struct_3.ev_ta = ev_ta
         wc_ta.struct_3.unk_580 = 0x0 # fixed
         wc_ta.struct_3.unk_584 = 0x0 # 1 for boot stuff?
-        wc_ta.struct_3.uuid2 = 0x3d1770f9
+        wc_ta.struct_3.uuid2 = uuid_ta
         wc_ta.struct_3.unk_58c = [0x0, 0x0]
 
     wc_ta.set_addr() # Update inner structure addresses
@@ -611,7 +624,7 @@ try:
 
     start_ta.unkptr_5c = wc_ta.unk_594._addr
     start_ta.unk_64 = 0x0 # fixed
-    start_ta.uuid = 0x3d1770f9
+    start_ta.uuid = uuid_ta
     start_ta.unk_70 = 0x0 # fixed
     start_ta.unk_74 = [ # fixed
         0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -634,7 +647,7 @@ try:
     ts1.ts2_addr = wc_ta.ts2._addr
     ts1.cmdqueue_ptr = wq_ta.info._addr
     ts1.unk_24 = 0x0
-    ts1.uuid = 0x3d1770f9
+    ts1.uuid = uuid_ta
     ts1.unk_30_padding = 0x0
     ms.append(ts1)
 
@@ -649,12 +662,11 @@ try:
     ts2.ts2_addr = wc_ta.ts3._addr
     ts2.cmdqueue_ptr = wq_ta.info._addr
     ts2.unk_24 = 0x0
-    ts2.uuid = 0x3d1770f9
+    ts2.uuid = uuid_ta
     ts2.unk_30_padding = 0x0
     ms.append(ts2)
 
     finish_ta = FinalizeTACmd()
-    finish_ta.magic = 0x23
     finish_ta.buf_thing = buf_desc
     finish_ta.buffer_mgr = buffer_mgr.info
     finish_ta.unkptr_14 = agx.initdata.regionB.unkptr_170 + 4
@@ -663,9 +675,9 @@ try:
     finish_ta.unk_28 = 0x0 # fixed
     finish_ta.struct3 = wc_ta.struct_3
     finish_ta.unk_34 = 0x0 # fixed
-    finish_ta.uuid = 0x1000033
+    finish_ta.uuid = uuid_ta
     finish_ta.barrier = barrier_ta2
-    finish_ta.barrier_tag = 0x100
+    finish_ta.barrier_tag = barrier_tag
     finish_ta.unk_48 = 0x0 # fixed
     finish_ta.unk_50 = 0x0 # fixed
     finish_ta.unk_54 = 0x0 # fixed
@@ -683,8 +695,8 @@ try:
     wc_ta.tvb_size = tvb_something_size # fixed?
     wc_ta.controllist_ptr = ms.obj._addr
     wc_ta.controllist_size = ms.size
-    wc_ta.unk_478 = ctx_something
-    wc_ta.barrier_tag = 0x100
+    wc_ta.ev_3d = ev_3d
+    wc_ta.barrier_tag = barrier_tag
 
     wc_ta.push()
     ms.dump()
@@ -694,53 +706,37 @@ try:
     print(wc_ta)
     wq_ta.submit(wc_ta)
 
-    ##### Run TA queue
-    agx.ch.queue[0].q_TA.run(wq_ta, 0)
+    ##### Run queues
+    agx.ch.queue[2].q_3D.run(wq_3d, ev_3d)
+    agx.ch.queue[2].q_TA.run(wq_ta, ev_ta)
 
-    #time.sleep(0.3)
+    ##### Wait for work
     agx.asc.work_for(0.3)
-    mon.poll()
-
-    ##### Run 3D queue
-    agx.ch.queue[0].q_3D.run(wq_3d, 1)
-
-    #time.sleep(0.3)
-    agx.asc.work_for(0.3)
-    mon.poll()
-
-    #print("3D:")
-    #print(wq_3d.info.pull())
-    #print("TA:")
-    #print(wq_ta.info.pull())
+    print("3D:")
+    print(wq_3d.info.pull())
+    print("TA:")
+    print(wq_ta.info.pull())
     print("Barriers:")
     print(barrier_ta1.pull())
     print(barrier_ta2.pull())
     print(barrier_3d1.pull())
     print(barrier_3d2.pull())
 
-    print(ms)
-
-    #agx.asc.uat.dump(0)
-    agx.asc.work_for(0.3)
-    #print(wc_ta.pull())
-    #run_shell(globals(), msg="Have fun!")
-    wq_ta.info.pull()
-    print(wq_ta.info)
     fb_buf.pull()
     print(fb_buf)
 
     print("==")
     mon.poll()
     print("==")
-    agx.kick_firmware()
+    #agx.kick_firmware()
     agx.asc.work_for(0.3)
     p.read32(0x204000000 + 0xd14000)
     # [cpu0] [0xfffffe00124bf9a8] MMIO: W.4   0x204d14000 (sgx, offset 0xd14000) = 0x70001
     p.write32(0x204000000 + 0xd14000, 0x70001)
 
-    fault_code = p.read64(0x204017030)
+    #agx.uat.dump(ctx_id)
 
-    agx.uat.dump(ctx_id)
+    fault_code = p.read64(0x204017030)
     fault_addr = fault_code >> 24
     if fault_addr & 0x8000000000:
         fault_addr |= 0xffffff8000000000
@@ -749,7 +745,7 @@ try:
     if obj is not None:
 
         print(f"Faulted at : {fault_addr:#x}: {obj!s} + {fault_addr - base:#x}")
-    agx.kick_firmware()
+    #agx.kick_firmware()
     mon.poll()
 
     w = 640

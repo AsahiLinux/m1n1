@@ -202,8 +202,8 @@ class Start3DStruct1(ConstructClass):
         "unk_4" / Int32ul,
         "unk_8" / Int32ul,
         "unk_c" / Int32ul,
-        "flt_10" / Float32l,
-        "flt_14" / Float32l,
+        "uuid1" / Int32ul,
+        "uuid2" / Int32ul,
         "unk_18" / Int64ul,
         "unk_20" / Int32ul,
         "unk_24" / Int32ul,
@@ -332,9 +332,9 @@ class Start3DStruct7(ConstructClass):
 class Start3DCmd(ConstructClass):
     subcon = Struct( # 0x194 bytes''''
         "magic" / Const(0x24, Int32ul),
-        "struct1_addr" / Int64ul, # empty before run. Output? WorkCommand_1 + 0x3c0
+        "struct1_addr" / Int64ul, # empty before run. Output? WorkCommand3D + 0x3c0
         "struct1" / ROPointer(this.struct1_addr, Start3DStruct1),
-        "struct2_addr" / Int64ul, # ??  WorkCommand_1 + 0x78
+        "struct2_addr" / Int64ul, # ??  WorkCommand3D + 0x78
         "struct2" / ROPointer(this.struct2_addr, Start3DStruct2),
         "buf_thing_addr" / Int64ul,
         "buf_thing" / ROPointer(this.buf_thing_addr, BufferThing),
@@ -472,7 +472,7 @@ class StartTACmdStruct3(ConstructClass):
         "unk_528" / Int32ul,
         "unk_52c" / Int32ul,
         "unk_530" / Int32ul,
-        "uuid1" / Int32ul,
+        "encoder_id" / Int32ul,
         "unk_538" / Int32ul,
         "unk_53c" / Int32ul,
         "unknown_buffer" / Int64ul,
@@ -483,7 +483,7 @@ class StartTACmdStruct3(ConstructClass):
         "barrier2_addr" / Int64ul, # same as FinalizeComputeCmd.barrier - some kind of fence/token
         "barrier2" / ROPointer(this.barrier2_addr, BarrierCounter),
         "barrier_tag" / Int32ul,
-        "unk_57c" / Int32ul,
+        "ev_ta" / Int32ul,
         "unk_580" / Int32ul,
         "unk_584" / Int32ul,
         "uuid2" / Int32ul,
@@ -615,8 +615,8 @@ class ComputeInfo2(ConstructClass):
 class StartComputeCmd(ConstructClass):
     subcon = Struct( # 0x154 bytes''''
         "magic" / Const(0x29, Int32ul),
-        "unkptr_4" / Int64ul, # empty: WorkCommand_3 + 0x14, size: 0x54
-        "computeinfo_addr" / Int64ul, # List of userspace VAs: WorkCommand_3 + 0x68
+        "unkptr_4" / Int64ul, # empty: WorkCommandCP + 0x14, size: 0x54
+        "computeinfo_addr" / Int64ul, # List of userspace VAs: WorkCommandCP + 0x68
         "computeinfo" / ROPointer(this.computeinfo_addr, ComputeInfo),
         "unkptr_14" / Int64ul, # In gpu-asc's heap? Did this pointer come from the gfx firmware?
         "cmdqueue_ptr" / Int64ul, # points back to the submitinfo that this command came from
@@ -626,7 +626,7 @@ class StartComputeCmd(ConstructClass):
         "unk_30" / Int32ul,
         "unk_34" / Int32ul,
         "unk_38" / Int32ul,
-        "computeinfo2_addr" / Int64ul, # WorkCommand_3 + 0x1f4
+        "computeinfo2_addr" / Int64ul, # WorkCommandCP + 0x1f4
         "computeinfo2" / ROPointer(this.computeinfo2_addr, ComputeInfo2),
         "unk_44" / Int32ul,
         "uuid" / Int32ul, # uuid for tracking?

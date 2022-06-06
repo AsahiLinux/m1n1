@@ -8,7 +8,7 @@ __all__ = []
 
 class WorkCommandBarrier(ConstructClass):
     """
-        sent before WorkCommand_1 on the Submit3d queue.
+        sent before WorkCommand3D on the Submit3d queue.
         Might be for initilzing the tile buckets?
 
     Example:
@@ -28,7 +28,7 @@ class WorkCommandBarrier(ConstructClass):
 
 class WorkCommandInitBM(ConstructClass):
     """
-        occationally sent before WorkCommand_0 on the SubmitTA queue.
+        occationally sent before WorkCommandTA on the SubmitTA queue.
 
     Example:
     00000004 0c378018 ffffffa0 00000c00 00000006 00000900 08002c9a 00000000
@@ -79,7 +79,7 @@ class WorkCommandSubC(ConstructClass):
         self.unk_94 = 0
         self.unk_98 = 0
         self.context_ptr = 0
-class WorkCommand_3(ConstructClass):
+class WorkCommandCP(ConstructClass):
     """
     For compute
 
@@ -147,7 +147,7 @@ class WorkCommand1_UnkBuf2(ConstructClass):
         "unk_10" / Int64ul,
     )
 
-class WorkCommand_1(ConstructClass):
+class WorkCommand3D(ConstructClass):
     """
     For 3D
 
@@ -229,7 +229,7 @@ class WorkCommand0_UnkBuf(ConstructValueClass):
     def __init__(self):
         self.value = bytes(0x18)
 
-class WorkCommand_0(ConstructClass):
+class WorkCommandTA(ConstructClass):
     """
     For TA
 
@@ -278,7 +278,7 @@ class WorkCommand_0(ConstructClass):
         "controllist_ptr" / Hex(Int64ul),
         "controllist_size" / Hex(Int32ul),
         "controllist" / ROPointer(this.controllist_ptr, ControlList),
-        "unk_478" / Int32ul,
+        "ev_3d" / Int32ul,
         "barrier_tag" / Int32ul,
 
         "struct_3" / StartTACmdStruct3, # 0x114 bytes
@@ -319,9 +319,9 @@ class CmdBufWork(ConstructClass):
     subcon = Struct(
         "cmdid" / Peek(Int32ul),
         "cmd" / Switch(this.cmdid, {
-            0: WorkCommand_0,
-            1: WorkCommand_1,
-            3: WorkCommand_3,
+            0: WorkCommandTA,
+            1: WorkCommand3D,
+            3: WorkCommandCP,
             4: WorkCommandBarrier,
             6: WorkCommandInitBM,
         })
