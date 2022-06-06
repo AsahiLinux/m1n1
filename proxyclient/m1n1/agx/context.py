@@ -34,12 +34,12 @@ class GPUContext:
                                  va_block=32768, nG=1, AP=0, PXN=1, UXN=1)
 
     def bind(self, ctx_id):
-        self.ctx_id = ctx_id
+        self.ctx = ctx_id
         self.uobj.ctx = ctx_id
         self.uat.bind_context(ctx_id, self.ttbr0_base)
 
     def make_stream(self, base):
-        return self.uat.iostream(self.ctx_id, base)
+        return self.uat.iostream(self.ctx, base)
 
     def new_at(self, addr, objtype, name=None, **flags):
         obj = GPUObject(self, objtype)
@@ -56,7 +56,7 @@ class GPUContext:
 
         print(f"[Context@{self.gpu_context._addr}] Map {obj._name} size {obj._size:#x} @ {obj._addr:#x} ({obj._paddr:#x})")
 
-        self.agx.uat.iomap_at(self.ctx_id, obj._addr, obj._paddr, size_align, **flags)
+        self.agx.uat.iomap_at(self.ctx, obj._addr, obj._paddr, size_align, **flags)
         self.objects[obj._addr] = obj
 
         return obj
