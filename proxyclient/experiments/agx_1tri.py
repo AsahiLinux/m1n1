@@ -529,8 +529,10 @@ try:
         wc_ta.tiling_params.unk_0 = 0x28
         wc_ta.tiling_params.unk_4 = 0x88
         wc_ta.tiling_params.unk_8 = 0x202
-        wc_ta.tiling_params.unk_c = 0xe01301df027f
-        wc_ta.tiling_params.unk_14 = 0x10100c00202018
+        wc_ta.tiling_params.x_max = 639
+        wc_ta.tiling_params.y_max = 479
+        wc_ta.tiling_params.unk_10 = 0xe013
+        wc_ta.tiling_params.unk_14 = 0x10_10_0c_00_20_20_18
         wc_ta.tiling_params.unk_1c = 0x20
         wc_ta.tiling_params.unk_20 = 0x40
         wc_ta.tiling_params.unk_24 = 0x100
