@@ -41,7 +41,7 @@ class GPUContext:
     def make_stream(self, base):
         return self.uat.iostream(self.ctx, base)
 
-    def new_at(self, addr, objtype, name=None, **flags):
+    def new_at(self, addr, objtype, name=None, track=True, **flags):
         obj = GPUObject(self, objtype)
         obj._stream = self.make_stream
         if name is not None:
@@ -58,17 +58,19 @@ class GPUContext:
 
         self.agx.uat.iomap_at(self.ctx, obj._addr, obj._paddr, size_align, **flags)
         self.objects[obj._addr] = obj
+        if track:
+            self.agx.reg_object(obj)
 
         return obj
 
-    def buf_at(self, addr, is_pipeline, size, name=None):
-        return self.new_at(addr, Bytes(size), name,
+    def buf_at(self, addr, is_pipeline, size, name=None, track=True):
+        return self.new_at(addr, Bytes(size), name, track=track,
                            AttrIndex=MemoryAttr.Shared, PXN=1,
                            nG=1, AP=(1 if is_pipeline else 0))
 
-    def load_blob(self, addr, is_pipeline, filename):
+    def load_blob(self, addr, is_pipeline, filename, track=True):
         data = open(filename, "rb").read()
-        obj = self.new_at(addr, Bytes(len(data)), filename,
+        obj = self.new_at(addr, Bytes(len(data)), filename, track=track,
                           AttrIndex=MemoryAttr.Shared, PXN=1,
                           nG=1, AP=(1 if is_pipeline else 0))
         obj.val = data
