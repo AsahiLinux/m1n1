@@ -671,8 +671,8 @@ class AGXTracer(ASCTracer):
             self.log(f"  struct7 @ {cmd3d.struct7_addr:#x}: {cmd3d.struct7!s}")
             self.log(f"  unk_buf_ptr @ {cmd3d.unk_buf_ptr:#x}:")
             chexdump(kread(cmd3d.unk_buf_ptr, 0x11c), print_fn=self.log)
-            self.log(f"  unkptr_74 @ {cmd3d.unkptr_74:#x}:")
-            chexdump(kread(cmd3d.unkptr_74, 0x18), print_fn=self.log)
+            self.log(f"  unk_buf2_ptr @ {cmd3d.unk_buf2_ptr:#x}:")
+            chexdump(kread(cmd3d.unk_buf2_ptr, 0x18), print_fn=self.log)
 
             for i in wi1.controllist.value:
                 i = i.cmd
