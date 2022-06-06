@@ -126,7 +126,7 @@ try:
 
     ##### Initialize buffer manager
 
-    buffer_mgr = GPUBufferManager(agx, ctx)
+    buffer_mgr = GPUBufferManager(agx, ctx, 8)
 
     ##### Initialize work queues
 

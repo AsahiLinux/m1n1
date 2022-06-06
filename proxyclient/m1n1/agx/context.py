@@ -152,12 +152,12 @@ class GPUMicroSequence:
         return s
 
 class GPUBufferManager:
-    def __init__(self, agx, context):
+    def __init__(self, agx, context, blocks=8):
         self.agx = agx
         self.ctx = context
 
         self.block_ctl_obj = agx.kshared.new(BufferManagerBlockControl)
-        self.block_ctl_obj.total = 0x10
+        self.block_ctl_obj.total = blocks
         self.block_ctl_obj.wptr = 0
         self.block_ctl_obj.unk = 0
         self.block_ctl = self.block_ctl_obj.push().regmap()
