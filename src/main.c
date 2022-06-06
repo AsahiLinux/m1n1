@@ -101,9 +101,11 @@ void run_actions(void)
 
     if (payload_run() == 0) {
         printf("Valid payload found\n");
+        display_finish_config();
         return;
     }
 
+    display_finish_config();
     fb_set_active(true);
 
     printf("No valid payload found\n");
@@ -138,9 +140,6 @@ void m1n1_main(void)
 
 #ifdef USE_FB
     display_init();
-    // Kick DCP to sleep, so dodgy monitors which cause reconnect cycles don't cause us to lose the
-    // framebuffer.
-    display_shutdown(DCP_SLEEP_IF_EXTERNAL);
     fb_init(false);
     fb_display_logo();
 #ifdef FB_SILENT_MODE
@@ -167,7 +166,6 @@ void m1n1_main(void)
     nvme_shutdown();
     exception_shutdown();
     usb_iodev_shutdown();
-    display_shutdown(DCP_SLEEP_IF_EXTERNAL);
 #ifdef USE_FB
     fb_shutdown(next_stage.restore_logo);
 #endif

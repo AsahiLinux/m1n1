@@ -26,6 +26,7 @@ static dcp_dev_t *dcp;
 static dcp_iboot_if_t *iboot;
 static u64 fb_dva;
 static u64 fb_size;
+static bool config_done;
 static bool display_is_external;
 
 #define abs(x) ((x) >= 0 ? (x) : -(x))
@@ -233,9 +234,11 @@ int display_parse_mode(const char *config, dcp_timing_mode_t *mode, struct displ
 
     const char *option = config;
     while (option && opts) {
-        if (!strncmp(option + 1, "retina", 6))
+        if (!strncmp(option, "retina", 6))
             opts->retina = true;
-        option = strchr(option + 1, ',');
+        option = strchr(option, ',');
+        if (option)
+            option += 1;
     }
 
     printf("display: want mode: valid=%d %dx%d %d.%02d Hz\n", mode->valid, mode->width,
@@ -301,6 +304,8 @@ int display_configure(const char *config)
         printf("display: failed to set power\n");
         return ret;
     }
+
+    config_done = true;
 
     // Detect if display is connected
     int timing_cnt, color_cnt;
@@ -430,14 +435,15 @@ int display_configure(const char *config)
 
     printf("display: swapped! (swap_id=%d)\n", ret);
 
+    u32 depth = 30 | (opts.retina ? FB_DEPTH_FLAG_RETINA : 0);
     if (fb_pa != cur_boot_args.video.base || cur_boot_args.video.stride != stride ||
         cur_boot_args.video.width != tbest.width || cur_boot_args.video.height != tbest.height ||
-        cur_boot_args.video.depth != 30) {
+        cur_boot_args.video.depth != depth) {
         cur_boot_args.video.base = fb_pa;
         cur_boot_args.video.stride = stride;
         cur_boot_args.video.width = tbest.width;
         cur_boot_args.video.height = tbest.height;
-        cur_boot_args.video.depth = 30 | (opts.retina ? FB_DEPTH_FLAG_RETINA : 0);
+        cur_boot_args.video.depth = depth;
         fb_reinit();
     }
 
@@ -457,6 +463,17 @@ int display_configure(const char *config)
     return 1;
 }
 
+void display_finish_config(void)
+{
+    if (!config_done && display_is_external) {
+        display_configure(NULL);
+    }
+
+    // Kick DCP to sleep, so dodgy monitors which cause reconnect cycles don't cause us to lose the
+    // framebuffer.
+    display_shutdown(DCP_SLEEP_IF_EXTERNAL);
+}
+
 int display_init(void)
 {
     int node = adt_path_offset(adt, "/arm-io/disp0");
@@ -467,22 +484,13 @@ int display_init(void)
     }
 
     display_is_external = adt_getprop(adt, node, "external", NULL);
+    config_done = false;
     if (display_is_external)
         printf("display: Display is external\n");
     else
         printf("display: Display is internal\n");
 
-    if (cur_boot_args.video.width == 640 && cur_boot_args.video.height == 1136) {
-        printf("display: Dummy framebuffer found, initializing display\n");
-        return display_configure(NULL);
-    } else if (display_is_external) {
-        printf("display: External display found, reconfiguring\n");
-        return display_configure(NULL);
-    } else {
-        printf("display: Display is already initialized (%ldx%ld)\n", cur_boot_args.video.width,
-               cur_boot_args.video.height);
-        return 0;
-    }
+    return 0;
 }
 
 void display_shutdown(dcp_shutdown_mode mode)
