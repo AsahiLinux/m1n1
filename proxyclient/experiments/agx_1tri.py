@@ -106,23 +106,26 @@ try:
     #p.read32(0x204000000 + 0xd14000)
     #p.write32(0x204000000 + 0xd14000, 0x70001)
 
-    ctx.load_blob(0x1100000000, True, "gpudata/1tri/mem_0_0.bin")
-    ctx.load_blob(0x1100008000, True, "gpudata/1tri/mem_8000_0.bin")
-    ctx.load_blob(0x1100010000, True, "gpudata/1tri/mem_10000_0.bin")
-    ctx.load_blob(0x1100058000, True, "gpudata/1tri/mem_58000_0.bin")
-    ctx.load_blob(0x1100060000, True, "gpudata/1tri/mem_60000_0.bin")
-    ctx.load_blob(0x1500000000, False, "gpudata/1tri/mem_1500000000_0.bin")
-    ctx.load_blob(0x1500048000, False, "gpudata/1tri/mem_1500048000_0.bin")
-    ctx.load_blob(0x15000d0000, False, "gpudata/1tri/mem_15000d0000_0.bin")
-    ctx.load_blob(0x1500158000, False, "gpudata/1tri/mem_1500158000_0.bin")
-    ctx.load_blob(0x15001e0000, False, "gpudata/1tri/mem_15001e0000_0.bin")
-    ctx.load_blob(0x15001e8000, False, "gpudata/1tri/mem_15001e8000_0.bin")
-    ctx.load_blob(0x15001f0000, False, "gpudata/1tri/mem_15001f0000_0.bin")
-    ctx.load_blob(0x15001f8000, False, "gpudata/1tri/mem_15001f8000_0.bin")
-    ctx.load_blob(0x1500490000, False, "gpudata/1tri/mem_1500490000_0.bin")
-    color = ctx.buf_at(0x1500200000, False, 1310720, "Color")
-    depth = ctx.buf_at(0x1500348000, False, 1310720, "Depth")
-    p.dc_civac(color._paddr, 640 * 480 * 4)
+    #base = "gpudata/1tri/"
+    base = "gpudata/mesa-flag/"
+    ctx.load_blob(0x1100000000, True, base + "mem_0_0.bin")
+    ctx.load_blob(0x1100008000, True, base + "mem_8000_0.bin")
+    ctx.load_blob(0x1100010000, True, base + "mem_10000_0.bin")
+    ctx.load_blob(0x1100058000, True, base + "mem_58000_0.bin")
+    ctx.load_blob(0x1100060000, True, base + "mem_60000_0.bin")
+    ctx.load_blob(0x1100068000, True, base + "mem_68000_0.bin")
+    ctx.load_blob(0x1500000000, False, base + "mem_1500000000_0.bin")
+    ctx.load_blob(0x1500048000, False, base + "mem_1500048000_0.bin")
+    ctx.load_blob(0x15000d0000, False, base + "mem_15000d0000_0.bin")
+    ctx.load_blob(0x1500158000, False, base + "mem_1500158000_0.bin")
+    ctx.load_blob(0x15001e0000, False, base + "mem_15001e0000_0.bin")
+    ctx.load_blob(0x15001e8000, False, base + "mem_15001e8000_0.bin")
+    ctx.load_blob(0x15001f0000, False, base + "mem_15001f0000_0.bin")
+    ctx.load_blob(0x15001f8000, False, base + "mem_15001f8000_0.bin")
+    ctx.load_blob(0x1500490000, False, base + "mem_1500490000_0.bin")
+    ctx.load_blob(0x1500518000, False, base + "mem_1500518000_0.bin")
+    color = ctx.buf_at(0x1500200000, False, 1310720, "Color", track=False)
+    depth = ctx.buf_at(0x1500348000, False, 1310720, "Depth", track=False)
 
     ##### Initialize buffer manager
 
@@ -258,7 +261,7 @@ try:
     # Structures embedded in WorkCommand3D
     if True:
         wc_3d.struct_1 = Start3DStruct1()
-        wc_3d.struct_1.unk_4 = 0x14004
+        wc_3d.struct_1.unk_4 = 0x1e004
         wc_3d.struct_1.unk_8 = 0x0
         wc_3d.struct_1.unk_c = 0x0
         wc_3d.struct_1.uuid1 = wc_3d.uuid1
@@ -277,10 +280,10 @@ try:
         wc_3d.struct_1.unk_110 = 0x0
         wc_3d.struct_1.unk_118 = 0x0
         wc_3d.struct_1.unk_120 = [0] * 35
-        wc_3d.struct_1.clear_pipeline = Start3DClearPipelineBinding(0xffff8002, 0x12004)
+        wc_3d.struct_1.clear_pipeline = Start3DClearPipelineBinding(0xffff8002, 0x1c004)
         wc_3d.struct_1.unk_258 = 0
         wc_3d.struct_1.unk_260 = 0
-        wc_3d.struct_1.depth_clear_pipeline = Start3DClearPipelineBinding(0xffff8212, 0x13004)
+        wc_3d.struct_1.depth_clear_pipeline = Start3DClearPipelineBinding(0xffff8212, 0x1d004)
         wc_3d.struct_1.depth_flags = 0x80000
         wc_3d.struct_1.unk_290 = 0x0
         wc_3d.struct_1.depth_buffer_ptr1 = 0x1500348000
@@ -299,8 +302,8 @@ try:
         wc_3d.struct_1.unk_30c = 0x0
         wc_3d.struct_1.aux_fb = AuxFBInfo(0xc000, 0, 640, 480)
         wc_3d.struct_1.unk_320_padding = bytes(0x10)
-        wc_3d.struct_1.store_pipeline = Start3DStorePipelineBinding(0x12, 0x14004)
-        wc_3d.struct_1.depth_store_pipeline = Start3DStorePipelineBinding(0x12, 0x14004)
+        wc_3d.struct_1.store_pipeline = Start3DStorePipelineBinding(0x12, 0x1e004)
+        wc_3d.struct_1.depth_store_pipeline = Start3DStorePipelineBinding(0x12, 0x1e004)
         wc_3d.struct_1.depth_clear_val2 = 1.0
         wc_3d.struct_1.stencil_clear_val2 = 0x0
         wc_3d.struct_1.context_id = ctx_id
@@ -315,7 +318,7 @@ try:
         wc_3d.struct_2 = Start3DStruct2()
         wc_3d.struct_2.unk_0 = 0xa000
         wc_3d.struct_2.unk_8 = 0xffff8002
-        wc_3d.struct_2.unk_10 = 0x12004
+        wc_3d.struct_2.unk_10 = 0x1c004
         wc_3d.struct_2.unk_18 = 0x88
         wc_3d.struct_2.scissor_array = 0x15000d0000
         wc_3d.struct_2.depth_bias_array = 0x1500158000
@@ -333,7 +336,7 @@ try:
         wc_3d.struct_2.unk_e8 = 0xa0000000
         wc_3d.struct_2.tvb_tilemap_addr = tvb_tilemap
         wc_3d.struct_2.unk_f8 = 0x10280
-        wc_3d.struct_2.aux_fb_ptr = 0x1500012000
+        wc_3d.struct_2.aux_fb_ptr = 0x150051c000
         wc_3d.struct_2.unk_108 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
         wc_3d.struct_2.pipeline_base = 0x1100000000
         wc_3d.struct_2.unk_140 = 0x8c60
@@ -349,7 +352,7 @@ try:
         wc_3d.struct_6.unk_10 = 0x0
         wc_3d.struct_6.encoder_id = encoder_id
         wc_3d.struct_6.unk_1c = 0xffffffff
-        wc_3d.struct_6.unknown_buffer = 0x150001a000
+        wc_3d.struct_6.unknown_buffer = 0x1500524000
         wc_3d.struct_6.unk_28 = 0x0
         wc_3d.struct_6.unk_30 = 0x1
         wc_3d.struct_6.unk_34 = 0x1
@@ -551,10 +554,10 @@ try:
         wc_ta.struct_2.tvb_tilemap_addr = tvb_tilemap
         wc_ta.struct_2.unk_60 = 0x0 # fixed
         wc_ta.struct_2.unk_68 = 0x0 # fixed
-        wc_ta.struct_2.iogpu_deflake_1 = 0x15000112a0
-        wc_ta.struct_2.iogpu_deflake_2 = 0x1500011020
+        wc_ta.struct_2.iogpu_deflake_1 = 0x150051b2a0
+        wc_ta.struct_2.iogpu_deflake_2 = 0x150051b020
         wc_ta.struct_2.unk_80 = 0x1 # fixed
-        wc_ta.struct_2.iogpu_deflake_3 = 0x4001500011000
+        wc_ta.struct_2.iogpu_deflake_3 = 0x400150051b000
         wc_ta.struct_2.encoder_addr = 0x1500048000
         wc_ta.struct_2.unk_98 = [0x0, 0x0] # fixed
         wc_ta.struct_2.unk_a8 = 0xa041 # fixed
@@ -571,7 +574,7 @@ try:
         wc_ta.struct_3.unk_480 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0] # fixed
         wc_ta.struct_3.unk_498 = 0x0 # fixed
         wc_ta.struct_3.unk_4a0 = 0x0 # fixed
-        wc_ta.struct_3.iogpu_deflake_1 = 0x15000112a0
+        wc_ta.struct_3.iogpu_deflake_1 = 0x150051b2a0
         wc_ta.struct_3.unk_4ac = 0x0 # fixed
         wc_ta.struct_3.unk_4b0 = 0x0 # fixed
         wc_ta.struct_3.unk_4b8 = 0x0 # fixed
@@ -587,7 +590,7 @@ try:
         wc_ta.struct_3.encoder_id = encoder_id
         wc_ta.struct_3.unk_538 = 0x0 # fixed
         wc_ta.struct_3.unk_53c = 0xffffffff
-        wc_ta.struct_3.unknown_buffer = 0x150001a000
+        wc_ta.struct_3.unknown_buffer = 0x1500524000
         wc_ta.struct_3.unk_548 = 0x0 # fixed
         wc_ta.struct_3.unk_550 = [
             0x0, 0x0, # fixed
