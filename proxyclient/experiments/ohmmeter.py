@@ -7,7 +7,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 from m1n1.utils import *
 from enum import IntEnum
 from m1n1.setup import *
-from m1n1.hw.i2c import I2C
+from m1n1.hw.i2c import I2C, I2CRegMapDev
 
 
 class R_IRQ_MASK1(Register8):
@@ -223,20 +223,9 @@ class CS42L84Registers(RegMap):
     ASP_TXSLOT_CH1_MSB = 0x5068, Register8
 
 
-class CS42L84:
-    def __init__(self, bus, addr):
-        self.regs = CS42L84Registers(self, 0)
-        self.bus = bus
-        self.addr = addr
-
-    def write(self, regaddr, val, width=8):
-        valbytes = val.to_bytes(width//8, byteorder="little")
-        self.bus.write_reg(self.addr, regaddr, valbytes, regaddrlen=2)
-
-    def read(self, regaddr, width=8):
-        read = self.bus.read_reg(self.addr, regaddr, width//8, regaddrlen=2)
-        return int.from_bytes(read, byteorder='little')
-
+class CS42L84(I2CRegMapDev):
+    REGMAP = CS42L84Registers
+    ADDRESSING = (0, 2)
 
 def read_devid():
     pass
