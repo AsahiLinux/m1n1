@@ -135,6 +135,7 @@ class I2C:
         self.iface = u.iface
         self.base = u.adt[adt_path].get_reg(0)[0]
         self.regs = I2CRegs(u, self.base)
+        self.devs = []
 
     def clear_fifos(self):
         self.regs.CTL.set(MTR=1, MRR=1)
@@ -192,3 +193,59 @@ class I2C:
         data = self._fifo_read(nbytes)
         self.regs.CTL.set(ENABLE=0, CLK=0x4)
         return data
+
+class I2CRegMapDev:
+    REGMAP = None
+    ADDRESSING = (0, 1)
+
+    def __init__(self, bus, addr, name=None):
+        self.bus = bus
+        self.addr = addr
+        self.curr_page = None
+        self.name = name
+
+        self.paged, self.regimmbytes = self.ADDRESSING
+        if self.REGMAP is not None:
+            self.regs = self.REGMAP(self, 0)
+
+    @classmethod
+    def from_adt(cls, bus, path):
+        node = bus.u.adt[path]
+        addr = node.reg[0] & 0xff
+        return cls(bus, addr, node.name)
+
+    def _switch_page(self, page):
+        assert self.paged
+        self.bus.write_reg(self.addr, 0, bytes([page]),
+                            regaddrlen=self.regimmbytes)
+        self.curr_page = page
+
+    def _snip_regaddr(self, addr):
+        pageshift = self.regimmbytes * 8
+        page = addr >> pageshift
+        immediate = addr & ~(~0 << pageshift)
+        return (page, immediate)
+
+    def write(self, reg, val, width=8):
+        page, imm = self._snip_regaddr(reg)
+
+        if self.paged and page != self.curr_page:
+            self._switch_page(page)
+
+        valbytes = val.to_bytes(width//8, byteorder="little")
+        self.bus.write_reg(self.addr, imm, valbytes,
+                            regaddrlen=self.regimmbytes)
+
+    def read(self, reg, width=8):
+        page, imm = self._snip_regaddr(reg)
+
+        if self.paged and page != self.curr_page:
+            self._switch_page(page)
+
+        data = self.bus.read_reg(self.addr, imm, width//8,
+                                    regaddrlen=self.regimmbytes)
+        return int.from_bytes(data, byteorder='little')
+
+    def __repr__(self):
+        label = self.name or f"@ {self.addr:02x}"
+        return f"<{type(self).__name__} {label}>"
