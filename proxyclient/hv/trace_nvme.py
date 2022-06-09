@@ -7,7 +7,9 @@ from m1n1.hv import TraceMode
 from m1n1.utils import *
 from m1n1.trace import ADTDevTracer
 from m1n1.trace.asc import ASCRegs
+from m1n1.trace.asc import ASCTracer
 
+ASCTracer = ASCTracer._reloadcls()
 
 class NVMERegs(RegMap):
     APPLE_NVMMU_NUM = 0x28100, Register32
@@ -144,7 +146,7 @@ NVMMUTcb = Struct(
 )
 
 
-class NVMETracer(ADTDevTracer):
+class NVMETracer(ASCTracer):
     DEFAULT_MODE = TraceMode.SYNC
 
     REGMAPS = [ASCRegs, None, None, NVMERegs]
@@ -270,5 +272,4 @@ NVMETracer = NVMETracer._reloadcls()
 nvme_tracer = NVMETracer(hv, "/arm-io/ans", verbose=1)
 nvme_tracer.start()
 
-sart_base = 0x27BC50000
-hv.trace_range(range(sart_base, sart_base + 0x4000))
+trace_device("/arm-io/sart-ans")
