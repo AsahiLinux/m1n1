@@ -483,11 +483,11 @@ int afk_epic_shutdown(afk_epic_ep_t *epic)
 
 int afk_epic_start_interface(afk_epic_ep_t *epic, char *name, size_t txsize, size_t rxsize)
 {
-    int channel;
+    int channel = -1;
     struct afk_qe *msg;
     struct epic_announce *announce;
 
-    while (true) {
+    for (int tries = 0; tries < 20; tries += 1) {
 
         int ret = afk_epic_rx(epic, &msg);
         if (ret < 0)
@@ -515,10 +515,14 @@ int afk_epic_start_interface(afk_epic_ep_t *epic, char *name, size_t txsize, siz
             continue;
         }
 
+        channel = msg->channel;
         break;
     }
 
-    channel = msg->channel;
+    if (channel == -1) {
+        printf("EPIC: too many unexpected messages, giving up\n");
+        return -1;
+    }
 
     if (!rtkit_alloc_buffer(epic->rtk, &epic->rxbuf, rxsize)) {
         printf("EPIC: failed to allocate rx buffer\n");
