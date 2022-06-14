@@ -65,7 +65,7 @@ class R_MSM_BLOCK_EN3(Register8):
     TR_SENSE_EN = 3
     DCID_EN     = 4
 
-class R_MSM_CLAMP_CTRL(Register8):
+class R_HS_CLAMP_DISABLE(Register8):
     HS_CLAMP_DISABLE = 0
 
 class E_SAMP_RATE(IntEnum):
@@ -96,6 +96,53 @@ class E_PULLDOWN_R(IntEnum):
 
 class R_DAC_CTRL2(Register8):
     PULLDOWN_R = 3, 0, E_PULLDOWN_R
+
+class R_HSBIAS_SC_AUTOCTL(Register8):
+    TIP_SENSE_EN = 5
+
+class E_TIP_SENSE_CTRL(IntEnum):
+    DISABLED  = 0b00
+    DIG_INPUT = 0b01
+    SHORT_DET = 0b11
+
+class R_TIP_SENSE_CTRL2(Register8):
+    CTRL = 7, 6, E_TIP_SENSE_CTRL
+    INV  = 5
+
+class E_HSBIAS_CTRL(IntEnum):
+    HI_Z  = 0b00
+    U_0V0 = 0b01
+    U_2V0 = 0b10
+    U_2V7 = 0b11
+
+class R_MISC_DET_CTRL(Register8):
+    HSBIAS_CTRL = 2, 1, E_HSBIAS_CTRL
+
+class E_S0_DEBOUNCE_TIME(IntEnum):
+    T_10MS = 0b000
+    T_20MS = 0b001
+    T_30MS = 0b010
+    T_40MS = 0b011
+    T_50MS = 0b100
+    T_60MS = 0b101
+    T_70MS = 0b110
+    T_80MS = 0b111
+
+class R_MIC_DET_CTRL2(Register8):
+    DEBOUNCE_TIME = 7, 5, E_S0_DEBOUNCE_TIME
+
+class R_MIC_DET_CTRL4(Register8):
+    LATCH_TO_VP = 1
+
+class R_HS_SWITCH_CTRL(Register8):
+    REF_HS3      = 7
+    REF_HS4      = 6
+    HSB_FILT_HS3 = 5
+    HSB_FILT_HS4 = 4
+    HSB_HS3      = 3
+    HSB_HS4      = 2
+    GNDHS_HS3    = 1
+    GNDHS_HS4    = 0
 
 class CS42L84Registers(RegMap):
     DEVID  = irange(0x0, 5), Register8
@@ -134,11 +181,20 @@ class CS42L84Registers(RegMap):
     TIP_SENSE_CTRL  = 0x1283, R_TR_SENSE_CTRL
     TR_SENSE_STATUS = 0x1288, R_TR_SENSE_STATUS
 
-    MIKEY_CTRL1 = 0x1472
-    MIKEY_CTRL2 = 0x1473, Register8
+    HSBIAS_SC_AUTOCTL = 0x1470, R_HSBIAS_SC_AUTOCTL
+    WAKE_CTRL         = 0x1471, Register8 # guess (cs42l42)
+    TIP_SENSE_CTRL2   = 0x1473, R_TIP_SENSE_CTRL2 # guess (cs42l42)
+    MISC_DET_CTRL     = 0x1474, R_MISC_DET_CTRL # guess (cs42l42)
+    MIC_DET_CTRL2     = 0x1478, R_MIC_DET_CTRL2
+    MIC_DET_CTRL4     = 0x1477, R_MIC_DET_CTRL4
 
-    MSM_BLOCK_EN3  = 0x1802, R_MSM_BLOCK_EN3
-    MSM_CLAMP_CTRL = 0x1813, R_MSM_CLAMP_CTRL
+    MIKEY_DET_STATUS     = irange(0x147c, 2), Register8
+    MIKEY_DET_IRQ_MASK   = irange(0x1480, 2), Register8
+    MIKEY_DET_IRQ_STATUS = irange(0x1484, 2), Register8
+
+    MSM_BLOCK_EN3    = 0x1802, R_MSM_BLOCK_EN3
+    HS_SWITCH_CTRL   = 0x1812, R_HS_SWITCH_CTRL
+    HS_CLAMP_DISABLE = 0x1813, R_HS_CLAMP_DISABLE
     ADC_CTRL     = irange(0x2000, 4), Register8
 
     DAC_CTRL1     = 0x3000, R_DAC_CTRL1
@@ -188,7 +244,7 @@ def read_devid():
 def sense_Z():
     r = l84.regs
 
-    r.MSM_CLAMP_CTRL.set(HS_CLAMP_DISABLE=1)
+    r.HS_CLAMP_DISABLE.set(HS_CLAMP_DISABLE=1)
     r.DAC_CTRL2.set(PULLDOWN_R=E_PULLDOWN_R.R_1K1OHMS)
     r.DCID_CTRL1.set(Z_RANGE=E_DCID_Z_RANGE.UNK2)
     r.DCID_CTRL2.set(GND_SEL=E_DCID_GND_SEL.HS3)
@@ -219,10 +275,8 @@ def sense_Z():
     return Z_headphones
 
 def init_ring_tip_sense():
-    l84.write(0x1471, 0xe0)
-    l84.write(0x1473, 0xc0)
-    l84.write(0x1477, 0x02)
-    l84.write(0x1478, 0x8f)
+    l84.regs.MIC_DET_CTRL4.set(LATCH_TO_VP=1)
+    l84.regs.TIP_SENSE_CTRL2.set(CTRL=E_TIP_SENSE_CTRL.SHORT_DET)
 
     l84.regs.RING_SENSE_CTRL.set(INV=1, UNK1=1,
         RISETIME=E_DEBOUNCE_TIME.T_125MS, FALLTIME=E_DEBOUNCE_TIME.T_125MS)
