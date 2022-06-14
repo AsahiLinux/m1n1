@@ -18,6 +18,10 @@ class SN012776(I2CRegMapDev):
     REGMAP     = SN012776Regs
     ADDRESSING = (1, 1)
 
+class CS42L84(I2CRegMapDev):
+    REGMAP     = CS42L84Regs
+    ADDRESSING = (0, 2)
+
 gpios = {}
 for node in u.adt["/arm-io"]:
     if node.name.endswith("gpio") or node.name.endswith("gpio0"):
@@ -37,7 +41,8 @@ for node in u.adt["/arm-io"]:
 
         dcls = {
             "audio-control,tas5770": TAS5770,
-            "audio-control,sn012776": SN012776
+            "audio-control,sn012776": SN012776,
+            "audio-control,cs42l84": CS42L84,
         }.get(devnode.compatible[0], None)
 
         if not dcls:

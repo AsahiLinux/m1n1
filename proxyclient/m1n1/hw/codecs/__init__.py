@@ -1,5 +1,6 @@
 from m1n1.utils import RegMap, Register8
 from enum import IntEnum
+from .cs42l84 import *
 
 class E_PWR_MODE(IntEnum):
     ACTIVE   = 0
