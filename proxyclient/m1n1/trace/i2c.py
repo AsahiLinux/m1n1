@@ -171,20 +171,24 @@ class I2CRegMapTracer(I2CDevTracer):
 
         self.regbytes.append(data)
         if len(self.regbytes)*8 >= self.pageshift:
-            subreg = int.from_bytes(bytes(self.regbytes),
+            immediate = int.from_bytes(bytes(self.regbytes),
                                     byteorder="big")
-            self.reg = self.page << self.pageshift | subreg
+            self.reg = self.page << self.pageshift | immediate
         return True
+
+    @property
+    def reg_imm(self):
+        '''Returns the 'immediate' part of current register address'''
+        return self.reg & ~(~0 << self.pageshift)
 
     def handle_page_register(self, data):
         if not self.paged:
             return False
 
-        subreg = self.reg & ~(~0 << self.pageshift)
-        if subreg >= self.npagebytes:
+        if self.reg_imm >= self.npagebytes:
             return False
 
-        shift = 8 * subreg
+        shift = 8 * self.reg_imm
         self.page &= ~(0xff << shift)
         self.page |= data << shift
         return True
@@ -192,7 +196,7 @@ class I2CRegMapTracer(I2CDevTracer):
     def write(self, data):
         if self.handle_addressing(data):
             return
-        if self.handle_page_register(data):
+        elif self.handle_page_register(data):
             pass
         else:
             self.regwrite(self.reg, data)
@@ -201,7 +205,7 @@ class I2CRegMapTracer(I2CDevTracer):
         super().write(data)
 
     def read(self, data):
-        if self.reg & 0xff != 0:
+        if self.reg_imm >= self.npagebytes:
             self.regread(self.reg, data)
         self.reg += 1
         super().read(data)
