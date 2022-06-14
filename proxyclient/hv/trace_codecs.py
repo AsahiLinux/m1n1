@@ -12,6 +12,10 @@ class TAS5770Tracer(I2CRegMapTracer):
     REGMAP = TAS5770Regs
     ADDRESSING = (1, 1)
 
+class CS42L84Tracer(I2CRegMapTracer):
+    REGMAP = CS42L84Regs
+    ADDRESSING = (0, 2)
+
 i2c_tracers = {}
 
 for node in hv.adt["/arm-io"]:
@@ -27,7 +31,8 @@ for node in hv.adt["/arm-io"]:
 
         dcls = {
             "audio-control,tas5770": TAS5770Tracer,
-            "audio-control,sn012776": SN012776Tracer
+            "audio-control,sn012776": SN012776Tracer,
+            "audio-control,cs42l84": CS42L84Tracer,
         }.get(devnode.compatible[0], None)
         if dcls:
             bus.add_device(
