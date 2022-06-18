@@ -56,7 +56,7 @@ class GPUContext:
         #if isinstance(obj.val, ConstructClassBase):
             #obj.val._addr = obj._addr
 
-        print(f"[Context@{self.gpu_context._addr}] Map {obj._name} size {obj._size:#x} @ {obj._addr:#x} ({obj._paddr:#x})")
+        self.agx.log(f"[Context@{self.gpu_context._addr}] Map {obj._name} size {obj._size:#x} @ {obj._addr:#x} ({obj._paddr:#x})")
 
         self.agx.uat.iomap_at(self.ctx, obj._addr, obj._paddr, size_align, **flags)
         self.objects[obj._addr] = obj

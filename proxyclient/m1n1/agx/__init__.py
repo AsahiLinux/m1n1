@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-import bisect
+import bisect, time
 
 from .object import GPUObject, GPUAllocator
 from .initdata import build_initdata
@@ -19,6 +19,7 @@ class AGX:
     PAGE_SIZE = 0x4000
 
     def __init__(self, u):
+        self.start_time = time.time()
         self.u = u
         self.p = u.proxy
 
@@ -184,4 +185,5 @@ class AGX:
         self.asc.work()
 
     def log(self, msg):
-       print("[AGX] " + msg)
+        t = time.time() - self.start_time
+        print(f"[AGX][{t:10.03f}] " + msg)

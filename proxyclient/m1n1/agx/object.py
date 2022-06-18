@@ -149,7 +149,8 @@ class GPUAllocator:
 
         self.objects[obj._addr] = obj
 
-        print(f"[{self.name}] Alloc {obj._name} size {obj._size:#x} @ {obj._addr:#x} ({obj._paddr:#x})")
+        if self.verbose:
+            self.agx.log(f"[{self.name}] Alloc {obj._name} size {obj._size:#x} @ {obj._addr:#x} ({obj._paddr:#x})")
 
         self.agx.reg_object(obj, track=track)
         return obj

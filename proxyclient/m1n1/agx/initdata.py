@@ -131,5 +131,5 @@ def build_initdata(agx):
 
     initdata.push()
 
-    print(initdata.val)
+    #print(initdata.val)
     return initdata
