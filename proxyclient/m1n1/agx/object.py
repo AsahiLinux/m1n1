@@ -25,8 +25,9 @@ class GPUObject:
         self._alloc = allocator
         self._type = objtype
         self._addr = None
+        self._last_data = None
 
-    def push(self):
+    def push(self, if_needed=False):
         assert self._addr is not None
         stream = self._alloc.make_stream(self._addr)
         context = Container()
@@ -34,16 +35,25 @@ class GPUObject:
         context._building = True
         context._sizing = False
         context._params = context
-        print(f"[{self._name} @{self._addr:#x}] pushing {self._size} bytes")
 
         # build locally and push as a block for efficiency
         ios = io.BytesIO()
         self._type._build(self.val, ios, context, "(pushing)")
-        stream.write(ios.getvalue())
+        data = ios.getvalue()
+        if if_needed and data == self._last_data:
+            return self
+
+        if self._alloc.verbose:
+            self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] pushing {self._size} bytes")
+        if self._size > 32768:
+            self._alloc.agx.u.compressed_writemem(self._paddr, data)
+        else:
+            self._alloc.agx.iface.writemem(self._paddr, data)
+        #stream.write(data)
         if isinstance(self._type, type) and issubclass(self._type, ConstructClassBase):
-            print("setmeta", self._type)
             self.val.set_addr(self._addr, stream)
 
+        self._last_data = data
         return self
 
     def pull(self):
@@ -54,7 +64,8 @@ class GPUObject:
         context._building = False
         context._sizing = False
         context._params = context
-        print(f"[{self._name} @{self._addr:#x}] pulling {self._size} bytes")
+        if self._alloc.verbose:
+            self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] pulling {self._size} bytes")
         self.val = self._type._parse(stream, context, "(pulling)")
 
         return self

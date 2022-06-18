@@ -15,6 +15,7 @@ class GPUContext:
         self.uat = self.agx.uat
         self.u = self.agx.u
         self.p = self.agx.p
+        self.verbose = False
 
         self.context_info = agx.kshared.new(ContextInfo)
         self.context_info.fb_ptr = 0
