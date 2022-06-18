@@ -301,6 +301,7 @@ class UAT(Reloadable):
         iova = self.allocator.malloc(size)
 
         self.iomap_at(ctx, iova, addr, size, **flags)
+        self.flush_dirty()
         return iova
 
     def iomap_at(self, ctx, iova, addr, size, **flags):
@@ -341,7 +342,7 @@ class UAT(Reloadable):
                         self.write_pte(table_addr, page >> offset, size, pte)
                     table_addr = pte.offset()
 
-        self.flush_dirty()
+        #self.flush_dirty()
 
 
     def fetch_pte(self, offset, idx, size, ptecls):
@@ -350,6 +351,7 @@ class UAT(Reloadable):
         cached, table = self.get_pt(offset, size=size)
         pte = ptecls(table[idx])
         if not pte.valid() and cached:
+            self.flush_dirty()
             cached, table = self.get_pt(offset, size=size, uncached=True)
             pte = ptecls(table[idx])
 
