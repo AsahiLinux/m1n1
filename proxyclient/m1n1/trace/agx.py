@@ -601,9 +601,6 @@ class AGXTracer(ASCTracer):
 
             chexdump(kread(wi0.addr, 0x600), print_fn=self.log)
             self.log(f"  context_id = {context:#x}")
-            self.log(f"  unk_c @ {wi0.unkptr_c:#x}: {wi0.unk_c!s}")
-            self.log(f"    unkptr_0 @ {wi0.unk_c.unkptr_0:#x}:")
-            chexdump(kread(wi0.unk_c.unkptr_0, 0x100), print_fn=self.log)
             self.dump_buffer_manager(wi0.buffer_mgr, kread, read)
             self.log(f"  unk_emptybuf @ {wi0.unk_emptybuf_addr:#x}:")
             chexdump(kread(wi0.unk_emptybuf_addr, 0x1000), print_fn=self.log)
@@ -659,12 +656,12 @@ class AGXTracer(ASCTracer):
             self.log(f" 3D:")
             self.log(f"  struct1 @ {cmd3d.struct1_addr:#x}: {cmd3d.struct1!s}")
             self.log(f"  struct2 @ {cmd3d.struct2_addr:#x}: {cmd3d.struct2!s}")
-            self.log(f"    tvb_start_addr @ {cmd3d.struct2.tvb_start_addr:#x}:")
-            if cmd3d.struct2.tvb_start_addr:
-                chexdump(read(cmd3d.struct2.tvb_start_addr, 0x1000), print_fn=self.log)
-            self.log(f"    tvb_tilemap_addr @ {cmd3d.struct2.tvb_tilemap_addr:#x}:")
-            if cmd3d.struct2.tvb_tilemap_addr:
-                chexdump(read(cmd3d.struct2.tvb_tilemap_addr, 0x1000), print_fn=self.log)
+            #self.log(f"    tvb_start_addr @ {cmd3d.struct2.tvb_start_addr:#x}:")
+            #if cmd3d.struct2.tvb_start_addr:
+                #chexdump(read(cmd3d.struct2.tvb_start_addr, 0x1000), print_fn=self.log)
+            #self.log(f"    tvb_tilemap_addr @ {cmd3d.struct2.tvb_tilemap_addr:#x}:")
+            #if cmd3d.struct2.tvb_tilemap_addr:
+                #chexdump(read(cmd3d.struct2.tvb_tilemap_addr, 0x1000), print_fn=self.log)
             #self.log(f"    aux_fb_ptr @ {cmd3d.struct2.aux_fb_ptr:#x}:")
             #chexdump(read(cmd3d.struct2.aux_fb_ptr, 0x100), print_fn=self.log)
             self.log(f"    pipeline_base @ {cmd3d.struct2.pipeline_base:#x}:")
@@ -674,8 +671,6 @@ class AGXTracer(ASCTracer):
             self.log(f"    unkptr_18 @ {cmd3d.buf_thing.unkptr_18:#x}:")
             chexdump(read(cmd3d.buf_thing.unkptr_18, 0x1000), print_fn=self.log)
 
-            self.log(f"  unkptr_1c @ {cmd3d.unkptr_1c:#x}:")
-            chexdump(kread(cmd3d.unkptr_1c, 0x400), print_fn=self.log)
             self.log(f"  unk_24 @ {cmd3d.unkptr_24:#x}: {cmd3d.unk_24!s}")
             self.log(f"  struct6 @ {cmd3d.struct6_addr:#x}: {cmd3d.struct6!s}")
             self.log(f"    unknown_buffer @ {cmd3d.struct6.unknown_buffer:#x}:")
@@ -713,8 +708,8 @@ class AGXTracer(ASCTracer):
             self.dump_buffer_manager(wi1.buffer_mgr, kread, read)
             self.log(f"  unk_emptybuf @ {wi1.unk_emptybuf_addr:#x}:")
             chexdump(kread(wi1.unk_emptybuf_addr, 0x1000), print_fn=self.log)
-            self.log(f"  tvb_addr @ {wi1.tvb_addr:#x}:")
-            chexdump(read(wi1.tvb_addr, 0x1000), print_fn=self.log)
+            #self.log(f"  tvb_addr @ {wi1.tvb_addr:#x}:")
+            #chexdump(read(wi1.tvb_addr, 0x1000), print_fn=self.log)
 
     def handle_compute(self, msg):
         self.log("Got Compute Work Item")
