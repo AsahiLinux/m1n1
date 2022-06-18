@@ -300,7 +300,7 @@ class AGXTracer(ASCTracer):
         self.last_3d = None
 
         self.trace_userva = False
-        self.pause_after_init = True
+        self.pause_after_init = False
         self.shell_after_init = False
         self.encoder_id_filter = None
 
