@@ -25,8 +25,8 @@ __all__ = []
 class Timestamp(ConstructValueClass):
     subcon = Int64ul
 
-    def __init__(self):
-        self.value = 0
+    def __init__(self, value=0):
+        self.value = value
 
 class BarrierCounter(ConstructValueClass):
     subcon = Hex(Int32ul)
@@ -86,8 +86,10 @@ class BufferManagerInfo(ConstructClass):
         "unk_60" / Int64ul,
         "counter_addr" / Int64ul,
         "counter" / ROPointer(this.counter_addr, BufferManagerCounter),
-        "unk_70" / Int64ul,
-        "unk_78" / Int64ul,
+        "unk_70" / Int32ul,
+        "unk_74" / Int32ul,
+        "unk_78" / Int32ul,
+        "unk_7c" / Int32ul,
         "unk_80" / Int32ul,
         "unk_84" / Int32ul,
         "unk_88" / Int32ul,
@@ -121,7 +123,9 @@ class BufferManagerInfo(ConstructClass):
         self.unk_58 = 0x0
         self.unk_60 = 0x0
         self.unk_70 = 0x0
+        self.unk_74 = 0x0
         self.unk_78 = 0x0
+        self.unk_7c = 0x0
         self.unk_80 = 0x1
         self.unk_84 = 0x3468
         self.unk_88 = 0x1178
@@ -136,16 +140,12 @@ class BufferManagerInfo(ConstructClass):
 
 class Start3DClearPipelineBinding(ConstructClass):
     subcon = Struct(
-        "unk_0" / Int64ul,
-        "unk_4" / Int64ul,
         "pipeline_bind" / Int64ul,
         "address" / Int64ul,
     )
 
     def __init__(self, pipeline_bind=None, address=None):
         super().__init__()
-        self.unk_0 = 0
-        self.unk_4 = 0
         self.pipeline_bind = pipeline_bind
         self.address = address
 
@@ -199,31 +199,35 @@ class AuxFBInfo(ConstructClass):
 class Start3DStruct1(ConstructClass):
     subcon = Struct(
         "magic" / Const(0x12, Int32ul),
-        "unk_4" / Int32ul,
+        "store_pipeline_addr" / Int32ul,
         "unk_8" / Int32ul,
         "unk_c" / Int32ul,
         "uuid1" / Int32ul,
         "uuid2" / Int32ul,
         "unk_18" / Int64ul,
-        "unk_20" / Int32ul,
+        "tile_blocks_y" / Int16ul, # * 4
+        "tile_blocks_x" / Int16ul, # * 4
         "unk_24" / Int32ul,
-        "unk_28" / Int32ul,
+        "tile_counts" / Int32ul,
         "unk_2c" / Int32ul,
         "depth_clear_val1" / Float32l,
         "stencil_clear_val1" / Int8ul,
         "context_id" / Int8ul,
         "unk_376" / Int16ul,
-        "unk_38" / Int64ul,
+        "unk_38" / Int32ul,
+        "unk_3c" / Int32ul,
         "unk_40_padding" / HexDump(Bytes(0xb0)),
         "depth_bias_array" / Start3DArrayAddr,
         "scissor_array" / Start3DArrayAddr,
         "unk_110" / Int64ul,
         "unk_118" / Int64ul,
-        "unk_120" / Array(35, Int64ul),
-        "clear_pipeline" / Start3DClearPipelineBinding,
+        "unk_120" / Array(37, Int64ul),
+        "unk_reload_pipeline" / Start3DClearPipelineBinding,
         "unk_258" / Int64ul,
         "unk_260" / Int64ul,
-        "depth_clear_pipeline" / Start3DClearPipelineBinding,
+        "unk_268" / Int64ul,
+        "unk_270" / Int64ul,
+        "reload_pipeline" / Start3DClearPipelineBinding,
         "depth_flags" / Int64ul, # 0x40000 - has stencil 0x80000 - has depth
         "unk_290" / Int64ul,
         "depth_buffer_ptr1" / Int64ul,
@@ -242,8 +246,8 @@ class Start3DStruct1(ConstructClass):
         "unk_30c" / Int32ul,
         "aux_fb" / AuxFBInfo,
         "unk_320_padding" / HexDump(Bytes(0x10)),
-        "store_pipeline" / Start3DStorePipelineBinding,
-        "depth_store_pipeline" / Start3DStorePipelineBinding,
+        "unk_partial_store_pipeline" / Start3DStorePipelineBinding,
+        "partial_store_pipeline" / Start3DStorePipelineBinding,
         "depth_clear_val2" / Float32l,
         "stencil_clear_val2" / Int8ul,
         "context_id" / Int8ul,
@@ -252,19 +256,18 @@ class Start3DStruct1(ConstructClass):
         "unk_37c" / Int32ul,
         "unk_380" / Int64ul,
         "unk_388" / Int64ul,
-        "unk_390" / Int64ul,
+        "depth_dimensions" / Int64ul,
     )
 
 class Start3DStruct2(ConstructClass):
     subcon = Struct(
         "unk_0" / Int64ul,
-        "unk_8" / Int64ul,
-        "unk_10" / Int64ul,
+        "clear_pipeline" / Start3DClearPipelineBinding,
         "unk_18" / Int64ul,
         "scissor_array" / Int64ul,
         "depth_bias_array" / Int64ul,
         "aux_fb" / AuxFBInfo,
-        "unk_40" / Int64ul,
+        "depth_dimensions" / Int64ul,
         "unk_48" / Int64ul,
         "depth_flags" / Int64ul, # 0x40000 - has stencil 0x80000 - has depth
         "depth_buffer_ptr1" / Int64ul,
@@ -272,10 +275,10 @@ class Start3DStruct2(ConstructClass):
         "stencil_buffer_ptr1" / Int64ul,
         "stencil_buffer_ptr2" / Int64ul,
         "unk_68" / Array(12, Int64ul),
-        "tvb_start_addr" / Int64ul,
-        "tvb_end_addr" / Int64ul,
+        "tvb_tilemap" / Int64ul,
+        "tvb_heapmeta_addr" / Int64ul,
         "unk_e8" / Int64ul,
-        "tvb_tilemap_addr" / Int64ul,
+        "tvb_heapmeta_addr2" / Int64ul,
         "unk_f8" / Int64ul,
         "aux_fb_ptr" / Int64ul,
         "unk_108" / Array(6, Int64ul),
@@ -316,18 +319,30 @@ class Start3DStruct6(ConstructClass):
 class Start3DStruct7(ConstructClass):
     subcon = Struct(
         "unk_0" / Int64ul,
-        "barrier1_addr" / Int64ul, # same contents as below
-        "barrier1" / ROPointer(this.barrier1_addr, BarrierCounter),
-        "barrier2_addr" / Int64ul, # same as FinalizeComputeCmd.barrier - some kind of fence/token
-        "barrier2" / ROPointer(this.barrier2_addr, BarrierCounter),
-        "barrier_tag" / Int32ul,
-        "unk_1c" / Int32ul,
+        "stamp1_addr" / Int64ul, # same contents as below
+        "stamp1" / ROPointer(this.stamp1_addr, BarrierCounter),
+        "stamp2_addr" / Int64ul, # same as FinalizeComputeCmd.stamp - some kind of fence/token
+        "stamp2" / ROPointer(this.stamp2_addr, BarrierCounter),
+        "stamp_value" / Int32ul,
+        "ev_3d" / Int32ul,
         "unk_20" / Int32ul,
         "unk_24" / Int32ul,
         "uuid" / Int32ul,
-        "prev_barrier_tag" / Int32ul,
+        "prev_stamp_value" / Int32ul,
         "unk_30" / Int32ul,
     )
+
+class Attachment(ConstructClass):
+    subcon = Struct(
+        "address" / Int64ul,
+        "unk_8" / Int32ul,
+        "unk_c" / Int32ul,
+    )
+
+    def __init__(self, addr, unk_8, unk_c):
+        self.address = addr
+        self.unk_8 = unk_8
+        self.unk_c = unk_c
 
 class Start3DCmd(ConstructClass):
     subcon = Struct( # 0x194 bytes''''
@@ -353,7 +368,7 @@ class Start3DCmd(ConstructClass):
         "unk_54" / Int32ul,
         "unk_58" / Int32ul,
         "unk_5c" / Int32ul,
-        "prev_barrier_tag" / Int64ul, # 0
+        "prev_stamp_value" / Int64ul, # 0
         "unk_68" / Int32ul, # 0
         "unk_buf_ptr" / Int64ul,
         "unk_buf2_ptr" / Int64ul, # 0x18 bytes
@@ -361,17 +376,8 @@ class Start3DCmd(ConstructClass):
         "unk_80" / Int32ul,
         "unk_84" / Int32ul,
         "uuid" / Int32ul, # uuid for tracking
-        "unkptr_8c" / Int64ul, # Userspace VA
-        "unk_94" / Int64ul, # 0x000100170000ed80
-        "unk_9c" / Int32ul,
-        "unk_a0" / Array(26, Int64ul),
-        "unk_170" / Int32ul,
-        "unk_174" / Int32ul,
-        "unk_178" / Int64ul,
-        "unk_180" / Int32ul,
-        "unk_184" / Int32ul,
-        "unk_188" / Int32ul,
-        "unk_18c" / Int32ul,
+        "attachments" / Array(16, Attachment),
+        "num_attachments" / Int32ul,
         "unk_190" / Int32ul
     )
 
@@ -381,9 +387,9 @@ class Finalize3DCmd(ConstructClass):
         "magic" / Const(0x25, Int32ul),
         "uuid" / Int32ul, # uuid for tracking
         "unk_8" / Int32ul, # 0
-        "barrier_addr" / Int64ul,
-        "barrier" / ROPointer(this.barrier_addr, BarrierCounter),
-        "barrier_tag" / Int32ul,
+        "stamp_addr" / Int64ul,
+        "stamp" / ROPointer(this.stamp_addr, BarrierCounter),
+        "stamp_value" / Int32ul,
         "unk_18" / Int32ul,
         "buf_thing_addr" / Int64ul,
         "buf_thing" / ROPointer(this.buf_thing_addr, BufferThing),
@@ -409,15 +415,16 @@ class Finalize3DCmd(ConstructClass):
 
 class TilingParameters(ConstructClass):
     subcon = Struct(
-        "unk_0" / Int32ul,
+        "size1" / Int32ul,
         "unk_4" / Int32ul,
         "unk_8" / Int32ul,
-        "x_max" / Int16ul,
-        "y_max" / Int16ul,
-        "unk_10" / Int32ul,
-        "unk_14" / Int64ul,
-        "unk_1c" / Int32ul,
-        "unk_20" / Int32ul,
+        "x_max" / Dec(Int16ul),
+        "y_max" / Dec(Int16ul),
+        "tile_count" / Int32ul,
+        "x_blocks" / Int32ul,
+        "y_blocks" / Int32ul,
+        "size2" / Int32ul,
+        "size3" / Int32ul,
         "unk_24" / Int32ul,
         "unk_28" / Int32ul,
     )
@@ -427,17 +434,17 @@ class StartTACmdStruct2(ConstructClass):
         "unk_0" / Hex(Int64ul),
         "unk_8" / Hex(Int32ul),
         "unk_c" / Hex(Int32ul),
-        "tvb_start_addr" / Hex(Int64ul), # like Start3DStruct2.tvb_start_addr
+        "tvb_tilemap" / Hex(Int64ul),
         "unkptr_18" / Hex(Int64ul),
         "unkptr_20" / Hex(Int64ul),
-        "tvb_end_addr" / Hex(Int64ul), # like Start3DStruct2.tvb_end_addr with bit 63 set?
+        "tvb_heapmeta_addr" / Hex(Int64ul), # like Start3DStruct2.tvb_end_addr with bit 63 set?
         "iogpu_unk_54" / Int32ul,
         "iogpu_unk_55" / Int32ul,
         "iogpu_unk_56" / Int64ul,
         "unk_40" / Int64ul,
         "unk_48" / Int64ul,
         "unk_50" / Int64ul,
-        "tvb_tilemap_addr" / Int64ul, # like Start3DStruct2.unkptr_e0/f0
+        "tvb_heapmeta_addr" / Int64ul, # like Start3DStruct2.unkptr_e0/f0
         "unk_60" / Int64ul,
         "unk_68" / Int64ul,
         "iogpu_deflake_1" / Int64ul,
@@ -480,11 +487,11 @@ class StartTACmdStruct3(ConstructClass):
         "unknown_buffer" / Int64ul,
         "unk_548" / Int64ul,
         "unk_550" / Array(6, Int32ul),
-        "barrier1_addr" / Int64ul, # same contents as below
-        "barrier1" / ROPointer(this.barrier1_addr, BarrierCounter),
-        "barrier2_addr" / Int64ul, # same as FinalizeComputeCmd.barrier - some kind of fence/token
-        "barrier2" / ROPointer(this.barrier2_addr, BarrierCounter),
-        "barrier_tag" / Int32ul,
+        "stamp1_addr" / Int64ul, # same contents as below
+        "stamp1" / ROPointer(this.stamp1_addr, BarrierCounter),
+        "stamp2_addr" / Int64ul, # same as FinalizeComputeCmd.stamp - some kind of fence/token
+        "stamp2" / ROPointer(this.stamp2_addr, BarrierCounter),
+        "stamp_value" / Int32ul,
         "ev_ta" / Int32ul,
         "unk_580" / Int32ul,
         "unk_584" / Int32ul,
@@ -544,9 +551,9 @@ class FinalizeTACmd(ConstructClass):
         "struct3" / ROPointer(this.struct3_addr, StartTACmdStruct3),
         "unk_34" / Int32ul,
         "uuid" / Int32ul,
-        "barrier_addr" / Int64ul,
-        "barrier" / ROPointer(this.barrier_addr, BarrierCounter),
-        "barrier_tag" / Int32ul,
+        "stamp_addr" / Int64ul,
+        "stamp" / ROPointer(this.stamp_addr, BarrierCounter),
+        "stamp_value" / Int32ul,
         "unk_48" / Int64ul,
         "unk_50" / Int32ul,
         "unk_54" / Int32ul,
@@ -602,11 +609,11 @@ class ComputeInfo2(ConstructClass):
         unk_80 = Int32ul,
         unk_84 = Int32ul,
         unk_88 = Int32ul,
-        barrier1_addr = Int64ul, # same contents as below
-        barrier1 = ROPointer(this.barrier1_addr, Hex(Int32ul)),
-        barrier2_addr = Int64ul, # same as FinalizeComputeCmd.barrier - some kind of fence/token
-        barrier2 = ROPointer(this.barrier2_addr, Hex(Int32ul)),
-        barrier_tag = Int32ul,
+        stamp1_addr = Int64ul, # same contents as below
+        stamp1 = ROPointer(this.stamp1_addr, Hex(Int32ul)),
+        stamp2_addr = Int64ul, # same as FinalizeComputeCmd.stamp - some kind of fence/token
+        stamp2 = ROPointer(this.stamp2_addr, Hex(Int32ul)),
+        stamp_value = Int32ul,
         unk_a0 = Int32ul,
         unk_a4 = Int32ul,
         unk_a8 = Int32ul,
@@ -655,8 +662,8 @@ class FinalizeComputeCmd(ConstructClass):
         "unkptr_1c" / Int64ul, # same as ComputeStartCmd.unkptr_3c
         "unk_24" / Int32ul,
         "uuid" / Int32ul,  # uuid for tracking?
-        "barrier" / Int64ul,
-        "barrier_tag" / Int32ul, # Gets written to unkptr_2c (after barrier?)
+        "stamp" / Int64ul,
+        "stamp_value" / Int32ul, # Gets written to unkptr_2c (after stamp?)
         "unk_38" / Int32ul,
         "unk_3c" / Int32ul,
         "unk_40" / Int32ul,
@@ -727,7 +734,7 @@ class NopCmd(ConstructClass):
         return "Nop"
 
 
-class ControlList(ConstructValueClass):
+class MicroSequence(ConstructValueClass):
     subcon = RepeatUntil(lambda obj, lst, ctx: lst[-1].cmdid == 0x18,
                          Struct(
             "cmdid" / Peek(Int8ul),

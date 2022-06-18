@@ -4,7 +4,7 @@ from ..malloc import Heap
 from construct.core import *
 from ..fw.agx.channels import *
 from ..fw.agx.cmdqueue import *
-from ..fw.agx.controllist import *
+from ..fw.agx.microsequence import *
 from ..hw.uat import MemoryAttr
 from .object import *
 import textwrap
@@ -142,7 +142,7 @@ class GPUMicroSequence:
 
     def dump(self):
         chexdump(self.agx.iface.readmem(self.obj._paddr, self.size))
-        print(ControlList.parse_stream(self.agx.uat.iostream(0, self.obj._addr)))
+        print(MicroSequence.parse_stream(self.agx.uat.iostream(0, self.obj._addr)))
 
     def __str__(self):
         s = f"GPUMicroSequence: {len(self.ops)} ops\n"

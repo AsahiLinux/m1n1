@@ -205,18 +205,21 @@ class FWLogMsg(ConstructClass):
         "msg" / PaddedString(0xc8, "ascii")
     )
 
+class FaultMsg(ConstructClass):
+    subcon = Struct (
+        "msg_type" / Hex(Const(0, Int32ul)),
+        "unk_4" / HexDump(Bytes(0x34)),
+    )
+
 class FlagMsg(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(1, Int32ul)),
-        "firing" / Hex(Int32ul),
-        "unk_8" / Hex(Int32ul),
-        "unk_c" / Hex(Int32ul),
-        "unk_10" / Hex(Int32ul),
+        "firing" / Array(2, Hex(Int64ul)),
         "unk_14" / Hex(Int16ul),
-        "unkpad_16" / HexDump(Bytes(0x38 - 0x16)),
+        Padding(0x38 - 0x16), # confirmed
     )
 
-class FaultMsg(ConstructClass):
+class Fault2Msg(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(4, Int32ul)),
         "index" / Hex(Int32ul),
@@ -226,7 +229,9 @@ class FaultMsg(ConstructClass):
     )
 
 EventMsg = FixedSized(0x38, Select(
+    FaultMsg,
     FlagMsg,
+    Fault2Msg,
     HexDump(Bytes(0x38)),
 ))
 

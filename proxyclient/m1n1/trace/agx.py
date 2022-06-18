@@ -7,7 +7,7 @@ from ..hw.uat import UAT, MemoryAttr, PTE, Page_PTE, TTBR
 from ..fw.agx.initdata import InitData as NewInitData
 from ..fw.agx.channels import *
 from ..fw.agx.cmdqueue import *
-from ..fw.agx.controllist import *
+from ..fw.agx.microsequence import *
 
 from m1n1.proxyutils import RegMonitor
 from m1n1.constructutils import *
@@ -615,7 +615,7 @@ class AGXTracer(ASCTracer):
             self.log(f"  unkptr_45c @ {wi0.unkptr_45c:#x}:")
             chexdump(read(wi0.unkptr_45c, 0x1800), print_fn=self.log)
 
-            for i in wi0.controllist.value:
+            for i in wi0.microsequence.value:
                 i = i.cmd
                 if isinstance(i, StartTACmd):
                     self.log(f"  # StartTACmd")
@@ -651,7 +651,7 @@ class AGXTracer(ASCTracer):
                 return self.uat.ioread(context, off, size)
 
             self.log(f" context_id = {context:#x}")
-            cmd3d = wi1.controllist.value[0].cmd
+            cmd3d = wi1.microsequence.value[0].cmd
 
             self.log(f" 3D:")
             self.log(f"  struct1 @ {cmd3d.struct1_addr:#x}: {cmd3d.struct1!s}")
@@ -681,7 +681,7 @@ class AGXTracer(ASCTracer):
             self.log(f"  unk_buf2_ptr @ {cmd3d.unk_buf2_ptr:#x}:")
             chexdump(kread(cmd3d.unk_buf2_ptr, 0x18), print_fn=self.log)
 
-            for i in wi1.controllist.value:
+            for i in wi1.microsequence.value:
                 i = i.cmd
                 if not isinstance(i, Finalize3DCmd):
                     continue
@@ -735,7 +735,7 @@ class AGXTracer(ASCTracer):
 
         self.log("StartComputeCmd:")
         try:
-            ccmd = wi.controllist.value[0].cmd
+            ccmd = wi.microsequence.value[0].cmd
         except:
             self.log(" MISSING!")
             return

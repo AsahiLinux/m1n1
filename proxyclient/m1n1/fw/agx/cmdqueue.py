@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 from m1n1.constructutils import *
 from construct import *
-from .controllist import *
+from .microsequence import *
 from ...utils import RegMap, Register32
 
 __all__ = []
@@ -17,11 +17,11 @@ class WorkCommandBarrier(ConstructClass):
     """
     subcon = Struct(
         "magic" / Const(0x4, Int32ul),
-        "barrier_addr" / Int64ul,
-        "barrier" / ROPointer(this.barrier_addr, Int32ul),
-        "barrier_tag1" / Int32ul,
-        "event" / Int32ul, # Event number that signals a barrier check
-        "barrier_tag2" / Int32ul,
+        "stamp_addr" / Int64ul,
+        "stamp" / ROPointer(this.stamp_addr, Int32ul),
+        "stamp_value1" / Int32ul,
+        "event" / Int32ul, # Event number that signals a stamp check
+        "stamp_value2" / Int32ul,
         "uuid" / Int32ul,
         "unk" / Default(Int32ul, 0),
     )
@@ -42,13 +42,14 @@ class WorkCommandInitBM(ConstructClass):
         "unk_10" / Hex(Int32ul), # 0x30
         "buffer_mgr_addr" / Int64ul,
         "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
-        "barrier_tag" / Hex(Int32ul),  # 0x100
+        "stamp_value" / Hex(Int32ul),  # 0x100
     )
 
-class WorkCommandSubC(ConstructClass):
+class EventControl(ConstructClass):
     subcon = Struct(
-        "unkptr_0" / Int64ul,
-        "unk_8" / Int32ul,
+        "event_count_addr" / Int64ul,
+        "event_count" / ROPointer(this.event_count_addr, Int32ul),
+        "base_stamp" / Int32ul,
         "unk_c" / Int32ul,
         "unk_10" / Int64ul,
         "unk_18" / Int64ul,
@@ -79,6 +80,7 @@ class WorkCommandSubC(ConstructClass):
         self.unk_94 = 0
         self.unk_98 = 0
         self.context_ptr = 0
+
 class WorkCommandCP(ConstructClass):
     """
     For compute
@@ -109,23 +111,23 @@ class WorkCommandCP(ConstructClass):
         "magic" / Const(0x3, Hex(Int32ul)),
         "unk_4" / Hex(Int32ul),
         "context_id" / Hex(Int32ul),
-        "unkptr_c" / Hex(Int64ul),
-        "unk_c" / ROPointer(this.unkptr_c, WorkCommandSubC),
+        "event_control_addr" / Hex(Int64ul),
+        "event_control" / ROPointer(this.event_control_addr, EventControl),
 
         # This struct embeeds some data that the Control List has pointers back to, but doesn't
         # seem to be actually part of this struct
         Padding(0x1e8 - 0x14),
 
         # offset 000001e8
-        "controllist_ptr" / Hex(Int64ul),
-        "controllist_size" / Hex(Int32ul),
-        "controllist" / ROPointer(this.controllist_ptr, ControlList),
+        "microsequence_ptr" / Hex(Int64ul),
+        "microsequence_size" / Hex(Int32ul),
+        "microsequence" / ROPointer(this.microsequence_ptr, MicroSequence),
     )
 
     def __str__(self) -> str:
         str = super().__str__(ignore=['magic'])
-        str += f"   Control List - {self.controllist_size:#x} bytes @ {self.controllist_ptr:#x}:\n"
-        str += textwrap.indent(repr(self.controllist), ' ' * 3)
+        str += f"   Control List - {self.microsequence_size:#x} bytes @ {self.microsequence_ptr:#x}:\n"
+        str += textwrap.indent(repr(self.microsequence), ' ' * 3)
         return str
 
 class WorkCommand0_UnkBuf(ConstructValueClass):
@@ -178,26 +180,27 @@ class WorkCommand3D(ConstructClass):
         "magic" / Const(0x1, Hex(Int32ul)),
         "context_id" / Hex(Int32ul),
         "unk_8" / Hex(Int32ul),
-        "controllist_ptr" / Hex(Int64ul), # Command list
-        "controllist_size" / Hex(Int32ul),
-        "controllist" / ROPointer(this.controllist_ptr, ControlList),
-        "unkptr_18" / Hex(Int64ul),
-        "unk_18" / ROPointer(this.unkptr_18, WorkCommandSubC),
+        "microsequence_ptr" / Hex(Int64ul), # Command list
+        "microsequence_size" / Hex(Int32ul),
+        "microsequence" / ROPointer(this.microsequence_ptr, MicroSequence),
+        "event_control_addr" / Hex(Int64ul),
+        "event_control" / ROPointer(this.event_control_addr, EventControl),
         "buffer_mgr_addr" / Int64ul,
         "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
         "buf_thing_addr" / Int64ul,
         "buf_thing" / ROPointer(this.buf_thing_addr, BufferThing),
         "unk_emptybuf_addr" / Hex(Int64ul),
-        "tvb_addr" / Hex(Int64ul),
+        "tvb_tilemap" / Hex(Int64ul),
         "unk_40" / Hex(Int64ul),
         "unk_48" / Hex(Int32ul),
-        "unk_4c" / Hex(Int32ul),
+        "tile_blocks_y" / Hex(Int16ul), # * 4
+        "tile_blocks_x" / Hex(Int16ul), # * 4
         "unk_50" / Hex(Int64ul),
         "unk_58" / Hex(Int64ul),
         "uuid1" / Hex(Int32ul), # same across repeated submits
         "uuid2" / Hex(Int32ul), # same across repeated submits
         "unk_68" / Hex(Int64ul),
-        "unk_70" / Hex(Int64ul),
+        "tile_count" / Hex(Int64ul),
 
         # Embedded structures that are also pointed to by other stuff
         "struct_2" / Start3DStruct2,
@@ -219,8 +222,8 @@ class WorkCommand3D(ConstructClass):
 
     def __str__(self) -> str:
         str = super().__str__()
-        # str += f"   Control List - {self.controllist_size:#x} bytes @ {self.controllist_ptr:#x}:\n"
-        # str += textwrap.indent(repr(self.controllist), ' ' * 3)
+        # str += f"   Control List - {self.microsequence_size:#x} bytes @ {self.microsequence_ptr:#x}:\n"
+        # str += textwrap.indent(repr(self.microsequence), ' ' * 3)
         return str
 
 class WorkCommand0_UnkBuf(ConstructValueClass):
@@ -257,8 +260,8 @@ class WorkCommandTA(ConstructClass):
         "magic" / Const(0x0, Hex(Int32ul)),
         "context_id" / Hex(Int32ul),
         "unk_8" / Hex(Int32ul),
-        "unkptr_c" / Hex(Int64ul),
-        "unk_c" / ROPointer(this.unkptr_c, WorkCommandSubC),
+        "event_control_addr" / Hex(Int64ul),
+        "event_control" / ROPointer(this.event_control_addr, EventControl),
         "unk_14" / Hex(Int64ul),
         "buffer_mgr_addr" / Int64ul,
         "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
@@ -275,11 +278,11 @@ class WorkCommandTA(ConstructClass):
 
         "unkptr_45c" / Int64ul,
         "tvb_size" / Int64ul,
-        "controllist_ptr" / Hex(Int64ul),
-        "controllist_size" / Hex(Int32ul),
-        "controllist" / ROPointer(this.controllist_ptr, ControlList),
+        "microsequence_ptr" / Hex(Int64ul),
+        "microsequence_size" / Hex(Int32ul),
+        "microsequence" / ROPointer(this.microsequence_ptr, MicroSequence),
         "ev_3d" / Int32ul,
-        "barrier_tag" / Int32ul,
+        "stamp_value" / Int32ul,
 
         "struct_3" / StartTACmdStruct3, # 0x114 bytes
 
@@ -299,8 +302,8 @@ class WorkCommandTA(ConstructClass):
 
     def __str__(self) -> str:
         str = super().__str__(ignore=['magic'])
-        #str += f"   Control List - {self.controllist_size:#x} bytes @ {self.controllist_ptr:#x}:\n"
-        #str += textwrap.indent(repr(self.controllist), ' ' * 3)
+        #str += f"   Control List - {self.microsequence_size:#x} bytes @ {self.microsequence_ptr:#x}:\n"
+        #str += textwrap.indent(repr(self.microsequence), ' ' * 3)
         return str
 
 class UnknownWorkCommand(ConstructClass):
@@ -399,7 +402,7 @@ class CommandQueueInfo(ConstructClass):
         "context_info_addr" / Hex(Int64ul), # ffffffa000000000, size 0x18 (shared by 3D and TA)
         "context_info" / ROPointer(this.context_info_addr, ContextInfo),
         "gpu_buf_addr" / Hex(Int64ul), # GPU space for this queue, 0x2c18 bytes?
-        "gpu_buf" / ROPointer(this.gpu_buf_addr, HexDump(Bytes(0x2c18))),
+        #"gpu_buf" / ROPointer(this.gpu_buf_addr, HexDump(Bytes(0x2c18))),
         "gpu_rptr1" / Hex(Int32ul),
         "gpu_rptr2" / Hex(Int32ul),
         "gpu_rptr3" / Hex(Int32ul),
