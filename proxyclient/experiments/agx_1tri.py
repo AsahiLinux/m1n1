@@ -41,7 +41,7 @@ mon.add(sgx.gfx_handoff_base, sgx.gfx_handoff_size, "gfx-handoff")
 addr, size = u.adt["/arm-io/aic"].get_reg(0)
 mon.add(addr, size, "aic")
 
-def unswizzle(addr, w, h, psize):
+def unswizzle(addr, w, h, psize, dump=None, grid=False):
     tw = 64
     th = 64
     ntx = (w + tw - 1) // 64
@@ -63,8 +63,15 @@ def unswizzle(addr, w, h, psize):
                 ((j & 16) << 4) | ((i & 16) << 5) |
                 ((j & 32) << 5) | ((i & 32) << 6))
             r,g,b,a = data[toff + psize*off: toff + psize*(off+1)]
+            if grid:
+                if x % 64 == 0 or y % 64 == 0:
+                    r,g,b,a = 255,255,255,255
+                elif x % 32 == 0 or y % 32 == 0:
+                    r,g,b,a = 128,128,128,255
             new_data.append(bytes([b, g, r, a]))
     data = b"".join(new_data)
+    if dump:
+        open(dump, "wb").write(data)
     iface.writemem(addr, data)
 
 try:
@@ -107,13 +114,14 @@ try:
     #p.write32(0x204000000 + 0xd14000, 0x70001)
 
     #base = "gpudata/1tri/"
-    base = "gpudata/mesa-flag/"
+    #base = "gpudata/mesa-flag/"
+    base = "gpudata/bunny/"
     ctx.load_blob(0x1100000000, True, base + "mem_0_0.bin")
     ctx.load_blob(0x1100008000, True, base + "mem_8000_0.bin")
     ctx.load_blob(0x1100010000, True, base + "mem_10000_0.bin")
     ctx.load_blob(0x1100058000, True, base + "mem_58000_0.bin")
     ctx.load_blob(0x1100060000, True, base + "mem_60000_0.bin")
-    ctx.load_blob(0x1100068000, True, base + "mem_68000_0.bin")
+    #ctx.load_blob(0x1100068000, True, base + "mem_68000_0.bin")
     ctx.load_blob(0x1500000000, False, base + "mem_1500000000_0.bin")
     ctx.load_blob(0x1500048000, False, base + "mem_1500048000_0.bin")
     ctx.load_blob(0x15000d0000, False, base + "mem_15000d0000_0.bin")
@@ -122,13 +130,33 @@ try:
     ctx.load_blob(0x15001e8000, False, base + "mem_15001e8000_0.bin")
     ctx.load_blob(0x15001f0000, False, base + "mem_15001f0000_0.bin")
     ctx.load_blob(0x15001f8000, False, base + "mem_15001f8000_0.bin")
-    ctx.load_blob(0x1500490000, False, base + "mem_1500490000_0.bin")
-    ctx.load_blob(0x1500518000, False, base + "mem_1500518000_0.bin")
-    color = ctx.buf_at(0x1500200000, False, 1310720, "Color", track=False)
-    depth = ctx.buf_at(0x1500348000, False, 1310720, "Depth", track=False)
+    #ctx.load_blob(0x1500490000, False, base + "mem_1500490000_0.bin")
+    #ctx.load_blob(0x1500518000, False, base + "mem_1500518000_0.bin")
+    #color = ctx.buf_at(0x1500200000, False, 1310720, "Color", track=False)
+    #depth = ctx.buf_at(0x1500348000, False, 1310720, "Depth", track=False)
+    color = ctx.buf_at(0x1500200000, False, 2129920, "Color", track=False)
+    depth = ctx.buf_at(0x1500410000, False, 2129920, "Depth", track=False)
+    ctx.load_blob(0x1500620000, False, base + "mem_1500620000_0.bin", track=False)
+    ctx.load_blob(0x1500890000, False, base + "mem_1500890000_0.bin", track=False)
+
+    mon.poll()
+
+    p.memset32(color._paddr, 0xdeadbeef, color._size)
+    p.memset32(depth._paddr, 0xdeadbeef, depth._size)
+
+    stencil = ctx.buf_at(0x1510410000, False, 2129920, "Stencil", track=False)
+
+    width = 800
+    height = 600
+
+    width_a = align_up(width, 64)
+    height_a = align_up(height, 64)
+
+    depth_addr = depth._addr
 
     ##### Initialize buffer manager
 
+    #buffer_mgr = GPUBufferManager(agx, ctx, 26)
     buffer_mgr = GPUBufferManager(agx, ctx, 8)
 
     ##### Initialize work queues
@@ -136,54 +164,78 @@ try:
     wq_3d = GPU3DWorkQueue(agx, ctx)
     wq_ta = GPUTAWorkQueue(agx, ctx)
 
-    ##### TA barriers
+    ##### TA stamps
 
     #Message 1: DAG: Non Sequential Stamp Updates seen entryIdx 0x41 roots.dag 0x1 stampIdx 0x7 stampValue 0x4100 channel 0xffffffa000163f58 channelRingCommandIndex 0x1
 
-    prev_barrier_tag = 0x4000
-    barrier_tag = 0x4100
+    prev_stamp_value = 0x4000
+    stamp_value = 0x4100
 
     # start?
-    barrier_ta1 = agx.kshared.new(BarrierCounter, name="TA barrier 1")
-    barrier_ta1.value = prev_barrier_tag
-    barrier_ta1.push()
+    stamp_ta1 = agx.kshared.new(BarrierCounter, name="TA stamp 1")
+    stamp_ta1.value = prev_stamp_value
+    stamp_ta1.push()
 
     # complete?
-    barrier_ta2 = agx.kobj.new(BarrierCounter, name="TA barrier 2")
-    barrier_ta2.value = prev_barrier_tag
-    barrier_ta2.push()
+    stamp_ta2 = agx.kobj.new(BarrierCounter, name="TA stamp 2")
+    stamp_ta2.value = prev_stamp_value
+    stamp_ta2.push()
 
-    ##### 3D barriers
+    ##### 3D stamps
 
     # start?
-    barrier_3d1 = agx.kshared.new(BarrierCounter, name="3D barrier 1")
-    barrier_3d1.value = prev_barrier_tag
-    barrier_3d1.push()
+    stamp_3d1 = agx.kshared.new(BarrierCounter, name="3D stamp 1")
+    stamp_3d1.value = prev_stamp_value
+    stamp_3d1.push()
 
     # complete?
-    barrier_3d2 = agx.kobj.new(BarrierCounter, name="3D barrier 2")
-    barrier_3d2.value = prev_barrier_tag
-    barrier_3d2.push()
+    stamp_3d2 = agx.kobj.new(BarrierCounter, name="3D stamp 2")
+    stamp_3d2.value = prev_stamp_value
+    stamp_3d2.push()
 
     ##### Some kind of feedback/status buffer, GPU managed?
 
-    fb_buf = agx.kobj.new(WorkCommandSubC)
-    fb_buf.unkptr_0 = agx.kobj.buf(4, "fb_buf")
-    fb_buf.unk_8 = 0
-    fb_buf.unk_c = 0
-    fb_buf.unk_10 = 0x50
-    fb_buf.push()
+    event_control = agx.kobj.new(EventControl)
+    event_control.event_count = agx.kobj.new(Int32ul, "Event Count")
+    event_control.base_stamp = 0x15 #0
+    event_control.unk_c = 0
+    event_control.unk_10 = 0x50
+    event_control.push()
 
-    ##### TVB allocations
+    ##### TVB allocations / Tiler config
 
-    tvb_something_size = 0x1000
-    tvb_something = ctx.uobj.buf(tvb_something_size, "TVB Something")
+    tile_width = 32
+    tile_height = 32
+    tiles_x = ((width + tile_width - 1) // tile_width)
+    tiles_y = ((height + tile_height - 1) // tile_height)
+    tiles = tiles_x * tiles_y
 
-    tvb_list_size = 0x4000
-    tvb_list = ctx.uobj.buf(tvb_list_size, "TVB List")
+    tile_blocks_x = (tiles_x + 15) // 16
+    tile_blocks_y = (tiles_y + 15) // 16
+    tile_blocks = tile_blocks_x * tile_blocks_y
 
-    tvb_tilemap_size = 0x4000
-    tvb_tilemap = ctx.uobj.buf(tvb_tilemap_size, "TVB Tilemap")
+    tiling_params = TilingParameters()
+    tiling_params.size1 = 0x14 * tile_blocks
+    tiling_params.unk_4 = 0x88
+    tiling_params.unk_8 = 0x202
+    tiling_params.x_max = width - 1
+    tiling_params.y_max = height - 1
+    tiling_params.tile_count = ((tiles_y-1) << 12) | (tiles_x-1)
+    tiling_params.x_blocks = (12 * tile_blocks_x) | (tile_blocks_x << 12) | (tile_blocks_x << 20)
+    tiling_params.y_blocks = (12 * tile_blocks_y) | (tile_blocks_y << 12) | (tile_blocks_y << 20)
+    tiling_params.size2 = 0x10 * tile_blocks
+    tiling_params.size3 = 0x20 * tile_blocks
+    tiling_params.unk_24 = 0x100
+    tiling_params.unk_28 = 0x8000
+
+    tvb_something_size = 0x800 * tile_blocks
+    tvb_something = ctx.uobj.new_buf(tvb_something_size, "TVB Something")
+
+    tvb_tilemap_size = 0x800 * tile_blocks
+    tvb_tilemap = ctx.uobj.new_buf(tvb_tilemap_size, "TVB Tilemap")
+
+    tvb_heapmeta_size = 0x4000
+    tvb_heapmeta = ctx.uobj.new_buf(tvb_heapmeta_size, "TVB Heap Meta")
 
     ##### Buffer stuff?
 
@@ -210,15 +262,15 @@ try:
     ev_3d = 7
 
     barrier_cmd = agx.kobj.new(WorkCommandBarrier)
-    barrier_cmd.barrier = barrier_ta2
-    barrier_cmd.barrier_tag1 = 0x4100
-    barrier_cmd.barrier_tag2 = 0x4100
+    barrier_cmd.stamp = stamp_ta2
+    barrier_cmd.stamp_value1 = 0x4100
+    barrier_cmd.stamp_value2 = 0x4100
     barrier_cmd.event = ev_ta
     barrier_cmd.uuid = uuid_3d
 
 
-    #barrier.add_to_mon(mon)
-    #barrier2.add_to_mon(mon)
+    #stamp.add_to_mon(mon)
+    #stamp2.add_to_mon(mon)
 
     print(barrier_cmd)
 
@@ -229,20 +281,21 @@ try:
     wc_3d = agx.kobj.new(WorkCommand3D)
     wc_3d.context_id = ctx_id
     wc_3d.unk_8 = 0
-    wc_3d.unk_18 = fb_buf
+    wc_3d.event_control = event_control
     wc_3d.buffer_mgr = buffer_mgr.info
     wc_3d.buf_thing = buf_desc
     wc_3d.unk_emptybuf_addr = agx.kobj.buf(0x100, "unk_emptybuf")
-    wc_3d.tvb_addr = tvb_list
+    wc_3d.tvb_tilemap = tvb_tilemap._addr
     wc_3d.unk_40 = 0x88
     wc_3d.unk_48 = 0x1
-    wc_3d.unk_4c = 0x80004
+    wc_3d.tile_blocks_y = tile_blocks_y * 4
+    wc_3d.tile_blocks_x = tile_blocks_x * 4
     wc_3d.unk_50 = 0x0
     wc_3d.unk_58 = 0x0
     wc_3d.uuid1 = 0x3b315cae
     wc_3d.uuid2 = 0x3b6c7b92
     wc_3d.unk_68 = 0x0
-    wc_3d.unk_70 = 0x12c
+    wc_3d.tile_count = tiles
 
     wc_3d.unk_buf = WorkCommand1_UnkBuf()
     wc_3d.unk_word = BarrierCounter()
@@ -261,49 +314,53 @@ try:
     # Structures embedded in WorkCommand3D
     if True:
         wc_3d.struct_1 = Start3DStruct1()
-        wc_3d.struct_1.unk_4 = 0x1e004
+        wc_3d.struct_1.store_pipeline_addr = 0x14004 # CHECKED
         wc_3d.struct_1.unk_8 = 0x0
         wc_3d.struct_1.unk_c = 0x0
         wc_3d.struct_1.uuid1 = wc_3d.uuid1
         wc_3d.struct_1.uuid2 = wc_3d.uuid2
         wc_3d.struct_1.unk_18 = 0x0
-        wc_3d.struct_1.unk_20 = 0x80004
+        wc_3d.struct_1.tile_blocks_y = tile_blocks_y * 4
+        wc_3d.struct_1.tile_blocks_x = tile_blocks_x * 4
         wc_3d.struct_1.unk_24 = 0x0
-        wc_3d.struct_1.unk_28 = 0xe013
-        wc_3d.struct_1.unk_2c = 0x4
-        wc_3d.struct_1.depth_clear_val1 = 1.0
+        wc_3d.struct_1.tile_counts = ((tiles_y-1) << 12) | (tiles_x-1)
+        wc_3d.struct_1.unk_2c = 0x8
+        wc_3d.struct_1.depth_clear_val1 = 1.0 # works
         wc_3d.struct_1.stencil_clear_val1 = 0x0
-        wc_3d.struct_1.unk_38 = 0x100000000
+        wc_3d.struct_1.unk_38 = 0x0
+        wc_3d.struct_1.unk_3c = 0x1
         wc_3d.struct_1.unk_40_padding = bytes(0xb0)
         wc_3d.struct_1.depth_bias_array = Start3DArrayAddr(0x1500158000)
         wc_3d.struct_1.scissor_array = Start3DArrayAddr(0x15000d0000)
         wc_3d.struct_1.unk_110 = 0x0
         wc_3d.struct_1.unk_118 = 0x0
-        wc_3d.struct_1.unk_120 = [0] * 35
-        wc_3d.struct_1.clear_pipeline = Start3DClearPipelineBinding(0xffff8002, 0x1c004)
+        wc_3d.struct_1.unk_120 = [0] * 37
+        wc_3d.struct_1.unk_reload_pipeline = Start3DStorePipelineBinding(0xffff8212, 0xfffffff4)
         wc_3d.struct_1.unk_258 = 0
         wc_3d.struct_1.unk_260 = 0
-        wc_3d.struct_1.depth_clear_pipeline = Start3DClearPipelineBinding(0xffff8212, 0x1d004)
-        wc_3d.struct_1.depth_flags = 0x80000
+        wc_3d.struct_1.unk_268 = 0
+        wc_3d.struct_1.unk_270 = 0
+        wc_3d.struct_1.reload_pipeline = Start3DClearPipelineBinding(0xffff8212, 0x13004) # CHECKED
+        wc_3d.struct_1.depth_flags = 0x00000
         wc_3d.struct_1.unk_290 = 0x0
-        wc_3d.struct_1.depth_buffer_ptr1 = 0x1500348000
+        wc_3d.struct_1.depth_buffer_ptr1 = depth_addr
         wc_3d.struct_1.unk_2a0 = 0x0
         wc_3d.struct_1.unk_2a8 = 0x0
-        wc_3d.struct_1.depth_buffer_ptr2 = 0x1500348000
-        wc_3d.struct_1.depth_buffer_ptr3 = 0x1500348000
+        wc_3d.struct_1.depth_buffer_ptr2 = depth_addr
+        wc_3d.struct_1.depth_buffer_ptr3 = depth_addr
         wc_3d.struct_1.unk_2c0 = 0x0
-        wc_3d.struct_1.stencil_buffer_ptr1 = 0x0
+        wc_3d.struct_1.stencil_buffer_ptr1 = stencil._addr
         wc_3d.struct_1.unk_2d0 = 0x0
         wc_3d.struct_1.unk_2d8 = 0x0
-        wc_3d.struct_1.stencil_buffer_ptr2 = 0x0
-        wc_3d.struct_1.stencil_buffer_ptr3 = 0x0
+        wc_3d.struct_1.stencil_buffer_ptr2 = stencil._addr
+        wc_3d.struct_1.stencil_buffer_ptr3 = stencil._addr
         wc_3d.struct_1.unk_2f0 = [0x0, 0x0, 0x0]
         wc_3d.struct_1.aux_fb_unk0 = 0x4
         wc_3d.struct_1.unk_30c = 0x0
-        wc_3d.struct_1.aux_fb = AuxFBInfo(0xc000, 0, 640, 480)
+        wc_3d.struct_1.aux_fb = AuxFBInfo(0xc000, 0, width, height)
         wc_3d.struct_1.unk_320_padding = bytes(0x10)
-        wc_3d.struct_1.store_pipeline = Start3DStorePipelineBinding(0x12, 0x1e004)
-        wc_3d.struct_1.depth_store_pipeline = Start3DStorePipelineBinding(0x12, 0x1e004)
+        wc_3d.struct_1.unk_partial_store_pipeline = Start3DStorePipelineBinding(0xffff8212, 0xfffffff4)
+        wc_3d.struct_1.partial_store_pipeline = Start3DStorePipelineBinding(0x12, 0x14004) # CHECKED
         wc_3d.struct_1.depth_clear_val2 = 1.0
         wc_3d.struct_1.stencil_clear_val2 = 0x0
         wc_3d.struct_1.context_id = ctx_id
@@ -312,31 +369,30 @@ try:
         wc_3d.struct_1.unk_37c = 0x0
         wc_3d.struct_1.unk_380 = 0x0
         wc_3d.struct_1.unk_388 = 0x0
-        wc_3d.struct_1.unk_390 = 0xef827f
+        wc_3d.struct_1.depth_dimensions = 0x12b831f #0xef827f
 
     if True:
         wc_3d.struct_2 = Start3DStruct2()
         wc_3d.struct_2.unk_0 = 0xa000
-        wc_3d.struct_2.unk_8 = 0xffff8002
-        wc_3d.struct_2.unk_10 = 0x1c004
+        wc_3d.struct_2.clear_pipeline = Start3DClearPipelineBinding(0xffff8002, 0x12004)
         wc_3d.struct_2.unk_18 = 0x88
         wc_3d.struct_2.scissor_array = 0x15000d0000
         wc_3d.struct_2.depth_bias_array = 0x1500158000
         wc_3d.struct_2.aux_fb =  wc_3d.struct_1.aux_fb
-        wc_3d.struct_2.unk_40 = wc_3d.struct_1.unk_390
+        wc_3d.struct_2.depth_dimensions = wc_3d.struct_1.depth_dimensions
         wc_3d.struct_2.unk_48 = 0x0
-        wc_3d.struct_2.depth_flags = 0x80000
-        wc_3d.struct_2.depth_buffer_ptr1 = 0x1500348000
-        wc_3d.struct_2.depth_buffer_ptr2 = 0x1500348000
-        wc_3d.struct_2.stencil_buffer_ptr1 = 0x0
-        wc_3d.struct_2.stencil_buffer_ptr2 = 0x0
+        wc_3d.struct_2.depth_flags = wc_3d.struct_1.depth_flags
+        wc_3d.struct_2.depth_buffer_ptr1 = depth_addr
+        wc_3d.struct_2.depth_buffer_ptr2 = depth_addr
+        wc_3d.struct_2.stencil_buffer_ptr1 = stencil._addr
+        wc_3d.struct_2.stencil_buffer_ptr2 = stencil._addr
         wc_3d.struct_2.unk_68 = [0] * 12
-        wc_3d.struct_2.tvb_start_addr = tvb_list
-        wc_3d.struct_2.tvb_end_addr = tvb_tilemap
-        wc_3d.struct_2.unk_e8 = 0xa0000000
-        wc_3d.struct_2.tvb_tilemap_addr = tvb_tilemap
-        wc_3d.struct_2.unk_f8 = 0x10280
-        wc_3d.struct_2.aux_fb_ptr = 0x150051c000
+        wc_3d.struct_2.tvb_tilemap = tvb_tilemap._addr
+        wc_3d.struct_2.tvb_heapmeta_addr = tvb_heapmeta._addr
+        wc_3d.struct_2.unk_e8 = 0x50000000 * tile_blocks
+        wc_3d.struct_2.tvb_heapmeta_addr2 = tvb_heapmeta._addr
+        wc_3d.struct_2.unk_f8 = 0x10280 # TODO: varies 0, 0x280, 0x10000, 0x10280
+        wc_3d.struct_2.aux_fb_ptr = 0x1500006000
         wc_3d.struct_2.unk_108 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
         wc_3d.struct_2.pipeline_base = 0x1100000000
         wc_3d.struct_2.unk_140 = 0x8c60
@@ -352,7 +408,7 @@ try:
         wc_3d.struct_6.unk_10 = 0x0
         wc_3d.struct_6.encoder_id = encoder_id
         wc_3d.struct_6.unk_1c = 0xffffffff
-        wc_3d.struct_6.unknown_buffer = 0x1500524000
+        wc_3d.struct_6.unknown_buffer = 0x150000e000
         wc_3d.struct_6.unk_28 = 0x0
         wc_3d.struct_6.unk_30 = 0x1
         wc_3d.struct_6.unk_34 = 0x1
@@ -360,14 +416,14 @@ try:
     if True:
         wc_3d.struct_7 = Start3DStruct7()
         wc_3d.struct_7.unk_0 = 0x0
-        wc_3d.struct_7.barrier1 = barrier_3d1
-        wc_3d.struct_7.barrier2 = barrier_3d2
-        wc_3d.struct_7.barrier_tag = barrier_tag
-        wc_3d.struct_7.unk_1c = ev_3d
+        wc_3d.struct_7.stamp1 = stamp_3d1
+        wc_3d.struct_7.stamp2 = stamp_3d2
+        wc_3d.struct_7.stamp_value = stamp_value
+        wc_3d.struct_7.ev_3d = ev_3d
         wc_3d.struct_7.unk_20 = 0x0
         wc_3d.struct_7.unk_24 = 0x0 # check
         wc_3d.struct_7.uuid = uuid_3d
-        wc_3d.struct_7.prev_barrier_tag = 0x0
+        wc_3d.struct_7.prev_stamp_value = 0x0
         wc_3d.struct_7.unk_30 = 0x0
 
     wc_3d.set_addr() # Update inner structure addresses
@@ -394,7 +450,7 @@ try:
     start_3d.unk_54 = 0x0
     start_3d.unk_58 = 0x2
     start_3d.unk_5c = 0x0
-    start_3d.prev_barrier_tag = 0x0
+    start_3d.prev_stamp_value = 0x0
     start_3d.unk_68 = 0x0
     start_3d.unk_buf_ptr = wc_3d.unk_buf._addr
     start_3d.unk_buf2_ptr = wc_3d.unk_buf2._addr
@@ -402,17 +458,11 @@ try:
     start_3d.unk_80 = 0x0
     start_3d.unk_84 = 0x0
     start_3d.uuid = uuid_3d
-    start_3d.unkptr_8c = 0x1500200000
-    start_3d.unk_94 = 0x1001700002800
-    start_3d.unk_9c = 0x0
-    start_3d.unk_a0 = [0] * 26
-    start_3d.unk_170 = 0x0
-    start_3d.unk_174 = 0x0
-    start_3d.unk_178 = 0x0
-    start_3d.unk_180 = 0x0
-    start_3d.unk_184 = 0x0
-    start_3d.unk_188 = 0x0
-    start_3d.unk_18c = 0x1
+    start_3d.attachments = [
+        Attachment(color._addr, 0x2800, 0x10017),
+        Attachment(depth._addr, 0x4100, 0x10017),
+    ] + [Attachment(0, 0, 0)] * 14
+    start_3d.num_attachments = 2
     start_3d.unk_190 = 0x0
 
     ms.append(start_3d)
@@ -448,8 +498,8 @@ try:
     finish_3d = Finalize3DCmd()
     finish_3d.uuid = uuid_3d
     finish_3d.unk_8 = 0
-    finish_3d.barrier = barrier_3d2
-    finish_3d.barrier_tag = barrier_tag
+    finish_3d.stamp = stamp_3d2
+    finish_3d.stamp_value = stamp_value
     finish_3d.unk_18 = 0
     finish_3d.buf_thing = buf_desc
     finish_3d.buffer_mgr = buffer_mgr.info
@@ -471,8 +521,8 @@ try:
     ms.append(finish_3d)
     ms.finalize()
 
-    wc_3d.controllist_ptr = ms.obj._addr
-    wc_3d.controllist_size = ms.size
+    wc_3d.microsequence_ptr = ms.obj._addr
+    wc_3d.microsequence_size = ms.size
 
     print(wc_3d)
 
@@ -491,7 +541,7 @@ try:
     wc_initbm.unk_c = 0
     wc_initbm.unk_10 = buffer_mgr.info.block_count
     wc_initbm.buffer_mgr = buffer_mgr.info
-    wc_initbm.barrier_tag = barrier_tag
+    wc_initbm.stamp_value = stamp_value
     wc_initbm.push()
 
     print(wc_initbm)
@@ -502,7 +552,7 @@ try:
     wc_ta = agx.kobj.new(WorkCommandTA)
     wc_ta.context_id = ctx_id
     wc_ta.unk_8 = 0
-    wc_ta.unk_c = fb_buf
+    wc_ta.event_control = event_control
     wc_ta.unk_14 = ctx_something
     wc_ta.buffer_mgr = buffer_mgr.info
     wc_ta.buf_thing = buf_desc
@@ -520,46 +570,47 @@ try:
     wc_ta.unk_5c8 = 0
     wc_ta.unk_5cc = 0
     wc_ta.unk_5d0 = 0
-    wc_ta.unk_5d4 = 1
+    wc_ta.unk_5d4 = 0x27 #1
 
     # Structures embedded in WorkCommandTA
     if True:
-        # same for 1tri and boot
-        wc_ta.tiling_params = TilingParameters()
-        wc_ta.tiling_params.unk_0 = 0x28
-        wc_ta.tiling_params.unk_4 = 0x88
-        wc_ta.tiling_params.unk_8 = 0x202
-        wc_ta.tiling_params.x_max = 639
-        wc_ta.tiling_params.y_max = 479
-        wc_ta.tiling_params.unk_10 = 0xe013
-        wc_ta.tiling_params.unk_14 = 0x10_10_0c_00_20_20_18
-        wc_ta.tiling_params.unk_1c = 0x20
-        wc_ta.tiling_params.unk_20 = 0x40
-        wc_ta.tiling_params.unk_24 = 0x100
-        wc_ta.tiling_params.unk_28 = 0x8000
+
+        wc_ta.tiling_params = tiling_params
+        #wc_ta.tiling_params.unk_0 = 0x28
+        #wc_ta.tiling_params.unk_4 = 0x88
+        #wc_ta.tiling_params.unk_8 = 0x202
+        #wc_ta.tiling_params.x_max = 639
+        #wc_ta.tiling_params.y_max = 479
+        #wc_ta.tiling_params.unk_10 = 0xe013
+        #wc_ta.tiling_params.unk_14 = 0x20_20_18
+        #wc_ta.tiling_params.unk_18 = 0x10_10_0c
+        #wc_ta.tiling_params.unk_1c = 0x20
+        #wc_ta.tiling_params.unk_20 = 0x40
+        #wc_ta.tiling_params.unk_24 = 0x100
+        #wc_ta.tiling_params.unk_28 = 0x8000
 
     if True:
         wc_ta.struct_2 = StartTACmdStruct2()
         wc_ta.struct_2.unk_0 = 0x200
         wc_ta.struct_2.unk_8 = 0x1e3ce508 # fixed
         wc_ta.struct_2.unk_c = 0x1e3ce508 # fixed
-        wc_ta.struct_2.tvb_start_addr = tvb_list
+        wc_ta.struct_2.tvb_tilemap = tvb_tilemap._addr
         wc_ta.struct_2.unkptr_18 = 0x0
-        wc_ta.struct_2.unkptr_20 = tvb_something
-        wc_ta.struct_2.tvb_end_addr = tvb_tilemap | 0x8000000000000000
+        wc_ta.struct_2.unkptr_20 = tvb_something._addr
+        wc_ta.struct_2.tvb_heapmeta_addr = tvb_heapmeta._addr | 0x8000000000000000
         wc_ta.struct_2.iogpu_unk_54 = 0x6b0003 # fixed
         wc_ta.struct_2.iogpu_unk_55 = 0x3a0012 # fixed
         wc_ta.struct_2.iogpu_unk_56 = 0x1 # fixed
         wc_ta.struct_2.unk_40 = 0x0 # fixed
         wc_ta.struct_2.unk_48 = 0xa000 # fixed
         wc_ta.struct_2.unk_50 = 0x88 # fixed
-        wc_ta.struct_2.tvb_tilemap_addr = tvb_tilemap
+        wc_ta.struct_2.tvb_heapmeta_addr2 = tvb_heapmeta._addr
         wc_ta.struct_2.unk_60 = 0x0 # fixed
         wc_ta.struct_2.unk_68 = 0x0 # fixed
-        wc_ta.struct_2.iogpu_deflake_1 = 0x150051b2a0
-        wc_ta.struct_2.iogpu_deflake_2 = 0x150051b020
+        wc_ta.struct_2.iogpu_deflake_1 = 0x15000052a0
+        wc_ta.struct_2.iogpu_deflake_2 = 0x1500005020
         wc_ta.struct_2.unk_80 = 0x1 # fixed
-        wc_ta.struct_2.iogpu_deflake_3 = 0x400150051b000
+        wc_ta.struct_2.iogpu_deflake_3 = 0x1500005000
         wc_ta.struct_2.encoder_addr = 0x1500048000
         wc_ta.struct_2.unk_98 = [0x0, 0x0] # fixed
         wc_ta.struct_2.unk_a8 = 0xa041 # fixed
@@ -576,7 +627,7 @@ try:
         wc_ta.struct_3.unk_480 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0] # fixed
         wc_ta.struct_3.unk_498 = 0x0 # fixed
         wc_ta.struct_3.unk_4a0 = 0x0 # fixed
-        wc_ta.struct_3.iogpu_deflake_1 = 0x150051b2a0
+        wc_ta.struct_3.iogpu_deflake_1 = 0x15000052a0
         wc_ta.struct_3.unk_4ac = 0x0 # fixed
         wc_ta.struct_3.unk_4b0 = 0x0 # fixed
         wc_ta.struct_3.unk_4b8 = 0x0 # fixed
@@ -592,20 +643,21 @@ try:
         wc_ta.struct_3.encoder_id = encoder_id
         wc_ta.struct_3.unk_538 = 0x0 # fixed
         wc_ta.struct_3.unk_53c = 0xffffffff
-        wc_ta.struct_3.unknown_buffer = 0x1500524000
+        wc_ta.struct_3.unknown_buffer = wc_3d.struct_6.unknown_buffer
         wc_ta.struct_3.unk_548 = 0x0 # fixed
         wc_ta.struct_3.unk_550 = [
             0x0, 0x0, # fixed
             0x0, # 1 for boot stuff?
             0x0, 0x0, 0x0] # fixed
-        wc_ta.struct_3.barrier1 = barrier_ta1
-        wc_ta.struct_3.barrier2 = barrier_ta2
-        wc_ta.struct_3.barrier_tag = barrier_tag
+        wc_ta.struct_3.stamp1 = stamp_ta1
+        wc_ta.struct_3.stamp2 = stamp_ta2
+        wc_ta.struct_3.stamp_value = stamp_value
         wc_ta.struct_3.ev_ta = ev_ta
         wc_ta.struct_3.unk_580 = 0x0 # fixed
         wc_ta.struct_3.unk_584 = 0x0 # 1 for boot stuff?
         wc_ta.struct_3.uuid2 = uuid_ta
-        wc_ta.struct_3.unk_58c = [0x0, 0x0]
+        #wc_ta.struct_3.unk_58c = [0x0, 0x0]
+        wc_ta.struct_3.unk_58c = [0x1, 0x0]
 
     wc_ta.set_addr() # Update inner structure addresses
     #print("wc_ta", wc_ta)
@@ -621,9 +673,9 @@ try:
     start_ta.cmdqueue_ptr = wq_ta.info._addr
     start_ta.context_id = ctx_id
     start_ta.unk_38 = 1
-    start_ta.unk_3c = 0
+    start_ta.unk_3c = 1 #0
     start_ta.unk_40 = ctx_something
-    start_ta.unk_48 = 0
+    start_ta.unk_48 = 1 #0
     start_ta.unk_50 = 0
     start_ta.struct3 = wc_ta.struct_3
 
@@ -681,8 +733,8 @@ try:
     finish_ta.struct3 = wc_ta.struct_3
     finish_ta.unk_34 = 0x0 # fixed
     finish_ta.uuid = uuid_ta
-    finish_ta.barrier = barrier_ta2
-    finish_ta.barrier_tag = barrier_tag
+    finish_ta.stamp = stamp_ta2
+    finish_ta.stamp_value = stamp_value
     finish_ta.unk_48 = 0x0 # fixed
     finish_ta.unk_50 = 0x0 # fixed
     finish_ta.unk_54 = 0x0 # fixed
@@ -696,12 +748,12 @@ try:
 
     ms.finalize()
 
-    wc_ta.unkptr_45c = tvb_something
-    wc_ta.tvb_size = tvb_something_size # fixed?
-    wc_ta.controllist_ptr = ms.obj._addr
-    wc_ta.controllist_size = ms.size
+    wc_ta.unkptr_45c = tvb_something._addr
+    wc_ta.tvb_size = tvb_something_size
+    wc_ta.microsequence_ptr = ms.obj._addr
+    wc_ta.microsequence_size = ms.size
     wc_ta.ev_3d = ev_3d
-    wc_ta.barrier_tag = barrier_tag
+    wc_ta.stamp_value = stamp_value
 
     wc_ta.push()
     ms.dump()
@@ -722,13 +774,13 @@ try:
     print("TA:")
     print(wq_ta.info.pull())
     print("Barriers:")
-    print(barrier_ta1.pull())
-    print(barrier_ta2.pull())
-    print(barrier_3d1.pull())
-    print(barrier_3d2.pull())
+    print(stamp_ta1.pull())
+    print(stamp_ta2.pull())
+    print(stamp_3d1.pull())
+    print(stamp_3d2.pull())
 
-    fb_buf.pull()
-    print(fb_buf)
+    event_control.pull()
+    print(event_control)
 
     print("==")
     mon.poll()
@@ -748,19 +800,33 @@ try:
     print(f"FAULT CODE: {fault_code:#x}")
     base, obj = agx.find_object(fault_addr)
     if obj is not None:
-
         print(f"Faulted at : {fault_addr:#x}: {obj!s} + {fault_addr - base:#x}")
     #agx.kick_firmware()
     mon.poll()
 
-    w = 640
-    h = 480
+    #print(buffer_mgr.info.pull())
+    #print(buffer_mgr.counter_obj.pull())
+    #print(buffer_mgr.misc_obj.pull())
+    #print(buffer_mgr.block_ctl_obj.pull())
 
-    unswizzle(color._paddr, w, h, 4)
+    width = 800
+    height = 600
 
-    stride = (w + 63) & ~63
+    unswizzle(color._paddr, width, height, 4, "fb.bin", grid=True)
+    unswizzle(depth._paddr, width, height, 4, "depth.bin", grid=True)
 
-    p.fb_blit(0, 0, w, h, color._paddr, stride)
+    p.fb_blit(0, 0, width, height, color._paddr, width)
+
+    print("TVB something:")
+    chexdump(iface.readmem(tvb_something._paddr, tvb_something._size), stride=16, abbreviate=False)
+
+    print("TVB list:")
+    chexdump(iface.readmem(tvb_tilemap._paddr, tvb_tilemap._size), stride=5, abbreviate=False)
+
+    print("Tile params:")
+    print(f"X: {tiles_x} ({tile_blocks_x})")
+    print(f"Y: {tiles_y} ({tile_blocks_y})")
+    print(f"Total: {tiles} ({tile_blocks})")
 
     agx.stop()
 except:
@@ -769,27 +835,5 @@ except:
     raise
     #agx.stop()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#time.sleep(10)
+#p.reboot()
