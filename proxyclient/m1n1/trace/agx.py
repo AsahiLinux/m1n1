@@ -302,6 +302,7 @@ class AGXTracer(ASCTracer):
         self.trace_userva = False
         self.pause_after_init = True
         self.shell_after_init = False
+        self.encoder_id_filter = None
 
         self.add_mon_regions()
 
@@ -523,7 +524,18 @@ class AGXTracer(ASCTracer):
         elif isinstance(msg, RunCmdQueueMsg):
             self.log(f"== Work notification (type {msg.queue_type})==")
             queue = self.get_cmdqueue(msg.cmdqueue_addr)
-            for wi in queue.get_workitems(msg):
+            work_items = list(queue.get_workitems(msg))
+            if self.encoder_id_filter is not None:
+                for wi in work_items:
+                    if wi.cmd.magic == 0:
+                        # TA
+                        if not self.encoder_id_filter(wi.cmd.struct_3.encoder_id):
+                            return True
+                    if wi.cmd.magic == 1:
+                        # 3D
+                        if not self.encoder_id_filter(wi.cmd.struct_6.encoder_id):
+                            return True
+            for wi in work_items:
                 self.log(str(wi))
                 if msg.queue_type == 2:
                     pass
