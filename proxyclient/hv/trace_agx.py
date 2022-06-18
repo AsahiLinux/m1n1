@@ -12,6 +12,8 @@ from m1n1.trace.agx import AGXTracer
 AGXTracer = AGXTracer._reloadcls(True)
 
 agx_tracer = AGXTracer(hv, "/arm-io/gfx-asc", verbose=1)
+
+#agx_tracer.encoder_id_filter = lambda i: (i >> 16) == 0xc0de
 agx_tracer.start()
 
 def resume_tracing(ctx):
