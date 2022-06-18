@@ -60,8 +60,7 @@ class GPUContext:
 
         self.agx.uat.iomap_at(self.ctx, obj._addr, obj._paddr, size_align, **flags)
         self.objects[obj._addr] = obj
-        if track:
-            self.agx.reg_object(obj)
+        self.agx.reg_object(obj, track=track)
 
         return obj
 
@@ -206,7 +205,7 @@ class GPUBufferManager:
         idx = self.block_ctl.wptr.val
         total = self.block_ctl.total.val
         while idx < total:
-            block = self.ctx.uobj.new_buf(self.block_size, "BM Block")
+            block = self.ctx.uobj.new_buf(self.block_size, "BM Block", track=False)
             self.block_list[idx] = block._addr // self.page_size
 
             page_idx = idx * self.pages_per_block

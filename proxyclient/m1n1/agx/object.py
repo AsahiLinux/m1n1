@@ -114,11 +114,12 @@ class GPUAllocator:
         self.guard_pages = guard_pages
         self.objects = {}
         self.flags = kwargs
+        self.align_to_end = True
 
     def make_stream(self, base):
         return self.agx.uat.iostream(self.ctx, base)
 
-    def new(self, objtype, name=None, **kwargs):
+    def new(self, objtype, name=None, track=True, **kwargs):
         obj = GPUObject(self, objtype)
         obj._stream = self.make_stream
         if name is not None:
@@ -129,7 +130,9 @@ class GPUAllocator:
         size_align = align_up(obj._size, self.page_size)
         addr = self.va.malloc(size_align + guard_size)
         paddr = self.agx.u.memalign(self.page_size, size_align)
-        off = size_align - obj._size
+        off = 0
+        if self.align_to_end:
+            off = size_align - obj._size
 
         flags = dict(self.flags)
         flags.update(kwargs)
@@ -141,11 +144,12 @@ class GPUAllocator:
 
         print(f"[{self.name}] Alloc {obj._name} size {obj._size:#x} @ {obj._addr:#x} ({obj._paddr:#x})")
 
-        self.agx.reg_object(obj)
+        self.agx.reg_object(obj, track=track)
         return obj
 
-    def new_buf(self, size, name):
-        return self.new(HexDump(Bytes(size)), name=name).push()
+    def new_buf(self, size, name, track=True):
+        return self.new(HexDump(Bytes(size)), name=name, track=track)
 
-    def buf(self, size, name):
-        return self.new_buf(size, name)._addr
+    def buf(self, size, name, track=True):
+        return self.new_buf(size, name, track)._addr
+

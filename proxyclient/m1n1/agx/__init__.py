@@ -77,9 +77,9 @@ class AGX:
 
         return self.all_objects[idx]
 
-    def reg_object(self, obj):
+    def reg_object(self, obj, track=True):
         self.all_objects.append((obj._addr, obj))
-        if self.mon is not None:
+        if track and self.mon is not None:
             obj.add_to_mon(self.mon)
 
     def alloc_channels(self, cls, name, channel_id, count=1, rx=False):
