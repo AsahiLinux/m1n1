@@ -33,7 +33,7 @@ class FirmwareEP(ASCBaseEndpoint):
 
     @msg_handler(0x42)
     def event(self, msg):
-        self.log("Received event")
+        #self.log("Received event")
         self.asc.agx.poll_channels()
         return True
 
@@ -47,7 +47,7 @@ class DoorbellEP(ASCBaseEndpoint):
     SHORT = "db"
 
     def doorbell(self, channel):
-        self.log(f"Sending doorbell ch={channel}")
+        #self.log(f"Sending doorbell ch={channel}")
         msg = DoorbellMsg(CHANNEL = channel)
         self.send(msg)
 
