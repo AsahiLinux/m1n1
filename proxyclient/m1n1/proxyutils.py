@@ -167,11 +167,11 @@ class ProxyUtils(Reloadable):
 
     inst = exec
 
-    def compressed_writemem(self, dest, data, progress):
+    def compressed_writemem(self, dest, data, progress=None):
         if not len(data):
             return
 
-        payload = gzip.compress(data)
+        payload = gzip.compress(data, compresslevel=2)
         compressed_size = len(payload)
 
         with self.heap.guarded_malloc(compressed_size) as compressed_addr:
