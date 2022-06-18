@@ -114,15 +114,26 @@ static inline rgb_t fb_get_pixel(u32 x, u32 y)
     return pixel2rgb_30(fb.ptr[x + y * fb.stride]);
 }
 
-void fb_blit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride)
+void fb_blit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride, pix_fmt_t pix_fmt)
 {
     u8 *p = data;
 
     for (u32 i = 0; i < h; i++) {
         for (u32 j = 0; j < w; j++) {
-            rgb_t color = {.r = p[(j + i * stride) * 4],
-                           .g = p[(j + i * stride) * 4 + 1],
-                           .b = p[(j + i * stride) * 4 + 2]};
+            rgb_t color;
+            switch (pix_fmt) {
+                default:
+                case PIX_FMT_XRGB:
+                    color.r = p[(j + i * stride) * 4];
+                    color.g = p[(j + i * stride) * 4 + 1];
+                    color.b = p[(j + i * stride) * 4 + 2];
+                    break;
+                case PIX_FMT_XBGR:
+                    color.r = p[(j + i * stride) * 4 + 2];
+                    color.g = p[(j + i * stride) * 4 + 1];
+                    color.b = p[(j + i * stride) * 4];
+                    break;
+            }
             fb_set_pixel(x + j, y + i, color);
         }
     }
@@ -161,7 +172,7 @@ void fb_clear(rgb_t color)
 
 void fb_blit_image(u32 x, u32 y, const struct image *img)
 {
-    fb_blit(x, y, img->width, img->height, img->ptr, img->width);
+    fb_blit(x, y, img->width, img->height, img->ptr, img->width, PIX_FMT_XRGB);
 }
 
 void fb_unblit_image(u32 x, u32 y, struct image *img)

@@ -71,6 +71,10 @@ class DCP_SHUTDOWN_MODE(IntEnum):
     SLEEP_IF_EXTERNAL = 1
     SLEEP = 2
 
+class PIX_FMT(IntEnum):
+    XRGB = 0
+    XBGR = 1
+
 ExcInfo = Struct(
     "regs" / Array(32, Int64ul),
     "spsr" / RegAdapter(SPSR),
@@ -1015,8 +1019,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_FB_INIT)
     def fb_shutdown(self, restore_logo=True):
         return self.request(self.P_FB_SHUTDOWN, restore_logo)
-    def fb_blit(self, x, y, w, h, ptr, stride):
-        return self.request(self.P_FB_BLIT, x, y, w, h, ptr, stride)
+    def fb_blit(self, x, y, w, h, ptr, stride, pix_fmt=PIX_FMT.XRGB):
+        return self.request(self.P_FB_BLIT, x, y, w, h, ptr, stride | pix_fmt << 32)
     def fb_unblit(self, x, y, w, h, ptr, stride):
         return self.request(self.P_FB_UNBLIT, x, y, w, h, ptr, stride)
     def fb_fill(self, x, y, w, h, color):
