@@ -26,6 +26,7 @@ class GPUObject:
         self._type = objtype
         self._addr = None
         self._last_data = None
+        self._dead = False
 
     def push(self, if_needed=False):
         assert self._addr is not None
@@ -100,6 +101,12 @@ class GPUObject:
         s_val = str_value(self.val)
         return f"GPUObject {self._name} ({self._size:#x} @ {self._addr:#x}): " + s_val
 
+    def free(self):
+        if self._dead:
+            return
+        self._dead = True
+        self._alloc.free(self)
+
 class GPUAllocator:
     def __init__(self, agx, name, start, size,
                  ctx=0, page_size=16384, va_block=None, guard_pages=1, **kwargs):
@@ -153,3 +160,6 @@ class GPUAllocator:
     def buf(self, size, name, track=True):
         return self.new_buf(size, name, track)._addr
 
+    def free(self, obj):
+        self.agx.u.free(obj._paddr)
+        self.va.free(obj._addr)

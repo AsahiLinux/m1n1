@@ -29,7 +29,7 @@ class AGX:
 
         self.log("Initializing allocations")
 
-        self.all_objects = []
+        self.all_objects = {}
 
         # Memory areas
         self.fw_va_base = self.sgx_dev.rtkit_private_vm_region_base
@@ -69,18 +69,22 @@ class AGX:
         self.mon = None
 
     def find_object(self, addr):
-        self.all_objects.sort()
+        all_objects = list(self.all_objects.items())
+        all_objects.sort()
 
-        idx = bisect.bisect_left(self.all_objects, (addr + 1, "")) - 1
-        if idx < 0 or idx >= len(self.all_objects):
+        idx = bisect.bisect_left(all_objects, (addr + 1, "")) - 1
+        if idx < 0 or idx >= len(all_objects):
             return None, None
 
-        return self.all_objects[idx]
+        return all_objects[idx]
 
     def reg_object(self, obj, track=True):
-        self.all_objects.append((obj._addr, obj))
+        self.all_objects[obj._addr] = obj
         if track and self.mon is not None:
             obj.add_to_mon(self.mon)
+
+    def unreg_object(self, obj):
+        del self.all_objects[obj._addr]
 
     def alloc_channels(self, cls, name, channel_id, count=1, rx=False):
 
