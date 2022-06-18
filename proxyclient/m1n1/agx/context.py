@@ -32,6 +32,7 @@ class GPUContext:
 
         # 32K VA pages since buffer manager needs that
         self.uobj = GPUAllocator(agx, "Userspace", 0x1600000000, 0x100000000, ctx=None,
+                                 guard_pages=1,
                                  va_block=32768, nG=1, AP=0, PXN=1, UXN=1)
 
     def bind(self, ctx_id):

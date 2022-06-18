@@ -102,7 +102,7 @@ class GPUObject:
 
 class GPUAllocator:
     def __init__(self, agx, name, start, size,
-                 ctx=0, page_size=16384, va_block=None, **kwargs):
+                 ctx=0, page_size=16384, va_block=None, guard_pages=1, **kwargs):
         self.page_size = page_size
         if va_block is None:
             va_block = page_size
@@ -111,6 +111,7 @@ class GPUAllocator:
         self.name = name
         self.va = Heap(start, start + size, block=va_block)
         self.verbose = 1
+        self.guard_pages = guard_pages
         self.objects = {}
         self.flags = kwargs
 
@@ -123,8 +124,10 @@ class GPUAllocator:
         if name is not None:
             obj._name = name
 
+        guard_size = self.page_size * self.guard_pages
+
         size_align = align_up(obj._size, self.page_size)
-        addr = self.va.malloc(size_align + self.page_size)
+        addr = self.va.malloc(size_align + guard_size)
         paddr = self.agx.u.memalign(self.page_size, size_align)
         off = size_align - obj._size
 
