@@ -4,6 +4,7 @@ import bisect, time
 from .object import GPUObject, GPUAllocator
 from .initdata import build_initdata
 from .channels import *
+from .event import GPUEventManager
 from ..proxy import IODEV
 from ..malloc import Heap
 from ..hw.uat import UAT, MemoryAttr
@@ -18,6 +19,7 @@ class AGXQueue:
 
 class AGX:
     PAGE_SIZE = 0x4000
+    MAX_EVENTS = 128
 
     def __init__(self, u):
         self.start_time = time.time()
@@ -69,6 +71,7 @@ class AGX:
                                  block=self.PAGE_SIZE)
 
         self.mon = None
+        self.event_mgr = GPUEventManager(self)
 
         self.p.iodev_set_usage(IODEV.FB, 0)
 
@@ -202,6 +205,16 @@ class AGX:
 
     def work(self):
         self.asc.work()
+
+    def wait_for_events(self, timeout=1.0):
+        now = time.time()
+        deadline = now + timeout
+        cnt = self.event_mgr.event_count
+        while now < deadline and self.event_mgr.event_count == cnt:
+            self.asc.work()
+            now = time.time()
+        if self.event_mgr.event_count == cnt:
+            raise Exception("Timed out waiting for events")
 
     def log(self, msg):
         t = time.time() - self.start_time

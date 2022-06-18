@@ -75,7 +75,9 @@ class GPUEventChannel(GPURXChannel):
     MSG_CLASS = EventMsg
 
     def handle_message(self, msg):
-        if isinstance(msg, FaultMsg):
+        if isinstance(msg, FlagMsg):
+            self.agx.event_mgr.fired(msg.firing)
+        elif isinstance(msg, FaultMsg):
             self.agx.faulted()
         else:
             self.log(f"Unknown event: {msg}")
