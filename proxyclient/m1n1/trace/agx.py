@@ -934,6 +934,7 @@ class AGXTracer(ASCTracer):
         self.trace_uatrange(0, self.state.initdata.regionA_addr, 0x4000, name="regionA")
         self.trace_uatrange(0, self.state.initdata.regionB_addr, 0x6bc0, name="regionB")
         self.trace_uatrange(0, self.state.initdata.regionC_addr, 0x11d40, name="regionC")
+        self.trace_uatrange(0, self.state.initdata.regionB.unkptr_214, 0x4000, name="Shared AP=0 region")
 
     def add_mon_regions(self):
         initdata = self.state.initdata
@@ -941,6 +942,14 @@ class AGXTracer(ASCTracer):
             self.mon_addva(0, initdata.regionA_addr, 0x4000, "RegionA")
             self.mon_addva(0, initdata.regionB_addr, 0x6bc0, "RegionB")
             self.mon_addva(0, initdata.regionC_addr, 0x11d40, "RegionC")
+            self.mon_addva(0, initdata.regionB.unkptr_170, 0xc0, "unkptr_170")
+            self.mon_addva(0, initdata.regionB.unkptr_178, 0x1c0, "unkptr_178")
+            self.mon_addva(0, initdata.regionB.unkptr_180, 0x140, "unkptr_180")
+            self.mon_addva(0, initdata.regionB.unkptr_190, 0x80, "unkptr_190")
+            self.mon_addva(0, initdata.regionB.unkptr_198, 0xc0, "unkptr_198")
+            self.mon_addva(0, initdata.regionB.unkptr_214, 0x4000, "Shared AP=0 region")
+            self.mon_addva(0, initdata.unkptr_20.unkptr_0, 0x40, "unkptr_20.unkptr_0")
+            self.mon_addva(0, initdata.unkptr_20.unkptr_8, 0x40, "unkptr_20.unkptr_8")
 
     def pong_init(self, addr):
         self.log("UAT at init time:")
