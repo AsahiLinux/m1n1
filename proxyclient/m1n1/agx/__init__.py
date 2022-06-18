@@ -4,6 +4,7 @@ import bisect, time
 from .object import GPUObject, GPUAllocator
 from .initdata import build_initdata
 from .channels import *
+from ..proxy import IODEV
 from ..malloc import Heap
 from ..hw.uat import UAT, MemoryAttr
 from ..fw.agx import AGXASC
@@ -68,6 +69,9 @@ class AGX:
                                  block=self.PAGE_SIZE)
 
         self.mon = None
+
+        self.p.iodev_set_usage(IODEV.FB, 0)
+
 
     def find_object(self, addr):
         all_objects = list(self.all_objects.items())
@@ -150,6 +154,21 @@ class AGX:
 
     def kick_firmware(self):
         self.asc.db.doorbell(0x10)
+
+    def faulted(self):
+        fault_code = self.p.read64(0x204017030)
+        if fault_code == 0xacce5515abad1dea:
+            raise Exception("Got fault notification, but fault address is unreadable")
+
+        fault_addr = fault_code >> 24
+        if fault_addr & 0x8000000000:
+            fault_addr |= 0xffffff8000000000
+        self.log(f"FAULT CODE: {fault_code:#x} ({fault_addr:#x})")
+        base, obj = self.find_object(fault_addr)
+        info = ""
+        if obj is not None:
+            info = f" ({obj!s} + {fault_addr - base:#x})"
+        raise Exception(f"GPU fault at {fault_addr:#x}{info}")
 
     def start(self):
         self.log("Starting ASC")

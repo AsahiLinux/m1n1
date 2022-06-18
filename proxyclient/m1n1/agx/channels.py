@@ -74,6 +74,12 @@ class GPUDeviceControlChannel(GPUTXChannel):
 class GPUEventChannel(GPURXChannel):
     MSG_CLASS = EventMsg
 
+    def handle_message(self, msg):
+        if isinstance(msg, FaultMsg):
+            self.agx.faulted()
+        else:
+            self.log(f"Unknown event: {msg}")
+
 class GPULogChannel(GPURXChannel):
     MSG_CLASS = FWLogMsg
 
