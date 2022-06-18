@@ -142,11 +142,11 @@ class AGX:
         self.ch_info.FWLog.ringbuffer_addr = self.kshared.buf(0x150000, "FWLog_Dummy")
 
     def poll_channels(self):
-        self.ch.event.poll()
         for chan in self.ch.log:
             chan.poll()
         self.ch.ktrace.poll()
         self.ch.stats.poll()
+        self.ch.event.poll()
 
     def kick_firmware(self):
         self.asc.db.doorbell(0x10)
