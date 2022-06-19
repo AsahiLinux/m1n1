@@ -57,11 +57,12 @@ void smp_secondary_entry(void)
 
     while (1) {
         while (!(target = me->target)) {
-            if (wfe_mode)
+            if (wfe_mode) {
                 sysop("wfe");
-            else
+            } else {
                 deep_wfi();
-            msr(SYS_IMP_APL_IPI_SR_EL1, 1);
+                msr(SYS_IMP_APL_IPI_SR_EL1, 1);
+            }
             sysop("isb");
         }
         sysop("dmb sy");
