@@ -62,6 +62,7 @@ void smp_secondary_entry(void)
             else
                 deep_wfi();
             msr(SYS_IMP_APL_IPI_SR_EL1, 1);
+            sysop("isb");
         }
         sysop("dmb sy");
         me->flag++;
@@ -209,7 +210,7 @@ void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
     target->args[3] = arg3;
     sysop("dmb sy");
     target->target = (u64)func;
-    sysop("dmb sy");
+    sysop("dsb sy");
 
     if (wfe_mode)
         sysop("sev");
@@ -236,7 +237,7 @@ u64 smp_wait(int cpu)
 void smp_set_wfe_mode(bool new_mode)
 {
     wfe_mode = new_mode;
-    sysop("dmb sy");
+    sysop("dsb sy");
 
     for (int cpu = 1; cpu < MAX_CPUS; cpu++)
         if (smp_is_alive(cpu))
