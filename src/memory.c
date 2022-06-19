@@ -146,9 +146,11 @@ enum SPRR_val_t {
  */
 
 #define MAIR_SHIFT_NORMAL        (MAIR_IDX_NORMAL * 8)
+#define MAIR_SHIFT_NORMAL_NC     (MAIR_IDX_NORMAL_NC * 8)
 #define MAIR_SHIFT_DEVICE_nGnRnE (MAIR_IDX_DEVICE_nGnRnE * 8)
 #define MAIR_SHIFT_DEVICE_nGnRE  (MAIR_IDX_DEVICE_nGnRE * 8)
-#define MAIR_SHIFT_NORMAL_NC     (MAIR_IDX_NORMAL_NC * 8)
+#define MAIR_SHIFT_DEVICE_nGRE   (MAIR_IDX_DEVICE_nGRE * 8)
+#define MAIR_SHIFT_DEVICE_GRE    (MAIR_IDX_DEVICE_GRE * 8)
 
 /*
  * https://developer.arm.com/documentation/ddi0500/e/system-control/aarch64-register-descriptions/memory-attribute-indirection-register--el1
@@ -162,6 +164,8 @@ enum SPRR_val_t {
 #define MAIR_ATTR_NORMAL_NC      0x44UL
 #define MAIR_ATTR_DEVICE_nGnRnE  0x00UL
 #define MAIR_ATTR_DEVICE_nGnRE   0x04UL
+#define MAIR_ATTR_DEVICE_nGRE    0x08UL
+#define MAIR_ATTR_DEVICE_GRE     0x0cUL
 
 static u64 *mmu_pt_L0;
 static u64 *mmu_pt_L1;
@@ -438,8 +442,10 @@ static void mmu_add_default_mappings(void)
     mmu_add_mapping(ram_base | REGION_RX_EL1, ram_base, ram_size, MAIR_IDX_NORMAL, PERM_RX_EL0);
 
     /*
-     * Create two seperate nGnRnE and nGnRE full mappings of MMIO space
+     * Create four seperate full mappings of MMIO space, with different access types
      */
+    mmu_add_mapping(0xc000000000, 0x0000000000, 0x0800000000, MAIR_IDX_DEVICE_GRE, PERM_RW_EL0);
+    mmu_add_mapping(0xd000000000, 0x0000000000, 0x0800000000, MAIR_IDX_DEVICE_nGRE, PERM_RW_EL0);
     mmu_add_mapping(0xe000000000, 0x0000000000, 0x0800000000, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
     mmu_add_mapping(0xf000000000, 0x0000000000, 0x0800000000, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
 

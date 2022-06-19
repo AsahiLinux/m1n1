@@ -44,9 +44,11 @@
 #define PERM_RWX 0
 
 #define MAIR_IDX_NORMAL        0
-#define MAIR_IDX_DEVICE_nGnRnE 1
-#define MAIR_IDX_DEVICE_nGnRE  2
-#define MAIR_IDX_NORMAL_NC     3
+#define MAIR_IDX_NORMAL_NC     1
+#define MAIR_IDX_DEVICE_nGnRnE 2
+#define MAIR_IDX_DEVICE_nGnRE  3
+#define MAIR_IDX_DEVICE_nGRE   4
+#define MAIR_IDX_DEVICE_GRE    5
 
 #ifndef __ASSEMBLER__
 
