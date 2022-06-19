@@ -336,7 +336,7 @@ void fb_init(bool clear)
     printf("fb init: %dx%d (%d) [s=%d] @%p\n", fb.width, fb.height, fb.depth, fb.stride, fb.hwptr);
 
     mmu_add_mapping(cur_boot_args.video.base, cur_boot_args.video.base, ALIGN_UP(fb.size, 0x4000),
-                    MAIR_IDX_FRAMEBUFFER, PERM_RW);
+                    MAIR_IDX_NORMAL_NC, PERM_RW);
 
     fb.ptr = malloc(fb.size);
     memcpy(fb.ptr, fb.hwptr, fb.size);

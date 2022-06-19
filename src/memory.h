@@ -46,7 +46,7 @@
 #define MAIR_IDX_NORMAL        0
 #define MAIR_IDX_DEVICE_nGnRnE 1
 #define MAIR_IDX_DEVICE_nGnRE  2
-#define MAIR_IDX_FRAMEBUFFER   3
+#define MAIR_IDX_NORMAL_NC     3
 
 #ifndef __ASSEMBLER__
 
