@@ -1489,7 +1489,6 @@ class HV(Reloadable):
 
     def load_raw(self, data):
         image = data
-        #right now from load_macho
         sepfw_start, sepfw_length = self.u.adt["chosen"]["memory-map"].SEPFW
         tc_start, tc_size = self.u.adt["chosen"]["memory-map"].TrustCache
         if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
