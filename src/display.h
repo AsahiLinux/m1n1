@@ -12,6 +12,7 @@ typedef enum _dcp_shutdown_mode {
 int display_init(void);
 int display_start_dcp(void);
 int display_configure(const char *config);
+void display_finish_config(void);
 void display_shutdown(dcp_shutdown_mode mode);
 
 #endif
