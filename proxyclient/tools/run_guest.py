@@ -14,6 +14,7 @@ parser.add_argument('-e', '--hook-exceptions', action="store_true")
 parser.add_argument('-d', '--debug-xnu', action="store_true")
 parser.add_argument('-l', '--logfile', type=pathlib.Path)
 parser.add_argument('-C', '--cpus', default=None)
+parser.add_argument('-r', '--raw', action="store_true")
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
@@ -61,7 +62,10 @@ if len(args.boot_args) > 0:
 symfile = None
 if args.symbols:
     symfile = args.symbols.open("rb")
-hv.load_macho(args.payload.open("rb"), symfile=symfile)
+if args.raw:
+    hv.load_raw(args.payload.read_bytes())
+else:
+    hv.load_macho(args.payload.open("rb"), symfile=symfile)
 
 PMU(u).reset_panic_counter()
 
