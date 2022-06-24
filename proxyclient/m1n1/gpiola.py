@@ -7,12 +7,16 @@ from .proxy import REGION_RX_EL1
 from .sysreg import *
 
 class GPIOLogicAnalyzer(Reloadable):
-    def __init__(self, u, node, pins, regs={}, div=1, cpu=1, on_pin_change=True):
+    def __init__(self, u, node=None, pins={}, regs={}, div=1, cpu=1, on_pin_change=True, on_reg_change=True):
         self.u = u
         self.p = u.proxy
         self.iface = u.iface
         self.cpu = cpu
-        self.base = u.adt[node].get_reg(0)[0]
+        self.base = 0
+        if node is not None:
+            self.base = u.adt[node].get_reg(0)[0]
+        else:
+            on_pin_change=False
         self.node = node
         self.pins = pins
         self.regs = regs
@@ -22,6 +26,7 @@ class GPIOLogicAnalyzer(Reloadable):
         self.cbuf = self.u.malloc(0x1000)
         self.dbuf = None
         self.on_pin_change = on_pin_change
+        self.on_reg_change = on_reg_change
         self.p.mmu_init_secondary(cpu)
         self.tfreq = u.mrs(CNTFRQ_EL0)
 
@@ -40,6 +45,7 @@ class GPIOLogicAnalyzer(Reloadable):
         text = f"""
         trace:
             add x3, x3, x2
+            mov x12, #-8
             mov x10, x2
             mov x6, #-1
             mov x7, #0
@@ -70,21 +76,51 @@ class GPIOLogicAnalyzer(Reloadable):
                 b.eq 3f
                 mov x6, x7
             """
+        if self.on_reg_change:
+            text += f"""
+                mov x11, x2
+            """
+
         text += f"""
             str w5, [x2], #4
             str w7, [x2], #4
         """
+        if self.on_reg_change:
+            text += f"""
+                mov x13, #0
+                add x14, x12, #8
+            """
 
         for reg in self.regs.values():
             if isinstance(reg, tuple):
                 reg = reg[0]
             text += f"""
-            ldr x9, ={reg}
-            ldr w9, [x9]
-            str w9, [x2], #4
+                ldr x9, ={reg}
+                ldr w9, [x9]
+                str w9, [x2], #4
             """
+            if self.on_reg_change:
+                text += f"""
+                    eor w15, w9, #1
+                    cmp x14, #0
+                    b.eq 4f
+                    ldr w15, [x14], #4
+                4:
+                    eor w15, w15, w9
+                    orr w13, w13, w15
+                """
 
+        if self.on_reg_change:
+            text += f"""
+                cmp x13, #0
+                b.ne 4f
+                mov x2, x11
+                mov x11, x12
+                b 3f
+            4:
+            """
         text += f"""
+            mov x12, x11
             cmp x2, x3
             b.hs 2f
         3:
@@ -207,4 +243,4 @@ $dumpvars
         with open("/tmp/dump.gtkw", "w") as fd:
             fd.write(gtkw)
 
-        os.system("gtkwave /tmp/dump.gtkw")
+        os.system("gtkwave /tmp/dump.gtkw&")
