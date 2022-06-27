@@ -47,6 +47,7 @@ typedef enum _hv_entry_type {
     HV_USER_INTERRUPT,
     HV_WDT_BARK,
     HV_CPU_SWITCH,
+    HV_VIRTIO,
 } hv_entry_type;
 
 /* VM */
@@ -69,6 +70,9 @@ bool hv_trace_irq(u32 type, u32 num, u32 count, u32 flags);
 /* Virtual peripherals */
 void hv_vuart_poll(void);
 void hv_map_vuart(u64 base, int irq, iodev_id_t iodev);
+struct virtio_conf;
+void hv_map_virtio(u64 base, struct virtio_conf *conf);
+void virtio_put_buffer(u64 base, int qu, u32 id, u32 len);
 
 /* Exceptions */
 void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type, void *extra);

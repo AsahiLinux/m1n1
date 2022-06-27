@@ -37,6 +37,7 @@ class HV_EVENT(IntEnum):
     USER_INTERRUPT = 3
     WDT_BARK = 4
     CPU_SWITCH = 5
+    VIRTIO = 6
 
 VMProxyHookData = Struct(
     "flags" / RegAdapter(MMIOTraceFlags),
