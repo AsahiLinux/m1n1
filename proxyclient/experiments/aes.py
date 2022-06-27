@@ -4,9 +4,10 @@ import sys, pathlib
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 from m1n1.setup import *
+from m1n1.shell import run_shell
 from m1n1.hw.dart import DART
+from m1n1.hw.dart8110 import DART8110
 from m1n1.hw.aes import *
-
 
 def aes_set_custom_key(
     aes,
@@ -113,14 +114,22 @@ def test_custom_key(key, keygen=0):
     aes.R_CONTROL.set(STOP=1)
 
 
-p.pmgr_adt_clocks_enable(f"/arm-io/aes")
+p.pmgr_adt_clocks_enable("/arm-io/aes")
 
-dart = DART.from_adt(u, f"/arm-io/dart-sio")
+dart_path = "/arm-io/dart-sio"
+
+if u.adt[dart_path].compatible[0] == "dart,t8110":
+    dart = DART8110.from_adt(u, dart_path)
+else:
+    dart = DART.from_adt(u, dart_path)
+
 dart.initialize()
 
-aes_base, _ = u.adt[f"/arm-io/aes"].get_reg(0)
+aes_base, _ = u.adt["/arm-io/aes"].get_reg(0)
 aes = AESRegs(u, aes_base)
 aes.dump_regs()
+
+dart.dump_all()
 
 for keygen in range(4):
     print(f"zero key, keygen={keygen}", end="")
@@ -136,3 +145,7 @@ for keygen in range(4):
         for i in (1, 3):
             print(f"key = {i}, keylen={keylen}, keygen={keygen}", end="")
             test_hw_key(i, keylen, keygen=keygen)
+
+dart.dump_all()
+
+run_shell(globals(), msg="Have fun!")
