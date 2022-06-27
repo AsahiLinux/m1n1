@@ -257,6 +257,8 @@ int mcc_init(void)
 
     if (adt_is_compatible(adt, node, "mcc,t8103")) {
         return mcc_init_t8103(node, path);
+    } else if (adt_is_compatible(adt, node, "mcc,t8112")) {
+        return mcc_init_t8103(node, path);
     } else if (adt_is_compatible(adt, node, "mcc,t6000")) {
         return mcc_init_t6000(node, path);
     } else {
