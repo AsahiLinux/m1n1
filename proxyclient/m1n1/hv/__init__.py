@@ -13,6 +13,7 @@ from .. import xnutools, shell
 
 from .gdbserver import *
 from .types import *
+from .virtio import *
 
 __all__ = ["HV"]
 
@@ -111,6 +112,7 @@ class HV(Reloadable):
         self.hvcall_handlers = {}
         self.switching_context = False
         self.show_timestamps = False
+        self.virtio_devs = {}
 
     def _reloadme(self):
         super()._reloadme()
@@ -999,6 +1001,52 @@ class HV(Reloadable):
 
         self.p.exit(0)
 
+    def attach_virtio(self, dev, base=None, irq=None, verbose=False):
+        assert base is not None and irq is not None
+        # TODO: ^-- allocate those if not chosen by caller
+
+        data = dev.config_data
+        data_base = self.u.heap.malloc(len(data))
+        self.iface.writemem(data_base, data)
+
+        config = VirtioConfig.build({
+            "irq": irq,
+            "devid": dev.devid,
+            "feats": dev.feats,
+            "num_qus": dev.num_qus,
+            "data": data_base,
+            "data_len": len(data),
+            "verbose": verbose,
+        })
+
+        config_base = self.u.heap.malloc(len(config))
+        self.iface.writemem(config_base, config)
+
+        self.p.hv_map_virtio(base, config_base)
+        self.add_tracer(irange(base, 0x1000), "VIRTIO", TraceMode.RESERVED)
+
+        dev.base = base
+        dev.hv = self
+        self.virtio_devs[base] = dev
+
+    def handle_virtio(self, reason, code, info):
+        ctx = self.iface.readstruct(info, ExcInfo)
+        self.virtio_ctx = info = self.iface.readstruct(ctx.data, VirtioExcInfo)
+
+        try:
+            handled = self.virtio_devs[info.devbase].handle_exc(info)
+        except:
+            self.log(f"Python exception from within virtio handler")
+            traceback.print_exc()
+            handled = False
+
+        if not handled:
+            signal.signal(signal.SIGINT, self.default_sigint)
+            self.run_shell("Entering hypervisor shell", "Returning")
+            signal.signal(signal.SIGINT, self._handle_sigint)
+
+        self.p.exit(EXC_RET.HANDLED)
+
     def skip(self):
         self.ctx.elr += 4
         self.cont()
@@ -1299,6 +1347,7 @@ class HV(Reloadable):
         self.iface.set_handler(START.HV, HV_EVENT.VTIMER, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.WDT_BARK, self.handle_bark)
         self.iface.set_handler(START.HV, HV_EVENT.CPU_SWITCH, self.handle_exception)
+        self.iface.set_handler(START.HV, HV_EVENT.VIRTIO, self.handle_virtio)
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
         self.iface.set_event_handler(EVENT.IRQTRACE, self.handle_irqtrace)
 
