@@ -10,6 +10,9 @@
 // Initialize USB early and break into proxy if device is opened within this time (sec)
 //#define EARLY_PROXY_TIMEOUT 5
 
+// Minimal build for bring-up
+//#define BRINGUP
+
 // Print RTKit logs to the console
 //#define RTKIT_SYSLOG
 

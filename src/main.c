@@ -63,6 +63,7 @@ void run_actions(void)
 {
     bool usb_up = false;
 
+#ifndef BRINGUP
 #ifdef EARLY_PROXY_TIMEOUT
     if (!cur_boot_args.video.display) {
         printf("Bringing up USB for early debug...\n");
@@ -96,6 +97,7 @@ void run_actions(void)
         printf(" Timed out\n");
     }
 #endif
+#endif
 
     printf("Checking for payloads...\n");
 
@@ -108,10 +110,12 @@ void run_actions(void)
 
     printf("No valid payload found\n");
 
+#ifndef BRINGUP
     if (!usb_up) {
         usb_init();
         usb_iodev_init();
     }
+#endif
 
     printf("Running proxy...\n");
 
@@ -129,11 +133,15 @@ void m1n1_main(void)
     get_device_info();
 
     heapblock_init();
+
+#ifndef BRINGUP
     gxf_init();
     mcc_init();
     mmu_init();
     aic_init();
+#endif
     wdt_disable();
+#ifndef BRINGUP
     pmgr_init();
 
 #ifdef USE_FB
@@ -153,6 +161,7 @@ void m1n1_main(void)
     clk_init();
     cpufreq_init();
     sep_init();
+#endif
 
     printf("Initialization complete.\n");
 
@@ -166,12 +175,14 @@ void m1n1_main(void)
 
     nvme_shutdown();
     exception_shutdown();
+#ifndef BRINGUP
     usb_iodev_shutdown();
     display_shutdown(DCP_SLEEP_IF_EXTERNAL);
 #ifdef USE_FB
     fb_shutdown(next_stage.restore_logo);
 #endif
     mmu_shutdown();
+#endif
 
     printf("Vectoring to next stage...\n");
 
