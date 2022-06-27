@@ -24,14 +24,24 @@
 #define HID0_CACHE_FUSION_DISABLE       BIT(36)
 #define HID0_SAME_PG_POWER_OPTIMIZATION BIT(45)
 
+#define SYS_IMP_APL_EHID0 sys_reg(3, 0, 15, 0, 1)
+#define EHID0_BLI_UNK32   BIT(32)
+
 #define SYS_IMP_APL_HID1                    sys_reg(3, 0, 15, 1, 0)
 #define HID1_TRAP_SMC                       BIT(54)
 #define HID1_ENABLE_MDSB_STALL_PIPELINE_ECO BIT(58)
 #define HID1_ENABLE_BR_KILL_LIMIT           BIT(60)
 
+#define HID1_AVL_UNK22_MASK GENMASK(23, 22)
+#define HID1_AVL_UNK22(x)   (((unsigned long)x) << 22)
+#define HID1_AVL_UNK42_MASK GENMASK(43, 42)
+#define HID1_AVL_UNK42(x)   (((unsigned long)x) << 42)
+
 #define SYS_IMP_APL_HID3                 sys_reg(3, 0, 15, 3, 0)
-#define HID3_DEV_PCIE_THROTTLE_ENABLE    BIT(63)
 #define HID3_DISABLE_ARBITER_FIX_BIF_CRD BIT(44)
+#define HID3_AVL_UNK57_MASK              GENMASK(62, 57)
+#define HID3_AVL_UNK57(x)                (((unsigned long)x) << 57)
+#define HID3_DEV_PCIE_THROTTLE_ENABLE    BIT(63)
 
 #define SYS_IMP_APL_HID4                         sys_reg(3, 0, 15, 4, 0)
 #define SYS_IMP_APL_EHID4                        sys_reg(3, 0, 15, 4, 1)
@@ -56,6 +66,7 @@
 #define HID7_FORCE_NONSPEC_TARGET_TIMER_SEL_MASK                      (3UL << 24)
 
 #define SYS_IMP_APL_HID9                sys_reg(3, 0, 15, 9, 0)
+#define HID9_AVL_UNK17                  BIT(17)
 #define HID9_TSO_ALLOW_DC_ZVA_WC        BIT(26)
 #define HID9_TSO_SERIALIZE_VLD_MICROOPS BIT(29)
 #define HID9_FIX_BUG_51667805           BIT(48)
@@ -63,7 +74,10 @@
 
 #define SYS_IMP_APL_EHID9           sys_reg(3, 0, 15, 9, 1)
 #define EHID9_DEV_THROTTLE_2_ENABLE BIT(5)
+#define EHID9_BLZ_UNK6_MASK         GENMASK(11, 6)
+#define EHID9_BLZ_UNK6(x)           (((unsigned long)x) << 6)
 
+#define SYS_IMP_APL_HID10               sys_reg(3, 0, 15, 10, 0)
 #define SYS_IMP_APL_EHID10              sys_reg(3, 0, 15, 10, 1)
 #define HID10_FORCE_WAIT_STATE_DRAIN_UC BIT(32)
 #define HID10_DISABLE_ZVA_TEMPORAL_TSO  BIT(49)
@@ -72,11 +86,32 @@
 #define HID11_ENABLE_FIX_UC_55719865 BIT(15)
 #define HID11_DISABLE_LD_NT_WIDGET   BIT(59)
 
-#define SYS_IMP_APL_HID13     sys_reg(3, 0, 15, 14, 0)
-#define HID13_PRE_CYCLES(x)   (((unsigned long)x) << 14)
-#define HID13_PRE_CYCLES_MASK (0xFUL << 14)
+#define SYS_IMP_APL_HID13            sys_reg(3, 0, 15, 14, 0)
+#define HID13_AVL_UNK0(x)            (((unsigned long)x))
+#define HID13_AVL_UNK0_MASK          GENMASK(6, 0)
+#define HID13_AVL_UNK7(x)            (((unsigned long)x) << 7)
+#define HID13_AVL_UNK7_MASK          GENMASK(13, 7)
+#define HID13_PRE_CYCLES(x)          (((unsigned long)x) << 14)
+#define HID13_PRE_CYCLES_MASK        GENMASK(17, 14)
+#define HID13_AVL_UNK26(x)           (((unsigned long)x) << 26)
+#define HID13_AVL_UNK26_MASK         GENMASK(29, 26)
+#define HID13_AVL_UNK30(x)           (((unsigned long)x) << 30)
+#define HID13_AVL_UNK30_MASK         GENMASK(33, 30)
+#define HID13_AVL_UNK34(x)           (((unsigned long)x) << 34)
+#define HID13_AVL_UNK34_MASK         GENMASK(37, 34)
+#define HID13_AVL_UNK38(x)           (((unsigned long)x) << 38)
+#define HID13_AVL_UNK38_MASK         GENMASK(41, 38)
+#define HID13_AVL_UNK42(x)           (((unsigned long)x) << 42)
+#define HID13_AVL_UNK42_MASK         GENMASK(45, 42)
+#define HID13_AVL_UNK46(x)           (((unsigned long)x) << 46)
+#define HID13_AVL_UNK46_MASK         GENMASK(49, 46)
+#define HID13_AVL_UNK50(x)           (((unsigned long)x) << 50)
+#define HID13_AVL_UNK50_MASK         GENMASK(53, 50)
+#define HID13_RESET_CYCLE_COUNT(x)   (((unsigned long)x) << 60)
+#define HID13_RESET_CYCLE_COUNT_MASK (0xFUL << 60)
 
 #define SYS_IMP_APL_HID16         sys_reg(3, 0, 15, 15, 2)
+#define HID16_AVL_UNK12           BIT(12)
 #define HID16_SPAREBIT0           BIT(56)
 #define HID16_SPAREBIT3           BIT(59)
 #define HID16_ENABLE_MPX_PICK_45  BIT(61)
@@ -84,7 +119,13 @@
 
 #define SYS_IMP_APL_HID18             sys_reg(3, 0, 15, 11, 2)
 #define HID18_HVC_SPECULATION_DISABLE BIT(14)
+#define HID18_AVL_UNK27               BIT(27)
+#define HID18_AVL_UNK29               BIT(29)
+#define HID18_SPAREBIT7               BIT(39)
 #define HID18_SPAREBIT17              BIT(49)
+
+#define SYS_IMP_APL_EHID18 sys_reg(3, 0, 15, 11, 3)
+#define EHID18_BLZ_UNK34   BIT(34)
 
 #define SYS_IMP_APL_EHID20                                            sys_reg(3, 0, 15, 1, 2)
 #define EHID20_TRAP_SMC                                               BIT(8)
@@ -93,8 +134,11 @@
 #define EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL(x)                    (((unsigned long)x) << 21)
 #define EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL_MASK                  (3UL << 21)
 
-#define SYS_IMP_APL_HID21             sys_reg(3, 0, 15, 1, 3)
-#define HID21_ENABLE_LDREX_FILL_REPLY BIT(19)
+#define SYS_IMP_APL_HID21                            sys_reg(3, 0, 15, 1, 3)
+#define HID21_ENABLE_LDREX_FILL_REPLY                BIT(19)
+#define HID21_LDQ_RTR_WAIT_FOR_OLD_ST_REL_COMPLETION BIT(33)
+#define HID21_DISABLE_CDP_REPLY_PURGED_TRANSACTION   BIT(34)
+#define HID21_AVL_UNK52                              BIT(52)
 
 #define SYS_IMP_APL_PMCR0 sys_reg(3, 1, 15, 0, 0)
 #define PMCR0_CNT_EN_MASK (MASK(8) | GENMASK(33, 32))
