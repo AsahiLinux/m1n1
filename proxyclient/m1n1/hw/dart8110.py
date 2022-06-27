@@ -253,7 +253,7 @@ class DART8110(Reloadable):
     Lx_SIZE = (1 << IDX_BITS)
     IDX_MASK = Lx_SIZE - 1
 
-    def __init__(self, iface, regs, util=None, iova_range=(0x800000000, 0x900000000)):
+    def __init__(self, iface, regs, util=None, iova_range=(0x80000000, 0x90000000)):
         self.iface = iface
         self.regs = regs
         self.u = util
