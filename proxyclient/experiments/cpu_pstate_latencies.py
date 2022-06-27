@@ -12,19 +12,24 @@ tfreq = u.mrs(CNTFRQ_EL0)
 
 TEST_CPUS = [1, 4]
 
-CREG = [
-    0x210e00000,
-    0x211e00000,
-]
-
 CLUSTER_PSTATE = 0x20020
+CLUSTER_STATUS = 0x20050
 
-MAX_PSTATE = [5, 15]
+if u.adt["/chosen"].chip_id == 0x8103:
+    CREG = [
+        0x210e00000,
+        0x211e00000,
+    ]
 
-# e-core pstates
-#   600 972 1332 1704 2064
-# p-core pstates
-#   600 828 1056 1284 1500 1728 1956 2184 2388 2592 2772 2988 3096 3144 3204
+    MAX_PSTATE = [5, 15]
+
+elif u.adt["/chosen"].chip_id == 0x8112:
+    CREG = [
+        0x210e00000,
+        0x211e00000,
+    ]
+
+    MAX_PSTATE = [7, 17]
 
 code = u.malloc(0x1000)
 
@@ -88,7 +93,7 @@ def bench_cpu(idx, loops=10000000):
     return mhz
 
 def set_pstate(cluster, pstate):
-    p.mask64(CREG[cluster] + CLUSTER_PSTATE, 0xf00f, (1<<25) | pstate | (pstate << 12))
+    p.mask64(CREG[cluster] + CLUSTER_PSTATE, 0x1f01f, (1<<25) | pstate | (pstate << 12))
 
 print()
 
@@ -100,7 +105,7 @@ def bench_latency(cluster, cpu, from_pstate, to_pstate, verbose=False):
     bench_cpu(cpu)
 
     p.smp_call(cpu, util.timelog, logbuf, LOG_ITERS)
-    psreg = (p.read64(CREG[cluster] + CLUSTER_PSTATE) & ~0xf00f) | (1<<25) | to_pstate | (to_pstate << 12)
+    psreg = (p.read64(CREG[cluster] + CLUSTER_PSTATE) & ~0x1f001f) | (1<<25) | to_pstate | (to_pstate << 12)
     tval = p.call(util.signal_and_write, CREG[cluster] + CLUSTER_PSTATE, psreg)
     p.smp_wait(cpu)
     
