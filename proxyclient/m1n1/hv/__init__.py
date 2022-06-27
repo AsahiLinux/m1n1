@@ -1389,9 +1389,16 @@ class HV(Reloadable):
         die_count = self.adt["/arm-io"].die_count if hasattr(self.adt["/arm-io"], "die-count") else 1
 
         for die in range(0, die_count):
-            PMGR_CPU_START = 0x54000 + die * 0x20_0000_0000
-            zone = irange(pmgr0_start + PMGR_CPU_START, 0x20)
-            self.map_hook(pmgr0_start + PMGR_CPU_START, 0x20, write=cpustart_wh)
+            if self.u.adt["/chosen"].chip_id in (0x8103, 0x6000, 0x6001, 0x6002):
+                cpu_start = 0x54000 + die * 0x20_0000_0000
+            elif self.u.adt["/chosen"].chip_id in (0x8112,):
+                cpu_start = 0x34000 + die * 0x20_0000_0000
+            else:
+                self.log("CPUSTART unknown for this SoC!")
+                break
+
+            zone = irange(pmgr0_start + cpu_start, 0x20)
+            self.map_hook(pmgr0_start + cpu_start, 0x20, write=cpustart_wh)
             self.add_tracer(zone, "CPU_START", TraceMode.RESERVED)
 
     def start_secondary(self, die, cluster, cpu):
