@@ -80,6 +80,12 @@ static const struct cluster_t t6002_clusters[] = {
     {},
 };
 
+static const struct cluster_t t8112_clusters[] = {
+    {"ECPU", 0x210e20000, false, 7},
+    {"PCPU", 0x211e20000, true, 6},
+    {},
+};
+
 int cpufreq_init(void)
 {
     printf("cpufreq: Initializing clusters\n");
@@ -96,6 +102,9 @@ int cpufreq_init(void)
             break;
         case T6002:
             cluster = t6002_clusters;
+            break;
+        case T8112:
+            cluster = t8112_clusters;
             break;
         default:
             printf("cpufreq: Chip 0x%x is unsupported\n", chip_id);
