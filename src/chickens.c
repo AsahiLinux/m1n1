@@ -14,6 +14,10 @@
 #define MIDR_PART_T6000_FIRESTORM 0x25
 #define MIDR_PART_T6001_ICESTORM  0x28
 #define MIDR_PART_T6001_FIRESTORM 0x29
+#define MIDR_PART_T8110_BLIZZARD  0x30
+#define MIDR_PART_T8110_AVALANCHE 0x31
+#define MIDR_PART_T8112_BLIZZARD  0x32
+#define MIDR_PART_T8112_AVALANCHE 0x33
 
 #define MIDR_REV_LOW  GENMASK(3, 0)
 #define MIDR_PART     GENMASK(15, 4)
@@ -23,6 +27,9 @@ void init_m1_icestorm(void);
 void init_t8103_firestorm(int rev);
 void init_t6000_firestorm(int rev);
 void init_t6001_firestorm(int rev);
+
+void init_m2_blizzard(void);
+void init_t8112_avalanche(int rev);
 
 const char *init_cpu(void)
 {
@@ -71,6 +78,16 @@ const char *init_cpu(void)
         case MIDR_PART_T6001_ICESTORM:
             cpu = "M1 Max Icestorm";
             init_m1_icestorm();
+            break;
+
+        case MIDR_PART_T8112_AVALANCHE:
+            cpu = "M2 Avalanche";
+            init_t8112_avalanche(rev);
+            break;
+
+        case MIDR_PART_T8112_BLIZZARD:
+            cpu = "M2 Blizzard";
+            init_m2_blizzard();
             break;
 
         default:
