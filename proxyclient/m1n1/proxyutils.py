@@ -60,6 +60,8 @@ class ProxyUtils(Reloadable):
         self.simd_type = None
         self.simd = None
 
+        self.mmu_off = False
+
         self.exec_modes = {
             None: (self.proxy.call, REGION_RX_EL1),
             "el2": (self.proxy.call, REGION_RX_EL1),
@@ -147,6 +149,9 @@ class ProxyUtils(Reloadable):
             func = op
         else:
             raise ValueError()
+
+        if self.mmu_off:
+            region = 0
 
         assert len(func) < self.CODE_BUFFER_SIZE
         self.iface.writemem(self.code_buffer, func)
