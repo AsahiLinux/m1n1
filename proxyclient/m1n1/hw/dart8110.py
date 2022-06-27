@@ -43,7 +43,7 @@ class R_ERROR(Register32):
     SMMU = 30
     REGION_PROTECT = 29
     WRITE_nREAD = 28
-    SID = 23, 20
+    SID = 27, 20
     SECONDARY = 19
     FILL_REGION = 18
     BPF_REJECT = 14
@@ -137,9 +137,7 @@ class DART8110Regs(RegMap):
     TLB_END_DVA_PAGE    = 0x0a0, Register32    # hwrev 2 only
 
     ERROR           = 0x100, R_ERROR
-    # completely guessed, unverified
-    # based on what bits can be set/cleared in it
-    ERR_INTR_ENABLE = 0x104, Register32
+    ERROR_DISABLE   = 0x104, R_ERROR
 
     # Found via register bruteforcing
     STREAM_UNK_SET  = irange(0x120, 8, 4), Register32
@@ -470,11 +468,11 @@ class DART8110(Reloadable):
 
         self.invalidate_streams()
 
-#     def show_error(self):
-#         if self.regs.ERROR.reg.FLAG:
-#             print(f"ERROR: {self.regs.ERROR.reg!s}")
-#             print(f"ADDR: {self.regs.ERROR_ADDR_HI.val:#x}:{self.regs.ERROR_ADDR_LO.val:#x}")
-#             self.regs.ERROR.val = 0xffffffff
+    def show_error(self):
+        if self.regs.ERROR.reg.FLAG:
+            print(f"ERROR: {self.regs.ERROR.reg!s}")
+            print(f"ADDR: {self.regs.ERROR_ADDR_HI.val:#x}:{self.regs.ERROR_ADDR_LO.val:#x}")
+            self.regs.ERROR.val = 0x80000004
 
     def invalidate_streams(self, streams=0xffff):
         for sid in range(256):
