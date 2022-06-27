@@ -75,6 +75,8 @@ OBJECTS := \
 	chainload.o \
 	chainload_asm.o \
 	chickens.o \
+	chickens_firestorm.o \
+	chickens_icestorm.o \
 	clk.o \
 	cpufreq.o \
 	dart.o \
