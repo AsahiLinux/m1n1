@@ -23,9 +23,10 @@ static bool mcc_initialized = false;
 #define T6000_DCS_STRIDE    0x100000
 #define T6000_DCS_COUNT     4
 
-#define PLANE_TZ_START(i) (0x6a0 + i * 0x10)
-#define PLANE_TZ_END(i)   (0x6a4 + i * 0x10)
-#define PLANE_TZ_REGS     4
+#define PLANE_TZ_START(i)  (0x6a0 + i * 0x10)
+#define PLANE_TZ_END(i)    (0x6a4 + i * 0x10)
+#define PLANE_TZ_ENABLE(i) (0x6a8 + i * 0x10)
+#define PLANE_TZ_REGS      4
 
 #define PLANE_CACHE_ENABLE 0x1c00
 #define PLANE_CACHE_STATUS 0x1c04
@@ -101,6 +102,9 @@ static int plane_poll32(int mcc, int plane, u64 offset, u32 mask, u32 target, u3
 
 static void mcc_enable_cache(void)
 {
+    if (!mcc_initialized)
+        return;
+
     for (int mcc = 0; mcc < mcc_count; mcc++) {
         for (int plane = 0; plane < mcc_regs[mcc].plane_count; plane++) {
             plane_write32(mcc, plane, PLANE_CACHE_ENABLE, mcc_regs[mcc].cache_ways);
@@ -114,13 +118,26 @@ static void mcc_enable_cache(void)
 
 int mcc_unmap_carveouts(void)
 {
+    if (!mcc_initialized)
+        return -1;
+
     mcc_carveout_count = 0;
     memset(mcc_carveouts, 0, sizeof mcc_carveouts);
     // All MCCs and planes should have identical configs
     for (int i = 0; i < PLANE_TZ_REGS; i++) {
-        uint64_t start = ((uint64_t)plane_read32(0, 0, PLANE_TZ_START(i))) << 12;
-        uint64_t end = ((uint64_t)(1 + plane_read32(0, 0, PLANE_TZ_END(i)))) << 12;
-        if (start && start != end) {
+        uint64_t start = plane_read32(0, 0, PLANE_TZ_START(i));
+        uint64_t end = plane_read32(0, 0, PLANE_TZ_END(i));
+        bool enabled = plane_read32(0, 0, PLANE_TZ_ENABLE(i));
+
+        if (enabled) {
+            if (!start || start == end) {
+                printf("MMU: TZ%d region has bad bounds 0x%lx..0x%lx (iBoot bug?)\n", i, start,
+                       end);
+                continue;
+            }
+
+            start = start << 12;
+            end = (end + 1) << 12;
             start |= ram_base;
             end |= ram_base;
             printf("MMU: Unmapping TZ%d region at 0x%lx..0x%lx\n", i, start, end);
