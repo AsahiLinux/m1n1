@@ -267,8 +267,8 @@ class DART8110(Reloadable):
                                for i in range(16)]
 
     @classmethod
-    def from_adt(cls, u, path):
-        dart_addr = u.adt[path].get_reg(0)[0]
+    def from_adt(cls, u, path, instance=0):
+        dart_addr = u.adt[path].get_reg(instance)[0]
         regs = DART8110Regs(u, dart_addr)
         dart = cls(u.iface, regs, u)
         return dart
