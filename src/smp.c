@@ -5,11 +5,13 @@
 #include "cpu_regs.h"
 #include "malloc.h"
 #include "pmgr.h"
+#include "soc.h"
 #include "string.h"
 #include "types.h"
 #include "utils.h"
 
-#define CPU_START_OFF 0x54000
+#define CPU_START_OFF_T8103 0x54000
+#define CPU_START_OFF_T8112 0x34000
 
 #define CPU_REG_CORE    GENMASK(7, 0)
 #define CPU_REG_CLUSTER GENMASK(10, 8)
@@ -145,8 +147,24 @@ void smp_start_secondaries(void)
     }
 
     int cpu_nodes[MAX_CPUS];
+    u64 cpu_start_off;
 
     memset(cpu_nodes, 0, sizeof(cpu_nodes));
+
+    switch (chip_id) {
+        case T8103:
+        case T6000:
+        case T6001:
+        case T6002:
+            cpu_start_off = CPU_START_OFF_T8103;
+            break;
+        case T8112:
+            cpu_start_off = CPU_START_OFF_T8112;
+            break;
+        default:
+            printf("CPU start offset is unknown for this SoC!\n");
+            return;
+    }
 
     ADT_FOREACH_CHILD(adt, node)
     {
@@ -179,7 +197,7 @@ void smp_start_secondaries(void)
         u8 cluster = FIELD_GET(CPU_REG_CLUSTER, reg);
         u8 die = FIELD_GET(CPU_REG_DIE, reg);
 
-        smp_start_cpu(i, die, cluster, core, cpu_impl_reg[0], pmgr_reg + CPU_START_OFF);
+        smp_start_cpu(i, die, cluster, core, cpu_impl_reg[0], pmgr_reg + cpu_start_off);
     }
 
     spin_table[0].mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
