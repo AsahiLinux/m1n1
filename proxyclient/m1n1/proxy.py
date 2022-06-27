@@ -75,6 +75,11 @@ class PIX_FMT(IntEnum):
     XRGB = 0
     XBGR = 1
 
+class DART(IntEnum):
+    T8020 = 0
+    T8110 = 1
+    T6000 = 2
+
 ExcInfo = Struct(
     "regs" / Array(32, Int64ul),
     "spsr" / RegAdapter(SPSR),
@@ -979,8 +984,8 @@ class M1N1Proxy(Reloadable):
     def tunables_apply_local_addr(self, path, prop, base):
         return self.request(self.P_TUNABLES_APPLY_LOCAL, path, prop, base)
 
-    def dart_init(self, base, sid):
-        return self.request(self.P_DART_INIT, base, sid)
+    def dart_init(self, base, sid, dart_type=DART.T8020):
+        return self.request(self.P_DART_INIT, base, sid, dart_type)
     def dart_shutdown(self, dart):
         return self.request(self.P_DART_SHUTDOWN, dart)
     def dart_map(self, dart, iova, bfr, len):

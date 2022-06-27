@@ -8,75 +8,185 @@
 #include "string.h"
 #include "utils.h"
 
-#define DART_CONFIG      0x60
-#define DART_CONFIG_LOCK BIT(15)
+#define DART_T8020_CONFIG      0x60
+#define DART_T8020_CONFIG_LOCK BIT(15)
 
-#define DART_ERROR              0x40
-#define DART_ERROR_STREAM_SHIFT 24
-#define DART_ERROR_STREAM_MASK  0xf
-#define DART_ERROR_CODE_MASK    0xffffff
-#define DART_ERROR_FLAG         BIT(31)
-#define DART_ERROR_READ_FAULT   BIT(4)
-#define DART_ERROR_WRITE_FAULT  BIT(3)
-#define DART_ERROR_NO_PTE       BIT(2)
-#define DART_ERROR_NO_PMD       BIT(1)
-#define DART_ERROR_NO_TTBR      BIT(0)
+#define DART_T8020_ERROR              0x40
+#define DART_T8020_ERROR_STREAM_SHIFT 24
+#define DART_T8020_ERROR_STREAM_MASK  0xf
+#define DART_T8020_ERROR_CODE_MASK    0xffffff
+#define DART_T8020_ERROR_FLAG         BIT(31)
+#define DART_T8020_ERROR_READ_FAULT   BIT(4)
+#define DART_T8020_ERROR_WRITE_FAULT  BIT(3)
+#define DART_T8020_ERROR_NO_PTE       BIT(2)
+#define DART_T8020_ERROR_NO_PMD       BIT(1)
+#define DART_T8020_ERROR_NO_TTBR      BIT(0)
 
-#define DART_STREAM_SELECT 0x34
+#define DART_T8020_STREAM_SELECT 0x34
 
-#define DART_STREAM_COMMAND            0x20
-#define DART_STREAM_COMMAND_BUSY       BIT(2)
-#define DART_STREAM_COMMAND_INVALIDATE BIT(20)
+#define DART_T8020_STREAM_COMMAND            0x20
+#define DART_T8020_STREAM_COMMAND_BUSY       BIT(2)
+#define DART_T8020_STREAM_COMMAND_INVALIDATE BIT(20)
 
-#define DART_STREAM_COMMAND_BUSY_TIMEOUT 100
+#define DART_T8020_STREAM_COMMAND_BUSY_TIMEOUT 100
 
-#define DART_STREAM_REMAP 0x80
+#define DART_T8020_STREAM_REMAP 0x80
 
-#define DART_ERROR_ADDR_HI 0x54
-#define DART_ERROR_ADDR_LO 0x50
+#define DART_T8020_ERROR_ADDR_HI 0x54
+#define DART_T8020_ERROR_ADDR_LO 0x50
 
-#define DART_ENABLED_STREAMS 0xfc
+#define DART_T8020_ENABLED_STREAMS 0xfc
 
-#define DART_TCR(sid)             (0x100 + 4 * (sid))
-#define DART_TCR_TRANSLATE_ENABLE BIT(7)
-#define DART_TCR_BYPASS_DART      BIT(8)
-#define DART_TCR_BYPASS_DAPF      BIT(12)
+#define DART_T8020_TCR_OFF              0x100
+#define DART_T8020_TCR_TRANSLATE_ENABLE BIT(7)
+#define DART_T8020_TCR_BYPASS_DART      BIT(8)
+#define DART_T8020_TCR_BYPASS_DAPF      BIT(12)
 
-#define DART_TTBR(sid, idx) (0x200 + 16 * (sid) + 4 * (idx))
-#define DART_TTBR_VALID     BIT(31)
-#define DART_TTBR_ADDR      GENMASK(30, 0)
-#define DART_TTBR_SHIFT     12
+#define DART_T8020_TTBR_OFF   0x200
+#define DART_T8020_TTBR_VALID BIT(31)
+#define DART_T8020_TTBR_ADDR  GENMASK(30, 0)
+#define DART_T8020_TTBR_SHIFT 12
 
-#define DART_PTE_OFFSET_SHIFT 14
-#define DART_PTE_SP_START     GENMASK(63, 52)
-#define DART_PTE_SP_END       GENMASK(51, 40)
-#define DART_PTE_OFFSET_T8020 GENMASK(39, 14)
-#define DART_PTE_OFFSET_T6000 GENMASK(39, 10)
-#define DART_PTE_VALID        0b11
+#define DART_PTE_OFFSET_SHIFT     14
+#define DART_PTE_SP_START         GENMASK(63, 52)
+#define DART_PTE_SP_END           GENMASK(51, 40)
+#define DART_T8020_PTE_OFFSET     GENMASK(39, 14)
+#define DART_T6000_PTE_OFFSET     GENMASK(39, 10)
+#define DART_T8020_PTE_DISABLE_SP BIT(1)
+#define DART_T6000_PTE_REALTIME   BIT(1)
+#define DART_PTE_VALID            BIT(0)
+
+#define DART_T8110_TTBR_OFF   0x1400
+#define DART_T8110_TTBR_VALID BIT(0)
+#define DART_T8110_TTBR_ADDR  GENMASK(29, 2)
+#define DART_T8110_TTBR_SHIFT 14
+
+#define DART_T8110_TCR_OFF              0x1000
+#define DART_T8110_TCR_REMAP            GENMASK(11, 8)
+#define DART_T8110_TCR_REMAP_EN         BIT(7)
+#define DART_T8110_TCR_BYPASS_DAPF      BIT(2)
+#define DART_T8110_TCR_BYPASS_DART      BIT(1)
+#define DART_T8110_TCR_TRANSLATE_ENABLE BIT(0)
+
+#define DART_T8110_TLB_CMD              0x80
+#define DART_T8110_TLB_CMD_BUSY         BIT(31)
+#define DART_T8110_TLB_CMD_OP           GENMASK(10, 8)
+#define DART_T8110_TLB_CMD_OP_FLUSH_ALL 0
+#define DART_T8110_TLB_CMD_OP_FLUSH_SID 1
+#define DART_T8110_TLB_CMD_STREAM       GENMASK(7, 0)
+
+#define DART_T8110_ENABLE_STREAMS  0xc00
+#define DART_T8110_DISABLE_STREAMS 0xc20
+
+#define DART_MAX_TTBR_COUNT 4
+
+#define DART_TCR(dart) (dart->regs + dart->params->tcr_off + 4 * dart->device)
+#define DART_TTBR(dart, idx)                                                                       \
+    (dart->regs + dart->params->ttbr_off + 4 * dart->params->ttbr_count * dart->device + 4 * idx)
+
+struct dart_params {
+    int sid_count;
+
+    u64 pte_flags;
+    u64 offset_mask;
+
+    u64 tcr_enabled;
+    u64 tcr_disabled;
+    u64 tcr_off;
+
+    u64 ttbr_valid;
+    u64 ttbr_addr;
+    u64 ttbr_shift;
+    u64 ttbr_off;
+    int ttbr_count;
+
+    void (*tlb_invalidate)(dart_dev_t *dart);
+};
 
 struct dart_dev {
     bool locked;
     bool keep;
     uintptr_t regs;
     u8 device;
+    enum dart_type_t type;
+    const struct dart_params *params;
 
-    u64 offset_mask;
-    u64 *l1[4];
+    u64 *l1[DART_MAX_TTBR_COUNT];
 };
 
-static void dart_tlb_invalidate(dart_dev_t *dart)
+static void dart_t8020_tlb_invalidate(dart_dev_t *dart)
 {
-    write32(dart->regs + DART_STREAM_SELECT, BIT(dart->device));
+    write32(dart->regs + DART_T8020_STREAM_SELECT, BIT(dart->device));
 
     /* ensure that the DART can see the updated pagetables before invalidating */
     dma_wmb();
-    write32(dart->regs + DART_STREAM_COMMAND, DART_STREAM_COMMAND_INVALIDATE);
+    write32(dart->regs + DART_T8020_STREAM_COMMAND, DART_T8020_STREAM_COMMAND_INVALIDATE);
 
-    if (poll32(dart->regs + DART_STREAM_COMMAND, DART_STREAM_COMMAND_BUSY, 0, 100))
-        printf("dart: DART_STREAM_COMMAND_BUSY did not clear.\n");
+    if (poll32(dart->regs + DART_T8020_STREAM_COMMAND, DART_T8020_STREAM_COMMAND_BUSY, 0, 100))
+        printf("dart: DART_T8020_STREAM_COMMAND_BUSY did not clear.\n");
 }
 
-dart_dev_t *dart_init(uintptr_t base, u8 device, bool keep_pts)
+static void dart_t8110_tlb_invalidate(dart_dev_t *dart)
+{
+    /* ensure that the DART can see the updated pagetables before invalidating */
+    dma_wmb();
+    write32(dart->regs + DART_T8110_TLB_CMD,
+            FIELD_PREP(DART_T8110_TLB_CMD_OP, DART_T8110_TLB_CMD_OP_FLUSH_SID) |
+                FIELD_PREP(DART_T8110_TLB_CMD_STREAM, dart->device));
+
+    if (poll32(dart->regs + DART_T8110_TLB_CMD_OP, DART_T8110_TLB_CMD_BUSY, 0, 100))
+        printf("dart: DART_T8110_TLB_CMD_BUSY did not clear.\n");
+}
+
+const struct dart_params dart_t8020 = {
+    .sid_count = 32,
+    .pte_flags = FIELD_PREP(DART_PTE_SP_END, 0xfff) | FIELD_PREP(DART_PTE_SP_START, 0) |
+                 DART_T8020_PTE_DISABLE_SP | DART_PTE_VALID,
+    .offset_mask = DART_T8020_PTE_OFFSET,
+    .tcr_enabled = DART_T8020_TCR_TRANSLATE_ENABLE,
+    .tcr_disabled = DART_T8020_TCR_BYPASS_DAPF | DART_T8020_TCR_BYPASS_DART,
+    .tcr_off = DART_T8020_TCR_OFF,
+    .ttbr_valid = DART_T8020_TTBR_VALID,
+    .ttbr_addr = DART_T8020_TTBR_ADDR,
+    .ttbr_shift = DART_T8020_TTBR_SHIFT,
+    .ttbr_off = DART_T8020_TTBR_OFF,
+    .ttbr_count = 4,
+    .tlb_invalidate = dart_t8020_tlb_invalidate,
+};
+
+const struct dart_params dart_t6000 = {
+    .sid_count = 32,
+    .pte_flags =
+        FIELD_PREP(DART_PTE_SP_END, 0xfff) | FIELD_PREP(DART_PTE_SP_START, 0) | DART_PTE_VALID,
+    .offset_mask = DART_T6000_PTE_OFFSET,
+    .tcr_enabled = DART_T8020_TCR_TRANSLATE_ENABLE,
+    .tcr_disabled = DART_T8020_TCR_BYPASS_DAPF | DART_T8020_TCR_BYPASS_DART,
+    .tcr_off = DART_T8020_TCR_OFF,
+    .ttbr_valid = DART_T8020_TTBR_VALID,
+    .ttbr_addr = DART_T8020_TTBR_ADDR,
+    .ttbr_shift = DART_T8020_TTBR_SHIFT,
+    .ttbr_off = DART_T8020_TTBR_OFF,
+    .ttbr_count = 4,
+    .tlb_invalidate = dart_t8020_tlb_invalidate,
+};
+
+const struct dart_params dart_t8110 = {
+    .sid_count = 256,
+    .pte_flags =
+        FIELD_PREP(DART_PTE_SP_END, 0xfff) | FIELD_PREP(DART_PTE_SP_START, 0) | DART_PTE_VALID,
+    .offset_mask = DART_T6000_PTE_OFFSET,
+    .tcr_enabled = DART_T8110_TCR_TRANSLATE_ENABLE,
+    .tcr_disabled = DART_T8110_TCR_BYPASS_DAPF | DART_T8110_TCR_BYPASS_DART,
+    .tcr_off = DART_T8110_TCR_OFF,
+    .ttbr_valid = DART_T8110_TTBR_VALID,
+    .ttbr_addr = DART_T8110_TTBR_ADDR,
+    .ttbr_shift = DART_T8110_TTBR_SHIFT,
+    .ttbr_off = DART_T8110_TTBR_OFF,
+    .ttbr_count = 1,
+    .tlb_invalidate = dart_t8110_tlb_invalidate,
+};
+
+dart_dev_t *dart_init(uintptr_t base, u8 device, bool keep_pts, enum dart_type_t type)
 {
     dart_dev_t *dart = malloc(sizeof(*dart));
     if (!dart)
@@ -86,22 +196,51 @@ dart_dev_t *dart_init(uintptr_t base, u8 device, bool keep_pts)
 
     dart->regs = base;
     dart->device = device;
+    dart->type = type;
 
-    if (read32(dart->regs + DART_CONFIG) & DART_CONFIG_LOCK)
-        dart->locked = true;
+    switch (type) {
+        case DART_T8020:
+            dart->params = &dart_t8020;
+            break;
+        case DART_T8110:
+            dart->params = &dart_t8110;
+            break;
+        case DART_T6000:
+            dart->params = &dart_t6000;
+            break;
+    }
 
-    dart->offset_mask = DART_PTE_OFFSET_T8020;
+    if (device >= dart->params->sid_count) {
+        printf("dart: device %d is too big for this DART type\n", device);
+        free(dart);
+        return NULL;
+    }
+
+    switch (type) {
+        case DART_T8020:
+        case DART_T6000:
+            if (read32(dart->regs + DART_T8020_CONFIG) & DART_T8020_CONFIG_LOCK)
+                dart->locked = true;
+            set32(dart->regs + DART_T8020_ENABLED_STREAMS, BIT(device & 0x1f));
+            break;
+        case DART_T8110:
+            // TODO locked dart
+            write32(dart->regs + DART_T8110_ENABLE_STREAMS + 4 * (device >> 5), BIT(device & 0x1f));
+            break;
+    }
+
     dart->keep = keep_pts;
 
     if (dart->locked || keep_pts) {
-        for (int i = 0; i < 4; i++) {
-            u32 ttbr = read32(dart->regs + DART_TTBR(device, i));
-            if (ttbr & DART_TTBR_VALID)
-                dart->l1[i] = (u64 *)((ttbr & DART_TTBR_ADDR) << DART_TTBR_SHIFT);
+        for (int i = 0; i < dart->params->ttbr_count; i++) {
+            u32 ttbr = read32(DART_TTBR(dart, i));
+            if (ttbr & dart->params->ttbr_valid)
+                dart->l1[i] =
+                    (u64 *)(FIELD_GET(dart->params->ttbr_addr, ttbr) << dart->params->ttbr_shift);
         }
     }
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < dart->params->ttbr_count; i++) {
         if (dart->l1[i])
             continue;
 
@@ -110,14 +249,16 @@ dart_dev_t *dart_init(uintptr_t base, u8 device, bool keep_pts)
             goto error;
         memset(dart->l1[i], 0, SZ_16K);
 
-        write32(dart->regs + DART_TTBR(device, i),
-                DART_TTBR_VALID | (((uintptr_t)dart->l1[i]) >> DART_TTBR_SHIFT));
+        write32(DART_TTBR(dart, i),
+                dart->params->ttbr_valid |
+                    FIELD_PREP(dart->params->ttbr_addr,
+                               ((uintptr_t)dart->l1[i]) >> dart->params->ttbr_shift));
     }
 
     if (!dart->locked && !keep_pts)
-        write32(dart->regs + DART_TCR(device), DART_TCR_TRANSLATE_ENABLE);
+        write32(DART_TCR(dart), dart->params->tcr_enabled);
 
-    dart_tlb_invalidate(dart);
+    dart->params->tlb_invalidate(dart);
     return dart;
 
 error:
@@ -142,23 +283,33 @@ dart_dev_t *dart_init_adt(const char *path, int instance, int device, bool keep_
         return NULL;
     }
 
-    dart_dev_t *dart = dart_init(base, device, keep_pts);
+    enum dart_type_t type;
+    const char *type_s;
+
+    if (adt_is_compatible(adt, node, "dart,t8020")) {
+        type = DART_T8020;
+        type_s = "t8020";
+    } else if (adt_is_compatible(adt, node, "dart,t6000")) {
+        type = DART_T6000;
+        type_s = "t6000";
+    } else if (adt_is_compatible(adt, node, "dart,t8110")) {
+        type = DART_T8110;
+        type_s = "t8110";
+    } else {
+        printf("dart: dart %s at 0x%lx is of an unknown type\n", path, base);
+        return NULL;
+    }
+
+    dart_dev_t *dart = dart_init(base, device, keep_pts, type);
 
     if (!dart)
         return NULL;
 
-    if (adt_is_compatible(adt, node, "dart,t8020")) {
-        printf("dart: dart %s at 0x%lx is a t8020%s\n", path, base,
-               dart->locked ? " (locked)" : "");
-        dart->offset_mask = DART_PTE_OFFSET_T8020;
-    } else if (adt_is_compatible(adt, node, "dart,t6000")) {
-        printf("dart: dart %s at 0x%lx is a t6000%s\n", path, base,
-               dart->locked ? " (locked)" : "");
-        dart->offset_mask = DART_PTE_OFFSET_T6000;
-    }
+    printf("dart: dart %s at 0x%lx is a %s%s\n", path, base, type_s,
+           dart->locked ? " (locked)" : "");
 
     if (adt_getprop(adt, node, "real-time", NULL)) {
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < dart->params->ttbr_count; i++) {
             printf("dart: dart %s.%d.%d L1 %d is real-time at %p\n", path, instance, device, i,
                    dart->l1[i]);
         }
@@ -197,7 +348,7 @@ int dart_setup_pt_region(dart_dev_t *dart, const char *path, int device)
             u64 l2tbl = l2_start + index * SZ_16K;
 
             if (dart->l1[ttbr][idx] & DART_PTE_VALID) {
-                u64 off = FIELD_GET(dart->offset_mask, dart->l1[ttbr][idx])
+                u64 off = FIELD_GET(dart->params->offset_mask, dart->l1[ttbr][idx])
                           << DART_PTE_OFFSET_SHIFT;
                 if (off != l2tbl)
                     printf("dart: unexpected L2 tbl at index:%lu. 0x%016lx != 0x%016lx\n", index,
@@ -208,7 +359,7 @@ int dart_setup_pt_region(dart_dev_t *dart, const char *path, int device)
                 memset((void *)l2tbl, 0, SZ_16K);
             }
 
-            u64 offset = FIELD_PREP(dart->offset_mask, l2tbl >> DART_PTE_OFFSET_SHIFT);
+            u64 offset = FIELD_PREP(dart->params->offset_mask, l2tbl >> DART_PTE_OFFSET_SHIFT);
             dart->l1[ttbr][idx] = offset | DART_PTE_VALID;
         }
 
@@ -218,7 +369,7 @@ int dart_setup_pt_region(dart_dev_t *dart, const char *path, int device)
             printf("dart: failed to update '%s/l2-tt-0'\n", path);
         }
 
-        dart_tlb_invalidate(dart);
+        dart->params->tlb_invalidate(dart);
     }
 
     return 0;
@@ -230,7 +381,8 @@ static u64 *dart_get_l2(dart_dev_t *dart, u32 idx)
     idx &= 0x7ff;
 
     if (dart->l1[ttbr][idx] & DART_PTE_VALID) {
-        u64 off = FIELD_GET(dart->offset_mask, dart->l1[ttbr][idx]) << DART_PTE_OFFSET_SHIFT;
+        u64 off = FIELD_GET(dart->params->offset_mask, dart->l1[ttbr][idx])
+                  << DART_PTE_OFFSET_SHIFT;
         return (u64 *)off;
     }
 
@@ -240,7 +392,7 @@ static u64 *dart_get_l2(dart_dev_t *dart, u32 idx)
 
     memset(tbl, 0, SZ_16K);
 
-    u64 offset = FIELD_PREP(dart->offset_mask, ((u64)tbl) >> DART_PTE_OFFSET_SHIFT);
+    u64 offset = FIELD_PREP(dart->params->offset_mask, ((u64)tbl) >> DART_PTE_OFFSET_SHIFT);
 
     dart->l1[ttbr][idx] = offset | DART_PTE_VALID;
 
@@ -263,10 +415,9 @@ static int dart_map_page(dart_dev_t *dart, uintptr_t iova, uintptr_t paddr)
         return -1;
     }
 
-    u64 offset = FIELD_PREP(dart->offset_mask, paddr >> DART_PTE_OFFSET_SHIFT);
+    u64 offset = FIELD_PREP(dart->params->offset_mask, paddr >> DART_PTE_OFFSET_SHIFT);
 
-    l2[l2_index] = offset | FIELD_PREP(DART_PTE_SP_END, 0xfff) | FIELD_PREP(DART_PTE_SP_START, 0) |
-                   DART_PTE_VALID;
+    l2[l2_index] = offset | dart->params->pte_flags;
 
     return 0;
 }
@@ -294,7 +445,7 @@ int dart_map(dart_dev_t *dart, uintptr_t iova, void *bfr, size_t len)
         offset += SZ_16K;
     }
 
-    dart_tlb_invalidate(dart);
+    dart->params->tlb_invalidate(dart);
     return 0;
 }
 
@@ -325,7 +476,7 @@ void dart_unmap(dart_dev_t *dart, uintptr_t iova, size_t len)
         iova += SZ_16K;
     }
 
-    dart_tlb_invalidate(dart);
+    dart->params->tlb_invalidate(dart);
 }
 
 void dart_free_l2(dart_dev_t *dart, uintptr_t iova)
@@ -365,8 +516,8 @@ static void *dart_translate_internal(dart_dev_t *dart, uintptr_t iova, int silen
     }
 
     u32 l2_index = (iova >> 14) & 0x7ff;
-    u64 *l2 =
-        (u64 *)(FIELD_GET(dart->offset_mask, dart->l1[ttbr][l1_index]) << DART_PTE_OFFSET_SHIFT);
+    u64 *l2 = (u64 *)(FIELD_GET(dart->params->offset_mask, dart->l1[ttbr][l1_index])
+                      << DART_PTE_OFFSET_SHIFT);
 
     if (!(l2[l2_index] & DART_PTE_VALID) && !silent) {
         printf("dart[%lx %u]: l2 translation failure %x:%x %lx\n", dart->regs, dart->device,
@@ -375,7 +526,8 @@ static void *dart_translate_internal(dart_dev_t *dart, uintptr_t iova, int silen
     }
 
     u32 offset = iova & 0x3fff;
-    void *base = (void *)(FIELD_GET(dart->offset_mask, l2[l2_index]) << DART_PTE_OFFSET_SHIFT);
+    void *base =
+        (void *)(FIELD_GET(dart->params->offset_mask, l2[l2_index]) << DART_PTE_OFFSET_SHIFT);
 
     return base + offset;
 }
@@ -387,20 +539,20 @@ void *dart_translate(dart_dev_t *dart, uintptr_t iova)
 
 u64 dart_search(dart_dev_t *dart, void *paddr)
 {
-    for (int ttbr = 0; ttbr < 4; ++ttbr) {
+    for (int ttbr = 0; ttbr < dart->params->ttbr_count; ++ttbr) {
         if (!dart->l1[ttbr])
             continue;
         for (u32 l1_index = 0; l1_index < 0x7ff; l1_index++) {
             if (!(dart->l1[ttbr][l1_index] & DART_PTE_VALID))
                 continue;
 
-            u64 *l2 = (u64 *)(FIELD_GET(dart->offset_mask, dart->l1[ttbr][l1_index])
+            u64 *l2 = (u64 *)(FIELD_GET(dart->params->offset_mask, dart->l1[ttbr][l1_index])
                               << DART_PTE_OFFSET_SHIFT);
             for (u32 l2_index = 0; l2_index < 0x7ff; l2_index++) {
                 if (!(l2[l2_index] & DART_PTE_VALID))
                     continue;
-                u64 *dst =
-                    (u64 *)(FIELD_GET(dart->offset_mask, l2[l2_index]) << DART_PTE_OFFSET_SHIFT);
+                u64 *dst = (u64 *)(FIELD_GET(dart->params->offset_mask, l2[l2_index])
+                                   << DART_PTE_OFFSET_SHIFT);
                 if (dst == paddr)
                     return ((u64)ttbr << 36) | ((u64)l1_index << 25) | (l2_index << 14);
             }
@@ -442,13 +594,13 @@ s64 dart_find_iova(dart_dev_t *dart, s64 start, size_t len)
 void dart_shutdown(dart_dev_t *dart)
 {
     if (!dart->locked && !dart->keep)
-        write32(dart->regs + DART_TCR(dart->device), DART_TCR_BYPASS_DART | DART_TCR_BYPASS_DAPF);
+        write32(DART_TCR(dart), dart->params->tcr_disabled);
 
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < dart->params->ttbr_count; ++i)
         if (is_heap(dart->l1[i]))
-            write32(dart->regs + DART_TTBR(dart->device, i), 0);
+            write32(DART_TTBR(dart, i), 0);
 
-    for (int ttbr = 0; ttbr < 4; ++ttbr) {
+    for (int ttbr = 0; ttbr < dart->params->ttbr_count; ++ttbr) {
         for (int i = 0; i < SZ_16K / 8; ++i) {
             if (dart->l1[ttbr][i] & DART_PTE_VALID) {
                 void *l2 = dart_get_l2(dart, i);
@@ -460,9 +612,9 @@ void dart_shutdown(dart_dev_t *dart)
         }
     }
 
-    dart_tlb_invalidate(dart);
+    dart->params->tlb_invalidate(dart);
 
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < dart->params->ttbr_count; ++i)
         if (is_heap(dart->l1[i]))
             free(dart->l1[i]);
     free(dart);
