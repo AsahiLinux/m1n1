@@ -52,7 +52,7 @@ void hv_init(void)
 {
     pcie_shutdown();
     // Make sure we wake up DCP if we put it to sleep, just quiesce it to match ADT
-    if (display_start_dcp() >= 0)
+    if (display_is_external && display_start_dcp() >= 0)
         display_shutdown(DCP_QUIESCED);
     // reenable hpm interrupts for the guest for unused iodevs
     usb_hpm_restore_irqs(0);

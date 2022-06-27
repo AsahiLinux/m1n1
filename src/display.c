@@ -26,7 +26,7 @@ static dcp_dev_t *dcp;
 static dcp_iboot_if_t *iboot;
 static u64 fb_dva;
 static u64 fb_size;
-static bool display_is_external;
+bool display_is_external;
 
 #define abs(x) ((x) >= 0 ? (x) : -(x))
 
