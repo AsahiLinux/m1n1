@@ -531,6 +531,46 @@ static int dt_set_mac_addresses(void)
     return 0;
 }
 
+static int dt_set_bluetooth_cal(int anode, int node, const char *adt_name, const char *fdt_name)
+{
+    u32 len;
+    const u8 *cal_blob = adt_getprop(adt, anode, adt_name, &len);
+
+    if (!cal_blob || !len)
+        bail("ADT: Failed to get %s", adt_name);
+
+    fdt_setprop(dt, node, fdt_name, cal_blob, len);
+    return 0;
+}
+
+static int dt_set_bluetooth(void)
+{
+    int ret;
+    int anode = adt_path_offset(adt, "/arm-io/bluetooth");
+
+    if (anode < 0)
+        bail("ADT: /arm-io/bluetooth not found\n");
+
+    const char *path = fdt_get_alias(dt, "bluetooth0");
+    if (path == NULL)
+        return 0;
+
+    int node = fdt_path_offset(dt, path);
+    if (node < 0)
+        return 0;
+
+    ret = dt_set_bluetooth_cal(anode, node, "bluetooth-taurus-calibration-bf",
+                               "brcm,taurus-bf-cal-blob");
+    if (ret)
+        return ret;
+
+    ret = dt_set_bluetooth_cal(anode, node, "bluetooth-taurus-calibration", "brcm,taurus-cal-blob");
+    if (ret)
+        return ret;
+
+    return 0;
+}
+
 static int dt_set_wifi(void)
 {
     int anode = adt_path_offset(adt, "/arm-io/wlan");
@@ -1037,6 +1077,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_mac_addresses())
         return -1;
     if (dt_set_wifi())
+        return -1;
+    if (dt_set_bluetooth())
         return -1;
     if (dt_set_uboot())
         return -1;
