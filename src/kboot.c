@@ -496,10 +496,22 @@ err:
     return ret;
 }
 
-static const char *aliases[] = {
-    "bluetooth0",
-    "ethernet0",
-    "wifi0",
+static struct {
+    const char *alias;
+    const char *fdt_property;
+} mac_address_devices[] = {
+    {
+        .alias = "bluetooth0",
+        .fdt_property = "local-bd-address",
+    },
+    {
+        .alias = "ethernet0",
+        .fdt_property = "local-mac-address",
+    },
+    {
+        .alias = "wifi0",
+        .fdt_property = "local-mac-address",
+    },
 };
 
 static int dt_set_mac_addresses(void)
@@ -509,15 +521,15 @@ static int dt_set_mac_addresses(void)
     if (anode < 0)
         bail("ADT: /chosen not found\n");
 
-    for (size_t i = 0; i < sizeof(aliases) / sizeof(*aliases); i++) {
+    for (size_t i = 0; i < sizeof(mac_address_devices) / sizeof(*mac_address_devices); i++) {
         char propname[32];
-        snprintf(propname, sizeof(propname), "mac-address-%s", aliases[i]);
+        snprintf(propname, sizeof(propname), "mac-address-%s", mac_address_devices[i].alias);
 
         uint8_t addr[6];
         if (ADT_GETPROP_ARRAY(adt, anode, propname, addr) < 0)
             continue;
 
-        const char *path = fdt_get_alias(dt, aliases[i]);
+        const char *path = fdt_get_alias(dt, mac_address_devices[i].alias);
         if (path == NULL)
             continue;
 
@@ -525,7 +537,7 @@ static int dt_set_mac_addresses(void)
         if (node < 0)
             continue;
 
-        fdt_setprop(dt, node, "local-mac-address", addr, sizeof(addr));
+        fdt_setprop(dt, node, mac_address_devices[i].fdt_property, addr, sizeof(addr));
     }
 
     return 0;
