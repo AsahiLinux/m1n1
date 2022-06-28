@@ -22,8 +22,6 @@ ASCTracer = ASCTracer._reloadcls()
 GPIOTracer = GPIOTracer._reloadcls()
 SPITracer = SPITracer._reloadcls()
 
-#trace_device("/arm-io/spi2", True)
-
 mesa_node = None
 for node in hv.adt.walk_tree():
     try:
@@ -57,8 +55,6 @@ mesa_pins = {
 
 }
 
-# Trace entire SPI MMIO range, can probably disable
-#trace_range(irange(0x000000019B108000, 0x4000), mode=TraceMode.ASYNC)
 
 gpio_tracer = GPIOTracer(hv, "/arm-io/gpio0", mesa_pins, verbose=1)
 gpio_tracer.start()
@@ -207,14 +203,6 @@ class SIOTracer(ASCTracer):
     ENDPOINTS = {
         0x20: SIOEp
     }
-
-
-# RegMonitor for fingerprint endpoints?
-# Read pages pointed to by SIO
-#iomon.add((0x3d0 << 12), 0x4000, name="MESA 0x19?", offset=(0x3d0 << 12))
-#trace_device("/arm-io/spi2", True)
-#iomon.add((0x3db << 12), 0x4000, name="MESA 0x18?", offset=(0x3db << 12))
-
 
 
 sio_tracer = SIOTracer(hv, "/arm-io/sio", verbose=1)
