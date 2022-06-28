@@ -190,7 +190,7 @@ class SIOEp(EP):
                 self.log("Mesa command interrupted!")
                 return
             if size >= 0x7200:
-                with open("print.png", "wb") as fd:
+                with open("large_message.bin", "wb") as fd:
                     fd.write(self.tracer.ioread(buf, size))
                 print("Fingerprint record message dumped.")
                 return
