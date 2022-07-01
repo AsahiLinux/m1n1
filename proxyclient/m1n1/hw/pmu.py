@@ -13,14 +13,16 @@ class PMU:
         if adt_path is None:
             adt_path = PMU.find_primary_pmu(u.adt)
 
+        self.node = u.adt[adt_path]
         self.spmi = SPMI(u, adt_path.rpartition('/')[0])
         self.adt_path = adt_path
-        self.primary = getattr(u.adt[adt_path], "is-primary") == 1
+        self.primary = u.adt[adt_path].is_primary == 1
+        self.reg = u.adt[adt_path].reg[0]
 
     def reset_panic_counter(self):
         if self.primary:
-            leg_scrpad = self.u.adt[self.adt_path].info_leg__scrpad[0]
-            self.spmi.write8(15, leg_scrpad + 2, 0) # error counts
+            leg_scrpad = self.node.info_leg__scrpad[0]
+            self.spmi.write8(self.reg, leg_scrpad + 2, 0) # error counts
 
     @staticmethod
     def find_primary_pmu(adt):
