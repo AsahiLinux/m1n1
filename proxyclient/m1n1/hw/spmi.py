@@ -21,12 +21,15 @@ class R_CMD(Register32):
 
 class R_STATUS(Register32):
     RX_EMPTY    = 24
+    RX_COUNT    = 23, 16
     TX_EMPTY    = 8
+    TX_COUNT    = 7, 0
 
 class SPMIRegs(RegMap):
     STATUS      = 0x00, R_STATUS
     CMD         = 0x04, R_CMD
     REPLY       = 0x08, Register32
+    IRQ_FLAG    = 0x80, Register32
 
 class SPMI:
     def __init__(self, u, adt_path):
