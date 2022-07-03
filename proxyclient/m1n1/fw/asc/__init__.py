@@ -26,14 +26,17 @@ class StandardASC(ASC):
         0xa: ASCDummyEndpoint, # tracekit
     }
 
-    def __init__(self, u, asc_base, dart=None):
+    def __init__(self, u, asc_base, dart=None, stream=0):
         super().__init__(u, asc_base)
         self.remote_eps = set()
         self.add_ep(0, ASCManagementEndpoint(self, 0))
         self.dart = dart
+        self.stream = stream
         self.eps = []
         self.epcls = {}
         self.dva_offset = 0
+        self.dva_size = 1 << 32
+        self.allow_phys = False
 
         for cls in type(self).mro():
             eps = getattr(cls, "ENDPOINTS", None)
@@ -49,7 +52,7 @@ class StandardASC(ASC):
     def iomap(self, addr, size):
         if self.dart is None:
             return addr
-        dva = self.dva_offset | self.dart.iomap(0, addr, size)
+        dva = self.dva_offset | self.dart.iomap(self.stream, addr, size)
 
         self.dart.invalidate_streams(1)
         return dva
@@ -60,22 +63,31 @@ class StandardASC(ASC):
         return paddr, dva
 
     def ioread(self, dva, size):
+        if self.allow_phys and dva < self.dva_offset or dva >= (self.dva_offset + self.dva_size):
+            return self.iface.readmem(dva, size)
+
         if self.dart:
-            return self.dart.ioread(0, dva & 0xFFFFFFFF, size)
+            return self.dart.ioread(self.stream, dva & 0xFFFFFFFF, size)
         else:
             return self.iface.readmem(dva, size)
 
     def iowrite(self, dva, data):
+        if self.allow_phys and dva < self.dva_offset or dva >= (self.dva_offset + self.dva_size):
+            return self.iface.writemem(dva, data)
+
         if self.dart:
-            return self.dart.iowrite(0, dva & 0xFFFFFFFF, data)
+            return self.dart.iowrite(self.stream, dva & 0xFFFFFFFF, data)
         else:
             return self.iface.writemem(dva, data)
 
     def iotranslate(self, dva, size):
+        if self.allow_phys and dva < self.dva_offset or dva >= (self.dva_offset + self.dva_size):
+            return [(dva, size)]
+
         if self.dart:
-            return self.dart.iotranslate(0, dva & 0xFFFFFFFF, size)
+            return self.dart.iotranslate(self.stream, dva & 0xFFFFFFFF, size)
         else:
-            return self.iface.readmem(dva, size)
+            return [(dva, size)]
 
     def start_ep(self, epno):
         if epno not in self.epcls:
