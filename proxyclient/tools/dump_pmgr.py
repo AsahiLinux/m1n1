@@ -24,10 +24,10 @@ print("=== Perf Regs ===")
 for i, r in enumerate(pmgr.perf_regs):
     print(f" #{i:2d} reg: {r.reg} off: {r.offset:05x} size:{r.size:05x} unk:{r.unk:08x}")
 
-print()
-print("=== PWR Gate Regs ===")
-for i, r in enumerate(pmgr.pwrgate_regs):
-    print(f" #{i:2d} reg: {r.reg} off: {r.offset:05x} mask:{r.mask:08x} unk:{r.unk:08x}")
+#print()
+#print("=== PWR Gate Regs ===")
+#for i, r in enumerate(pmgr.pwrgate_regs):
+    #print(f" #{i:2d} reg: {r.reg} off: {r.offset:05x} mask:{r.mask:08x} unk:{r.unk:08x}")
 
 clock_users = {}
 dev_users = {}
