@@ -18,6 +18,7 @@ class HistoryConsole(code.InteractiveConsole):
         code.InteractiveConsole.__init__(self, locals, filename)
         self.histfile = histfile
         self.init_history(histfile)
+        self.poll_func = None
 
     def init_history(self, histfile):
         readline.parse_and_bind("tab: complete")
@@ -37,6 +38,8 @@ class HistoryConsole(code.InteractiveConsole):
 
     def runcode(self, code):
         super().runcode(code)
+        if self.poll_func:
+            self.poll_func()
         if "mon" in self.locals:
             try:
                 self.locals["mon"].poll()
@@ -118,7 +121,7 @@ def help_cmd(arg=None):
 #locals is a dictionary for constructing the
 # InteractiveConsole with. It adds in the callables
 # in proxy utils iface and sysreg into locals
-def run_shell(locals, msg=None, exitmsg=None):
+def run_shell(locals, msg=None, exitmsg=None, poll_func=None):
     saved_display = sys.displayhook
     try:
         def display(val):
@@ -189,6 +192,7 @@ def run_shell(locals, msg=None, exitmsg=None):
                     clist[obj_name] = desc
 
         con = HistoryConsole(locals)
+        con.poll_func = poll_func
         try:
             con.interact(msg, exitmsg)
         except ExitConsole as e:
