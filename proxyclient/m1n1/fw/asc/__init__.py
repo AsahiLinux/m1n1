@@ -101,10 +101,8 @@ class StandardASC(ASC):
         ep.start()
 
     def start(self):
-        if self.is_running():
-            self.mgmt.start()
-        else:
-            self.boot()
+        super().boot()
+        self.mgmt.start()
         self.mgmt.wait_boot(1)
 
     def stop(self, state=0x10):
@@ -115,11 +113,13 @@ class StandardASC(ASC):
         self.mgmt.stop(state=state)
         self.epmap = {}
         self.add_ep(0, ASCManagementEndpoint(self, 0))
+        if state < 0x10:
+            self.shutdown()
 
     def boot(self):
         print("Booting ASC...")
         super().boot()
-        self.mgmt.wait_boot()
+        self.mgmt.wait_boot(1)
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
