@@ -265,10 +265,10 @@ class DART8110(Reloadable):
                                for i in range(16)]
 
     @classmethod
-    def from_adt(cls, u, path, instance=0):
+    def from_adt(cls, u, path, instance=0, **kwargs):
         dart_addr = u.adt[path].get_reg(instance)[0]
         regs = DART8110Regs(u, dart_addr)
-        dart = cls(u.iface, regs, u)
+        dart = cls(u.iface, regs, u, **kwargs)
         return dart
 
     def ioread(self, stream, base, size):
