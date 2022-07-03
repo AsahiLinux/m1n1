@@ -11,30 +11,6 @@ from m1n1.shell import run_shell
 from m1n1.hw.dart import DART, DARTRegs
 from m1n1.fw.asc import StandardASC, ASCDummyEndpoint
 
-
-DAPFFirmwareData = SafeGreedyRange(Struct(
-    "addr_from" / Hex(Int64ul),
-    "addr_to" / Hex(Int64ul),
-    "unk1" / Hex(Int32ul),
-    "unk2" / Hex(Int32ul),
-))
-
-
-def set_dapf_from_adt(adtpath):
-    node = u.adt[adtpath]
-    dapf_base, dapf_len = node.get_reg(1)
-
-    fw_data = DAPFFirmwareData.parse(node.filter_data_instance_0)
-    for entry, b in zip(fw_data,
-                range(dapf_base, dapf_base + dapf_len, 0x40)):
-        p.write32(b + 0x04, entry.unk2) # a guess
-        p.write32(b + 0x08, entry.addr_from & (1<<32)-1)
-        p.write32(b + 0x0c, entry.addr_from >> 32)
-        p.write32(b + 0x10, entry.addr_to & (1<<32)-1)
-        p.write32(b + 0x14, entry.addr_to >> 32)
-        p.write32(b, 0x31)
-
-
 class ASCArgumentSection:
     def __init__(self, bytes_):
         self.blob = bytearray(bytes_)
@@ -138,8 +114,7 @@ class AOPClient(StandardASC):
         args.update(keyvals)
         self.write_bootargs(args)
 
-
-set_dapf_from_adt("/arm-io/dart-aop")
+p.dapf_init_all()
 
 dart = DART.from_adt(u, "/arm-io/dart-aop")
 dart.initialize()

@@ -81,6 +81,7 @@ OBJECTS := \
 	chickens_icestorm.o \
 	clk.o \
 	cpufreq.o \
+	dapf.o \
 	dart.o \
 	dcp.o \
 	dcp_iboot.o \

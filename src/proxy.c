@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "proxy.h"
+#include "dapf.h"
 #include "dart.h"
 #include "display.h"
 #include "exception.h"
@@ -537,6 +538,13 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_DISPLAY_SHUTDOWN:
             display_shutdown(request->args[0]);
+            break;
+
+        case P_DAPF_INIT_ALL:
+            reply->retval = dapf_init_all();
+            break;
+        case P_DAPF_INIT:
+            reply->retval = dapf_init((const char *)request->args[0]);
             break;
 
         default:

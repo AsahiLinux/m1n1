@@ -3,6 +3,7 @@
 #include "kboot.h"
 #include "adt.h"
 #include "assert.h"
+#include "dapf.h"
 #include "exception.h"
 #include "malloc.h"
 #include "memory.h"
@@ -1113,6 +1114,7 @@ int kboot_boot(void *kernel)
 {
     usb_init();
     pcie_init();
+    dapf_init_all();
 
     printf("Setting SMP mode to WFE...\n");
     smp_set_wfe_mode(true);

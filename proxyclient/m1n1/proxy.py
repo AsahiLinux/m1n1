@@ -618,6 +618,9 @@ class M1N1Proxy(Reloadable):
     P_DISPLAY_CONFIGURE = 0x1101
     P_DISPLAY_SHUTDOWN = 0x1102
 
+    P_DAPF_INIT_ALL = 0x1200
+    P_DAPF_INIT = 0x1201
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
@@ -1062,6 +1065,11 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_DISPLAY_CONFIGURE, cfg)
     def display_shutdown(self, mode):
         return self.request(self.P_DISPLAY_SHUTDOWN, mode)
+
+    def dapf_init_all(self):
+        return self.request(self.P_DAPF_INIT_ALL)
+    def dapf_init(self, path):
+        return self.request(self.P_DAPF_INIT, path)
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
