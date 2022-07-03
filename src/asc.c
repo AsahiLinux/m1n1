@@ -69,7 +69,10 @@ int asc_get_iop_node(asc_dev_t *asc)
 void asc_cpu_start(asc_dev_t *asc)
 {
     set32(asc->cpu_base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
-    udelay(10);
+}
+
+void asc_cpu_stop(asc_dev_t *asc)
+{
     clear32(asc->cpu_base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
 }
 
