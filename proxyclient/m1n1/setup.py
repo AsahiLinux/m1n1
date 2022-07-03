@@ -7,6 +7,7 @@ from .proxyutils import *
 from .sysreg import *
 from .tgtypes import *
 from .utils import *
+from .hw.pmu import PMU
 
 # Create serial connection
 iface = UartInterface()
@@ -26,3 +27,5 @@ hv = HV(iface, p, u)
 fb = u.ba.video.base
 
 print(f"m1n1 base: 0x{u.base:x}")
+
+PMU(u).reset_panic_counter()
