@@ -499,10 +499,12 @@ err:
 static struct {
     const char *alias;
     const char *fdt_property;
+    bool swap;
 } mac_address_devices[] = {
     {
         .alias = "bluetooth0",
         .fdt_property = "local-bd-address",
+        .swap = true,
     },
     {
         .alias = "ethernet0",
@@ -528,6 +530,14 @@ static int dt_set_mac_addresses(void)
         uint8_t addr[6];
         if (ADT_GETPROP_ARRAY(adt, anode, propname, addr) < 0)
             continue;
+
+        if (mac_address_devices[i].swap) {
+            for (size_t i = 0; i < sizeof(addr) / 2; ++i) {
+                uint8_t tmp = addr[i];
+                addr[i] = addr[sizeof(addr) - i - 1];
+                addr[sizeof(addr) - i - 1] = tmp;
+            }
+        }
 
         const char *path = fdt_get_alias(dt, mac_address_devices[i].alias);
         if (path == NULL)
