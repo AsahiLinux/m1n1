@@ -8,14 +8,39 @@ from enum import IntEnum
 class R_IRQS(Register32):
     DONE = 0
     DBGSTS_ERROR = 1
-    # presumably one is read and one is write?
-    RW_ERROR_A = 3
-    RW_ERROR_B = 4
+    READ_ERROR = 3
+    # This doesn't actually trigger on bad IOVAs?
+    WRITE_ERROR_MAYBE = 4
     DECOMPRESSION_ERROR = 9
     CONTEXT_SWITCH = 10
     _BIT11 = 11
     AXI_ERROR = 12
     _BIT13 = 13
+
+
+class E_FLIP_ROTATE(IntEnum):
+    NONE = 0
+    # clockwise rotations
+    ROT_90 = 1
+    ROT_180 = 2
+    ROT_270 = 3
+    FLIP_UPDOWN = 4
+    FLIP_DIAGONAL_TR_BL = 5
+    FLIP_LEFTRIGHT = 6
+    FLIP_DIAGONAL_TL_BR = 7
+    # 8 = FLIP_LEFTRIGHT
+    # 9 = FLIP_DIAGONAL_TL_BR
+    # 10 = FLIP_UPDOWN
+    # 11 = FLIP_DIAGONAL_TR_BL
+    # 12 = ROT_180
+    # 13 = ROT_270
+    # 14 = NONE
+    # 15 = ROT_90
+
+
+class R_FLIP_ROTATE(Register32):
+    FLIP_ROTATE = 3, 0, E_FLIP_ROTATE
+
 
 class ScalerMainRegs(RegMap):
     # on startup 1 will be written followed by 0
@@ -85,6 +110,7 @@ class ScalerMainRegs(RegMap):
     SRC_PLANE1_STRIDE               = 0x001dc, Register32
     SRC_PLANE2_STRIDE               = 0x001e0, Register32
 
+    # seems to be in "pixels"
     SRC_PLANE0_OFFSET               = 0x001e8, Register32
     SRC_PLANE1_OFFSET               = 0x001ec, Register32
     SRC_PLANE2_OFFSET               = 0x001f0, Register32
@@ -138,3 +164,5 @@ class ScalerMainRegs(RegMap):
     DST_SIZE_THING5                 = 0x00314, Register32
     DST_SIZE_THING6                 = 0x00318, Register32
     DST_SIZE_THING7                 = 0x0031c, Register32
+
+    FLIP_ROTATE                     = 0x00380, R_FLIP_ROTATE
