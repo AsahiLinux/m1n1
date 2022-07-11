@@ -102,12 +102,8 @@ with Image.open(input_image_fn) as im:
             r, g, b = im.getpixel((x, y))
             in_data += struct.pack("BBBB", r, g, b, 255)
 
-# FIXME: don't fully understand how this works yet
-assert in_W == 32
-assert in_H == 32
-
-out_W = 32
-out_H = 32
+out_W = in_W
+out_H = in_H
 out_BYTESPP = 4
 out_STRIDE = out_W * out_BYTESPP
 out_SZ = out_W * out_H * out_BYTESPP * 2  # HACK: double size for testing purposes
@@ -209,26 +205,26 @@ scaler.SRC_PLANE0_OFFSET = 0
 scaler.SRC_PLANE2_OFFSET = 0
 
 # dest sizes
-scaler.DST_SIZE_THING0 = 0x20
-scaler.DST_SIZE_THING1 = 0x20
+scaler.DST_W = out_W
+scaler.DST_H = out_H
 
-scaler.DST_SIZE_THING3 = 0x20
-scaler.DST_SIZE_THING6 = 0x20
-scaler.DST_SIZE_THING2 = 0x20
-scaler.DST_SIZE_THING5 = 0x20
-scaler.DST_SIZE_THING4 = 0x20
-scaler.DST_SIZE_THING7 = 0x20
+scaler.DST_SIZE_THING3 = 0
+scaler.DST_SIZE_THING6 = 0
+scaler.DST_SIZE_THING2 = 0
+scaler.DST_SIZE_THING5 = 0
+scaler.DST_SIZE_THING4 = 0
+scaler.DST_SIZE_THING7 = 0
 
 # src sizes
-scaler.SRC_SIZE_THING0 = 0x20
-scaler.SRC_SIZE_THING1 = 0x20
+scaler.SRC_W = in_W
+scaler.SRC_H = in_H
 
-scaler.SRC_SIZE_THING3 = 0x20
-scaler.SRC_SIZE_THING6 = 0x20
-scaler.SRC_SIZE_THING2 = 0x20
-scaler.SRC_SIZE_THING5 = 0x20
-scaler.SRC_SIZE_THING4 = 0x20
-scaler.SRC_SIZE_THING7 = 0x20
+scaler.SRC_SIZE_THING3 = 0
+scaler.SRC_SIZE_THING6 = 0
+scaler.SRC_SIZE_THING2 = 0
+scaler.SRC_SIZE_THING5 = 0
+scaler.SRC_SIZE_THING4 = 0
+scaler.SRC_SIZE_THING7 = 0
 
 # swizzling
 scaler.SRC_SWIZZLE = 0x03020100
