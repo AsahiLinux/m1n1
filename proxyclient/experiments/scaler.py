@@ -9,6 +9,7 @@ from m1n1.hw.scaler import *
 from m1n1.utils import *
 import struct
 import time
+from PIL import Image, ImageDraw
 
 SCALER_ADT = '/arm-io/scaler0'
 DART_ADT = '/arm-io/dart-scaler0'
@@ -82,17 +83,35 @@ scaler.RESET = 0
 
 print(f"Hardware version after reset {scaler.HW_VERSION.val:08X}")
 
-in_W = 32
-in_H = 32
-in_STRIDE = in_W * 4
-in_SZ = in_W * in_H * 4
+if len(sys.argv) < 3:
+    print(f"Usage: {sys.argv[0]} input.png output.png")
+    sys.exit(-1)
+
+input_image_fn = sys.argv[1]
+output_image_fn = sys.argv[2]
+
+in_data = b''
+with Image.open(input_image_fn) as im:
+    in_W, in_H = im.size
+    in_BYTESPP = 4
+    in_STRIDE = in_W * in_BYTESPP
+    in_SZ = in_W * in_H * in_BYTESPP
+
+    for y in range(in_H):
+        for x in range(in_W):
+            r, g, b = im.getpixel((x, y))
+            in_data += struct.pack("BBBB", r, g, b, 255)
+
+# FIXME: don't fully understand how this works yet
+assert in_W == 32
+assert in_H == 32
 
 out_W = 32
 out_H = 32
-out_STRIDE = out_W * 4
-out_SZ = out_W * out_H * 4 * 2  # HACK: double size for testing purposes
+out_BYTESPP = 4
+out_STRIDE = out_W * out_BYTESPP
+out_SZ = out_W * out_H * out_BYTESPP * 2  # HACK: double size for testing purposes
 
-in_data = b''
 for i in range(in_W * in_H):
     in_data += struct.pack("<I", i & 0xFFFFFFFF)
 # chexdump(in_data)
@@ -123,7 +142,7 @@ p.write32(scaler_base + 0x18c, 0x0)
 p.write32(scaler_base + 0x190, 0x0)
 
 # transform config (flip/rotate)
-p.write32(scaler_base + 0x380, 0x0)
+scaler.FLIP_ROTATE.set(FLIP_ROTATE=E_FLIP_ROTATE.NONE)
 
 # cache hints
 scaler.CACHE_HINTS_THING0[0].val = 0x7d311
@@ -330,7 +349,7 @@ p.write32(scaler_base + 0x110, 0x1)
 
 # start
 p.write32(scaler_base + 0x98, 0xfffffffe)
-p.write32(scaler_base + 0x80, 0x1)
+scaler.START = 1
 
 start_time = time.time()
 while scaler.MSR_GLBL_IRQSTS.reg.DONE == 0:
@@ -343,3 +362,15 @@ print(f"Debug status is now {scaler.MSR_CTRL_DBGSTS}")
 
 out_buf_new = iface.readmem(out_buf_phys, out_SZ)
 chexdump(out_buf_new)
+
+with Image.new(mode='RGBA', size=(out_W, out_H)) as im:
+    for y in range(out_H):
+        for x in range(out_W):
+            block = out_buf_new[
+                y*out_STRIDE + x*out_BYTESPP:
+                y*out_STRIDE + (x+1)*out_BYTESPP]
+
+            r, g, b, a = block
+            im.putpixel((x, y), (r, g, b, a))
+
+    im.save(output_image_fn)
