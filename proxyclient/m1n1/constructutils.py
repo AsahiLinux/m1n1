@@ -158,11 +158,13 @@ class ReloadableConstructMeta(ReloadableMeta, Construct):
                 try:
                     sizeof = subcon.sizeof()
                 except:
-                    break
+                    sizeof = None
                 if isinstance(subcon, Renamed):
                     name = subcon.name
                     subcon = subcon.subcon
                     cls._off[name] = off, sizeof
+                if sizeof is None:
+                    break
                 off += sizeof
         return cls
 
@@ -380,7 +382,11 @@ class ConstructClass(ConstructClassBase, Container):
             meta = ""
             if key in self._off:
                 offv, sizeof = self._off[key]
-                off = f"\x1b[32m[{offv:3x}.{sizeof:3x}]\x1b[m "
+                if sizeof is not None:
+                    sizeofs = f"{sizeof:3x}"
+                else:
+                    sizeofs = "  *"
+                off = f"\x1b[32m[{offv:3x}.{sizeofs}]\x1b[m "
             if key in self._meta:
                 meta = f" \x1b[34m{self._meta[key]}\x1b[m"
             if '\n' in val_repr:
