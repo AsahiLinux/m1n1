@@ -35,12 +35,27 @@ class ScalerMainRegs(RegMap):
     MSR_GLBL_IRQSTS                 = 0x0001c, R_IRQS
     FRAME_COUNT                     = 0x00020, Register32
 
+    # can set 7
+    REG_0x58                        = 0x00058, Register32
+
+    # can set 0xffff
+    REG_0x74                        = 0x00074, Register32
+
     # 1, or 3 if readonly??
     START                           = 0x00080, Register32
+    # can set all bits
+    REG_0x84                        = 0x00084, Register32
+    # can set all bits
+    REG_0x88                        = 0x00088, Register32
+    # can set 0x8000ffff
+    REG_0x8c                        = 0x0008c, Register32
 
+    # can set all bits
+    REG_0x98                        = 0x00098, Register32
     # 0x3f3d?
     MSR_CTRL_DBGSTS                 = 0x0009c, Register32
-
+    # can set 3
+    REG_0xa0                        = 0x000a0, Register32
     PROFILING_RELATED               = 0x000a4, Register32
 
     TRANSFORM_ID                    = 0x00110, Register32
