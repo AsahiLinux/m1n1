@@ -311,11 +311,10 @@ class MTPMultitouchInterface(MTPHIDInterface):
     def initialize(self):
         super().initialize()
 
-        data = open("afe.bin", "rb").read()
-        self.proto.comm.init_afe(self.iface, data)
-        self.proto.comm.device_reset(self.iface, 1, 0)
-        self.proto.comm.device_reset(self.iface, 1, 2)
-
+        #data = open("afe.bin", "rb").read()
+        #self.proto.comm.init_afe(self.iface, data)
+        #self.proto.comm.device_reset(self.iface, 1, 0)
+        #self.proto.comm.device_reset(self.iface, 1, 2)
 
 class MTPKeyboardInterface(MTPHIDInterface):
     NAME = "keyboard"

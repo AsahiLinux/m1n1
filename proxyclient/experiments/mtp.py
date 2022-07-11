@@ -80,11 +80,17 @@ try:
     mp = MTPProtocol(u, node, mtp, dc, smc)
 
     mp.wait_init("keyboard")
-    mp.wait_init("multi_touch")
+    #mp.wait_init("multi_touch")
+    mp.wait_init("stm")
 
     mtp.stop()
     mtp.start()
     mon.poll()
+
+    for i in range(256):
+        mp.stm.get_report(i)
+        mtp.work()
+        mp.work_pending()
 
     #for i in range(256):
         #if i in (0x40, 0x42):
@@ -104,15 +110,15 @@ try:
             #print(f"{m.command:#x} {m.args.hex()}")
             #mp.comm.device_control(m)
 
-    mon.poll()
-    mtp.stop()
-    mon.poll()
-    mtp.start()
+    #mon.poll()
+    #mtp.stop()
+    #mon.poll()
+    #mtp.start()
 
-    mon.poll()
-    mtp.stop(1)
-    #reset(1)
-    #p.dapf_init_all()
+    #mon.poll()
+    #mtp.stop(1)
+    ##reset(1)
+    ##p.dapf_init_all()
 
     #mtp.boot()
 
