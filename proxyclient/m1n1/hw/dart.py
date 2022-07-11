@@ -106,8 +106,8 @@ class DART(Reloadable):
         self.ptecls = PTE_TYPES[compat]
 
     @classmethod
-    def from_adt(cls, u, path):
-        dart_addr = u.adt[path].get_reg(0)[0]
+    def from_adt(cls, u, path, instance=0, **kwargs):
+        dart_addr = u.adt[path].get_reg(instance)[0]
         regs = DARTRegs(u, dart_addr)
         dart = cls(u.iface, regs, u)
         dart.ptecls = PTE_TYPES[u.adt[path].compatible[0]]
