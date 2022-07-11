@@ -87,6 +87,13 @@ class ASC:
         self.epmap[idx] = ep
         setattr(self, ep.SHORT, ep)
 
+    def has_messages(self):
+        return not self.asc.OUTBOX_CTRL.reg.EMPTY
+
+    def work_pending(self):
+        while self.has_messages():
+            self.work()
+
     def work(self):
         if self.asc.OUTBOX_CTRL.reg.EMPTY:
             return True
