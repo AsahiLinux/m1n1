@@ -7,6 +7,8 @@ from m1n1.setup import *
 from m1n1.hw.dart8110 import DART8110
 from m1n1.hw.scaler import *
 from m1n1.utils import *
+import struct
+import time
 
 SCALER_ADT = '/arm-io/scaler0'
 DART_ADT = '/arm-io/dart-scaler0'
@@ -79,3 +81,265 @@ scaler.RESET = 1
 scaler.RESET = 0
 
 print(f"Hardware version after reset {scaler.HW_VERSION.val:08X}")
+
+in_W = 32
+in_H = 32
+in_STRIDE = in_W * 4
+in_SZ = in_W * in_H * 4
+
+out_W = 32
+out_H = 32
+out_STRIDE = out_W * 4
+out_SZ = out_W * out_H * 4 * 2  # HACK: double size for testing purposes
+
+in_data = b''
+for i in range(in_W * in_H):
+    in_data += struct.pack("<I", i & 0xFFFFFFFF)
+# chexdump(in_data)
+
+out_buf_phys = u.heap.memalign(0x4000, out_SZ)
+iface.writemem(out_buf_phys, b'\xAA' * out_SZ)
+out_buf_iova = dart.iomap(0, out_buf_phys, out_SZ)
+print(f"Output buffer @ phys {out_buf_phys:016X} iova {out_buf_iova:016X}")
+
+in_buf_phys = u.heap.memalign(0x4000, in_SZ)
+iface.writemem(in_buf_phys, in_data)
+in_buf_iova = dart.iomap(0, in_buf_phys, in_SZ)
+print(f"Input buffer @ phys {in_buf_phys:016X} iova {in_buf_iova:016X}")
+dart.dump_all()
+
+
+
+dpe_start()
+
+# reset CM
+p.write32(scaler_base + 0x3800, 0x0)
+
+# RDMA control
+p.write32(scaler_base + 0x180, 0x1)
+p.write32(scaler_base + 0x184, 0x1e)
+p.write32(scaler_base + 0x188, 0x0)
+p.write32(scaler_base + 0x18c, 0x0)
+p.write32(scaler_base + 0x190, 0x0)
+
+# transform config (flip/rotate)
+p.write32(scaler_base + 0x380, 0x0)
+
+# cache hints
+scaler.CACHE_HINTS_THING0[0].val = 0x7d311
+scaler.CACHE_HINTS_THING0[1].val = 0x7d311
+scaler.CACHE_HINTS_THING0[2].val = 0x7d311
+scaler.CACHE_HINTS_THING0[3].val = 0x7d311
+scaler.CACHE_HINTS_THING2[0].val = 0xbd311
+scaler.CACHE_HINTS_THING2[1].val = 0xbd311
+scaler.CACHE_HINTS_THING2[2].val = 0xbd311
+# scaler.CACHE_HINTS_THING2[3].val = 0xbd311
+scaler.CACHE_HINTS_THING1[0].val = 0x707
+scaler.CACHE_HINTS_THING1[1].val = 0x707
+scaler.CACHE_HINTS_THING1[2].val = 0x707
+scaler.CACHE_HINTS_THING1[3].val = 0x707
+scaler.CACHE_HINTS_THING3[0].val = 0xc0bd307
+scaler.CACHE_HINTS_THING3[1].val = 0xc0bd307
+scaler.CACHE_HINTS_THING3[2].val = 0xc0bd307
+# scaler.CACHE_HINTS_THING3[3].val = 0xc0bd307
+
+# tunables
+scaler.TUNABLES_THING0[0].val = 0x20
+scaler.TUNABLES_THING0[1].val = 0x20
+scaler.TUNABLES_THING0[2].val = 0x20
+scaler.TUNABLES_THING0[3].val = 0x20
+scaler.TUNABLES_THING1[0].val = 0x4000720
+scaler.TUNABLES_THING1[1].val = 0x4000720
+scaler.TUNABLES_THING1[2].val = 0x4000720
+# scaler.TUNABLES_THING1[3].val = 0x4000720
+
+# dest base addresses
+scaler.DST_PLANE1_LO = 0
+scaler.DST_PLANE1_HI = 0
+scaler.DST_PLANE0_LO = out_buf_iova & 0xFFFFFFFF
+scaler.DST_PLANE0_HI = out_buf_iova >> 32
+scaler.DST_PLANE2_LO = 0
+scaler.DST_PLANE2_HI = 0
+
+# src base addresses
+scaler.SRC_PLANE1_LO = 0
+scaler.SRC_PLANE1_HI = 0
+scaler.SRC_PLANE0_LO = in_buf_iova & 0xFFFFFFFF
+scaler.SRC_PLANE0_HI = in_buf_iova >> 32
+scaler.SRC_PLANE2_LO = 0
+scaler.SRC_PLANE2_HI = 0
+
+# dest stride
+scaler.DST_PLANE1_STRIDE = 0
+scaler.DST_PLANE0_STRIDE = out_STRIDE
+scaler.DST_PLANE2_STRIDE = 0
+
+# src stride
+scaler.SRC_PLANE1_STRIDE = 0
+scaler.SRC_PLANE0_STRIDE = in_STRIDE
+scaler.SRC_PLANE2_STRIDE = 0
+
+# dest offset
+scaler.DST_PLANE1_OFFSET = 0
+scaler.DST_PLANE0_OFFSET = 0
+scaler.DST_PLANE2_OFFSET = 0
+
+# src offset
+scaler.SRC_PLANE1_OFFSET = 0
+scaler.SRC_PLANE0_OFFSET = 0
+scaler.SRC_PLANE2_OFFSET = 0
+
+# dest sizes
+scaler.DST_SIZE_THING0 = 0x20
+scaler.DST_SIZE_THING1 = 0x20
+
+scaler.DST_SIZE_THING3 = 0x20
+scaler.DST_SIZE_THING6 = 0x20
+scaler.DST_SIZE_THING2 = 0x20
+scaler.DST_SIZE_THING5 = 0x20
+scaler.DST_SIZE_THING4 = 0x20
+scaler.DST_SIZE_THING7 = 0x20
+
+# src sizes
+scaler.SRC_SIZE_THING0 = 0x20
+scaler.SRC_SIZE_THING1 = 0x20
+
+scaler.SRC_SIZE_THING3 = 0x20
+scaler.SRC_SIZE_THING6 = 0x20
+scaler.SRC_SIZE_THING2 = 0x20
+scaler.SRC_SIZE_THING5 = 0x20
+scaler.SRC_SIZE_THING4 = 0x20
+scaler.SRC_SIZE_THING7 = 0x20
+
+# swizzling
+scaler.SRC_SWIZZLE = 0x03020100
+scaler.DST_SWIZZLE = 0x03020100
+
+# WDMA control
+p.write32(scaler_base + 0x280, 0x1)
+p.write32(scaler_base + 0x284, 0x81e)
+p.write32(scaler_base + 0x288, 0x800)
+p.write32(scaler_base + 0x28c, 0x800)
+
+# pixel averaging -----
+p.write32(scaler_base + 0xe4, 0x0)
+
+# ASE enhancement
+p.write32(scaler_base + 0x16800, 0x0)
+
+# ASE 3x1 transform
+p.write32(scaler_base + 0x16080, 0x0)
+p.write32(scaler_base + 0x16084, 0xb710367)
+p.write32(scaler_base + 0x16088, 0x128)
+
+# ASE interpolation
+p.write32(scaler_base + 0x16600, 0x15)
+
+# ASE angle detect
+p.write32(scaler_base + 0x16504, 0x2000500)
+p.write32(scaler_base + 0x16508, 0x3200)
+p.write32(scaler_base + 0x16534, 0x8)
+p.write32(scaler_base + 0x1651c, 0x851400)
+p.write32(scaler_base + 0x16568, 0x250500)
+p.write32(scaler_base + 0x16588, 0x496513)
+
+# ASE config
+p.write32(scaler_base + 0x16000, 0x0)
+
+# chroma upsampling
+p.write32(scaler_base + 0x800, 0xc)
+
+# chroma downsampling
+p.write32(scaler_base + 0x900, 0x0)
+
+# DDA init
+p.write32(scaler_base + 0x2004, 0x0)
+p.write32(scaler_base + 0x201c, 0x0)
+p.write32(scaler_base + 0x1008, 0x0)
+
+# vertical scaling
+p.write32(scaler_base + 0x100c, 0x400000)
+p.write32(scaler_base + 0x1020, 0x400000)
+p.write32(scaler_base + 0x1010, 0x400000)
+p.write32(scaler_base + 0x1014, 0x400000)
+p.write32(scaler_base + 0x1018, 0x400000)
+p.write32(scaler_base + 0x1024, 0x400000)
+p.write32(scaler_base + 0x1000, 0x0)
+
+# DDA init
+p.write32(scaler_base + 0x2004, 0x0)
+p.write32(scaler_base + 0x201c, 0x0)
+p.write32(scaler_base + 0x2008, 0x0)
+
+# horizontal scaling
+p.write32(scaler_base + 0x200c, 0x400000)
+p.write32(scaler_base + 0x2020, 0x400000)
+p.write32(scaler_base + 0x2010, 0x400000)
+p.write32(scaler_base + 0x2014, 0x400000)
+p.write32(scaler_base + 0x2024, 0x400000)
+p.write32(scaler_base + 0x2018, 0x400000)
+p.write32(scaler_base + 0x2000, 0x0)
+
+# pseudo linear scaling
+p.write32(scaler_base + 0x480, 0x0)
+
+# reshape
+p.write32(scaler_base + 0xe8, 0x0)
+
+# reset CM 3x
+p.write32(scaler_base + 0x3800, 0x0)
+p.write32(scaler_base + 0x3800, 0x0)
+p.write32(scaler_base + 0x3800, 0x0)
+
+# enable prescaler
+p.write32(scaler_base + 0x824, 0xc)
+
+# alpha override
+p.write32(scaler_base + 0x8c, 0xffff)
+
+# dither
+p.write32(scaler_base + 0xa00, 0x0)
+
+# commit convert
+p.write32(scaler_base + 0x13808, 0x0)
+p.write32(scaler_base + 0x1380c, 0x0)
+p.write32(scaler_base + 0x13800, 0x0)
+p.write32(scaler_base + 0x13804, 0x0)
+
+# convert map
+p.write32(scaler_base + 0x13810, 0x8)
+p.write32(scaler_base + 0x13814, 0x8)
+p.write32(scaler_base + 0x13818, 0x8)
+p.write32(scaler_base + 0x1381c, 0x8)
+p.write32(scaler_base + 0x13804, 0x0)
+p.write32(scaler_base + 0x13c04, 0x0)
+p.write32(scaler_base + 0x13c10, 0x8)
+p.write32(scaler_base + 0x13c14, 0x8)
+p.write32(scaler_base + 0x13c18, 0x8)
+p.write32(scaler_base + 0x13c1c, 0x8)
+
+# commit revert
+p.write32(scaler_base + 0x13c00, 0x1)
+
+# (don't) program histogram
+p.write32(scaler_base + 0x3000, 0x0)
+p.write32(scaler_base + 0x124, 0x0)
+
+# tag transform registers
+p.write32(scaler_base + 0x110, 0x1)
+
+# start
+p.write32(scaler_base + 0x98, 0xfffffffe)
+p.write32(scaler_base + 0x80, 0x1)
+
+start_time = time.time()
+while scaler.MSR_GLBL_IRQSTS.reg.DONE == 0:
+    if time.time() - start_time > 5:
+        print("TIMED OUT!!!")
+        break
+
+print(f"IRQ status is now {scaler.MSR_GLBL_IRQSTS}")
+print(f"Debug status is now {scaler.MSR_CTRL_DBGSTS}")
+
+out_buf_new = iface.readmem(out_buf_phys, out_SZ)
+chexdump(out_buf_new)
