@@ -116,8 +116,8 @@ class ScalerMainRegs(RegMap):
     SRC_PLANE2_OFFSET               = 0x001f0, Register32
 
     SRC_SWIZZLE                     = 0x001f8, Register32
-    SRC_SIZE_THING0                 = 0x001fc, Register32
-    SRC_SIZE_THING1                 = 0x00200, Register32
+    SRC_W                           = 0x001fc, Register32
+    SRC_H                           = 0x00200, Register32
     CACHE_HINTS_THING0              = irange(0x00204, 4, 4), Register32
     CACHE_HINTS_THING1              = irange(0x00214, 4, 4), Register32
     TUNABLES_THING0                 = irange(0x00224, 4, 4), Register32
@@ -152,8 +152,8 @@ class ScalerMainRegs(RegMap):
     DST_PLANE1_OFFSET               = 0x002d0, Register32
     DST_PLANE2_OFFSET               = 0x002d4, Register32
     DST_SWIZZLE                     = 0x002d8, Register32
-    DST_SIZE_THING0                 = 0x002dc, Register32
-    DST_SIZE_THING1                 = 0x002e0, Register32
+    DST_W                           = 0x002dc, Register32
+    DST_H                           = 0x002e0, Register32
     # uhh is there a macos bug with these? last val always overwritten
     CACHE_HINTS_THING2              = irange(0x002e4, 3, 4), Register32
     CACHE_HINTS_THING3              = irange(0x002f0, 3, 4), Register32
