@@ -137,7 +137,7 @@ class PMGRTracer(Tracer):
                 ps_addr = addr + idx * 8
                 self.ranges[ps_addr:ps_addr + 8] = self.event_default, ps_addr, f"ps[{i}][{idx}]"
 
-        for i, pg in enumerate(self.dev.pwrgate_regs):
+        for i, pg in getattr(self.dev, "pwrgate_regs", []):
             addr = self.dev.get_reg(pg.reg)[0] + pg.offset
             for idx in range(32):
                 gate_addr = addr + idx * 8
