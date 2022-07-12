@@ -297,6 +297,26 @@ static int dt_set_memory(void)
     return 0;
 }
 
+static int dt_set_serial_number(void)
+{
+
+    int fdt_root = fdt_path_offset(dt, "/");
+    int adt_root = adt_path_offset(adt, "/");
+
+    if (fdt_root < 0)
+        bail("FDT: could not open a handle to FDT root.\n");
+    if (adt_root < 0)
+        bail("ADT: could not open a handle to ADT root.\n");
+
+    u32 sn_len;
+    const char *serial_number = adt_getprop(adt, adt_root, "serial-number", &sn_len);
+    if (fdt_setprop_string(dt, fdt_root, "serial-number", serial_number))
+        bail("FDT: unable to set device serial number!\n");
+    printf("FDT: reporting device serial number: %s\n", serial_number);
+
+    return 0;
+}
+
 static int dt_set_cpus(void)
 {
     int ret = 0;
@@ -1094,6 +1114,8 @@ int kboot_prepare_dt(void *fdt)
         bail("FDT: couldn't add reservation for m1n1\n");
 
     if (dt_set_chosen())
+        return -1;
+    if (dt_set_serial_number())
         return -1;
     if (dt_set_memory())
         return -1;
