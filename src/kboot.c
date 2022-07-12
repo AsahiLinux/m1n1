@@ -239,8 +239,11 @@ static int dt_set_chosen(void)
     }
 
     int ipd = adt_path_offset(adt, "/arm-io/spi3/ipd");
+    if (ipd < 0)
+        ipd = adt_path_offset(adt, "/arm-io/dockchannel-mtp/mtp-transport/keyboard");
+
     if (ipd < 0) {
-        printf("ADT: /arm-io/spi3/ipd not found, no keyboard\n");
+        printf("ADT: no keyboard found\n");
     } else {
         u32 len;
         const u8 *kblang = adt_getprop(adt, ipd, "kblang-calibration", &len);
