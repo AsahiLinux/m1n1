@@ -206,6 +206,58 @@ int pmgr_adt_power_disable(const char *path)
     return pmgr_adt_devices_set_mode(path, PMGR_PS_PWRGATE, false);
 }
 
+static int pmgr_reset_device(int die, const struct pmgr_device *dev)
+{
+    if (die < 0 || die > 16) {
+        printf("pmgr: invalid die id %d for device %s\n", die, dev->name);
+        return -1;
+    }
+
+    uintptr_t addr = pmgr_device_get_addr(die, dev);
+
+    u32 reg = read32(addr);
+    if (FIELD_GET(PMGR_PS_ACTUAL, reg) != PMGR_PS_ACTIVE) {
+        printf("pmgr: will not reset disabled device %d.%s\n", die, dev->name);
+        return -1;
+    }
+
+    printf("pmgr: resetting device %d.%s\n", die, dev->name);
+
+    set32(addr, PMGR_DEV_DISABLE);
+    set32(addr, PMGR_RESET);
+    udelay(10);
+    clear32(addr, PMGR_RESET);
+    clear32(addr, PMGR_DEV_DISABLE);
+
+    return 0;
+}
+
+int pmgr_adt_reset(const char *path)
+{
+    const u32 *devices;
+    u32 n_devices;
+    int ret = 0;
+
+    if (pmgr_adt_find_devices(path, &devices, &n_devices) < 0)
+        return -1;
+
+    for (u32 i = 0; i < n_devices; ++i) {
+        const struct pmgr_device *device;
+        u16 id = FIELD_GET(PMGR_DEVICE_ID, devices[i]);
+        u8 die = FIELD_GET(PMGR_DIE_ID, devices[i]);
+
+        if (pmgr_find_device(id, &device)) {
+            ret = -1;
+            continue;
+        }
+
+        if (pmgr_reset_device(die, device))
+            ret = -1;
+    }
+
+    return ret;
+}
+
 int pmgr_reset(int die, const char *name)
 {
     const struct pmgr_device *dev = NULL;
@@ -217,31 +269,10 @@ int pmgr_reset(int die, const char *name)
         }
     }
 
-    if (!dev) {
-        printf("pmgr: unable to find device %s\n", name);
+    if (!dev)
         return -1;
-    }
 
-    if (die < 0 || die > 16) {
-        printf("pmgr: invalid die id %d for devicece %s\n", die, name);
-        return -1;
-    }
-
-    uintptr_t addr = pmgr_device_get_addr(die, dev);
-
-    u32 reg = read32(addr);
-    if (FIELD_GET(PMGR_PS_ACTUAL, reg) != PMGR_PS_ACTIVE) {
-        printf("pmgr: will not reset disabled device %s\n", name);
-        return -1;
-    }
-
-    set32(addr, PMGR_DEV_DISABLE);
-    set32(addr, PMGR_RESET);
-    udelay(1);
-    clear32(addr, PMGR_RESET);
-    clear32(addr, PMGR_DEV_DISABLE);
-
-    return 0;
+    return pmgr_reset_device(die, dev);
 }
 
 int pmgr_init(void)
