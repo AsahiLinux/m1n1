@@ -409,6 +409,8 @@ out_disable_ctrl:
     nvme_poll_syslog();
 out_shutdown:
     rtkit_sleep(nvme_rtkit);
+    // Some machines call this ANS, some ANS2...
+    pmgr_reset(nvme_die, "ANS");
     pmgr_reset(nvme_die, "ANS2");
 out_rtkit:
     rtkit_free(nvme_rtkit);
@@ -450,6 +452,8 @@ void nvme_shutdown(void)
         printf("nvme: timeout while waiting for CSTS.RDY to clear\n");
 
     rtkit_sleep(nvme_rtkit);
+    // Some machines call this ANS, some ANS2...
+    pmgr_reset(nvme_die, "ANS");
     pmgr_reset(nvme_die, "ANS2");
     rtkit_free(nvme_rtkit);
     sart_free(nvme_sart);
