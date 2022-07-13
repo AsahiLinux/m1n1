@@ -1487,9 +1487,8 @@ class HV(Reloadable):
     def disable_time_stealing(self):
         self.p.hv_set_time_stealing(False)
 
-    #only meant to be called from load_raw or load_macho
-    #macho_data is unused for raw images, but not sure if there's a more "elegant" solution
-    def load_common(self, image, is_macho_bin, macho_data):
+
+    def load_raw(self, image, entryoffset=0x800):
         sepfw_start, sepfw_length = self.u.adt["chosen"]["memory-map"].SEPFW
         tc_start, tc_size = self.u.adt["chosen"]["memory-map"].TrustCache
         if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
@@ -1522,10 +1521,8 @@ class HV(Reloadable):
 
         print(f"Physical memory: 0x{phys_base:x} .. 0x{mem_top:x}")
         print(f"Guest region start: 0x{guest_base:x}")
-        if(is_macho_bin == True):
-            self.entry = macho_data.entry - macho_data.vmin + guest_base
-        else:
-            self.entry = guest_base + 0x800
+        
+        self.entry = guest_base + entryoffset
 
         print(f"Mapping guest physical memory...")
         self.add_tracer(irange(self.ram_base, self.u.ba.phys_base - self.ram_base), "RAM-LOW", TraceMode.OFF)
@@ -1571,9 +1568,8 @@ class HV(Reloadable):
             addr, size = cpu.cpu_impl_reg
             print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
             self.p.write64(addr, rvbar)
-    def load_raw(self, data):
-        image = data
-        self.load_common(image, False, 0)
+
+
     def load_macho(self, data, symfile=None):
         if isinstance(data, str):
             data = open(data, "rb")
@@ -1619,7 +1615,9 @@ class HV(Reloadable):
 
         #image = macho.prepare_image(load_hook)
         image = macho.prepare_image()
-        self.load_common(image, True, macho)
+        self.load_raw(image, entryoffset=(macho.entry - macho.vmin))
+
+
     def update_pac_mask(self):
         tcr = TCR(self.u.mrs(TCR_EL12))
         valid_bits = (1 << (64 - tcr.T1SZ)) - 1
