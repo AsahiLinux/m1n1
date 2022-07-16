@@ -5,9 +5,10 @@
 
 static void init_common_avalanche(void)
 {
-
     reg_mask(SYS_IMP_APL_HID1, HID1_AVL_UNK42_MASK, HID1_AVL_UNK42(1));
     reg_mask(SYS_IMP_APL_HID1, HID1_AVL_UNK22_MASK, HID1_AVL_UNK22(3));
+
+    reg_set(SYS_IMP_APL_HID11, HID11_DISABLE_LD_NT_WIDGET);
 
     reg_set(SYS_IMP_APL_HID9, HID9_TSO_ALLOW_DC_ZVA_WC | HID9_AVL_UNK17);
 
