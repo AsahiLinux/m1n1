@@ -32,6 +32,13 @@ class R_FLIP_ROTATE(Register32):
     FLIP_LEFTRIGHT = 3
 
 
+class R_SCALE_FLAGS(Register32):
+    EN = 0
+    MAKE_THE_OUTPUT_YELLOW = 1
+    # only when bit1 is set, only on H scaling
+    MAKE_A_BLUE_LINE_APPEAR = 4
+
+
 class ScalerMainRegs(RegMap):
     # on startup 1 will be written followed by 0
     # but it's not clear if that actually does anything
@@ -163,8 +170,7 @@ class ScalerMainRegs(RegMap):
     # can set bits 3
     PSEUDO_LINEAR_SCALING           = 0x00480, Register32
 
-    # can set bits 0x13
-    SCALE_V_FLAGS                   = 0x01000, Register32
+    SCALE_V_FLAGS                   = 0x01000, R_SCALE_FLAGS
     # No idea what a DDA is? Q1.22 or U1.22 (23 bits total)
     # Also macOS doesn't touch a bunch of the V ones (uses H instead???)
     SCALE_V_DDA_THING0              = 0x01004, Register32
@@ -185,8 +191,7 @@ class ScalerMainRegs(RegMap):
     SCALE_FILTER_V_BLOCK0           = irange(0x01400, 9 * 32, 4), Register32
     SCALE_FILTER_V_BLOCK1           = irange(0x01c00, 9 * 32 // 2, 4), Register32
 
-    # can set bits 0x13
-    SCALE_H_FLAGS                   = 0x02000, Register32
+    SCALE_H_FLAGS                   = 0x02000, R_SCALE_FLAGS
     # No idea what a DDA is? Q1.22 or U1.22 (23 bits total)
     SCALE_H_DDA_THING0              = 0x02004, Register32
     SCALE_H_DDA_THING1              = 0x02008, Register32
