@@ -237,7 +237,7 @@ p.write32(scaler_base + 0x288, 0x800)
 p.write32(scaler_base + 0x28c, 0x800)
 
 # pixel averaging
-p.write32(scaler_base + 0xe4, 0x0)
+scaler.PIXEL_AVERAGING = 0
 
 # ASE enhancement
 p.write32(scaler_base + 0x16800, 0x0)
@@ -267,10 +267,10 @@ p.write32(scaler_base + 0x800, 0xc)
 # chroma downsampling
 p.write32(scaler_base + 0x900, 0x0)
 
-# DDA init
-p.write32(scaler_base + 0x2004, 0x0)
-p.write32(scaler_base + 0x201c, 0x0)
-p.write32(scaler_base + 0x1008, 0x0)
+# DDA init V???
+scaler.SCALE_H_DDA_THING0 = 0
+scaler.SCALE_H_DDA_THING2 = 0
+scaler.SCALE_V_DDA_THING1 = 0
 
 # vertical scaling
 p.write32(scaler_base + 0x100c, 0x400000)
@@ -281,10 +281,10 @@ p.write32(scaler_base + 0x1018, 0x400000)
 p.write32(scaler_base + 0x1024, 0x400000)
 p.write32(scaler_base + 0x1000, 0x0)
 
-# DDA init
-p.write32(scaler_base + 0x2004, 0x0)
-p.write32(scaler_base + 0x201c, 0x0)
-p.write32(scaler_base + 0x2008, 0x0)
+# DDA init H
+scaler.SCALE_H_DDA_THING0 = 0
+scaler.SCALE_H_DDA_THING2 = 0
+scaler.SCALE_H_DDA_THING1 = 0
 
 # horizontal scaling
 p.write32(scaler_base + 0x200c, 0x400000)
@@ -296,7 +296,7 @@ p.write32(scaler_base + 0x2018, 0x400000)
 p.write32(scaler_base + 0x2000, 0x0)
 
 # pseudo linear scaling
-p.write32(scaler_base + 0x480, 0x0)
+scaler.PSEUDO_LINEAR_SCALING = 0
 
 # reshape
 p.write32(scaler_base + 0xe8, 0x0)
