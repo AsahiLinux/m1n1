@@ -138,7 +138,7 @@ p.write32(scaler_base + 0x18c, 0x0)
 p.write32(scaler_base + 0x190, 0x0)
 
 # transform config (flip/rotate)
-scaler.FLIP_ROTATE.set(FLIP_ROTATE=E_FLIP_ROTATE.NONE)
+scaler.FLIP_ROTATE.set()
 
 # cache hints
 scaler.CACHE_HINTS_THING0[0].val = 0x7d311
@@ -236,7 +236,7 @@ p.write32(scaler_base + 0x284, 0x81e)
 p.write32(scaler_base + 0x288, 0x800)
 p.write32(scaler_base + 0x28c, 0x800)
 
-# pixel averaging -----
+# pixel averaging
 p.write32(scaler_base + 0xe4, 0x0)
 
 # ASE enhancement

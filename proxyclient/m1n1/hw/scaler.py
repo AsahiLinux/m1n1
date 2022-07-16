@@ -18,28 +18,18 @@ class R_IRQS(Register32):
     _BIT13 = 13
 
 
-class E_FLIP_ROTATE(IntEnum):
-    NONE = 0
+class E_ROTATE(IntEnum):
     # clockwise rotations
+    ROT_0 = 0
     ROT_90 = 1
     ROT_180 = 2
     ROT_270 = 3
-    FLIP_UPDOWN = 4
-    FLIP_DIAGONAL_TR_BL = 5
-    FLIP_LEFTRIGHT = 6
-    FLIP_DIAGONAL_TL_BR = 7
-    # 8 = FLIP_LEFTRIGHT
-    # 9 = FLIP_DIAGONAL_TL_BR
-    # 10 = FLIP_UPDOWN
-    # 11 = FLIP_DIAGONAL_TR_BL
-    # 12 = ROT_180
-    # 13 = ROT_270
-    # 14 = NONE
-    # 15 = ROT_90
 
 
 class R_FLIP_ROTATE(Register32):
-    FLIP_ROTATE = 3, 0, E_FLIP_ROTATE
+    ROTATE = 1, 0, E_ROTATE
+    FLIP_UPDOWN = 2
+    FLIP_LEFTRIGHT = 3
 
 
 class ScalerMainRegs(RegMap):
