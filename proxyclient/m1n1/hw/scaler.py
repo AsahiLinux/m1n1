@@ -73,6 +73,9 @@ class ScalerMainRegs(RegMap):
     REG_0xa0                        = 0x000a0, Register32
     PROFILING_RELATED               = 0x000a4, Register32
 
+    # Can set bits 7
+    PIXEL_AVERAGING                 = 0x000e4, Register32
+
     TRANSFORM_ID                    = 0x00110, Register32
 
     RDMA_THING0                     = 0x00180, Register32
@@ -156,3 +159,46 @@ class ScalerMainRegs(RegMap):
     DST_SIZE_THING7                 = 0x0031c, Register32
 
     FLIP_ROTATE                     = 0x00380, R_FLIP_ROTATE
+
+    # can set bits 3
+    PSEUDO_LINEAR_SCALING           = 0x00480, Register32
+
+    # can set bits 0x13
+    SCALE_V_FLAGS                   = 0x01000, Register32
+    # No idea what a DDA is? Q1.22 or U1.22 (23 bits total)
+    # Also macOS doesn't touch a bunch of the V ones (uses H instead???)
+    SCALE_V_DDA_THING0              = 0x01004, Register32
+    SCALE_V_DDA_THING1              = 0x01008, Register32
+    # Q4.22 or U4.22 (26 bits total)
+    SCALE_V_RATIO_0                 = 0x0100c, Register32
+    SCALE_V_RATIO_1                 = 0x01010, Register32
+    SCALE_V_RATIO_2                 = 0x01014, Register32
+    SCALE_V_RATIO_3                 = 0x01018, Register32
+    SCALE_V_DDA_THING2              = 0x0101c, Register32
+    SCALE_V_RATIO_4                 = 0x01020, Register32
+    SCALE_V_RATIO_5                 = 0x01024, Register32
+
+    # 9 taps, 32 phases polyphase resampling filter
+    # Q4.12 (16-bit total) fixed point filter coeffs
+    # packed into 32-bit registers, 3 sets of filters total (chroma/luma/alpha??)
+    # exact ordering and arithmetic performed not yet clear
+    SCALE_FILTER_V_BLOCK0           = irange(0x01400, 9 * 32, 4), Register32
+    SCALE_FILTER_V_BLOCK1           = irange(0x01c00, 9 * 32 // 2, 4), Register32
+
+    # can set bits 0x13
+    SCALE_H_FLAGS                   = 0x02000, Register32
+    # No idea what a DDA is? Q1.22 or U1.22 (23 bits total)
+    SCALE_H_DDA_THING0              = 0x02004, Register32
+    SCALE_H_DDA_THING1              = 0x02008, Register32
+    # Q4.22 or U4.22 (26 bits total)
+    SCALE_H_RATIO_0                 = 0x0200c, Register32
+    SCALE_H_RATIO_1                 = 0x02010, Register32
+    SCALE_H_RATIO_2                 = 0x02014, Register32
+    SCALE_H_RATIO_3                 = 0x02018, Register32
+    SCALE_H_DDA_THING2              = 0x0201c, Register32
+    SCALE_H_RATIO_4                 = 0x02020, Register32
+    SCALE_H_RATIO_5                 = 0x02024, Register32
+
+    # 15 taps, 32 phases polyphase resampling filter
+    SCALE_FILTER_H_BLOCK0           = irange(0x02400, 15 * 32, 4), Register32
+    SCALE_FILTER_H_BLOCK1           = irange(0x02c00, 15 * 32 // 2, 4), Register32
