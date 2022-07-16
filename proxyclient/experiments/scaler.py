@@ -102,8 +102,8 @@ with Image.open(input_image_fn) as im:
             r, g, b = im.getpixel((x, y))
             in_data += struct.pack("BBBB", r, g, b, 255)
 
-out_W = in_W * 2
-out_H = in_H * 2
+out_W = in_W * 5
+out_H = in_H * 3
 out_BYTESPP = 4
 out_STRIDE = out_W * out_BYTESPP
 out_SZ = out_W * out_H * out_BYTESPP * 2  # HACK: double size for testing purposes
@@ -273,7 +273,7 @@ scaler.SCALE_H_DDA_THING2 = 0
 scaler.SCALE_V_DDA_THING1 = 0
 
 # vertical scaling
-scaler.SCALE_V_RATIO_0 = 0x200000
+scaler.SCALE_V_RATIO_0 = int(in_H / out_H * 0x400000)
 scaler.SCALE_V_RATIO_4 = 0  # XXX what does this do?
 scaler.SCALE_V_RATIO_1 = 0  # XXX what does this do?
 scaler.SCALE_V_RATIO_2 = 0  # XXX what does this set do?
@@ -721,10 +721,10 @@ scaler.SCALE_H_DDA_THING2 = 0
 scaler.SCALE_H_DDA_THING1 = 0
 
 # horizontal scaling
-scaler.SCALE_H_RATIO_0 = 0x200000
+scaler.SCALE_H_RATIO_0 = int(in_W / out_W * 0x400000)
 scaler.SCALE_H_RATIO_4 = 0  # XXX what does this do?
 scaler.SCALE_H_RATIO_1 = 0  # XXX what does this do?
-scaler.SCALE_H_RATIO_2 = 0x400000   # XXX what does this set do? zeroing this one out doesn't work
+scaler.SCALE_H_RATIO_2 = int(out_W / in_W * 0x400000)   # XXX what does this set do? zeroing this one out doesn't work
 scaler.SCALE_H_RATIO_3 = 0  # XXX what does this set do?
 scaler.SCALE_H_RATIO_5 = 0  # XXX what does this set do?
 scaler.SCALE_H_FLAGS.set(EN=1)
@@ -1451,7 +1451,7 @@ scaler.SCALE_FILTER_H_BLOCK0[479].val = 0x0
 scaler.SCALE_FILTER_H_BLOCK1[239].val = 0x0
 
 # pseudo linear scaling
-scaler.PSEUDO_LINEAR_SCALING = 3
+scaler.PSEUDO_LINEAR_SCALING = 0
 
 # reshape
 p.write32(scaler_base + 0xe8, 0x0)

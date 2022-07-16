@@ -80,7 +80,9 @@ class ScalerMainRegs(RegMap):
     REG_0xa0                        = 0x000a0, Register32
     PROFILING_RELATED               = 0x000a4, Register32
 
-    # Can set bits 7
+    # Can set bits 0/1/2
+    # Does something breaking horizontal scaling
+    # bit2 seems to affect alpha output
     PIXEL_AVERAGING                 = 0x000e4, Register32
 
     TRANSFORM_ID                    = 0x00110, Register32
@@ -167,7 +169,8 @@ class ScalerMainRegs(RegMap):
 
     FLIP_ROTATE                     = 0x00380, R_FLIP_ROTATE
 
-    # can set bits 3
+    # can set bit 0/1
+    # the output obviously changes when this is set
     PSEUDO_LINEAR_SCALING           = 0x00480, Register32
 
     SCALE_V_FLAGS                   = 0x01000, R_SCALE_FLAGS
