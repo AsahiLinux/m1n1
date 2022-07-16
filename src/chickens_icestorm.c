@@ -8,7 +8,7 @@ static void init_common_icestorm(void)
     // "Sibling Merge in LLC can cause UC load to violate ARM Memory Ordering Rules."
     reg_set(SYS_IMP_APL_HID5, HID5_DISABLE_FILL_2C_MERGE);
 
-    reg_clr(SYS_IMP_APL_EHID9, EHID9_DEV_THROTTLE_2_ENABLE);
+    reg_clr(SYS_IMP_APL_EHID9, EHID9_DEV_2_THROTTLE_ENABLE);
 
     // "Prevent store-to-load forwarding for UC memory to avoid barrier ordering
     // violation"
