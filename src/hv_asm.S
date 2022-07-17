@@ -166,7 +166,6 @@ hv_enter_guest:
     str x5, [x6, x7, LSL #3]
 
     mrs x5, daif
-    msr daifclr, 3
     mov x6, #5
     orr x5, x5, x6 // EL1h
     msr spsr_el2, x5
