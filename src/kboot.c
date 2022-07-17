@@ -918,7 +918,6 @@ static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix
 
     u32 die_count;
     if (ADT_GETPROP(adt, node, "die-count", &die_count) < 0) {
-        printf("ADT: missing die-count property handling device as single die device\n");
         die_count = 1;
     }
     if (die_count > 8) {
