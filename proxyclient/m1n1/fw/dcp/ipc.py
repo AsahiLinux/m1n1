@@ -661,7 +661,7 @@ class IOMobileFramebufferAP(IPCObject):
     D598 = Callback(void, "find_swap_function_gated")
 
 class ServiceRelay(IPCObject):
-    D400 = Callback(void, "get_property", obj=FourCC, key=string(0x40), value=OutPtr(Bytes(0x200)), lenght=InOutPtr(uint))
+    D400 = Callback(void, "get_property", obj=FourCC, key=string(0x40), value=OutPtr(Bytes(0x200)), length=InOutPtr(uint))
     D401 = Callback(bool_, "sr_get_uint_prop", obj=FourCC, key=string(0x40), value=InOutPtr(ulong))
     D404 = Callback(void, "sr_set_uint_prop", obj=FourCC, key=string(0x40), value=uint)
     D406 = Callback(void, "set_fx_prop", obj=FourCC, key=string(0x40), value=uint)

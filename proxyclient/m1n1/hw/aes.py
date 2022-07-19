@@ -90,7 +90,7 @@ class AESControlReg(Register32):
     START = 0, 0
     STOP = 1, 1
     CLEAR_FIFO = 2, 2
-    # TOOD: not convinced about RESET anymore, I remember this un-broke the engine once but I can't reproduce that anymore
+    # TODO: not convinced about RESET anymore, I remember this un-broke the engine once but I can't reproduce that anymore
     RESET = 3, 3
 
 

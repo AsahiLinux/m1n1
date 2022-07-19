@@ -362,7 +362,7 @@ int rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
         msg->msg = asc_msg.msg0;
         msg->ep = (u8)asc_msg.msg1;
 
-        /* if this is an app message we can just forwad it to the caller */
+        /* if this is an app message we can just forward it to the caller */
         if (msg->ep >= 0x20)
             return 1;
 

@@ -28,7 +28,7 @@ Environment:
 #include "lzmadec.h"
 
 //
-// Probability Bit Model for Lenghts in Rep and in Match sequences
+// Probability Bit Model for Lengths in Rep and in Match sequences
 //
 typedef struct _LENGTH_DECODER_STATE
 {
@@ -291,7 +291,7 @@ LzDecodeLen (
     uint16_t limit;
 
     //
-    // Lenghts of 2 and higher are encoded in 3 possible types of arithmetic-
+    // Lengths of 2 and higher are encoded in 3 possible types of arithmetic-
     // coded bit trees, depending on the size of the length.
     //
     // Lengths 2-9 are encoded in trees called "Low" using 3 bits of data.

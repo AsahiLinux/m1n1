@@ -593,7 +593,7 @@ desc = EncodeNotRawDescriptor(
     unk_pad_0x5a_=b'\x00',
     bitstream_version=0,
     encoder_identifier=0xcafeface,
-    # cannot change arbitrily, will break
+    # cannot change arbitrarily, will break
     pix_surface_w_byteswap_=bswp16(im_W),
     pix_surface_h_byteswap_=bswp16(im_H),
     # seemingly can change arbitrarily

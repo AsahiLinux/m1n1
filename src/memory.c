@@ -87,7 +87,7 @@ static inline void write_sctlr(u64 val)
  * [L1 index]  [L2 index]  [L3 index] [page offset]
  *   12 bits     11 bits     11 bits    14 bits
  *
- * We initalize one double-size L1 table which covers the entire virtual memory space,
+ * We initialize one double-size L1 table which covers the entire virtual memory space,
  * point to the two halves in the single L0 table and then create L2/L3 tables on demand.
  */
 
@@ -442,7 +442,7 @@ static void mmu_add_default_mappings(void)
     mmu_add_mapping(ram_base | REGION_RX_EL1, ram_base, ram_size, MAIR_IDX_NORMAL, PERM_RX_EL0);
 
     /*
-     * Create four seperate full mappings of MMIO space, with different access types
+     * Create four separate full mappings of MMIO space, with different access types
      */
     mmu_add_mapping(0xc000000000, 0x0000000000, 0x0800000000, MAIR_IDX_DEVICE_GRE, PERM_RW_EL0);
     mmu_add_mapping(0xd000000000, 0x0000000000, 0x0800000000, MAIR_IDX_DEVICE_nGRE, PERM_RW_EL0);
@@ -491,7 +491,7 @@ void mmu_init(void)
     printf("MMU: Initializing...\n");
 
     if (read_sctlr() & SCTLR_M) {
-        printf("MMU: already intialized.\n");
+        printf("MMU: already initialized.\n");
         return;
     }
 

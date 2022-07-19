@@ -277,7 +277,7 @@ swaps = mgr.swaps
 mon.poll()
 
 fb_size = align_up(width * height * 4, 8 * 0x4000)
-print(f"Dispaly {width}x{height}, fb size: {fb_size}")
+print(f"Display {width}x{height}, fb size: {fb_size}")
 
 buf = u.memalign(0x4000, fb_size)
 

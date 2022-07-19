@@ -28,7 +28,7 @@ class PongMsg(GpuMsg):
     UNK     = 47, 0
 
 class PongEp(EP):
-    # This endpoint recives pongs. The cpu code reads some status registers after receiving one
+    # This endpoint receives pongs. The cpu code reads some status registers after receiving one
     # Might be a "work done" message.
     BASE_MESSAGE = GpuMsg
 
