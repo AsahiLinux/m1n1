@@ -206,21 +206,30 @@ class ProxyUtils(Reloadable):
         print(f"Pushing ADT ({adt_size} bytes)...")
         self.iface.writemem(adt_base, self.adt_data)
 
-    def disassemble_at(self, start, size, pc=None):
+    def disassemble_at(self, start, size, pc=None, vstart=None, sym=None):
         '''disassemble len bytes of memory from start
          optional pc address will mark that line with a '*' '''
         code = struct.unpack(f"<{size // 4}I", self.iface.readmem(start, size))
+        if vstart is None:
+            vstart = start
 
-        c = ARMAsm(".inst " + ",".join(str(i) for i in code), start)
-        lines = list(c.disassemble())
-        if pc is not None:
-            idx = (pc - start) // 4
+        c = ARMAsm(".inst " + ",".join(str(i) for i in code), vstart)
+        lines = list()
+        for line in c.disassemble():
+            sl = line.split()
             try:
-                lines[idx] = " *" + lines[idx][2:]
-            except IndexError:
-                pass
-        for i in lines:
-            print(" " + i)
+                addr = int(sl[0].rstrip(":"), 16)
+            except:
+                addr = None
+            if pc == addr:
+                line = " *" + line
+            else:
+                line = "  " + line
+            if sym:
+                if s := sym(addr):
+                    print()
+                    print(f"{' '*len(sl[0])}   {s}:")
+            print(line)
 
     def print_l2c_regs(self):
         print()
@@ -234,7 +243,7 @@ class ProxyUtils(Reloadable):
         self.msr(L2C_ERR_STS_EL1, l2c_err_sts) # Clear the flag bits
         self.msr(DAIF, self.mrs(DAIF) | 0x100) # Re-enable SError exceptions
 
-    def print_context(self, ctx, is_fault=True, addr=lambda a: f"0x{a:x}"):
+    def print_context(self, ctx, is_fault=True, addr=lambda a: f"0x{a:x}", sym=None, num_ctx=9):
         print(f"  == Exception taken from {ctx.spsr.M.name} ==")
         el = ctx.spsr.M >> 2
         print(f"  SPSR   = {ctx.spsr}")
@@ -252,7 +261,9 @@ class ProxyUtils(Reloadable):
             print()
             print("  == Code context ==")
 
-            self.disassemble_at(ctx.elr_phys - 4 * 4, 9 * 4, ctx.elr_phys)
+            off = -(num_ctx // 2)
+
+            self.disassemble_at(ctx.elr_phys + 4 * off, num_ctx * 4, ctx.elr, ctx.elr + 4 * off, sym=sym)
 
         if is_fault:
             if ctx.esr.EC == ESR_EC.MSR or ctx.esr.EC == ESR_EC.IMPDEF and ctx.esr.ISS == 0x20:
