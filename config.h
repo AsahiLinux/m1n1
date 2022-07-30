@@ -21,7 +21,9 @@
 
 #ifdef RELEASE
 # define FB_SILENT_MODE
-# define EARLY_PROXY_TIMEOUT 5
+# ifdef CHAINLOADING
+#  define EARLY_PROXY_TIMEOUT 5
+# endif
 #endif
 
 #endif
