@@ -23,6 +23,9 @@ if [ ! -z "$args" ]; then
 fi
 
 cat "$kernel_base"/arch/arm64/boot/dts/apple/*.dtb "$kernel_base"/arch/arm64/boot/Image.gz >>/tmp/m1n1-linux.bin
+if [ ! -z "$initramfs" ]; then
+    cat "$initramfs" >>/tmp/m1n1-linux.bin
+fi
 echo "Chainloading to updated m1n1..."
 python chainload.py -r ../../build/m1n1.bin
 echo "Starting guest..."
