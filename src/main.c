@@ -65,7 +65,15 @@ void run_actions(void)
 
 #ifndef BRINGUP
 #ifdef EARLY_PROXY_TIMEOUT
-    if (!cur_boot_args.video.display) {
+    int node = adt_path_offset(adt, "/chosen/asmb");
+    u64 lp_sip0 = 0;
+
+    if (node >= 0) {
+        ADT_GETPROP(adt, node, "lp-sip0", &lp_sip0);
+        printf("Boot policy: sip0 = %ld\n", lp_sip0);
+    }
+
+    if (!cur_boot_args.video.display && lp_sip0 == 127) {
         printf("Bringing up USB for early debug...\n");
 
         usb_init();
