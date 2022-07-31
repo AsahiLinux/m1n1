@@ -57,7 +57,7 @@ class KernelRegmapAccessor:
             raise ValueError(f"register {reg:04x} out of range")
         return off * self.linelen
 
-    def read(self, reg, width=None):
+    def _read(self, reg, width=None):
         assert width == self.working_width
         with self.open_node("registers", buffering=0) as f:
             f.seek(self._find_off(reg))
@@ -66,10 +66,22 @@ class KernelRegmapAccessor:
             assert int(regstr, 16) == reg
             return int(valstr, 16)
 
-    def write(self, reg, val, width=None):
+    def read(self, reg, width=None):
+        assert width % self.working_width == 0
+        ret = 0
+        for off in range(0, width // 8, self.working_width // 8):
+            ret |= self._read(reg + off, self.working_width) << (8 * off)
+        return ret
+
+    def _write(self, reg, val, width=None):
         assert width == self.working_width
         with self.open_node("registers", mode="wb") as f:
             f.write(f"{reg:x} {val:x}".encode())
+
+    def write(self, reg, val, width=None):
+        assert width % self.working_width == 0
+        for off in range(0, width // 8, self.working_width // 8):
+            self._write(reg + off, val >> (8 * off), self.working_width)
 
 def require_debugfs():
     if os.path.ismount("/sys/kernel/debug"):
