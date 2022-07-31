@@ -601,6 +601,23 @@ class ADTNode:
 
         return addr
 
+    def to_bus_addr(self, addr):
+        node = self._parent
+
+        descend = []
+        while node is not None:
+            if "ranges" not in node._properties:
+                break
+            descend.append(node)
+            node = node._parent
+
+        for node in reversed(descend):
+            for r in node.ranges:
+                if r.parent_addr <= addr < (r.parent_addr + r.size):
+                    addr = addr - r.parent_addr + r.bus_addr
+                    break
+        return addr
+
     def tostruct(self):
         properties = []
         for k,v in itertools.chain(self._properties.items()):
