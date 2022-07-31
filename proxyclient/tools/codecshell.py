@@ -3,6 +3,12 @@
 import sys, pathlib
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
+import argparse
+
+parser = argparse.ArgumentParser(description='Enter a shell for codec-poking')
+parser.add_argument('-n', '--no-reset', action="store_true")
+args = parser.parse_args()
+
 from m1n1.setup import *
 from m1n1.shell import run_shell
 from m1n1.hw.i2c import I2C, I2CRegMapDev
@@ -61,6 +67,9 @@ for node in u.adt["/arm-io"]:
             prop = devnode.function_reset
             gpio_host = gpios[prop.phandle]
             addr = gpio_host.get_reg(0)[0] + prop.args[0] * 4
+            if not args.no_reset:
+                print(f"Releasing #RST of {devnode.name}")
+                p.mask32(addr, 1, 0)
             print(f"Pulling #RST of {devnode.name}")
             p.mask32(addr, 1, 1)
 
