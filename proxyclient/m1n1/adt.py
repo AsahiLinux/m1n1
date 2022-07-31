@@ -470,6 +470,20 @@ class ADTNode:
 
         del self._children[item]
 
+    def __contains__(self, item):
+        if isinstance(item, str):
+            while item.startswith("/"):
+                item = item[1:]
+            if "/" in item:
+                a, b = item.split("/", 1)
+                return b in self[a]
+            for c in self._children:
+                if c.name == item:
+                    return True
+            return False
+
+        return item in self._children
+
     def __getattr__(self, attr):
         attr = attr.replace("_", "-")
         attr = attr.replace("--", "_")
