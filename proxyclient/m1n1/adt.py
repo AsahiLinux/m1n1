@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 import itertools, fnmatch, sys
 from construct import *
+import sys
 
 from .utils import AddrLookup, FourCC, SafeGreedyRange
 
