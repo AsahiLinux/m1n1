@@ -415,6 +415,8 @@ class LazyADT:
          self._adt[item] = value
     def __delitem__(self, item):
          del self._adt[item]
+    def __contains__(self, item):
+        return item in self._adt
     def __getattr__(self, attr):
         return getattr(self._adt, attr)
     def __setattr__(self, attr, value):
