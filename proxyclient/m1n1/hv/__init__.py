@@ -82,6 +82,7 @@ class HV(Reloadable):
         self.want_vbar = None
         self.vectors = [None]
         self._bps = [None, None, None, None, None]
+        self._bp_hooks = dict()
         self._wps = [None, None, None, None]
         self._wpcs = [0, 0, 0, 0]
         self.sym_offset = 0
@@ -806,6 +807,10 @@ class HV(Reloadable):
         self.u.msr(MDSCR_EL1, MDSCR(SS=1, MDE=1).value)
         self.ctx.spsr.SS = 1
 
+        if ctx.elr in self._bp_hooks:
+            if self._bp_hooks[ctx.elr](ctx):
+                return True
+
     def handle_watch(self, ctx):
         # disable all watchpoints so that we don't get stuck
         for i in range(len(self._wps)):
@@ -1074,19 +1079,21 @@ class HV(Reloadable):
         if self.ctx.cpu_id != cpu:
             raise Exception(f"Switching to CPU #{cpu} but ended on #{self.ctx.cpu_id}")
 
-    def add_hw_bp(self, vaddr):
-        for i, i_vaddr in enumerate(self._bps):
-            if i_vaddr is None:
-                cpu_id = self.ctx.cpu_id
-                try:
-                    for cpu in self.cpus():
-                        self.u.msr(DBGBCRn_EL1(i), DBGBCR(E=1, PMC=0b11, BAS=0xf).value)
-                        self.u.msr(DBGBVRn_EL1(i), vaddr)
-                finally:
-                    self.cpu(cpu_id)
-                self._bps[i] = vaddr
-                return
-        raise ValueError("Cannot add more HW breakpoints")
+    def add_hw_bp(self, vaddr, hook=None):
+        if None not in self._bps:
+            raise ValueError("Cannot add more HW breakpoints")
+
+        i = self._bps.index(None)
+        cpu_id = self.ctx.cpu_id
+        try:
+            for cpu in self.cpus():
+                self.u.msr(DBGBCRn_EL1(i), DBGBCR(E=1, PMC=0b11, BAS=0xf).value)
+                self.u.msr(DBGBVRn_EL1(i), vaddr)
+        finally:
+            self.cpu(cpu_id)
+        self._bps[i] = vaddr
+        if hook is not None:
+            self._bp_hooks[vaddr] = hook
 
     def remove_hw_bp(self, vaddr):
         idx = self._bps.index(vaddr)
@@ -1098,12 +1105,18 @@ class HV(Reloadable):
                 self.u.msr(DBGBVRn_EL1(idx), 0)
         finally:
             self.cpu(cpu_id)
+        if vaddr in self._bp_hooks:
+            del self._bp_hooks[vaddr]
 
-    def add_sym_bp(self, name):
-        return self.add_hw_bp(self.resolve_symbol(name))
+    def add_sym_bp(self, name, hook=None):
+        return self.add_hw_bp(self.resolve_symbol(name), hook=hook)
 
     def remove_sym_bp(self, name):
         return self.remove_hw_bp(self.resolve_symbol(name))
+
+    def clear_hw_bps(self):
+        for vaddr in self._bps:
+            self.remove_hw_bp(vaddr)
 
     def add_hw_wp(self, vaddr, bas, lsc):
         for i, i_vaddr in enumerate(self._wps):
