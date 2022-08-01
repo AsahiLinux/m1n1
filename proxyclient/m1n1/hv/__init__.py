@@ -13,6 +13,7 @@ from .. import xnutools, shell
 
 from .gdbserver import *
 from .types import *
+from .virtutils import *
 from .virtio import *
 
 __all__ = ["HV"]
@@ -1002,8 +1003,10 @@ class HV(Reloadable):
         self.p.exit(0)
 
     def attach_virtio(self, dev, base=None, irq=None, verbose=False):
-        assert base is not None and irq is not None
-        # TODO: ^-- allocate those if not chosen by caller
+        if base is None:
+            base = alloc_mmio_base(self.adt, 0x1000)
+        if irq is None:
+            irq = alloc_aic_irq(self.adt)
 
         data = dev.config_data
         data_base = self.u.heap.malloc(len(data))
@@ -1030,6 +1033,8 @@ class HV(Reloadable):
                 break
         if name is None:
             raise ValueError("Too many virtios in ADT")
+
+        print(f"Adding {n} @ 0x{base:x}, irq {irq}")
 
         node = self.adt.create_node(name)
         node.reg = [Container(addr=node.to_bus_addr(base), size=0x1000)]
