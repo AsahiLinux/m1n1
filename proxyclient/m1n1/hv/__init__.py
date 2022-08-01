@@ -1022,6 +1022,21 @@ class HV(Reloadable):
         config_base = self.u.heap.malloc(len(config))
         self.iface.writemem(config_base, config)
 
+        name = None
+        for i in range(16):
+            n = "/arm-io/virtio%d" % i
+            if n not in self.adt:
+                name = n
+                break
+        if name is None:
+            raise ValueError("Too many virtios in ADT")
+
+        node = self.adt.create_node(name)
+        node.reg = [Container(addr=node.to_bus_addr(base), size=0x1000)]
+        node.interrupt_parent = getattr(self.adt["/arm-io/aic"], "AAPL,phandle")
+        node.interrupts = (irq,)
+        node.compatible = ["virtio,mmio"]
+
         self.p.hv_map_virtio(base, config_base)
         self.add_tracer(irange(base, 0x1000), "VIRTIO", TraceMode.RESERVED)
 
