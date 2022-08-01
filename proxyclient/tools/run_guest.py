@@ -6,6 +6,9 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 import argparse, pathlib
 from io import BytesIO
 
+def volumespec(s):
+    return tuple(s.split(":", 2))
+
 parser = argparse.ArgumentParser(description='Run a Mach-O payload under the hypervisor')
 parser.add_argument('-s', '--symbols', type=pathlib.Path)
 parser.add_argument('-m', '--script', type=pathlib.Path, action='append', default=[])
@@ -18,6 +21,10 @@ parser.add_argument('-C', '--cpus', default=None)
 parser.add_argument('-r', '--raw', action="store_true")
 parser.add_argument('-E', '--entry-point', action="store", type=int, help="Entry point for the raw image", default=0x800)
 parser.add_argument('-a', '--append-payload', type=pathlib.Path, action="append", default=[])
+parser.add_argument('-v', '--volume', type=volumespec, action='append',
+                    help='Attach a 9P virtio device for file export to the guest. The argument is a host path to the '
+                         'exported tree, joined by colon (\':\') with a tag under which the tree will be advertised '
+                         'on the guest side.')
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
@@ -27,6 +34,7 @@ from m1n1.proxyutils import *
 from m1n1.utils import *
 from m1n1.shell import run_shell
 from m1n1.hv import HV
+from m1n1.hv.virtio import Virtio9PTransport
 from m1n1.hw.pmu import PMU
 
 iface = UartInterface()
@@ -54,6 +62,10 @@ if args.cpus:
 
 if args.debug_xnu:
     hv.adt["chosen"].debug_enabled = 1
+
+if args.volume:
+    for path, tag in args.volume:
+        hv.attach_virtio(Virtio9PTransport(root=path, tag=tag))
 
 if args.logfile:
     hv.set_logfile(args.logfile.open("w"))
