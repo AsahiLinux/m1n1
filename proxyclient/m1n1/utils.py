@@ -519,7 +519,7 @@ class RangeMap(Reloadable):
 
     def _overlap_range(self, zone, split=False):
         zone = self.__zone(zone)
-        if len(zone) == 0:
+        if not zone:
             return 0, 0
 
         start = bisect.bisect_left(self.__end, zone.start)
