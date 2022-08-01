@@ -1524,6 +1524,74 @@ err:
     return ret;
 }
 
+static int dt_transfer_virtios(void)
+{
+    int path[3];
+    path[0] = adt_path_offset(adt, "/arm-io/");
+    if (path[0] < 0)
+        bail("ADT: /arm-io not found\n");
+
+    int aic = fdt_node_offset_by_compatible(dt, -1, "apple,aic");
+    if (aic == -FDT_ERR_NOTFOUND)
+        aic = fdt_node_offset_by_compatible(dt, -1, "apple,aic2");
+    if (aic < 0)
+        bail("FDT: failed to find AIC node\n");
+
+    u32 aic_phandle = fdt_get_phandle(dt, aic);
+    const fdt32_t *ic_prop = fdt_getprop(dt, aic, "#interrupt-cells", NULL);
+    u32 intcells = 0;
+    if (ic_prop)
+        intcells = fdt32_ld(ic_prop);
+    if (intcells < 3 || intcells > 4)
+        bail("FDT: bad '#interrupt-cells' on AIC node (%d)\n", intcells);
+
+    for (u32 i = 0; i < 16; i++) {
+        char name[16], fullname[32];
+        snprintf(name, sizeof(name) - 1, "virtio%d", i);
+
+        path[1] = adt_subnode_offset(adt, path[0], name);
+        if (path[1] < 0)
+            break;
+        path[2] = 0;
+
+        u64 addr, size;
+        if (adt_get_reg(adt, path, "reg", 0, &addr, &size) < 0)
+            bail("ADT: error getting /arm-io/%s regs\n", name);
+
+        u32 irq;
+        ADT_GETPROP(adt, path[1], "interrupts", &irq);
+
+        snprintf(fullname, sizeof(fullname) - 1, "virtio@%lx", addr);
+        printf("FDT: Adding %s found in ADT\n", name);
+
+        int fnode = fdt_add_subnode(dt, 0, fullname);
+        if (fnode < 0)
+            bail("FDT: failed to create %s\n", fullname);
+
+        if (fdt_setprop_string(dt, fnode, "compatible", "virtio,mmio"))
+            bail("FDT: couldn't set %s.compatible\n", fullname);
+
+        fdt64_t reg[2];
+        fdt64_st(reg + 0, addr);
+        fdt64_st(reg + 1, size);
+        if (fdt_setprop(dt, fnode, "reg", reg, sizeof(reg)))
+            bail("FDT: couldn't set %s.reg\n", fullname);
+
+        if (fdt_setprop_u32(dt, fnode, "interrupt-parent", aic_phandle))
+            bail("FDT: couldn't set %s.interrupt-parent\n", fullname);
+
+        fdt32_t intprop[4];
+        fdt32_st(intprop + 0, 0); // AIC_IRQ
+        fdt32_st(intprop + 1, 0);
+        fdt32_st(intprop + intcells - 2, irq);
+        fdt32_st(intprop + intcells - 1, 4); // IRQ_TYPE_LEVEL_HIGH
+        if (fdt_setprop(dt, fnode, "interrupts", intprop, 4 * intcells))
+            bail("FDT: couldn't set %s.interrupts\n", fullname);
+    }
+
+    return 0;
+}
+
 void kboot_set_initrd(void *start, size_t size)
 {
     initrd_start = start;
@@ -1610,6 +1678,10 @@ int kboot_prepare_dt(void *fdt)
         return -1;
     if (dt_disable_missing_devs("i2c", "i2c@", 8))
         return -1;
+#ifndef RELEASE
+    if (dt_transfer_virtios())
+        return 1;
+#endif
 
     if (fdt_pack(dt))
         bail("FDT: fdt_pack() failed\n");
