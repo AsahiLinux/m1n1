@@ -15,7 +15,7 @@ from m1n1.proxyutils import RegMonitor
 
 print(f"Framebuffer at {u.ba.video.base:#x}")
 
-p.display_shutdown()
+p.display_shutdown(DCP_SHUTDOWN_MODE.QUIESCED)
 
 dart = DART.from_adt(u, "arm-io/dart-dcp")
 disp_dart = DART.from_adt(u, "arm-io/dart-disp0")
