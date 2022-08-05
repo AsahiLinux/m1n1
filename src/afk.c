@@ -399,6 +399,7 @@ int afk_epic_command(afk_epic_ep_t *epic, int channel, u16 code, void *txbuf, si
         if (sub->category != CAT_REPLY || sub->code != code) {
             printf("EPIC: got unexpected message %02x:%04x during command\n", sub->category,
                    sub->code);
+            afk_epic_rx_ack(epic);
             continue;
         }
 
@@ -505,6 +506,7 @@ int afk_epic_start_interface(afk_epic_ep_t *epic, char *name, size_t txsize, siz
         if (sub->category != CAT_REPORT || sub->code != CODE_ANNOUNCE) {
             printf("EPIC: got unexpected message %02x:%04x during iface start\n", sub->category,
                    sub->code);
+            afk_epic_rx_ack(epic);
             continue;
         }
 
@@ -512,6 +514,7 @@ int afk_epic_start_interface(afk_epic_ep_t *epic, char *name, size_t txsize, siz
 
         if (strncmp(name, announce->name, sizeof(announce->name))) {
             printf("EPIC: ignoring channel %d: %s\n", msg->channel, announce->name);
+            afk_epic_rx_ack(epic);
             continue;
         }
 
