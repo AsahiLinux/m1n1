@@ -125,16 +125,22 @@ class Tracer(Reloadable):
             self.hv.add_tracer(zone, self.ident, mode, self.evt_rw if read else None,
                                self.evt_rw if write else None, **kwargs)
 
-    def trace_regmap(self, start, size, cls, mode=None, name=None, prefix=None):
+    def trace_regmap(self, start, size, cls, mode=None, name=None, prefix=None, regmap_offset=0):
         if mode is None:
             mode = self.DEFAULT_MODE
         if name is None:
             name = cls.__name__
-        regmap = cls(self._cache, start)
-        regmap.cached = cls(self._cache.cached, start)
+
+        regmap = self.regmaps.get(start - regmap_offset, None)
+        if regmap is None:
+            regmap = cls(self._cache, start - regmap_offset)
+            regmap.cached = cls(self._cache.cached, start - regmap_offset)
+            self.regmaps[start - regmap_offset] = regmap
+        else:
+            assert isinstance(regmap, cls)
+
         setattr(self, name, regmap)
         self.trace(start, size, mode=mode, regmap=regmap, prefix=prefix)
-        self.regmaps[start] = regmap
 
     def start(self):
         pass
@@ -181,13 +187,27 @@ class ADTDevTracer(Tracer):
 
     @classmethod
     def _reloadcls(cls, force=False):
-        cls.REGMAPS = [i._reloadcls(force) if i else None for i in cls.REGMAPS]
+        regmaps = []
+        for i in cls.REGMAPS:
+            if i is None:
+                reloaded = None
+            elif isinstance(i, tuple):
+                reloaded = (i[0]._reloadcls(force), i[1])
+            else:
+                reloaded = i._reloadcls(force)
+            regmaps.append(reloaded)
+        cls.REGMAPS = regmaps
+
         return super()._reloadcls(force)
 
     def start(self):
         for i in range(len(self.dev.reg)):
             if i >= len(self.REGMAPS) or (regmap := self.REGMAPS[i]) is None:
                 continue
+            if isinstance(regmap, tuple):
+                regmap, regmap_offset = regmap
+            else:
+                regmap_offset = 0
             prefix = name = None
             if i < len(self.NAMES):
                 name = self.NAMES[i]
@@ -195,7 +215,7 @@ class ADTDevTracer(Tracer):
                 prefix = self.PREFIXES[i]
 
             start, size = self.dev.get_reg(i)
-            self.trace_regmap(start, size, regmap, name=name, prefix=prefix)
+            self.trace_regmap(start, size, regmap, name=name, prefix=prefix, regmap_offset=regmap_offset)
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__.startswith(__name__))
