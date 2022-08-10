@@ -2,24 +2,45 @@
 
 from m1n1.hv import TraceMode
 from m1n1.hw.dwc3 import XhciRegs, Dwc3CoreRegs
-from m1n1.hw.atc import PhyRegs
+from m1n1.hw.atc import Usb2PhyRegs, AtcPhyRegs
 from m1n1.trace import ADTDevTracer
 from m1n1.utils import *
+
 
 class PhyTracer(ADTDevTracer):
     DEFAULT_MODE = TraceMode.SYNC
 
-    REGMAPS = [PhyRegs]
-    NAMES = ["usb-phy"]
+    REGMAPS = [
+        Usb2PhyRegs,
+        None,
+        (AtcPhyRegs, 0x20000),
+        (AtcPhyRegs, 0x0),
+        (AtcPhyRegs, 0x2000),
+        (AtcPhyRegs, 0x2200),
+        (AtcPhyRegs, 0x2800),
+        (AtcPhyRegs, 0x2A00),
+        (AtcPhyRegs, 0x7000),
+        (AtcPhyRegs, 0xA00),
+        (AtcPhyRegs, 0x800),
+        (AtcPhyRegs, 0xD000),
+        (AtcPhyRegs, 0x14000),
+        (AtcPhyRegs, 0xC000),
+        (AtcPhyRegs, 0x13000),
+        (AtcPhyRegs, 0xB000),
+        (AtcPhyRegs, 0x12000),
+        (AtcPhyRegs, 0x9000),
+        (AtcPhyRegs, 0x10000),
+        (AtcPhyRegs, 0x1000),
+        (AtcPhyRegs, 0x50000),
+        (AtcPhyRegs, 0x50200),
+        (AtcPhyRegs, 0x54000),
+        None,
+        None,
+        None,
+        (AtcPhyRegs, 0xA000),
+        (AtcPhyRegs, 0x11000),
+    ]
 
-    ENDPOINTS = {}
-
-    def init_state(self):
-        self.state.ep = {}
-
-    def start(self):
-        self.cmd_cache = {}
-        super().start()
 
 class Dwc3Tracer(ADTDevTracer):
     DEFAULT_MODE = TraceMode.SYNC
