@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 
 from m1n1.hv import TraceMode
-from m1n1.hw.dwc3 import XhciRegs, Dwc3CoreRegs
+from m1n1.hw.dwc3 import XhciRegs, Dwc3CoreRegs, PipehandlerRegs
 from m1n1.hw.atc import Usb2PhyRegs, AtcPhyRegs
 from m1n1.trace import ADTDevTracer
 from m1n1.utils import *
@@ -40,16 +40,22 @@ class PhyTracer(ADTDevTracer):
     ]
 
 
+class Dwc3VerboseTracer(ADTDevTracer):
+    REGMAPS = [XhciRegs, None, Dwc3CoreRegs, PipehandlerRegs]
+    NAMES = ["xhci", None, "dwc-core", "pipehandler"]
+
+
 class Dwc3Tracer(ADTDevTracer):
-    REGMAPS = [XhciRegs, None, Dwc3CoreRegs]
-    NAMES = ["xhci", None, "dwc-core"]
+    REGMAPS = [None, None, Dwc3CoreRegs, PipehandlerRegs]
+    NAMES = [None, None, "dwc-core", "pipehandler"]
 
 
 PhyTracer = PhyTracer._reloadcls()
-phy_tracer = PhyTracer(hv, "/arm-io/atc-phy1", verbose=2)
-phy_tracer.start()
-
 Dwc3Tracer = Dwc3Tracer._reloadcls()
+Dwc3VerboseTracer = Dwc3VerboseTracer._reloadcls()
+
+phy_tracer = PhyTracer(hv, "/arm-io/atc-phy1", verbose=2)
 dwc3_tracer = Dwc3Tracer(hv, "/arm-io/usb-drd1", verbose=2)
-if False:
-    dwc3_tracer.start()
+
+phy_tracer.start()
+dwc3_tracer.start()
