@@ -44,7 +44,9 @@ class GPIOLogicAnalyzer(Reloadable):
 
         text = f"""
         trace:
+            mov x16, x2
             add x3, x3, x2
+            add x2, x2, #4
             mov x12, #-8
             mov x10, x2
             mov x6, #-1
@@ -53,6 +55,9 @@ class GPIOLogicAnalyzer(Reloadable):
             mrs x4, CNTPCT_EL0
             isb
         1:
+            ldr w15, [x16]
+            cmp w15, #1
+            b.eq done
             add x4, x4, x1
         2:
             mrs x5, CNTPCT_EL0
@@ -63,7 +68,7 @@ class GPIOLogicAnalyzer(Reloadable):
                 cmp x5, x4
                 b.lo 2b
             """
-        
+
         for idx, pin in enumerate(self.pins.values()):
             text += f"""
             ldr w9, [x8, #{pin * 4}]
@@ -122,11 +127,11 @@ class GPIOLogicAnalyzer(Reloadable):
         text += f"""
             mov x12, x11
             cmp x2, x3
-            b.hs 2f
+            b.hs done
         3:
             sub x0, x0, #1
             cbnz x0, 1b
-        2:
+        done:
             sub x0, x2, x10
             ret
         """
@@ -136,12 +141,15 @@ class GPIOLogicAnalyzer(Reloadable):
         self.p.dc_cvau(self.cbuf, len(code.data))
         self.p.ic_ivau(self.cbuf, len(code.data))
 
+        self.p.write32(self.dbuf, 0)
+
         self.p.smp_call(self.cpu, code.trace | REGION_RX_EL1, ticks, self.div, self.dbuf, bufsize - (8 + 4 * len(self.regs)))
     
     def complete(self):
+        self.p.write32(self.dbuf, 1)
         wrote = self.p.smp_wait(self.cpu)
         assert wrote <= self.bufsize
-        data = self.iface.readmem(self.dbuf, wrote)
+        data = self.iface.readmem(self.dbuf + 4, wrote)
         self.u.free(self.dbuf)
         self.dbuf = None
         
@@ -155,12 +163,12 @@ class GPIOLogicAnalyzer(Reloadable):
 
     def vcd(self):
         off = self.data[0][0]
-        if len(self.data) > 1:
+        if False: #len(self.data) > 1:
             off2 = max(0, ((self.data[1][0] - off) & 0xffffffff) - 5000)
         else:
             off2 = 0
         
-        print(off, off2)
+        #print(off, off2)
         
         vcd = []
         vcd.append("""
@@ -216,7 +224,7 @@ $dumpvars
                         vcd.append(f"b{v:0{width}b} {key}\n")
                     
 
-        ns += 10000
+        ns += ns//10
         vcd.append(f"#{ns}\n" + "\n".join(f"{(val>>i) & 1}{k}" for i, k in enumerate(keys)) + "\n")
  
         return "".join(vcd)
