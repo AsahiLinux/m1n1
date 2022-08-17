@@ -199,6 +199,7 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
     parsed = None
 
     def __init__(self):
+        self._pointers = set()
         self._addr = None
         self._meta = {}
 
@@ -272,6 +273,7 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
     @classmethod
     def _set_meta(cls, self, stream=None):
         if stream is not None:
+            self._pointers = set()
             self._meta = {}
             self._stream = stream
 
@@ -291,6 +293,7 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
                         if meta is not None:
                             self._meta[name] = meta
                     if isinstance(subcon, Pointer):
+                        self._pointers.add(name)
                         continue
                     try:
                         #print(name, subcon)
@@ -370,7 +373,16 @@ class ConstructClass(ConstructClassBase, Container):
                 )
     """
 
-    def __str__(self, ignore=[]) -> str:
+    def diff(self, other, show_all=False):
+        return self.__str__(other=other, show_all=show_all)
+
+    def __eq__(self, other):
+        return all(self[k] == other[k] for k in self
+                   if (not k.startswith("_"))
+                   and (k not in self._pointers)
+                   and not callable(self[k]))
+
+    def __str__(self, ignore=[], other=None, show_all=False) -> str:
 
         str = self.__class__.__name__
         if self._addr is not None:
@@ -385,7 +397,44 @@ class ConstructClass(ConstructClassBase, Container):
             if key in ignore or key.startswith('_'):
                 continue
             value = getattr(self, key)
-            val_repr = str_value(value)
+            need_diff = False
+            if other is not None:
+                if key in self._pointers or callable(value):
+                    continue
+                other_value = getattr(other, key)
+                if not show_all and other_value == value:
+                    continue
+                offv, sizeof = self._off[key]
+                if sizeof == 0:
+                    continue
+                def _valdiff(value, other_value):
+                    if hasattr(value, "diff"):
+                        return value.diff(other_value)
+                    elif isinstance(value, bytes) and isinstance(other_value, bytes):
+                        pad = bytes()
+                        if len(value) & 3:
+                            pad = bytes(4 - (len(value) & 3))
+                        return chexdiff32(other_value+pad, value+pad, offset=offv, offset2=0)
+                    else:
+                        val_repr = str_value(value)
+                        if other_value != value:
+                            other_repr = str_value(other_value)
+                            return f"\x1b[33;1;4m{val_repr}\x1b[m ← \x1b[34m{other_repr}\x1b[m"
+                        return val_repr
+
+                if isinstance(value, list):
+                    val_repr = "{\n"
+                    for i, (a, b) in enumerate(zip(value, other_value)):
+                        if a == b:
+                            continue
+                        val_repr += f"[{i}] = " + textwrap.indent(_valdiff(a, b), "    ") + "\n"
+                        offv += sizeof // len(value)
+                    val_repr += "}\n"
+                else:
+                    val_repr = _valdiff(value, other_value)
+
+            else:
+                val_repr = str_value(value)
             off = ""
             meta = ""
             if key in self._off:
@@ -435,7 +484,9 @@ class ConstructClass(ConstructClassBase, Container):
                 if not isinstance(subcon, Pointer):
                     continue
                 addr_field = subcon.offset.__getfield__()
-                if not hasattr(obj, name) and hasattr(obj, addr_field):
+                # Ugh.
+                parent = subcon.offset._Path__parent(obj)
+                if not hasattr(obj, name) and hasattr(parent, addr_field):
                     # No need for building
                     setattr(obj, name, None)
                 elif hasattr(obj, name):
@@ -445,7 +496,7 @@ class ConstructClass(ConstructClassBase, Container):
                     except (AttributeError, KeyError):
                         addr = None
                     if addr is not None:
-                        setattr(obj, addr_field, addr)
+                        setattr(parent, addr_field, addr)
 
     @classmethod
     def _parse(cls, stream, context, path):
@@ -474,10 +525,18 @@ class ConstructValueClass(ConstructClassBase):
         the value is stored as .value
     """
 
+    def __eq__(self, other):
+        return self.value == other.value
+
     def __str__(self) -> str:
         str = f"{self.__class__.__name__} @ 0x{self._addr:x}:"
         str += f"\t{str_value(self.value)}"
         return str
+
+    def __getitem__(self, i):
+        if i == "value":
+            return self.value
+        raise Exception(f"Invalid index {i}")
 
     @classmethod
     def _build(cls, obj, stream, context, path):
