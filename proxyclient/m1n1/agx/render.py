@@ -147,6 +147,11 @@ class GPURenderer:
 
         ##### Work Queues
 
+        self.ts3d_1 = agx.kshared.new(Int64ul, name="3D timestamp 1")
+        self.ts3d_2 = agx.kshared.new(Int64ul, name="3D timestamp 2")
+        self.tsta_1 = agx.kshared.new(Int64ul, name="TA timestamp 1")
+        self.tsta_2 = agx.kshared.new(Int64ul, name="TA timestamp 2")
+
         self.wq_3d = GPU3DWorkQueue(agx, ctx, self.job_list)
         self.wq_ta = GPUTAWorkQueue(agx, ctx, self.job_list)
 
@@ -377,8 +382,8 @@ class GPURenderer:
         wc_3d.unk_buf2.unk_8 = 0
         wc_3d.unk_buf2.unk_10 = 1
         wc_3d.ts1 = Timestamp(0)
-        wc_3d.ts2 = Timestamp(0)
-        wc_3d.ts3 = Timestamp(0)
+        wc_3d.ts2 = Timestamp(self.ts3d_1._addr)
+        wc_3d.ts3 = Timestamp(self.ts3d_2._addr)
         wc_3d.unk_914 = 0
         wc_3d.unk_918 = 0
         wc_3d.unk_920 = 0
@@ -660,8 +665,8 @@ class GPURenderer:
         wc_ta.unk_594 = WorkCommand0_UnkBuf()
 
         wc_ta.ts1 = Timestamp(0)
-        wc_ta.ts2 = Timestamp(0)
-        wc_ta.ts3 = Timestamp(0)
+        wc_ta.ts2 = Timestamp(self.tsta_1._addr)
+        wc_ta.ts3 = Timestamp(self.tsta_2._addr)
         wc_ta.unk_5c4 = 0
         wc_ta.unk_5c8 = 0
         wc_ta.unk_5cc = 0
