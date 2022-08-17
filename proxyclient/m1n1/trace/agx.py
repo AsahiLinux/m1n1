@@ -619,8 +619,8 @@ class AGXTracer(ASCTracer):
             self.log(f"    block_list @ {buffer_mgr.block_list_addr:#x}:")
             chexdump(read(buffer_mgr.block_list_addr,
                           0x8000), print_fn=self.log)
-            self.log(f"    unkptr_d8 @ {buffer_mgr.unkptr_d8:#x}:")
-            chexdump(read(buffer_mgr.unkptr_d8, 0x4000), print_fn=self.log)
+            #self.log(f"    unkptr_d8 @ {buffer_mgr.unkptr_d8:#x}:")
+            #chexdump(read(buffer_mgr.unkptr_d8, 0x4000), print_fn=self.log)
 
 
     def handle_ta(self, wi):
@@ -655,8 +655,8 @@ class AGXTracer(ASCTracer):
             #self.log(f"  unkptr_60 @ {wi0.unkptr_60:#x}:")
             #chexdump(read(wi0.unkptr_60, 0x4000), print_fn=self.log)
 
-            self.log(f"  unkptr_45c @ {wi0.unkptr_45c:#x}:")
-            chexdump(read(wi0.unkptr_45c, 0x1800), print_fn=self.log)
+            #self.log(f"  unkptr_45c @ {wi0.unkptr_45c:#x}:")
+            #chexdump(read(wi0.unkptr_45c, 0x1800), print_fn=self.log)
 
             for i in wi0.microsequence.value:
                 i = i.cmd
