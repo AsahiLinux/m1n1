@@ -166,6 +166,8 @@ class ChannelTracer(Reloadable):
 
         cur = self.state.tail[ring]
         tail = self.channel.state[ring].WRITE_PTR.val
+        if tail >= count:
+            raise Exception(f"Message index {tail:#x} >= {count:#x}")
         if cur != tail:
             #self.log(f"{cur:#x} -> {tail:#x}")
             while cur != tail:
