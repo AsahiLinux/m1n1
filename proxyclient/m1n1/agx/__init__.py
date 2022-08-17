@@ -58,16 +58,16 @@ class AGX:
 
         self.kobj = GPUAllocator(self, "kernel",
                                  self.kern_va_base, 0x10000000,
-                                 AttrIndex=MemoryAttr.Shared, AP=1)
+                                 AttrIndex=MemoryAttr.Shared, AP=1, guard_pages=4)
         self.cmdbuf = GPUAllocator(self, "cmdbuf",
                                    self.kern_va_base + 0x10000000, 0x10000000,
-                                   AttrIndex=MemoryAttr.Shared, AP=0)
+                                   AttrIndex=MemoryAttr.Shared, AP=0, guard_pages=4)
         self.kshared = GPUAllocator(self, "kshared",
                                     self.kern_va_base + 0x20000000, 0x10000000,
-                                    AttrIndex=MemoryAttr.Shared, AP=1)
+                                    AttrIndex=MemoryAttr.Shared, AP=1, guard_pages=4)
         self.kshared2 = GPUAllocator(self, "kshared2",
-                                     self.kern_va_base + 0x30000000, 0x10000,
-                                     AttrIndex=MemoryAttr.Shared, AP=0, PXN=1)
+                                     self.kern_va_base + 0x30000000, 0x100000,
+                                     AttrIndex=MemoryAttr.Shared, AP=0, PXN=1, guard_pages=4)
 
         self.io_allocator = Heap(self.kern_va_base + 0x38000000,
                                  self.kern_va_base + 0x40000000,
