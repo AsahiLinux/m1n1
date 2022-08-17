@@ -122,6 +122,8 @@ class DRMAsahiShim:
             obj.push(True)
 
         self.renderer.submit(cmdbuf)
+        self.renderer.run()
+        self.renderer.wait()
 
         if self.pull_buffers:
             for i in cmdbuf.attachments:
