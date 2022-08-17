@@ -45,7 +45,31 @@ class DC_DestroyContext(ConstructClass):
         "unk_14" / Hex(Int32ul),
         "unk_18" / Hex(Int32ul),
         "context_addr" / Hex(Int64ul),
-        "rest" / HexDump(Bytes(0xc))
+        "rest" / HexDump(Default(Bytes(0xc), bytes(0xc)))
+    )
+
+class DC_Write32(ConstructClass):
+    subcon =  Struct (
+        "msg_type" / Const(0x18, Int32ul),
+        "addr" / Hex(Int64ul),
+        "data" / Int32ul,
+        "unk_10" / Int32ul,
+        "unk_14" / Int32ul,
+        "unk_18" / Int32ul,
+        "unk_1c" / Int32ul,
+        "rest" / HexDump(Default(Bytes(0x10), bytes(0x10)))
+    )
+
+class DC_Write32B(ConstructClass):
+    subcon =  Struct (
+        "msg_type" / Const(0x13, Int32ul),
+        "addr" / Hex(Int64ul),
+        "data" / Int32ul,
+        "unk_10" / Int32ul,
+        "unk_14" / Int32ul,
+        "unk_18" / Int32ul,
+        "unk_1c" / Int32ul,
+        "rest" / HexDump(Default(Bytes(0x10), bytes(0x10)))
     )
 
 class DC_Init(ConstructClass):
@@ -54,12 +78,28 @@ class DC_Init(ConstructClass):
         "data" / HexDump(Default(Bytes(0x2c), bytes(0x2c)))
     )
 
+class DC_09(ConstructClass):
+    subcon =  Struct (
+        "msg_type" / Const(0x9, Int32ul),
+        "unk_4" / Int64ul,
+        "unkptr_c" / Int64ul,
+        "unk_14" / Int64ul,
+        "data" /  HexDump(Default(Bytes(0x14), bytes(0x14)))
+    )
 
-class DeviceControl_1e(ConstructClass):
+class DC_Any(ConstructClass):
+    subcon =  Struct (
+        "msg_type" / Int32ul,
+        "data" / HexDump(Default(Bytes(0x2c), bytes(0x2c)))
+    )
+
+class DC_1e(ConstructClass):
     subcon =  Struct (
         "msg_type" / Const(0x1e, Int32ul),
-        "data" / HexDump(Bytes(0x2c)),
-    ),
+        "unk_4" / Int64ul,
+        "unk_c" / Int64ul,
+        "data" /  HexDump(Default(Bytes(0x1c), bytes(0x1c)))
+    )
 
 class DC_UpdateIdleTS(ConstructClass):
     subcon = Struct (
@@ -77,6 +117,8 @@ DeviceControlMsg = FixedSized(0x30, Select(
     DC_DestroyContext,
     DC_Init,
     DC_UpdateIdleTS,
+    DC_1e,
+    DC_Write32,
     UnknownMsg,
 ))
 
