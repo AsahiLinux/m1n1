@@ -62,6 +62,8 @@ class ProxyUtils(Reloadable):
 
         self.mmu_off = False
 
+        self.inst_cache = {}
+
         self.exec_modes = {
             None: (self.proxy.call, REGION_RX_EL1),
             "el2": (self.proxy.call, REGION_RX_EL1),
@@ -138,7 +140,10 @@ class ProxyUtils(Reloadable):
             call, region = call
         else:
             call, region = self.exec_modes[call]
-        if isinstance(op, tuple) or isinstance(op, list):
+
+        if op in self.inst_cache:
+            func = self.inst_cache[op]
+        elif isinstance(op, tuple) or isinstance(op, list):
             func = struct.pack(f"<{len(op)}II", *op, 0xd65f03c0) # ret
         elif isinstance(op, int):
             func = struct.pack("<II", op, 0xd65f03c0) # ret
@@ -152,6 +157,8 @@ class ProxyUtils(Reloadable):
 
         if self.mmu_off:
             region = 0
+
+        self.inst_cache[op] = func
 
         assert len(func) < self.CODE_BUFFER_SIZE
         self.iface.writemem(self.code_buffer, func)
