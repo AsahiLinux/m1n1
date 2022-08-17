@@ -301,4 +301,4 @@ class AGX:
 
     def log(self, msg):
         t = time.time() - self.start_time
-        print(f"[AGX][{t:10.03f}] " + msg)
+        print(f"[AGX][{t:10.03f}] " + str(msg))
