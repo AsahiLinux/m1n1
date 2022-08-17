@@ -527,12 +527,60 @@ class ConstructClass(ConstructClassBase, Container):
                 g_struct_trace.add((val, f"{cls.name}.{key}"))
         return self
 
+    def _apply_classful(self, obj):
+        obj2 = dict(obj)
+        if isinstance(self.__class__.subcon, Struct):
+            for subcon in self.__class__.subcon.subcons:
+                if not isinstance(subcon, Renamed):
+                    continue
+                name = subcon.name
+                subcon = subcon.subcon
+                if isinstance(subcon, Lazy):
+                    continue
+                if isinstance(subcon, Pointer):
+                    subcon = subcon.subcon
+                if isinstance(subcon, Array):
+                    subcon = subcon.subcon
+
+                if name not in obj2:
+                    continue
+
+                val = obj2[name]
+                if not isinstance(subcon, type) or not issubclass(subcon, ConstructClassBase):
+                    continue
+
+                def _map(v):
+                    if not isinstance(v, subcon):
+                        sc = subcon()
+                        sc._apply(v)
+                        return sc
+                    return v
+
+                if isinstance(val, list):
+                    obj2[name] = list(map(_map, val))
+                else:
+                    obj2[name] = _map(val)
+
+        self._apply(obj2)
+
     def _apply(self, obj):
         self.update(obj)
+
+    def items(self):
+        for k in list(self):
+            if k.startswith("_"):
+                continue
+            yield k, self[k]
 
     def addrof(self, name):
         return self._addr + self._off[name][0]
 
+    @classmethod
+    def from_json(cls, fd):
+        d = json.load(fd)
+        obj = cls()
+        obj._apply_classful(d)
+        return obj
 
 class ConstructValueClass(ConstructClassBase):
     """ Same as Construct, but for subcons that are single values, rather than containers
@@ -559,6 +607,7 @@ class ConstructValueClass(ConstructClassBase):
 
     def _apply(self, obj):
         self.value = obj
+    _apply_classful = _apply
 
 class ConstructRegMap(BaseRegMap):
     TYPE_MAP = {
