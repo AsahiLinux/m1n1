@@ -133,7 +133,10 @@ class AGX:
         info = ChannelInfo()
         info.state_addr = state_obj._addr
         info.ringbuffer_addr = ring_buf._addr
-        setattr(self.ch_info, name, info)
+        if name == "FWCtl":
+            self.fwctl_chinfo = info
+        else:
+            setattr(self.ch_info, name, info)
 
         return [cls(self, name + ("" if count == 1 else f"[{i}]"), channel_id,
                     state_obj._paddr + 0x30 * i,
@@ -164,6 +167,8 @@ class AGX:
         self.ch.log = self.alloc_channels(GPULogChannel, "FWLog", None, 6, rx=True)
         self.ch.ktrace = self.alloc_channels(GPUKTraceChannel, "KTrace", None, rx=True)[0]
         self.ch.stats = self.alloc_channels(GPUStatsChannel, "Stats", None, rx=True)[0]
+
+        self.ch.fwctl = self.alloc_channels(GPUFWCtlChannel, "FWCtl", None, rx=False)[0]
 
         # For some reason, the FWLog channels have their rings in a different place...
         self.fwlog_ring = self.ch_info.FWLog.ringbuffer_addr
