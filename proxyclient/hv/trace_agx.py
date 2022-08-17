@@ -1,8 +1,10 @@
 # SPDX-License-Identifier: MIT
 import datetime
 
-from m1n1.constructutils import show_struct_trace
+from m1n1.constructutils import show_struct_trace, Ver
 from m1n1.utils import *
+
+Ver.set_version(hv.u.version)
 
 trace_device("/arm-io/sgx", False)
 trace_device("/arm-io/pmp", False)
