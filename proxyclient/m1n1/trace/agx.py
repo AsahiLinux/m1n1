@@ -276,6 +276,17 @@ CmdBufWork = CmdBufWork._reloadcls()
 CommandQueueTracer = CommandQueueTracer._reloadcls()
 NewInitData = NewInitData._reloadcls(True)
 
+class HandoffTracer(Tracer):
+    DEFAULT_MODE = TraceMode.SYNC
+
+    def __init__(self, hv, agx_tracer, base, verbose=False):
+        super().__init__(hv, verbose=verbose)
+        self.agx_tracer = agx_tracer
+        self.base = base
+
+    def start(self):
+        self.trace_regmap(self.base, 0x4000, GFXHandoffStruct, name="regs")
+
 class AGXTracer(ASCTracer):
     ENDPOINTS = {
         0x20: PongEp,
@@ -296,6 +307,8 @@ class AGXTracer(ASCTracer):
         self.gfx_shared_region_size = getattr(self.dev_sgx, "gfx-shared-region-size")
         self.gfx_handoff = getattr(self.dev_sgx, "gfx-handoff-base")
         self.gfx_handoff_size = getattr(self.dev_sgx, "gfx-handoff-size")
+
+        self.handoff_tracer = HandoffTracer(hv, self, self.gfx_handoff, verbose=2)
 
         self.ignorelist = []
         self.last_msg = None
@@ -525,6 +538,7 @@ class AGXTracer(ASCTracer):
 
     def start(self):
         super().start()
+        self.handoff_tracer.start()
         self.init_channels()
         if self.state.active:
             self.resume()
@@ -533,6 +547,7 @@ class AGXTracer(ASCTracer):
 
     def stop(self):
         self.pause()
+        self.handoff_tracer.stop()
         super().stop()
 
     def mon_addva(self, ctx, va, size, name=""):
