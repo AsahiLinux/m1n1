@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: MIT
+
+from construct import *
 from ..fw.agx.channels import *
 from ..fw.agx.cmdqueue import *
 
@@ -73,8 +75,54 @@ class GPUDeviceControlChannel(GPUTXChannel):
     def send_init(self):
         self.send_message(DC_Init())
 
+    def dc_09(self, a, ptr, b):
+        # Writes to InitData.RegionB
+        msg = DC_09()
+        msg.unk_4 = a
+        msg.unkptr_c = ptr
+        msg.unk_14 = b
+        self.send_message(msg)
+
+    def send_foo(self, t, d=None):
+        msg = DC_Any()
+        msg.msg_type = t
+        if d is not None:
+            msg.data = d
+        self.send_message(msg)
+
     def update_idle_ts(self):
         self.send_message(DC_UpdateIdleTS())
+
+    def destroy_context(self, ctx):
+        msg = DC_DestroyContext()
+        msg.unk_4 = 0
+        msg.unk_8 = 2
+        msg.unk_c = 0
+        msg.unk_10 = 0
+        msg.unk_14 = 0xffff
+        msg.unk_18 = 0
+        msg.context_addr = ctx.gpu_context._addr
+        print(msg)
+        self.send_message(msg)
+
+    # Maybe related to stamps?
+    def write32(self, addr, val):
+        msg = DC_Write32()
+        msg.addr = addr
+        msg.data = val
+        msg.unk_10 = 0
+        msg.unk_14 = 0
+        msg.unk_18 = 0
+        msg.unk_1c = 0
+        print(msg)
+        self.send_message(msg)
+
+    def dc_1e(self, a, b):
+        msg = DC_1e()
+        msg.unk_4 = a
+        msg.unk_c = b
+        print(msg)
+        self.send_message(msg)
 
 class GPUFWCtlChannel(GPUTXChannel):
     STATE_FIELDS = FWControlStateFields
