@@ -99,7 +99,7 @@ class BaseAsm(object):
 
 class ARMAsm(BaseAsm):
     ARCH = os.path.join(os.environ.get("ARCH", "aarch64-linux-gnu-"))
-    CFLAGS = "-pipe -Wall -march=armv8.2-a"
+    CFLAGS = "-pipe -Wall -march=armv8.4-a"
     LDFLAGS = "-maarch64elf"
     HEADER = """
     .text
