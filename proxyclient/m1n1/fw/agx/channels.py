@@ -83,9 +83,9 @@ DeviceControlMsg = FixedSized(0x30, Select(
 class StatsMsg_Power(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x00, Int32ul)),
-        Padding(0x18), # ??? why the hole? never written...
+        ZPadding(0x18), # ??? why the hole? never written...
         "power" / Hex(Int64ul),
-        Padding(0xc), # Confirmed padding
+        ZPadding(0xc), # Confirmed padding
     )
 
     def __str__(self):
@@ -95,7 +95,7 @@ class StatsMsg_PowerOn(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x02, Int32ul)),
         "power_off_ticks" / Dec(Int64ul),
-        Padding(0x24), # Confirmed padding
+        ZPadding(0x24), # Confirmed padding
     )
     def __str__(self):
         t = self.power_off_ticks / 24000000
@@ -105,7 +105,7 @@ class StatsMsg_PowerOff(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x03, Int32ul)),
         "power_on_ticks" / Dec(Int64ul),
-        Padding(0x24), # Confirmed padding
+        ZPadding(0x24), # Confirmed padding
     )
     def __str__(self):
         t = self.power_on_ticks / 24000000
@@ -119,7 +119,7 @@ class StatsMsg_Util(ConstructClass):
         "util2" / Dec(Int32ul),
         "util3" / Dec(Int32ul),
         "util4" / Dec(Int32ul),
-        Padding(0x14), # Confirmed padding
+        ZPadding(0x14), # Confirmed padding
     )
     def __str__(self):
         return f"Utilization: {self.util1:>3d}% {self.util2:>3d}% {self.util3:>3d}% {self.util4:>3d}%"
@@ -132,7 +132,7 @@ class StatsMsg_AvgPower(ConstructClass):
         "unk3" / Hex(Int32ul),
         "unk4" / Hex(Int32ul),
         "avg_power" / Dec(Int32ul),
-        Padding(0x14), # Confirmed padding
+        ZPadding(0x14), # Confirmed padding
     )
 
     def __str__(self):
@@ -141,12 +141,12 @@ class StatsMsg_AvgPower(ConstructClass):
 class StatsMsg_Temp(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x0a, Int32ul)),
-        Padding(8), # Not written
+        ZPadding(8), # Not written
         "raw_value" / Hex(Int32ul),
         "scale" / Hex(Int32ul),
         "tmin" / Hex(Int32ul),
         "tmax" / Hex(Int32ul),
-        Padding(0x14), # Confirmed padding
+        ZPadding(0x14), # Confirmed padding
     )
 
     def __str__(self):
@@ -164,7 +164,7 @@ class StatsMsg_PowerState(ConstructClass):
         "pstate" / Dec(Int32ul),
         "unk4" / Dec(Int32ul),
         "unk5" / Dec(Int32ul),
-        Padding(4), # Confirmed padding
+        ZPadding(4), # Confirmed padding
     )
 
     def __str__(self):
@@ -178,7 +178,7 @@ class StatsMsg_FWBusy(ConstructClass):
         "msg_type" / Hex(Const(0x0c, Int32ul)),
         "timestamp" / Hex(Int64ul),
         "flag" / Int32ul,
-        Padding(0x20), # Confirmed padding
+        ZPadding(0x20), # Confirmed padding
     )
 
     def __str__(self):
@@ -187,12 +187,12 @@ class StatsMsg_FWBusy(ConstructClass):
 class StatsMsg_PState(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x0d, Int32ul)),
-        Padding(8), # Not written
+        ZPadding(8), # Not written
         "ps_min" / Dec(Int32ul),
         "unk1" / Dec(Int32ul),
         "ps_max" / Dec(Int32ul),
         "unk3" / Dec(Int32ul),
-        Padding(0x14), # Confirmed padding
+        ZPadding(0x14), # Confirmed padding
     )
     def __str__(self):
         return f"PState: {self.ps_min:d}..{self.ps_max:d} ({self.unk1:d}/{self.unk3:d})"
@@ -200,13 +200,13 @@ class StatsMsg_PState(ConstructClass):
 class StatsMsg_TempSensor(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x0e, Int32ul)),
-        Padding(4), # Not written
+        ZPadding(4), # Not written
         "sensor_id" / Hex(Int32ul),
         "raw_value" / Hex(Int32ul),
         "scale" / Dec(Int32ul),
         "tmin" / Dec(Int32ul),
         "tmax" / Dec(Int32ul),
-        Padding(0x14), # Confirmed padding
+        ZPadding(0x14), # Confirmed padding
     )
     def __str__(self):
         temp = self.raw_value / float(self.scale) / 64.0
@@ -245,7 +245,7 @@ class FlagMsg(ConstructClass):
         "msg_type" / Hex(Const(1, Int32ul)),
         "firing" / Array(2, Hex(Int64ul)),
         "unk_14" / Hex(Int16ul),
-        Padding(0x38 - 0x16), # confirmed
+        "tail" / Bytes(0x38 - 0x18),
     )
 
 class TimeoutMsg(ConstructClass):
