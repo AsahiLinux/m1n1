@@ -176,6 +176,7 @@ class GPUAllocator:
 
         self.agx.uat.iomap_at(self.ctx, addr, paddr, size_align, **flags)
         obj._set_addr(addr + off, paddr + off)
+        obj._map_flags = flags
 
         self.objects[obj._addr] = obj
 
