@@ -56,10 +56,10 @@ class AGX:
 
         self.kobj = GPUAllocator(self, "kernel",
                                  self.kern_va_base, 0x10000000,
-                                 AttrIndex=MemoryAttr.Normal, AP=1)
+                                 AttrIndex=MemoryAttr.Shared, AP=1)
         self.cmdbuf = GPUAllocator(self, "cmdbuf",
                                    self.kern_va_base + 0x10000000, 0x10000000,
-                                   AttrIndex=MemoryAttr.Normal, AP=0)
+                                   AttrIndex=MemoryAttr.Shared, AP=0)
         self.kshared = GPUAllocator(self, "kshared",
                                     self.kern_va_base + 0x20000000, 0x10000000,
                                     AttrIndex=MemoryAttr.Shared, AP=1)
