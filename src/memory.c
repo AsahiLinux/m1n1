@@ -375,7 +375,6 @@ static void mmu_remap_ranges(void)
             mmu_add_mapping(addr, addr, size, MAIR_IDX_DEVICE_nGnRE, PERM_RW_EL0);
         } else if (flags == 0x60004016) {
             printf("MMU: Adding Normal-NC mapping at 0x%lx (0x%lx)\n", addr, size);
-            dc_civac_range((void *)addr, size);
             mmu_add_mapping(addr, addr, size, MAIR_IDX_NORMAL_NC, PERM_RW_EL0);
         }
 
