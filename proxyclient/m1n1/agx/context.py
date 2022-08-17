@@ -49,6 +49,7 @@ class GPUContext:
         self.gobj.ctx = ctx_id
         self.pobj.ctx = ctx_id
         self.uat.bind_context(ctx_id, self.ttbr0_base)
+        self.thing = self.buf_at(0x6fffff8000, 0, 0x4000, "thing")
 
     def make_stream(self, base):
         return self.uat.iostream(self.ctx, base, recurse=False)
