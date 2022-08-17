@@ -269,14 +269,29 @@ class KTraceMsg(ConstructClass):
         "unk" / HexDump(Bytes(0x70)),
     )
 
+class FWCtlMsg(ConstructClass):
+    subcon = Struct (
+        "addr" / Int64ul,
+        "unk_8" / Int32ul,
+        "context_id" / Int32ul,
+        "unk_10" / Int16ul,
+        "unk_12" / Int16ul,
+    )
+
 channelNames = [
     "TA_0", "3D_0", "CL_0",
     "TA_1", "3D_1", "CL_1",
     "TA_2", "3D_2", "CL_2",
     "TA_3", "3D_3", "CL_3",
     "DevCtrl",
-    "Event", "FWLog", "KTrace", "Stats"
+    "Event", "FWLog", "KTrace", "Stats",
+
+    ## Not really in normal order
+    "FWCtl"
 ]
+
+# Exclude FWCtl
+CHANNEL_COUNT = len(channelNames) - 1
 
 channelRings = (
     [[(RunCmdQueueMsg, 0x30, 0x100)]] * 12 + [
@@ -291,7 +306,8 @@ channelRings = (
             (FWLogMsg, 0xd8, 0x100),                # unk 5
         ],
         [(KTraceMsg, 0x70, 0x100)],
-        [(StatsMsg, 0x30, 0x100)]
+        [(StatsMsg, 0x30, 0x100)],
+        [(FWCtlMsg, 0x14, 0x100)],
     ]
 )
 
@@ -299,8 +315,12 @@ class ChannelStateFields(RegMap):
     READ_PTR = 0x00, Register32
     WRITE_PTR = 0x20, Register32
 
+class FWControlStateFields(RegMap):
+    READ_PTR = 0x00, Register32
+    WRITE_PTR = 0x10, Register32
+
 class Channel(Reloadable):
-    def __init__(self, u, uat, info, ring_defs, base=None):
+    def __init__(self, u, uat, info, ring_defs, base=None, state_fields=ChannelStateFields):
         self.uat = uat
         self.u = u
         self.p = u.proxy
@@ -323,7 +343,7 @@ class Channel(Reloadable):
         for i, (msg, size, count) in enumerate(ring_defs):
             assert msg.sizeof() == size
 
-            self.state.append(ChannelStateFields(self.u, self.state_phys + 0x30 * i))
+            self.state.append(state_fields(self.u, self.state_phys + 0x30 * i))
             m = uat.iotranslate(0, p, size * count)
             self.rb_base.append(p)
             self.rb_maps.append(m)
@@ -360,9 +380,9 @@ class ChannelInfo(ConstructClass):
     )
 
 class ChannelInfoSet(ConstructClass):
-    CHAN_COUNT = len(channelNames)
+    CHAN_COUNT = CHANNEL_COUNT
 
-    subcon = Struct(*[ name / ChannelInfo for name in channelNames])
+    subcon = Struct(*[ name / ChannelInfo for name in channelNames[:CHAN_COUNT]])
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
