@@ -8,7 +8,7 @@ from m1n1.proxy import *
 from .context import *
 from .event import GPUEventManager
 from .uapi import *
-from m1n1.constructutils import ConstructClass
+from m1n1.constructutils import ConstructClass, Ver
 
 def unswizzle(agx, addr, w, h, psize, dump=None, grid=False):
     iface = agx.u.iface
@@ -206,8 +206,8 @@ class GPURenderer:
         self.event_control.event_count.val = 0
         self.event_control.event_count.push()
 
-        self.event_control.base_stamp = 0
-        self.event_control.unk_c = 0
+        self.event_control.generation = 0
+        self.event_control.cur_count = 0
         self.event_control.unk_10 = 0x50
         self.event_control.push()
 
@@ -342,8 +342,8 @@ class GPURenderer:
         barrier_cmd = agx.kobj.new(WorkCommandBarrier, track=False)
         work.add(barrier_cmd)
         barrier_cmd.stamp = self.stamp_ta2
-        barrier_cmd.stamp_value_ta = self.stamp_value_ta
-        barrier_cmd.stamp_value_3d = self.stamp_value_3d
+        barrier_cmd.wait_value = self.stamp_value_ta
+        barrier_cmd.stamp_self = self.stamp_value_3d
         barrier_cmd.event = ev_ta.id
         barrier_cmd.uuid = uuid_3d
 
@@ -355,6 +355,7 @@ class GPURenderer:
 
         work.wc_3d = wc_3d = agx.kobj.new(WorkCommand3D, track=False)
         work.add(work.wc_3d)
+        wc_3d.counter = 0
         wc_3d.context_id = self.ctx_id
         wc_3d.unk_8 = 0
         wc_3d.event_control = self.event_control
@@ -388,6 +389,10 @@ class GPURenderer:
         wc_3d.unk_918 = 0
         wc_3d.unk_920 = 0
         wc_3d.unk_924 = 1
+        # Ventura
+        wc_3d.unk_928_0 = 0
+        wc_3d.unk_928_4 = 0
+        wc_3d.ts_flag = TsFlag()
 
         # cmdbuf.ds_flags
         # 0 - no depth
@@ -398,6 +403,7 @@ class GPURenderer:
         # Structures embedded in WorkCommand3D
         if True:
             wc_3d.struct_1 = Start3DStruct1()
+            wc_3d.struct_1.store_pipeline_bind = cmdbuf.store_pipeline_bind
             wc_3d.struct_1.store_pipeline_addr = cmdbuf.store_pipeline | 4
             wc_3d.struct_1.unk_8 = 0x0
             wc_3d.struct_1.unk_c = 0x0
@@ -459,6 +465,7 @@ class GPURenderer:
             wc_3d.struct_1.unk_37c = 0x0
             wc_3d.struct_1.unk_380 = 0x0
             wc_3d.struct_1.unk_388 = 0x0
+            wc_3d.struct_1.unk_390_0 = 0x0 # Ventura
             wc_3d.struct_1.depth_dimensions = (width - 1) | ((height - 1) << 15)
 
         if True:
@@ -491,7 +498,7 @@ class GPURenderer:
             wc_3d.struct_2.unk_148 = 0x0
             wc_3d.struct_2.unk_150 = 0x0
             wc_3d.struct_2.unk_158 = 0x1c
-            wc_3d.struct_2.unk_160_padding = bytes(0x1e8)
+            wc_3d.struct_2.unk_160_padding = bytes(0x1e0)
 
         if True:
             wc_3d.struct_6 = Start3DStruct6()
@@ -540,7 +547,7 @@ class GPURenderer:
         start_3d.workitem_ptr = wc_3d._addr
         start_3d.context_id = self.ctx_id
         start_3d.unk_50 = 0x1
-        start_3d.unk_54 = 0x0
+        start_3d.event_generation = self.event_control.generation
         start_3d.buffer_mgr_slot = self.buffer_mgr_slot
         start_3d.unk_5c = 0x0
         start_3d.prev_stamp_value = self.prev_stamp_value_3d >> 8
@@ -552,6 +559,8 @@ class GPURenderer:
         start_3d.unk_84 = 0x0
         start_3d.uuid = uuid_3d
         start_3d.attachments = []
+        start_3d.unk_194 = 0
+        start_3d.unkptr_19c = self.event_control.unk_buf._addr
 
         work.fb = None
         work.depth = None
@@ -579,6 +588,8 @@ class GPURenderer:
         ts1.ts2_addr = wc_3d.ts2._addr
         ts1.cmdqueue_ptr = self.wq_3d.info._addr
         ts1.unk_24 = 0x0
+        if Ver.check("13.0 beta4"):
+            ts1.unkptr_2c_0 = wc_3d.ts_flag._addr
         ts1.uuid = uuid_3d
         ts1.unk_30_padding = 0x0
         ms.append(ts1)
@@ -594,6 +605,8 @@ class GPURenderer:
         ts2.ts2_addr = wc_3d.ts3._addr
         ts2.cmdqueue_ptr = self.wq_3d.info._addr
         ts2.unk_24 = 0x0
+        if Ver.check("13.0 beta4"):
+            ts2.unkptr_2c_0 = wc_3d.ts_flag._addr
         ts2.uuid = uuid_3d
         ts2.unk_30_padding = 0x0
         ms.append(ts2)
@@ -621,6 +634,7 @@ class GPURenderer:
         finish_3d.unk_8c = 0
         finish_3d.restart_branch_offset = start_3d_offset - ms.off
         finish_3d.unk_98 = 0
+        finish_3d.unk_9c = bytes(0x10)
         ms.append(finish_3d)
         ms.finalize()
 
@@ -654,6 +668,7 @@ class GPURenderer:
         work.wc_ta = wc_ta = agx.kobj.new(WorkCommandTA, track=False)
         work.add(work.wc_ta)
         wc_ta.context_id = self.ctx_id
+        wc_ta.counter = 1
         wc_ta.unk_8 = 0
         wc_ta.event_control = self.event_control
         wc_ta.buffer_mgr_slot = self.buffer_mgr_slot
@@ -674,6 +689,10 @@ class GPURenderer:
         wc_ta.unk_5cc = 0
         wc_ta.unk_5d0 = 0
         wc_ta.unk_5d4 = 0x27 #1
+        # Ventura
+        wc_ta.unk_5e0 = 0
+        wc_ta.unk_5e4 = 0
+        wc_ta.ts_flag = TsFlag()
 
         # Structures embedded in WorkCommandTA
         if True:
@@ -763,7 +782,7 @@ class GPURenderer:
         start_ta.cmdqueue_ptr = self.wq_ta.info._addr
         start_ta.context_id = self.ctx_id
         start_ta.unk_38 = 1
-        start_ta.unk_3c = 0 # 1 sometimes, breaks things (cache related?)
+        start_ta.event_generation = self.event_control.generation
         start_ta.buffer_mgr_slot = self.buffer_mgr_slot
         start_ta.unk_48 = 0#1 #0
         start_ta.unk_50 = 0
@@ -783,7 +802,10 @@ class GPURenderer:
         start_ta.unk_168 = 0x0 # fixed
         start_ta.unk_16c = 0x0 # fixed
         start_ta.unk_170 = 0x0 # fixed
-        start_ta.unk_178 = 0x0 # fixed
+        start_ta.unk_178 = 0x0 # fixed?
+        start_ta.unk_17c = 0x0
+        start_ta.unkptr_180 = self.event_control.unk_buf._addr
+        start_ta.unk_188 = 0x0
 
         start_ta_offset = ms.append(start_ta)
 
@@ -796,6 +818,8 @@ class GPURenderer:
         ts1.ts2_addr = wc_ta.ts2._addr
         ts1.cmdqueue_ptr = self.wq_ta.info._addr
         ts1.unk_24 = 0x0
+        if Ver.check("13.0 beta4"):
+            ts1.unkptr_2c_0 = wc_ta.ts_flag._addr
         ts1.uuid = uuid_ta
         ts1.unk_30_padding = 0x0
         ms.append(ts1)
@@ -811,6 +835,8 @@ class GPURenderer:
         ts2.ts2_addr = wc_ta.ts3._addr
         ts2.cmdqueue_ptr = self.wq_ta.info._addr
         ts2.unk_24 = 0x0
+        if Ver.check("13.0 beta4"):
+            ts2.unkptr_2c_0 = wc_ta.ts_flag._addr
         ts2.uuid = uuid_ta
         ts2.unk_30_padding = 0x0
         ms.append(ts2)
@@ -836,6 +862,7 @@ class GPURenderer:
         finish_ta.unk_68 = 0x0 # fixed
         finish_ta.restart_branch_offset = start_ta_offset - ms.off
         finish_ta.unk_70 = 0x0 # fixed
+        finish_ta.unk_74 = bytes(0x10) # Ventura
         ms.append(finish_ta)
 
         ms.finalize()
