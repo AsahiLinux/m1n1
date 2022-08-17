@@ -48,7 +48,7 @@ class DC_DestroyContext(ConstructClass):
         "rest" / HexDump(Bytes(0xc))
     )
 
-class DeviceControl_19(ConstructClass):
+class DC_Init(ConstructClass):
     subcon =  Struct (
         "msg_type" / Const(0x19, Int32ul),
         "data" / HexDump(Default(Bytes(0x2c), bytes(0x2c)))
@@ -61,7 +61,7 @@ class DeviceControl_1e(ConstructClass):
         "data" / HexDump(Bytes(0x2c)),
     ),
 
-class DeviceControl_23(ConstructClass):
+class DC_UpdateIdleTS(ConstructClass):
     subcon = Struct (
         "msg_type" / Const(0x23, Int32ul),
         "data" / HexDump(Default(Bytes(0x2c), bytes(0x2c))),
@@ -75,8 +75,8 @@ class UnknownMsg(ConstructClass):
 
 DeviceControlMsg = FixedSized(0x30, Select(
     DC_DestroyContext,
-    DeviceControl_19,
-    DeviceControl_23,
+    DC_Init,
+    DC_UpdateIdleTS,
     UnknownMsg,
 ))
 
