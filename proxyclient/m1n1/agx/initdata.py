@@ -40,6 +40,8 @@ def build_initdata(agx):
 
     initdata = agx.kshared.new(InitData)
 
+    initdata.ver_info = (1, 1, 16, 1)
+
     initdata.regionA = agx.kshared.new_buf(0x4000, "InitData_RegionA").push()
 
     regionB = agx.kobj.new(InitData_RegionB)
@@ -50,7 +52,9 @@ def build_initdata(agx):
     regionB.stats_3d = agx.kobj.new(InitData_GPUGlobalStats3D).push()
 
     # size: 0x180, Empty
-    regionB.stats_cp = agx.kobj.new_buf(0x180, "RegionB.unkptr_180").push()
+    # 13.0: grew
+    #regionB.stats_cp = agx.kobj.new_buf(0x180, "RegionB.unkptr_180").push()
+    regionB.stats_cp = agx.kobj.new_buf(0x980, "RegionB.unkptr_180").push()
 
     # size: 0x3b80, few floats, few ints, needed for init
     regionB.hwdata_a = agx.kobj.new(AGXHWDataA, track=False).push()
