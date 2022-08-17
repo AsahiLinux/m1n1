@@ -1,10 +1,11 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+import inspect, textwrap, json, re
+
 from construct import *
 from construct.core import evaluate
 from construct.lib import HexDisplayedInteger
 from .utils import *
-import inspect
-import textwrap
-import re
 
 g_struct_trace = set()
 g_depth = 0
