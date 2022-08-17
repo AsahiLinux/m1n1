@@ -317,7 +317,9 @@ class AGXTracer(ASCTracer):
         # self.mon.add(self.gfx_shared_region, self.gfx_shared_region_size, "gfx-shared")
         # self.mon.add(self.gfx_handoff, self.gfx_handoff_size, "gfx-handoff")
 
+        self.trace_kernva = False
         self.trace_userva = False
+        self.trace_usermap = True
         self.pause_after_init = False
         self.shell_after_init = False
         self.encoder_id_filter = None
@@ -377,7 +379,7 @@ class AGXTracer(ASCTracer):
         def trace_pt(start, end, idx, pte, level, sparse):
             if start >= 0xf8000000000 and ctx != 0:
                 return
-            if start < 0xf8000000000 and not self.trace_userva:
+            if start < 0xf8000000000 and not self.trace_usermap:
                 return
             self.hv.add_tracer(irange(pte.offset(), 0x4000),
                             f"UATMapTracer/{ctx}",
@@ -469,10 +471,8 @@ class AGXTracer(ASCTracer):
     def uat_page_mapped(self, iova, pte, ctx=0):
         if iova >= 0xf8000000000 and ctx != 0:
             return
-        if not self.trace_userva and ctx != 0:
-            return
-
         if not pte.valid():
+            self.log(f"UAT unmap {ctx}:{iova:#x} ({pte})")
             try:
                 paddr = self.va_to_pa[(ctx, iova)]
             except KeyError:
@@ -482,9 +482,15 @@ class AGXTracer(ASCTracer):
             return
 
         paddr = pte.offset()
-        self.log(f"UAT map {ctx}:{iova:#x} -> {paddr:#x}")
+        self.log(f"UAT map {ctx}:{iova:#x} -> {paddr:#x} ({pte})")
         if paddr < 0x800000000:
             return # MMIO, ignore
+
+        if not self.trace_userva and ctx != 0 and iova < 0x6f_00000000:
+            return
+        if not self.trace_kernva and ctx == 0:
+            return
+
         self.va_to_pa[(ctx, iova)] = paddr
         self.hv.add_tracer(irange(paddr, 0x4000),
                            f"GPUVM/{ctx}",
