@@ -103,7 +103,9 @@ class DRMAsahiShim:
             return
 
         self.init_agx()
-        self.renderer = GPURenderer(self.agx)
+        self.ctx = GPUContext(self.agx)
+        self.ctx.bind(0x17)
+        self.renderer = GPURenderer(self.ctx, 0x40, bm_slot=10, queue=1)
 
         self.initialized = True
 
