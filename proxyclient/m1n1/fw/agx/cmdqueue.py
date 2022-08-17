@@ -19,9 +19,9 @@ class WorkCommandBarrier(ConstructClass):
         "magic" / Const(0x4, Int32ul),
         "stamp_addr" / Int64ul,
         "stamp" / ROPointer(this.stamp_addr, StampCounter),
-        "stamp_value_ta" / Int32ul,
+        "wait_value" / Int32ul,
         "event" / Int32ul, # Event number that signals a stamp check
-        "stamp_value_3d" / Int32ul,
+        "stamp_self" / Int32ul,
         "uuid" / Int32ul,
         "unk" / Default(Int32ul, 0),
     )
@@ -52,15 +52,23 @@ class LinkedListHead(ConstructClass):
     )
 
     def __init__(self):
+        super().__init__()
         self.prev = 0
         self.next = 0
+
+class EventControlUnkBuf(ConstructValueClass):
+    subcon = HexDump(Bytes(0x8))
+
+    def __init__(self):
+        super().__init__()
+        self.value = b"\xff" * 8
 
 class EventControl(ConstructClass):
     subcon = Struct(
         "event_count_addr" / Int64ul,
         "event_count" / ROPointer(this.event_count_addr, Int32ul),
-        "base_stamp" / Int32ul,
-        "unk_c" / Int32ul,
+        "generation" / Int32ul,
+        "cur_count" / Int32ul,
         "unk_10" / Int32ul,
         "unk_14" / Int32ul,
         "unk_18" / Int64ul,
@@ -77,6 +85,7 @@ class EventControl(ConstructClass):
         "unk_cp" / HexDump(Bytes(0x18)),
         "in_list" / Int32ul,
         "list_head" / LinkedListHead,
+        "unk_buf" / EventControlUnkBuf,
     )
 
     def __init__(self):
@@ -96,6 +105,7 @@ class EventControl(ConstructClass):
         self.unk_cp = bytes(24)
         self.in_list = 0
         self.list_head = LinkedListHead()
+        self.unk_buf = EventControlUnkBuf()
 
 class WorkCommandCP(ConstructClass):
     """
@@ -194,6 +204,7 @@ class WorkCommand3D(ConstructClass):
     subcon = Struct(
         "addr" / Tell,
         "magic" / Const(0x1, Hex(Int32ul)),
+        Ver("13.0 beta4", "counter" / Int64ul),
         "context_id" / Hex(Int32ul),
         "unk_8" / Hex(Int32ul),
         "microsequence_ptr" / Hex(Int64ul), # Command list
@@ -235,6 +246,11 @@ class WorkCommand3D(ConstructClass):
         "unk_918" / Int64ul,
         "unk_920" / Int32ul,
         "unk_924" / Int32ul,
+        Ver("13.0 beta4", "unk_928_0" / Int32ul),
+        Ver("13.0 beta4", "unk_928_4" / Int8ul),
+        Ver("13.0 beta4", "ts_flag" / TsFlag),
+        Ver("13.0 beta4", "unk_5e6" / Default(Int16ul, 0)),
+        Ver("13.0 beta4", "unk_5e8" / Default(HexDump(Bytes(0x20)), bytes(0x20))),
         "pad_928" / Default(HexDump(Bytes(0x18)), bytes(0x18)),
     )
 
@@ -242,6 +258,7 @@ class WorkCommand0_UnkBuf(ConstructValueClass):
     subcon = HexDump(Bytes(0x18))
 
     def __init__(self):
+        super().__init__()
         self.value = bytes(0x18)
 
 class WorkCommandTA(ConstructClass):
@@ -270,6 +287,7 @@ class WorkCommandTA(ConstructClass):
     subcon = Struct(
         "addr" / Tell,
         "magic" / Const(0x0, Hex(Int32ul)),
+        Ver("13.0 beta4", "counter" / Int64ul),
         "context_id" / Hex(Int32ul),
         "unk_8" / Hex(Int32ul),
         "event_control_addr" / Hex(Int64ul),
@@ -309,7 +327,14 @@ class WorkCommandTA(ConstructClass):
         "unk_5cc" / Int32ul,
         "unk_5d0" / Int32ul,
         "unk_5d4" / Int8ul,
-        "pad_5d5" / Default(HexDump(Bytes(0xb)), bytes(0xb)),
+        "pad_5d5" / Default(HexDump(Bytes(0x3)), bytes(0x3)),
+        Ver("13.0 beta4", "unk_5e0" / Int32ul),
+        Ver("13.0 beta4", "unk_5e4" / Int8ul),
+        Ver("13.0 beta4", "ts_flag" / TsFlag),
+        Ver("13.0 beta4", "unk_5e6" / Default(Int16ul, 0)),
+        Ver("13.0 beta4", "unk_5e8" / Default(HexDump(Bytes(0x18)), bytes(0x18))),
+        "pad_5d8" / Default(HexDump(Bytes(0x8)), bytes(0x8)),
+        Ver("13.0 beta4", "pad_5e0" / Default(HexDump(Bytes(0x18)), bytes(0x18))),
     )
 
 class UnknownWorkCommand(ConstructClass):
@@ -346,14 +371,14 @@ class JobList(ConstructClass):
 class GPUContextData(ConstructClass):
     subcon = Struct(
         "unk_0" / Int16ul,
-        Padding(3),
+        "unk_2" / Default(Bytes(3), bytes(3)),
         "unk_5" / Int8ul,
-        Padding(0x1e - 6),
+        "unk_6" / Default(Bytes(0x18), bytes(0x18)),
         "unk_1e" / Int8ul,
         "unk_1f" / Int8ul,
-        Padding(3),
+        "unk_20" / Default(Bytes(3), bytes(3)),
         "unk_23" / Int8ul,
-        Padding(0x1c),
+        "unk_24" / Default(Bytes(0x1c), bytes(0x1c)),
     )
 
     def __init__(self):
@@ -371,17 +396,17 @@ class CommandQueuePointerMap(RegMap):
 class CommandQueuePointers(ConstructClass):
     subcon = Struct(
         "gpu_doneptr" / Int32ul,
-        Padding(12),
+        ZPadding(12),
         "unk_10" / Int32ul,
-        Padding(12),
+        ZPadding(12),
         "unk_20" / Int32ul,
-        Padding(12),
+        ZPadding(12),
         "gpu_rptr" / Int32ul,
-        Padding(12),
+        ZPadding(12),
         "cpu_wptr" / Int32ul,
-        Padding(12),
+        ZPadding(12),
         "rb_size" / Int32ul,
-        Padding(12),
+        ZPadding(12),
         "unk" / Default(Bytes(0x2800), bytes(0x2800)),
     )
 
@@ -412,7 +437,7 @@ class CommandQueueInfo(ConstructClass):
         "gpu_rptr1" / Hex(Int32ul),
         "gpu_rptr2" / Hex(Int32ul),
         "gpu_rptr3" / Hex(Int32ul),
-        "unk_2c" / Int32sl, # busy flags?
+        "event_id" / Int32sl,
         "unk_30" / Hex(Int32ul), # read by CPU
         "unk_34" / Hex(Int32ul),
         "unk_38" / Hex(Int64ul),
@@ -424,12 +449,18 @@ class CommandQueueInfo(ConstructClass):
         "unk_54" / Int32sl,
         "unk_58" / Hex(Int64ul), # 0
         "busy" / Hex(Int32ul), # 1 = gpu busy
-        Padding(0x20),
+        "pad1" / ZPadding(0x20),
         "blocked_on_barrier" / Hex(Int32ul),
-        Padding(0x18),
+        "unk_88" / Int32ul,
+        "unk_8c" / Int32ul,
+        "unk_90" / Int32ul,
+        "unk_94" / Int32ul,
+        "pending" / Int32ul,
+        "unk_9c" / Int32ul,
         "gpu_context_addr" / Hex(Int64ul), # GPU managed context, shared between 3D and TA. Passed to DC_DestroyContext
         "gpu_context" / ROPointer(this.gpu_context_addr, GPUContextData),
 
+        "tail" / HexDump(Bytes(0x100)),
         # End of struct
     )
 
@@ -438,14 +469,21 @@ class CommandQueueInfo(ConstructClass):
         self.gpu_rptr1 = 0
         self.gpu_rptr2 = 0
         self.gpu_rptr3 = 0
-        self.unk_2c = -1
+        self.event_id = -1
         self.unk_4c = -1
         self.uuid = 0xdeadbeef # some kind of ID
         self.unk_54 = -1
         self.unk_58 = 0x0
         self.busy = 0x0
         self.blocked_on_barrier = 0x0
+        self.unk_88 = 0
+        self.unk_8c = 0
+        self.unk_90 = 0
+        self.unk_94 = 0
+        self.pending = 0
+        self.unk_9c = 0
         self.set_prio(0)
+        self.tail = bytes(0x100)
 
     def set_prio(self, p):
         if p == 0:
