@@ -1,14 +1,21 @@
 # SPDX-License-Identifier: MIT
-import io
+import io, time
 
 from ..malloc import Heap
 from ..utils import *
 from ..constructutils import ConstructClassBase, str_value
 from construct import Bytes, Container, HexDump
+from ..hw.uat import MemoryAttr
 
 class GPUObject:
     def __init__(self, allocator, objtype):
-        if isinstance(objtype, ConstructClassBase):
+        self._raw = False
+        if isinstance(objtype, int):
+            self.val = bytes(objtype)
+            self._size = objtype
+            self._name = b"Bytes({objtype})"
+            self._raw = True
+        elif isinstance(objtype, ConstructClassBase):
             self.val = objtype
             objtype = type(objtype)
             self._size = objtype.sizeof()
@@ -29,30 +36,46 @@ class GPUObject:
         self._dead = False
         self._map_flags = {}
         self._mon_val = None
+        self._skipped_pushes = 0
+        self._compress_threshold = 65536
+        self._strm = None
 
     def push(self, if_needed=False):
         self._mon_val = self.val
-
         assert self._addr is not None
-        stream = self._alloc.make_stream(self._addr)
-        context = Container()
-        context._parsing = False
-        context._building = True
-        context._sizing = False
-        context._params = context
 
-        # build locally and push as a block for efficiency
-        ios = io.BytesIO()
-        self._type._build(self.val, ios, context, "(pushing)")
-        data = ios.getvalue()
-        if if_needed and data == self._data:
+        if self._raw:
+            data = self.val
+        else:
+            context = Container()
+            context._parsing = False
+            context._building = True
+            context._sizing = False
+            context._params = context
+            # build locally and push as a block for efficiency
+            ios = io.BytesIO()
+            self._type._build(self.val, ios, context, "(pushing)")
+            data = ios.getvalue()
+
+        #if self._alloc.verbose:
+            #t = time.time()
+            #self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] chk {self._size} bytes")
+        if if_needed and data[:] == self._data:
+            self._skipped_pushes += 1
+            #if self._alloc.verbose:
+                #t2 = time.time()
+                #mbs = self._size / (t2 - t) / 1000000
+                #self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] chk done ({mbs:.02f} MB/s)")
             return self
 
+        self._skipped_pushes = 0
+
+        t = time.time()
         if data == bytes(self._size):
             if self._alloc.verbose:
                 self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] zeroing {self._size} bytes")
             self._alloc.agx.p.memset8(self._paddr, 0, self._size)
-        elif self._size > 32768:
+        elif self._size > self._compress_threshold:
             if self._alloc.verbose:
                 self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] pushing {self._size} bytes (compressed)")
             self._alloc.agx.u.compressed_writemem(self._paddr, data)
@@ -60,14 +83,24 @@ class GPUObject:
             if self._alloc.verbose:
                 self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] pushing {self._size} bytes")
             self._alloc.agx.iface.writemem(self._paddr, data)
+        if self._alloc.verbose:
+            t2 = time.time()
+            mbs = self._size / (t2 - t) / 1000000
+            self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] push done ({mbs:.02f} MB/s)")
         #stream.write(data)
         if isinstance(self._type, type) and issubclass(self._type, ConstructClassBase):
-            self.val.set_addr(self._addr, stream)
+            if self._strm is None:
+                self._strm = self._alloc.make_stream(self._addr)
+            self.val.set_addr(self._addr, self._strm)
 
-        self._data = data
+        self._data = bytes(data)
         return self
 
     def _pull(self):
+        if self._raw:
+            assert self._paddr is not None
+            return self._alloc.agx.iface.readmem(self._paddr, self._size)
+
         assert self._addr is not None
         stream = self._alloc.make_stream(self._addr)
         context = Container()
@@ -174,6 +207,9 @@ class GPUAllocator:
         flags = dict(self.flags)
         flags.update(kwargs)
 
+        obj._addr_align = addr
+        obj._paddr_align = paddr
+        obj._size_align = size_align
         self.agx.uat.iomap_at(self.ctx, addr, paddr, size_align, **flags)
         obj._set_addr(addr + off, paddr + off)
         obj._map_flags = flags
