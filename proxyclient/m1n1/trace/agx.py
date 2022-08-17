@@ -4,7 +4,7 @@ import textwrap
 from .asc import *
 from ..hw.uat import UAT, MemoryAttr, PTE, Page_PTE, TTBR
 
-from ..fw.agx.initdata import InitData as NewInitData
+from ..fw.agx.initdata import InitData
 from ..fw.agx.channels import *
 from ..fw.agx.cmdqueue import *
 from ..fw.agx.microsequence import *
@@ -274,7 +274,7 @@ class CommandQueueTracer(Reloadable):
 
 CmdBufWork = CmdBufWork._reloadcls()
 CommandQueueTracer = CommandQueueTracer._reloadcls()
-NewInitData = NewInitData._reloadcls(True)
+InitData = InitData._reloadcls(True)
 
 class HandoffTracer(Tracer):
     DEFAULT_MODE = TraceMode.SYNC
@@ -1026,7 +1026,7 @@ class AGXTracer(ASCTracer):
         self.uat.invalidate_cache()
         self.uat.dump(0, log=self.log)
         addr |= 0xfffff000_00000000
-        initdata = NewInitData.parse_stream(self.get_stream(0, addr))
+        initdata = InitData.parse_stream(self.get_stream(0, addr))
 
         self.log("Initdata:")
         self.log(initdata)
