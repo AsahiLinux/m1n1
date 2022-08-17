@@ -348,7 +348,7 @@ channelRings = (
             (FWLogMsg, 0xd8, 0x100),                # unk 5
         ],
         [(KTraceMsg, 0x38, 0x200)],
-        [(StatsMsg, 0x30, 0x100)],
+        [(HexDump(Bytes(0x60)), 0x60, 0x100)],
         [(FWCtlMsg, 0x14, 0x100)],
     ]
 )

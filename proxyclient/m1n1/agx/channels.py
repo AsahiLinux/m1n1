@@ -117,7 +117,7 @@ class GPUKTraceChannel(GPURXChannel):
     MSG_CLASS = KTraceMsg
 
 class GPUStatsChannel(GPURXChannel):
-    MSG_CLASS = StatsMsg
+    MSG_CLASS = HexDump(Bytes(0x60))
 
     def handle_message(self, msg):
         if self.agx.show_stats:
