@@ -242,8 +242,11 @@ class GPURenderer:
         work.ev_ta = ev_ta = self.ev_ta
         work.ev_3d = ev_3d = self.ev_3d
 
-        print("ev_ta:", ev_ta.id)
-        print("ev_3d:", ev_3d.id)
+        self.ev_ta.rearm()
+        self.ev_3d.rearm()
+
+        self.agx.log(f"ev_ta: {ev_ta.id}")
+        self.agx.log(f"ev_3d: {ev_3d.id}")
 
         deflake_1 = deflake._addr + 0x2a0
         deflake_2 = deflake._addr + 0x20
