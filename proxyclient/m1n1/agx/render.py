@@ -852,14 +852,18 @@ class GPURenderer:
         #print(wc_ta)
         self.wq_ta.submit(wc_ta)
 
+        self.agx.log("Submit done")
         return work
 
     def run(self):
         ##### Run queues
+        self.agx.log("Run queues")
         self.agx.ch.queue[self.queue].q_3D.run(self.wq_3d, self.ev_3d.id)
         self.agx.ch.queue[self.queue].q_TA.run(self.wq_ta, self.ev_ta.id)
+        self.agx.log("Run done")
 
     def wait(self):
+        self.agx.log("Waiting...")
         work = self.work[-1]
 
         ##### Wait for work completion
@@ -867,13 +871,14 @@ class GPURenderer:
             self.agx.wait_for_events(timeout=2.0)
 
         if not self.ev_3d.fired:
-            print("3D event didn't fire")
+            self.agx.log("3D event didn't fire")
 
-        print("Stamps:")
-        print(self.stamp_ta1.pull())
-        print(self.stamp_ta2.pull())
-        print(self.stamp_3d1.pull())
-        print(self.stamp_3d2.pull())
+        self.agx.log("Event fired")
+        #print("Stamps:")
+        #print(self.stamp_ta1.pull())
+        #print(self.stamp_ta2.pull())
+        #print(self.stamp_3d1.pull())
+        #print(self.stamp_3d2.pull())
 
         #print("WCs:")
         #print(work.wc_3d.pull())
