@@ -28,6 +28,12 @@ class Timestamp(ConstructValueClass):
     def __init__(self, value=0):
         self.value = value
 
+class TsFlag(ConstructValueClass):
+    subcon = Int8ul
+
+    def __init__(self, value=0):
+        self.value = value
+
 class WrappedPointer(ConstructValueClass):
     subcon = Int64ul
 
@@ -45,13 +51,13 @@ class BufferManagerBlockControl(ConstructClass):
         "total" / Int32ul,
         "wptr" / Int32ul,
         "unk" / Int32ul,
-        "pad" / Padding(0x34)
+        "pad" / ZPadding(0x34)
     )
 
 class BufferManagerCounter(ConstructClass):
     subcon = Struct(
         "count" / Int32ul,
-        "pad" / Padding(0x3c)
+        "pad" / ZPadding(0x3c)
     )
 
 class BufferManagerMisc(ConstructClass):
@@ -60,9 +66,9 @@ class BufferManagerMisc(ConstructClass):
         "gpu_4" / Default(Int32ul, 0),
         "gpu_8" / Default(Int32ul, 0),
         "gpu_c" / Default(Int32ul, 0),
-        "pad_10" / Padding(0x10),
+        "pad_10" / ZPadding(0x10),
         "cpu_flag" / Int32ul,
-        "pad_24" / Padding(0x1c),
+        "pad_24" / ZPadding(0x1c),
     )
 
 class BufferManagerInfo(ConstructClass):
@@ -74,7 +80,7 @@ class BufferManagerInfo(ConstructClass):
         "unk_10" / Int32ul,
         "gpu_counter2" / Int32ul,
         "unk_18" / Int32ul,
-        "unk_1c" / Int32ul,
+        Ver("..13.0 beta4", "unk_1c" / Int32ul),
         "page_list_addr" / Int64ul,
         "page_list_size" / Int32ul,
         "page_count" / Int32ul,
@@ -180,6 +186,7 @@ class AuxFBInfo(ConstructClass):
         "unk2" / Int32ul,
         "width" / Dec(Int32ul),
         "height" / Dec(Int32ul),
+        Ver("13.0 beta4", "unk3" / Int64ul),
     )
 
     def __init__(self, unk1, unk2, width, height):
@@ -188,10 +195,11 @@ class AuxFBInfo(ConstructClass):
         self.unk2 = unk2
         self.width = width
         self.height = height
+        self.unk3 = 0x100000
 
 class Start3DStruct1(ConstructClass):
     subcon = Struct(
-        "magic" / Const(0x12, Int32ul),
+        "store_pipeline_bind" / Int32ul, # 0x12, 0x34 seen
         "store_pipeline_addr" / Int32ul,
         "unk_8" / Int32ul,
         "unk_c" / Int32ul,
@@ -249,6 +257,7 @@ class Start3DStruct1(ConstructClass):
         "unk_37c" / Int32ul,
         "unk_380" / Int64ul,
         "unk_388" / Int64ul,
+        Ver("13.0 beta4", "unk_390_0" / Int64ul),
         "depth_dimensions" / Int64ul,
     )
 
@@ -280,7 +289,8 @@ class Start3DStruct2(ConstructClass):
         "unk_148" / Int64ul,
         "unk_150" / Int64ul,
         "unk_158" / Int64ul,
-        "unk_160_padding" / HexDump(Bytes(0x1e8)),
+        "unk_160_padding" / HexDump(Bytes(0x1e0)),
+        Ver("..13.0 beta4", ZPadding(8)),
     )
 
 class BufferThing(ConstructClass):
@@ -365,7 +375,7 @@ class Start3DCmd(ConstructClass):
         "workitem_ptr" / Int64ul, # points back at the WorkItem that this command came from
         "context_id" / Int32ul,
         "unk_50" / Int32ul,
-        "unk_54" / Int32ul,
+        "event_generation" / Int32ul,
         "buffer_mgr_slot" / Int32ul,
         "unk_5c" / Int32ul,
         "prev_stamp_value" / Int64ul, # 0
@@ -378,7 +388,9 @@ class Start3DCmd(ConstructClass):
         "uuid" / Int32ul, # uuid for tracking
         "attachments" / Array(16, Attachment),
         "num_attachments" / Int32ul,
-        "unk_190" / Int32ul
+        "unk_190" / Int32ul,
+        Ver("13.0 beta4", "unk_194" / Int64ul),
+        Ver("13.0 beta4", "unkptr_19c" / Int64ul),
     )
 
 
@@ -411,6 +423,7 @@ class Finalize3DCmd(ConstructClass):
         "unk_8c" / Int64ul, # 0
         "restart_branch_offset" / Int32sl,
         "unk_98" / Int32ul, # 1
+        Ver("13.0 beta4", "unk_9c" / HexDump(Bytes(0x10))),
     )
 
 class TilingParameters(ConstructClass):
@@ -520,7 +533,7 @@ class StartTACmd(ConstructClass):
         "cmdqueue_ptr" / Int64ul,
         "context_id" / Int32ul,
         "unk_38" / Int32ul,
-        "unk_3c" / Int32ul,
+        "event_generation" / Int32ul,
         "buffer_mgr_slot" / Int64ul,
         "unk_48" / Int64ul,
         "unk_50" / Int32ul,
@@ -539,6 +552,9 @@ class StartTACmd(ConstructClass):
         "unk_16c" / Int32ul,
         "unk_170" / Int64ul,
         "unk_178" / Int32ul,
+        Ver("13.0 beta4", "unk_17c" / Int32ul),
+        Ver("13.0 beta4", "unkptr_180" / Int64ul),
+        Ver("13.0 beta4", "unk_188" / Int32ul),
     )
 
 class FinalizeTACmd(ConstructClass):
@@ -568,6 +584,7 @@ class FinalizeTACmd(ConstructClass):
         "unk_68" / Int32ul,
         "restart_branch_offset" / Int32sl,
         "unk_70" / Int32ul,
+        Ver("13.0 beta4", "unk_74" / HexDump(Bytes(0x10))),
     )
 
 class ComputeArgs(ConstructClass):
@@ -706,11 +723,12 @@ class TimestampCmd(ConstructClass):
         "ts0_addr" / Int64ul,
         "ts0" / ROPointer(this.ts0_addr, Timestamp),
         "ts1_addr" / Int64ul,
-        "ts1" / ROPointer(this.ts0_addr, Timestamp),
+        "ts1" / ROPointer(this.ts1_addr, Timestamp),
         "ts2_addr" / Int64ul,
-        "ts2" / ROPointer(this.ts0_addr, Timestamp),
+        "ts2" / ROPointer(this.ts2_addr, Timestamp),
         "cmdqueue_ptr" / Int64ul,
         "unk_24" / Int64ul,
+        Ver("13.0 beta4", "unkptr_2c_0" / Int64ul),
         "uuid" / Int32ul,
         "unk_30_padding" / Int32ul,
     )
