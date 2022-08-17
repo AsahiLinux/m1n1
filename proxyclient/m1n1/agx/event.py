@@ -35,7 +35,7 @@ class GPUEventManager:
                 if v & (1 << j):
                     ev_id = i * 64 + j
                     ev = self.events[ev_id]
-                    #self.agx.log(f"Event fired: {ev_id}")
+                    self.agx.log(f"Event fired: {ev_id}")
                     if ev is None:
                         raise Exception("Received spurious notification for event ID {ev}")
                     ev.fire()
