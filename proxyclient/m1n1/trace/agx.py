@@ -256,10 +256,10 @@ class CommandQueueTracer(Reloadable):
         count = 0
         orig_rptr = rptr = self.state.rptr
         while rptr != workmsg.head:
-            self.log(f"WI item @{rptr:#x}")
             count += 1
             stream.seek(self.info.rb_addr + rptr * 8, 0)
             pointer = Int64ul.parse_stream(stream)
+            self.log(f"WI item @{rptr:#x}: {pointer:#x}")
             if pointer:
                 stream.seek(pointer, 0)
                 yield CmdBufWork.parse_stream(stream)
