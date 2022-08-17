@@ -222,9 +222,9 @@ class FlagMsg(ConstructClass):
 class TimeoutMsg(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(4, Int32ul)),
-        "index" / Hex(Int32ul),
+        "counter" / Hex(Int32ul),
         "unk_8" / Hex(Int32ul),
-        "queue" / Hex(Int32ul),
+        "stamp_index" / Hex(Int32ul),
         "unkpad_16" / HexDump(Bytes(0x38 - 0x10)),
     )
 

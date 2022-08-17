@@ -171,25 +171,89 @@ class AGX:
     def kick_firmware(self):
         self.asc.db.doorbell(0x10)
 
-    def timeout(self):
-        self.log("!!!! timeout?")
-        self.faulted()
-        #raise Exception(f"GPU timeout")
+    def timeout(self, msg):
+        if self.mon:
+            self.mon.poll()
+        self.poll_objects()
+        self.log(msg)
+        self.log(r' (\________/) ')
+        self.log(r'  |        |  ')
+        self.log(r"'.| \  , / |.'")
+        self.log(r'--| / (( \ |--')
+        self.log(r".'|  _-_-  |'.")
+        self.log(r'  |________|  ')
+        self.log(r'')
+        self.log(r' Timeout nya~!!!!!')
+        self.log(r'')
+        self.log(f' Stamp index: {int(msg.stamp_index)}')
+        self.show_pending_stamps()
+        self.log(f' Fault info:')
+        self.log(self.initdata.regionC.fault_info)
 
-    def faulted(self):
-        fault_code = self.p.read64(0x204017030)
-        if fault_code == 0xacce5515abad1dea:
+        self.check_fault()
+        self.recover()
+
+    def faulted(self, msg):
+        if self.mon:
+            self.mon.poll()
+        self.poll_objects()
+        self.log(msg)
+        self.log(r' (\________/) ')
+        self.log(r'  |        |  ')
+        self.log(r"'.| \  , / |.'")
+        self.log(r'--| / (( \ |--')
+        self.log(r".'|  _-_-  |'.")
+        self.log(r'  |________|  ')
+        self.log(r'')
+        self.log(r' Fault nya~!!!!!')
+        self.log(r'')
+        self.show_pending_stamps()
+        self.log(f' Fault info:')
+        self.log(self.initdata.regionC.fault_info)
+
+        self.check_fault()
+        self.recover()
+
+    def show_pending_stamps(self):
+        self.initdata.regionC.pull()
+        self.log(f' Pending stamps:')
+        for i in self.initdata.regionC.pending_stamps:
+            if i.info or i.wait_value:
+                self.log(f"  - #{i.info >> 3:3d}: {i.info & 0x7}/{i.wait_value:#x}")
+            i.info = 0
+            i.wait_value = 0
+            tmp = i.regmap()
+            tmp.info.val = 0
+            tmp.wait_value.val = 0
+
+        #self.initdata.regionC.push()
+
+    def check_fault(self):
+        fault_info = self.sgx.FAULT_INFO.reg
+        if fault_info.value == 0xacce5515abad1dea:
             raise Exception("Got fault notification, but fault address is unreadable")
 
-        fault_addr = fault_code >> 24
+        self.log(f" Fault info: {fault_info}")
+        fault_addr = fault_info.ADDR
         if fault_addr & 0x8000000000:
             fault_addr |= 0xffffff8000000000
-        self.log(f"FAULT CODE: {fault_code:#x} ({fault_addr:#x})")
         base, obj = self.find_object(fault_addr)
         info = ""
         if obj is not None:
             info = f" ({obj!s} + {fault_addr - base:#x})"
-        raise Exception(f"GPU fault at {fault_addr:#x}{info}")
+        self.log(f" GPU fault at {fault_addr:#x}{info}")
+
+    def recover(self):
+        status = self.fw_status
+        self.log(f" Halt count: {status.halt_count.val}")
+        halted = bool(status.halted.val)
+        self.log(f" Halted: {halted}")
+        if halted:
+            self.log(f" Attempting recovery...")
+            status.halted.val = 0
+            status.resume.val = 1
+        else:
+            raise Exception("Cannot recover")
 
     def start(self):
         self.log("Starting ASC")
@@ -203,6 +267,7 @@ class AGX:
 
         self.log("Building initdata")
         self.initdata = build_initdata(self)
+        self.fw_status = self.initdata.fw_status.regmap()
         self.uat.flush_dirty()
 
         self.log("Sending initdata")
