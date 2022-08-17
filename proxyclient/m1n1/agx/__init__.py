@@ -274,14 +274,13 @@ class AGX:
         self.asc.fw.send_initdata(self.initdata._addr & 0xfff_ffffffff)
         self.asc.work()
 
-        self.log("Sending DC19")
-        self.ch.devctrl.send_dc19()
+        self.log("Sending DC_Init")
+        self.ch.devctrl.send_init()
         self.asc.work()
 
-        for i in range(4):
-            self.log("Sending DC23")
-            self.ch.devctrl.send_dc23()
-            self.asc.work()
+        self.log("Sending DC_UpdateIdleTS")
+        self.ch.devctrl.update_idle_ts()
+        self.asc.work()
 
     def stop(self):
         self.asc.stop()
