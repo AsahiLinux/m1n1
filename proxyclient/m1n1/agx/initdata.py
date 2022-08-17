@@ -157,9 +157,9 @@ def build_initdata(agx):
     initdata.host_mapped_fw_allocations = 1
 
 
-    initdata.regionC.idle_ts = agx.u.mrs("CNTPCT_EL0") + 24000000
-    initdata.regionC.idle_unk = 0x5b2e8
-    initdata.regionC.idle_to_off_timeout_ms = 20000
+    #initdata.regionC.idle_ts = agx.u.mrs("CNTPCT_EL0") + 24000000
+    #initdata.regionC.idle_unk = 0x5b2e8
+    #initdata.regionC.idle_to_off_timeout_ms = 20000
 
     initdata.regionC.push()
     initdata.push()
