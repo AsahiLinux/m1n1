@@ -190,7 +190,7 @@ class GPUAllocator:
         return self.new(HexDump(Bytes(size)), name=name, track=track)
 
     def buf(self, size, name, track=True):
-        return self.new_buf(size, name, track)._addr
+        return self.new_buf(size, name, track).push()._addr
 
     def free(self, obj):
         self.agx.u.free(obj._paddr)
