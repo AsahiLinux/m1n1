@@ -71,6 +71,8 @@ class DRMAsahiShim:
                 self.ioctl_map[ioctl.value] = ioctl, f
         self.bos = {}
         self.pull_buffers = False
+        self.dump_frames = bool(os.getenv("ASAHI_SHIM_DUMP"))
+        self.frame = 0
 
     def read_buf(self, ptr, size):
         return ctypes.cast(ptr, ctypes.POINTER(ctypes.c_ubyte * size))[0]
@@ -121,18 +123,31 @@ class DRMAsahiShim:
             obj.val = self.memfd.read(obj._size)
             obj.push(True)
 
+        attachment_objs = []
+        for i in cmdbuf.attachments:
+            for obj in self.bos.values():
+                if obj._addr == i.pointer:
+                    attachment_objs.append(obj)
+
+        if self.dump_frames:
+            name = f"shim_frame{self.frame:03d}.agx"
+            f = GPUFrame(self.renderer.ctx)
+            f.cmdbuf = cmdbuf
+            for obj in self.bos.values():
+                f.add_object(obj)
+            f.save(name)
+
         self.renderer.submit(cmdbuf)
         self.renderer.run()
         self.renderer.wait()
 
         if self.pull_buffers:
-            for i in cmdbuf.attachments:
-                for obj in self.bos.values():
-                    if obj._addr == i.pointer:
-                        obj.pull()
-                        self.memfd.seek(obj._memfd_offset)
-                        self.memfd.write(obj.val)
+            for i in attachment_objs:
+                obj.pull()
+                self.memfd.seek(obj._memfd_offset)
+                self.memfd.write(obj.val)
 
+        self.frame += 1
         return 0
 
     @IOW(DRM_COMMAND_BASE + 0x01, drm_asahi_wait_bo_t)
