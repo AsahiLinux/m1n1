@@ -341,8 +341,8 @@ class AGXTracer(ASCTracer):
 
         self.add_mon_regions()
 
-    def get_cmdqueue(self, info_addr):
-        if info_addr in self.cmdqueues:
+    def get_cmdqueue(self, info_addr, new_queue):
+        if info_addr in self.cmdqueues and not new_queue:
             return self.cmdqueues[info_addr]
 
         cmdqueue = CommandQueueTracer(self, info_addr)
@@ -566,7 +566,7 @@ class AGXTracer(ASCTracer):
             return
         elif isinstance(msg, RunCmdQueueMsg):
             self.log(f"== Work notification (type {msg.queue_type})==")
-            queue = self.get_cmdqueue(msg.cmdqueue_addr)
+            queue = self.get_cmdqueue(msg.cmdqueue_addr, msg.new_queue)
             work_items = list(queue.get_workitems(msg))
             if self.encoder_id_filter is not None:
                 for wi in work_items:
