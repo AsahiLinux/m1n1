@@ -180,7 +180,7 @@ class GPUBufferManager:
         self.block_ctl = self.block_ctl_obj.push().regmap()
 
         self.counter_obj = agx.kshared.new(BufferManagerCounter)
-        self.counter_obj.count = 1
+        self.counter_obj.count = 0
         self.counter = self.counter_obj.push().regmap()
 
         self.misc_obj = agx.kshared.new(BufferManagerMisc)
@@ -206,9 +206,6 @@ class GPUBufferManager:
         info.block_size = self.block_size
 
         info.counter = self.counter_obj
-        info.misc = self.misc_obj
-
-        info.unkptr_d8 = context.uobj.buf(0x80, "BufferManager unk")
 
         self.populate()
         self.block_ctl_obj.pull()
@@ -216,6 +213,10 @@ class GPUBufferManager:
         self.page_list.push()
 
         info.push()
+
+    def increment(self):
+        self.counter_obj.count += 1
+        self.counter_obj.push()
 
     def populate(self):
         idx = self.block_ctl.wptr.val
