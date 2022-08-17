@@ -439,18 +439,43 @@ class CommandQueueInfo(ConstructClass):
         self.gpu_rptr2 = 0
         self.gpu_rptr3 = 0
         self.unk_2c = -1
-        self.unk_30 = 0x0
-        self.unk_34 = 0x0
-        self.unk_38 = 0xffffffffffff0000
-        self.unk_40 = 0x1
-        self.unk_44 = 0x0
-        self.unk_48 = 0x1
         self.unk_4c = -1
         self.uuid = 0xdeadbeef # some kind of ID
         self.unk_54 = -1
         self.unk_58 = 0x0
         self.busy = 0x0
         self.blocked_on_barrier = 0x0
+        self.set_prio(0)
+
+    def set_prio(self, p):
+        if p == 0:
+            self.unk_30 = 0
+            self.unk_34 = 0 # 0-3?
+            self.unk_38 = 0xffff_ffff_ffff_0000
+            self.unk_40 = 1
+            self.unk_44 = 0
+            self.unk_48 = 1
+        elif p == 1:
+            self.unk_30 = 1
+            self.unk_34 = 1
+            self.unk_38 = 0xffff_ffff_0000_0000
+            self.unk_40 = 0
+            self.unk_44 = 0
+            self.unk_48 = 0
+        elif p == 2:
+            self.unk_30 = 2
+            self.unk_34 = 2
+            self.unk_38 = 0xffff_0000_0000_0000
+            self.unk_40 = 0
+            self.unk_44 = 0
+            self.unk_48 = 2
+        else:
+            self.unk_30 = 3
+            self.unk_34 = 3
+            self.unk_38 = 0x0000_0000_0000_0000
+            self.unk_40 = 0
+            self.unk_44 = 0
+            self.unk_48 = 3
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
