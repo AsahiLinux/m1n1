@@ -105,7 +105,17 @@ class GPUFrame:
                 self.objects.append(obj)
 
 class GPUWork:
-    pass
+    def __init__(self, renderer):
+        self.objects = []
+        self.renderer = renderer
+
+    def add(self, obj):
+        self.objects.append(obj)
+
+    def free(self):
+        for obj in self.objects:
+            obj.free()
+        self.objects = []
 
 class GPURenderer:
     def __init__(self, ctx, buffers=16, bm_slot=0, queue=0):
@@ -204,19 +214,26 @@ class GPURenderer:
         self.work = []
 
     def submit(self, cmdbuf):
+        work = GPUWork(self)
+        self.work.append(work)
+
         self.buffer_mgr.increment()
 
         aux_fb = self.ctx.uobj.new_buf(0x8000, "Aux FB thing", track=False)
+        work.add(aux_fb)
+
         #self.deflake_1 = ctx.uobj.new_buf(0x20, "Deflake 1")
         #self.deflake_2 = ctx.uobj.new_buf(0x280, "Deflake 2")
         #self.deflake_3 = ctx.uobj.new_buf(0x540, "Deflake 3")
         deflake = self.ctx.uobj.new_buf(0x7e0, "Deflake", track=False)
+        work.add(deflake)
+
         unk_buf = self.ctx.uobj.new(Array(0x800, Int64ul), "Unknown Buffer", track=False)
+        work.add(unk_buf)
+
         unk_buf.val = [0, *range(1, 0x400), *(0x400 * [0])]
         unk_buf.push()
 
-        work = GPUWork()
-        self.work.append(work)
 
         work.cmdbuf = cmdbuf
 
@@ -279,14 +296,20 @@ class GPURenderer:
 
         tvb_tilemap_size = 0x800 * tile_blocks
         tvb_tilemap = ctx.uobj.new_buf(tvb_tilemap_size, "TVB Tilemap", track=False).push()
+        work.add(tvb_tilemap)
 
         tvb_heapmeta_size = 0x200
         tvb_heapmeta = ctx.uobj.new_buf(tvb_heapmeta_size, "TVB Heap Meta", track=False).push()
+        work.add(tvb_heapmeta)
 
         ##### Buffer stuff?
 
         # buffer related?
+        bufferthing_buf = ctx.uobj.new_buf(0x80, "BufferThing.unkptr_18", track=False)
+        work.add(bufferthing_buf)
+
         work.buf_desc = buf_desc = agx.kobj.new(BufferThing, track=False)
+        work.add(buf_desc)
         buf_desc.unk_0 = 0x0
         buf_desc.unk_8 = 0x0
         buf_desc.unk_10 = 0x0
@@ -309,6 +332,7 @@ class GPURenderer:
         ##### 3D barrier command
 
         barrier_cmd = agx.kobj.new(WorkCommandBarrier, track=False)
+        work.add(barrier_cmd)
         barrier_cmd.stamp = self.stamp_ta2
         barrier_cmd.stamp_value_ta = self.stamp_value_ta
         barrier_cmd.stamp_value_3d = self.stamp_value_3d
@@ -322,6 +346,7 @@ class GPURenderer:
         ##### 3D execution
 
         work.wc_3d = wc_3d = agx.kobj.new(WorkCommand3D, track=False)
+        work.add(work.wc_3d)
         wc_3d.context_id = self.ctx_id
         wc_3d.unk_8 = 0
         wc_3d.event_control = self.event_control
@@ -585,6 +610,8 @@ class GPURenderer:
         ms.append(finish_3d)
         ms.finalize()
 
+        work.add(ms.obj)
+
         wc_3d.microsequence_ptr = ms.obj._addr
         wc_3d.microsequence_size = ms.size
 
@@ -600,6 +627,7 @@ class GPURenderer:
 
         if not self.buffer_mgr_initialized:
             wc_initbm = agx.kobj.new(WorkCommandInitBM, track=False)
+            work.add(wc_initbm)
             wc_initbm.context_id = self.ctx_id
             wc_initbm.buffer_mgr_slot = self.buffer_mgr_slot
             wc_initbm.unk_c = 0
@@ -614,6 +642,7 @@ class GPURenderer:
         ##### TA execution
 
         work.wc_ta = wc_ta = agx.kobj.new(WorkCommandTA, track=False)
+        work.add(work.wc_ta)
         wc_ta.context_id = self.ctx_id
         wc_ta.unk_8 = 0
         wc_ta.event_control = self.event_control
@@ -800,6 +829,8 @@ class GPURenderer:
 
         ms.finalize()
 
+        work.add(ms.obj)
+
         wc_ta.unkptr_45c = self.tvb_something._addr
         wc_ta.tvb_size = tvb_tilemap_size
         wc_ta.microsequence_ptr = ms.obj._addr
@@ -853,5 +884,8 @@ class GPURenderer:
 
             unswizzle(self.agx, obj._paddr, work.width, work.height, 4, "depth.bin", grid=False)
             os.system(f"convert -size {width}x{height} -depth 8 rgba:depth.bin depth.png")
+
+        for i in self.work:
+            i.free()
 
         self.work = []
