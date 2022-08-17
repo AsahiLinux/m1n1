@@ -6,20 +6,37 @@ from .utils import Register, Register64, Register32
 __all__ = ["sysreg_fwd", "sysreg_rev"]
 
 def _load_registers():
+    global sysreg_fwd, sysop_fwd
+
+    sysreg_fwd = {}
+    sysop_fwd = {}
     for fname in ["arm_regs.json", "apple_regs.json"]:
         data = json.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "tools", fname)))
         for reg in data:
-            yield reg["name"], tuple(reg["enc"])
+            if "accessors" in reg:
+                for acc in reg["accessors"]:
+                    if acc in ("MRS", "MSR"):
+                        sysreg_fwd[reg["name"]] = tuple(reg["enc"])
+                    else:
+                        sysop_fwd[acc + " " + reg["name"]] = tuple(reg["enc"])
+            else:
+                sysreg_fwd[reg["name"]] = tuple(reg["enc"])
 
-sysreg_fwd = dict(_load_registers())
+_load_registers()
 sysreg_rev = {v: k for k, v in sysreg_fwd.items()}
+sysop_rev = {v: k for k, v in sysop_fwd.items()}
+sysop_fwd_id = {k.replace(" ", "_"): v for k,v in sysop_fwd.items()}
 
 globals().update(sysreg_fwd)
 __all__.extend(sysreg_fwd.keys())
+globals().update(sysop_fwd_id)
+__all__.extend(sysop_fwd_id.keys())
 
 def sysreg_name(enc):
     if enc in sysreg_rev:
         return sysreg_rev[enc]
+    if enc in sysop_rev:
+        return sysop_rev[enc]
     return f"s{enc[0]}_{enc[1]}_c{enc[2]}_c{enc[3]}_{enc[4]}"
 
 def sysreg_parse(s):
@@ -31,9 +48,13 @@ def sysreg_parse(s):
             enc = tuple(map(int, m.groups()))
             break
     else:
-        try:
-            enc = sysreg_fwd[s]
-        except KeyError:
+        for i in sysreg_fwd, sysop_fwd, sysop_fwd_id:
+            try:
+                enc = i[s]
+            except KeyError:
+                continue
+            break
+        else:
             raise Exception(f"Unknown sysreg name {s}")
     return enc
 
@@ -349,6 +370,14 @@ class TCR(Register64):
     IRGN0 = 9, 8
     EPD0 = 7
     T0SZ = 5, 0
+
+class TLBI_RVA(Register64):
+    ASID = 63, 48
+    TG = 47, 46
+    SCALE = 45, 44
+    NUM = 43, 39
+    TTL = 38, 37
+    BaseADDR = 36, 0
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

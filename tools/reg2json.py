@@ -24,7 +24,7 @@ def parse_one(regs, xml):
         name = reg.find('reg_short_name').text
         fullname = reg.find('reg_long_name').text
 
-        if name.startswith("S3_"):
+        if name.startswith("S3_") or name.startswith("SYS S1_"):
             continue
 
         array = reg.find('reg_array')
@@ -36,11 +36,13 @@ def parse_one(regs, xml):
             end = int(array.find("reg_array_end").text)
 
         encs = {}
+        accessors = {}
 
         for am in reg.findall('access_mechanisms/access_mechanism'):
             accessor = am.attrib["accessor"]
-            if not accessor.startswith("MSRregister ") and not accessor.startswith("MRS "):
+            if accessor.startswith("MSRimmediate"):
                 continue
+            ins = am.find("encoding/access_instruction").text.split(" ")[0]
             regname = accessor.split(" ", 1)[1]
             enc = {}
             for e in am.findall("encoding/enc"):
@@ -50,6 +52,7 @@ def parse_one(regs, xml):
             if regname in encs:
                 assert encs[regname] == enc
             encs[regname] = enc
+            accessors.setdefault(regname, set()).add(ins)
 
         if not encs:
             continue
@@ -114,6 +117,7 @@ def parse_one(regs, xml):
                     "name": name.replace("<n>", "%d" % n),
                     "fullname": fullname,
                     "enc": enc,
+                    "accessors": sorted(list(accessors[name])),
                     "fieldsets": fieldsets,
                 }
 
