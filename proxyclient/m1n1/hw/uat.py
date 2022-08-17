@@ -339,7 +339,9 @@ class UAT(Reloadable):
                 else:
                     pte = self.fetch_pte(table_addr, page >> offset, size, ptecls)
                     if not pte.valid():
-                        pte.set_offset(self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE))
+                        table = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
+                        self.p.memset32(table, 0, self.PAGE_SIZE)
+                        pte.set_offset(table)
                         if ptecls is not TTBR:
                             pte.VALID = 1
                             pte.TYPE = 1
