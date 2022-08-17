@@ -25,8 +25,8 @@ class RunCmdQueueMsg(ConstructClass):
         2: "SubmitCompute",
     }
 
-    def __str__(self):
-        s = super().__str__() + "\n"
+    def __str__(self, *args, **kwargs):
+        s = super().__str__(*args, **kwargs) + "\n"
 
         if self.cmdqueue_addr == 0:
             return s + "<Empty RunCmdQueueMsg>"
