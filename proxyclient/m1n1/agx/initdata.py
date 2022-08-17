@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 from ..fw.agx.initdata import *
+from ..fw.agx.channels import ChannelInfo
 from ..hw.uat import MemoryAttr
 
 def build_iomappings(agx):
@@ -52,7 +53,7 @@ def build_initdata(agx):
     regionB.stats_cp = agx.kobj.new_buf(0x180, "RegionB.unkptr_180").push()
 
     # size: 0x3b80, few floats, few ints, needed for init
-    regionB.hwdata_a = agx.kobj.new(AGXHWDataA, track=True).push()
+    regionB.hwdata_a = agx.kobj.new(AGXHWDataA, track=False).push()
 
     # size: 0x80, empty
     regionB.unk_190 = agx.kobj.new_buf(0x80, "RegionB.unkptr_190").push()
@@ -61,7 +62,7 @@ def build_initdata(agx):
     regionB.unk_198 = agx.kobj.new_buf(0xc0, "RegionB.unkptr_198").push()
 
     # size: 0xb80, io stuff
-    hwdata = agx.kobj.new(AGXHWDataB, track=True)
+    hwdata = agx.kobj.new(AGXHWDataB, track=False)
     hwdata.io_mappings = build_iomappings(agx)
     hwdata.chip_id = chosen.chip_id
 
@@ -128,14 +129,12 @@ def build_initdata(agx):
 
     initdata.regionB = regionB.push()
 
-    initdata.regionC = agx.kshared.new(InitData_RegionC).push()
+    initdata.regionC = agx.kshared.new(InitData_RegionC, track=False).push()
 
     #self.regionC_addr = agx.ksharedshared_heap.malloc(0x88000)
 
     initdata.fw_status = agx.kobj.new(InitData_FWStatus)
-    initdata.fw_status.unkptr_0 = agx.kobj.buf(0x40, "initdata.fw_status.unkptr_0")
-    # totally guessing the size on this one
-    initdata.fw_status.unkptr_8 = agx.kobj.buf(0x40, "initdata.fw_status.unkptr_8")
+    initdata.fw_status.fwctl_channel = agx.fwctl_chinfo
     initdata.fw_status.push()
 
     ## This section seems to be data that would be used by firmware side page allocation
@@ -153,6 +152,12 @@ def build_initdata(agx):
     # Host handles FW allocations for existing firmware versions
     initdata.host_mapped_fw_allocations = 1
 
+
+    initdata.regionC.idle_ts = agx.u.mrs("CNTPCT_EL0") + 24000000
+    initdata.regionC.idle_unk = 0x5b2e8
+    initdata.regionC.idle_to_off_timeout_ms = 20000
+
+    initdata.regionC.push()
     initdata.push()
 
     #print(initdata.val)

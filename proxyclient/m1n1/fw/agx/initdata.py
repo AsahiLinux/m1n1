@@ -3,14 +3,13 @@ from m1n1.constructutils import ConstructClass, ConstructValueClass, ROPointer, 
 from construct import *
 from construct.lib import hexundump
 
-from .channels import ChannelInfoSet
+from .channels import ChannelInfoSet, ChannelInfo
 
 __all__ = []
 
 class InitData_FWStatus(ConstructClass):
     subcon = Struct(
-        "unkptr_0" / Int64ul,
-        "unkptr_8" / Int64ul,
+        "fwctl_channel" / ChannelInfo,
         "halt_count" / Int32ul,
         Padding(0xc),
         "halted" / Int32ul,
@@ -662,18 +661,13 @@ class IOMapping(ConstructClass):
 
 class AGXHWDataB(ConstructClass):
     subcon = Struct(
-        "unk_0" / Int32ul,
-        "unk_4" / Int32ul,
-        "unk_8" / Int32ul, # Number of IO mappings?
-        "unk_c" / Int32ul,
-        "unk_10" / Int32ul,
-        "unk_14" / Int32ul,
+        "unk_0" / Int64ul,
+        "unk_8" / Int64ul,
+        "unk_10" / Int64ul,
         "unk_18" / Int64ul,
-        "unk_20" / Int32ul,
-        "unk_24" / Int32ul,
-        "unk_28" / Int32ul,
-        "unk_2c" / Int32ul,
-        "unk_30" / Int64ul, # This might be another IO mapping? But it's weird
+        "unk_20" / Int64ul,
+        "unk_28" / Int64ul,
+        "unk_30" / Int64ul,
         "unkptr_38" / Int64ul,
         "pad_40" / HexDump(Bytes(0x20)),
         "yuv_matrices" / Array(15, Array(3, Array(4, Int16sl))),
@@ -801,17 +795,14 @@ class AGXHWDataB(ConstructClass):
     )
 
     def __init__(self):
-        self.unk_0 = 0
-        self.unk_4 = 0x13
-        self.unk_8 = 0
-        self.unk_c = 0x14
-        self.unk_10 = 0
-        self.unk_14 = 1
+        # Userspace VA map related
+        self.unk_0 = 0x13_00000000
+        self.unk_8 = 0x14_00000000
+        self.unk_10 = 0x1_00000000
         self.unk_18 = 0xffc00000
-        self.unk_20 = 0
-        self.unk_24 = 0x11
-        self.unk_28 = 0
-        self.unk_2c = 0x11
+        self.unk_20 = 0x11_00000000
+        self.unk_28 = 0x11_00000000
+        # userspace address?
         self.unk_30 = 0x6f_ffff8000
         self.pad_40 = bytes(0x20)
         # unmapped?
@@ -1260,7 +1251,7 @@ class InitData_RegionC(ConstructClass):
         "unk_1000" / HexDump(Bytes(0x7000)),
         "unk_8000" / HexDump(Bytes(0x900)),
         "unk_8900" / Int32ul,
-        "unk_8904" / Int32ul,
+        "unk_atomic" / Int32ul,
         "unk_8908" / Int32ul,
         "unk_890c" / Int32ul,
         "unk_8910" / Int32ul,
@@ -1319,12 +1310,14 @@ class InitData_RegionC(ConstructClass):
         "unk_10000" / HexDump(Bytes(0xe80)),
         "unk_10e80" / Int32ul,
         "unk_10e84" / Int32ul,
-        "unk_10e88" / HexDump(Bytes(0x198)),
+        "unk_10e88" / HexDump(Bytes(0x188)),
+        "idle_ts" / Int64ul,
+        "idle_unk" / Int64ul,
         "unk_11020" / Int32ul,
         "unk_11024" / Int32ul,
         "unk_11028" / Int32ul,
         "unk_1102c" / Int32ul,
-        "unk_11030" / Int32ul,
+        "idle_to_off_timeout_ms" / Int32ul,
         "unk_11034" / Int32ul,
         "unk_11038" / Int32ul,
         "pending_stamps" / Array(0x110, InitData_PendingStamp),
@@ -1356,7 +1349,8 @@ class InitData_RegionC(ConstructClass):
         self.unk_1000 = bytes(0x7000)
         self.unk_8000 = bytes(0x900)
         self.unk_8900 = 1
-        self.unk_8904 = 0
+        # Accessed with OSIncrementAtomic/OSDecrementAtomic
+        self.unk_atomic = 0
         self.unk_8908 = 19551
         self.unk_890c = 600
         self.unk_8910 = 600
@@ -1425,13 +1419,15 @@ class InitData_RegionC(ConstructClass):
         self.unk_10000 = bytes(0xe80)
         self.unk_10e80 = 11
         self.unk_10e84 = 1
-        self.unk_10e88 = bytes(0x198)
+        self.unk_10e88 = bytes(0x188)
+        self.idle_ts = 0
+        self.idle_unk = 0
         self.unk_11020 = 40
         self.unk_11024 = 10
         self.unk_11028 = 250
         self.unk_1102c = 0
 
-        self.unk_11030 = 2
+        self.idle_to_off_timeout_ms = 2
         self.unk_11034 = 40
         self.unk_11038 = 5
         self.pending_stamps = [InitData_PendingStamp() for i in range(0x110)]
