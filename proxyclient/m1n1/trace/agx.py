@@ -8,9 +8,11 @@ from ..fw.agx.initdata import InitData as NewInitData
 from ..fw.agx.channels import *
 from ..fw.agx.cmdqueue import *
 from ..fw.agx.microsequence import *
+from ..fw.agx.handoff import *
 
 from m1n1.proxyutils import RegMonitor
 from m1n1.constructutils import *
+from m1n1.trace import Tracer
 
 from construct import *
 
@@ -60,12 +62,23 @@ class KickEp(EP):
     @msg(0x83, DIR.TX, KickMsg)
     def kick(self, msg):
         if self.tracer.state.active:
-            self.log(f"  Kick {msg.KICK:x}")
+            self.log(f"  Kick {msg}")
         self.tracer.kick(msg.KICK)
 
         return True
 
+    @msg(0x84, DIR.TX, KickMsg)
+    def fwkick(self, msg):
+        if self.tracer.state.active:
+            self.log(f"  FWRing Kick {msg}")
+        self.tracer.fwkick(msg.KICK)
+        return True
+
 class ChannelTracer(Reloadable):
+    STATE_FIELDS = ChannelStateFields
+    WPTR = 0x20
+    RPTR = 0x00
+
     def __init__(self, tracer, info, index):
         self.tracer = tracer
         self.uat = tracer.uat
@@ -90,7 +103,8 @@ class ChannelTracer(Reloadable):
         if self.name == "FWLog":
             base = self.tracer.state.fwlog_ring2
 
-        self.channel = Channel(self.u, self.uat, self.info, channelRings[index], base=base)
+        self.channel = Channel(self.u, self.uat, self.info, channelRings[index], base=base,
+                               state_fields=self.STATE_FIELDS)
         for addr, size in self.channel.st_maps:
             self.log(f"st_map {addr:#x} ({size:#x})")
         for i in range(self.ring_count):
@@ -106,11 +120,11 @@ class ChannelTracer(Reloadable):
 
         msgcls, size, count = self.channel.ring_defs[ring]
 
-        if off == 0x20:
+        if off == self.WPTR:
             if self.verbose:
                 self.log(f"RD [{evt.addr:#x}] WPTR[{ring}] = {evt.data:#x}")
             self.poll_ring(ring)
-        elif off == 0x00:
+        elif off == self.RPTR:
             if self.verbose:
                 self.log(f"RD [{evt.addr:#x}] RPTR[{ring}] = {evt.data:#x}")
             self.poll_ring(ring)
@@ -125,11 +139,11 @@ class ChannelTracer(Reloadable):
 
         msgcls, size, count = self.channel.ring_defs[ring]
 
-        if off == 0x20:
+        if off == self.WPTR:
             if self.verbose:
                 self.log(f"WR [{evt.addr:#x}] WPTR[{ring}] = {evt.data:#x}")
             self.poll_ring(ring)
-        elif off == 0x00:
+        elif off == self.RPTR:
             if self.verbose:
                 self.log(f"WR [{evt.addr:#x}] RPTR[{ring}] = {evt.data:#x}")
             self.poll_ring(ring)
@@ -170,12 +184,12 @@ class ChannelTracer(Reloadable):
                     self.state.tail[ring] = self.channel.state[ring].WRITE_PTR.val
 
             for base in range(0, 0x30 * self.ring_count, 0x30):
-                self.hv.add_tracer(irange(self.channel.state_phys + base + 0x00, 4),
+                self.hv.add_tracer(irange(self.channel.state_phys + base + self.RPTR, 4),
                                    f"ChannelTracer/{self.name}",
                                    mode=TraceMode.SYNC,
                                    read=self.state_read,
                                    write=self.state_write)
-                self.hv.add_tracer(irange(self.channel.state_phys + base + 0x20, 4),
+                self.hv.add_tracer(irange(self.channel.state_phys + base + self.WPTR, 4),
                                    f"ChannelTracer/{self.name}",
                                    mode=TraceMode.SYNC,
                                    read=self.state_read,
@@ -186,6 +200,11 @@ class ChannelTracer(Reloadable):
 
 ChannelTracer = ChannelTracer._reloadcls()
 CommandQueueInfo = CommandQueueInfo._reloadcls()
+
+class FWCtlChannelTracer(ChannelTracer):
+    STATE_FIELDS = FWControlStateFields
+    WPTR = 0x10
+    RPTR = 0x00
 
 class CommandQueueTracer(Reloadable):
     def __init__(self, tracer, info_addr):
@@ -831,6 +850,24 @@ class AGXTracer(ASCTracer):
         for chan in self.channels[13:]:
             chan.poll()
 
+    def fwkick(self, val):
+        if not self.state.active:
+            return
+
+        self.log(f"FW Kick~! {val:#x}")
+        self.mon.poll()
+
+        if val == 0x00: # Kick FW control
+            channel = len(self.channels) - 1
+        else:
+            raise(Exception("Unknown kick type"))
+
+        self.channels[channel].poll()
+
+        # check the gfx -> cpu channels
+        for chan in self.channels[13:]:
+            chan.poll()
+
     def pong(self):
         if not self.state.active:
             return
@@ -899,9 +936,12 @@ class AGXTracer(ASCTracer):
             return
         #self.channels = []
         for i, chan_info in enumerate(self.state.channel_info):
-            if i == 16:
-                continue
-            channel_chan = ChannelTracer(self, chan_info, i)
+            #if channelNames[i] == "Stats": # ignore stats
+                #continue
+            if channelNames[i] == "FWCtl": # ignore stats
+                channel_chan = FWCtlChannelTracer(self, chan_info, i)
+            else:
+                channel_chan = ChannelTracer(self, chan_info, i)
             self.channels.append(channel_chan)
             #for i, (msg, size, count) in enumerate(channel_chan.channel.ring_defs):
             #    self.mon_addva(0, chan_info.state_addr + i * 0x30, 0x30, f"chan[{channel_chan.name}]->state[{i}]")
@@ -934,6 +974,8 @@ class AGXTracer(ASCTracer):
         self.log("Resuming tracing")
         self.state.active = True
         for chan in self.channels:
+            if chan.name == "Stats":
+                continue
             chan.set_active(True)
         for queue in self.cmdqueues.values():
             queue.set_active(True)
@@ -978,7 +1020,10 @@ class AGXTracer(ASCTracer):
         self.state.fwlog_ring2 = initdata.regionB.fwlog_ring2
         channels = initdata.regionB.channels
         for i in channelNames:
-            chan_info = channels[i]
+            if i == "FWCtl":
+                chan_info = initdata.fw_status.fwctl_channel
+            else:
+                chan_info = channels[i]
             self.state.channel_info.append(chan_info)
 
         self.init_channels()
