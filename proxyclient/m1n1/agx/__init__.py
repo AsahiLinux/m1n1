@@ -150,10 +150,10 @@ class AGX:
         self.ch.devctrl = self.alloc_channels(GPUDeviceControlChannel, "DevCtrl", 0x11)[0]
 
         # GPU -> CPU channels
-        self.ch.event = self.alloc_channels(GPUEventChannel, "Event", None)[0]
-        self.ch.log = self.alloc_channels(GPULogChannel, "FWLog", None, 6)
-        self.ch.ktrace = self.alloc_channels(GPUKTraceChannel, "KTrace", None)[0]
-        self.ch.stats = self.alloc_channels(GPUStatsChannel, "Stats", None)[0]
+        self.ch.event = self.alloc_channels(GPUEventChannel, "Event", None, rx=True)[0]
+        self.ch.log = self.alloc_channels(GPULogChannel, "FWLog", None, 6, rx=True)
+        self.ch.ktrace = self.alloc_channels(GPUKTraceChannel, "KTrace", None, rx=True)[0]
+        self.ch.stats = self.alloc_channels(GPUStatsChannel, "Stats", None, rx=True)[0]
 
         # For some reason, the FWLog channels have their rings in a different place...
         self.fwlog_ring = self.ch_info.FWLog.ringbuffer_addr
