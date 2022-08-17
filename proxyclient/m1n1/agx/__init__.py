@@ -46,7 +46,6 @@ class AGX:
 
         # Set up UAT
         self.uat = UAT(self.u.iface, self.u)
-        self.uat.early_init()
 
         # Allocator for RTKit/ASC objects
         self.uat.allocator = Heap(self.kern_va_base + 0x80000000,
