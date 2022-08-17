@@ -17,11 +17,11 @@ class GPUContext:
         self.p = self.agx.p
         self.verbose = False
 
-        self.context_info = agx.kshared.new(ContextInfo)
-        self.context_info.fb_ptr = 0
-        self.context_info.self = self.context_info._addr
-        self.context_info.unkptr_10 = 0
-        self.context_info.push()
+        #self.job_list = agx.kshared.new(JobList)
+        #self.job_list.first_job = 0
+        #self.job_list.last_head = self.job_list._addr # Empty list has self as last_head
+        #self.job_list.unkptr_10 = 0
+        #self.job_list.push()
 
         self.gpu_context = agx.kobj.new(GPUContextData).push()
 
@@ -90,7 +90,7 @@ class GPUContext:
         return obj
 
 class GPUWorkQueue:
-    def __init__(self, agx, context):
+    def __init__(self, agx, context, job_list):
         self.agx = agx
         self.u = agx.u
         self.p = agx.p
@@ -106,7 +106,7 @@ class GPUWorkQueue:
 
         self.info.pointers = self.pointers
         self.info.rb_addr = self.ring._addr
-        self.info.context_info = context.context_info
+        self.info.job_list = job_list
         self.info.gpu_buf_addr = agx.kobj.buf(0x2c18, "GPUWorkQueue.gpu_buf")
         self.info.gpu_context = context.gpu_context
         self.info.push()
