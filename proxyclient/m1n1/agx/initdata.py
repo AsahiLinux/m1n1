@@ -45,19 +45,14 @@ def build_initdata(agx):
 
     regionB.channels = agx.ch_info
 
-    # size 0xc0, empty
-    regionB.unk_170 = agx.kobj.new_buf(0xc0, "RegionB.unkptr_170").push()
-
-    # size: 0x1c0, has random negative 1s, Needed for login screen
-    unk_178 = agx.kobj.new_buf(0x1c0, "RegionB.unkptr_178")
-    unk_178.val = b"\x00" * 0x108 + b"\xff" * 4 + b"\x00" * 0x14 + b"\xff" * 4 + b"\x00" * 0x9c
-    regionB.unk_178 = unk_178
+    regionB.stats_ta = agx.kobj.new(InitData_GPUGlobalStatsTA).push()
+    regionB.stats_3d = agx.kobj.new(InitData_GPUGlobalStats3D).push()
 
     # size: 0x140, Empty
-    regionB.unk_180 = agx.kobj.new_buf(0x140, "RegionB.unkptr_180").push()
+    regionB.stats_cp = agx.kobj.new_buf(0x140, "RegionB.unkptr_180").push()
 
     # size: 0x3b80, few floats, few ints, needed for init
-    regionB.hwdata_a = agx.kobj.new(AGXHWDataA).push()
+    regionB.hwdata_a = agx.kobj.new(AGXHWDataA, track=False).push()
 
     # size: 0x80, empty
     regionB.unk_190 = agx.kobj.new_buf(0x80, "RegionB.unkptr_190").push()
@@ -66,7 +61,7 @@ def build_initdata(agx):
     regionB.unk_198 = agx.kobj.new_buf(0xc0, "RegionB.unkptr_198").push()
 
     # size: 0xb80, io stuff
-    hwdata = agx.kobj.new(AGXHWDataB)
+    hwdata = agx.kobj.new(AGXHWDataB, track=False)
     hwdata.io_mappings = build_iomappings(agx)
     hwdata.chip_id = chosen.chip_id
 
@@ -99,8 +94,36 @@ def build_initdata(agx):
     regionB.unk_1c8 = agx.kobj.new_buf(0x1000, "RegionB.unkptr_1c8").push()
 
     # Size: 0x4000
-    regionB.unk_214 = agx.kshared2.new_buf(0x4000, "Shared AP=0 region").push()
-    regionB.unkptr_21c = regionB.unk_214._addr
+    regionB.buffer_mgr_ctl = agx.kshared2.new(InitData_BufferMgrCtl).push()
+    regionB.buffer_mgr_ctl_addr2 = regionB.buffer_mgr_ctl._addr
+
+    regionB.unk_6a80 = 0
+    regionB.unk_6a84 = 0
+    regionB.unk_6a9c = 0
+    regionB.unk_6aa0 = 0
+    regionB.unk_6aa4 = 0
+    regionB.unk_6aa8 = 0
+    regionB.unk_6aac = 0
+    regionB.unk_6ab0 = 0
+    regionB.unk_6ab4 = 0
+    regionB.unk_6ab8 = 0
+    regionB.unk_6abc = 0
+    regionB.unk_6ac0 = 0
+    regionB.unk_6ac4 = 0
+    regionB.unk_6ac8 = 0
+    regionB.unk_6acc = 0
+    regionB.unk_6ad0 = 0
+    regionB.unk_6ad4 = 0
+    regionB.unk_6ad8 = 0
+    regionB.unk_6adc = 0
+    regionB.unk_6ae0 = 0
+    regionB.unk_6ae4 = 0
+    regionB.unk_6ae8 = 0
+    regionB.unk_6aec = 0
+    regionB.unk_6af0 = 0
+    regionB.unk_6af4 = 0
+    regionB.unk_6af8 = 0
+    regionB.unk_6afc = 0
 
     initdata.regionB = regionB.push()
 
