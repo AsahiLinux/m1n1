@@ -435,12 +435,19 @@ class UAT(Reloadable):
         assert addr in self.pt_cache
         table = self.pt_cache[addr]
         self.iface.writemem(addr, struct.pack(f"<{len(table)}Q", *table))
+        self.p.dc_civac(addr, 0x4000)
 
     def flush_dirty(self):
+        inval = False
+
         for page in self.dirty:
             self.flush_pt(page)
+            inval = True
 
         self.dirty.clear()
+
+        if inval:
+            self.u.inst("tlbi vmalle1os")
 
     def invalidate_cache(self):
         self.pt_cache = {}
