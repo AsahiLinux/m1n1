@@ -616,6 +616,91 @@ class ConstructClass(ConstructClassBase, Container):
                     break
         return False
 
+    @classmethod
+    def to_rust(cls):
+        assert isinstance(cls.subcon, Struct)
+        s = []
+        if cls.is_versioned():
+            s.append("#[versions(AGX)]"),
+
+        s += [
+            "#[derive(Debug, Clone, Copy)]",
+            "#[repr(C, packed(4))]",
+            f"struct {cls.__name__} {{",
+        ]
+        pad = 0
+        has_ver = False
+        for subcon in cls.subcon.subcons:
+            if isinstance(subcon, Ver):
+                if not has_ver:
+                    s.append("")
+                s.append(f"    #[ver({subcon.rust})]")
+                subcon = subcon.subcon
+                has_ver = True
+            else:
+                has_ver = False
+
+            name = subcon.name
+            if name is None:
+                name = f"__pad{pad}"
+                pad += 1
+
+            array_len = []
+            skip = False
+            while subcon:
+                if isinstance(subcon, Lazy):
+                    skip = True
+                    break
+                elif isinstance(subcon, Pointer):
+                    skip = True
+                    break
+                elif isinstance(subcon, Array):
+                    array_len.append(subcon.count)
+                elif isinstance(subcon, (HexDump, Default, Renamed, Dec, Hex, Const)):
+                    pass
+                else:
+                    break
+                subcon = subcon.subcon
+
+            if isinstance(subcon, Bytes):
+                array_len.append(subcon.length)
+                subcon = Int8ul
+
+            if skip:
+                #s.append(f"    // {name}: {subcon}")
+                continue
+
+            TYPE_MAP = {
+                Int64ul: "u64",
+                Int32ul: "u32",
+                Int16ul: "u16",
+                Int8ul: "u8",
+                Int64sl: "i64",
+                Int32sl: "i32",
+                Int16sl: "i16",
+                Int8sl: "i8",
+                Float32l: "f32",
+                Float64l: "f64",
+            }
+
+            t = TYPE_MAP.get(subcon, repr(subcon))
+
+            if isinstance(subcon, type) and issubclass(subcon, ConstructClass):
+                t = subcon.__name__
+                if subcon.is_versioned():
+                    t += "::ver"
+
+            for n in array_len[::-1]:
+                t = f"[{t}; {n:#x}]"
+
+            s.append(f"    {name}: {t},")
+
+            if has_ver:
+                s.append("")
+
+        s += ["}"]
+        return "\n".join(s)
+
 class ConstructValueClass(ConstructClassBase):
     """ Same as Construct, but for subcons that are single values, rather than containers
 
