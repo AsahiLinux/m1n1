@@ -8,6 +8,7 @@ from .event import GPUEventManager
 from ..proxy import IODEV
 from ..malloc import Heap
 from ..hw.uat import UAT, MemoryAttr
+from ..hw.agx import SGXRegs
 from ..fw.agx import AGXASC
 from ..fw.agx.channels import ChannelInfoSet, ChannelInfo
 
@@ -30,6 +31,7 @@ class AGX:
 
         self.asc_dev = u.adt["/arm-io/gfx-asc"]
         self.sgx_dev = u.adt["/arm-io/sgx"]
+        self.sgx = SGXRegs(u, self.sgx_dev.get_reg(0)[0])
 
         self.log("Initializing allocations")
 
