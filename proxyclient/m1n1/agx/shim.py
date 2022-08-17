@@ -145,7 +145,7 @@ class DRMAsahiShim:
         if args.flags & ASAHI_BO_PIPELINE:
             alloc = self.renderer.ctx.pobj
         else:
-            alloc = self.renderer.ctx.uobj
+            alloc = self.renderer.ctx.gobj
 
         obj = alloc.new(HexDump(Bytes(args.size)), name=f"GBM offset {memfd_offset:#x}", track=False)
         obj._memfd_offset = memfd_offset

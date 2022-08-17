@@ -35,6 +35,9 @@ class GPUContext:
                                  guard_pages=1,
                                  va_block=32768, nG=1, AP=0, PXN=1, UXN=1)
 
+        self.gobj = GPUAllocator(agx, "GEM", 0x1500000000, 0x100000000, ctx=None,
+                                 guard_pages=1, nG=1, AP=0, PXN=1, UXN=1)
+
         self.pipeline_base = 0x1100000000
         self.pipeline_size = 1 << 32
         self.pobj = GPUAllocator(agx, "Pipelines", self.pipeline_base + 0x10000, self.pipeline_size,
@@ -43,6 +46,7 @@ class GPUContext:
     def bind(self, ctx_id):
         self.ctx = ctx_id
         self.uobj.ctx = ctx_id
+        self.gobj.ctx = ctx_id
         self.pobj.ctx = ctx_id
         self.uat.bind_context(ctx_id, self.ttbr0_base)
 
