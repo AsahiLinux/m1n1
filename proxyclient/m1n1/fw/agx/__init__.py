@@ -5,8 +5,6 @@ from ...malloc import Heap
 from ..asc import StandardASC
 from ..asc.base import ASCBaseEndpoint, msg_handler
 
-from ...hw.uat import UAT
-
 from .initdata import InitData, IOMapping
 
 __all__ = []
