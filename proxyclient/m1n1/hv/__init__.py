@@ -109,6 +109,7 @@ class HV(Reloadable):
         self.ctx = None
         self.hvcall_handlers = {}
         self.switching_context = False
+        self.show_timestamps = False
 
     def _reloadme(self):
         super()._reloadme()
@@ -133,9 +134,12 @@ class HV(Reloadable):
 
     def log(self, s, *args, show_cpu=True, **kwargs):
         if self.ctx is not None and show_cpu:
-            print(f"[cpu{self.ctx.cpu_id}] " + s, *args, **kwargs)
+            ts=""
+            if self.show_timestamps:
+                ts = f"[{self.u.mrs(CNTPCT_EL0):#x}]"
+            print(ts+f"[cpu{self.ctx.cpu_id}] " + s, *args, **kwargs)
             if self.print_tracer.log_file:
-                print(f"# [cpu{self.ctx.cpu_id}] " + s, *args, file=self.print_tracer.log_file, **kwargs)
+                print(f"# {ts}[cpu{self.ctx.cpu_id}] " + s, *args, file=self.print_tracer.log_file, **kwargs)
         else:
             print(s, *args, **kwargs)
             if self.print_tracer.log_file:
