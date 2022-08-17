@@ -183,10 +183,6 @@ class DRMAsahiShim:
 
     def init_agx(self):
         from m1n1.setup import p, u, iface
-        from m1n1.shell import run_shell
-
-        from m1n1.hw.pmu import PMU
-        PMU(u).reset_panic_counter()
 
         p.pmgr_adt_clocks_enable("/arm-io/gfx-asc")
         p.pmgr_adt_clocks_enable("/arm-io/sgx")
