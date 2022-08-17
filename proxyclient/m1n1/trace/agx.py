@@ -624,7 +624,7 @@ class AGXTracer(ASCTracer):
                     self.log(f"  # StartTACmd")
                     self.log(f"    buf_thing @ {i.buf_thing_addr:#x}: {i.buf_thing!s}")
                     self.log(f"      unkptr_18 @ {i.buf_thing.unkptr_18:#x}:")
-                    chexdump(read(i.buf_thing.unkptr_18, 0x1000), print_fn=self.log)
+                    chexdump(read(i.buf_thing.unkptr_18, 0x100), print_fn=self.log)
                     self.log(f"    unkptr_24 @ {i.unkptr_24:#x}:")
                     chexdump(read(i.unkptr_24, 0x100), print_fn=self.log)
                     self.log(f"    unk_5c @ {i.unkptr_5c:#x}:")
@@ -637,7 +637,10 @@ class AGXTracer(ASCTracer):
             #self.uat.dump(context, self.log)
 
     def handle_3d(self, wi):
-        self.log(f"Got 3D WI{wi.cmd.magic:d}")
+        self.log(f"Got 3D WI{wi.cmdid:d}")
+        if wi.cmdid != 1:
+            return
+
         self.last_3d = wi
 
         def kread(off, size):
@@ -667,17 +670,17 @@ class AGXTracer(ASCTracer):
                 #chexdump(read(cmd3d.struct2.tvb_tilemap_addr, 0x1000), print_fn=self.log)
             #self.log(f"    aux_fb_ptr @ {cmd3d.struct2.aux_fb_ptr:#x}:")
             #chexdump(read(cmd3d.struct2.aux_fb_ptr, 0x100), print_fn=self.log)
-            self.log(f"    pipeline_base @ {cmd3d.struct2.pipeline_base:#x}:")
-            chexdump(read(cmd3d.struct2.pipeline_base, 0x100), print_fn=self.log)
+            #self.log(f"    pipeline_base @ {cmd3d.struct2.pipeline_base:#x}:")
+            #chexdump(read(cmd3d.struct2.pipeline_base, 0x100), print_fn=self.log)
 
             self.log(f"  buf_thing @ {cmd3d.buf_thing_addr:#x}: {cmd3d.buf_thing!s}")
-            self.log(f"    unkptr_18 @ {cmd3d.buf_thing.unkptr_18:#x}:")
-            chexdump(read(cmd3d.buf_thing.unkptr_18, 0x1000), print_fn=self.log)
+            #self.log(f"    unkptr_18 @ {cmd3d.buf_thing.unkptr_18:#x}:")
+            #chexdump(read(cmd3d.buf_thing.unkptr_18, 0x1000), print_fn=self.log)
 
-            self.log(f"  unk_24 @ {cmd3d.unkptr_24:#x}: {cmd3d.unk_24!s}")
+            #self.log(f"  unk_24 @ {cmd3d.unkptr_24:#x}: {cmd3d.unk_24!s}")
             self.log(f"  struct6 @ {cmd3d.struct6_addr:#x}: {cmd3d.struct6!s}")
-            self.log(f"    unknown_buffer @ {cmd3d.struct6.unknown_buffer:#x}:")
-            chexdump(read(cmd3d.struct6.unknown_buffer, 0x1000), print_fn=self.log)
+            #self.log(f"    unknown_buffer @ {cmd3d.struct6.unknown_buffer:#x}:")
+            #chexdump(read(cmd3d.struct6.unknown_buffer, 0x1000), print_fn=self.log)
             self.log(f"  struct7 @ {cmd3d.struct7_addr:#x}: {cmd3d.struct7!s}")
             self.log(f"  unk_buf_ptr @ {cmd3d.unk_buf_ptr:#x}:")
             chexdump(kread(cmd3d.unk_buf_ptr, 0x11c), print_fn=self.log)
@@ -945,9 +948,9 @@ class AGXTracer(ASCTracer):
             self.mon_addva(0, initdata.regionA_addr, 0x4000, "RegionA")
             self.mon_addva(0, initdata.regionB_addr, 0x6bc0, "RegionB")
             self.mon_addva(0, initdata.regionC_addr, 0x11d40, "RegionC")
-            self.mon_addva(0, initdata.regionB.unkptr_170, 0xc0, "unkptr_170")
-            self.mon_addva(0, initdata.regionB.unkptr_178, 0x1c0, "unkptr_178")
-            self.mon_addva(0, initdata.regionB.unkptr_180, 0x140, "unkptr_180")
+            #self.mon_addva(0, initdata.regionB.unkptr_170, 0xc0, "unkptr_170")
+            #self.mon_addva(0, initdata.regionB.unkptr_178, 0x1c0, "unkptr_178")
+            #self.mon_addva(0, initdata.regionB.unkptr_180, 0x140, "unkptr_180")
             self.mon_addva(0, initdata.regionB.unkptr_190, 0x80, "unkptr_190")
             self.mon_addva(0, initdata.regionB.unkptr_198, 0xc0, "unkptr_198")
             self.mon_addva(0, initdata.regionB.unkptr_214, 0x4000, "Shared AP=0 region")
