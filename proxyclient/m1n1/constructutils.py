@@ -530,6 +530,9 @@ class ConstructClass(ConstructClassBase, Container):
     def _apply(self, obj):
         self.update(obj)
 
+    def addrof(self, name):
+        return self._addr + self._off[name][0]
+
 
 class ConstructValueClass(ConstructClassBase):
     """ Same as Construct, but for subcons that are single values, rather than containers
