@@ -1018,8 +1018,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_HV_START_SECONDARY, cpu, entry, *args)
     def hv_switch_cpu(self, cpu):
         return self.request(self.P_HV_SWITCH_CPU, cpu)
-    def hv_set_time_stealing(self, enabled):
-        return self.request(self.P_HV_SET_TIME_STEALING, int(bool(enabled)))
+    def hv_set_time_stealing(self, enabled, reset):
+        return self.request(self.P_HV_SET_TIME_STEALING, int(bool(enabled)), int(bool(reset)))
     def hv_pin_cpu(self, cpu):
         return self.request(self.P_HV_PIN_CPU, cpu)
 

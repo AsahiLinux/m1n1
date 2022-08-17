@@ -468,7 +468,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->retval = hv_switch_cpu(request->args[0]);
             break;
         case P_HV_SET_TIME_STEALING:
-            hv_set_time_stealing(request->args[0]);
+            hv_set_time_stealing(request->args[0], request->args[1]);
             break;
         case P_HV_PIN_CPU:
             hv_pin_cpu(request->args[0]);

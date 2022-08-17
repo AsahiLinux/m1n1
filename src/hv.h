@@ -70,7 +70,7 @@ void hv_map_vuart(u64 base, int irq, iodev_id_t iodev);
 
 /* Exceptions */
 void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type, void *extra);
-void hv_set_time_stealing(bool enabled);
+void hv_set_time_stealing(bool enabled, bool reset);
 
 /* WDT */
 void hv_wdt_pet(void);
