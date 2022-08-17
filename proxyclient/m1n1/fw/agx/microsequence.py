@@ -205,8 +205,8 @@ class Start3DStruct1(ConstructClass):
         "unk_2c" / Int32ul,
         "depth_clear_val1" / Float32l,
         "stencil_clear_val1" / Int8ul,
-        "context_id" / Int8ul,
-        "unk_376" / Int16ul,
+        "unk_35" / Int8ul,
+        "unk_36" / Int16ul,
         "unk_38" / Int32ul,
         "unk_3c" / Int32ul,
         "unk_40_padding" / HexDump(Bytes(0xb0)),
@@ -243,7 +243,7 @@ class Start3DStruct1(ConstructClass):
         "partial_store_pipeline" / Start3DStorePipelineBinding,
         "depth_clear_val2" / Float32l,
         "stencil_clear_val2" / Int8ul,
-        "context_id" / Int8ul,
+        "unk_375" / Int8ul,
         "unk_376" / Int16ul,
         "unk_378" / Int32ul,
         "unk_37c" / Int32ul,
@@ -291,6 +291,7 @@ class BufferThing(ConstructClass):
         "unkptr_18" / Int64ul,
         "unk_20" / Int32ul,
         "bm_misc_addr" / Int64ul,
+        "bm_misc" / ROPointer(this.bm_misc_addr, BufferManagerMisc),
         "unk_2c" / Int32ul,
         "unk_30" / Int64ul,
         "unk_38" / Int64ul,
@@ -299,7 +300,8 @@ class BufferThing(ConstructClass):
 class Start3DStruct6(ConstructClass):
     subcon = Struct(
         "tvb_overflow_count" / Int64ul,
-        "unk_8" / Int64ul,
+        "unk_8" / Int32ul,
+        "unk_c" / Int32ul,
         "unk_10" / Int32ul,
         "encoder_id" / Int64ul,
         "unk_1c" / Int32ul,
@@ -333,14 +335,16 @@ class Start3DStruct7(ConstructClass):
 class Attachment(ConstructClass):
     subcon = Struct(
         "address" / Int64ul,
-        "unk_8" / Int32ul,
-        "unk_c" / Int32ul,
+        "size" / Int32ul,
+        "unk_c" / Int16ul,
+        "unk_e" / Int16ul,
     )
 
-    def __init__(self, addr, unk_8, unk_c):
+    def __init__(self, addr, size, unk_c, unk_e):
         self.address = addr
-        self.unk_8 = unk_8
+        self.size = size
         self.unk_c = unk_c
+        self.unk_e = unk_e
 
 class Start3DCmd(ConstructClass):
     subcon = Struct( # 0x194 bytes''''
@@ -492,7 +496,8 @@ class StartTACmdStruct3(ConstructClass):
         "unk_580" / Int32ul,
         "unk_584" / Int32ul,
         "uuid2" / Int32ul,
-        "unk_58c" / Array(2, Int32ul),
+        "prev_stamp_value" / Int32ul,
+        "unk_590" / Int32ul,
     )
 
     def __init__(self):
@@ -523,7 +528,8 @@ class StartTACmd(ConstructClass):
         "struct3" / ROPointer(this.struct3_addr, StartTACmdStruct3),
         "unkptr_5c" / Int64ul,
         "unk_5c" / ROPointer(this.unkptr_5c, HexDump(Bytes(0x18))),
-        "unk_64" / Int64ul,
+        "unk_64" / Int32ul,
+        "unk_68" / Int32ul,
         "uuid" / Int32ul,
         "unk_70" / Int32ul,
         "unk_74" / Array(29, Int64ul),
