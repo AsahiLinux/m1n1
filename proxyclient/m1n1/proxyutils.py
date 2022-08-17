@@ -186,7 +186,7 @@ class ProxyUtils(Reloadable):
         if not len(data):
             return
 
-        payload = gzip.compress(data, compresslevel=2)
+        payload = gzip.compress(data, compresslevel=1)
         compressed_size = len(payload)
 
         with self.heap.guarded_malloc(compressed_size) as compressed_addr:
