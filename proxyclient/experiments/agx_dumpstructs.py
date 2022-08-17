@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+
+import sys, pathlib, time
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+
+from m1n1.constructutils import *
+from m1n1.fw.agx import initdata
+
+#for v in initdata.__all__:
+for v in initdata.__dict__:
+    struct = getattr(initdata, v)
+    if isinstance(struct, type) and issubclass(struct, ConstructClass) and struct is not ConstructClass:
+        print(struct.to_rust())
+        print()
