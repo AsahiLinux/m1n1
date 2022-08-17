@@ -841,16 +841,33 @@ class HV(Reloadable):
 
         if insn & 0x3b200c00 == 0x38200000:
             page = far_phys & ~0x3fff
-            self.log(f"Unhandled atomic instruction in tracer (FAR={far_phys:#x}), unmapping page at {page:#x}...")
-            self.add_tracer(irange(page, 0x4000), "**auto-bypassed:atomic**", TraceMode.RESERVED)
+
+            before = self.p.read32(far_phys)
             self.map_hw(page, page, 0x4000)
+            r0b = self.ctx.regs[0]
+            self.log(f"-ELR={self.ctx.elr:#x} LR={self.ctx.regs[30]:#x}")
+            self.step()
+            self.log(f"+ELR={self.ctx.elr:#x}")
+            r0a = self.ctx.regs[0]
+            self.dirty_maps.set(irange(page, 0x4000))
+            self.pt_update()
+            after = self.p.read32(far_phys)
+            self.log(f"Unhandled atomic: @{far_phys:#x} {before:#x} -> {after:#x} | r0={r0b:#x} -> {r0a:#x}")
             return True
 
         if insn & 0x3f000000 == 0x08000000:
             page = far_phys & ~0x3fff
-            self.log(f"Unhandled exclusive instruction in tracer (FAR={far_phys:#x}), unmapping page at {page:#x}...")
-            self.add_tracer(irange(page, 0x4000), "**auto-bypassed:excl**", TraceMode.RESERVED)
+            before = self.p.read32(far_phys)
             self.map_hw(page, page, 0x4000)
+            r0b = self.ctx.regs[0]
+            self.log(f"-ELR={self.ctx.elr:#x} LR={self.ctx.regs[30]:#x}")
+            self.step()
+            self.log(f"+ELR={self.ctx.elr:#x}")
+            r0a = self.ctx.regs[0]
+            self.dirty_maps.set(irange(page, 0x4000))
+            self.pt_update()
+            after = self.p.read32(far_phys)
+            self.log(f"Unhandled exclusive: @{far_phys:#x} {before:#x} -> {after:#x} | r0={r0b:#x} -> {r0a:#x}")
             return True
 
     def handle_sync(self, ctx):
