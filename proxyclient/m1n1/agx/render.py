@@ -919,7 +919,7 @@ class GPURenderer:
         if not self.ev_3d.fired:
             self.agx.log("3D event didn't fire")
 
-        self.agx.log("Event fired")
+        self.agx.log(f"Event {self.ev_3d.id} fired")
         #print("Stamps:")
         #print(self.stamp_ta1.pull())
         #print(self.stamp_ta2.pull())
