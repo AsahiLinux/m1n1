@@ -30,17 +30,19 @@ def pause_tracing(ctx):
 hv.add_hvcall(100, resume_tracing)
 hv.add_hvcall(101, pause_tracing)
 
-mode = TraceMode.OFF
+mode = TraceMode.SYNC
 trace_range(irange(agx_tracer.gpu_region, agx_tracer.gpu_region_size), mode=mode, name="gpu_region")
 trace_range(irange(agx_tracer.gfx_shared_region, agx_tracer.gfx_shared_region_size), mode=mode, name="gfx_shared_region")
-trace_range(irange(agx_tracer.gfx_handoff, agx_tracer.gfx_handoff_size), mode=mode, name="gfx_handoff")
 
 ## Trace the entire mmio range around the GPU
 node = hv.adt["/arm-io/sgx"]
 addr, size = node.get_reg(0)
-#hv.trace_range(irange(addr, 0x1000000), TraceMode.SYNC, name="sgx")
-hv.trace_range(irange(addr, 0x1000000), TraceMode.OFF, name="sgx")
+hv.trace_range(irange(addr, 0x1000000), TraceMode.SYNC, name="sgx")
+#hv.trace_range(irange(addr, 0x1000000), TraceMode.OFF, name="sgx")
 hv.trace_range(irange(0x204017030, 8), TraceMode.SYNC, name="faultcode")
+
+trace_device("/arm-io/sgx", True)
+trace_device("/arm-io/gfx-asc", False)
 
 def trace_all_gfx_io():
     # These are all the IO ranges that get mapped into the UAT iommu pagetable
@@ -95,7 +97,9 @@ def trace_gpu_irqs():
     for irq in getattr(node, "interrupts"):
         hv.trace_irq(f"{node.name} {irq}", irq, 1, hv.IRQTRACE_IRQ)
 
-    # Trace gfx-asc interrupts
-    node = hv.adt["/arm-io/gfx-asc"]
-    for irq in getattr(node, "interrupts"):
-        hv.trace_irq(f"{node.name} {irq}", irq, 1, hv.IRQTRACE_IRQ)
+    ## Trace gfx-asc interrupts
+    #node = hv.adt["/arm-io/gfx-asc"]
+    #for irq in getattr(node, "interrupts"):
+        #hv.trace_irq(f"{node.name} {irq}", irq, 1, hv.IRQTRACE_IRQ)
+
+trace_gpu_irqs()
