@@ -853,7 +853,7 @@ class BaseRegMap(Reloadable):
             width = rcls.__WIDTH__
             rd = functools.partial(backend.read, width=width)
             wr = functools.partial(backend.write, width=width)
-            if isinstance(addr, NdRange):
+            if type(addr).__name__ == "NdRange":
                 self._accessor[name] = RegArrayAccessor(addr, rcls, rd, wr, base)
             else:
                 self._accessor[name] = RegAccessor(rcls, rd, wr, base + addr)
