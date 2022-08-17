@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-import inspect, textwrap, json, re
+import inspect, textwrap, json, re, sys, os
 
 from construct import *
 from construct.core import evaluate
@@ -172,6 +172,8 @@ class ReloadableConstructMeta(ReloadableMeta, Construct):
                     sizeof = subcon.sizeof()
                 except:
                     sizeof = None
+                if isinstance(subcon, Ver):
+                    subcon = subcon.subcon
                 if isinstance(subcon, Renamed):
                     name = subcon.name
                     subcon = subcon.subcon
@@ -291,6 +293,8 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
                     sizeof = subcon.sizeof()
                 except:
                     break
+                if isinstance(subcon, Ver):
+                    subcon = subcon.subcon
                 if isinstance(subcon, Renamed):
                     name = subcon.name
                     #print(name, subcon)
@@ -494,6 +498,8 @@ class ConstructClass(ConstructClassBase, Container):
     def _build_prepare(cls, obj):
         if isinstance(cls.subcon, Struct):
             for subcon in cls.subcon.subcons:
+                if isinstance(subcon, Ver):
+                    subcon = subcon.subcon
                 if not isinstance(subcon, Renamed):
                     continue
                 name = subcon.name
@@ -538,13 +544,15 @@ class ConstructClass(ConstructClassBase, Container):
         obj2 = dict(obj)
         if isinstance(self.__class__.subcon, Struct):
             for subcon in self.__class__.subcon.subcons:
-                if not isinstance(subcon, Renamed):
-                    continue
                 name = subcon.name
+                if name is None:
+                    continue
                 subcon = subcon.subcon
                 if isinstance(subcon, Lazy):
                     continue
                 if isinstance(subcon, Pointer):
+                    subcon = subcon.subcon
+                if isinstance(subcon, Ver):
                     subcon = subcon.subcon
                 if isinstance(subcon, Array):
                     subcon = subcon.subcon
@@ -594,6 +602,20 @@ class ConstructClass(ConstructClassBase, Container):
         obj._apply_classful(d)
         return obj
 
+    @classmethod
+    def is_versioned(cls):
+        for subcon in cls.subcon.subcons:
+            if isinstance(subcon, Ver):
+                return True
+            while True:
+                try:
+                    subcon = subcon.subcon
+                    if isinstance(subcon, type) and issubclass(subcon, ConstructClass) and subcon.is_versioned():
+                        return True
+                except:
+                    break
+        return False
+
 class ConstructValueClass(ConstructClassBase):
     """ Same as Construct, but for subcons that are single values, rather than containers
 
@@ -635,6 +657,8 @@ class ConstructRegMap(BaseRegMap):
         self._namemap = {}
         assert isinstance(cls.subcon, Struct)
         for subcon in cls.subcon.subcons:
+            if isinstance(subcon, Ver):
+                subcon = subcon.subcon
             if not isinstance(subcon, Renamed):
                 continue
             name = subcon.name
@@ -642,6 +666,8 @@ class ConstructRegMap(BaseRegMap):
             if subcon not in self.TYPE_MAP:
                 continue
             rtype = self.TYPE_MAP[subcon]
+            if name not in cls._off:
+                continue
             addr, size = cls._off[name]
             self._addrmap[addr] = name, rtype
             self._namemap[name] = addr, rtype
@@ -658,8 +684,101 @@ class ConstructRegMap(BaseRegMap):
             return
         self._accessor[k].val = v
 
+class Ver(Subconstruct):
+    # Ugly hack to make this survive across reloads...
+    try:
+        _version = sys.modules["m1n1.constructutils"].Ver._version
+    except (KeyError, AttributeError):
+        _version = [os.environ.get("AGX_FWVER", "0")]
+
+    def __init__(self, version, subcon):
+        self.rust, self.min_ver, self.max_ver = self.parse_ver(version)
+        self._name = subcon.name
+        self.subcon = subcon
+        self.flagbuildnone = True
+        self.docs = ""
+        self.parsed = None
+
+    @property
+    def name(self):
+        if self._active():
+            return self._name
+        else:
+            return None
+
+    @staticmethod
+    def _split_ver(s):
+        if not s:
+            return None
+        parts = re.split(r"[-,. ]", s)
+        parts2 = []
+        for i in parts:
+            try:
+                parts2.append(int(i))
+            except ValueError:
+                parts2.append(i)
+        if len(parts2) > 3 and parts2[-2] == "beta":
+            parts2[-3] -= 1
+            parts2[-2] = 99
+        return tuple(parts2)
+
+    @classmethod
+    def parse_ver(cls, version):
+        def rv(s):
+            return "V" + s.replace(" ", "").replace(".", "_").replace("beta", "b")
+
+        if ".." in version:
+            v = version.split("..")
+            min_ver = cls._split_ver(v[0])
+            max_ver = cls._split_ver(v[1])
+            if v[0]:
+                rust = f"V >= {rv(v[0])} && V < {rv(v[1])}"
+            else:
+                rust = f"V < {rv(v[1])}"
+        else:
+            min_ver = cls._split_ver(version)
+            max_ver = None
+            rust = f"V >= {rv(version)}"
+
+        if min_ver is None:
+            min_ver = (0,)
+        if max_ver is None:
+            max_ver = (999,)
+
+        return rust, min_ver, max_ver
+
+    @classmethod
+    def check(cls, version):
+        _, min_ver, max_ver = cls.parse_ver(version)
+        v = cls._split_ver(cls._version[0])
+        return min_ver <= v < max_ver
+
+    def _active(self):
+        v = self._split_ver(self._version[0])
+        return self.min_ver <= v < self.max_ver
+
+    def _parse(self, stream, context, path):
+        if not self._active():
+            return None
+        obj = self.subcon._parse(stream, context, path)
+        return obj
+
+    def _build(self, obj, stream, context, path):
+        if not self._active():
+            return None
+        return self.subcon._build(obj, stream, context, path)
+
+    def _sizeof(self, context, path):
+        if not self._active():
+            return 0
+        return self.subcon._sizeof(context, path)
+
+    @classmethod
+    def set_version(cls, version):
+        cls._version[0] = version
+
 def show_struct_trace(log=print):
     for addr, desc in sorted(list(g_struct_trace)):
         log(f"{addr:>#18x}: {desc}")
 
-__all__ = ["ConstructClass", "ConstructValueClass", "Dec", "ROPointer", "show_struct_trace", "ZPadding"]
+__all__ = ["ConstructClass", "ConstructValueClass", "Dec", "ROPointer", "show_struct_trace", "ZPadding", "Ver"]
