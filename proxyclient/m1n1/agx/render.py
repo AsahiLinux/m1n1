@@ -125,7 +125,7 @@ class GPURenderer:
         self.buffer_mgr_initialized = False
         self.unk_emptybuf = agx.kobj.new_buf(0x40, "unk_emptybuf")
         self.tvb_something_size = 0x8000
-        self.tvb_something = ctx.uobj.new_buf(self.tvb_something_size, "TVB Something", track=True).push()
+        self.tvb_something = ctx.uobj.new_buf(self.tvb_something_size, "TVB Something", track=False).push()
 
         ##### Job group
 

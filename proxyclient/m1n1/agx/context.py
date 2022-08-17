@@ -152,7 +152,7 @@ class GPUMicroSequence:
     def finalize(self):
         self.ops.append(EndCmd())
         self.size = sum(i.sizeof() for i in self.ops)
-        self.obj = self.agx.kobj.new_buf(self.size, "GPUMicroSequence")
+        self.obj = self.agx.kobj.new_buf(self.size, "GPUMicroSequence", track=False)
         self.obj.val = b"".join(i.build() for i in self.ops)
         self.obj.push()
         return self.obj
@@ -191,8 +191,8 @@ class GPUBufferManager:
         self.pages_per_block = 4
         self.block_size = self.pages_per_block * self.page_size
 
-        self.page_list = context.uobj.new(Array(0x10000 // 4, Int32ul), "BM PageList")
-        self.block_list = context.uobj.new(Array(0x8000 // 4, Int32ul), "BM BlockList")
+        self.page_list = context.uobj.new(Array(0x10000 // 4, Int32ul), "BM PageList", track=False)
+        self.block_list = context.uobj.new(Array(0x8000 // 4, Int32ul), "BM BlockList", track=False)
 
         self.info = info = agx.kobj.new(BufferManagerInfo)
         info.page_list_addr = self.page_list._addr
