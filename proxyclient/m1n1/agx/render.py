@@ -218,7 +218,7 @@ class GPURenderer:
 
         self.work = []
 
-    def submit(self, cmdbuf):
+    def submit(self, cmdbuf, wait_for=None):
         work = GPUWork(self)
         self.work.append(work)
 
@@ -266,6 +266,9 @@ class GPURenderer:
         self.stamp_value_ta += 0x100
         self.event_control.event_count.val += 2
         self.event_control.event_count.push()
+
+        work.stamp_value_3d = self.stamp_value_3d
+        work.stamp_value_ta = self.stamp_value_ta
 
         agx = self.agx
         ctx = self.ctx
@@ -648,6 +651,22 @@ class GPURenderer:
         ##### TA init
 
         #print(ctx_info)
+        if wait_for is not None:
+            barrier_cmd = agx.kobj.new(WorkCommandBarrier, track=False)
+            work.add(barrier_cmd)
+            if not isinstance(wait_for, tuple):
+                barrier_cmd.stamp = wait_for.renderer.stamp_3d2
+                barrier_cmd.wait_value = wait_for.stamp_value_3d
+                barrier_cmd.event = wait_for.ev_3d.id
+            else:
+                barrier_cmd.stamp_addr = wait_for[0]
+                barrier_cmd.wait_value = wait_for[1]
+                barrier_cmd.event = wait_for[2]
+
+            barrier_cmd.stamp_self = self.stamp_value_ta
+            barrier_cmd.uuid = uuid_ta
+
+            self.wq_ta.submit(barrier_cmd)
 
         if not self.buffer_mgr_initialized:
             wc_initbm = agx.kobj.new(WorkCommandInitBM, track=False)
