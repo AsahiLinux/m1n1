@@ -48,11 +48,11 @@ def build_initdata(agx):
     regionB.stats_ta = agx.kobj.new(InitData_GPUGlobalStatsTA).push()
     regionB.stats_3d = agx.kobj.new(InitData_GPUGlobalStats3D).push()
 
-    # size: 0x140, Empty
-    regionB.stats_cp = agx.kobj.new_buf(0x140, "RegionB.unkptr_180").push()
+    # size: 0x180, Empty
+    regionB.stats_cp = agx.kobj.new_buf(0x180, "RegionB.unkptr_180").push()
 
     # size: 0x3b80, few floats, few ints, needed for init
-    regionB.hwdata_a = agx.kobj.new(AGXHWDataA, track=False).push()
+    regionB.hwdata_a = agx.kobj.new(AGXHWDataA, track=True).push()
 
     # size: 0x80, empty
     regionB.unk_190 = agx.kobj.new_buf(0x80, "RegionB.unkptr_190").push()
@@ -61,10 +61,11 @@ def build_initdata(agx):
     regionB.unk_198 = agx.kobj.new_buf(0xc0, "RegionB.unkptr_198").push()
 
     # size: 0xb80, io stuff
-    hwdata = agx.kobj.new(AGXHWDataB, track=False)
+    hwdata = agx.kobj.new(AGXHWDataB, track=True)
     hwdata.io_mappings = build_iomappings(agx)
     hwdata.chip_id = chosen.chip_id
 
+    hwdata.max_pstate = sgx.gpu_num_perf_states
     hwdata.num_pstates = sgx.perf_state_count
     hwdata.min_volt = 850
     # how is this computed?
@@ -98,19 +99,19 @@ def build_initdata(agx):
     regionB.buffer_mgr_ctl_addr2 = regionB.buffer_mgr_ctl._addr
 
     regionB.unk_6a80 = 0
-    regionB.unk_6a84 = 0
+    regionB.gpu_idle = 0
     regionB.unk_6a9c = 0
-    regionB.unk_6aa0 = 0
-    regionB.unk_6aa4 = 0
+    regionB.unk_ctr0 = 0
+    regionB.unk_ctr1 = 0
     regionB.unk_6aa8 = 0
     regionB.unk_6aac = 0
-    regionB.unk_6ab0 = 0
+    regionB.unk_ctr2 = 0
     regionB.unk_6ab4 = 0
     regionB.unk_6ab8 = 0
     regionB.unk_6abc = 0
     regionB.unk_6ac0 = 0
     regionB.unk_6ac4 = 0
-    regionB.unk_6ac8 = 0
+    regionB.unk_ctr3 = 0
     regionB.unk_6acc = 0
     regionB.unk_6ad0 = 0
     regionB.unk_6ad4 = 0
@@ -121,8 +122,8 @@ def build_initdata(agx):
     regionB.unk_6ae8 = 0
     regionB.unk_6aec = 0
     regionB.unk_6af0 = 0
-    regionB.unk_6af4 = 0
-    regionB.unk_6af8 = 0
+    regionB.unk_ctr4 = 0
+    regionB.unk_ctr5 = 0
     regionB.unk_6afc = 0
 
     initdata.regionB = regionB.push()
@@ -131,11 +132,11 @@ def build_initdata(agx):
 
     #self.regionC_addr = agx.ksharedshared_heap.malloc(0x88000)
 
-    initdata.unkptr_20 = agx.kobj.new(InitData_unkptr20)
-    initdata.unkptr_20.unkptr_0 = agx.kobj.buf(0x40, "initdata.unkptr_20.unkptr_0")
+    initdata.fw_status = agx.kobj.new(InitData_FWStatus)
+    initdata.fw_status.unkptr_0 = agx.kobj.buf(0x40, "initdata.fw_status.unkptr_0")
     # totally guessing the size on this one
-    initdata.unkptr_20.unkptr_8 = agx.kobj.buf(0x40, "initdata.unkptr_20.unkptr_8")
-    initdata.unkptr_20.push()
+    initdata.fw_status.unkptr_8 = agx.kobj.buf(0x40, "initdata.fw_status.unkptr_8")
+    initdata.fw_status.push()
 
     ## This section seems to be data that would be used by firmware side page allocation
     ## But the current firmware doesn't have this functionality enabled, so it's not used?
