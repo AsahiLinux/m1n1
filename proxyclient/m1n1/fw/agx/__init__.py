@@ -27,6 +27,9 @@ class DoorbellMsg(GpuMsg):
     TYPE        = 63, 48, Constant(0x83)
     CHANNEL     = 15, 0
 
+class FWCtlMsg(GpuMsg):
+    TYPE        = 63, 48, Constant(0x84)
+
 class FirmwareEP(ASCBaseEndpoint):
     BASE_MESSAGE = GpuMsg
     SHORT = "fw"
@@ -49,6 +52,10 @@ class DoorbellEP(ASCBaseEndpoint):
     def doorbell(self, channel):
         #self.log(f"Sending doorbell ch={channel}")
         msg = DoorbellMsg(CHANNEL = channel)
+        self.send(msg)
+
+    def fwctl_doorbell(self):
+        msg = FWCtlMsg()
         self.send(msg)
 
 class AGXASC(StandardASC):
