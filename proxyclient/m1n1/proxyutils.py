@@ -5,7 +5,7 @@ from construct import *
 
 from .asm import ARMAsm
 from .proxy import *
-from .utils import Reloadable, _ascii
+from .utils import Reloadable, chexdiff32
 from .tgtypes import *
 from .sysreg import *
 from .malloc import Heap
@@ -418,50 +418,15 @@ class RegMonitor(Reloadable):
                 continue
 
             words = struct.unpack("<%dI" % count, block)
-            cur.append(words)
-            if last == words:
+            cur.append(block)
+            if last == block:
                 continue
-            out = []
             if name:
-                out.append(f"# {name} ({start:#x}..{start + size - 1:#x})\n")
+                header = f"# {name} ({start:#x}..{start + size - 1:#x})\n"
             else:
-                out.append(f"# ({start:#x}..{start + size - 1:#x})\n")
-            row = 8
-            skipping = False
-            for i in range(0, count, row):
-                if not last:
-                    if i != 0 and words[i:i+row] == words[i-row:i]:
-                        if not skipping:
-                            out.append("%016x *\n" % (offset + i * 4))
-                        skipping = True
-                    else:
-                        out.append("%016x " % (offset + i * 4))
-                        for new in words[i:i+row]:
-                            out.append("%08x " % new)
-                        if self.ascii:
-                            out.append("| " + _ascii(block[4*i:4*(i+row)]))
-                        out.append("\n")
-                        skipping = False
-                elif last[i:i+row] != words[i:i+row]:
-                    out.append("%016x " % (offset + i * 4))
-                    for old, new in zip(last[i:i+row], words[i:i+row]):
-                        so = "%08x" % old
-                        sn = s = "%08x" % new
-                        if old != new:
-                            s = "\x1b[32m"
-                            ld = False
-                            for a,b in zip(so, sn):
-                                d = a != b
-                                if ld != d:
-                                    s += "\x1b[31;1;4m" if d else "\x1b[32m"
-                                    ld = d
-                                s += b
-                            s += "\x1b[m"
-                        out.append(s + " ")
-                    if self.ascii:
-                        out.append("| " + _ascii(block[4*i:4*(i+row)]))
-                    out.append("\n")
-            self.log("".join(out))
+                header = f"# ({start:#x}..{start + size - 1:#x})\n"
+
+            self.log(header + chexdiff32(last, block, offset=offset))
         self.last = cur
 
 class GuardedHeap:
