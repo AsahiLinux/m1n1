@@ -229,5 +229,29 @@ class GPUAllocator:
         return self.new_buf(size, name, track).push()._addr
 
     def free(self, obj):
-        self.agx.u.free(obj._paddr)
-        self.va.free(obj._addr)
+        obj._dead = True
+        is_private = obj._map_flags.get("AttrIndex", MemoryAttr.Normal) != MemoryAttr.Shared
+        if is_private and obj._addr_align > 0xf8000000000:
+            flags2 = dict(obj._map_flags)
+            flags2["AttrIndex"] = MemoryAttr.Shared
+            self.agx.uat.iomap_at(self.ctx, obj._addr_align, obj._paddr_align,
+                                  obj._size_align, obj._flags)
+            self.agx.uat.flush_dirty()
+            self.agx.uat.handoff.prepare_cacheflush(obj._addr_align, obj._size_align)
+            self.agx.ch.fwctl.send_inval(0x40, obj._addr_align)
+            self.agx.uat.handoff.wait_cacheflush()
+
+        self.agx.uat.iomap_at(self.ctx, obj._addr_align, 0,
+                              obj._size_align, VALID=0)
+
+        if is_private and obj._addr_align > 0xf8000000000:
+            self.agx.uat.flush_dirty()
+            self.agx.uat.handoff.complete_cacheflush()
+
+        self.agx.u.free(obj._paddr_align)
+        self.va.free(obj._addr_align)
+        del self.objects[obj._addr]
+        self.agx.unreg_object(obj)
+
+        if self.verbose:
+            self.agx.log(f"[{self.name}] Free {obj._name} size {obj._size:#x} @ {obj._addr:#x} ({obj._paddr:#x})")
