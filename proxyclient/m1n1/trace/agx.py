@@ -940,7 +940,7 @@ class AGXTracer(ASCTracer):
         self.trace_uatrange(0, self.state.initdata.regionA_addr, 0x4000, name="regionA")
         self.trace_uatrange(0, self.state.initdata.regionB_addr, 0x6bc0, name="regionB")
         self.trace_uatrange(0, self.state.initdata.regionC_addr, 0x11d40, name="regionC")
-        self.trace_uatrange(0, self.state.initdata.regionB.unkptr_214, 0x4000, name="Shared AP=0 region")
+        self.trace_uatrange(0, self.state.initdata.regionB.buffer_mgr_ctl_addr, 0x4000, name="Buffer manager ctl")
 
     def add_mon_regions(self):
         initdata = self.state.initdata
@@ -953,7 +953,7 @@ class AGXTracer(ASCTracer):
             #self.mon_addva(0, initdata.regionB.unkptr_180, 0x140, "unkptr_180")
             self.mon_addva(0, initdata.regionB.unkptr_190, 0x80, "unkptr_190")
             self.mon_addva(0, initdata.regionB.unkptr_198, 0xc0, "unkptr_198")
-            self.mon_addva(0, initdata.regionB.unkptr_214, 0x4000, "Shared AP=0 region")
+            self.mon_addva(0, initdata.regionB.buffer_mgr_ctl_addr, 0x4000, "Buffer manager ctl")
             self.mon_addva(0, initdata.unkptr_20.unkptr_0, 0x40, "unkptr_20.unkptr_0")
             self.mon_addva(0, initdata.unkptr_20.unkptr_8, 0x40, "unkptr_20.unkptr_8")
 
