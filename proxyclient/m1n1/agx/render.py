@@ -884,22 +884,27 @@ class GPURenderer:
         #print(work.wc_3d.pull())
         #print(work.wc_ta.pull())
 
-        if work.fb is not None:
-            print(f"Render {work.width}x{work.height} @ {work.fb:#x}")
+        if work.fb is not None and work.width and work.height:
+
+            self.agx.log(f"Render {work.width}x{work.height} @ {work.fb:#x}")
             base, obj = self.agx.find_object(work.fb, self.ctx_id)
 
             #unswizzle(agx, obj._paddr, width, height, 4, "fb.bin", grid=False)
-            #os.system(f"convert -size {width}x{height} -depth 8 rgba:fb.bin frame{self.frames}.png")
+            open("fb.bin", "wb").write(self.agx.u.iface.readmem(obj._paddr, work.width*work.height*4))
+            os.system(f"convert -size {work.width}x{work.height} -depth 8 rgba:fb.bin -alpha off frame{self.frames}.png")
             self.agx.p.fb_blit(0, 0, work.width, work.height, obj._paddr, work.width, PIX_FMT.XBGR)
 
-        if False and depth is not None:
-            base, obj = self.agx.find_object(depth, self.ctx_id)
+        if work.depth is not None:#False and depth is not None:
+            base, obj = self.agx.find_object(work.depth, self.ctx_id)
 
             width = align_up(work.width, 64)
             height = align_up(work.height, 64)
 
+            obj.pull()
+            chexdump(obj.val)
+
             unswizzle(self.agx, obj._paddr, work.width, work.height, 4, "depth.bin", grid=False)
-            os.system(f"convert -size {width}x{height} -depth 8 rgba:depth.bin depth.png")
+            os.system(f"convert -size {work.width}x{work.height} -depth 8 rgba:depth.bin -alpha off depth.png")
 
         for i in self.work:
             i.free()
