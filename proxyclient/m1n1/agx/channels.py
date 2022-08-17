@@ -79,6 +79,8 @@ class GPUEventChannel(GPURXChannel):
             self.agx.event_mgr.fired(msg.firing)
         elif isinstance(msg, FaultMsg):
             self.agx.faulted()
+        elif isinstance(msg, TimeoutMsg):
+            self.agx.timeout()
         else:
             self.log(f"Unknown event: {msg}")
 

@@ -219,7 +219,7 @@ class FlagMsg(ConstructClass):
         Padding(0x38 - 0x16), # confirmed
     )
 
-class Fault2Msg(ConstructClass):
+class TimeoutMsg(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(4, Int32ul)),
         "index" / Hex(Int32ul),
@@ -231,7 +231,7 @@ class Fault2Msg(ConstructClass):
 EventMsg = FixedSized(0x38, Select(
     FaultMsg,
     FlagMsg,
-    Fault2Msg,
+    TimeoutMsg,
     HexDump(Bytes(0x38)),
 ))
 
