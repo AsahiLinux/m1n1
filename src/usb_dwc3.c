@@ -43,11 +43,13 @@
 
 #define DWC3_SCRATCHPAD_SIZE SZ_16K
 #define TRB_BUFFER_SIZE      SZ_16K
-#define XFER_BUFFER_SIZE     SZ_16K
+#define XFER_BUFFER_SIZE     (SZ_16K * MAX_ENDPOINTS * 2)
 #define PAD_BUFFER_SIZE      SZ_16K
 
 #define TRBS_PER_EP              (TRB_BUFFER_SIZE / (MAX_ENDPOINTS * sizeof(struct dwc3_trb)))
 #define XFER_BUFFER_BYTES_PER_EP (XFER_BUFFER_SIZE / MAX_ENDPOINTS)
+
+#define XFER_SIZE SZ_16K
 
 #define SCRATCHPAD_IOVA   0xbeef0000
 #define EVENT_BUFFER_IOVA 0xdead0000
@@ -883,13 +885,13 @@ static void usb_dwc3_cdc_start_bulk_out_xfer(dwc3_dev_t *dev, u8 endpoint_number
     if (!host2device)
         return;
 
-    if (ringbuffer_get_free(host2device) < 512)
+    if (ringbuffer_get_free(host2device) < XFER_SIZE)
         return;
 
-    memset(dev->endpoints[endpoint_number].xfer_buffer, 0xaa, 512);
+    memset(dev->endpoints[endpoint_number].xfer_buffer, 0xaa, XFER_SIZE);
     trb_iova = usb_dwc3_init_trb(dev, endpoint_number, &trb);
     trb->ctrl |= DWC3_TRBCTL_NORMAL;
-    trb->size = DWC3_TRB_SIZE_LENGTH(512);
+    trb->size = DWC3_TRB_SIZE_LENGTH(XFER_SIZE);
 
     usb_dwc3_ep_start_transfer(dev, endpoint_number, trb_iova);
     dev->endpoints[endpoint_number].xfer_in_progress = true;
@@ -907,7 +909,8 @@ static void usb_dwc3_cdc_start_bulk_in_xfer(dwc3_dev_t *dev, u8 endpoint_number)
     if (!device2host)
         return;
 
-    size_t len = ringbuffer_read(dev->endpoints[endpoint_number].xfer_buffer, 512, device2host);
+    size_t len =
+        ringbuffer_read(dev->endpoints[endpoint_number].xfer_buffer, XFER_SIZE, device2host);
 
     if (!len && !dev->endpoints[endpoint_number].zlp_pending)
         return;
@@ -918,7 +921,7 @@ static void usb_dwc3_cdc_start_bulk_in_xfer(dwc3_dev_t *dev, u8 endpoint_number)
 
     usb_dwc3_ep_start_transfer(dev, endpoint_number, trb_iova);
     dev->endpoints[endpoint_number].xfer_in_progress = true;
-    dev->endpoints[endpoint_number].zlp_pending = len == 512;
+    dev->endpoints[endpoint_number].zlp_pending = (len % 512) == 0;
 }
 
 static void usb_dwc3_cdc_handle_bulk_out_xfer_done(dwc3_dev_t *dev,
@@ -927,7 +930,7 @@ static void usb_dwc3_cdc_handle_bulk_out_xfer_done(dwc3_dev_t *dev,
     ringbuffer_t *host2device = usb_dwc3_cdc_get_ringbuffer(dev, event.endpoint_number);
     if (!host2device)
         return;
-    size_t len = min(512, ringbuffer_get_free(host2device));
+    size_t len = min(XFER_SIZE, ringbuffer_get_free(host2device));
     ringbuffer_write(dev->endpoints[event.endpoint_number].xfer_buffer,
                      len - dev->endpoints[event.endpoint_number].trb->size, host2device);
 }
