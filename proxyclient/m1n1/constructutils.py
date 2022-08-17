@@ -358,6 +358,13 @@ class ROPointer(Pointer):
     def _build(self, obj, stream, context, path):
         return obj
 
+    def _parse(self, stream, context, path):
+        recurse = getattr(stream, "recurse", False)
+        if not recurse:
+            return None
+
+        return Pointer._parse(self, stream, context, path)
+
 class ConstructClass(ConstructClassBase, Container):
     """ Offers two benifits over regular construct
 
