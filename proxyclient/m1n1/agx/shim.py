@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
-import errno, ctypes, sys, atexit, os, os.path
+import errno, ctypes, sys, atexit, os, os.path, mmap
 from construct import *
 
 from m1n1 import malloc
@@ -61,7 +61,7 @@ def IOWR(nr, cls):
 
 class DRMAsahiShim:
     def __init__(self, memfd):
-        self.memfd = open(memfd, closefd=False, mode="r+b")
+        self.memfd = memfd
         self.initialized = False
         self.ioctl_map = {}
         for key in dir(self):
@@ -70,9 +70,10 @@ class DRMAsahiShim:
             if ioctl is not None:
                 self.ioctl_map[ioctl.value] = ioctl, f
         self.bos = {}
-        self.pull_buffers = False
+        self.pull_buffers = bool(os.getenv("ASAHI_SHIM_PULL"))
         self.dump_frames = bool(os.getenv("ASAHI_SHIM_DUMP"))
         self.frame = 0
+        self.agx = None
 
     def read_buf(self, ptr, size):
         return ctypes.cast(ptr, ctypes.POINTER(ctypes.c_ubyte * size))[0]
@@ -111,19 +112,18 @@ class DRMAsahiShim:
 
     @IOW(DRM_COMMAND_BASE + 0x00, drm_asahi_submit_t)
     def submit(self, fd, args):
-        #print("Submit!")
         sys.stdout.write(".")
         sys.stdout.flush()
 
         size = drm_asahi_cmdbuf_t.sizeof()
         cmdbuf = drm_asahi_cmdbuf_t.parse(self.read_buf(args.cmdbuf, size))
 
-        #print(cmdbuf)
-
+        self.log("Pushing objects...")
         for obj in self.bos.values():
-            self.memfd.seek(obj._memfd_offset)
-            obj.val = self.memfd.read(obj._size)
+            #if obj._skipped_pushes > 64:# and obj._addr > 0x1200000000 and obj._size > 131072:
+                #continue
             obj.push(True)
+        self.log("Push done")
 
         attachment_objs = []
         for i in cmdbuf.attachments:
@@ -144,10 +144,21 @@ class DRMAsahiShim:
         self.renderer.wait()
 
         if self.pull_buffers:
-            for i in attachment_objs:
+            self.log("Pulling buffers...")
+            for obj in attachment_objs:
                 obj.pull()
-                self.memfd.seek(obj._memfd_offset)
-                self.memfd.write(obj.val)
+                obj._map[:] = obj.val
+                obj.val = obj._map
+            self.log("Pull done")
+
+        #print("HEAP STATS")
+        #self.ctx.uobj.va.check()
+        #self.ctx.gobj.va.check()
+        #self.ctx.pobj.va.check()
+        #self.agx.kobj.va.check()
+        #self.agx.cmdbuf.va.check()
+        #self.agx.kshared.va.check()
+        #self.agx.kshared2.va.check()
 
         self.frame += 1
         return 0
@@ -166,8 +177,10 @@ class DRMAsahiShim:
         else:
             alloc = self.renderer.ctx.gobj
 
-        obj = alloc.new(HexDump(Bytes(args.size)), name=f"GBM offset {memfd_offset:#x}", track=False)
+        obj = alloc.new(args.size, name=f"GBM offset {memfd_offset:#x}", track=False)
         obj._memfd_offset = memfd_offset
+        obj._pushed = False
+        obj.val = obj._map = mmap.mmap(self.memfd, args.size, offset=memfd_offset)
         self.bos[memfd_offset] = obj
         args.offset = obj._addr
 
