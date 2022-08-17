@@ -34,6 +34,7 @@ class GPUEventManager:
         self.free_events.add(ev.id)
 
     def fired(self, flags):
+        self.agx.log("= Events fired =")
         for i, v in enumerate(flags):
             for j in range(64):
                 if v & (1 << j):
