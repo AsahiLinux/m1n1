@@ -206,12 +206,12 @@ class GPURenderer:
     def submit(self, cmdbuf):
         self.buffer_mgr.increment()
 
-        aux_fb = self.ctx.uobj.new_buf(0x8000, "Aux FB thing")
+        aux_fb = self.ctx.uobj.new_buf(0x8000, "Aux FB thing", track=False)
         #self.deflake_1 = ctx.uobj.new_buf(0x20, "Deflake 1")
         #self.deflake_2 = ctx.uobj.new_buf(0x280, "Deflake 2")
         #self.deflake_3 = ctx.uobj.new_buf(0x540, "Deflake 3")
-        deflake = self.ctx.uobj.new_buf(0x7e0, "Deflake")
-        unk_buf = self.ctx.uobj.new(Array(0x800, Int64ul), "Unknown Buffer")
+        deflake = self.ctx.uobj.new_buf(0x7e0, "Deflake", track=False)
+        unk_buf = self.ctx.uobj.new(Array(0x800, Int64ul), "Unknown Buffer", track=False)
         unk_buf.val = [0, *range(1, 0x400), *(0x400 * [0])]
         unk_buf.push()
 
@@ -286,11 +286,11 @@ class GPURenderer:
         ##### Buffer stuff?
 
         # buffer related?
-        work.buf_desc = buf_desc = agx.kobj.new(BufferThing)
+        work.buf_desc = buf_desc = agx.kobj.new(BufferThing, track=False)
         buf_desc.unk_0 = 0x0
         buf_desc.unk_8 = 0x0
         buf_desc.unk_10 = 0x0
-        buf_desc.unkptr_18 = ctx.uobj.buf(0x80, "BufferThing.unkptr_18")
+        buf_desc.unkptr_18 = ctx.uobj.buf(0x80, "BufferThing.unkptr_18", track=False)
         buf_desc.unk_20 = 0x0
         buf_desc.bm_misc_addr = self.buffer_mgr.misc_obj._addr
         buf_desc.unk_2c = 0x0
@@ -308,7 +308,7 @@ class GPURenderer:
 
         ##### 3D barrier command
 
-        barrier_cmd = agx.kobj.new(WorkCommandBarrier)
+        barrier_cmd = agx.kobj.new(WorkCommandBarrier, track=False)
         barrier_cmd.stamp = self.stamp_ta2
         barrier_cmd.stamp_value1 = self.stamp_value_ta
         barrier_cmd.stamp_value2 = self.stamp_value_ta
@@ -321,7 +321,7 @@ class GPURenderer:
 
         ##### 3D execution
 
-        work.wc_3d = wc_3d = agx.kobj.new(WorkCommand3D)
+        work.wc_3d = wc_3d = agx.kobj.new(WorkCommand3D, track=False)
         wc_3d.context_id = self.ctx_id
         wc_3d.unk_8 = 0
         wc_3d.event_control = self.event_control
@@ -599,7 +599,7 @@ class GPURenderer:
         #print(ctx_info)
 
         if not self.buffer_mgr_initialized:
-            wc_initbm = agx.kobj.new(WorkCommandInitBM)
+            wc_initbm = agx.kobj.new(WorkCommandInitBM, track=False)
             wc_initbm.context_id = self.ctx_id
             wc_initbm.buffer_mgr_slot = self.buffer_mgr_slot
             wc_initbm.unk_c = 0
@@ -613,7 +613,7 @@ class GPURenderer:
 
         ##### TA execution
 
-        work.wc_ta = wc_ta = agx.kobj.new(WorkCommandTA)
+        work.wc_ta = wc_ta = agx.kobj.new(WorkCommandTA, track=False)
         wc_ta.context_id = self.ctx_id
         wc_ta.unk_8 = 0
         wc_ta.event_control = self.event_control
