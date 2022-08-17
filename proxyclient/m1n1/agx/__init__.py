@@ -28,6 +28,7 @@ class AGX:
         self.p = u.proxy
 
         self.iface = u.iface
+        self.show_stats = False
 
         self.asc_dev = u.adt["/arm-io/gfx-asc"]
         self.sgx_dev = u.adt["/arm-io/sgx"]
@@ -165,7 +166,8 @@ class AGX:
         for chan in self.ch.log:
             chan.poll()
         self.ch.ktrace.poll()
-        self.ch.stats.poll()
+        if self.show_stats:
+            self.ch.stats.poll()
         self.ch.event.poll()
 
     def kick_firmware(self):
