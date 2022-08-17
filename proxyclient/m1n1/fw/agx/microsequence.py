@@ -28,7 +28,13 @@ class Timestamp(ConstructValueClass):
     def __init__(self, value=0):
         self.value = value
 
-class BarrierCounter(ConstructValueClass):
+class WrappedPointer(ConstructValueClass):
+    subcon = Int64ul
+
+    def __init__(self, value=0):
+        self.value = value
+
+class StampCounter(ConstructValueClass):
     subcon = Hex(Int32ul)
 
     def __init__(self):
@@ -63,8 +69,8 @@ class BufferManagerInfo(ConstructClass):
     subcon = Struct(
         "gpu_counter" / Int32ul,
         "unk_4" / Int32ul,
-        "active" / Int32ul,
-        "unk_c" / Int32ul,
+        "last_id" / Int32ul,
+        "cur_id" / Int32ul,
         "unk_10" / Int32ul,
         "gpu_counter2" / Int32ul,
         "unk_18" / Int32ul,
@@ -95,23 +101,15 @@ class BufferManagerInfo(ConstructClass):
         "unk_88" / Int32ul,
         "unk_8c" / Int32ul,
         "unk_90" / HexDump(Bytes(0x30)),
-        "unk_c0" / Int32ul, # written by GPU
-        "unk_c4" / HexDump(Bytes(0x14)),
-        "unkptr_d8" / Int64ul,
-        "unk_e0" / Int32ul,
-        "misc_addr" / Int64ul, # like unkptr_24 in Start3DStruct3
-        "misc" / ROPointer(this.misc_addr, BufferManagerMisc),
-        "unk_ec" / Int32ul,
-        "unk_f0" / Int64ul,
-        "unk_f8" / Int64ul,
+
     )
 
     def __init__(self):
         super().__init__()
         self.gpu_counter = 0x0
         self.unk_4 = 0
-        self.active = 0x0
-        self.unk_c = 0xffffffff
+        self.last_id = 0x0
+        self.cur_id = 0xffffffff
         self.unk_10 = 0x0
         self.gpu_counter2 = 0x0
         self.unk_18 = 0x0
@@ -131,12 +129,7 @@ class BufferManagerInfo(ConstructClass):
         self.unk_88 = 0x1178
         self.unk_8c = 0x0
         self.unk_90 = bytes(0x30)
-        self.unk_c0 = 0x0
-        self.unk_c4 = bytes(0x14)
-        self.unk_e0 = 0x0
-        self.unk_ec = 0x0
-        self.unk_f0 = 0x0
-        self.unk_f8 = 0x0
+
 
 class Start3DClearPipelineBinding(ConstructClass):
     subcon = Struct(
@@ -305,7 +298,7 @@ class BufferThing(ConstructClass):
 
 class Start3DStruct6(ConstructClass):
     subcon = Struct(
-        "unk_0" / Int64ul,
+        "tvb_overflow_count" / Int64ul,
         "unk_8" / Int64ul,
         "unk_10" / Int32ul,
         "encoder_id" / Int64ul,
@@ -319,10 +312,10 @@ class Start3DStruct6(ConstructClass):
 class Start3DStruct7(ConstructClass):
     subcon = Struct(
         "unk_0" / Int64ul,
-        "stamp1_addr" / Int64ul, # same contents as below
-        "stamp1" / ROPointer(this.stamp1_addr, BarrierCounter),
-        "stamp2_addr" / Int64ul, # same as FinalizeComputeCmd.stamp - some kind of fence/token
-        "stamp2" / ROPointer(this.stamp2_addr, BarrierCounter),
+        "stamp1_addr" / WrappedPointer, # same contents as below
+        "stamp1" / ROPointer(this.stamp1_addr.value, StampCounter),
+        "stamp2_addr" / WrappedPointer, # same as FinalizeComputeCmd.stamp - some kind of fence/token
+        "stamp2" / ROPointer(this.stamp2_addr.value, StampCounter),
         "stamp_value" / Int32ul,
         "ev_3d" / Int32ul,
         "unk_20" / Int32ul,
@@ -331,6 +324,11 @@ class Start3DStruct7(ConstructClass):
         "prev_stamp_value" / Int32ul,
         "unk_30" / Int32ul,
     )
+
+    def __init__(self):
+        super().__init__()
+        self.stamp1_addr = StampCounter()
+        self.stamp2_addr = StampCounter()
 
 class Attachment(ConstructClass):
     subcon = Struct(
@@ -353,10 +351,8 @@ class Start3DCmd(ConstructClass):
         "struct2" / ROPointer(this.struct2_addr, Start3DStruct2),
         "buf_thing_addr" / Int64ul,
         "buf_thing" / ROPointer(this.buf_thing_addr, BufferThing),
-        "unkptr_1c" / Int64ul, # constant 0xffffffa00c33ec88, AKA initdata->unkptr_178+8
-        "unk_1c" / ROPointer(this.unkptr_1c, HexDump(Bytes(0x4))),
-        "unkptr_24" / Int64ul, # 4 bytes
-        "unk_24" / ROPointer(this.unkptr_24, Int32ul),
+        "stats_ptr" / Int64ul,
+        "busy_flag_ptr" / Int64ul, # 4 bytes
         "struct6_addr" / Int64ul, # 0x3c bytes
         "struct6" / ROPointer(this.struct6_addr, Start3DStruct6),
         "struct7_addr" / Int64ul, # 0x34 bytes
@@ -366,7 +362,7 @@ class Start3DCmd(ConstructClass):
         "context_id" / Int32ul,
         "unk_50" / Int32ul,
         "unk_54" / Int32ul,
-        "unk_58" / Int32ul,
+        "buffer_mgr_slot" / Int32ul,
         "unk_5c" / Int32ul,
         "prev_stamp_value" / Int64ul, # 0
         "unk_68" / Int32ul, # 0
@@ -388,7 +384,7 @@ class Finalize3DCmd(ConstructClass):
         "uuid" / Int32ul, # uuid for tracking
         "unk_8" / Int32ul, # 0
         "stamp_addr" / Int64ul,
-        "stamp" / ROPointer(this.stamp_addr, BarrierCounter),
+        "stamp" / ROPointer(this.stamp_addr, StampCounter),
         "stamp_value" / Int32ul,
         "unk_18" / Int32ul,
         "buf_thing_addr" / Int64ul,
@@ -396,10 +392,10 @@ class Finalize3DCmd(ConstructClass):
         "buffer_mgr_addr" / Int64ul,
         "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
         "unk_2c" / Int64ul, # 1
-        "unkptr_34" / Int64ul, # Same as Start3DCmd.unkptr_1c
+        "stats_ptr" / Int64ul,
         "struct7_addr" / Int64ul,
         "struct7" / ROPointer(this.struct7_addr, Start3DStruct7),
-        "unkptr_44" / Int64ul, # Same as Start3DCmd.unkptr_24
+        "busy_flag_ptr" / Int64ul,
         "cmdqueue_ptr" / Int64ul,
         "workitem_ptr" / Int64ul,
         "unk_5c" / Int64ul,
@@ -409,7 +405,7 @@ class Finalize3DCmd(ConstructClass):
         "unk_7c" / Int64ul, # 0
         "unk_84" / Int64ul, # 0
         "unk_8c" / Int64ul, # 0
-        "startcmd_offset" / Int32sl, # relative offset from start of Finalize to StartComputeCmd
+        "restart_branch_offset" / Int32sl,
         "unk_98" / Int32ul, # 1
     )
 
@@ -444,7 +440,7 @@ class StartTACmdStruct2(ConstructClass):
         "unk_40" / Int64ul,
         "unk_48" / Int64ul,
         "unk_50" / Int64ul,
-        "tvb_heapmeta_addr" / Int64ul, # like Start3DStruct2.unkptr_e0/f0
+        "tvb_heapmeta_addr2" / Int64ul,
         "unk_60" / Int64ul,
         "unk_68" / Int64ul,
         "iogpu_deflake_1" / Int64ul,
@@ -487,10 +483,10 @@ class StartTACmdStruct3(ConstructClass):
         "unknown_buffer" / Int64ul,
         "unk_548" / Int64ul,
         "unk_550" / Array(6, Int32ul),
-        "stamp1_addr" / Int64ul, # same contents as below
-        "stamp1" / ROPointer(this.stamp1_addr, BarrierCounter),
-        "stamp2_addr" / Int64ul, # same as FinalizeComputeCmd.stamp - some kind of fence/token
-        "stamp2" / ROPointer(this.stamp2_addr, BarrierCounter),
+        "stamp1_addr" / WrappedPointer, # same contents as below
+        "stamp1" / ROPointer(this.stamp1_addr.value, StampCounter),
+        "stamp2_addr" / WrappedPointer, # same as FinalizeComputeCmd.stamp - some kind of fence/token
+        "stamp2" / ROPointer(this.stamp2_addr.value, StampCounter),
         "stamp_value" / Int32ul,
         "ev_ta" / Int32ul,
         "unk_580" / Int32ul,
@@ -498,6 +494,11 @@ class StartTACmdStruct3(ConstructClass):
         "uuid2" / Int32ul,
         "unk_58c" / Array(2, Int32ul),
     )
+
+    def __init__(self):
+        super().__init__()
+        self.stamp1_addr = StampCounter()
+        self.stamp2_addr = StampCounter()
 
 class StartTACmd(ConstructClass):
     subcon = Struct(
@@ -510,14 +511,12 @@ class StartTACmd(ConstructClass):
         "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
         "buf_thing_addr" / Int64ul,
         "buf_thing" / ROPointer(this.buf_thing_addr, BufferThing),
-        "unkptr_24" / Int64ul,
-        # unkptr_1c in Start3DCmd comes after this struct
-        "unk_24" / ROPointer(this.unkptr_24, HexDump(Bytes(0x4))),
+        "stats_ptr" / Int64ul,
         "cmdqueue_ptr" / Int64ul,
         "context_id" / Int32ul,
         "unk_38" / Int32ul,
         "unk_3c" / Int32ul,
-        "unk_40" / Int64ul,
+        "buffer_mgr_slot" / Int64ul,
         "unk_48" / Int64ul,
         "unk_50" / Int32ul,
         "struct3_addr" / Int64ul,
@@ -543,7 +542,7 @@ class FinalizeTACmd(ConstructClass):
         "buf_thing" / ROPointer(this.buf_thing_addr, BufferThing),
         "buffer_mgr_addr" / Int64ul,
         "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
-        "unkptr_14" / Int64ul, # StartTACmd.unkptr_24
+        "stats_ptr" / Int64ul,
         "cmdqueue_ptr" / Int64ul, #
         "context_id" / Int32ul,
         "unk_28" / Int32ul,
@@ -552,7 +551,7 @@ class FinalizeTACmd(ConstructClass):
         "unk_34" / Int32ul,
         "uuid" / Int32ul,
         "stamp_addr" / Int64ul,
-        "stamp" / ROPointer(this.stamp_addr, BarrierCounter),
+        "stamp" / ROPointer(this.stamp_addr, StampCounter),
         "stamp_value" / Int32ul,
         "unk_48" / Int64ul,
         "unk_50" / Int32ul,
@@ -561,7 +560,7 @@ class FinalizeTACmd(ConstructClass):
         "unk_60" / Int32ul,
         "unk_64" / Int32ul,
         "unk_68" / Int32ul,
-        "startcmd_offset" / Int32sl,
+        "restart_branch_offset" / Int32sl,
         "unk_70" / Int32ul,
     )
 
@@ -673,7 +672,7 @@ class FinalizeComputeCmd(ConstructClass):
         "unk_50" / Int32ul,
         "unk_54" / Int32ul,
         "unk_58" / Int32ul,
-        "startcmd_offset" / Int32sl, # realative offset from start of Finalize to StartComputeCmd
+        "restart_branch_offset" / Int32sl, # realative offset from start of Finalize to StartComputeCmd
         "unk_60" / Int32ul,
     )
 

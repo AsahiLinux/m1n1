@@ -18,7 +18,7 @@ class WorkCommandBarrier(ConstructClass):
     subcon = Struct(
         "magic" / Const(0x4, Int32ul),
         "stamp_addr" / Int64ul,
-        "stamp" / ROPointer(this.stamp_addr, Int32ul),
+        "stamp" / ROPointer(this.stamp_addr, StampCounter),
         "stamp_value1" / Int32ul,
         "event" / Int32ul, # Event number that signals a stamp check
         "stamp_value2" / Int32ul,
@@ -37,7 +37,7 @@ class WorkCommandInitBM(ConstructClass):
     subcon = Struct(
         "magic" / Const(0x6, Hex(Int32ul)),
         "context_id" / Hex(Int32ul), # Might be context?
-        "unk_8" / Hex(Int32ul), # 0
+        "buffer_mgr_slot" / Hex(Int32ul), # 0
         "unk_c" / Hex(Int32ul), # 0
         "unk_10" / Hex(Int32ul), # 0x30
         "buffer_mgr_addr" / Int64ul,
@@ -45,41 +45,57 @@ class WorkCommandInitBM(ConstructClass):
         "stamp_value" / Hex(Int32ul),  # 0x100
     )
 
+class LinkedListHead(ConstructClass):
+    subcon = Struct(
+        "prev" / Int64ul,
+        "next" / Int64ul,
+    )
+
+    def __init__(self):
+        self.prev = 0
+        self.next = 0
+
 class EventControl(ConstructClass):
     subcon = Struct(
         "event_count_addr" / Int64ul,
         "event_count" / ROPointer(this.event_count_addr, Int32ul),
         "base_stamp" / Int32ul,
         "unk_c" / Int32ul,
-        "unk_10" / Int64ul,
+        "unk_10" / Int32ul,
+        "unk_14" / Int32ul,
         "unk_18" / Int64ul,
         "unk_20" / Int32ul,
         "unk_24" / Int32ul,
-        "unk_28" / Int32ul,
-        "unkptr_2c" / Int64ul,
-        "unk_34" / HexDump(Bytes(24)),
-        "unk_4c" / Int32ul,
-        "unkptr_50" / Int64ul,
-        "unk_58" / HexDump(Bytes(0x94 - 0x58)),
-        "unk_94" / Int32ul,
-        "unk_98" / Int64ul,
-        "context_ptr" / Int64ul,
+        "has_ta" / Int32ul,
+        "pstamp_ta" / Int64ul,
+        "unk_ta" / HexDump(Bytes(0x18)),
+        "has_3d" / Int32ul,
+        "pstamp_3d" / Int64ul,
+        "unk_3d" / HexDump(Bytes(0x18)),
+        "has_cp" / Int32ul,
+        "pstamp_cp" / Int64ul,
+        "unk_cp" / HexDump(Bytes(0x18)),
+        "in_list" / Int32ul,
+        "list_head" / LinkedListHead,
     )
 
     def __init__(self):
         super().__init__()
+        self.unk_14 = 0
         self.unk_18 = 0
         self.unk_20 = 0
         self.unk_24 = 0
-        self.unk_28 = 0
-        self.unkptr_2c = 0
-        self.unk_34 = bytes(24)
-        self.unk_4c = 0
-        self.unkptr_50 = 0
-        self.unk_58 = bytes(0x94 - 0x58)
-        self.unk_94 = 0
-        self.unk_98 = 0
-        self.context_ptr = 0
+        self.has_ta = 0
+        self.pstamp_ta = 0
+        self.unk_ta = bytes(24)
+        self.has_3d = 0
+        self.pstamp_3d = 0
+        self.unk_3d = bytes(24)
+        self.has_cp = 0
+        self.pstamp_cp = 0
+        self.unk_cp = bytes(24)
+        self.in_list = 0
+        self.list_head = LinkedListHead()
 
 class WorkCommandCP(ConstructClass):
     """
@@ -124,12 +140,6 @@ class WorkCommandCP(ConstructClass):
         "microsequence" / ROPointer(this.microsequence_ptr, MicroSequence),
     )
 
-    def __str__(self) -> str:
-        str = super().__str__(ignore=['magic'])
-        str += f"   Control List - {self.microsequence_size:#x} bytes @ {self.microsequence_ptr:#x}:\n"
-        str += textwrap.indent(repr(self.microsequence), ' ' * 3)
-        return str
-
 class WorkCommand0_UnkBuf(ConstructValueClass):
     subcon = HexDump(Bytes(0x18))
 
@@ -137,10 +147,10 @@ class WorkCommand0_UnkBuf(ConstructValueClass):
         self.value = bytes(0x18)
 
 class WorkCommand1_UnkBuf(ConstructValueClass):
-    subcon = HexDump(Bytes(0x118))
+    subcon = HexDump(Bytes(0x110))
 
     def __init__(self):
-        self.value = bytes(0x118)
+        self.value = bytes(0x110)
 
 class WorkCommand1_UnkBuf2(ConstructClass):
     subcon = Struct(
@@ -148,6 +158,12 @@ class WorkCommand1_UnkBuf2(ConstructClass):
         "unk_8" / Int64ul,
         "unk_10" / Int64ul,
     )
+
+class Flag(ConstructValueClass):
+    subcon = Hex(Int32ul)
+
+    def __init__(self):
+        self.value = 0
 
 class WorkCommand3D(ConstructClass):
     """
@@ -205,8 +221,10 @@ class WorkCommand3D(ConstructClass):
         # Embedded structures that are also pointed to by other stuff
         "struct_2" / Start3DStruct2,
         "struct_1" / Start3DStruct1,
+        "unk_758" / Flag,
+        "unk_75c" / Flag,
         "unk_buf" / WorkCommand1_UnkBuf,
-        "unk_word" / BarrierCounter,
+        "busy_flag" / Flag,
         "struct_6" / Start3DStruct6,
         "struct_7" / Start3DStruct7,
         "unk_buf2" / WorkCommand1_UnkBuf2,
@@ -219,12 +237,6 @@ class WorkCommand3D(ConstructClass):
         "unk_924" / Int32ul,
         "pad_928" / Default(HexDump(Bytes(0x18)), bytes(0x18)),
     )
-
-    def __str__(self) -> str:
-        str = super().__str__()
-        # str += f"   Control List - {self.microsequence_size:#x} bytes @ {self.microsequence_ptr:#x}:\n"
-        # str += textwrap.indent(repr(self.microsequence), ' ' * 3)
-        return str
 
 class WorkCommand0_UnkBuf(ConstructValueClass):
     subcon = HexDump(Bytes(0x18))
@@ -262,7 +274,7 @@ class WorkCommandTA(ConstructClass):
         "unk_8" / Hex(Int32ul),
         "event_control_addr" / Hex(Int64ul),
         "event_control" / ROPointer(this.event_control_addr, EventControl),
-        "unk_14" / Hex(Int64ul),
+        "buffer_mgr_slot" / Hex(Int64ul),
         "buffer_mgr_addr" / Int64ul,
         "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
         "buf_thing_addr" / Int64ul,
@@ -300,12 +312,6 @@ class WorkCommandTA(ConstructClass):
         "pad_5d5" / Default(HexDump(Bytes(0xb)), bytes(0xb)),
     )
 
-    def __str__(self) -> str:
-        str = super().__str__(ignore=['magic'])
-        #str += f"   Control List - {self.microsequence_size:#x} bytes @ {self.microsequence_ptr:#x}:\n"
-        #str += textwrap.indent(repr(self.microsequence), ' ' * 3)
-        return str
-
 class UnknownWorkCommand(ConstructClass):
     subcon = Struct(
         "magic" / Hex(Int32ul),
@@ -330,10 +336,10 @@ class CmdBufWork(ConstructClass):
         })
     )
 
-class ContextInfo(ConstructClass):
+class JobList(ConstructClass):
     subcon = Struct(
-        "fb_ptr" / Default(Int64ul, 0),
-        "self" / Int64ul,
+        "first_job" / Default(Int64ul, 0),
+        "last_head" / Int64ul,
         "unkptr_10" / Default(Int64ul, 0),
     )
 
@@ -399,23 +405,23 @@ class CommandQueueInfo(ConstructClass):
         "pointers_addr" / Hex(Int64ul),
         "pointers" / ROPointer(this.pointers_addr, CommandQueuePointers),
         "rb_addr" / Hex(Int64ul), # 0x4ff pointers
-        "context_info_addr" / Hex(Int64ul), # ffffffa000000000, size 0x18 (shared by 3D and TA)
-        "context_info" / ROPointer(this.context_info_addr, ContextInfo),
+        "job_list_addr" / Hex(Int64ul), # ffffffa000000000, size 0x18 (shared by 3D and TA)
+        "job_list" / ROPointer(this.job_list_addr, JobList),
         "gpu_buf_addr" / Hex(Int64ul), # GPU space for this queue, 0x2c18 bytes?
         #"gpu_buf" / ROPointer(this.gpu_buf_addr, HexDump(Bytes(0x2c18))),
         "gpu_rptr1" / Hex(Int32ul),
         "gpu_rptr2" / Hex(Int32ul),
         "gpu_rptr3" / Hex(Int32ul),
-        "unk_2c" / Int32ul, # busy flags?
+        "unk_2c" / Int32sl, # busy flags?
         "unk_30" / Hex(Int32ul), # read by CPU
         "unk_34" / Hex(Int32ul),
-        "unk_38" / Hex(Int64ul), # 0xffffffffffff0000, page mask?
+        "unk_38" / Hex(Int64ul),
         "unk_40" / Hex(Int32ul), # 1
         "unk_44" / Hex(Int32ul), # 0
         "unk_48" / Hex(Int32ul), # 1, 2
         "unk_4c" / Int32sl, # -1
         "unk_50" / Hex(Int32ul), # Counts up for each new process or command queue
-        "unk_54" / Hex(Int32ul), # always 0x04
+        "unk_54" / Int32sl,
         "unk_58" / Hex(Int64ul), # 0
         "busy" / Hex(Int32ul), # 1 = gpu busy
         Padding(0x20),
@@ -432,16 +438,16 @@ class CommandQueueInfo(ConstructClass):
         self.gpu_rptr1 = 0
         self.gpu_rptr2 = 0
         self.gpu_rptr3 = 0
-        self.unk_2c = 0xffffffff
+        self.unk_2c = -1
         self.unk_30 = 0x0
         self.unk_34 = 0x0
         self.unk_38 = 0xffffffffffff0000
         self.unk_40 = 0x1
         self.unk_44 = 0x0
         self.unk_48 = 0x1
-        self.unk_4c = -0x1
-        self.unk_50 = 0x96
-        self.unk_54 = 0xffffffff
+        self.unk_4c = -1
+        self.unk_50 = 0xdeadbeef # some kind of ID
+        self.unk_54 = -1
         self.unk_58 = 0x0
         self.busy = 0x0
         self.blocked_on_barrier = 0x0
