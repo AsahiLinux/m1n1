@@ -8,6 +8,7 @@ from construct.lib import HexDisplayedInteger
 from .utils import *
 
 g_struct_trace = set()
+g_struct_addrmap = {}
 g_depth = 0
 
 def recusive_reload(obj, token=None):
@@ -80,7 +81,11 @@ def str_value(value, repr=False):
     if isinstance(value, DecDisplayedInteger):
         return str(value)
     if isinstance(value, int):
-        return f"{value:#x}"
+        if value in g_struct_addrmap:
+            desc = g_struct_addrmap[value]
+            return f"{value:#x} ({desc})"
+        else:
+            return f"{value:#x}"
     if isinstance(value, ListContainer):
         if len(value) <= 16:
             return "[" + ", ".join(map(str_value, value)) + "]"
@@ -319,7 +324,9 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
 
         self._apply(obj)
 
-        g_struct_trace.add((self._addr, f"{cls.name} (end: {self._addr + size:#x})"))
+        if self._addr > 0x10000:
+            g_struct_trace.add((self._addr, f"{cls.name} (end: {self._addr + size:#x})"))
+            g_struct_addrmap[self._addr] = f"{cls.name}"
         return self
 
     @classmethod
