@@ -308,7 +308,7 @@ EventMsg = FixedSized(0x38, Select(
 
 class KTraceMsg(ConstructClass):
     subcon = Struct (
-        "unk" / HexDump(Bytes(0x70)),
+        "unk" / HexDump(Bytes(0x38)),
     )
 
 class FWCtlMsg(ConstructClass):
@@ -347,7 +347,7 @@ channelRings = (
             (FWLogMsg, 0xd8, 0x100),                # unk 4
             (FWLogMsg, 0xd8, 0x100),                # unk 5
         ],
-        [(KTraceMsg, 0x70, 0x100)],
+        [(KTraceMsg, 0x38, 0x200)],
         [(StatsMsg, 0x30, 0x100)],
         [(FWCtlMsg, 0x14, 0x100)],
     ]
