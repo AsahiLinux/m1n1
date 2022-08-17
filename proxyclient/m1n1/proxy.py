@@ -885,8 +885,8 @@ class M1N1Proxy(Reloadable):
         self.request(self.P_IC_IALLU)
     def ic_ivau(self, addr, size):
         self.request(self.P_IC_IVAU, addr, size)
-    def ic_ivac(self, addr, size):
-        self.request(self.P_IC_IVAC, addr, size)
+    def dc_ivac(self, addr, size):
+        self.request(self.P_DC_IVAC, addr, size)
     def dc_isw(self, sw):
         self.request(self.P_DC_ISW, sw)
     def dc_csw(self, sw):
