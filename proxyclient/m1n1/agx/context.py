@@ -73,6 +73,7 @@ class GPUContext:
         flags2.update(flags)
         obj._map_flags = flags2
 
+        obj._size_align = size_align
         self.agx.uat.iomap_at(self.ctx, obj._addr, obj._paddr, size_align, **flags2)
         self.objects[obj._addr] = obj
         self.agx.reg_object(obj, track=track)
@@ -93,6 +94,15 @@ class GPUContext:
         obj.push()
 
         return obj
+
+    def free(self, obj):
+        obj._dead = True
+        self.agx.uat.iomap_at(self.ctx, obj._addr, 0, obj._size_align, VALID=0)
+        del self.objects[obj._addr]
+        self.agx.unreg_object(obj)
+
+    def free_at(self, addr):
+        self.free(self.objects[obj._addr])
 
 class GPUWorkQueue:
     def __init__(self, agx, context, job_list):
