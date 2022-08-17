@@ -139,11 +139,15 @@ class GPUTAWorkQueue(GPUWorkQueue):
 class GPUMicroSequence:
     def __init__(self, agx):
         self.agx = agx
+        self.off = 0
         self.ops = []
         self.obj = None
 
     def append(self, op):
+        off = self.off
         self.ops.append(op)
+        self.off += op.sizeof()
+        return off
 
     def finalize(self):
         self.ops.append(EndCmd())
