@@ -169,6 +169,11 @@ class AGX:
     def kick_firmware(self):
         self.asc.db.doorbell(0x10)
 
+    def timeout(self):
+        self.log("!!!! timeout?")
+        self.faulted()
+        #raise Exception(f"GPU timeout")
+
     def faulted(self):
         fault_code = self.p.read64(0x204017030)
         if fault_code == 0xacce5515abad1dea:
