@@ -417,7 +417,7 @@ class GPURenderer:
             wc_3d.struct_1.tile_blocks_x = tile_blocks_x * 4
             wc_3d.struct_1.unk_24 = 0x0
             wc_3d.struct_1.tile_counts = ((tiles_y-1) << 12) | (tiles_x-1)
-            wc_3d.struct_1.unk_2c = 0x4
+            wc_3d.struct_1.unk_2c = 0x8
             wc_3d.struct_1.depth_clear_val1 = cmdbuf.depth_clear_value
             wc_3d.struct_1.stencil_clear_val1 = cmdbuf.stencil_clear_value
             wc_3d.struct_1.unk_35 = 0x7 # clear flags? 2 = depth 4 = stencil?
@@ -464,7 +464,7 @@ class GPURenderer:
             wc_3d.struct_1.stencil_clear_val2 = cmdbuf.stencil_clear_value
             wc_3d.struct_1.unk_375 = 3
             wc_3d.struct_1.unk_376 = 0x0
-            wc_3d.struct_1.unk_378 = 0x8
+            wc_3d.struct_1.unk_378 = 0x10 #0x8
             wc_3d.struct_1.unk_37c = 0x0
             wc_3d.struct_1.unk_380 = 0x0
             wc_3d.struct_1.unk_388 = 0x0
@@ -524,7 +524,7 @@ class GPURenderer:
             wc_3d.struct_7.stamp_value = self.stamp_value_3d
             wc_3d.struct_7.ev_3d = ev_3d.id
             wc_3d.struct_7.unk_20 = 0x0
-            wc_3d.struct_7.unk_24 = 0x0 # check
+            wc_3d.struct_7.unk_24 = 1 # 0x0 # check
             wc_3d.struct_7.uuid = uuid_3d
             wc_3d.struct_7.prev_stamp_value = self.prev_stamp_value_3d >> 8
             wc_3d.struct_7.unk_30 = 0x0
@@ -707,7 +707,7 @@ class GPURenderer:
         wc_ta.unk_5c8 = 0
         wc_ta.unk_5cc = 0
         wc_ta.unk_5d0 = 0
-        wc_ta.unk_5d4 = 0x27 #1
+        wc_ta.unk_5d4 = 1 #0x27 #1
         # Ventura
         wc_ta.unk_5e0 = 0
         wc_ta.unk_5e4 = 0
@@ -738,7 +738,7 @@ class GPURenderer:
             wc_ta.struct_2.iogpu_deflake_1 = deflake_1
             wc_ta.struct_2.iogpu_deflake_2 = deflake_2
             wc_ta.struct_2.unk_80 = 0x1 # fixed
-            wc_ta.struct_2.iogpu_deflake_3 = deflake_3
+            wc_ta.struct_2.iogpu_deflake_3 = deflake_3 | 0x4000000000000 # check
             wc_ta.struct_2.encoder_addr = cmdbuf.encoder_ptr
             wc_ta.struct_2.unk_98 = [0x0, 0x0] # fixed
             wc_ta.struct_2.unk_a8 = 0xa041 # fixed
