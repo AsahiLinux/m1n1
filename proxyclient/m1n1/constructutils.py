@@ -11,6 +11,9 @@ g_struct_trace = set()
 g_struct_addrmap = {}
 g_depth = 0
 
+def ZPadding(size):
+    return Const(bytes(size), Bytes(size))
+
 def recusive_reload(obj, token=None):
     global g_depth
 
@@ -659,4 +662,4 @@ def show_struct_trace(log=print):
     for addr, desc in sorted(list(g_struct_trace)):
         log(f"{addr:>#18x}: {desc}")
 
-__all__ = ["ConstructClass", "ConstructValueClass", "Dec", "ROPointer", "show_struct_trace"]
+__all__ = ["ConstructClass", "ConstructValueClass", "Dec", "ROPointer", "show_struct_trace", "ZPadding"]
