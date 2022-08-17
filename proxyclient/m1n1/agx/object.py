@@ -110,7 +110,7 @@ class GPUObject:
         context._params = context
         if self._alloc.verbose:
             self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] pulling {self._size} bytes")
-        return self._type._parse(stream, context, "(pulling)")
+        return self._type._parse(stream, context, f"(pulling {self._name})")
 
     def pull(self):
         self._mon_val = self.val = self._pull()
