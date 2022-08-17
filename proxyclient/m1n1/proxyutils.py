@@ -19,6 +19,15 @@ SIMD_S = Array(32, Array(4, Int32ul))
 SIMD_D = Array(32, Array(2, Int64ul))
 SIMD_Q = Array(32, BytesInteger(16, swapped=True))
 
+# This isn't perfect, since multiple versions could have the same
+# iBoot version, but it's good enough
+VERSION_MAP = {
+    "iBoot-7429.61.2": "12.1",
+    "iBoot-7459.101.2": "12.3",
+    "iBoot-7459.101.3": "12.4",
+    "iBoot-8419.0.151.0.1": "13.0 beta4",
+}
+
 class ProxyUtils(Reloadable):
     CODE_BUFFER_SIZE = 0x10000
     def __init__(self, p, heap_size=1024 * 1024 * 1024):
@@ -353,6 +362,19 @@ class ProxyUtils(Reloadable):
     @property
     def q(self):
         return self.get_simd(SIMD_Q)
+
+    def get_version(self, v):
+        if isinstance(v, bytes):
+            v = v.split(b"\0")[0].decode("ascii")
+        return VERSION_MAP.get(v, None)
+
+    @property
+    def version(self):
+        return self.get_version(self.adt["/chosen"].firmware_version)
+
+    @property
+    def sfr_version(self):
+        return self.get_version(self.adt["/chosen"].system_firmware_version)
 
 class LazyADT:
     def __init__(self, utils):
