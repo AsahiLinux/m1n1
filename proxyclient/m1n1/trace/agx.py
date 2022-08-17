@@ -285,6 +285,12 @@ class AGXTracer(ASCTracer):
         # self.mon.add(self.gfx_shared_region, self.gfx_shared_region_size, "gfx-shared")
         # self.mon.add(self.gfx_handoff, self.gfx_handoff_size, "gfx-handoff")
 
+        self.trace_userva = False
+        self.pause_after_init = False
+        self.shell_after_init = False
+        self.encoder_id_filter = None
+        self.redump = False
+
         self.clear_ttbr_tracers()
         self.clear_uatmap_tracers()
         self.add_ttbr_tracers()
@@ -298,11 +304,6 @@ class AGXTracer(ASCTracer):
 
         self.last_ta = None
         self.last_3d = None
-
-        self.trace_userva = False
-        self.pause_after_init = False
-        self.shell_after_init = False
-        self.encoder_id_filter = None
 
         self.add_mon_regions()
 
@@ -343,6 +344,8 @@ class AGXTracer(ASCTracer):
 
         def trace_pt(start, end, idx, pte, level, sparse):
             if start >= 0xf8000000000 and ctx != 0:
+                return
+            if start < 0xf8000000000 and not self.trace_userva:
                 return
             self.hv.add_tracer(irange(pte.offset(), 0x4000),
                             f"UATMapTracer/{ctx}",
@@ -549,7 +552,7 @@ class AGXTracer(ASCTracer):
         return True
 
     def handle_event(self, msg):
-        if self.last_ta:
+        if self.last_ta and self.redump:
             self.log("Redumping TA...")
             stream = self.get_stream(0, self.last_ta._addr)
             last_ta = CmdBufWork.parse_stream(stream)
@@ -558,7 +561,7 @@ class AGXTracer(ASCTracer):
             self.queue_ta.update_info()
             self.log(f"Queue info: {self.queue_ta.info}")
             self.last_ta = None
-        if self.last_3d:
+        if self.last_3d and self.redump:
             self.log("Redumping 3D...")
             stream = self.get_stream(0, self.last_3d._addr)
             last_3d = CmdBufWork.parse_stream(stream)
