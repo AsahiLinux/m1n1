@@ -80,79 +80,100 @@ DeviceControlMsg = FixedSized(0x30, Select(
     UnknownMsg,
 ))
 
-# Tends to count up
-class StatsMsg_00(ConstructClass):
+class StatsMsg_Power(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x00, Int32ul)),
         Padding(0x18), # ??? why the hole? never written...
-        "offset" / Hex(Int64ul),
+        "power" / Hex(Int64ul),
         Padding(0xc), # Confirmed padding
     )
 
-class StatsMsg_02(ConstructClass):
+    def __str__(self):
+        return f"Power: {self.power / 8192.0:.3f} mW"
+
+class StatsMsg_PowerOn(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x02, Int32ul)),
-        "timestamp" / Hex(Int64ul),
-        "data" / HexDump(Bytes(0x24)),
-    )
-
-# Related to 00, tends to "reset" the count
-class StatsMsg_03(ConstructClass):
-    subcon = Struct (
-        "msg_type" / Hex(Const(0x03, Int32ul)),
-        "offset" / Hex(Int64ul),
+        "power_off_ticks" / Dec(Int64ul),
         Padding(0x24), # Confirmed padding
     )
+    def __str__(self):
+        t = self.power_off_ticks / 24000000
+        return f"Power ON: spent {t:.04}s powered off ({self.power_off_ticks} ticks)"
 
-class StatsMsg_04(ConstructClass):
+class StatsMsg_PowerOff(ConstructClass):
+    subcon = Struct (
+        "msg_type" / Hex(Const(0x03, Int32ul)),
+        "power_on_ticks" / Dec(Int64ul),
+        Padding(0x24), # Confirmed padding
+    )
+    def __str__(self):
+        t = self.power_on_ticks / 24000000
+        return f"Power OFF: spent {t:.04}s powered on ({self.power_on_ticks} ticks)"
+
+class StatsMsg_Util(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x04, Int32ul)),
-        "unk0" / Hex(Int32ul),
-        "unk1" / Hex(Int32ul),
-        "unk2" / Hex(Int32ul),
-        "unk3" / Hex(Int32ul),
-        "offset" / Hex(Int64ul),
+        "timestamp" / Hex(Int64ul),
+        "util1" / Dec(Int32ul),
+        "util2" / Dec(Int32ul),
+        "util3" / Dec(Int32ul),
+        "util4" / Dec(Int32ul),
         Padding(0x14), # Confirmed padding
     )
+    def __str__(self):
+        return f"Utilization: {self.util1:>3d}% {self.util2:>3d}% {self.util3:>3d}% {self.util4:>3d}%"
 
-class StatsMsg_09(ConstructClass):
+class StatsMsg_AvgPower(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x09, Int32ul)),
-        "unk0" / Hex(Int32ul),
-        "unk1" / Hex(Int32ul),
+        "active_cs" / Dec(Int64ul),
         "unk2" / Hex(Int32ul),
         "unk3" / Hex(Int32ul),
         "unk4" / Hex(Int32ul),
-        "unk5" / Hex(Int32ul),
+        "avg_power" / Dec(Int32ul),
         Padding(0x14), # Confirmed padding
     )
 
-class StatsMsg_0a(ConstructClass):
+    def __str__(self):
+        return f"Activity: Active {self.active_cs * 10:6d} ms Avg Pwr {self.avg_power:4d} mW ({self.unk2:d} {self.unk3:d} {self.unk4:d})"
+
+class StatsMsg_Temp(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x0a, Int32ul)),
         Padding(8), # Not written
-        "unk0" / Hex(Int32ul),
-        "unk1" / Hex(Int32ul),
-        "unk2" / Hex(Int32ul),
-        "unk3" / Hex(Int32ul),
+        "raw_value" / Hex(Int32ul),
+        "scale" / Hex(Int32ul),
+        "tmin" / Hex(Int32ul),
+        "tmax" / Hex(Int32ul),
         Padding(0x14), # Confirmed padding
     )
 
-class StatsMsg_0b(ConstructClass):
+    def __str__(self):
+        temp = self.raw_value / float(self.scale) / 64.0
+        return f"Temp: {temp:.2f}°C s={self.scale:d} tmin={self.tmin:d} tmax={self.tmax:d}"
+
+class StatsMsg_PowerState(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x0b, Int32ul)),
         "timestamp" / Hex(Int64ul),
-        "timestamp2" / Hex(Int64ul),
-        "unk0" / Hex(Int32ul),
-        "unk1" / Hex(Int32ul),
-        "unk2" / Hex(Int32ul),
-        "unk3" / Hex(Int32ul),
-        "unk4" / Hex(Int32ul),
-        "unk5" / Hex(Int32ul),
+        "last_busy_ts" / Hex(Int64ul),
+        "active" / Hex(Int32ul),
+        "poweroff" / Dec(Int32ul),
+        "unk2" / Dec(Int32ul),
+        "pstate" / Dec(Int32ul),
+        "unk4" / Dec(Int32ul),
+        "unk5" / Dec(Int32ul),
         Padding(4), # Confirmed padding
     )
 
-class StatsMsg_0c(ConstructClass):
+    def __str__(self):
+        act = "ACT" if self.active else "   "
+        off = "OFF" if self.poweroff else "   "
+
+        return f"PowerState: {act} {off} ps={int(self.pstate)} {self.unk4} {self.unk2} {self.unk5}"
+
+class StatsMsg_FWBusy(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x0c, Int32ul)),
         "timestamp" / Hex(Int64ul),
@@ -160,40 +181,48 @@ class StatsMsg_0c(ConstructClass):
         Padding(0x20), # Confirmed padding
     )
 
-class StatsMsg_0d(ConstructClass):
+    def __str__(self):
+        return f"FW active: {bool(self.flag)}"
+
+class StatsMsg_PState(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x0d, Int32ul)),
         Padding(8), # Not written
-        "unk0" / Hex(Int32ul),
-        "unk1" / Hex(Int32ul),
-        "unk2" / Hex(Int32ul),
-        "unk3" / Hex(Int32ul),
+        "ps_min" / Dec(Int32ul),
+        "unk1" / Dec(Int32ul),
+        "ps_max" / Dec(Int32ul),
+        "unk3" / Dec(Int32ul),
         Padding(0x14), # Confirmed padding
     )
+    def __str__(self):
+        return f"PState: {self.ps_min:d}..{self.ps_max:d} ({self.unk1:d}/{self.unk3:d})"
 
-class StatsMsg_0e(ConstructClass):
+class StatsMsg_TempSensor(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(0x0e, Int32ul)),
         Padding(4), # Not written
-        "unk0" / Hex(Int32ul),
-        "unk1" / Hex(Int32ul),
-        "unk2" / Hex(Int32ul),
-        "unk3" / Hex(Int32ul),
-        "unk4" / Hex(Int32ul),
+        "sensor_id" / Hex(Int32ul),
+        "raw_value" / Hex(Int32ul),
+        "scale" / Dec(Int32ul),
+        "tmin" / Dec(Int32ul),
+        "tmax" / Dec(Int32ul),
         Padding(0x14), # Confirmed padding
     )
+    def __str__(self):
+        temp = self.raw_value / float(self.scale) / 64.0
+        return f"TempSensor: #{self.sensor_id:d} {temp:.2f}°C s={self.scale:d} tmin={self.tmin:d} tmax={self.tmax:d}"
 
 StatsMsg = FixedSized(0x30, Select(
-    StatsMsg_00,
-    #StatsMsg_02,
-    StatsMsg_03,
-    StatsMsg_04,
-    StatsMsg_09,
-    StatsMsg_0a,
-    StatsMsg_0b,
-    StatsMsg_0c,
-    StatsMsg_0d,
-    StatsMsg_0e,
+    StatsMsg_Power,
+    StatsMsg_PowerOn,
+    StatsMsg_PowerOff,
+    StatsMsg_Util,
+    StatsMsg_AvgPower,
+    StatsMsg_Temp,
+    StatsMsg_PowerState,
+    StatsMsg_FWBusy,
+    StatsMsg_PState,
+    StatsMsg_TempSensor,
     UnknownMsg,
 ))
 

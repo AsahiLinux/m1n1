@@ -98,6 +98,4 @@ class GPUStatsChannel(GPURXChannel):
     MSG_CLASS = StatsMsg
 
     def handle_message(self, msg):
-        # ignore
-        #self.log(f"stat")
-        pass
+        self.log(f"stat {msg}")
