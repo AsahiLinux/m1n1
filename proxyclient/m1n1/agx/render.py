@@ -930,17 +930,18 @@ class GPURenderer:
         #print(work.wc_3d.pull())
         #print(work.wc_ta.pull())
 
-        if work.fb is not None and work.width and work.height:
+        #if work.fb is not None and work.width and work.height:
+        if work.fb is not None and work.width and work.height and work.width == 1920:
 
             self.agx.log(f"Render {work.width}x{work.height} @ {work.fb:#x}")
             base, obj = self.agx.find_object(work.fb, self.ctx_id)
 
             #unswizzle(agx, obj._paddr, width, height, 4, "fb.bin", grid=False)
-            open("fb.bin", "wb").write(self.agx.u.iface.readmem(obj._paddr, work.width*work.height*4))
-            os.system(f"convert -size {work.width}x{work.height} -depth 8 rgba:fb.bin -alpha off frame{self.frames}.png")
+            #open("fb.bin", "wb").write(self.agx.u.iface.readmem(obj._paddr, work.width*work.height*4))
+            #os.system(f"convert -size {work.width}x{work.height} -depth 8 rgba:fb.bin -alpha off frame{self.frames}.png")
             self.agx.p.fb_blit(0, 0, work.width, work.height, obj._paddr, work.width, PIX_FMT.XBGR)
 
-        if work.depth is not None:#False and depth is not None:
+        if False: #if work.depth is not None:#False and depth is not None:
             base, obj = self.agx.find_object(work.depth, self.ctx_id)
 
             width = align_up(work.width, 64)
