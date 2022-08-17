@@ -34,6 +34,7 @@ class AGX:
         self.log("Initializing allocations")
 
         self.all_objects = {}
+        self.tracked_objects = {}
 
         # Memory areas
         self.fw_va_base = self.sgx_dev.rtkit_private_vm_region_base
@@ -75,24 +76,34 @@ class AGX:
 
         self.p.iodev_set_usage(IODEV.FB, 0)
 
-
-    def find_object(self, addr):
+    def find_object(self, addr, ctx=0):
         all_objects = list(self.all_objects.items())
         all_objects.sort()
 
-        idx = bisect.bisect_left(all_objects, (addr + 1, "")) - 1
+        idx = bisect.bisect_left(all_objects, ((ctx, addr + 1), "")) - 1
         if idx < 0 or idx >= len(all_objects):
             return None, None
 
-        return all_objects[idx]
+        (ctx, base), obj = all_objects[idx]
+        return base, obj
 
     def reg_object(self, obj, track=True):
-        self.all_objects[obj._addr] = obj
-        if track and self.mon is not None:
-            obj.add_to_mon(self.mon)
+        self.all_objects[(obj._ctx, obj._addr)] = obj
+        if track:
+            if self.mon is not None:
+                obj.add_to_mon(self.mon)
+            self.tracked_objects[(obj._ctx, obj._addr)] = obj
 
     def unreg_object(self, obj):
-        del self.all_objects[obj._addr]
+        del self.all_objects[(obj._ctx, obj._addr)]
+        if obj._addr in self.tracked_objects:
+            del self.tracked_objects[(obj._ctx, obj._addr)]
+
+    def poll_objects(self):
+        for obj in self.tracked_objects.values():
+            diff = obj.poll()
+            if diff is not None:
+                self.log(diff)
 
     def alloc_channels(self, cls, name, channel_id, count=1, rx=False):
 
@@ -103,11 +114,11 @@ class AGX:
 
         self.log(f"Allocating {count} channel(s) for {name} ({item_count} * {item_size:#x} bytes each)")
 
-        state_obj = self.kshared.new_buf(0x30 * count, f"Channel.{name}.state")
+        state_obj = self.kshared.new_buf(0x30 * count, f"Channel.{name}.state", track=False)
         if rx:
-            ring_buf = self.kshared.new_buf(ring_size * count, f"Channel.{name}.ring")
+            ring_buf = self.kshared.new_buf(ring_size * count, f"Channel.{name}.ring", track=False)
         else:
-            ring_buf = self.kobj.new_buf(ring_size * count, f"Channel.{name}.ring")
+            ring_buf = self.kobj.new_buf(ring_size * count, f"Channel.{name}.ring", track=False)
 
         info = ChannelInfo()
         info.state_addr = state_obj._addr
