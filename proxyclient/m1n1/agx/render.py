@@ -310,8 +310,8 @@ class GPURenderer:
 
         barrier_cmd = agx.kobj.new(WorkCommandBarrier, track=False)
         barrier_cmd.stamp = self.stamp_ta2
-        barrier_cmd.stamp_value1 = self.stamp_value_ta
-        barrier_cmd.stamp_value2 = self.stamp_value_ta
+        barrier_cmd.stamp_value_ta = self.stamp_value_ta
+        barrier_cmd.stamp_value_3d = self.stamp_value_3d
         barrier_cmd.event = ev_ta.id
         barrier_cmd.uuid = uuid_3d
 

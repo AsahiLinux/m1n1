@@ -19,9 +19,9 @@ class WorkCommandBarrier(ConstructClass):
         "magic" / Const(0x4, Int32ul),
         "stamp_addr" / Int64ul,
         "stamp" / ROPointer(this.stamp_addr, StampCounter),
-        "stamp_value1" / Int32ul,
+        "stamp_value_ta" / Int32ul,
         "event" / Int32ul, # Event number that signals a stamp check
-        "stamp_value2" / Int32ul,
+        "stamp_value_3d" / Int32ul,
         "uuid" / Int32ul,
         "unk" / Default(Int32ul, 0),
     )
