@@ -593,6 +593,7 @@ class M1N1Proxy(Reloadable):
     P_HV_SWITCH_CPU = 0xc09
     P_HV_SET_TIME_STEALING = 0xc0a
     P_HV_PIN_CPU = 0xc0b
+    P_HV_WRITE_HCR = 0xc0c
 
     P_FB_INIT = 0xd00
     P_FB_SHUTDOWN = 0xd01
@@ -1022,6 +1023,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_HV_SET_TIME_STEALING, int(bool(enabled)), int(bool(reset)))
     def hv_pin_cpu(self, cpu):
         return self.request(self.P_HV_PIN_CPU, cpu)
+    def hv_write_hcr(self, hcr):
+        return self.request(self.P_HV_WRITE_HCR, hcr)
 
     def fb_init(self):
         return self.request(self.P_FB_INIT)
