@@ -103,7 +103,7 @@ class StandardASC(ASC):
     def start(self):
         super().boot()
         self.mgmt.start()
-        self.mgmt.wait_boot(1)
+        self.mgmt.wait_boot(2)
 
     def stop(self, state=0x10):
         for ep in list(self.epmap.values())[::-1]:
