@@ -47,7 +47,7 @@ class GPUContext:
         self.uat.bind_context(ctx_id, self.ttbr0_base)
 
     def make_stream(self, base):
-        return self.uat.iostream(self.ctx, base)
+        return self.uat.iostream(self.ctx, base, recurse=False)
 
     def new_at(self, addr, objtype, name=None, track=True, **flags):
         obj = GPUObject(self, objtype)

@@ -134,12 +134,13 @@ class UatAccessor(Reloadable):
 class UatStream(Reloadable):
     CACHE_SIZE = 0x1000
 
-    def __init__(self, uat, ctx, addr):
+    def __init__(self, uat, ctx, addr, recurse=True):
         self.uat = uat
         self.ctx = ctx
         self.pos = addr
         self.cache = None
         self.meta_fn = None
+        self.recurse = recurse
 
     def to_accessor(self):
         return UatAccessor(self.uat, self.ctx)
@@ -290,8 +291,8 @@ class UAT(Reloadable):
             iova += size
 
     # A stream interface that can be used for random access by Construct
-    def iostream(self, ctx, base):
-        return UatStream(self, ctx, base)
+    def iostream(self, ctx, base, recurse=True):
+        return UatStream(self, ctx, base, recurse)
 
     # A read/write register interface like proxy/utils objects that can be used by RegMap
     def ioaccessor(self, ctx, base):
