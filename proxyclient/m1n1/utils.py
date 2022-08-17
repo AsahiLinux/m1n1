@@ -47,6 +47,58 @@ def chexdump(s, st=0, abbreviate=True, stride=16, indent="", print_fn=print):
             last = val
             skip = False
 
+def chexdiff32(prev, cur, ascii=True, offset=0, offset2=None):
+    assert len(cur) % 4 == 0
+    count = len(cur) // 4
+    words = struct.unpack("<%dI" % count, cur)
+
+    if prev is None:
+        last = None
+    else:
+        assert len(prev) == len(cur)
+        last = struct.unpack("<%dI" % count, prev)
+
+    row = 8
+    skipping = False
+    out = []
+    for i in range(0, count, row):
+        off_text = f"{offset + i * 4:016x}"
+        if offset2 is not None:
+            off_text += f"/{offset2 + i * 4:08x}"
+        if not last:
+            if i != 0 and words[i:i+row] == words[i-row:i]:
+                if not skipping:
+                    out.append(f"{off_text} *\n")
+                skipping = True
+            else:
+                out.append(f"{off_text} ")
+                for new in words[i:i+row]:
+                    out.append("%08x " % new)
+                if ascii:
+                    out.append("| " + _ascii(cur[4*i:4*(i+row)]))
+                out.append("\n")
+                skipping = False
+        elif last[i:i+row] != words[i:i+row]:
+            out.append(f"{off_text} ")
+            for old, new in zip(last[i:i+row], words[i:i+row]):
+                so = "%08x" % old
+                sn = s = "%08x" % new
+                if old != new:
+                    s = "\x1b[32m"
+                    ld = False
+                    for a,b in zip(so, sn):
+                        d = a != b
+                        if ld != d:
+                            s += "\x1b[31;1;4m" if d else "\x1b[32m"
+                            ld = d
+                        s += b
+                    s += "\x1b[m"
+                out.append(s + " ")
+            if ascii:
+                out.append("| " + _ascii(cur[4*i:4*(i+row)]))
+            out.append("\n")
+    return "".join(out)
+
 _extascii_table_low = [
     "▪", "☺", "☻", "♥", "♦", "♣", "♠", "•",
     "◘", "○", "◙", "♂", "♀", "♪", "♫", "☼",
