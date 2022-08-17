@@ -3,6 +3,8 @@ from ..fw.agx.channels import *
 from ..fw.agx.cmdqueue import *
 
 class GPUChannel:
+    STATE_FIELDS = ChannelStateFields
+
     def __init__(self, agx, name, channel_id, state_addr, ring_addr, ring_size):
         self.agx = agx
         self.u = agx.u
@@ -12,7 +14,7 @@ class GPUChannel:
         self.state_addr = state_addr
         self.ring_addr = ring_addr
         self.ring_size = ring_size
-        self.state = ChannelStateFields(self.u, self.state_addr)
+        self.state = self.STATE_FIELDS(self.u, self.state_addr)
         self.state.READ_PTR.val = 0
         self.state.WRITE_PTR.val = 0
 
@@ -25,12 +27,15 @@ class GPUChannel:
         self.agx.log(f"[{self.name}] {msg}")
 
 class GPUTXChannel(GPUChannel):
+    def doorbell(self):
+        self.agx.asc.db.doorbell(self.channel_id)
+
     def send_message(self, msg):
         wptr = self.state.WRITE_PTR.val
         self.iface.writemem(self.ring_addr + self.item_size * wptr,
                             msg.build())
         self.state.WRITE_PTR.val = (wptr + 1) % self.ring_size
-        self.agx.asc.db.doorbell(self.channel_id)
+        self.doorbell()
 
 class GPURXChannel(GPUChannel):
     def poll(self):
@@ -65,11 +70,28 @@ class GPUCmdQueueChannel(GPUTXChannel):
 class GPUDeviceControlChannel(GPUTXChannel):
     MSG_CLASS = DeviceControlMsg
 
-    def send_dc19(self):
-        self.send_message(DeviceControl_19())
+    def send_init(self):
+        self.send_message(DC_Init())
 
-    def send_dc23(self):
-        self.send_message(DeviceControl_23())
+    def update_idle_ts(self):
+        self.send_message(DC_UpdateIdleTS())
+
+class GPUFWCtlChannel(GPUTXChannel):
+    STATE_FIELDS = FWControlStateFields
+    MSG_CLASS = FWCtlMsg
+
+    def doorbell(self):
+        self.agx.asc.db.fwctl_doorbell()
+
+    def send_inval(self, ctx, addr=0):
+        msg = FWCtlMsg()
+        msg.addr = addr
+        msg.unk_8 = 0
+        msg.context_id = ctx
+        msg.unk_10 = 1
+        msg.unk_12 = 2
+        print(msg)
+        self.send_message(msg)
 
 class GPUEventChannel(GPURXChannel):
     MSG_CLASS = EventMsg
