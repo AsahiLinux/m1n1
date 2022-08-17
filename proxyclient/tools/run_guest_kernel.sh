@@ -13,11 +13,12 @@ initramfs=""
 if [ ! -z "$3" ]; then
     initramfs="$(realpath "$3")"
 fi
+shift 3
 
-cd "$(dirname "$0")"
+base="$(dirname "$0")"
 
 echo "Creating m1n1+kernel image"
-cp ../../build/m1n1.bin /tmp/m1n1-linux.bin
+cp "$base"/../../build/m1n1.bin /tmp/m1n1-linux.bin
 if [ ! -z "$args" ]; then
     echo "chosen.bootargs=$args" >>/tmp/m1n1-linux.bin
 fi
@@ -27,6 +28,6 @@ if [ ! -z "$initramfs" ]; then
     cat "$initramfs" >>/tmp/m1n1-linux.bin
 fi
 echo "Chainloading to updated m1n1..."
-python chainload.py -r ../../build/m1n1.bin
+python "$base"/chainload.py -r "$base"/../../build/m1n1.bin
 echo "Starting guest..."
-exec python run_guest.py -c "load_system_map('$kernel_base/System.map')" -r /tmp/m1n1-linux.bin
+exec python "$base"/run_guest.py -c "load_system_map('$kernel_base/System.map')" "$@" -r /tmp/m1n1-linux.bin
