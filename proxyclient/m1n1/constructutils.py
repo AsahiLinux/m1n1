@@ -87,13 +87,17 @@ def str_value(value, repr=False):
         else:
             return f"{value:#x}"
     if isinstance(value, ListContainer):
+        om = ""
+        while len(value) > 1 and not value[-1]:
+            value = value[:-1]
+            om = " ..."
         if len(value) <= 16:
-            return "[" + ", ".join(map(str_value, value)) + "]"
+            return "[" + ", ".join(map(str_value, value)) + f"{om}]"
         else:
             sv = ["[\n"]
             for off in range(0, len(value), 16):
                 sv.append("  " + ", ".join(map(str_value, value[off:off+16])) + ",\n")
-            sv.append("]\n")
+            sv.append(f"{om}]\n")
             return "".join(sv)
 
     return str(value)
