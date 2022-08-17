@@ -25,10 +25,14 @@ class GPUObject:
         self._alloc = allocator
         self._type = objtype
         self._addr = None
-        self._last_data = None
+        self._data = None
         self._dead = False
+        self._map_flags = {}
+        self._mon_val = None
 
     def push(self, if_needed=False):
+        self._mon_val = self.val
+
         assert self._addr is not None
         stream = self._alloc.make_stream(self._addr)
         context = Container()
@@ -41,23 +45,29 @@ class GPUObject:
         ios = io.BytesIO()
         self._type._build(self.val, ios, context, "(pushing)")
         data = ios.getvalue()
-        if if_needed and data == self._last_data:
+        if if_needed and data == self._data:
             return self
 
-        if self._alloc.verbose:
-            self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] pushing {self._size} bytes")
-        if self._size > 32768:
+        if data == bytes(self._size):
+            if self._alloc.verbose:
+                self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] zeroing {self._size} bytes")
+            self._alloc.agx.p.memset8(self._paddr, 0, self._size)
+        elif self._size > 32768:
+            if self._alloc.verbose:
+                self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] pushing {self._size} bytes (compressed)")
             self._alloc.agx.u.compressed_writemem(self._paddr, data)
         else:
+            if self._alloc.verbose:
+                self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] pushing {self._size} bytes")
             self._alloc.agx.iface.writemem(self._paddr, data)
         #stream.write(data)
         if isinstance(self._type, type) and issubclass(self._type, ConstructClassBase):
             self.val.set_addr(self._addr, stream)
 
-        self._last_data = data
+        self._data = data
         return self
 
-    def pull(self):
+    def _pull(self):
         assert self._addr is not None
         stream = self._alloc.make_stream(self._addr)
         context = Container()
@@ -67,14 +77,31 @@ class GPUObject:
         context._params = context
         if self._alloc.verbose:
             self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] pulling {self._size} bytes")
-        self.val = self._type._parse(stream, context, "(pulling)")
+        return self._type._parse(stream, context, "(pulling)")
 
+    def pull(self):
+        self._mon_val = self.val = self._pull()
         return self
 
+    def poll(self):
+        prev_val = self._mon_val
+        self._mon_val = cur_val = self._pull()
+        if not hasattr(cur_val, "diff"):
+            return None
+        if cur_val != prev_val:
+            diff = cur_val.diff(prev_val)
+            assert diff is not None
+            return f"GPUObject {self._name} ({self._size:#x} @ {self._addr:#x}): " + diff
+        else:
+            return None
+
+    @property
+    def _ctx(self):
+        return self._alloc.ctx
+
     def add_to_mon(self, mon):
-        ctx = self._alloc.ctx
         mon.add(self._addr, self._size, self._name, offset=0,
-                readfn=lambda a, s: self._alloc.agx.uat.ioread(ctx,  a, s))
+                readfn=lambda a, s: self._alloc.agx.uat.ioread(self._ctx,  a, s))
 
     def _set_addr(self, addr, paddr=None):
         self._addr = addr
@@ -98,7 +125,10 @@ class GPUObject:
         setattr(self.val, attr, val)
 
     def __str__(self):
-        s_val = str_value(self.val)
+        if isinstance(self.val, bytes) and len(self.val) > 128:
+            s_val = f"<{len(self.val)} bytes>"
+        else:
+            s_val = str_value(self.val)
         return f"GPUObject {self._name} ({self._size:#x} @ {self._addr:#x}): " + s_val
 
     def free(self):
@@ -117,14 +147,14 @@ class GPUAllocator:
         self.ctx = ctx
         self.name = name
         self.va = Heap(start, start + size, block=va_block)
-        self.verbose = 1
+        self.verbose = 0
         self.guard_pages = guard_pages
         self.objects = {}
         self.flags = kwargs
         self.align_to_end = True
 
     def make_stream(self, base):
-        return self.agx.uat.iostream(self.ctx, base)
+        return self.agx.uat.iostream(self.ctx, base, recurse=False)
 
     def new(self, objtype, name=None, track=True, **kwargs):
         obj = GPUObject(self, objtype)
