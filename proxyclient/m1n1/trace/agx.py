@@ -943,6 +943,7 @@ class AGXTracer(ASCTracer):
         self.trace_uatrange(0, self.state.initdata.regionB.buffer_mgr_ctl_addr, 0x4000, name="Buffer manager ctl")
 
     def add_mon_regions(self):
+        return
         initdata = self.state.initdata
         if initdata is not None:
             self.mon_addva(0, initdata.regionA_addr, 0x4000, "RegionA")
