@@ -78,6 +78,14 @@ class AGX:
 
         self.p.iodev_set_usage(IODEV.FB, 0)
 
+        # Early init, needed?
+        self.poke_sgx()
+
+    def poke_sgx(self):
+        self.sgx_base = self.sgx_dev.get_reg(0)[0]
+        self.p.read32(self.sgx_base + 0xd14000)
+        self.p.write32(self.sgx_base + 0xd14000, 0x70001)
+
     def find_object(self, addr, ctx=0):
         all_objects = list(self.all_objects.items())
         all_objects.sort()
