@@ -154,7 +154,7 @@ class DRMAsahiShim:
 
     @IOW(DRM_COMMAND_BASE + 0x01, drm_asahi_wait_bo_t)
     def wait_bo(self, fd, args):
-        print("Wait BO!", args)
+        self.log("Wait BO!", args)
         return 0
 
     @IOWR(DRM_COMMAND_BASE + 0x02, drm_asahi_create_bo_t)
@@ -174,23 +174,24 @@ class DRMAsahiShim:
         if args.flags & ASAHI_BO_PIPELINE:
             args.offset -= self.renderer.ctx.pipeline_base
 
-        print(f"Create BO @ {memfd_offset:#x}")
+        self.log(f"Create BO @ {memfd_offset:#x}")
         return 0
 
     @IOWR(DRM_COMMAND_BASE + 0x04, drm_asahi_get_param_t)
     def get_param(self, fd, args):
-        print("Get Param!", args)
+        self.log("Get Param!", args)
         return 0
 
     @IOWR(DRM_COMMAND_BASE + 0x05, drm_asahi_get_bo_offset_t)
     def get_bo_offset(self, fd, args):
-        print("Get BO Offset!", args)
+        self.log("Get BO Offset!", args)
         return 0
 
     def bo_free(self, memfd_offset):
-        print(f"Free BO @ {memfd_offset:#x}")
+        self.log(f"Free BO @ {memfd_offset:#x}")
         self.bos[memfd_offset].free()
         del self.bos[memfd_offset]
+        sys.stdout.flush()
 
     def ioctl(self, fd, request, p_arg):
         self.init()
@@ -198,7 +199,7 @@ class DRMAsahiShim:
         p_arg = ctypes.c_void_p(p_arg)
 
         if request not in self.ioctl_map:
-            print(f"Unknown ioctl: fd={fd} request={IOCTL(request)} arg={p_arg:#x}")
+            self.log(f"Unknown ioctl: fd={fd} request={IOCTL(request)} arg={p_arg:#x}")
             return -errno.ENOSYS
 
         ioctl, f = self.ioctl_map[request]
@@ -218,6 +219,13 @@ class DRMAsahiShim:
             assert len(data) == size
             ctypes.memmove(p_arg, data, size)
 
+        sys.stdout.flush()
         return ret
+
+    def log(self, s):
+        if self.agx is None:
+            print("[Shim] " + s)
+        else:
+            self.agx.log("[Shim] " + s)
 
 Shim = DRMAsahiShim
