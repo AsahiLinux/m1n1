@@ -303,6 +303,11 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
                     else:
                         if isinstance(val, ConstructClassBase):
                             val.set_addr(subaddr)
+                        if isinstance(val, list):
+                            for i in val:
+                                if isinstance(i, ConstructClassBase):
+                                    i.set_addr(subaddr)
+                                    subaddr += i.sizeof()
 
                 subaddr += sizeof
 
