@@ -140,30 +140,36 @@ class GPURenderer:
         self.wq_3d = GPU3DWorkQueue(agx, ctx, self.job_list)
         self.wq_ta = GPUTAWorkQueue(agx, ctx, self.job_list)
 
-        self.stamp_value = 0
+        self.wq_3d.info.uuid = 0x3D0000 | bm_slot
+        self.wq_3d.info.push()
+        self.wq_ta.info.uuid = 0x7A0000 | bm_slot
+        self.wq_ta.info.push()
+
+        self.stamp_value_3d = 0x3D000000 | (bm_slot << 16)
+        self.stamp_value_ta = 0x7A000000 | (bm_slot << 16)
 
         ##### TA stamps
 
         # start?
         self.stamp_ta1 = agx.kshared.new(StampCounter, name="TA stamp 1")
-        self.stamp_ta1.value = self.stamp_value
+        self.stamp_ta1.value = self.stamp_value_ta
         self.stamp_ta1.push()
 
         # complete?
         self.stamp_ta2 = agx.kobj.new(StampCounter, name="TA stamp 2")
-        self.stamp_ta2.value = self.stamp_value
+        self.stamp_ta2.value = self.stamp_value_ta
         self.stamp_ta2.push()
 
         ##### 3D stamps
 
         # start?
         self.stamp_3d1 = agx.kshared.new(StampCounter, name="3D stamp 1")
-        self.stamp_3d1.value = self.stamp_value
+        self.stamp_3d1.value = self.stamp_value_3d
         self.stamp_3d1.push()
 
         # complete?
         self.stamp_3d2 = agx.kobj.new(StampCounter, name="3D stamp 2")
-        self.stamp_3d2.value = self.stamp_value
+        self.stamp_3d2.value = self.stamp_value_3d
         self.stamp_3d2.push()
 
 
@@ -229,8 +235,10 @@ class GPURenderer:
         #self.event_control.base_stamp = self.stamp_value >> 8
         #self.event_control.push()
 
-        self.prev_stamp_value = self.stamp_value
-        self.stamp_value += 0x100
+        self.prev_stamp_value_3d = self.stamp_value_3d
+        self.prev_stamp_value_ta = self.stamp_value_ta
+        self.stamp_value_3d += 0x100
+        self.stamp_value_ta += 0x100
         self.event_control.event_count.val += 2
         self.event_control.event_count.push()
 
@@ -302,8 +310,8 @@ class GPURenderer:
 
         barrier_cmd = agx.kobj.new(WorkCommandBarrier)
         barrier_cmd.stamp = self.stamp_ta2
-        barrier_cmd.stamp_value1 = self.stamp_value
-        barrier_cmd.stamp_value2 = self.stamp_value
+        barrier_cmd.stamp_value1 = self.stamp_value_ta
+        barrier_cmd.stamp_value2 = self.stamp_value_ta
         barrier_cmd.event = ev_ta.id
         barrier_cmd.uuid = uuid_3d
 
@@ -460,12 +468,12 @@ class GPURenderer:
             wc_3d.struct_7.unk_0 = 0x0
             wc_3d.struct_7.stamp1 = self.stamp_3d1
             wc_3d.struct_7.stamp2 = self.stamp_3d2
-            wc_3d.struct_7.stamp_value = self.stamp_value
+            wc_3d.struct_7.stamp_value = self.stamp_value_3d
             wc_3d.struct_7.ev_3d = ev_3d.id
             wc_3d.struct_7.unk_20 = 0x0
             wc_3d.struct_7.unk_24 = 0x0 # check
             wc_3d.struct_7.uuid = uuid_3d
-            wc_3d.struct_7.prev_stamp_value = self.prev_stamp_value >> 8
+            wc_3d.struct_7.prev_stamp_value = self.prev_stamp_value_3d >> 8
             wc_3d.struct_7.unk_30 = 0x0
 
         wc_3d.set_addr() # Update inner structure addresses
@@ -492,7 +500,7 @@ class GPURenderer:
         start_3d.unk_54 = 0x0
         start_3d.buffer_mgr_slot = self.buffer_mgr_slot
         start_3d.unk_5c = 0x0
-        start_3d.prev_stamp_value = self.prev_stamp_value >> 8
+        start_3d.prev_stamp_value = self.prev_stamp_value_3d >> 8
         start_3d.unk_68 = 0x0
         start_3d.unk_buf_ptr = wc_3d.unk_758._addr
         start_3d.unk_buf2_ptr = wc_3d.unk_buf2._addr
@@ -555,7 +563,7 @@ class GPURenderer:
         finish_3d.uuid = uuid_3d
         finish_3d.unk_8 = 0
         finish_3d.stamp = self.stamp_3d2
-        finish_3d.stamp_value = self.stamp_value
+        finish_3d.stamp_value = self.stamp_value_3d
         finish_3d.unk_18 = 0
         finish_3d.buf_thing = buf_desc
         finish_3d.buffer_mgr = self.buffer_mgr.info
@@ -597,7 +605,7 @@ class GPURenderer:
             wc_initbm.unk_c = 0
             wc_initbm.unk_10 = self.buffer_mgr.info.block_count
             wc_initbm.buffer_mgr = self.buffer_mgr.info
-            wc_initbm.stamp_value = self.stamp_value
+            wc_initbm.stamp_value = self.stamp_value_ta
 
             self.wq_ta.submit(wc_initbm)
 
@@ -694,7 +702,7 @@ class GPURenderer:
                 0x0, 0x0, 0x0] # fixed
             wc_ta.struct_3.stamp1 = self.stamp_ta1
             wc_ta.struct_3.stamp2 = self.stamp_ta2
-            wc_ta.struct_3.stamp_value = self.stamp_value
+            wc_ta.struct_3.stamp_value = self.stamp_value_ta
             wc_ta.struct_3.ev_ta = ev_ta.id
             wc_ta.struct_3.unk_580 = 0x0 # fixed
             wc_ta.struct_3.unk_584 = 0x0 # 1 for boot stuff?
@@ -778,7 +786,7 @@ class GPURenderer:
         finish_ta.unk_34 = 0x0 # fixed
         finish_ta.uuid = uuid_ta
         finish_ta.stamp = self.stamp_ta2
-        finish_ta.stamp_value = self.stamp_value
+        finish_ta.stamp_value = self.stamp_value_ta
         finish_ta.unk_48 = 0x0 # fixed
         finish_ta.unk_50 = 0x0 # fixed
         finish_ta.unk_54 = 0x0 # fixed
@@ -797,7 +805,7 @@ class GPURenderer:
         wc_ta.microsequence_ptr = ms.obj._addr
         wc_ta.microsequence_size = ms.size
         wc_ta.ev_3d = ev_3d.id
-        wc_ta.stamp_value = self.stamp_value
+        wc_ta.stamp_value = self.stamp_value_ta
 
         #print(wc_ta)
         self.wq_ta.submit(wc_ta)
