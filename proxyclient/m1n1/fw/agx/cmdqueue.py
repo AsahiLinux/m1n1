@@ -420,7 +420,7 @@ class CommandQueueInfo(ConstructClass):
         "unk_44" / Hex(Int32ul), # 0
         "unk_48" / Hex(Int32ul), # 1, 2
         "unk_4c" / Int32sl, # -1
-        "unk_50" / Hex(Int32ul), # Counts up for each new process or command queue
+        "uuid" / Hex(Int32ul), # Counts up for each new process or command queue
         "unk_54" / Int32sl,
         "unk_58" / Hex(Int64ul), # 0
         "busy" / Hex(Int32ul), # 1 = gpu busy
@@ -446,7 +446,7 @@ class CommandQueueInfo(ConstructClass):
         self.unk_44 = 0x0
         self.unk_48 = 0x1
         self.unk_4c = -1
-        self.unk_50 = 0xdeadbeef # some kind of ID
+        self.uuid = 0xdeadbeef # some kind of ID
         self.unk_54 = -1
         self.unk_58 = 0x0
         self.busy = 0x0
