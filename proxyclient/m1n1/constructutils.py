@@ -173,6 +173,9 @@ class ReloadableConstructMeta(ReloadableMeta, Construct):
                 except:
                     sizeof = None
                 if isinstance(subcon, Ver):
+                    if not subcon._active():
+                        cls._off[subcon.name] = -1, 0
+                        continue
                     subcon = subcon.subcon
                 if isinstance(subcon, Renamed):
                     name = subcon.name
@@ -417,6 +420,11 @@ class ConstructClass(ConstructClassBase, Container):
         keys.sort(key = lambda x: self._off.get(x, (-1, 0))[0])
 
         for key in keys:
+            if key in self._off:
+                offv, sizeof = self._off[key]
+                if offv == -1:
+                    print(key, offv, sizeof)
+                    continue
             if key in ignore or key.startswith('_'):
                 continue
             value = getattr(self, key)
