@@ -1380,7 +1380,9 @@ class InitData_RegionB(ConstructClass):
         "unk_1c0" / Lazy(ROPointer(this.unkptr_1c0, Bytes(0x300))),
         "unkptr_1c8" / Int64ul, # Unallocated, unknown size
         "unk_1c8" / Lazy(ROPointer(this.unkptr_1c8, Bytes(0x1000))),
-        "pad_1d0" / ZPadding(0x44),
+        "unk_1d0" / Int32ul,
+        "unk_1d4" / Int32ul,
+        "unk_1d8" / HexDump(Bytes(0x3c)),
         "buffer_mgr_ctl_addr" / Int64ul, # Size: 0x4000
         "buffer_mgr_ctl" / ROPointer(this.buffer_mgr_ctl_addr, InitData_BufferMgrCtl),
         "buffer_mgr_ctl_addr2" / Int64ul, # Size: 0x4000
@@ -1421,6 +1423,9 @@ class InitData_RegionB(ConstructClass):
 
     def __init__(self):
         super().__init__()
+        self.unk_1d0 = 0
+        self.unk_1d4 = 0
+        self.unk_1d8 = bytes(0x3c)
         self.unk_224 = bytes(0x685c)
         self.unkpad_6a88 = bytes(0x14)
         self.pad_6b00 = bytes(0x38)
@@ -1542,17 +1547,14 @@ class InitData_RegionC(ConstructClass):
         Ver("13.0 beta4", "unk_900c_0" / HexDump(Bytes(0x28))),
         "unk_900c" / Int32ul,
         Ver("13.0 beta4", "unk_9010_0" / Int32ul),
-        Ver("13.0 beta4", "unk_9010_4" / HexDump(Bytes(0x10))),
-        "unk_9010" / HexDump(Bytes(0x30)),
-        "unk_9040" / Int32ul,
-        "unk_9044" / HexDump(Bytes(0xbc)),
-        "unk_a000" / HexDump(Bytes(0x6000)),
+        Ver("13.0 beta4", "unk_9010_4" / HexDump(Bytes(0x14))),
+        "unk_9010" / HexDump(Bytes(0x2c)),
+        "unk_903c" / Int32ul,
+        "unk_9040" / HexDump(Bytes(0xc0)),
+        "unk_9100" / HexDump(Bytes(0x6f00)),
         "unk_10000" / HexDump(Bytes(0xe50)),
         "unk_10e50" / Int32ul,
         "unk_10e54" / HexDump(Bytes(0x2c)),
-        Ver("13.0 beta4", "unk_10e80_0" / HexDump(Bytes(0xed4))),
-        Ver("13.0 beta4", "unk_10e80_ed0" / Int32ul),
-        Ver("13.0 beta4", "unk_10e80_ed4" / HexDump(Bytes(0x2c))),
         "unk_10e80" / Int32ul,
         "unk_10e84" / Int32ul,
         "unk_10e88" / HexDump(Bytes(0x188)),
@@ -1668,14 +1670,14 @@ class InitData_RegionC(ConstructClass):
         self.unk_900c_0 = bytes(0x28)
         self.unk_900c = 1
         self.unk_9010_0 = 1
-        self.unk_9010_4 = bytes(0x10)
-        self.unk_9010 = bytes(0x30)
+        self.unk_9010_4 = bytes(0x14)
+        self.unk_9010 = bytes(0x2c)
         if Ver.check("13.0 beta4"):
-            self.unk_9040 = 1
+            self.unk_903c = 1
         else:
-            self.unk_9040 = 0
-        self.unk_9044 = bytes(0xbc)
-        self.unk_a000 = bytes(0x6000)
+            self.unk_903c = 0
+        self.unk_9040 = bytes(0xc0)
+        self.unk_9100 = bytes(0x6f00)
         self.unk_10000 = bytes(0xe50)
         self.unk_10e50 = 0
         self.unk_10e54 = bytes(0x2c)
