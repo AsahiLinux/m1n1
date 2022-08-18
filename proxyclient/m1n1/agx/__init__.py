@@ -8,7 +8,7 @@ from .event import GPUEventManager
 from ..proxy import IODEV
 from ..malloc import Heap
 from ..hw.uat import UAT, MemoryAttr
-from ..hw.agx import SGXRegs
+from ..hw.agx import *
 from ..fw.agx import AGXASC
 from ..fw.agx.channels import ChannelInfoSet, ChannelInfo
 
@@ -256,6 +256,7 @@ class AGX:
         if obj is not None:
             info = f" ({obj!s} + {fault_addr - base:#x})"
         self.log(f" GPU fault at {fault_addr:#x}{info}")
+        self.log(f" Faulting unit: {agx_decode_unit(fault_info.UNIT)}")
 
     def recover(self):
         status = self.fw_status
