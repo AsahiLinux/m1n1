@@ -235,7 +235,7 @@ class GPUAllocator:
             flags2 = dict(obj._map_flags)
             flags2["AttrIndex"] = MemoryAttr.Shared
             self.agx.uat.iomap_at(self.ctx, obj._addr_align, obj._paddr_align,
-                                  obj._size_align, obj._flags)
+                                  obj._size_align, **flags2)
             self.agx.uat.flush_dirty()
             self.agx.uat.handoff.prepare_cacheflush(obj._addr_align, obj._size_align)
             self.agx.ch.fwctl.send_inval(0x40, obj._addr_align)
