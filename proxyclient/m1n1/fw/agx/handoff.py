@@ -14,9 +14,9 @@ class GFXHandoffStruct(RegMap):
 
     UNK         = 0x18, Register32
 
-    FLUSH_STATE = irange(0x20, 0x41, 0x18), Register32
-    FLUSH_ADDR  = irange(0x28, 0x41, 0x18), Register32
-    FLUSH_SIZE  = irange(0x30, 0x41, 0x18), Register32
+    FLUSH_STATE = irange(0x20, 0x41, 0x18), Register64
+    FLUSH_ADDR  = irange(0x28, 0x41, 0x18), Register64
+    FLUSH_SIZE  = irange(0x30, 0x41, 0x18), Register64
 
     UNK2        = 0x638, Register8
     UNK3        = 0x640, Register64
@@ -86,18 +86,18 @@ class GFXHandoff:
     # - Unmap memory
     # - TLBI
     # - complete_cacheflush()
-    def prepare_cacheflush(base, size, context=0x40):
+    def prepare_cacheflush(self, base, size, context=0x40):
         assert self.reg.FLUSH_STATE[context].val == 0
 
         self.reg.FLUSH_ADDR[context].val = base
         self.reg.FLUSH_SIZE[context].val = size
         self.reg.FLUSH_STATE[context].val = 1
 
-    def wait_cacheflush(context=0x40):
+    def wait_cacheflush(self, context=0x40):
         while self.reg.FLUSH_STATE[context].val == 1:
             pass
 
-    def complete_cacheflush(context=0x40):
+    def complete_cacheflush(self, context=0x40):
         assert self.reg.FLUSH_STATE[context].val == 2
         self.reg.FLUSH_STATE[context].val = 0
 
@@ -109,12 +109,12 @@ class GFXHandoff:
     # - unmap
     # - TLBI
     # - complete_unmap()
-    def prepare_unmap(base, size, context):
+    def prepare_unmap(self, base, size, context):
         assert self.reg.FLUSH_STATE[context].val == 0
         self.reg.FLUSH_ADDR[context].val = 0xdead000000000000 | (base & 0xffffffffffff)
         self.reg.FLUSH_SIZE[context].val = size
         self.reg.FLUSH_STATE[context].val = 2
 
-    def complete_unmap(context):
+    def complete_unmap(self, context):
         assert self.reg.FLUSH_STATE[context].val == 2
         self.reg.FLUSH_STATE[context].val = 0
