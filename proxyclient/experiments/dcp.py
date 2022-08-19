@@ -96,7 +96,7 @@ mon.poll()
 mgr.get_color_remap_mode(6)
 mgr.enable_disable_video_power_savings(0)
 
-mgr.update_notify_clients_dcp([0,0,0,0,0,0,1,1,1,0,1,1,1])
+mgr.update_notify_clients_dcp([0,0,0,0,0,0,1,1,1,0,1,1,1,1])
 mgr.first_client_open()
 print(f"keep on: {mgr.isKeepOnScreen()}")
 print(f"main display: {mgr.is_main_display()}")
