@@ -15,6 +15,7 @@ parser.add_argument('-d', '--debug-xnu', action="store_true")
 parser.add_argument('-l', '--logfile', type=pathlib.Path)
 parser.add_argument('-C', '--cpus', default=None)
 parser.add_argument('-r', '--raw', action="store_true")
+parser.add_argument('-E', '--entry-point', action="store", type=int, help="Entry point for the raw image", default=0x800)
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
@@ -63,7 +64,7 @@ symfile = None
 if args.symbols:
     symfile = args.symbols.open("rb")
 if args.raw:
-    hv.load_raw(args.payload.read_bytes())
+    hv.load_raw(args.payload.read_bytes(), args.entry_point)
 else:
     hv.load_macho(args.payload.open("rb"), symfile=symfile)
 
