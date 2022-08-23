@@ -347,7 +347,12 @@ class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
         self._apply(obj)
 
         if self._addr > 0x10000:
-            g_struct_trace.add((self._addr, f"{cls.name} (end: {self._addr + size:#x})"))
+            desc = f"{cls.name} (end: {self._addr + size:#x})"
+            if getattr(stream, "meta_fn", None):
+                meta = stream.meta_fn(self._addr, None)
+                if meta is not None:
+                    desc += " " + meta
+            g_struct_trace.add((self._addr, desc))
             g_struct_addrmap[self._addr] = f"{cls.name}"
         return self
 

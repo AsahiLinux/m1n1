@@ -586,7 +586,11 @@ class AGXTracer(ASCTracer):
         self.vmcnt += 1
         #self.mon.poll()
 
-    def meta_gpuvm(self, iova, size):
+    def meta_gpuvm(self, ctx, iova, size=None):
+        if size is None:
+            pte = self.uat.ioperm(ctx, iova)
+            return f"PTE: {pte.describe()}"
+
         meta = ""
         iova &= 0xfffffffffff
         for off in range(size):
@@ -605,7 +609,7 @@ class AGXTracer(ASCTracer):
 
     def get_stream(self, context, off):
         stream = self.uat.iostream(context, off)
-        stream.meta_fn = self.meta_gpuvm
+        stream.meta_fn = lambda a, b: self.meta_gpuvm(context, a, b)
         return stream
 
     def start(self):
