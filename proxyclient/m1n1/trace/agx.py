@@ -546,7 +546,7 @@ class AGXTracer(ASCTracer):
 
     def start(self):
         super().start()
-        self.handoff_tracer.start()
+        #self.handoff_tracer.start()
         self.init_channels()
         if self.state.active:
             self.resume()
