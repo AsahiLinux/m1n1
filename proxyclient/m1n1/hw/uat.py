@@ -278,10 +278,6 @@ class UAT(Reloadable):
         self.ttbr1_base = self.sgx_dev.gfx_shared_region_base
         self.handoff = GFXHandoff(self.u)
 
-        # Clear out any stale kernel page tables
-        self.p.memset64(self.ttbr1_base + 0x10, 0, 0x3ff0)
-        self.u.inst("tlbi vmalle1os")
-
         self.VA_MASK = 0
         for (off, size, _) in self.LEVELS:
             self.VA_MASK |= (size - 1) << off
@@ -523,6 +519,11 @@ class UAT(Reloadable):
             return
 
         print("[UAT] Initializing...")
+
+        # Clear out any stale kernel page tables
+        self.p.memset64(self.ttbr1_base + 0x10, 0, 0x3ff0)
+        self.u.inst("tlbi vmalle1os")
+
         self.handoff.initialize()
 
         with self.handoff.lock():
