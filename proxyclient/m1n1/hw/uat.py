@@ -455,6 +455,18 @@ class UAT(Reloadable):
 
         return ranges
 
+    def ioperm(self, ctx, addr):
+        page = align_down(addr, self.PAGE_SIZE)
+
+        table_addr = self.gpu_region + ctx * 16
+        for (offset, size, ptecls) in self.LEVELS:
+            pte = self.fetch_pte(table_addr, page >> offset, size, ptecls)
+            if not pte.valid():
+                break
+            table_addr = pte.offset()
+
+        return pte
+
     def get_pt(self, addr, size=None, uncached=False):
         if size is None:
             size = self.Lx_SIZE
