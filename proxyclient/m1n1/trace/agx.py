@@ -961,16 +961,16 @@ class AGXTracer(ASCTracer):
             return
         #self.channels = []
         for i, chan_info in enumerate(self.state.channel_info):
-            #if channelNames[i] == "Stats": # ignore stats
-                #continue
-            if channelNames[i] == "FWCtl": # ignore stats
+            print(channelNames[i], chan_info)
+            if channelNames[i] == "Stats": # ignore stats
+                continue
+            elif channelNames[i] == "KTrace": # ignore KTrace
+                continue
+            elif channelNames[i] == "FWCtl":
                 channel_chan = FWCtlChannelTracer(self, chan_info, i)
             else:
                 channel_chan = ChannelTracer(self, chan_info, i)
             self.channels.append(channel_chan)
-            #for i, (msg, size, count) in enumerate(channel_chan.channel.ring_defs):
-            #    self.mon_addva(0, chan_info.state_addr + i * 0x30, 0x30, f"chan[{channel_chan.name}]->state[{i}]")
-            #    self.mon_addva(0, channel_chan.channel.rb_base[i], size * count, f"chan[{channel_chan.name}]->ringbuffer[{i}]")
 
     def pause(self):
         self.clear_gpuvm_tracers()
