@@ -459,8 +459,7 @@ class CommandQueueInfo(ConstructClass):
         "unk_9c" / Int32ul,
         "gpu_context_addr" / Hex(Int64ul), # GPU managed context, shared between 3D and TA. Passed to DC_DestroyContext
         "gpu_context" / ROPointer(this.gpu_context_addr, GPUContextData),
-
-        "tail" / HexDump(Bytes(0x100)),
+        "unk_a8" / Int64ul
         # End of struct
     )
 
@@ -483,7 +482,7 @@ class CommandQueueInfo(ConstructClass):
         self.pending = 0
         self.unk_9c = 0
         self.set_prio(0)
-        self.tail = bytes(0x100)
+        self.unk_a8 = 0
 
     def set_prio(self, p):
         if p == 0:
