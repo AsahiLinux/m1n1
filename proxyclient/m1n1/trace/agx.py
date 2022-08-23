@@ -614,15 +614,17 @@ class AGXTracer(ASCTracer):
             self.last_3d = None
 
     def dump_buffer_manager(self, buffer_mgr, kread, read):
-            self.log(f"  buffer_mgr @ {buffer_mgr._addr:#x}: {buffer_mgr!s}")
-            self.log(f"    page_list @ {buffer_mgr.page_list_addr:#x}:")
-            chexdump(read(buffer_mgr.page_list_addr,
-                          buffer_mgr.page_list_size), print_fn=self.log)
-            self.log(f"    block_list @ {buffer_mgr.block_list_addr:#x}:")
-            chexdump(read(buffer_mgr.block_list_addr,
-                          0x8000), print_fn=self.log)
-            #self.log(f"    unkptr_d8 @ {buffer_mgr.unkptr_d8:#x}:")
-            #chexdump(read(buffer_mgr.unkptr_d8, 0x4000), print_fn=self.log)
+        return
+
+        self.log(f"  buffer_mgr @ {buffer_mgr._addr:#x}: {buffer_mgr!s}")
+        self.log(f"    page_list @ {buffer_mgr.page_list_addr:#x}:")
+        chexdump(read(buffer_mgr.page_list_addr,
+                        buffer_mgr.page_list_size), print_fn=self.log)
+        self.log(f"    block_list @ {buffer_mgr.block_list_addr:#x}:")
+        chexdump(read(buffer_mgr.block_list_addr,
+                        0x8000), print_fn=self.log)
+        #self.log(f"    unkptr_d8 @ {buffer_mgr.unkptr_d8:#x}:")
+        #chexdump(read(buffer_mgr.unkptr_d8, 0x4000), print_fn=self.log)
 
 
     def handle_ta(self, wi):
