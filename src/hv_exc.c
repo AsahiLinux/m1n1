@@ -206,6 +206,7 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
     switch (reg) {
         /* Some kind of timer */
         SYSREG_PASS(sys_reg(3, 7, 15, 1, 1));
+        SYSREG_PASS(sys_reg(3, 7, 15, 3, 1));
         /* Spammy stuff seen on t600x p-cores */
         SYSREG_PASS(sys_reg(3, 2, 15, 12, 0));
         SYSREG_PASS(sys_reg(3, 2, 15, 13, 0));
