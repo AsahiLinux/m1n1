@@ -1541,7 +1541,7 @@ class HV(Reloadable):
         self.p.hv_set_time_stealing(False)
 
 
-    def load_raw(self, image, entryoffset=0x800):
+    def load_raw(self, image, entryoffset=0x800, use_xnu_symbols=False, vmin=0):
         sepfw_start, sepfw_length = self.u.adt["chosen"]["memory-map"].SEPFW
         tc_start, tc_size = self.u.adt["chosen"]["memory-map"].TrustCache
         if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
@@ -1613,6 +1613,9 @@ class HV(Reloadable):
         self.tba.devtree = self.adt_base - phys_base + self.tba.virt_base
         self.tba.top_of_kernel_data = guest_base + image_size
 
+        if use_xnu_symbols == True:
+            self.sym_offset = vmin - guest_base + self.tba.phys_base - self.tba.virt_base
+
         self.iface.writemem(guest_base + self.bootargs_off, BootArgs.build(self.tba))
 
         print("Setting secondary CPU RVBARs...")
@@ -1668,7 +1671,7 @@ class HV(Reloadable):
 
         #image = macho.prepare_image(load_hook)
         image = macho.prepare_image()
-        self.load_raw(image, entryoffset=(macho.entry - macho.vmin))
+        self.load_raw(image, entryoffset=(macho.entry - macho.vmin), use_xnu_symbols=self.xnu_mode, vmin=macho.vmin)
 
 
     def update_pac_mask(self):
