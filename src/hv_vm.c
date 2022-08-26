@@ -1119,7 +1119,9 @@ bool hv_handle_dabort(struct exc_info *ctx)
 
     if (IS_HW(pte)) {
         printf("HV: Data abort on mapped page (0x%lx -> 0x%lx)\n", far, pte);
-        return false;
+        // Try again, this is usually a race
+        ctx->elr -= 4;
+        return true;
     }
 
     hv_wdt_breadcrumb('1');
