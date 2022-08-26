@@ -2,6 +2,7 @@
 from io import BytesIO, SEEK_END, SEEK_SET
 import bisect
 from construct import *
+import subprocess
 
 from .utils import *
 
@@ -195,7 +196,7 @@ class MachO:
             for seg in subfile.get_cmds(MachOLoadCmdType.SEGMENT_64):
                 self.symbols[f"{fe.args.name}:{seg.args.segname}"] = seg.args.vmaddr
 
-    def add_symbols(self, filename, syms):
+    def add_symbols(self, filename, syms, demangle=False):
         try:
             subfile = self.subfiles[filename]
         except KeyError:
@@ -205,7 +206,7 @@ class MachO:
         for sym_seg in syms.get_cmds(MachOLoadCmdType.SEGMENT_64):
             sym_segs[sym_seg.args.segname] = sym_seg
 
-        syms.load_symbols()
+        syms.load_symbols(demangle=demangle)
         symtab = [(v, k) for (k, v) in syms.symbols.items()]
         symtab.sort()
 
@@ -222,7 +223,7 @@ class MachO:
                 sname = f"{filename}:{sym}"
                 self.symbols[sname] = addr - sym_seg.args.vmaddr + seg.args.vmaddr
 
-    def load_symbols(self):
+    def load_symbols(self, demangle=False):
         self.symbols = {}
 
         cmd = self.get_cmd(MachOLoadCmdType.SYMTAB)
@@ -234,11 +235,26 @@ class MachO:
 
         symbols = Array(nsyms, NList).parse(symdata)
 
+        symbols_dict = {}
         for i in symbols:
             off = cmd.args.stroff + i.n_strx
             self.io.seek(self.off + off)
             name = self.io.read(1024).split(b"\x00")[0].decode("ascii")
-            self.symbols[name] = i.n_value
+            symbols_dict[name] = i.n_value
+
+        if demangle:
+            names = list(symbols_dict.keys())
+            argv = ["c++filt"]
+            argv += names
+
+            with subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE) as proc:
+                demangled, _ = proc.communicate()
+
+            demangled = demangled.decode("ascii").split("\n")[:-1]
+            for name_mangled, name_demangled in zip(names, demangled):
+                self.symbols[name_demangled] = symbols_dict[name_mangled]
+        else:
+            self.symbols = symbols_dict
 
 if __name__ == "__main__":
     import sys
