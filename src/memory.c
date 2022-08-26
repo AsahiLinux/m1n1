@@ -260,7 +260,13 @@ int mmu_map(u64 from, u64 to, u64 size)
         return -1;
 
     // L3 mappings to boundary
-    chunk = min(size, ALIGN_UP(from, MASK(VADDR_L2_OFFSET_BITS)) - from);
+    u64 boundary = ALIGN_UP(from, MASK(VADDR_L2_OFFSET_BITS));
+    // CPU CTRR doesn't like L2 mappings crossing CTRR boundaries!
+    // Map everything below the m1n1 base as L3
+    if (boundary >= ram_base && boundary < (u64)_base)
+        boundary = ALIGN_UP((u64)_base, MASK(VADDR_L2_OFFSET_BITS));
+
+    chunk = min(size, boundary - from);
     if (chunk) {
         mmu_pt_map_l3(from, to, chunk);
         from += chunk;
@@ -391,14 +397,14 @@ void mmu_map_framebuffer(u64 addr, size_t size)
 
 static void mmu_add_default_mappings(void)
 {
-    mmu_map_mmio();
-
     ram_base = ALIGN_DOWN(cur_boot_args.phys_base, BIT(32));
     uint64_t ram_size = cur_boot_args.mem_size + cur_boot_args.phys_base - ram_base;
     ram_size = ALIGN_DOWN(ram_size, 0x4000);
 
     printf("MMU: RAM base: 0x%lx\n", ram_base);
     printf("MMU: Top of normal RAM: 0x%lx\n", ram_base + ram_size);
+
+    mmu_map_mmio();
 
     /*
      * Create identity mapping for RAM from 0x08_0000_0000
