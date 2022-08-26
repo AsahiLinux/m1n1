@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-import io, sys, traceback, struct, array, bisect, os, signal, runpy
+import io, sys, traceback, struct, array, bisect, os, plistlib, signal, runpy
 from construct import *
 
 from ..asm import ARMAsm
@@ -1625,6 +1625,10 @@ class HV(Reloadable):
             print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
             self.p.write64(addr, rvbar)
 
+    def _load_macho_symbols(self):
+        self.symbol_dict = self.macho.symbols
+        self.symbols = [(v, k) for k, v in self.macho.symbols.items()]
+        self.symbols.sort()
 
     def load_macho(self, data, symfile=None):
         if isinstance(data, str):
@@ -1638,9 +1642,7 @@ class HV(Reloadable):
             macho.add_symbols("com.apple.kernel", syms)
             self.xnu_mode = True
 
-        self.symbol_dict = macho.symbols
-        self.symbols = [(v, k) for k, v in macho.symbols.items()]
-        self.symbols.sort()
+        self._load_macho_symbols()
 
         def load_hook(data, segname, size, fileoff, dest):
             if segname != "__TEXT_EXEC":
@@ -1700,6 +1702,14 @@ class HV(Reloadable):
                 self.symbols.append((addr, name))
                 self.symbol_dict[name] = addr
         self.symbols.sort()
+
+    def add_kext_symbols(self, kext, demangle=False):
+        info_plist = plistlib.load(open(f"{kext}/Contents/Info.plist", "rb"))
+        identifier = info_plist["CFBundleIdentifier"]
+        name = info_plist["CFBundleName"]
+        macho = MachO(open(f"{kext}/Contents/MacOS/{name}", "rb"))
+        self.macho.add_symbols(identifier, macho, demangle=demangle)
+        self._load_macho_symbols()
 
     def _handle_sigint(self, signal=None, stack=None):
         self._sigint_pending = True
