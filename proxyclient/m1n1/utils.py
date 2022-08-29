@@ -99,6 +99,34 @@ def chexdiff32(prev, cur, ascii=True, offset=0, offset2=None):
             out.append("\n")
     return "".join(out)
 
+def chexundump(dump):
+    if type(dump) is bytes:
+        dump = dump.decode("ascii")
+    elif type(dump) is str:
+        pass
+    else:
+        dump = dump.read()
+
+    decoded = bytearray()
+    for line in dump.splitlines():
+        try:
+            cropped = line.split("|", 2)[0]
+            mark, data = cropped.split(" ", 1)
+            if data.strip() == "*":
+                continue
+            offset = int(mark, 16)
+            data = data.replace(" ", "")
+            if len(data) % 2 != 0:
+                raise ValueError("odd sized data")
+            if offset > len(decoded):
+                decoded.extend([0] * (offset - len(decoded)))
+            decoded.extend([int(data[i:i+2], 16) for i \
+                            in range(0, len(data), 2)])
+        except (ValueError, TypeError) as exc:
+            raise ValueError("can't decode line: %s", line) from exc
+
+    return decoded
+
 _extascii_table_low = [
     "▪", "☺", "☻", "♥", "♦", "♣", "♠", "•",
     "◘", "○", "◙", "♂", "♀", "♪", "♫", "☼",
