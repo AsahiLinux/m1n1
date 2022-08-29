@@ -12,7 +12,10 @@ if uname.sysname == "Darwin":
         TOOLCHAIN = "/usr/local/opt/llvm/bin/"
     USE_CLANG = "1"
 else:
-    DEFAULT_ARCH = "aarch64-linux-gnu-"
+    if uname.machine == "aarch64":
+        DEFAULT_ARCH = ""
+    else:
+        DEFAULT_ARCH = "aarch64-linux-gnu-"
     USE_CLANG = "0"
     TOOLCHAIN = ""
 
@@ -98,7 +101,7 @@ class BaseAsm(object):
             self._tmp = None
 
 class ARMAsm(BaseAsm):
-    ARCH = os.path.join(os.environ.get("ARCH", "aarch64-linux-gnu-"))
+    ARCH = os.path.join(os.environ.get("ARCH", DEFAULT_ARCH))
     CFLAGS = "-pipe -Wall -march=armv8.4-a"
     LDFLAGS = "-maarch64elf"
     HEADER = """

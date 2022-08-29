@@ -1,4 +1,3 @@
-ARCH ?= aarch64-linux-gnu-
 RUSTARCH ?= aarch64-unknown-none-softfloat
 
 ifeq ($(shell uname),Darwin)
@@ -10,6 +9,12 @@ else
 TOOLCHAIN ?= /usr/local/opt/llvm/bin/
 endif
 $(info INFO: Toolchain path: $(TOOLCHAIN))
+endif
+
+ifeq ($(shell uname -m),aarch64)
+ARCH ?=
+else
+ARCH ?= aarch64-linux-gnu-
 endif
 
 ifeq ($(USE_CLANG),1)
