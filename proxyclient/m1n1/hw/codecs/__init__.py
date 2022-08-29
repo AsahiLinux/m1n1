@@ -24,11 +24,39 @@ class R_PB_CFG2(Register8):
 class R_PB_CFG3(Register8):
     DVC_PDM = 7, 0
 
+class E_RX_SCFG(IntEnum):
+    I2C_OFFSET = 0b00
+    LEFT       = 0b01
+    RIGHT      = 0b10
+    DOWNMIX    = 0b11
+
+class E_RX_WLEN(IntEnum):
+    W_16BIT = 0b00
+    W_20BIT = 0b01
+    W_24BIT = 0b10
+    W_32BIT = 0b11
+
+class E_RX_SLEN(IntEnum):
+    W_16BIT = 0b00
+    W_24BIT = 0b01
+    W_32BIT = 0b10
+
+class R_TDM_CFG2(Register8):
+    RX_SCFG = 5, 4, E_RX_SCFG
+    RX_WLEN = 3, 2, E_RX_WLEN
+    RX_SLEN = 1, 0, E_RX_SLEN
+
+class R_TDM_CFG3(Register8):
+    RX_SLOT_R = 7, 4
+    RX_SLOT_L = 3, 0
+
 class TAS5770Regs(RegMap):
-    PWR_CTL = 0x002, R_PWR_CTL
-    PB_CFG0 = 0x003, R_PB_CFG0
-    PB_CFG2 = 0x005, R_PB_CFG2
-    PB_CFG3 = 0x006, R_PB_CFG3
+    PWR_CTL  = 0x002, R_PWR_CTL
+    PB_CFG0  = 0x003, R_PB_CFG0
+    PB_CFG2  = 0x005, R_PB_CFG2
+    PB_CFG3  = 0x006, R_PB_CFG3
+    TDM_CFG2 = 0x00c, R_TDM_CFG2
+    TDM_CFG3 = 0x00d, R_TDM_CFG3
 
 class R_MODE_CTRL(Register8):
     BOP_SRC = 7
