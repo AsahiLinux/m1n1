@@ -54,7 +54,7 @@ class E_BUSWIDTH(IntEnum):
 class E_FRAME(IntEnum):
     F_1_WORD  = 0
     F_2_WORDS = 1
-    F_4_WRODS = 2
+    F_4_WORDS = 2
 
 class R_BUSWIDTH(Register32):
     WORD  = 2, 0, E_BUSWIDTH
