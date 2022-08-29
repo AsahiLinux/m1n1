@@ -762,9 +762,10 @@ class NdRange:
 class RegMapMeta(ReloadableMeta):
     def __new__(cls, name, bases, dct):
         m = super().__new__(cls, name, bases, dct)
-        m._addrmap = {}
-        m._rngmap = SetRangeMap()
-        m._namemap = {}
+        if getattr(m, "_addrmap", None) is None:
+            m._addrmap = {}
+            m._rngmap = SetRangeMap()
+            m._namemap = {}
 
         for k, v in dct.items():
             if k.startswith("_") or not isinstance(v, tuple):
