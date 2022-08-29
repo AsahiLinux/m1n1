@@ -6,6 +6,7 @@ __all__ = ["AsmException", "ARMAsm"]
 uname = os.uname()
 
 if uname.sysname == "Darwin":
+    DEFAULT_ARCH = "aarch64-linux-gnu-"
     if uname.machine == "arm64":
         TOOLCHAIN = "/opt/homebrew/opt/llvm/bin/"
     else:
