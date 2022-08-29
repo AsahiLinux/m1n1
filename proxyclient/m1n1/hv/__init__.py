@@ -110,6 +110,7 @@ class HV(Reloadable):
         self.hvcall_handlers = {}
         self.switching_context = False
         self.show_timestamps = False
+        self.trace_tlbos = False
 
     def _reloadme(self):
         super()._reloadme()
@@ -1299,7 +1300,8 @@ class HV(Reloadable):
         hcr.TVM = 0
         hcr.FMO = 1
         hcr.IMO = 0
-        hcr.TTLBOS = 1
+        if self.trace_tlbos:
+            hcr.TTLBOS = 1
         self.u.msr(HCR_EL2, hcr.value)
 
         # Trap dangerous things
