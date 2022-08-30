@@ -42,17 +42,14 @@ dcp.system.wait_for("system")
 dcp.system.system.setProperty("gAFKConfigLogMask", 0xffff)
 
 print("Connect...")
-#dcp.dpport.port0.open()
+dcp.dpport.port0.open()
 dcp.dpport.port0.getLocation()
 dcp.dpport.port0.getLocation()
 dcp.dpport.port0.getUnit()
-# this triggers the power up message, but hangs/crashes after (PMGR issue?)
-# macOS doesn't do this
-#dcp.dpport.port0.displayRequest()
-# these seem to not work/do anything? maybe ignored if not powered.
-dcp.dpport.port0.connectTo(True, ATC0, DPPHY)
-dcp.dpport.port0.connectTo(False, ATC0, DPPHY)
-dcp.dpport.port0.connectTo(False, ATC1, DPIN0)
+# this triggers the power up message
+dcp.dpport.port0.displayRequest()
+# these seem to not work/do anything?
+dcp.dpport.port0.connectTo(True, ATC0, DPPHY, 0)
 
 #dcp.dcpav.controller.setPower(False)
 #dcp.dcpav.controller.forceHotPlugDetect()
