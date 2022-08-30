@@ -101,7 +101,9 @@ class AFKRingBuf(Reloadable):
 
             payload = self.read_buf(3 * self.BLOCK_SIZE + self.rptr, size)
             self.rptr = (align_up(self.rptr + size, self.BLOCK_SIZE)) % self.bufsize
+            self.update_rptr(self.rptr)
             yield hdr[8:] + payload
+            self.wptr = self.get_wptr()
 
         self.update_rptr(self.rptr)
 
