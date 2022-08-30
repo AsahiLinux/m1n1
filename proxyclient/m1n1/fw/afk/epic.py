@@ -149,11 +149,11 @@ class EPICService:
         return self.reply
 
 class EPICStandardService(EPICService):
-    def send_cmd(self, group, cmd, data=b'', replen=None):
+    def call(self, group, cmd, data=b'', replen=None):
         msg = struct.pack("<2xHIII48x", group, cmd, len(data), 0x69706378) + data
         if replen is not None:
             replen += 64
-        resp = super().send_cmd(0xc0, msg, replen)
+        resp = self.send_cmd(0xc0, msg, replen)
         if not resp:
             return
         rgroup, rcmd, rlen, rmagic = struct.unpack("<2xHIII", resp[:16])
@@ -163,16 +163,16 @@ class EPICStandardService(EPICService):
         return resp[64:64+rlen]
 
     def getLocation(self, unk=0):
-        return struct.unpack("<16xI12x", self.send_cmd(4, 4, bytes(32)))
+        return struct.unpack("<16xI12x", self.call(4, 4, bytes(32)))
 
     def getUnit(self, unk=0):
-        return struct.unpack("<16xI12x", self.send_cmd(4, 5, bytes(32)))
+        return struct.unpack("<16xI12x", self.call(4, 5, bytes(32)))
 
     def open(self, unk=0):
-        self.send_cmd(4, 6, struct.pack("<16xI12x", unk))
+        self.call(4, 6, struct.pack("<16xI12x", unk))
 
     def close(self):
-        self.send_cmd(4, 7, bytes(16))
+        self.call(4, 7, bytes(16))
 
 class EPICEndpoint(AFKRingBufEndpoint):
     def __init__(self, *args, **kwargs):

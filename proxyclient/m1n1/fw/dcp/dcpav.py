@@ -10,22 +10,22 @@ class DCPAVControllerService(EPICStandardService):
     SHORT = "dcpav"
 
     def setPower(self, power):
-        self.send_cmd(8, 0x8, struct.pack("<16xI12x", power))
+        self.call(8, 0x8, struct.pack("<16xI12x", power))
 
     def getPower(self, power):
-        return struct.unpack("<16xI12x", self.send_cmd(8, 0x9, bytes(32)))
+        return struct.unpack("<16xI12x", self.call(8, 0x9, bytes(32)))
 
     def wakeDisplay(self):
-        self.send_cmd(8, 0xa, bytes(16))
+        self.call(8, 0xa, bytes(16))
 
     def sleepDisplay(self):
-        self.send_cmd(8, 0xb, bytes(16))
+        self.call(8, 0xb, bytes(16))
 
     def forceHotPlugDetect(self):
-        self.send_cmd(8, 0xc, bytes(16))
+        self.call(8, 0xc, bytes(16))
 
     def setVirtualDeviceMode(self, mode):
-        self.send_cmd(8, 0xd, struct.pack("<16xI12x", mode))
+        self.call(8, 0xd, struct.pack("<16xI12x", mode))
 
 class DCPDPControllerService(EPICStandardService):
     NAME = "dcpdp-controller-epic"
@@ -55,10 +55,10 @@ class DCPDPTXRemotePortService(EPICStandardService):
     SHORT = "port"
 
     def displayRequest(self):
-        self.send_cmd(8, 8, bytes(16))
+        self.call(8, 8, bytes(16))
 
     def displayRelease(self):
-        self.send_cmd(8, 9, bytes(16))
+        self.call(8, 9, bytes(16))
 
     def connectTo(self, connected, unit, port, unk=0):
         target = 0
@@ -66,7 +66,7 @@ class DCPDPTXRemotePortService(EPICStandardService):
             target |= (1 << 8)
         target |= unit
         target |= port << 4
-        self.send_cmd(8, 13, struct.pack("<16xII8x", unk, target))
+        self.call(8, 13, struct.pack("<16xII8x", unk, target))
 
 class DCPDPTXPortEndpoint(EPICEndpoint):
     SHORT = "dpport"
