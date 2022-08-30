@@ -84,6 +84,6 @@ for i in args.command:
         args.shell = True
 
 if args.shell:
-    run_shell(hv.shell_locals, "Entering hypervisor shell. Type `start` to start the guest.")
-else:
-    hv.start()
+    run_shell(hv.shell_locals, "Entering hypervisor shell. Type ^D to start the guest.")
+
+hv.start()
