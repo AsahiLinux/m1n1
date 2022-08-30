@@ -96,7 +96,7 @@ mon.poll()
 mgr.get_color_remap_mode(6)
 mgr.enable_disable_video_power_savings(0)
 
-mgr.update_notify_clients_dcp([0,0,0,0,0,0,1,1,1,0,1,1,1])
+mgr.update_notify_clients_dcp([0,0,0,0,0,0,1,1,1,0,1,1,1,1])
 mgr.first_client_open()
 print(f"keep on: {mgr.isKeepOnScreen()}")
 print(f"main display: {mgr.is_main_display()}")
@@ -281,11 +281,13 @@ print(f"Dispaly {width}x{height}, fb size: {fb_size}")
 
 buf = u.memalign(0x4000, fb_size)
 
-img = open("asahi.bin", "rb")
+colors = [0xDD0000, 0xFE6230, 0xFEF600, 0x00BB00, 0x009BFE, 0x000083, 0x30009B]
 
-block = 512 * 1024
-for off in range(0, fb_size, block):
-    iface.writemem(buf + off, img.read(min(block, fb_size - off)))
+
+for i, color in enumerate(colors):
+    lines = height // len(colors)
+    offset = i * lines * width * 4
+    p.memset32(buf + offset, color, lines * width * 4)
 
 iova = disp_dart.iomap(0, buf, fb_size)
 

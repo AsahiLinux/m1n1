@@ -142,6 +142,9 @@ int mcc_unmap_carveouts(void)
             end |= ram_base;
             printf("MMU: Unmapping TZ%d region at 0x%lx..0x%lx\n", i, start, end);
             mmu_rm_mapping(start, end - start);
+            mmu_rm_mapping(start | REGION_RWX_EL0, end - start);
+            mmu_rm_mapping(start | REGION_RW_EL0, end - start);
+            mmu_rm_mapping(start | REGION_RX_EL1, end - start);
             mcc_carveouts[mcc_carveout_count].base = start;
             mcc_carveouts[mcc_carveout_count].size = end - start;
             mcc_carveout_count++;

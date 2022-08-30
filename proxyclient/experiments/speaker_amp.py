@@ -39,7 +39,7 @@ p.pmgr_adt_clocks_enable("/arm-io/dart-sio")
 p.pmgr_adt_clocks_enable("/arm-io/mca-switch")
 
 # reset AUDIO_P
-PS_AUDIO_P = PMGR(u).regs[0].PS4[10]
+PS_AUDIO_P = PMGR(u).regs[0].PS4[5]
 PS_AUDIO_P.set(DEV_DISABLE=1)
 PS_AUDIO_P.set(RESET=1)
 PS_AUDIO_P.set(RESET=0)

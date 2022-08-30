@@ -507,17 +507,25 @@ class ADTNode:
         addr = reg.addr
         size = reg.size
 
-        node = self._parent
+        return self._parent.translate(addr), size
+
+    def translate(self, addr):
+        node = self
         while node is not None:
             if "ranges" not in node._properties:
                 break
             for r in node.ranges:
-                if r.bus_addr <= addr < (r.bus_addr + r.size):
-                    addr = addr - r.bus_addr + r.parent_addr
+                ba = r.bus_addr
+                # PCIe special case, because Apple really broke
+                # the spec here with their little endian antics
+                if isinstance(ba, list) and len(ba) == 3:
+                    ba = (ba[0] << 64) | (ba[2] << 32) | ba[1]
+                if ba <= addr < (ba + r.size):
+                    addr = addr - ba + r.parent_addr
                     break
             node = node._parent
 
-        return addr, size
+        return addr
 
     def tostruct(self):
         properties = []

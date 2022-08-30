@@ -270,6 +270,7 @@ int uartproxy_run(struct uartproxy_msg_start *start)
         sysop("dsb sy");
         sysop("isb");
         reply.checksum = checksum(&reply, REPLY_SIZE - 4);
+        iodev_lock(uartproxy_iodev);
         iodev_queue(iodev, &reply, REPLY_SIZE);
 
         if ((request.type == REQ_MEMREAD) && (reply.status == ST_OK)) {
@@ -284,6 +285,7 @@ int uartproxy_run(struct uartproxy_msg_start *start)
             }
         }
 
+        iodev_unlock(uartproxy_iodev);
         // Flush all queued data
         iodev_write(iodev, NULL, 0);
         iodev_flush(iodev);
@@ -307,7 +309,9 @@ void uartproxy_send_event(u16 event_type, void *data, u16 length)
         csum = checksum_start(&hdr, sizeof(UartEventHdr));
         csum = checksum_finish(checksum_add(data, length, csum));
     }
+    iodev_lock(uartproxy_iodev);
     iodev_queue(uartproxy_iodev, &hdr, sizeof(UartEventHdr));
     iodev_queue(uartproxy_iodev, data, length);
     iodev_write(uartproxy_iodev, &csum, sizeof(csum));
+    iodev_unlock(uartproxy_iodev);
 }

@@ -123,8 +123,21 @@ void exception_initialize(void)
 {
     msr(VBAR_EL1, _vectors_start);
 
+    // Clear FIQ sources
+    msr(CNTP_CTL_EL0, 7L);
+    msr(CNTV_CTL_EL0, 7L);
+    if (in_el2()) {
+        msr(CNTP_CTL_EL02, 7L);
+        msr(CNTV_CTL_EL02, 7L);
+    }
+    reg_clr(SYS_IMP_APL_PMCR0, PMCR0_IACT | PMCR0_IMODE_MASK);
+    reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
+    msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
+
     if (is_primary_core())
         msr(DAIF, 0 << 6); // Enable SError, IRQ and FIQ
+    else
+        msr(DAIF, 3 << 6); // Disable IRQ and FIQ
 
     if (in_el2()) {
         // Set up a sane HCR_EL2

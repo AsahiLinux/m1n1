@@ -54,7 +54,7 @@ class E_BUSWIDTH(IntEnum):
 class E_FRAME(IntEnum):
     F_1_WORD  = 0
     F_2_WORDS = 1
-    F_4_WRODS = 2
+    F_4_WORDS = 2
 
 class R_BUSWIDTH(Register32):
     WORD  = 2, 0, E_BUSWIDTH
@@ -379,6 +379,13 @@ class ADMAC(Reloadable):
     def iowrite(self, base, data):
         assert self.dart is not None
         self.dart.iowrite(self.dart_stream, base, data)
+
+    def fill_canary(self):
+        ranges = self.dart.iotranslate(self.dart_stream, 
+                                self.resmem_iova, self.resmem_size)
+        assert len(ranges) == 1
+        start, size = ranges[0]
+        self.p.memset8(start, 0xba, size)
 
     def get_buffer(self, size):
         assert size < self.resmem_size

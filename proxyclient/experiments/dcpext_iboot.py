@@ -11,35 +11,51 @@ from m1n1.shell import run_shell
 from m1n1 import asm
 from m1n1.hw.dart import DART, DARTRegs
 from m1n1.fw.dcp.iboot import DCPIBootClient, SurfaceFormat, EOTF, Transform, AddrFormat
+from m1n1.fw.dcp.dcpav import *
 from m1n1.proxyutils import RegMonitor
 
-print(f"Framebuffer at {u.ba.video.base:#x}")
-
-p.display_shutdown(DCP_SHUTDOWN_MODE.QUIESCED)
-
-dart = DART.from_adt(u, "arm-io/dart-dcp")
-disp_dart = DART.from_adt(u, "arm-io/dart-disp0")
+dart = DART.from_adt(u, "arm-io/dart-dcpext0")
+disp_dart = DART.from_adt(u, "arm-io/dart-dispext0")
 #disp_dart.dump_all()
 
-dcp_addr = u.adt["arm-io/dcp"].get_reg(0)[0]
+dcp_addr = u.adt["arm-io/dcpext0"].get_reg(0)[0]
 dcp = DCPIBootClient(u, dcp_addr, dart, disp_dart)
-dcp.dva_offset = getattr(u.adt["/arm-io/dcp"][0], "asc_dram_mask", 0)
+dcp.dva_offset = getattr(u.adt["/arm-io/dcpext0"][0], "asc_dram_mask", 0)
 
 dcp.start()
 dcp.start_ep(0x23)
 dcp.start_ep(0x24)
+dcp.start_ep(0x27)
+dcp.start_ep(0x2a)
 
 dcp.iboot.wait_for("disp0")
 dcp.dptx.wait_for("dcpav0")
+dcp.dptx.wait_for("dcpav1")
 dcp.dptx.wait_for("dcpdp0")
+dcp.dptx.wait_for("dcpdp1")
+dcp.dpport.wait_for("port0")
+dcp.dpport.wait_for("port1")
 
-#dcp.dptx.dcpav0.setPower(False)
-#dcp.dptx.dcpav0.forceHotPlugDetect()
-#dcp.dptx.dcpav0.setVirtualDeviceMode(0)
-#dcp.dptx.dcpav0.setPower(True)
-#dcp.dptx.dcpav0.wakeDisplay()
-#dcp.dptx.dcpav0.sleepDisplay()
-#dcp.dptx.dcpav0.wakeDisplay()
+print("Connect...")
+#dcp.dpport.port0.open()
+dcp.dpport.port0.getLocation()
+dcp.dpport.port0.getLocation()
+dcp.dpport.port0.getUnit()
+# this triggers the power up message, but hangs/crashes after (PMGR issue?)
+# macOS doesn't do this
+#dcp.dpport.port0.displayRequest()
+# these seem to not work/do anything? maybe ignored if not powered.
+dcp.dpport.port0.connectTo(True, ATC0, DPPHY)
+dcp.dpport.port0.connectTo(False, ATC0, DPPHY)
+dcp.dpport.port0.connectTo(False, ATC1, DPIN0)
+
+#dcp.dcpav.controller.setPower(False)
+#dcp.dcpav.controller.forceHotPlugDetect()
+#dcp.dcpav.controller.setVirtualDeviceMode(0)
+#dcp.dcpav.controller.setPower(True)
+#dcp.dcpav.controller.wakeDisplay()
+#dcp.dcpav.controller.sleepDisplay()
+#dcp.dcpav.controller.wakeDisplay()
 
 print("Waiting for HPD...")
 while True:

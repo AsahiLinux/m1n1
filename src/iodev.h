@@ -49,6 +49,8 @@ ssize_t iodev_write(iodev_id_t id, const void *buf, size_t length);
 ssize_t iodev_queue(iodev_id_t id, const void *buf, size_t length);
 void iodev_flush(iodev_id_t id);
 void iodev_handle_events(iodev_id_t id);
+void iodev_lock(iodev_id_t id);
+void iodev_unlock(iodev_id_t id);
 
 void iodev_console_write(const void *buf, size_t length);
 void iodev_console_kick(void);

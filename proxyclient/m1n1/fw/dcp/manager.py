@@ -103,15 +103,17 @@ class DCPManager(DCPBaseManager):
 
     setProperty_dict = setProperty_int = setProperty_bool = setProperty_str = setProperty
 
-    def swap_complete_ap_gated(self, arg0, arg1, arg2, arg3, arg4):
-        print(f"swap_complete_ap_gated({arg0}, {arg1}, ..., ..., {arg4}")
-        chexdump(arg2)
-        chexdump(arg3)
+    def swap_complete_ap_gated(self, swap_id, unkBool, swap_data, swap_info, unkUint):
+        swap_data_ptr = "NULL" if swap_data is None else "..."
+        print(f"swap_complete_ap_gated({swap_id}, {unkBool}, {swap_data_ptr}, ..., {unkUint}")
+        if swap_data is not None:
+            chexdump(swap_data)
+        chexdump(swap_info)
         self.swaps += 1
-        self.frame = arg0
+        self.frame = swap_id
 
-    def swap_complete_intent_gated(self, frame, arg1, arg2, width, height):
-        print(f"swap_complete_intent_gated({frame}, {arg1}, {arg2}, {width}, {height}")
+    def swap_complete_intent_gated(self, frame, unkB, unkInt, width, height):
+        print(f"swap_complete_intent_gated({frame}, {unkB}, {unkInt}, {width}, {height}")
         self.swaps += 1
         self.frame = frame
 

@@ -124,6 +124,24 @@ void iodev_flush(iodev_id_t id)
         spin_unlock(&iodevs[id]->lock);
 }
 
+void iodev_lock(iodev_id_t id)
+{
+    if (!iodevs[id])
+        return;
+
+    if (mmu_active())
+        spin_lock(&iodevs[id]->lock);
+}
+
+void iodev_unlock(iodev_id_t id)
+{
+    if (!iodevs[id])
+        return;
+
+    if (mmu_active())
+        spin_unlock(&iodevs[id]->lock);
+}
+
 int in_iodev = 0;
 
 static DECLARE_SPINLOCK(console_lock);

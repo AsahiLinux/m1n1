@@ -99,6 +99,34 @@ def chexdiff32(prev, cur, ascii=True, offset=0, offset2=None):
             out.append("\n")
     return "".join(out)
 
+def chexundump(dump):
+    if type(dump) is bytes:
+        dump = dump.decode("ascii")
+    elif type(dump) is str:
+        pass
+    else:
+        dump = dump.read()
+
+    decoded = bytearray()
+    for line in dump.splitlines():
+        try:
+            cropped = line.split("|", 2)[0]
+            mark, data = cropped.split(" ", 1)
+            if data.strip() == "*":
+                continue
+            offset = int(mark, 16)
+            data = data.replace(" ", "")
+            if len(data) % 2 != 0:
+                raise ValueError("odd sized data")
+            if offset > len(decoded):
+                decoded.extend([0] * (offset - len(decoded)))
+            decoded.extend([int(data[i:i+2], 16) for i \
+                            in range(0, len(data), 2)])
+        except (ValueError, TypeError) as exc:
+            raise ValueError("can't decode line: %s", line) from exc
+
+    return decoded
+
 _extascii_table_low = [
     "▪", "☺", "☻", "♥", "♦", "♣", "♠", "•",
     "◘", "○", "◙", "♂", "♀", "♪", "♫", "☼",
@@ -429,6 +457,13 @@ class RangeMap(Reloadable):
         self.__start = []
         self.__end = []
         self.__value = []
+
+    def clone(self):
+        r = type(self)()
+        r.__start = list(self.__start)
+        r.__end = list(self.__end)
+        r.__value = [copy.copy(i) for i in self.__value]
+        return r
 
     def __len__(self):
         return len(self.__start)
@@ -762,9 +797,14 @@ class NdRange:
 class RegMapMeta(ReloadableMeta):
     def __new__(cls, name, bases, dct):
         m = super().__new__(cls, name, bases, dct)
-        m._addrmap = {}
-        m._rngmap = SetRangeMap()
-        m._namemap = {}
+        if getattr(m, "_addrmap", None) is None:
+            m._addrmap = {}
+            m._rngmap = SetRangeMap()
+            m._namemap = {}
+        else:
+            m._addrmap = dict(m._addrmap)
+            m._rngmap = m._rngmap.clone()
+            m._namemap = dict(m._namemap)
 
         for k, v in dct.items():
             if k.startswith("_") or not isinstance(v, tuple):
