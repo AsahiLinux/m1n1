@@ -135,16 +135,41 @@ class EPICService:
             self.ep.asc.work()
         return self.reply
 
+class EPICStandardService(EPICService):
+    def send_cmd(self, group, cmd, data=b'', replen=None):
+        msg = struct.pack("<2xHIII48x", group, cmd, len(data), 0x69706378) + data
+        if replen is not None:
+            replen += 64
+        resp = super().send_cmd(0xc0, msg, replen)
+        if not resp:
+            return
+        rgroup, rcmd, rlen, rmagic = struct.unpack("<2xHIII", resp[:16])
+        assert rmagic == 0x69706378
+        assert rgroup == group
+        assert rcmd == cmd
+        return resp[64:64+rlen]
+
+    def getLocation(self, unk=0):
+        return struct.unpack("<16xI12x", self.send_cmd(4, 4, bytes(32)))
+
+    def getUnit(self, unk=0):
+        return struct.unpack("<16xI12x", self.send_cmd(4, 5, bytes(32)))
+
+    def open(self, unk=0):
+        self.send_cmd(4, 6, struct.pack("<16xI12x", unk))
+
+    def close(self):
+        self.send_cmd(4, 7, bytes(16))
+
 class EPICEndpoint(AFKRingBufEndpoint):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.serv_map = {}
         self.chan_map = {}
+        self.serv_names = {}
 
         for i in self.SERVICES:
-            srv = i(self)
-            setattr(self, srv.SHORT, srv)
-            self.serv_map[srv.NAME] = srv
+            self.serv_names[i.NAME] = i
 
     def handle_ipc(self, data):
         fd = BytesIO(data)
@@ -165,16 +190,29 @@ class EPICEndpoint(AFKRingBufEndpoint):
         elif sub.category == EPICCategory.COMMAND:
             self.handle_cmd(hdr, sub, fd)
 
+    def wait_for(self, name):
+        while True:
+            srv = getattr(self, name, None)
+            if srv is not None and srv.ready:
+                break
+            self.asc.work()
+
     def handle_report(self, hdr, sub, fd):
         if sub.type == 0x30:
             init = EPICAnnounce.parse_stream(fd)
-            key = init.name
+            name = init.name
             if "EPICName" in init.props:
-                key = init.props["EPICName"]
-            if key in self.serv_map:
-                self.serv_map[key].init(init.props)
-                self.serv_map[key].chan = hdr.channel
-                self.chan_map[hdr.channel] = self.serv_map[key]
+                name = init.props["EPICName"]
+            key = name + str(init.props.get("EPICUnit", ""))
+            if name in self.serv_names:
+                srv = self.serv_names[name](self)
+                short = srv.SHORT + str(init.props.get("EPICUnit", ""))
+                setattr(self, short, srv)
+                srv.init(init.props)
+                srv.chan = hdr.channel
+                self.chan_map[hdr.channel] = srv
+                self.serv_map[key] = srv
+                self.log(f"New service: {key} on channel {hdr.channel} (short name: {short})")
             else:
                 self.log(f"Unknown service {key} on channel {hdr.channel}")
         else:
