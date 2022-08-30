@@ -49,6 +49,12 @@ EPICAnnounce = Struct(
     "props" / Optional(OSSerialize())
 )
 
+EPICSetProp = Struct(
+    "name_len" / Int32ul,
+    "name" / Aligned(4, CString("utf8")),
+    "value" / OSSerialize()
+)
+
 EPICCmd = Struct(
     "retcode" / Default(Hex(Int32ul), 0),
     "rxbuf" / Hex(Int64ul),
@@ -174,6 +180,23 @@ class EPICStandardService(EPICService):
     def close(self):
         self.call(4, 7, bytes(16))
 
+class AFKSystemService(EPICService):
+    NAME = "system"
+    SHORT = "system"
+
+    def getProperty(self, prop, val):
+        pass
+        #self.send_cmd(0x40, msg, 0)
+
+    def setProperty(self, prop, val):
+        msg = {
+            "name_len": (len(prop) + 3) & ~3,
+            "name": prop,
+            "value": val,
+        }
+        msg = EPICSetProp.build(msg)
+        self.send_cmd(0x43, msg, 0)
+
 class EPICEndpoint(AFKRingBufEndpoint):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -260,3 +283,10 @@ class EPICEndpoint(AFKRingBufEndpoint):
         sub.inline_len = inline_len
         pkt = EPICHeader.build(hdr) + EPICSubHeader.build(sub) + data
         super().send_ipc(pkt)
+
+class AFKSystemEndpoint(EPICEndpoint):
+    SHORT = "system"
+
+    SERVICES = [
+        AFKSystemService,
+    ]

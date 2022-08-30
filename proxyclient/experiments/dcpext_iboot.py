@@ -23,11 +23,13 @@ dcp = DCPIBootClient(u, dcp_addr, dart, disp_dart)
 dcp.dva_offset = getattr(u.adt["/arm-io/dcpext0"][0], "asc_dram_mask", 0)
 
 dcp.start()
+dcp.start_ep(0x20)
 dcp.start_ep(0x23)
 dcp.start_ep(0x24)
 dcp.start_ep(0x27)
 dcp.start_ep(0x2a)
 
+dcp.system.wait_for("system")
 dcp.iboot.wait_for("disp0")
 dcp.dptx.wait_for("dcpav0")
 dcp.dptx.wait_for("dcpav1")
@@ -35,6 +37,9 @@ dcp.dptx.wait_for("dcpdp0")
 dcp.dptx.wait_for("dcpdp1")
 dcp.dpport.wait_for("port0")
 dcp.dpport.wait_for("port1")
+
+dcp.system.wait_for("system")
+dcp.system.system.setProperty("gAFKConfigLogMask", 0xffff)
 
 print("Connect...")
 #dcp.dpport.port0.open()

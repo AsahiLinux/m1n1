@@ -195,6 +195,7 @@ class DCPIBootClient(StandardASC):
     DVA_OFFSET = 0xf00000000
 
     ENDPOINTS = {
+        0x20: AFKSystemEndpoint,
         0x23: DCPIBootEndpoint,
         0x24: DCPDPTXEndpoint,
         0x2a: DCPDPTXPortEndpoint,
