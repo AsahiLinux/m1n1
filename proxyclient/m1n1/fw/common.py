@@ -119,8 +119,48 @@ class OSSerialize(Construct):
         #print(f"{'  '*level}  => {d}")
         return d, last
 
+    def build_obj(self, obj, stream, last=True, level=0):
+        tag = 0
+        if last:
+            tag |= 0x80000000
+
+        if isinstance(obj, dict):
+            tag |= (1 << 24) | len(obj)
+            Int32ul.build_stream(tag, stream)
+            for i, (k, v) in enumerate(obj.items()):
+                self.build_obj(k, stream, False, level + 1)
+                self.build_obj(v, stream, i == len(obj) - 1, level + 1)
+        elif isinstance(obj, list):
+            tag |= (2 << 24) | len(obj)
+            Int32ul.build_stream(tag, stream)
+            for i, v in enumerate(obj):
+                self.build_obj(v, stream, i == len(obj) - 1, level + 1)
+        elif isinstance(obj, int):
+            tag |= (4 << 24) | 64
+            Int32ul.build_stream(tag, stream)
+            Int64ul.build_stream(obj, stream)
+        elif isinstance(obj, str):
+            obj = obj.encode("utf-8")
+            tag |= (9 << 24) | len(obj)
+            Int32ul.build_stream(tag, stream)
+            stream.write(obj)
+        elif isinstance(obj, bytes):
+            tag |= (10 << 24) | len(obj)
+            Int32ul.build_stream(tag, stream)
+            stream.write(obj)
+        elif isinstance(obj, bool):
+            tag |= (11 << 24) | int(obj)
+            Int32ul.build_stream(tag, stream)
+        else:
+            raise Exception(f"Cannot encode {obj!r}")
+
+        pos = stream.tell()
+        if pos & 3:
+            stream.write(bytes(4 - (pos & 3)))
+
     def _build(self, obj, stream, context, path):
-        assert False
+        Int32ul.build_stream(0xd3, stream)
+        self.build_obj(obj, stream)
 
     def _sizeof(self, context, path):
         return None
