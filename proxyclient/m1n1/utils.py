@@ -430,6 +430,13 @@ class RangeMap(Reloadable):
         self.__end = []
         self.__value = []
 
+    def clone(self):
+        r = type(self)()
+        r.__start = list(self.__start)
+        r.__end = list(self.__end)
+        r.__value = [copy.copy(i) for i in self.__value]
+        return r
+
     def __len__(self):
         return len(self.__start)
 
@@ -766,6 +773,10 @@ class RegMapMeta(ReloadableMeta):
             m._addrmap = {}
             m._rngmap = SetRangeMap()
             m._namemap = {}
+        else:
+            m._addrmap = dict(m._addrmap)
+            m._rngmap = m._rngmap.clone()
+            m._namemap = dict(m._namemap)
 
         for k, v in dct.items():
             if k.startswith("_") or not isinstance(v, tuple):
