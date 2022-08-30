@@ -15,10 +15,12 @@ fi
 kernel_base="$(realpath "$1")"
 args="$2"
 initramfs=""
-if [ -n "$3" ]; then
-    initramfs="$(realpath "$3")"
+shift 2
+
+if [ -n "$1" ]; then
+    initramfs="$(realpath "$1")"
+    shift
 fi
-shift 3
 
 if [ -z "$kernel" ]; then
     kernel="$kernel_base"/arch/arm64/boot/Image.gz
