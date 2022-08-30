@@ -41,7 +41,7 @@ EPICSubHeader = Struct(
     "timestamp" / Default(Int64ul, 0),
     "seq" / Int16ul,
     "unk" / Default(Hex(Int16ul), 0),
-    "unk2" / Default(Hex(Int32ul), 0),
+    "inline_len" / Hex(Int32ul),
 )
 
 EPICAnnounce = Struct(
@@ -94,14 +94,27 @@ class EPICService:
         chexdump(fd.read())
 
     def handle_notify(self, category, type, seq, fd):
-        self.log(f"Notify {category}/{type} #{seq}")
-        chexdump(fd.read())
+        retcode = struct.unpack("<I", fd.read(4))[0]
+        self.log(f"Notify {category}/{type} #{seq} ({retcode})")
+        data = fd.read()
+        chexdump(data)
+        print("Send ACK")
+
+        data = data[:0x50] + b"\x01\x00\x00\x00" + data[0x54:]
+
+        pkt = struct.pack("<I", 0) + data
+        self.ep.send_epic(self.chan, EPICType.NOTIFY_ACK, EPICCategory.REPLY, type, seq, pkt, len(data))
 
     def handle_reply(self, category, type, seq, fd):
         off = fd.tell()
-        if len(fd.read()) == 4:
+        data = fd.read()
+        if len(data) == 4:
             retcode = struct.unpack("<I", data)[0]
-            raise EPICError(f"IOP returned errcode {retcode:#x}")
+            if retcode:
+                raise EPICError(f"IOP returned errcode {retcode:#x}")
+            else:
+                self.reply = retcode
+                return
         fd.seek(off)
         cmd = EPICCmd.parse_stream(fd)
         payload = fd.read()
@@ -167,6 +180,7 @@ class EPICEndpoint(AFKRingBufEndpoint):
         self.serv_map = {}
         self.chan_map = {}
         self.serv_names = {}
+        self.hseq = 0
 
         for i in self.SERVICES:
             self.serv_names[i.NAME] = i
@@ -175,7 +189,6 @@ class EPICEndpoint(AFKRingBufEndpoint):
         fd = BytesIO(data)
         hdr = EPICHeader.parse_stream(fd)
         sub = EPICSubHeader.parse_stream(fd)
-
 
         if self.verbose > 2:
             self.log(f"Ch {hdr.channel} Type {hdr.type} Ver {hdr.version} Seq {hdr.seq}")
@@ -200,6 +213,8 @@ class EPICEndpoint(AFKRingBufEndpoint):
     def handle_report(self, hdr, sub, fd):
         if sub.type == 0x30:
             init = EPICAnnounce.parse_stream(fd)
+            if init.props is None:
+                init.props = {}
             name = init.name
             if "EPICName" in init.props:
                 name = init.props["EPICName"]
@@ -230,15 +245,18 @@ class EPICEndpoint(AFKRingBufEndpoint):
     def handle_cmd(self, hdr, sub, fd):
         self.chan_map[hdr.channel].handle_cmd(sub.category, sub.type, sub.seq, fd)
     
-    def send_epic(self, chan, ptype, category, type, seq, data):
+    def send_epic(self, chan, ptype, category, type, seq, data, inline_len=0):
         hdr = Container()
         hdr.channel = chan
         hdr.type = ptype
-        hdr.seq = 0
+        hdr.seq = self.hseq
+        self.hseq += 1
+
         sub = Container()
         sub.length = len(data)
         sub.category = category
         sub.type = type
         sub.seq = seq
+        sub.inline_len = inline_len
         pkt = EPICHeader.build(hdr) + EPICSubHeader.build(sub) + data
         super().send_ipc(pkt)
