@@ -598,6 +598,10 @@ class ConstructClass(ConstructClassBase, Container):
     def addrof(self, name):
         return self._addr + self._off[name][0]
 
+    @classmethod
+    def offsetof(cls, name):
+        return cls._off[name][0]
+
     def clone(self):
         obj = type(self)()
         obj.update(self)
