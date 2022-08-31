@@ -219,6 +219,9 @@ class GPURenderer:
 
         self.ev_idx = 0
 
+        self.mshook_ta = None
+        self.mshook_3d = None
+
     def submit(self, cmdbuf, wait_for=None):
         nclusters = 8
 
@@ -650,6 +653,8 @@ class GPURenderer:
         #print(" s7", hex(wc_3d.struct_7._addr))
 
         ms = GPUMicroSequence(agx)
+        if self.mshook_3d:
+            self.mshook_3d(self, work, ms)
 
         start_3d = Start3DCmd()
         start_3d.struct1 = wc_3d.struct_1 # 0x44 bytes!
@@ -908,6 +913,8 @@ class GPURenderer:
         #print("wc_ta", wc_ta)
 
         ms = GPUMicroSequence(agx)
+        if self.mshook_ta:
+            self.mshook_ta(self, work, ms)
 
         start_ta = StartTACmd()
         start_ta.tiling_params = wc_ta.tiling_params
