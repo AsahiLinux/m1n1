@@ -157,10 +157,15 @@ class CrashLogParser:
             print(f"  {f'x{i}-x{j}':>7} = {' '.join(f'{r:016x}' for r in ctx.regs[i:j + 1])}")
 
         if elr_phys:
+            v = self.asc.p.read32(elr_phys)
+
             print()
-            print("  == Faulting code ==")
-            dist = 16
-            self.asc.u.disassemble_at(elr_phys - dist * 4, (dist * 2 + 1) * 4, elr_phys)
+            if v == 0xabad1dea:
+                print("  == Faulting code is not available ==")
+            else:
+                print("  == Faulting code ==")
+                dist = 16
+                self.asc.u.disassemble_at(elr_phys - dist * 4, (dist * 2 + 1) * 4, elr_phys)
 
         print()
 
