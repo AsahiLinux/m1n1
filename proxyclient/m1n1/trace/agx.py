@@ -209,7 +209,7 @@ class FWCtlChannelTracer(ChannelTracer):
     RPTR = 0x00
 
 class CommandQueueTracer(Reloadable):
-    def __init__(self, tracer, info_addr):
+    def __init__(self, tracer, info_addr, new_queue):
         self.tracer = tracer
         self.uat = tracer.uat
         self.hv = tracer.hv
@@ -224,6 +224,9 @@ class CommandQueueTracer(Reloadable):
             tracer.state.queues[info_addr] = self.state
         else:
             self.state = tracer.state.queues[info_addr]
+
+        if new_queue:
+            self.state.rptr = 0
 
         self.update_info()
 
@@ -347,7 +350,7 @@ class AGXTracer(ASCTracer):
         if info_addr in self.cmdqueues and not new_queue:
             return self.cmdqueues[info_addr]
 
-        cmdqueue = CommandQueueTracer(self, info_addr)
+        cmdqueue = CommandQueueTracer(self, info_addr, new_queue)
         self.cmdqueues[info_addr] = cmdqueue
 
         return cmdqueue
