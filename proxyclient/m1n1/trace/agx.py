@@ -324,17 +324,13 @@ class AGXTracer(ASCTracer):
 
         self.trace_kernva = False
         self.trace_userva = False
+        self.trace_kernmap = True
         self.trace_usermap = True
         self.pause_after_init = False
         self.shell_after_init = False
         self.encoder_id_filter = None
         self.redump = False
 
-        self.clear_ttbr_tracers()
-        self.clear_uatmap_tracers()
-        self.add_ttbr_tracers()
-        self.add_uatmap_tracers()
-        self.clear_gpuvm_tracers()
         self.vmcnt = 0
         self.readlog = {}
         self.writelog = {}
@@ -344,7 +340,6 @@ class AGXTracer(ASCTracer):
         self.last_ta = None
         self.last_3d = None
 
-        self.add_mon_regions()
 
     def get_cmdqueue(self, info_addr, new_queue):
         if info_addr in self.cmdqueues and not new_queue:
@@ -377,15 +372,24 @@ class AGXTracer(ASCTracer):
     def add_uatmap_tracers(self, ctx=None):
         self.log(f"add_uatmap_tracers({ctx})")
         if ctx is None:
-            for i in range(16):
-                self.add_uatmap_tracers(i)
+            if self.trace_kernmap:
+                self.add_uatmap_tracers(0)
+            if self.trace_usermap:
+                for i in range(1, 16):
+                    self.add_uatmap_tracers(i)
+            return
+
+        if ctx != 0 and not self.trace_usermap:
+            return
+        if ctx == 0 and not self.trace_kernmap:
             return
 
         def trace_pt(start, end, idx, pte, level, sparse):
-            if start >= 0xf8000000000 and ctx != 0:
+            if start >= 0xf8000000000 and (ctx != 0 or not self.trace_kernmap):
                 return
             if start < 0xf8000000000 and not self.trace_usermap:
                 return
+            self.log(f"Add UATMapTracer/{ctx} {start:#x}")
             self.hv.add_tracer(irange(pte.offset(), 0x4000),
                             f"UATMapTracer/{ctx}",
                             mode=TraceMode.WSYNC,
@@ -407,8 +411,10 @@ class AGXTracer(ASCTracer):
     def add_gpuvm_tracers(self, ctx=None):
         self.log(f"add_gpuvm_tracers({ctx})")
         if ctx is None:
-            for i in range(16):
-                self.add_gpuvm_tracers(i)
+            self.add_gpuvm_tracers(0)
+            if self.trace_userva:
+                for i in range(1, 16):
+                    self.add_gpuvm_tracers(i)
             return
 
         def trace_page(start, end, idx, pte, level, sparse):
@@ -462,6 +468,11 @@ class AGXTracer(ASCTracer):
             del self.va_to_pa[(ctx, level, iova)]
             return
 
+        if ctx != 0 and not self.trace_usermap:
+            return
+        if ctx == 0 and not self.trace_kernmap:
+            return
+
         self.va_to_pa[(ctx, level, iova)] = pte.offset()
         level -= 1
         self.hv.add_tracer(irange(pte.offset(), 0x4000),
@@ -491,7 +502,7 @@ class AGXTracer(ASCTracer):
         if paddr < 0x800000000:
             return # MMIO, ignore
 
-        if not self.trace_userva and ctx != 0 and iova < 0x6f_00000000:
+        if not self.trace_userva and ctx != 0 and iova < 0x80_00000000:
             return
         if not self.trace_kernva and ctx == 0:
             return
@@ -549,6 +560,14 @@ class AGXTracer(ASCTracer):
 
     def start(self):
         super().start()
+
+        self.clear_ttbr_tracers()
+        self.clear_uatmap_tracers()
+        self.add_ttbr_tracers()
+        self.add_uatmap_tracers()
+        self.clear_gpuvm_tracers()
+        self.add_mon_regions()
+
         #self.handoff_tracer.start()
         self.init_channels()
         if self.state.active:
@@ -559,6 +578,9 @@ class AGXTracer(ASCTracer):
     def stop(self):
         self.pause()
         self.handoff_tracer.stop()
+        self.clear_ttbr_tracers()
+        self.clear_uatmap_tracers()
+        self.clear_gpuvm_tracers()
         super().stop()
 
     def mon_addva(self, ctx, va, size, name=""):
@@ -1069,6 +1091,7 @@ class AGXTracer(ASCTracer):
         if self.pause_after_init:
             self.log("Pausing tracing")
             self.pause()
+            self.stop()
         if self.shell_after_init:
             self.hv.run_shell()
 
