@@ -28,6 +28,9 @@ class DoorbellMsg(GpuMsg):
 class FWCtlMsg(GpuMsg):
     TYPE        = 63, 48, Constant(0x84)
 
+class HaltMsg(GpuMsg):
+    TYPE        = 63, 48, Constant(0x85)
+
 class FirmwareEP(ASCBaseEndpoint):
     BASE_MESSAGE = GpuMsg
     SHORT = "fw"
