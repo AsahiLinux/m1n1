@@ -115,10 +115,10 @@ class AGX:
             if diff is not None:
                 self.log(diff)
 
-    def alloc_channels(self, cls, name, channel_id, count=1, rx=False):
+    def alloc_channels(self, cls, name, channel_id, count=1, ring_size=0x100, rx=False):
 
         # All channels have 0x100 items
-        item_count = 0x100
+        item_count = ring_size
         item_size = cls.item_size
         ring_size = item_count * item_size
 
@@ -165,7 +165,7 @@ class AGX:
         # GPU -> CPU channels
         self.ch.event = self.alloc_channels(GPUEventChannel, "Event", None, rx=True)[0]
         self.ch.log = self.alloc_channels(GPULogChannel, "FWLog", None, 6, rx=True)
-        self.ch.ktrace = self.alloc_channels(GPUKTraceChannel, "KTrace", None, rx=True)[0]
+        self.ch.ktrace = self.alloc_channels(GPUKTraceChannel, "KTrace", None, ring_size=0x200, rx=True)[0]
         self.ch.stats = self.alloc_channels(GPUStatsChannel, "Stats", None, rx=True)[0]
 
         self.ch.fwctl = self.alloc_channels(GPUFWCtlChannel, "FWCtl", None, rx=False)[0]

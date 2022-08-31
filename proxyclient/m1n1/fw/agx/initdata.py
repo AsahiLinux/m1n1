@@ -1483,7 +1483,8 @@ class InitData_FaultInfo(ConstructClass):
 
 class InitData_RegionC(ConstructClass):
     subcon = Struct(
-        "unk_0" / HexDump(Bytes(0x28)),
+        "ktrace_enable" / Int32ul,
+        "unk_4" / HexDump(Bytes(0x24)),
         Ver("13.0 beta4", "unk_28_0" / Int32ul),
         "unk_28" / Int32ul,
         Ver("13.0 beta4", "unk_2c_0" / Int32ul),
@@ -1589,8 +1590,9 @@ class InitData_RegionC(ConstructClass):
     )
 
     def __init__(self):
-        self.unk_0 = bytes(0x28)
-        self.unk_28_0 = 0
+        self.ktrace_enable = 0xffffffff
+        self.unk_4 = bytes(0x24)
+        self.unk_28_0 = 1 # debug
         self.unk_28 = 1
         self.unk_2c_0 = 0
         self.unk_2c = 1

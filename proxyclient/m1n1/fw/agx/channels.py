@@ -306,10 +306,58 @@ EventMsg = FixedSized(0x38, Select(
     HexDump(Bytes(0x38)),
 ))
 
+TRACE_MSGS = {
+    (0x00, 0x00, 0): ("StartTA", "uuid", None, "unk", "cmdqueue"),
+    (0x00, 0x01, 0): ("FinishTA", "uuid", None, "unk", "cmdqueue"),
+    (0x00, 0x04, 0): ("Start3D", "uuid", "partial_render", "unk", "cmdqueue"),
+    (0x00, 0x05, 0): ("Finish3D_unk", "uuid", "unk", "flag", "buf_related"),
+    (0x00, 0x06, 0): ("Finish3D", "uuid", None, "unk", "cmdqueue"),
+    (0x00, 0x07, 0): ("StartCP", "uuid", None, "unk", "cmdqueue"),
+    (0x00, 0x08, 0): ("FinishCP", "uuid", None, "unk", "cmdqueue"),
+    (0x00, 0x0a, 0): ("StampUpdateTA", "value", "ev_id", "addr", "uuid"),
+    (0x00, 0x0c, 0): ("StampUpdate3D", "value", "ev_id", "addr", "uuid"),
+    (0x00, 0x0e, 0): ("StampUpdateCL", "value", "ev_id", "addr", "uuid"),
+    (0x00, 0x10, 1): ("TAPreproc1", "unk"),
+    (0x00, 0x10, 2): ("TAPreproc2", "unk1", "unk2"),
+    (0x00, 0x17, 0): ("Finish3D2", "uuid", None, "unk", "cmdqueue"),
+    (0x00, 0x28, 0): ("EvtNotify", "firing0", "firing1", "firing2", "firing3"),
+    (0x00, 0x2f, 0): ("Finish3D_unk2", "uuid", "unk"),
+    (0x00, 0x1e, 0): ("CleanupPB", "uuid", "unk2", "slot"),
+    (0x01, 0x0a, 0): ("Postproc", "cmdid", "event_ctl", "stamp_val", "uuid"),
+    (0x01, 0x0b, 0): ("EvtComplete", None, "event_ctl"),
+    (0x01, 0x0d, 0): ("EvtDequeued", "next", "event_ctl"),
+    (0x01, 0x16, 0): ("InitAttachment", "idx", "flags", "addr", "size"),
+    (0x01, 0x18, 0): ("ReInitAttachment", "idx", "flags", "addr", "size"),
+}
+
 class KTraceMsg(ConstructClass):
+    THREADS = [
+        "irq",
+        "bg",
+        "smpl",
+        "pwr",
+        "rec",
+        "kern",
+    ]
     subcon = Struct (
-        "unk" / HexDump(Bytes(0x38)),
+        "msg_type" / Hex(Const(5, Int32ul)),
+        "timestamp" / Hex(Int64ul),
+        "args" / Array(4, Int64ul),
+        "code" / Int8ul,
+        "channel" / Int8ul,
+        "pad" / Const(0, Int8ul),
+        "thread" / Int8ul,
+        "unk_flag" / Int64ul,
     )
+    def __str__(self):
+        ts = self.timestamp / 24000000
+        code = (self.channel, self.code, self.unk_flag)
+        if code in TRACE_MSGS:
+            info = TRACE_MSGS[code]
+            args = info[0] + ": " + " ".join(f"{k}={v:#x}" for k, v in zip(info[1:], self.args) if k is not None)
+        else:
+            args = "UNK: " + ", ".join(hex(i) for i in self.args)
+        return f"TRACE: [{ts:10.06f}][{self.THREADS[self.thread]:4s}] {self.channel:2x}:{self.code:2x} ({self.unk_flag}) {args}"
 
 class FWCtlMsg(ConstructClass):
     subcon = Struct (

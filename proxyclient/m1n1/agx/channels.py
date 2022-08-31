@@ -167,6 +167,9 @@ class GPULogChannel(GPURXChannel):
 class GPUKTraceChannel(GPURXChannel):
     MSG_CLASS = KTraceMsg
 
+    def handle_message(self, msg):
+        self.log(f"{msg}")
+
 class GPUStatsChannel(GPURXChannel):
     MSG_CLASS = HexDump(Bytes(0x60))
 
