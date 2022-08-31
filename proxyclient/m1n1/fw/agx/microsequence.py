@@ -849,14 +849,207 @@ class NopCmd(ConstructClass):
         return "Nop"
 
 
+class Write32Cmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x0e, Int8ul),
+        "unk_1" / Int8ul,
+        "unk_2" / Int8ul,
+        "unk_3" / Int8ul,
+        "addr" / Int64ul,
+        "val" / Int32ul,
+    )
+
+    def __init__(self, addr, val):
+        super().__init__()
+        self.unk_1 = self.unk_2 = 0
+        self.unk_3 = 0x20
+        self.addr = addr
+        self.val = val
+
+class Store32Cmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x0e, Int8ul),
+        "unk_1" / Int8ul,
+        "unk_2" / Int8ul,
+        "unk_3" / Int8ul,
+        "addr" / Int64ul,
+    )
+
+    def __init__(self, addr):
+        super().__init__()
+        self.unk_1 = self.unk_2 = self.unk_3 = 0
+        self.addr = addr
+
+class Store64Cmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x0f, Int8ul),
+        "unk_1" / Int8ul,
+        "unk_2" / Int8ul,
+        "unk_3" / Int8ul,
+        "addr" / Int64ul,
+    )
+
+    def __init__(self, addr):
+        super().__init__()
+        self.unk_1 = self.unk_2 = self.unk_3 = 0
+        self.addr = addr
+
+class Write64Cmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x0f, Int8ul),
+        "unk_1" / Int8ul,
+        "unk_2" / Int8ul,
+        "unk_3" / Int8ul,
+        "addr" / Int64ul,
+        "val" / Int64ul,
+    )
+
+    def __init__(self, addr, val):
+        super().__init__()
+        self.unk_1 = self.unk_2 = 0
+        self.unk_3 = 0x20
+        self.addr = addr
+        self.val = val
+
+class Read32Cmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x10, Int8ul),
+        "unk_1" / Int8ul,
+        "unk_2" / Int8ul,
+        "unk_3" / Int8ul,
+        "addr" / Int64ul,
+    )
+
+    def __init__(self, addr):
+        super().__init__()
+        self.unk_1 = self.unk_2 = self.unk_3 = 0
+        self.addr = addr
+
+class Read64Cmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x11, Int8ul),
+        "unk_1" / Int8ul,
+        "unk_2" / Int8ul,
+        "unk_3" / Int8ul,
+        "addr" / Int64ul,
+    )
+
+    def __init__(self, addr):
+        super().__init__()
+        self.unk_1 = self.unk_2 = self.unk_3 = 0
+        self.addr = addr
+
+class ALUCmd(ConstructClass):
+    AND = 0
+    OR = 1
+    XOR = 2
+    LSR = 3
+    LSL = 4
+
+    subcon = Struct(
+        "magic" / Const(0x16, Int8ul),
+        "v1" / Int8ul,
+        "op" / Int16ul,
+        "arg" / Int64ul,
+    )
+
+    def __init__(self, op, arg):
+        super().__init__()
+        self.v1 = 0
+        self.op = (op << 3) | (2 << 11)
+        self.arg = arg
+
+class Add16Cmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x17, Int8ul),
+        "arg1" / Int16ul,
+        "arg2" / Int8ul,
+    )
+
+    def __init__(self, arg):
+        super().__init__()
+        self.arg1 = (arg << 3) & 0xffff
+        self.arg2 = arg >> 13
+
+class CompleteCmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x2b, Int8ul),
+        ZPadding(3),
+        "unk" / Int64ul,
+        "stamp_addr" / Int64ul,
+        "stamp_val" / Int32ul,
+        "pad" / ZPadding(0x14),
+    )
+
+    def __init__(self):
+        super().__init__()
+        self.unk = 0
+
+class AbortCmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x2c, Int8ul),
+        ZPadding(3),
+        "bits" / Int32ul,
+        "unk1" / Int32ul,
+        "unk2" / Int64ul,
+        "unk3" / Int64ul,
+        "stamp_addr" / Int64ul,
+        "stamp_val" / Int32ul,
+        "pad" / ZPadding(0x14),
+    )
+
+    def __init__(self):
+        super().__init__()
+        self.bits = 0
+        self.unk1 = 0
+        self.unk2 = 0
+        self.unk3 = 0
+
+class DoorbellCmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x03, Int8ul),
+        "pad" / Int8ul,
+        "arg" / Int16ul,
+    )
+
+    def __init__(self, flags):
+        super().__init__()
+        self.pad = 0
+        self.arg = flags << 10
+
 class MicroSequence(ConstructValueClass):
-    subcon = RepeatUntil(lambda obj, lst, ctx: lst[-1].cmdid == 0x18,
+    subcon = RepeatUntil(lambda obj, lst, ctx: lst[-1].op & 0x3f in (0x18, 0x2b, 0x2c),
                          Struct(
-            "cmdid" / Peek(Int8ul),
-            "cmd" / Switch(this.cmdid, {
+            "op" / Peek(Int32ul),
+            #Probe(lookahead=32),
+            "cmd" / Switch(this.op & 0x3f, {
                 0x01: WaitForInterruptCmd,
+                0x03: DoorbellCmd,
+                #0x04: write sgx u8
+                #0x05: write sgx u32
+                #0x06: write sgx u64
+                #0x07: AGFSKUCommandTypeRegWriteStream not supported
+                #0x08: read sgx u8
+                #0x09: read sgx u32
+                #0x0a: read sgx u64
+                #0x0b: wait sgx reg u32
+                #0x0c: wait sgx reg u64
+                #0x0d: AGFSKUCommandTypeJump not supported
+                0x0e:  Switch(this.op >> 28, {
+                    0: Store32Cmd,
+                    2: Write32Cmd,
+                }),
+                0x0f:  Switch(this.op >> 28, {
+                    0: Store64Cmd,
+                    2: Write64Cmd,
+                }),
+                0x10: Read32Cmd,
+                0x11: Read64Cmd,
+                0x16: ALUCmd,
+                0x17: Add16Cmd,
                 0x18: EndCmd,
                 0x19: TimestampCmd,
+                #0x1a: KTraceCmd,
                 0x22: StartTACmd,
                 0x23: FinalizeTACmd,
                 0x24: Start3DCmd,
@@ -865,6 +1058,8 @@ class MicroSequence(ConstructValueClass):
                 0x27: FinalizeBlitCmd,
                 0x29: StartComputeCmd,
                 0x2a: FinalizeComputeCmd,
+                0x2b: CompleteCmd,
+                0x2c: AbortCmd,
             }, default=Error)
         )
     )
@@ -873,7 +1068,7 @@ class MicroSequence(ConstructValueClass):
         s = "{\n"
         for cmd in self.value:
             s += str(cmd.cmd) + '\n'
-            if isinstance(cmd.cmd, EndCmd):
+            if isinstance(cmd.cmd, (EndCmd, CompleteCmd)):
                 s += "}\n"
                 break
         else:
