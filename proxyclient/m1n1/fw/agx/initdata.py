@@ -1557,7 +1557,7 @@ class InitData_RegionC(ConstructClass):
         "unk_10e50" / Int32ul,
         "unk_10e54" / HexDump(Bytes(0x2c)),
         "unk_10e80" / Int32ul,
-        "unk_10e84" / Int32ul,
+        "do_init" / Int32ul,
         "unk_10e88" / HexDump(Bytes(0x188)),
         "idle_ts" / Int64ul,
         "idle_unk" / Int64ul,
@@ -1687,7 +1687,7 @@ class InitData_RegionC(ConstructClass):
         self.unk_10e80_ed0 = 0
         self.unk_10e80_ed4 = bytes(0x2c)
         self.unk_10e80 = 11
-        self.unk_10e84 = 1
+        self.do_init = 1
         self.unk_10e88 = bytes(0x188)
         self.idle_ts = 0
         self.idle_unk = 0
