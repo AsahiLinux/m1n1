@@ -467,8 +467,11 @@ class UAT(Reloadable):
         cached = True
         if addr not in self.pt_cache or uncached:
             cached = False
-            self.pt_cache[addr] = list(
-                struct.unpack(f"<{size}Q", self.iface.readmem(addr, size * 8)))
+            if self.p.read32(addr) == 0xabad1dea:
+                self.pt_cache[addr] = [0xabad1dea0000] * size
+            else:
+                self.pt_cache[addr] = list(
+                    struct.unpack(f"<{size}Q", self.iface.readmem(addr, size * 8)))
 
         return cached, self.pt_cache[addr]
 
