@@ -44,6 +44,9 @@ class TTBR(Register64):
     def valid(self):
         return self.VALID == 1
 
+    def block(self):
+        return False
+
     def offset(self):
         return self.BADDR << 1
 
@@ -54,26 +57,6 @@ class TTBR(Register64):
         return f"{self.offset():x} [ASID={self.ASID}, VALID={self.VALID}]"
 
 class PTE(Register64):
-    OFFSET = 47, 14
-    UNK0   = 10 # probally an ownership flag, seems to be 1 for FW created PTEs and 0 for OS PTEs
-    TYPE   = 1
-    VALID  = 0
-
-    def valid(self):
-        return self.VALID == 1 and self.TYPE == 1
-
-    def offset(self):
-        return self.OFFSET << 14
-
-    def set_offset(self, offset):
-        self.OFFSET = offset >> 14
-
-    def describe(self):
-        if not self.valid():
-            return f"<invalid> [{int(self)}:x]"
-        return f"{self.offset():x}, UNK={self.UNK0}"
-
-class Page_PTE(Register64):
     OS        = 55 # Owned by host os or firmware
     UXN       = 54
     PXN       = 53
@@ -87,7 +70,11 @@ class Page_PTE(Register64):
     VALID     = 0
 
     def valid(self):
-        return self.VALID == 1 and self.TYPE == 1
+        return self.VALID == 1
+
+    def block(self):
+        return self.TYPE == 0
+
 
     def offset(self):
         return self.OFFSET << 14
@@ -137,6 +124,13 @@ class Page_PTE(Register64):
             f"{MemoryAttr(self.AttrIndex).name}, {['Global', 'Local'][self.nG]}, " +
             f"Owner={['FW', 'OS'][self.OS]}, AF={self.AF}, SH={self.SH}] ({self.value:#x})"
         )
+
+class Page_PTE(PTE):
+    def valid(self):
+        return self.VALID == 1 and self.TYPE == 1
+
+    def block(self):
+        return True
 
 class UatAccessor(Reloadable):
     def __init__(self, uat, ctx=0):
@@ -520,7 +514,7 @@ class UAT(Reloadable):
             start = extend(base + i * range_size)
             end = start + range_size - 1
 
-            if level + 1 == len(self.LEVELS):
+            if pte.block():
                 if page_fn:
                     page_fn(start, end, i, pte, level, sparse=sparse)
             else:
@@ -571,7 +565,7 @@ class UAT(Reloadable):
 
     def dump(self, ctx, log=print):
         def print_fn(start, end, i, pte, level, sparse):
-            type = "page" if level+1 == len(self.LEVELS) else "table"
+            type = "page" if pte.block() else "table"
             if sparse:
                 log(f"{'  ' * level}...")
             log(f"{'  ' * level}{type}({i:03}): {start:011x} ... {end:011x}"
