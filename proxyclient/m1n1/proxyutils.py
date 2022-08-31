@@ -172,6 +172,9 @@ class ProxyUtils(Reloadable):
         else:
             call, region = self.exec_modes[call]
 
+        if isinstance(op, list):
+            op = tuple(op)
+
         if op in self.inst_cache:
             func = self.inst_cache[op]
         elif isinstance(op, tuple) or isinstance(op, list):
