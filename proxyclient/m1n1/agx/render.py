@@ -385,9 +385,9 @@ class GPURenderer:
         wc_3d.unk_buf2.unk_0 = 0
         wc_3d.unk_buf2.unk_8 = 0
         wc_3d.unk_buf2.unk_10 = 1
-        wc_3d.ts1 = Timestamp(0)
-        wc_3d.ts2 = Timestamp(self.ts3d_1._addr)
-        wc_3d.ts3 = Timestamp(self.ts3d_2._addr)
+        wc_3d.ts1 = TimeStamp(0)
+        wc_3d.ts2 = TimeStamp(self.ts3d_1._addr)
+        wc_3d.ts3 = TimeStamp(self.ts3d_2._addr)
         wc_3d.unk_914 = 0
         wc_3d.unk_918 = 0
         wc_3d.unk_920 = 0
@@ -700,9 +700,9 @@ class GPURenderer:
         wc_ta.unk_3e8 = bytes(0x74)
         wc_ta.unk_594 = WorkCommand0_UnkBuf()
 
-        wc_ta.ts1 = Timestamp(0)
-        wc_ta.ts2 = Timestamp(self.tsta_1._addr)
-        wc_ta.ts3 = Timestamp(self.tsta_2._addr)
+        wc_ta.ts1 = TimeStamp(0)
+        wc_ta.ts2 = TimeStamp(self.tsta_1._addr)
+        wc_ta.ts3 = TimeStamp(self.tsta_2._addr)
         wc_ta.unk_5c4 = 0
         wc_ta.unk_5c8 = 0
         wc_ta.unk_5cc = 0

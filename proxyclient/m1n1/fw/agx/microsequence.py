@@ -22,7 +22,7 @@ import textwrap
 
 __all__ = []
 
-class Timestamp(ConstructValueClass):
+class TimeStamp(ConstructValueClass):
     subcon = Int64ul
 
     def __init__(self, value=0):
@@ -721,11 +721,11 @@ class TimestampCmd(ConstructClass):
         "unk_3" / Int8ul, # Sometimes 0x80
         # all these pointers point to 0xfa0... addresses. Might be where the timestamp should be writen?
         "ts0_addr" / Int64ul,
-        "ts0" / ROPointer(this.ts0_addr, Timestamp),
+        "ts0" / ROPointer(this.ts0_addr, TimeStamp),
         "ts1_addr" / Int64ul,
-        "ts1" / ROPointer(this.ts1_addr, Timestamp),
+        "ts1" / ROPointer(this.ts1_addr, TimeStamp),
         "ts2_addr" / Int64ul,
-        "ts2" / ROPointer(this.ts2_addr, Timestamp),
+        "ts2" / ROPointer(this.ts2_addr, TimeStamp),
         "cmdqueue_ptr" / Int64ul,
         "unk_24" / Int64ul,
         Ver("13.0 beta4", "unkptr_2c_0" / Int64ul),

@@ -239,9 +239,9 @@ class WorkCommand3D(ConstructClass):
         "struct_6" / Start3DStruct6,
         "struct_7" / Start3DStruct7,
         "unk_buf2" / WorkCommand1_UnkBuf2,
-        "ts1" / Timestamp,
-        "ts2" / Timestamp,
-        "ts3" / Timestamp,
+        "ts1" / TimeStamp,
+        "ts2" / TimeStamp,
+        "ts3" / TimeStamp,
         "unk_914" / Int32ul,
         "unk_918" / Int64ul,
         "unk_920" / Int32ul,
@@ -318,9 +318,9 @@ class WorkCommandTA(ConstructClass):
 
         "unk_594" / WorkCommand0_UnkBuf,
 
-        "ts1" / Timestamp,
-        "ts2" / Timestamp,
-        "ts3" / Timestamp,
+        "ts1" / TimeStamp,
+        "ts2" / TimeStamp,
+        "ts3" / TimeStamp,
 
         "unk_5c4" / Int32ul,
         "unk_5c8" / Int32ul,
