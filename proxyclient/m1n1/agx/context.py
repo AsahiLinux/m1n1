@@ -67,7 +67,7 @@ class GPUContext:
         #if isinstance(obj.val, ConstructClassBase):
             #obj.val._addr = obj._addr
 
-        self.agx.log(f"[Context@{self.gpu_context._addr}] Map {obj._name} size {obj._size:#x} @ {obj._addr:#x} ({obj._paddr:#x})")
+        self.agx.log(f"[Context@{self.gpu_context._addr:#x}] Map {obj._name} size {obj._size:#x} @ {obj._addr:#x} ({obj._paddr:#x})")
 
         flags2 = {"AttrIndex": MemoryAttr.Shared}
         flags2.update(flags)
