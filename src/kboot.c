@@ -8,6 +8,7 @@
 #include "malloc.h"
 #include "memory.h"
 #include "pcie.h"
+#include "pmgr.h"
 #include "sep.h"
 #include "smp.h"
 #include "tunables.h"
@@ -959,10 +960,19 @@ static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix
     }
 
     for (u32 die = 0; die < die_count; ++die) {
-        char path[16] = "/soc";
+        char path[32] = "/soc";
 
-        if (die_count > 1)
+        if (die_count > 1) {
+            // pre-linux submission multi-die path
+            // can probably removed the next time someone read this comment.
             snprintf(path, sizeof(path), "/soc/die%u", die);
+            int die_node = fdt_path_offset(dt, path);
+            if (die_node < 0) {
+                /* this should use aliases for the soc nodes */
+                u64 die_unit_addr = die * PMGR_DIE_OFFSET + 0x200000000;
+                snprintf(path, sizeof(path), "/soc@%lx", die_unit_addr);
+            }
+        }
 
         int soc = fdt_path_offset(dt, path);
         if (soc < 0)
