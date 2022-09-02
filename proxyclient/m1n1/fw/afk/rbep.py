@@ -92,12 +92,12 @@ class AFKRingBuf(Reloadable):
             hdr = self.read_buf(3 * self.BLOCK_SIZE + self.rptr, 16)
             self.rptr += 16
             magic, size = struct.unpack("<4sI", hdr[:8])
-            assert magic == b"IOP "
+            assert magic in [b"IOP ", b"AOP "]
             if size > (self.bufsize - self.rptr):
                 hdr = self.read_buf(3 * self.BLOCK_SIZE, 16)
                 self.rptr = 16
                 magic, size = struct.unpack("<4sI", hdr[:8])
-                assert magic == b"IOP "
+                assert magic in [b"IOP ", b"AOP "]
 
             payload = self.read_buf(3 * self.BLOCK_SIZE + self.rptr, size)
             self.rptr = (align_up(self.rptr + size, self.BLOCK_SIZE)) % self.bufsize
