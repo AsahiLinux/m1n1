@@ -62,7 +62,7 @@ class DCPBaseManager:
         return functools.partial(method.call, rpc)
 
 class DCPManager(DCPBaseManager):
-    def __init__(self, dcpep):
+    def __init__(self, dcpep, compatible='t8103'):
         super().__init__(dcpep)
 
         self.iomfb_prop = {}
@@ -75,6 +75,8 @@ class DCPManager(DCPBaseManager):
 
         self.mapid = 0
         self.bufs = {}
+
+        self.compatible = compatible
 
     ## IOMobileFramebufferAP methods
 
@@ -130,11 +132,21 @@ class DCPManager(DCPBaseManager):
 
     def rt_bandwidth_setup_ap(self, config):
         print("rt_bandwidth_setup_ap(...)")
-        config.val = {
-            "reg1": 0x23b738014, # reg[5] in disp0/dispext0, plus 0x14 - part of pmgr
-            "reg2": 0x23bc3c000, # reg[6] in disp0/dispext0 - part of pmp/pmgr
-            "bit": 2,
-        }
+        if self.compatible == 't8103':
+            config.val = {
+                "reg1": 0x23b738014, # reg[5] in disp0/dispext0, plus 0x14 - part of pmgr
+                "reg2": 0x23bc3c000, # reg[6] in disp0/dispext0 - part of pmp/pmgr
+                "bit": 2,
+            }
+        elif self.compatible == 't600x':
+            config.val = {
+                "reg1": 0x28e3d0000 + 0x988, # reg[4] in disp0/dispext0, plus 0x988
+                "reg2": 0x0,
+                "bit": 0,
+            }
+        else:
+            raise ValueError(self.compatible)
+
     ## UnifiedPipeline2 methods
 
     def match_pmu_service(self):
