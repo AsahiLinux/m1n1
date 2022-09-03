@@ -71,6 +71,30 @@ if compat == 't8103':
 
     mon.add(0x230845840, 0x40) # error regs
 
+def get_color_mode(mgr):
+    best_id = None
+    best_score = -1
+    for mode in mgr.dcpav_prop['ColorElements']:
+        if mode['IsVirtual']:
+            continue
+        if mode['Depth'] != 8:
+            continue
+        if mode['Score'] > best_score:
+            best_score = mode['Score']
+            best_id =  mode['ID']
+    return best_id
+
+def get_timing_mode(mgr):
+    best_id = None
+    best_score = -1
+    for mode in mgr.dcpav_prop['TimingElements']:
+        if mode['IsVirtual']:
+            continue
+        if int(mode['Score']) > best_score:
+            best_score = int(mode['Score'])
+            best_id =  int(mode['ID'])
+    return best_id
+
 mon.poll()
 
 dart = DART.from_adt(u, "arm-io/dart-dcp")
@@ -113,14 +137,22 @@ if external:
 else:
     assert mgr.set_display_device(0) == 2
 assert mgr.set_parameter_dcp(14, [0], 1) == 0
-#mgr.set_digital_out_mode(86, 38)
+
+color_mode = get_color_mode(mgr)
+timing_mode = get_timing_mode(mgr)
+mgr.SetDigitalOutMode(color_mode, timing_mode)
+mon.poll()
+
+while mgr.iomfb_prop['DPTimingModeId'] != timing_mode:
+    print("Try re-setting mode")
+    mgr.SetDigitalOutMode(color_mode, timing_mode)
+    mon.poll()
 
 if external:
     assert mgr.set_display_device(2) == 0
 else:
     assert mgr.set_display_device(0) == 2
 assert mgr.set_parameter_dcp(14, [0], 1) == 0
-#mgr.set_digital_out_mode(89, 38)
 
 t = ByRef(b"\x00" * 0xc0c)
 assert mgr.get_gamma_table(t) == 2
@@ -132,7 +164,6 @@ if external:
 else:
     assert mgr.set_display_device(0) == 2
 assert mgr.set_parameter_dcp(14, [0], 1) == 0
-#mgr.set_digital_out_mode(89, 72)
 
 mon.poll()
 
