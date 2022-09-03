@@ -235,6 +235,9 @@ class DCPManager(DCPBaseManager):
         print(f"mapped to dva {dva}")
         return 0
 
+    def update_backlight_factor_prop(self, unk):
+        print(f"update_backlight_factor_prop {unk}")
+
     ## ServiceRelay methods
 
     def sr_setProperty(self, obj, key, value):
