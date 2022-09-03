@@ -112,10 +112,10 @@ class DCPManager(DCPBaseManager):
         self.swaps += 1
         self.frame = swap_id
 
-    def swap_complete_intent_gated(self, frame, unkB, unkInt, width, height):
-        print(f"swap_complete_intent_gated({frame}, {unkB}, {unkInt}, {width}, {height}")
+    def swap_complete_intent_gated(self, swap_id, unkB, unkInt, width, height):
+        print(f"swap_complete_intent_gated({swap_id}, {unkB}, {unkInt}, {width}, {height}")
         self.swaps += 1
-        self.frame = frame
+        self.frame = swap_id
 
     ## UPPipeAP_H13P methods
 
