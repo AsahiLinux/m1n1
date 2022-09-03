@@ -119,6 +119,14 @@ class DCPManager(DCPBaseManager):
         self.swaps += 1
         self.frame = swap_id
 
+    # wrapper for set_digital_out_mode to print information on the setted modes
+    def SetDigitalOutMode(self, color_id, timing_id):
+        color_mode = [x for x in self.dcpav_prop['ColorElements'] if x['ID'] == color_id][0]
+        timing_mode = [x for x in self.dcpav_prop['TimingElements'] if x['ID'] == timing_id][0]
+        pprint.pprint(color_mode)
+        pprint.pprint(timing_mode)
+        self.set_digital_out_mode(color_id, timing_id)
+
     ## UPPipeAP_H13P methods
 
     def did_boot_signal(self):
@@ -190,7 +198,7 @@ class DCPManager(DCPBaseManager):
         assert self.dcpav_prop_len == len(blob)
         self.dcpav_prop[key] = ipc.OSSerialize().parse(blob)
         self.dcpav_prop_data = self.dcpav_prop_len = self.dcpav_prop_off = None
-        pprint.pprint(self.dcpav_prop[key])
+        #pprint.pprint(self.dcpav_prop[key])
         return True
 
     def set_boolean_property(self, key, value):
