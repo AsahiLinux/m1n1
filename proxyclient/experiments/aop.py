@@ -93,6 +93,10 @@ class AOPClient(StandardASC):
         self.base = node.get_reg(0)[0]
         self.fw_base, self.fw_len = node.get_reg(2)
 
+        if u.adt["arm-io"].compatible[0] == "arm-io,t6000":
+            # argh
+            self.fw_base -= 0x2_0000_0000
+
         super().__init__(u, self.base, dart)
 
     def _bootargs_span(self):
