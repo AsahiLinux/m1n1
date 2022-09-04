@@ -678,7 +678,7 @@ class M1N1Proxy(Reloadable):
     def exit(self, retval=0):
         self.request(self.P_EXIT, retval)
     def call(self, addr, *args, reboot=False):
-        if len(args) > 4:
+        if len(args) > 5:
             raise ValueError("Too many arguments")
         return self.request(self.P_CALL, addr, *args, reboot=reboot)
     def reload(self, addr, *args, el1=False):
