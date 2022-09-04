@@ -354,7 +354,7 @@ class AGXTracer(ASCTracer):
         self.hv.clear_tracers(f"UATTTBRTracer")
 
     def add_ttbr_tracers(self):
-        self.hv.add_tracer(irange(self.gpu_region, 16 * 16),
+        self.hv.add_tracer(irange(self.gpu_region, UAT.NUM_CONTEXTS * 16),
                         f"UATTTBRTracer",
                         mode=TraceMode.WSYNC,
                         write=self.uat_write,
@@ -364,7 +364,7 @@ class AGXTracer(ASCTracer):
 
     def clear_uatmap_tracers(self, ctx=None):
         if ctx is None:
-            for i in range(16):
+            for i in range(UAT.NUM_CONTEXTS):
                 self.clear_uatmap_tracers(i)
         else:
             self.hv.clear_tracers(f"UATMapTracer/{ctx}")
@@ -375,7 +375,7 @@ class AGXTracer(ASCTracer):
             if self.trace_kernmap:
                 self.add_uatmap_tracers(0)
             if self.trace_usermap:
-                for i in range(1, 16):
+                for i in range(1, UAT.NUM_CONTEXTS):
                     self.add_uatmap_tracers(i)
             return
 
@@ -403,7 +403,7 @@ class AGXTracer(ASCTracer):
 
     def clear_gpuvm_tracers(self, ctx=None):
         if ctx is None:
-            for i in range(16):
+            for i in range(UAT.NUM_CONTEXTS):
                 self.clear_gpuvm_tracers(i)
         else:
             self.hv.clear_tracers(f"GPUVM/{ctx}")
@@ -413,7 +413,7 @@ class AGXTracer(ASCTracer):
         if ctx is None:
             self.add_gpuvm_tracers(0)
             if self.trace_userva:
-                for i in range(1, 16):
+                for i in range(1, UAT.NUM_CONTEXTS):
                     self.add_gpuvm_tracers(i)
             return
 
