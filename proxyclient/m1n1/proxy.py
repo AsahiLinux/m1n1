@@ -779,67 +779,67 @@ class M1N1Proxy(Reloadable):
         '''Or 64 bit value of data into memory at addr and return result'''
         if addr & 7:
             raise AlignmentError()
-        self.request(self.P_SET64, addr, data)
+        return self.request(self.P_SET64, addr, data)
     def set32(self, addr, data):
         '''Or 32 bit value of data into memory at addr and return result'''
         if addr & 3:
             raise AlignmentError()
-        self.request(self.P_SET32, addr, data)
+        return self.request(self.P_SET32, addr, data)
     def set16(self, addr, data):
         '''Or 16 bit value of data into memory at addr and return result'''
         if addr & 1:
             raise AlignmentError()
-        self.request(self.P_SET16, addr, data)
+        return self.request(self.P_SET16, addr, data)
     def set8(self, addr, data):
         '''Or byte value of data into memory at addr and return result'''
-        self.request(self.P_SET8, addr, data)
+        return self.request(self.P_SET8, addr, data)
 
     def clear64(self, addr, data):
         '''Clear bits in 64 bit memory at address addr that are set
     in parameter data and return result'''
         if addr & 7:
             raise AlignmentError()
-        self.request(self.P_CLEAR64, addr, data)
+        return self.request(self.P_CLEAR64, addr, data)
     def clear32(self, addr, data):
         '''Clear bits in 32 bit memory at address addr that are set
     in parameter data and return result'''
         if addr & 3:
             raise AlignmentError()
-        self.request(self.P_CLEAR32, addr, data)
+        return self.request(self.P_CLEAR32, addr, data)
     def clear16(self, addr, data):
         '''Clear bits in 16 bit memory at address addr that are set
     in parameter data and return result'''
         if addr & 1:
             raise AlignmentError()
-        self.request(self.P_CLEAR16, addr, data)
+        return self.request(self.P_CLEAR16, addr, data)
     def clear8(self, addr, data):
         '''Clear bits in 8 bit memory at addr that are set in data
     and return result'''
-        self.request(self.P_CLEAR8, addr, data)
+        return self.request(self.P_CLEAR8, addr, data)
 
     def mask64(self, addr, clear, set):
         '''Clear bits in 64 bit memory at address addr that are
  set in clear, then set the bits in set and return result'''
         if addr & 7:
             raise AlignmentError()
-        self.request(self.P_MASK64, addr, clear, set)
+        return self.request(self.P_MASK64, addr, clear, set)
     def mask32(self, addr, clear, set):
         '''Clear bits in 32 bit memory at address addr that are
  set in clear, then set the bits in set and return result'''
         if addr & 3:
             raise AlignmentError()
-        self.request(self.P_MASK32, addr, clear, set)
+        return self.request(self.P_MASK32, addr, clear, set)
     def mask16(self, addr, clear, set):
         '''Clear select bits in 16 bit memory addr that are set
  in clear parameter, then set the bits in set parameter and return result'''
         if addr & 1:
             raise AlignmentError()
-        self.request(self.P_MASK16, addr, clear, set)
+        return self.request(self.P_MASK16, addr, clear, set)
     def mask8(self, addr, clear, set):
         '''Clear bits in 1 byte memory at addr that are set
  in clear parameter, then set the bits in set parameter
  and return the result'''
-        self.request(self.P_MASK8, addr, clear, set)
+        return self.request(self.P_MASK8, addr, clear, set)
 
     def writeread64(self, addr, data):
         return self.request(self.P_WRITEREAD64, addr, data)
