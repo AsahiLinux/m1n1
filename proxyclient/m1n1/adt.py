@@ -148,6 +148,12 @@ SpeakerConfig = Struct(
     "isense_slot" / Int8ul,
 )
 
+DCBlockerConfig = Struct(
+    "dc_blk0" / Hex(Int8ul),
+    "dc_blk1" / Hex(Int8ul),
+    "pad" / Hex(Int16ul),
+)
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -217,6 +223,7 @@ DEV_PROPERTIES = {
     "audio-*": {
         "*": {
             "speaker-config": SafeGreedyRange(SpeakerConfig),
+            "amp-dcblocker-config": DCBlockerConfig,
         },
     },
 }
