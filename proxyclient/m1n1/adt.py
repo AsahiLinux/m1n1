@@ -141,6 +141,13 @@ GPUPerfState = Struct(
     "volt" / Int32ul,
 )
 
+SpeakerConfig = Struct(
+    "rx_slot" / Int8ul,
+    "amp_gain" / Int8ul,
+    "vsense_slot" / Int8ul,
+    "isense_slot" / Int8ul,
+)
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -206,7 +213,12 @@ DEV_PROPERTIES = {
         "*": {
             "pmap-io-ranges": PMAPIORanges,
         }
-    }
+    },
+    "audio-*": {
+        "*": {
+            "speaker-config": SafeGreedyRange(SpeakerConfig),
+        },
+    },
 }
 
 def parse_prop(node, path, node_name, name, v, is_template=False):
