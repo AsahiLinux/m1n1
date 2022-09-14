@@ -4,6 +4,8 @@ from m1n1.utils import RegMap
 from m1n1.trace.i2c import I2CTracer, I2CRegMapTracer
 from m1n1.hw.codecs import *
 
+hv.p.hv_set_time_stealing(0, 1)
+
 class SN012776Tracer(I2CRegMapTracer):
     REGMAP = SN012776Regs
     ADDRESSING = (1, 1)
