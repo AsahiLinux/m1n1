@@ -1229,10 +1229,10 @@ class AGXHWDataB(ConstructClass):
         self.unk_c3c = 0x19
 
 class InitData_BufferMgrCtl(ConstructValueClass):
-    subcon = Array(256, Bytes(0x10))
+    subcon = Array(126, Bytes(0x10))
 
     def __init__(self):
-        self.value = [bytes(0x10)] * 256
+        self.value = [bytes(0x10)] * 126
 
 class InitData_GPUQueueStatsTA(ConstructClass):
     subcon = Struct(
