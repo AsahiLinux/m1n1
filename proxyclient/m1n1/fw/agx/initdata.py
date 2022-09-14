@@ -1772,8 +1772,18 @@ class InitData(ConstructClass):
         "uat_level_info" / Array(3, UatLevelInfo),
         "pad_8c" / HexDump(Default(Bytes(0x14), bytes(0x14))),
         "host_mapped_fw_allocations" / Int32ul, # must be 1
-        ZPadding(0x1000) # For safety
+        "unk_ac" / Int32ul,
+        "unk_b0" / Int32ul,
+        "unk_b4" / Int32ul,
+        "unk_b8" / Int32ul,
     )
+
+    def __init__(self):
+        super().__init__()
+        self.unk_ac = 0
+        self.unk_b0 = 0
+        self.unk_b4 = 0
+        self.unk_b8 = 0
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
