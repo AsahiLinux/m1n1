@@ -402,10 +402,14 @@ channelRings = (
 )
 
 class ChannelStateFields(RegMap):
+    _SIZE = 0x30
+
     READ_PTR = 0x00, Register32
     WRITE_PTR = 0x20, Register32
 
 class FWControlStateFields(RegMap):
+    _SIZE = 0x20
+
     READ_PTR = 0x00, Register32
     WRITE_PTR = 0x10, Register32
 
@@ -419,7 +423,7 @@ class Channel(Reloadable):
         self.ring_defs = ring_defs
         self.info = info
 
-        self.st_maps = uat.iotranslate(0, info.state_addr, 0x30 * len(ring_defs))
+        self.st_maps = uat.iotranslate(0, info.state_addr, state_fields._SIZE * len(ring_defs))
         assert len(self.st_maps) == 1
         self.state_phys = self.st_maps[0][0]
         self.state = []
