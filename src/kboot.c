@@ -1066,7 +1066,7 @@ int kboot_set_chosen(const char *name, const char *value)
     if (!name)
         return -1;
 
-    for (int i = 0; i < MAX_CHOSEN_PARAMS; i++) {
+    for (i = 0; i < MAX_CHOSEN_PARAMS; i++) {
         if (!chosen_params[i][0]) {
             chosen_params[i][0] = malloc(strlen(name) + 1);
             strcpy(chosen_params[i][0], name);

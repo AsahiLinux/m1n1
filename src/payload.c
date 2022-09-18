@@ -172,7 +172,7 @@ static bool check_var(u8 **p)
 
     if (IS_VAR("chosen.")) {
         if (chosen_cnt >= MAX_CHOSEN_VARS)
-            printf("Too many chosen vars, ignoring %s='%s'\n", *p, val);
+            printf("Too many chosen vars, ignoring %s\n", *p);
         else
             chosen[chosen_cnt++] = (char *)*p;
     } else if (IS_VAR("chainload=")) {
