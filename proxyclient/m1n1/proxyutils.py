@@ -85,29 +85,48 @@ class ProxyUtils(Reloadable):
             8: lambda addr: self.proxy.read8(addr),
             16: lambda addr: self.proxy.read16(addr),
             32: lambda addr: self.proxy.read32(addr),
-            64: lambda addr: self.proxy.read64(addr),
-            128: lambda addr: [self.proxy.read64(addr),
-                               self.proxy.read64(addr + 8)],
-            256: lambda addr: [self.proxy.read64(addr),
-                               self.proxy.read64(addr + 8),
-                               self.proxy.read64(addr + 16),
-                               self.proxy.read64(addr + 24)],
-            512: lambda addr: [self.proxy.read64(addr + i) for i in range(0, 64, 8)],
+            64: lambda addr: self.uread64(addr),
+            128: lambda addr: [self.uread64(addr),
+                               self.uread64(addr + 8)],
+            256: lambda addr: [self.uread64(addr),
+                               self.uread64(addr + 8),
+                               self.uread64(addr + 16),
+                               self.uread64(addr + 24)],
+            512: lambda addr: [self.uread64(addr + i) for i in range(0, 64, 8)],
         }
         self._write = {
             8: lambda addr, data: self.proxy.write8(addr, data),
             16: lambda addr, data: self.proxy.write16(addr, data),
             32: lambda addr, data: self.proxy.write32(addr, data),
-            64: lambda addr, data: self.proxy.write64(addr, data),
-            128: lambda addr, data: (self.proxy.write64(addr, data[0]),
-                                     self.proxy.write64(addr + 8, data[1])),
-            256: lambda addr, data: (self.proxy.write64(addr, data[0]),
-                                     self.proxy.write64(addr + 8, data[1]),
-                                     self.proxy.write64(addr + 16, data[2]),
-                                     self.proxy.write64(addr + 24, data[3])),
-            512: lambda addr, data: [self.proxy.write64(addr + 8 * i, data[i])
+            64: lambda addr, data: self.uwrite64(addr, data),
+            128: lambda addr, data: (self.uwrite64(addr, data[0]),
+                                     self.uwrite64(addr + 8, data[1])),
+            256: lambda addr, data: (self.uwrite64(addr, data[0]),
+                                     self.uwrite64(addr + 8, data[1]),
+                                     self.uwrite64(addr + 16, data[2]),
+                                     self.uwrite64(addr + 24, data[3])),
+            512: lambda addr, data: [self.uwrite64(addr + 8 * i, data[i])
                                      for i in range(8)],
         }
+
+    def uwrite64(self, addr, data):
+        '''write 8 byte value to given address, supporting split 4-byte halves'''
+        if addr & 3:
+            raise AlignmentError()
+        if addr & 4:
+            self.proxy.write32(addr, data & 0xffffffff)
+            self.proxy.write32(addr + 4, data >> 32)
+        else:
+            self.proxy.write64(addr, data)
+
+    def uread64(self, addr):
+        '''write 8 byte value to given address, supporting split 4-byte halves'''
+        if addr & 3:
+            raise AlignmentError()
+        if addr & 4:
+            return self.proxy.read32(addr) | (self.proxy.read32(addr + 4) << 32)
+        else:
+            return self.proxy.read64(addr)
 
     def read(self, addr, width):
         '''do a width read from addr and return it
