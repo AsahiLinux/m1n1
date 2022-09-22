@@ -668,6 +668,10 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         get_simd_state(simd);
         simd[Rt].d[index] = val[0];
         put_simd_state(simd);
+    } else if ((insn & 0x3ffffc00) == 0x08dffc00) {
+        // LDAR*
+        DECODE_OK;
+        regs[Rt] = *val;
     } else {
         return false;
     }
@@ -789,6 +793,9 @@ static bool emulate_store(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, 
         *vaddr = regs[Rt];
         memset(val, 0, CACHE_LINE_SIZE);
         *width = CACHE_LINE_LOG2;
+    } else if ((insn & 0x3ffffc00) == 0x089ffc00) {
+        // STL  qR*
+        *val = regs[Rt] & mask;
     } else {
         return false;
     }
@@ -825,6 +832,7 @@ static void emit_mmiotrace(u64 pc, u64 addr, u64 *data, u64 width, u64 flags, bo
 
 bool hv_pa_write(struct exc_info *ctx, u64 addr, u64 *val, int width)
 {
+    sysop("dsb sy");
     exc_count = 0;
     exc_guard = GUARD_SKIP;
     switch (width) {
@@ -867,6 +875,7 @@ bool hv_pa_write(struct exc_info *ctx, u64 addr, u64 *val, int width)
 
 bool hv_pa_read(struct exc_info *ctx, u64 addr, u64 *val, int width)
 {
+    sysop("dsb sy");
     exc_count = 0;
     exc_guard = GUARD_SKIP;
     switch (width) {
