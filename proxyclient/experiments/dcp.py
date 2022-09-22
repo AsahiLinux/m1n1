@@ -110,8 +110,12 @@ dcp = DCPClient(u, dcp_addr, dart, disp_dart)
 dcp.dva_offset = getattr(u.adt["/arm-io/dcp"][0], "asc_dram_mask", 0)
 
 dcp.start()
+dcp.start_ep(0x20)
 dcp.start_ep(0x37)
 dcp.dcpep.initialize()
+
+dcp.system.wait_for("system")
+dcp.system.system.setProperty("gAFKConfigLogMask", 0xffff)
 
 mgr = DCPManager(dcp.dcpep, compat)
 

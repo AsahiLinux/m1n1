@@ -3,9 +3,11 @@ from ...utils import *
 
 from ..asc import StandardASC
 from .dcpep import DCPEndpoint
+from ..afk.epic import *
 
 class DCPClient(StandardASC):
     ENDPOINTS = {
+        0x20: AFKSystemEndpoint,
         0x37: DCPEndpoint,
     }
 
