@@ -421,6 +421,9 @@ static int dt_set_chosen(void)
         if (rnode >= 0) {
             dt_dart_reserve_vram();
             dt_carveout_reserved_regions(disp_reserved_regions, ARRAY_SIZE(disp_reserved_regions));
+
+            // Previous calls might invalidate /chosen, get it again
+            node = fdt_path_offset(dt, "/chosen");
         }
     }
 
