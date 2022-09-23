@@ -321,6 +321,31 @@ dart_dev_t *dart_init_adt(const char *path, int instance, int device, bool keep_
     return dart;
 }
 
+void dart_lock_adt(const char *path, int instance)
+{
+    int dart_path[8];
+    int node = adt_path_offset_trace(adt, path, dart_path);
+    if (node < 0) {
+        printf("dart: Error getting DART node %s\n", path);
+        return;
+    }
+
+    u64 base;
+    if (adt_get_reg(adt, dart_path, "reg", instance, &base, NULL) < 0) {
+        printf("dart: Error getting DART %s base address.\n", path);
+        return;
+    }
+
+    if (adt_is_compatible(adt, node, "dart,t8020") || adt_is_compatible(adt, node, "dart,t6000")) {
+        if (!(read32(base + DART_T8020_CONFIG) & DART_T8020_CONFIG_LOCK))
+            set32(base + DART_T8020_CONFIG, DART_T8020_CONFIG_LOCK);
+    } else if (adt_is_compatible(adt, node, "dart,t8110")) {
+        printf("dart: dart %s, locking ignored for t8110\n", path);
+    } else {
+        printf("dart: dart %s at 0x%lx is of an unknown type\n", path, base);
+    }
+}
+
 dart_dev_t *dart_init_fdt(void *dt, u32 phandle, int device, bool keep_pts)
 {
     int node = fdt_node_offset_by_phandle(dt, phandle);
