@@ -870,6 +870,14 @@ static int dt_set_atc_tunables(void)
     return 0;
 }
 
+static int dt_set_display(void)
+{
+    /* lock dart-disp0 to prevent old software from resetting it */
+    dart_lock_adt("/arm-io/dart-disp0", 0);
+
+    return 0;
+}
+
 static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix, int max_devs)
 {
     int ret = -1;
@@ -1095,6 +1103,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_uboot())
         return -1;
     if (dt_set_atc_tunables())
+        return -1;
+    if (dt_set_display())
         return -1;
     if (dt_disable_missing_devs("usb-drd", "usb@", 8))
         return -1;
