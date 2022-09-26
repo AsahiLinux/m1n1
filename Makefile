@@ -116,7 +116,7 @@ OBJECTS := \
 	start.o \
 	startup.o \
 	string.o \
-	tunables.o \
+	tunables.o tunables_static.o \
 	tps6598x.o \
 	uart.o \
 	uartproxy.o \

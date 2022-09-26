@@ -10,6 +10,7 @@
 #include "pcie.h"
 #include "sep.h"
 #include "smp.h"
+#include "tunables.h"
 #include "types.h"
 #include "usb.h"
 #include "utils.h"
@@ -1149,6 +1150,7 @@ int kboot_boot(void *kernel)
     usb_init();
     pcie_init();
     dapf_init_all();
+    tunables_apply_static();
 
     printf("Setting SMP mode to WFE...\n");
     smp_set_wfe_mode(true);

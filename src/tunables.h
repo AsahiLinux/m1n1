@@ -37,4 +37,6 @@ int tunables_apply_local(const char *path, const char *prop, u32 reg_idx);
  */
 int tunables_apply_local_addr(const char *path, const char *prop, uintptr_t base);
 
+int tunables_apply_static(void);
+
 #endif
