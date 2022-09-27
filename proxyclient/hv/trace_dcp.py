@@ -856,8 +856,22 @@ class DCPExpertService(EPICEp):
 class Disp0Service(EPICEp):
     NAME = "disp0"
 
+class DCPAVControllerEpicTracer(EPICServiceTracer):
+    NAME = "dcpav-controller-epic"
+
+    @epic_service_cmd(0, 14)
+    def getParticipatesPowerManagement(self, data):
+        self.log("> getParticipatesPowerManagement")
+    @epic_service_reply(0, 14)
+    def getParticipatesPowerManagement_reply(self, data):
+        self.log("< getParticipatesPowerManagement")
+        chexdump(data, print_fn=self.log)
+
 class DPAVController(EPICEp):
     NAME = "dpavctrl"
+    SERVICES = [
+        DCPAVControllerEpicTracer
+    ]
 
 class DPSACService(EPICEp):
     NAME = "dpsac"
