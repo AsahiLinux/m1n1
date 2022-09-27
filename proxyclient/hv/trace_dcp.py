@@ -137,15 +137,107 @@ class AFKEp(EP):
         self.state.rxbuf_info = (off, size)
         self.create_bufs()
 
+def epic_service_cmd(group, cmd):
+    def f(x):
+        x.is_cmd = True
+        x.group = group
+        x.cmd = cmd
+        return x
+    return f
+
+def epic_service_reply(group, cmd):
+    def f(x):
+        x.is_reply = True
+        x.group = group
+        x.cmd = cmd
+        return x
+    return f
+
+class EPICServiceTracer(Reloadable):
+    def __init__(self, tracer, ep, key):
+        self.tracer = tracer
+        self.ep = ep
+        self.key = key
+
+        self.cmdmap = {}
+        self.replymap = {}
+        for name in dir(self):
+            i = getattr(self, name)
+            if not callable(i):
+                continue
+            if getattr(i, "is_cmd", False):
+                self.cmdmap[i.group, i.cmd] = getattr(self, name)
+            if getattr(i, "is_reply", False):
+                self.replymap[i.group, i.cmd] = getattr(self, name)
+
+    def log(self, msg):
+        self.ep.log(f"[{self.key}] {msg}")
+
+    def init(self, props):
+        pass
+
+    def handle_cmd(self, sgroup, scmd, sdata):
+        cmdfn = self.cmdmap.get((sgroup, scmd), None)
+        if cmdfn:
+            cmdfn(sdata)
+        else:
+            self.log(f"> unknown group {sgroup}; command {scmd}")
+            if sdata:
+                chexdump(sdata, print_fn=self.log)
+
+    def handle_reply(self, sgroup, scmd, sdata):
+        replyfn = self.replymap.get((sgroup, scmd), None)
+        if replyfn:
+            replyfn(sdata)
+        else:
+            self.log(f"< unknown group {sgroup}; command {scmd}")
+            if sdata:
+                chexdump(sdata, print_fn=self.log)
+
+    @epic_service_cmd(4, 4)
+    def getLocation(self, data):
+        self.log("> getLocation")
+    @epic_service_reply(4, 4)
+    def getLocation_reply(self, data):
+        self.log("< getLocation")
+
+    @epic_service_cmd(4, 5)
+    def getUnit(self, data):
+        self.log("> getUnit")
+    @epic_service_reply(4, 5)
+    def getUnit_reply(self, data):
+        self.log("< getUnit")
+
+    @epic_service_cmd(4, 6)
+    def open(self, data):
+        self.log("> open")
+    @epic_service_reply(4, 6)
+    def open_reply(self, data):
+        self.log("< open")
+
+    @epic_service_cmd(4, 7)
+    def close(self, data):
+        self.log("> close")
+    @epic_service_reply(4, 7)
+    def close_reply(self, data):
+        self.log("< close")
+
 class EPICEp(AFKEp):
+    SERVICES = []
+
+    def __init__(self, tracer, epid):
+        super().__init__(tracer, epid)
+
+        self.serv_map = {}
+        self.chan_map = {}
+        self.serv_names = {}
+        for i in self.SERVICES:
+            self.serv_names[i.NAME] = i
+
     def handle_ipc(self, data, dir=None):
         fd = BytesIO(data)
         hdr = EPICHeader.parse_stream(fd)
         sub = EPICSubHeader.parse_stream(fd)
-
-        self.log(f"{dir}Ch {hdr.channel} Type {hdr.type} Ver {hdr.version} Tag {hdr.seq}")
-        self.log(f"  Len {sub.length} Ver {sub.version} Cat {sub.category} Type {sub.type:#x} Seq {sub.seq}")
-        chexdump(data, print_fn=self.log)
 
         if sub.category == EPICCategory.REPORT:
             self.handle_report(hdr, sub, fd)
@@ -155,12 +247,33 @@ class EPICEp(AFKEp):
             self.handle_reply(hdr, sub, fd)
         elif sub.category == EPICCategory.COMMAND:
             self.handle_cmd(hdr, sub, fd)
+        else:
+            self.log(f"{dir}Ch {hdr.channel} Type {hdr.type} Ver {hdr.version} Tag {hdr.seq}")
+            self.log(f"  Len {sub.length} Ver {sub.version} Cat {sub.category} Type {sub.type:#x} Seq {sub.seq}")
+            chexdump(data, print_fn=self.log)
 
-    def handle_report(self, hdr, sub, fd):
-        if sub.type == 0x30:
+    def handle_report_init(self, hdr, sub, fd):
             init = EPICAnnounce.parse_stream(fd)
             self.log(f"Init: {init.name}")
             self.log(f"  Props: {init.props}")
+
+            if not init.props:
+                init.props = {}
+
+            name = init.props.get("EPICName", init.name)
+            key = name + str(init.props.get("EPICUnit", ""))
+            self.log(f"New service: {key} on channel {hdr.channel}")
+
+            srv_cls = self.serv_names.get(name, EPICServiceTracer)
+            srv = srv_cls(self.tracer, self, key)
+            srv.init(init.props)
+            srv.chan = hdr.channel
+            self.chan_map[hdr.channel] = srv
+            self.serv_map[key] = srv
+
+    def handle_report(self, hdr, sub, fd):
+        if sub.type == 0x30:
+            self.handle_report_init(hdr, sub, fd)
         else:
             self.log(f"Report {sub.type:#x}")
             chexdump(fd.read(), print_fn=self.log)
@@ -170,25 +283,50 @@ class EPICEp(AFKEp):
         chexdump(fd.read(), print_fn=self.log)
 
     def handle_reply(self, hdr, sub, fd):
-        cmd = EPICCmd.parse_stream(fd)
-        payload = fd.read()
-        self.log(f"Response {sub.type:#x}: {cmd.retcode:#x}")
-        if payload:
+        if sub.inline_len:
+            payload = fd.read()
             self.log("Inline payload:")
             chexdump(payload, print_fn=self.log)
-        if cmd.rxbuf:
-            self.log(f"RX buf @ {cmd.rxbuf:#x} ({cmd.rxlen:#x} bytes):")
-            chexdump(self.dart.ioread(0, cmd.rxbuf, cmd.rxlen), print_fn=self.log)
+        else:
+            cmd = EPICCmd.parse_stream(fd)
+            if not cmd.rxbuf:
+                self.log(f"Response {sub.type:#x}: {cmd.retcode:#x}")
+                return
+
+            data = self.dart.ioread(0, cmd.rxbuf, cmd.rxlen)
+            rgroup, rcmd, rlen, rmagic = struct.unpack("<2xHIII", data[:16])
+            if rmagic != 0x69706378:
+                self.log("Warning: Invalid EPICStandardService response magic")
+
+            srv = self.chan_map.get(hdr.channel, None)
+            if srv:
+                srv.handle_reply(rgroup, rcmd, data[64:64+rlen] if rlen else None)
+            else:
+                self.log(f"[???] < group {rgroup} command {rcmd}")
+                chexdump(data[64:64+rlen], print_fn=lambda msg: self.log(f"[???] {msg}"))
 
     def handle_cmd(self, hdr, sub, fd):
         cmd = EPICCmd.parse_stream(fd)
         payload = fd.read()
-        self.log(f"Command {sub.type:#x}: {cmd.retcode:#x}")
-        if payload:
-            chexdump(payload, print_fn=self.log)
-        if cmd.txbuf:
-            self.log(f"TX buf @ {cmd.txbuf:#x} ({cmd.txlen:#x} bytes):")
-            chexdump(self.dart.ioread(0, cmd.txbuf, cmd.txlen), print_fn=self.log)
+
+        if sub.type == 0xc0 and cmd.txbuf:
+            data = self.dart.ioread(0, cmd.txbuf, cmd.txlen)
+            sgroup, scmd, slen, sfooter  = struct.unpack("<2xHIII48x", data[:64])
+            sdata = data[64:64+slen] if slen else None
+
+            srv = self.chan_map.get(hdr.channel, None)
+            if srv:
+                srv.handle_cmd(sgroup, scmd, sdata)
+            else:
+                self.log(f"[???] > group {sgroup} command {scmd}")
+                chexdump(data[64:64+slen], print_fn=lambda msg: self.log(f"[???] {msg}"))
+        else:
+            self.log(f"Command {sub.type:#x}: {cmd.retcode:#x}")
+            if payload:
+                chexdump(payload, print_fn=self.log)
+            if cmd.txbuf:
+                self.log(f"TX buf @ {cmd.txbuf:#x} ({cmd.txlen:#x} bytes):")
+                chexdump(self.dart.ioread(0, cmd.txbuf, cmd.txlen), print_fn=self.log)
 
 KNOWN_MSGS = {
     "A000": "IOMFB::UPPipeAP_H13P::late_init_signal()",
