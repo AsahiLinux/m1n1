@@ -856,8 +856,8 @@ class DCPExpertService(EPICEp):
 class Disp0Service(EPICEp):
     NAME = "disp0"
 
-class DPTXService(EPICEp):
-    NAME = "dptx"
+class DPAVController(EPICEp):
+    NAME = "dpavctrl"
 
 class DPSACService(EPICEp):
     NAME = "dpsac"
@@ -865,8 +865,8 @@ class DPSACService(EPICEp):
 class DPDevService(EPICEp):
     NAME = "dpdev"
 
-class MCDP29XXService(EPICEp):
-    NAME = "mcdp29xx"
+class DPAVService(EPICEp):
+    NAME = "dpavserv"
 
 class AVService(EPICEp):
     NAME = "av"
@@ -877,19 +877,22 @@ class HDCPService(EPICEp):
 class RemoteAllocService(EPICEp):
     NAME = "remotealloc"
 
+class DPTXPortService(EPICEp):
+    NAME = "dptxport"
+
 class DCPTracer(ASCTracer):
     ENDPOINTS = {
         0x20: SystemService,
         0x21: TestService,
         0x22: DCPExpertService,
         0x23: Disp0Service,
-        0x24: DPTXService,
+        0x24: DPAVController,
         0x25: EPICEp, # dcpav-power-ep
         0x26: DPSACService,
         0x27: DPDevService,
-        0x28: MCDP29XXService,
+        0x28: DPAVService,
         0x29: AVService,
-        0x2a: EPICEp, # dcpdptx-port-ep
+        0x2a: DPTXPortService, # dcpdptx-port-ep
         0x2b: HDCPService,
         0x2c: EPICEp, # cb-ap-to-dcp-service-ep
         0x2d: RemoteAllocService,
