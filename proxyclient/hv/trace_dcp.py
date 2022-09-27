@@ -877,8 +877,58 @@ class HDCPService(EPICEp):
 class RemoteAllocService(EPICEp):
     NAME = "remotealloc"
 
+class DCPDPTXRemotePortTarget(Register32):
+    CORE = 3, 0
+    ATC = 7, 4
+    DIE = 11, 8
+    CONNECTED = 15, 15
+
+class DCPDPTXPortEpicTracer(EPICServiceTracer):
+    NAME = "dcpdptx-port-epic"
+
+    @epic_service_cmd(0, 8)
+    def setPowerState(self, data):
+        self.log("> setPowerState")
+    @epic_service_reply(0, 8)
+    def setPowerState_reply(self, data):
+        self.log("< setPowerState")
+
+    @epic_service_cmd(0, 13)
+    def connectTo(self, data):
+        unk1, target = struct.unpack("<II24x", data)
+        target = DCPDPTXRemotePortTarget(target)
+        self.log(f"> connectTo(target={target}, unk1=0x{unk1:x})")
+    @epic_service_reply(0, 13)
+    def connectTo_reply(self, data):
+        unk1, target = struct.unpack("<II24x", data)
+        target = DCPDPTXRemotePortTarget(target)
+        self.log(f"< connectTo(target={target}, unk1=0x{unk1:x})")
+
+    @epic_service_cmd(0, 14)
+    def validateConnection(self, data):
+        unk1, target = struct.unpack("<II40x", data)
+        target = DCPDPTXRemotePortTarget(target)
+        self.log(f"> validateConnection(target={target}, unk1=0x{unk1:x})")
+    @epic_service_reply(0, 14)
+    def validateConnection_reply(self, data):
+        unk1, target = struct.unpack("<II40x", data)
+        target = DCPDPTXRemotePortTarget(target)
+        self.log(f"< validateConnection(target={target}, unk1=0x{unk1:x})")
+
+    @epic_service_cmd(8, 10)
+    def hotPlugDetectChangeOccurred(self, data):
+        unk = struct.unpack("<16x?15x", data)[0]
+        self.log(f"> hotPlugDetectChangeOccurred(unk={unk})")
+    @epic_service_reply(8, 10)
+    def hotPlugDetectChangeOccurred_reply(self, data):
+        unk = struct.unpack("<16x?15x", data)[0]
+        self.log(f"< hotPlugDetectChangeOccurred(unk={unk})")
+
 class DPTXPortService(EPICEp):
     NAME = "dptxport"
+    SERVICES = [
+        DCPDPTXPortEpicTracer
+    ]
 
 class DCPTracer(ASCTracer):
     ENDPOINTS = {
