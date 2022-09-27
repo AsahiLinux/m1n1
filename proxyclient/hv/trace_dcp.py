@@ -137,6 +137,14 @@ class AFKEp(EP):
         self.state.rxbuf_info = (off, size)
         self.create_bufs()
 
+class SilentEp(AFKEp):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.state.verbose = 0
+
+    def log(self, msg):
+        pass
+
 def epic_service_cmd(group, cmd):
     def f(x):
         x.is_cmd = True
