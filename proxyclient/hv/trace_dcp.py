@@ -868,8 +868,97 @@ class DPDevService(EPICEp):
 class DPAVService(EPICEp):
     NAME = "dpavserv"
 
+class DCPAVAudioInterfaceEpicTracer(EPICServiceTracer):
+    NAME = "dcpav-audio-interface-epic"
+
+    # usually 4, 6 but apparently also 0, 6 here?
+    # or maybe a different open?
+    @epic_service_cmd(0, 6)
+    def open2(self, data):
+        self.log("> open")
+    @epic_service_reply(0, 6)
+    def open2_reply(self, data):
+        self.log("< open")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_cmd(0, 8)
+    def prepareLink(self, data):
+        self.log("> prepareLink")
+    @epic_service_reply(0, 8)
+    def prepareLink_reply(self, data):
+        self.log("< prepareLink")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_cmd(0, 9)
+    def startLink(self, data):
+        self.log("> startLink")
+    @epic_service_reply(0, 9)
+    def startLink_reply(self, data):
+        self.log("< startLink")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_cmd(0, 15)
+    def getLinkStatus(self, data):
+        self.log("> getLinkStatus")
+    @epic_service_reply(0, 15)
+    def getLinkStatus_reply(self, data):
+        self.log("< getLinkStatus")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_cmd(0, 16)
+    def getTransport(self, data):
+        self.log("> getTransport")
+    @epic_service_reply(0, 16)
+    def getTransport_reply(self, data):
+        self.log("< getTransport")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_cmd(0, 17)
+    def getPortID(self, data):
+        self.log("> getPortID")
+    @epic_service_reply(0, 17)
+    def getPortID_reply(self, data):
+        self.log("< getPortID")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_cmd(1, 18)
+    def getElements(self, data):
+        self.log("> getElements")
+    @epic_service_reply(1, 18)
+    def getElements_reply(self, data):
+        self.log("< getElements")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_cmd(1, 20)
+    def getProductAttributes(self, data):
+        self.log("> getProductAttributes")
+    @epic_service_reply(1, 20)
+    def getProductAttributes_reply(self, data):
+        self.log("< getProductAttributes")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_cmd(1, 21)
+    def getEDIDUUID(self, data):
+        self.log("> getEDIDUUID")
+    @epic_service_reply(1, 21)
+    def getEDIDUUID_reply(self, data):
+        self.log("< getEDIDUUID")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_cmd(0, 22)
+    def getDataLatency(self, data):
+        self.log("> getDataLatency")
+    @epic_service_reply(0, 22)
+    def getDataLatency_reply(self, data):
+        self.log("< getDataLatency")
+        chexdump(data, print_fn=self.log)
+
+
 class AVService(EPICEp):
     NAME = "av"
+    SERVICES = [
+        DCPAVAudioInterfaceEpicTracer
+    ]
 
 class HDCPService(EPICEp):
     NAME = "hdcp"
