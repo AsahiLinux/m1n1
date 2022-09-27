@@ -12,7 +12,16 @@ from m1n1.trace.asc import ASCTracer, EP, EPState, msg, msg_log, DIR
 from m1n1.fw.afk.rbep import *
 from m1n1.fw.afk.epic import *
 
-trace_device("/arm-io/dcp", True, ranges=[1])
+if True:
+    dcp_adt_path = "/arm-io/dcp"
+    dcp_dart_adt_path = "/arm-io/dart-dcp"
+    disp0_dart_adt_path = "/arm-io/dart-disp0"
+else:
+    dcp_adt_path = "/arm-io/dcpext"
+    dcp_dart_adt_path = "/arm-io/dart-dcpext"
+    disp0_dart_adt_path = "/arm-io/dart-dispext0"
+
+trace_device(dcp_adt_path, True, ranges=[1])
 
 DARTTracer = DARTTracer._reloadcls()
 ASCTracer = ASCTracer._reloadcls()
@@ -745,10 +754,12 @@ class DCPTracer(ASCTracer):
         super().handle_msg(direction, r0, r1)
         #iomon.poll()
 
-dart_dcp_tracer = DARTTracer(hv, "/arm-io/dart-dcp")
+
+
+dart_dcp_tracer = DARTTracer(hv, dcp_dart_adt_path)
 dart_dcp_tracer.start()
 
-dart_disp0_tracer = DARTTracer(hv, "/arm-io/dart-disp0")
+dart_disp0_tracer = DARTTracer(hv, disp0_dart_adt_path)
 dart_disp0_tracer.start()
 
 def readmem_iova(addr, size, readfn):
@@ -760,7 +771,7 @@ def readmem_iova(addr, size, readfn):
 
 iomon.readmem = readmem_iova
 
-dcp_tracer = DCPTracer(hv, "/arm-io/dcp", verbose=1)
+dcp_tracer = DCPTracer(hv, dcp_adt_path, verbose=1)
 dcp_tracer.start(dart_dcp_tracer.dart)
 
 #dcp_tracer.ep.dcpep.state.dumpfile = open("dcp.log", "a")
