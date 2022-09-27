@@ -989,8 +989,22 @@ class AVService(EPICEp):
         DCPAVAudioInterfaceEpicTracer
     ]
 
+class DCPDPTXHDCPAuthSessionTracer(EPICServiceTracer):
+    NAME = "dcpdptx-hdcp-auth-session"
+
+    @epic_service_cmd(4, 8)
+    def getProtocol(self, data):
+        self.log("> getProtocol")
+    @epic_service_reply(4, 8)
+    def getProtocol_reply(self, data):
+        self.log("< getProtocol")
+        chexdump(data, print_fn=self.log)
+
 class HDCPService(EPICEp):
     NAME = "hdcp"
+    SERVICES = [
+        DCPDPTXHDCPAuthSessionTracer
+    ]
 
 class RemoteAllocService(EPICEp):
     NAME = "remotealloc"
