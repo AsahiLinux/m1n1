@@ -862,8 +862,23 @@ class DPAVController(EPICEp):
 class DPSACService(EPICEp):
     NAME = "dpsac"
 
+
+class DCPDPDeviceEpicTracer(EPICServiceTracer):
+    NAME = "dcpdp-device-epic"
+
+    @epic_service_cmd(0, 15)
+    def getDeviceMatchingData(self, data):
+        self.log("> getDeviceMatchingData")
+    @epic_service_reply(0, 15)
+    def getDeviceMatchingData_reply(self, data):
+        self.log("< getDeviceMatchingData")
+        chexdump(data, print_fn=self.log)
+
 class DPDevService(EPICEp):
     NAME = "dpdev"
+    SERVICES = [
+        DCPDPDeviceEpicTracer
+    ]
 
 class DPAVService(EPICEp):
     NAME = "dpavserv"
