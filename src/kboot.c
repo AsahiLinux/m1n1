@@ -1123,6 +1123,11 @@ static struct disp_mapping disp_reserved_regions_t8103[] = {
     {"region-id-95", "region95", true, false, true},
 };
 
+static struct disp_mapping dcpext_reserved_regions_t8103[] = {
+    {"region-id-73", "dcpext_data", true, false, false},
+    {"region-id-74", "region74", true, false, false},
+};
+
 static struct disp_mapping disp_reserved_regions_t600x[] = {
     {"region-id-50", "dcp_data", true, false, false},
     {"region-id-57", "region57", true, false, false},
@@ -1133,6 +1138,43 @@ static struct disp_mapping disp_reserved_regions_t600x[] = {
     {"region-id-95", "region95", true, false, true},
     // used on M1 Pro/Max/Ultra, mapped to dcp and disp0
     {"region-id-157", "region157", true, true, false},
+};
+
+#define MAX_DCPEXT 8
+
+static struct disp_mapping dcpext_reserved_regions_t600x[MAX_DCPEXT][2] = {
+    {
+        {"region-id-73", "dcpext0_data", true, false, false},
+        {"region-id-74", "", true, false, false},
+    },
+    {
+        {"region-id-88", "dcpext1_data", true, false, false},
+        {"region-id-89", "region89", true, false, false},
+    },
+    {
+        {"region-id-111", "dcpext2_data", true, false, false},
+        {"region-id-112", "region112", true, false, false},
+    },
+    {
+        {"region-id-119", "dcpext3_data", true, false, false},
+        {"region-id-120", "region120", true, false, false},
+    },
+    {
+        {"region-id-127", "dcpext4_data", true, false, false},
+        {"region-id-128", "region128", true, false, false},
+    },
+    {
+        {"region-id-135", "dcpext5_data", true, false, false},
+        {"region-id-136", "region136", true, false, false},
+    },
+    {
+        {"region-id-143", "dcpext6_data", true, false, false},
+        {"region-id-144", "region144", true, false, false},
+    },
+    {
+        {"region-id-151", "dcpext7_data", true, false, false},
+        {"region-id-152", "region152", true, false, false},
+    },
 };
 
 #define ARRAY_SIZE(s) (sizeof(s) / sizeof((s)[0]))
@@ -1150,17 +1192,33 @@ static int dt_set_display(void)
      * they are missing. */
 
     int ret = 0;
-    if (!fdt_node_check_compatible(dt, 0, "apple,t8103"))
+    if (!fdt_node_check_compatible(dt, 0, "apple,t8103")) {
         ret = dt_carveout_reserved_regions("dcp", "disp0", "disp0_piodma",
                                            disp_reserved_regions_t8103,
                                            ARRAY_SIZE(disp_reserved_regions_t8103));
-    else if (!fdt_node_check_compatible(dt, 0, "apple,t6000") ||
-             !fdt_node_check_compatible(dt, 0, "apple,t6001") ||
-             !fdt_node_check_compatible(dt, 0, "apple,t6002"))
+        if (ret)
+            return ret;
+
+        ret = dt_carveout_reserved_regions("dcpext", NULL, NULL, dcpext_reserved_regions_t8103,
+                                           ARRAY_SIZE(dcpext_reserved_regions_t8103));
+    } else if (!fdt_node_check_compatible(dt, 0, "apple,t6000") ||
+               !fdt_node_check_compatible(dt, 0, "apple,t6001") ||
+               !fdt_node_check_compatible(dt, 0, "apple,t6002")) {
         ret = dt_carveout_reserved_regions("dcp", "disp0", "disp0_piodma",
                                            disp_reserved_regions_t600x,
                                            ARRAY_SIZE(disp_reserved_regions_t600x));
-    else {
+        if (ret)
+            return ret;
+
+        for (int n = 0; n < MAX_DCPEXT && ret == 0; n++) {
+            char dcpext_alias[16];
+
+            snprintf(dcpext_alias, sizeof(dcpext_alias), "dcpext%d", n);
+            ret = dt_carveout_reserved_regions(dcpext_alias, NULL, NULL,
+                                               dcpext_reserved_regions_t600x[n],
+                                               ARRAY_SIZE(dcpext_reserved_regions_t600x[n]));
+        }
+    } else {
         printf("DT: unknown compatible, skip display reserved-memory setup\n");
         return 0;
     }
