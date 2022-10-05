@@ -88,7 +88,7 @@ class EPICService:
         self.log(f"Init: {props}")
         self.props = props
         self.rxbuf, self.rxbuf_dva = self.ep.asc.ioalloc(self.RX_BUFSIZE)
-        self.txbuf, self.txbuf_dva = self.ep.asc.ioalloc(self.RX_BUFSIZE)
+        self.txbuf, self.txbuf_dva = self.ep.asc.ioalloc(self.TX_BUFSIZE)
         self.ready = True
     
     def wait(self):
