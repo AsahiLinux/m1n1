@@ -53,12 +53,12 @@ class ASCArgumentSection:
         for key, val in self.items():
             print(f"{key:4s} = {val}")
 
-    def dump_diff(self, other):
+    def dump_diff(self, other, logger):
         assert self.index == other.index
 
         for key in self.keys():
             if self[key] != other[key]:
-                print(f"Differs: {key:4s} = {self[key]} / {other[key]}")
+                logger(f"\t{key:4s} = {self[key]} -> {other[key]}")
 
     def to_bytes(self):
         return bytes(self.blob)
