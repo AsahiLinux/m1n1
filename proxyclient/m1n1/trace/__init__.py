@@ -54,7 +54,6 @@ class Tracer(Reloadable):
     DEFAULT_MODE = TraceMode.ASYNC
 
     def __init__(self, hv, verbose=False, ident=None):
-        super().__init__()
         self.hv = hv
         self.ident = ident or type(self).__name__
         self.regmaps = {}
