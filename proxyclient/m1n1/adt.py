@@ -226,6 +226,17 @@ DEV_PROPERTIES = {
             "amp-dcblocker-config": DCBlockerConfig,
         },
     },
+    "*aop-audio*": {
+        "*": {
+            "clockSource": FourCC,
+            "identifier": FourCC,
+        },
+    },
+    "*alc?/audio-leap-mic*": {
+        "*": {
+            "audio-stream-formatter": FourCC,
+        }
+    }
 }
 
 def parse_prop(node, path, node_name, name, v, is_template=False):
@@ -236,9 +247,15 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
 
     dev_props = None
     for k, pt in DEV_PROPERTIES.items():
-        if fnmatch.fnmatch(node_name, k) or fnmatch.fnmatch(path, k):
+        if fnmatch.fnmatch(path, k):
             dev_props = pt
             break
+
+    if not dev_props:
+        for k, pt in DEV_PROPERTIES.items():
+            if fnmatch.fnmatch(node_name, k):
+                dev_props = pt
+                break
 
     possible_match = False
     if dev_props:
