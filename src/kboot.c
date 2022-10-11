@@ -4,6 +4,7 @@
 #include "adt.h"
 #include "assert.h"
 #include "dapf.h"
+#include "devicetree.h"
 #include "exception.h"
 #include "malloc.h"
 #include "memory.h"
@@ -869,52 +870,6 @@ static int dt_set_atc_tunables(void)
     return 0;
 }
 
-#define MAX_RANGES 8
-
-struct ranges_tbl {
-    u64 start;
-    u64 parent;
-    u64 size;
-};
-
-static void parse_ranges(int soc, struct ranges_tbl *ranges)
-{
-    int len;
-    const struct fdt_property *ranges_prop = fdt_get_property(dt, soc, "ranges", &len);
-    if (ranges_prop && len > 0) {
-        int idx = 0;
-        int num_entries = len / sizeof(fdt64_t);
-        if (num_entries > MAX_RANGES)
-            num_entries = MAX_RANGES;
-
-        const fdt64_t *entry = (const fdt64_t *)ranges_prop->data;
-        for (int i = 0; i < num_entries; ++i) {
-            u64 start = fdt64_ld(entry++);
-            u64 parent = fdt64_ld(entry++);
-            u64 size = fdt64_ld(entry++);
-            if (size) {
-                ranges[idx].start = start;
-                ranges[idx].parent = parent;
-                ranges[idx].size = size;
-                idx++;
-            }
-        }
-    }
-}
-
-static u64 translate(struct ranges_tbl *ranges, const fdt64_t *reg)
-{
-    u64 addr = fdt64_ld(reg);
-    for (int idx = 0; idx < MAX_RANGES; ++idx) {
-        if (ranges[idx].size == 0)
-            break;
-        if (addr >= ranges[idx].start && addr < ranges[idx].start + ranges[idx].size)
-            return ranges[idx].parent - ranges[idx].start + addr;
-    }
-
-    return addr;
-}
-
 static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix, int max_devs)
 {
     int ret = -1;
@@ -978,8 +933,8 @@ static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix
             bail("FDT: %s node not found in devtree\n", path);
 
         // parse ranges for address translation
-        struct ranges_tbl ranges[MAX_RANGES] = {0};
-        parse_ranges(soc, ranges);
+        struct dt_ranges_tbl ranges[DT_MAX_RANGES] = {0};
+        dt_parse_ranges(dt, soc, ranges);
 
         /* Disable primary devices */
         fdt_for_each_subnode(node, dt, soc)
@@ -992,7 +947,7 @@ static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix
             if (!reg)
                 bail_cleanup("FDT: failed to get reg property of %s\n", name);
 
-            u64 addr = translate(ranges, reg);
+            u64 addr = dt_translate(ranges, reg);
 
             int i;
             for (i = 0; i < acnt; i++)
