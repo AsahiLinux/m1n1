@@ -90,6 +90,7 @@ OBJECTS := \
 	dart.o \
 	dcp.o \
 	dcp_iboot.o \
+	devicetree.o \
 	display.o \
 	exception.o exception_asm.o \
 	fb.o font.o font_retina.o \
