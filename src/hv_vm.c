@@ -958,7 +958,7 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
                 // fallthrough
             case SPTE_MAP:
                 hv_wdt_breadcrumb('5');
-                dprintf("HV: SPTE_MAP[W] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr, far, paddr,
+                dprintf("HV: SPTE_MAP[W] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr, ipa, paddr,
                         1 << width, val[0]);
                 if (!hv_pa_write(ctx, paddr, val, width))
                     return false;
@@ -999,7 +999,7 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
                 hv_wdt_breadcrumb('4');
                 if (!hv_pa_read(ctx, paddr, val, width))
                     return false;
-                dprintf("HV: SPTE_MAP[R] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr, far, paddr,
+                dprintf("HV: SPTE_MAP[R] @0x%lx 0x%lx -> 0x%lx (w=%d): 0x%lx\n", elr, ipa, paddr,
                         1 << width, val[0]);
                 break;
             case SPTE_HOOK: {
@@ -1042,7 +1042,6 @@ static bool hv_emulate_rw(struct exc_info *ctx, u64 pte, u64 vaddr, u64 ipa, u8 
                           u64 bytes, u64 elr, u64 par)
 {
     u64 aval[HV_MAX_RW_WORDS];
-    memset(aval, 0, sizeof(aval));
 
     bool advance = (IS_HW(pte) || (IS_SW(pte) && FIELD_GET(SPTE_TYPE, pte) == SPTE_MAP)) ? 1 : 0;
     u64 off = 0;
@@ -1051,8 +1050,11 @@ static bool hv_emulate_rw(struct exc_info *ctx, u64 pte, u64 vaddr, u64 ipa, u8 
     bool first = true;
 
     u64 left = bytes;
+    u64 paddr = (pte & PTE_TARGET_MASK_L4) | (vaddr & MASK(VADDR_L4_OFFSET_BITS));
 
     while (left > 0) {
+        memset(aval, 0, sizeof(aval));
+
         if (left >= 64 && (ipa & 63) == 0)
             width = 6;
         else if (left >= 32 && (ipa & 31) == 0)
@@ -1079,7 +1081,10 @@ static bool hv_emulate_rw(struct exc_info *ctx, u64 pte, u64 vaddr, u64 ipa, u8 
         if (is_write)
             memcpy(aval, val + off, chunk);
 
-        if (!hv_emulate_rw_aligned(ctx, pte, vaddr, ipa, aval, is_write, width, elr)) {
+        if (advance)
+            pte = (paddr & PTE_TARGET_MASK_L4) | (pte & ~PTE_TARGET_MASK_L4);
+
+        if (!hv_emulate_rw_aligned(ctx, pte, vaddr, ipa, aval, is_write, width, elr, par)) {
             if (!first)
                 printf("HV: WARNING: Failed to emulate split op but part of it did commit!\n");
             return false;
@@ -1094,7 +1099,7 @@ static bool hv_emulate_rw(struct exc_info *ctx, u64 pte, u64 vaddr, u64 ipa, u8 
         ipa += chunk;
         vaddr += chunk;
         if (advance)
-            pte += chunk;
+            paddr += chunk;
 
         first = 0;
     }
