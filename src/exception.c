@@ -186,17 +186,18 @@ void print_regs(u64 *regs, int el12)
 
     u64 elr = in_gl ? mrs(SYS_IMP_APL_ELR_GL1) : (el12 ? mrs(ELR_EL12) : mrs(ELR_EL1));
     u64 esr = in_gl ? mrs(SYS_IMP_APL_ESR_GL1) : (el12 ? mrs(ESR_EL12) : mrs(ESR_EL1));
+    u64 far = in_gl ? mrs(SYS_IMP_APL_FAR_GL1) : (el12 ? mrs(FAR_EL12) : mrs(FAR_EL1));
 
     printf("PC:       0x%lx (rel: 0x%lx)\n", elr, elr - (u64)_base);
     printf("SP:       0x%lx\n", sp);
-    printf("SPSR_EL1: 0x%lx\n", spsr);
+    printf("SPSR:     0x%lx\n", spsr);
     if (in_gl12()) {
         printf("ASPSR:    0x%lx\n", mrs(SYS_IMP_APL_ASPSR_GL1));
     }
-    printf("FAR_EL1:  0x%lx\n", el12 ? mrs(FAR_EL12) : mrs(FAR_EL1));
+    printf("FAR:      0x%lx\n", far);
 
     const char *ec_desc = ec_table[(esr >> 26) & 0x3f];
-    printf("ESR_EL1:  0x%lx (%s)\n", esr, ec_desc ? ec_desc : "?");
+    printf("ESR:      0x%lx (%s)\n", esr, ec_desc ? ec_desc : "?");
 
     u64 sts = mrs(SYS_IMP_APL_L2C_ERR_STS);
     printf("L2C_ERR_STS: 0x%lx\n", sts);
