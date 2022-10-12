@@ -10,7 +10,9 @@ __all__ = [
 ]
 
 class MMIOTraceFlags(Register32):
+    ATTR = 31, 24
     CPU = 23, 16
+    SH = 15, 14
     WIDTH = 4, 0
     WRITE = 5
     MULTI = 6

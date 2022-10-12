@@ -10,7 +10,9 @@
 
 typedef bool(hv_hook_t)(struct exc_info *ctx, u64 addr, u64 *val, bool write, int width);
 
+#define MMIO_EVT_ATTR  GENMASK(31, 24)
 #define MMIO_EVT_CPU   GENMASK(23, 16)
+#define MMIO_EVT_SH    GENMASK(15, 14)
 #define MMIO_EVT_MULTI BIT(6)
 #define MMIO_EVT_WRITE BIT(5)
 #define MMIO_EVT_WIDTH GENMASK(4, 0)
@@ -54,7 +56,7 @@ int hv_unmap(u64 from, u64 size);
 int hv_map_hw(u64 from, u64 to, u64 size);
 int hv_map_sw(u64 from, u64 to, u64 size);
 int hv_map_hook(u64 from, hv_hook_t *hook, u64 size);
-u64 hv_translate(u64 addr, bool s1only, bool w);
+u64 hv_translate(u64 addr, bool s1only, bool w, u64 *par_out);
 u64 hv_pt_walk(u64 addr);
 bool hv_handle_dabort(struct exc_info *ctx);
 bool hv_pa_write(struct exc_info *ctx, u64 addr, u64 *val, int width);

@@ -58,9 +58,9 @@ static void _hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, 
 
     u64 entry_time = mrs(CNTPCT_EL0);
 
-    ctx->elr_phys = hv_translate(ctx->elr, false, false);
-    ctx->far_phys = hv_translate(ctx->far, false, false);
-    ctx->sp_phys = hv_translate(from_el == 0 ? ctx->sp[0] : ctx->sp[1], false, false);
+    ctx->elr_phys = hv_translate(ctx->elr, false, false, NULL);
+    ctx->far_phys = hv_translate(ctx->far, false, false, NULL);
+    ctx->sp_phys = hv_translate(from_el == 0 ? ctx->sp[0] : ctx->sp[1], false, false, NULL);
     ctx->extra = extra;
 
     struct uartproxy_msg_start start = {

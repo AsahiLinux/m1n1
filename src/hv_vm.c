@@ -381,7 +381,7 @@ int hv_map_hook(u64 from, hv_hook_t *hook, u64 size)
     return hv_map(from, ((u64)hook) | FIELD_PREP(SPTE_TYPE, SPTE_HOOK), size, 0);
 }
 
-u64 hv_translate(u64 addr, bool s1, bool w)
+u64 hv_translate(u64 addr, bool s1, bool w, u64 *par_out)
 {
     if (!(mrs(SCTLR_EL12) & SCTLR_M))
         return addr; // MMU off
@@ -416,6 +416,8 @@ u64 hv_translate(u64 addr, bool s1, bool w)
     }
 
     u64 par = mrs(PAR_EL1);
+    if (par_out)
+        *par_out = par;
     msr(PAR_EL1, save);
 
     if (par & PAR_F) {
@@ -927,13 +929,15 @@ bool hv_pa_rw(struct exc_info *ctx, u64 addr, u64 *val, bool write, int width)
 }
 
 static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 ipa, u64 *val,
-                                  bool is_write, u64 width, u64 elr)
+                                  bool is_write, u64 width, u64 elr, u64 par)
 {
     assert(pte);
     assert(((ipa & 0x3fff) + (1 << width)) <= 0x4000);
 
     u64 target = pte & PTE_TARGET_MASK_L4;
     u64 paddr = target | (vaddr & MASK(VADDR_L4_OFFSET_BITS));
+    u64 flags = FIELD_PREP(MMIO_EVT_ATTR, FIELD_GET(PAR_ATTR, par)) |
+                FIELD_PREP(MMIO_EVT_SH, FIELD_GET(PAR_SH, par));
 
     // For split ops, treat hardware mapped pages as SPTE_MAP
     if (IS_HW(pte))
@@ -944,7 +948,7 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
         hv_wdt_breadcrumb('3');
 
         if (pte & SPTE_TRACE_WRITE)
-            emit_mmiotrace(elr, ipa, val, width, MMIO_EVT_WRITE, pte & SPTE_TRACE_UNBUF);
+            emit_mmiotrace(elr, ipa, val, width, flags | MMIO_EVT_WRITE, pte & SPTE_TRACE_UNBUF);
 
         hv_wdt_breadcrumb('4');
 
@@ -972,7 +976,7 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
             case SPTE_PROXY_HOOK_W: {
                 hv_wdt_breadcrumb('7');
                 struct hv_vm_proxy_hook_data hook = {
-                    .flags = FIELD_PREP(MMIO_EVT_WIDTH, width) | MMIO_EVT_WRITE,
+                    .flags = FIELD_PREP(MMIO_EVT_WIDTH, width) | MMIO_EVT_WRITE | flags,
                     .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
                     .addr = ipa,
                     .data = {0},
@@ -1011,7 +1015,7 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
             case SPTE_PROXY_HOOK_R: {
                 hv_wdt_breadcrumb('6');
                 struct hv_vm_proxy_hook_data hook = {
-                    .flags = FIELD_PREP(MMIO_EVT_WIDTH, width),
+                    .flags = FIELD_PREP(MMIO_EVT_WIDTH, width) | flags,
                     .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
                     .addr = ipa,
                 };
@@ -1026,7 +1030,7 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
 
         hv_wdt_breadcrumb('7');
         if (pte & SPTE_TRACE_READ)
-            emit_mmiotrace(elr, ipa, val, width, 0, pte & SPTE_TRACE_UNBUF);
+            emit_mmiotrace(elr, ipa, val, width, flags, pte & SPTE_TRACE_UNBUF);
     }
 
     hv_wdt_breadcrumb('*');
@@ -1035,7 +1039,7 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
 }
 
 static bool hv_emulate_rw(struct exc_info *ctx, u64 pte, u64 vaddr, u64 ipa, u8 *val, bool is_write,
-                          u64 bytes, u64 elr)
+                          u64 bytes, u64 elr, u64 par)
 {
     u64 aval[HV_MAX_RW_WORDS];
     memset(aval, 0, sizeof(aval));
@@ -1105,7 +1109,8 @@ bool hv_handle_dabort(struct exc_info *ctx)
     bool is_write = esr & ESR_ISS_DABORT_WnR;
 
     u64 far = hv_get_far();
-    u64 ipa = hv_translate(far, true, is_write);
+    u64 par;
+    u64 ipa = hv_translate(far, true, is_write, &par);
 
     dprintf("hv_handle_abort(): stage 1 0x%0lx -> 0x%lx\n", far, ipa);
 
@@ -1138,7 +1143,7 @@ bool hv_handle_dabort(struct exc_info *ctx)
     assert(IS_SW(pte));
 
     u64 elr = ctx->elr;
-    u64 elr_pa = hv_translate(elr, false, false);
+    u64 elr_pa = hv_translate(elr, false, false, NULL);
     if (!elr_pa) {
         printf("HV: Failed to fetch instruction for data abort at 0x%lx\n", elr);
         return false;
@@ -1186,7 +1191,7 @@ bool hv_handle_dabort(struct exc_info *ctx)
             return false;
         }
 
-        if (!hv_emulate_rw(ctx, pte, vaddr, ipa, val, is_write, bytes, elr))
+        if (!hv_emulate_rw(ctx, pte, vaddr, ipa, val, is_write, bytes, elr, par))
             return false;
     } else {
         // Oops, we're straddling a page boundary
@@ -1211,7 +1216,8 @@ bool hv_handle_dabort(struct exc_info *ctx)
             vaddr2 = vaddr;
         }
 
-        u64 ipa2 = hv_translate(vaddr2, true, esr & ESR_ISS_DABORT_WnR);
+        u64 par2;
+        u64 ipa2 = hv_translate(vaddr2, true, esr & ESR_ISS_DABORT_WnR, &par2);
         if (!ipa2) {
             printf("HV: %s half stage 1 translation failed at VA 0x%0lx\n", other, vaddr2);
             return false;
@@ -1235,15 +1241,15 @@ bool hv_handle_dabort(struct exc_info *ctx)
 
         bool upper_ret;
         if (far == vaddr) {
-            if (!hv_emulate_rw(ctx, pte, vaddr, ipa, val, is_write, off, elr))
+            if (!hv_emulate_rw(ctx, pte, vaddr, ipa, val, is_write, off, elr, par))
                 return false;
             upper_ret =
-                hv_emulate_rw(ctx, pte2, vaddr2, ipa2, val + off, is_write, bytes - off, elr);
+                hv_emulate_rw(ctx, pte2, vaddr2, ipa2, val + off, is_write, bytes - off, elr, par2);
         } else {
-            if (!hv_emulate_rw(ctx, pte2, vaddr2, ipa2, val, is_write, off, elr))
+            if (!hv_emulate_rw(ctx, pte2, vaddr2, ipa2, val, is_write, off, elr, par2))
                 return false;
             upper_ret =
-                hv_emulate_rw(ctx, pte, vaddrp1, ipa, val + off, is_write, bytes - off, elr);
+                hv_emulate_rw(ctx, pte, vaddrp1, ipa, val + off, is_write, bytes - off, elr, par);
         }
 
         if (!upper_ret) {

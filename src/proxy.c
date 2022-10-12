@@ -446,7 +446,8 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             hv_start((void *)request->args[0], &request->args[1]);
             break;
         case P_HV_TRANSLATE:
-            reply->retval = hv_translate(request->args[0], request->args[1], request->args[2]);
+            reply->retval = hv_translate(request->args[0], request->args[1], request->args[2],
+                                         (void *)request->args[3]);
             break;
         case P_HV_PT_WALK:
             reply->retval = hv_pt_walk(request->args[0]);
