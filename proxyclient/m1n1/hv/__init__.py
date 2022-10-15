@@ -651,6 +651,9 @@ class HV(Reloadable):
             ACC_CFG_EL1,
             ACC_OVRD_EL1,
         }
+        xlate = {
+            DC_CIVAC,
+        }
         for i in range(len(self._bps)):
             shadow.add(DBGBCRn_EL1(i))
             shadow.add(DBGBVRn_EL1(i))
@@ -691,6 +694,8 @@ class HV(Reloadable):
                     value = ctx.regs[iss.Rt]
                 enc2 = self.MSR_REDIRECTS.get(enc, enc)
                 sys.stdout.flush()
+                if enc in xlate:
+                    value = self.p.hv_translate(value, True, False)
                 self.u.msr(enc2, value, call=self.p.gl2_call)
                 self.log(f"Pass: msr {name}, x{iss.Rt} = {value:x} (OK) ({sysreg_name(enc2)})")
 
