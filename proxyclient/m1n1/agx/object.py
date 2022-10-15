@@ -39,6 +39,7 @@ class GPUObject:
         self._skipped_pushes = 0
         self._compress_threshold = 65536
         self._strm = None
+        self._read_phys = False
 
     def push(self, if_needed=False):
         self._mon_val = self.val
@@ -102,7 +103,6 @@ class GPUObject:
             return self._alloc.agx.iface.readmem(self._paddr, self._size)
 
         assert self._addr is not None
-        stream = self._alloc.make_stream(self._addr)
         context = Container()
         context._parsing = True
         context._building = False
@@ -110,6 +110,12 @@ class GPUObject:
         context._params = context
         if self._alloc.verbose:
             self._alloc.agx.log(f"[{self._name} @{self._addr:#x}] pulling {self._size} bytes")
+        if self._read_phys:
+            stream = io.BytesIO()
+            stream.write(self._alloc.agx.iface.readmem(self._paddr, self._size))
+            stream.seek(0)
+        else:
+            stream = self._alloc.make_stream(self._addr)
         return self._type._parse(stream, context, f"(pulling {self._name})")
 
     def pull(self):
@@ -134,7 +140,7 @@ class GPUObject:
 
     def add_to_mon(self, mon):
         mon.add(self._addr, self._size, self._name, offset=0,
-                readfn=lambda a, s: self._alloc.agx.uat.ioread(self._ctx,  a, s))
+                readfn=lambda a, s: self._alloc.agx.iface.readmem(a - self._addr + self._paddr, s))
 
     def _set_addr(self, addr, paddr=None):
         self._addr = addr
