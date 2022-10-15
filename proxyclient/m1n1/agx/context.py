@@ -236,7 +236,7 @@ class GPUBufferManager:
         total = self.block_ctl.total.val
         while idx < total:
             block = self.ctx.uobj.new_buf(self.block_size, "BM Block", track=False)
-            self.block_list[idx] = block._addr // self.page_size
+            self.block_list[idx * 2] = block._addr // self.page_size
 
             page_idx = idx * self.pages_per_block
             for i in range(self.pages_per_block):
