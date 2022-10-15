@@ -242,6 +242,7 @@ class CommandQueueTracer(Reloadable):
         return self.info.pointers.rb_size
 
     def get_workitems(self, workmsg):
+        self.tracer.uat.invalidate_cache()
         self.update_info()
 
         if self.state.rptr is None:
@@ -426,7 +427,9 @@ class AGXTracer(ASCTracer):
 
     def uat_write(self, evt, level=3, base=0, iova=0, ctx=None):
         off = (evt.addr - base) // 8
-        self.log(f"UAT write L{level} at {ctx}:{iova:#x} (#{off:#x}) -> {evt.data}")
+        sh = ["NS", "??", "OS", "IS"]
+        a = f"{evt.flags.ATTR:02x}:{sh[evt.flags.SH]}"
+        self.log(f"UAT <{a}> write L{level} at {ctx}:{iova:#x} (#{off:#x}) -> {evt.data}")
 
         if level == 3:
             ctx = off // 2
@@ -529,10 +532,12 @@ class AGXTracer(ASCTracer):
             self.readlog[iova] = (self.vmcnt, evt)
         t = "W" if evt.flags.WRITE else "R"
         m = "+" if evt.flags.MULTI else " "
+        sh = ["NS", "??", "OS", "IS"]
+        a = f"{evt.flags.ATTR:02x}:{sh[evt.flags.SH]}"
         dinfo = ""
         if name is not None and base is not None:
             dinfo = f"[{name} + {iova - base:#x}]"
-        logline = (f"[cpu{evt.flags.CPU}] GPUVM[{ctx}/{self.vmcnt:5}]: {t}.{1<<evt.flags.WIDTH:<2}{m} " +
+        logline = (f"[cpu{evt.flags.CPU}] GPUVM[{ctx}/{self.vmcnt:5}]: <{a}>{t}.{1<<evt.flags.WIDTH:<2}{m} " +
                    f"{iova:#x}({evt.addr:#x}){dinfo} = {evt.data:#x}")
         self.log(logline, show_cpu=False)
         self.vmcnt += 1
@@ -886,6 +891,7 @@ class AGXTracer(ASCTracer):
             assert type != 3
             priority = (val >> 2) & 3
             channel = type + priority * 3
+            self.uat.invalidate_cache()
 
         else:
             raise(Exception("Unknown kick type"))
