@@ -254,6 +254,12 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
         SYSREG_PASS(SYS_IMP_APL_PMC8)
         SYSREG_PASS(SYS_IMP_APL_PMC9)
 
+        /* Outer Sharable TLB maintenance instructions */
+        SYSREG_PASS(sys_reg(1, 0, 8, 1, 0)) // TLBI VMALLE1OS
+        SYSREG_PASS(sys_reg(1, 0, 8, 1, 1)) // TLBI VAE1OS
+        SYSREG_PASS(sys_reg(1, 0, 8, 1, 2)) // TLBI ASIDE1OS
+        SYSREG_PASS(sys_reg(1, 0, 8, 5, 1)) // TLBI RVAE1OS
+
         /*
          * Handle this one here because m1n1/Linux (will) use it for explicit cpuidle.
          * We can pass it through; going into deep sleep doesn't break the HV since we
