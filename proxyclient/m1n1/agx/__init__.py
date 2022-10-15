@@ -250,6 +250,10 @@ class AGX:
             raise Exception("Got fault notification, but fault address is unreadable")
 
         self.log(f" Fault info: {fault_info}")
+
+        if not fault_info.FAULTED:
+            return
+
         fault_addr = fault_info.ADDR
         if fault_addr & 0x8000000000:
             fault_addr |= 0xffffff8000000000
