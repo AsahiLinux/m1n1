@@ -1590,7 +1590,7 @@ class InitData_RegionC(ConstructClass):
     )
 
     def __init__(self):
-        self.ktrace_enable = 0xffffffff
+        self.ktrace_enable = 0# 0xffffffff
         self.unk_4 = bytes(0x24)
         self.unk_28_0 = 1 # debug
         self.unk_28 = 1
