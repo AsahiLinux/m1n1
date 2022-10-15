@@ -2,7 +2,7 @@
 from ..utils import *
 from enum import IntEnum
 
-__all__ = ["SGXRegs", "agx_decode_unit"]
+__all__ = ["SGXRegs", "agx_decode_unit", "R_FAULT_INFO"]
 
 class FAULT_REASON(IntEnum):
     INVALID = 0
