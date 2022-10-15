@@ -307,7 +307,7 @@ class UAT(Reloadable):
         data = []
         for addr, size in ranges:
             if addr is None:
-                raise Exception(f"Unmapped page at iova {iova:#x}")
+                raise Exception(f"Unmapped page at iova {ctx}:{iova:#x}")
             data.append(self.iface.readmem(addr, size))
             iova += size
 
@@ -323,7 +323,7 @@ class UAT(Reloadable):
         p = 0
         for addr, size in ranges:
             if addr is None:
-                raise Exception(f"Unmapped page at iova {iova:#x}")
+                raise Exception(f"Unmapped page at iova {ctx}:{iova:#x}")
             self.iface.writemem(addr, data[p:p + size])
             p += size
             iova += size
