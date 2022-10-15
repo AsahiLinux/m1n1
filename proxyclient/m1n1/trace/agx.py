@@ -3,6 +3,7 @@
 import textwrap
 from .asc import *
 from ..hw.uat import UAT, MemoryAttr, PTE, Page_PTE, TTBR
+from ..hw.agx import SGXRegs
 
 from ..fw.agx.initdata import InitData
 from ..fw.agx.channels import *
@@ -306,6 +307,7 @@ class AGXTracer(ASCTracer):
         self.uat = UAT(hv.iface, hv.u, hv)
         self.mon = RegMonitor(hv.u, ascii=True, log=hv.log)
         self.dev_sgx = hv.u.adt["/arm-io/sgx"]
+        self.sgx = SGXRegs(hv.u, self.dev_sgx.get_reg(0)[0])
         self.gpu_region = getattr(self.dev_sgx, "gpu-region-base")
         self.gpu_region_size = getattr(self.dev_sgx, "gpu-region-size")
         self.gfx_shared_region = getattr(self.dev_sgx, "gfx-shared-region-base")
