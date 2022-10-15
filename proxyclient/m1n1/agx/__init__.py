@@ -78,6 +78,8 @@ class AGX:
 
         self.p.iodev_set_usage(IODEV.FB, 0)
 
+        self.initdata_hook = None
+
         # Early init, needed?
         self.poke_sgx()
 
@@ -282,6 +284,9 @@ class AGX:
 
         self.log("Building initdata")
         self.initdata = build_initdata(self)
+        if self.initdata_hook:
+            self.initdata_hook(self)
+
         self.fw_status = self.initdata.fw_status.regmap()
         self.uat.flush_dirty()
 

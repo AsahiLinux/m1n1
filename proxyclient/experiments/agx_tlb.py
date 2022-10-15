@@ -24,6 +24,12 @@ iface.dev.timeout = 42
 
 agx = AGX(u)
 
+def initdata_hook(agx):
+    agx.initdata.regionC.idle_to_off_timeout_ms = 20000
+    agx.initdata.regionC.push()
+
+agx.initdata_hook = initdata_hook
+
 mon = RegMonitor(u, ascii=True, bufsize=0x8000000)
 agx.mon = mon
 
