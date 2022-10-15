@@ -23,6 +23,7 @@
 #include "sep.h"
 #include "smp.h"
 #include "string.h"
+#include "tunables.h"
 #include "uart.h"
 #include "uartproxy.h"
 #include "usb.h"
@@ -151,6 +152,7 @@ void m1n1_main(void)
     wdt_disable();
 #ifndef BRINGUP
     pmgr_init();
+    tunables_apply_static();
 
 #ifdef USE_FB
     display_init();
