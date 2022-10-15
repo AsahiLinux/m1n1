@@ -284,32 +284,61 @@ class GPURenderer:
         tiles_y = ((height + tile_height - 1) // tile_height)
         tiles = tiles_x * tiles_y
 
+        mtiles_x = 4
+        mtiles_y = 4
+
+        mtile_x1 = align(((tiles_x + mtiles_x - 1) // mtiles_x), 4)
+        mtile_x2 = 2 * mtile_x1
+        mtile_x3 = 3 * mtile_x1
+        mtile_y1 = align(((tiles_y + mtiles_y - 1) // mtiles_y), 4)
+        mtile_y2 = 2 * mtile_y1
+        mtile_y3 = 3 * mtile_y1
+
+        mtile_stride = mtile_x1 * mtile_y1
+
+        ## TODO: *samples
+        tiles_per_mtile_x = mtile_x1
+        tiles_per_mtile_y = mtile_y1
+
         tile_blocks_x = (tiles_x + 15) // 16
         tile_blocks_y = (tiles_y + 15) // 16
         tile_blocks = tile_blocks_x * tile_blocks_y
 
         tiling_params = TilingParameters()
-        tiling_params.size1 = 0x14 * tile_blocks
+        # rgn_header_size
+        rgn_entry_size = 5
+        tiling_params.size1 = align(rgn_entry_size * tiles_per_mtile_x * tiles_per_mtile_y,  4)
+        # PPP_MULTISAMPLECTL
         tiling_params.unk_4 = 0x88
-        tiling_params.unk_8 = 0x202
+        # PPP_CTRL
+        tiling_params.unk_8 = 0x203 # bit 0: GL clip mode
+        # PPP_SCREEN
         tiling_params.x_max = width - 1
         tiling_params.y_max = height - 1
+        # TE_SCREEN
         tiling_params.tile_count = ((tiles_y-1) << 12) | (tiles_x-1)
-        tiling_params.x_blocks = (12 * tile_blocks_x) | (tile_blocks_x << 12) | (tile_blocks_x << 20)
-        tiling_params.y_blocks = (12 * tile_blocks_y) | (tile_blocks_y << 12) | (tile_blocks_y << 20)
-        tiling_params.size2 = 0x10 * tile_blocks
-        tiling_params.size3 = 0x20 * tile_blocks
+        # TE_MTILE1
+        tiling_params.x_blocks = mtile_x3 | (mtile_x2 << 9) | (mtile_x1 << 18)
+        # TE_MTILE2
+        tiling_params.y_blocks = mtile_y3 | (mtile_y2 << 9) | (mtile_y1 << 18)
+        tiling_params.size2 = mtile_stride
+        tiling_params.size3 = 2 * mtile_stride
         tiling_params.unk_24 = 0x100
         tiling_params.unk_28 = 0x8000
 
         #tvb_something_size = 0x800 * tile_blocks
         #tvb_something = ctx.uobj.new_buf(tvb_something_size, "TVB Something", track=False).push()
 
-        tvb_tilemap_size = 0x800 * tile_blocks
+        #tvb_tilemap_size = 0x80 * mtile_stride
+        tvb_tilemap_size = mtiles_x * mtiles_y * tiling_params.size1
         tvb_tilemap = ctx.uobj.new_buf(tvb_tilemap_size, "TVB Tilemap", track=False).push()
+        work.tvb_tilemap_size = tvb_tilemap_size
+        work.tvb_tilemap = tvb_tilemap
         work.add(tvb_tilemap)
 
-        tvb_heapmeta_size = 0x200
+        # rogue: 0x180 * 4?
+        #tvb_heapmeta_size = 0x200
+        tvb_heapmeta_size = 0x600
         tvb_heapmeta = ctx.uobj.new_buf(tvb_heapmeta_size, "TVB Heap Meta", track=False).push()
         work.add(tvb_heapmeta)
 
@@ -368,8 +397,8 @@ class GPURenderer:
         wc_3d.tvb_tilemap = tvb_tilemap._addr
         wc_3d.unk_40 = 0x88
         wc_3d.unk_48 = 0x1
-        wc_3d.tile_blocks_y = tile_blocks_y * 4
-        wc_3d.tile_blocks_x = tile_blocks_x * 4
+        wc_3d.tile_blocks_y = mtile_y1
+        wc_3d.tile_blocks_x = mtile_x1
         wc_3d.unk_50 = 0x0
         wc_3d.unk_58 = 0x0
         wc_3d.uuid1 = 0x3b315cae # ??
@@ -413,8 +442,8 @@ class GPURenderer:
             wc_3d.struct_1.uuid1 = wc_3d.uuid1
             wc_3d.struct_1.uuid2 = wc_3d.uuid2
             wc_3d.struct_1.unk_18 = 0x0
-            wc_3d.struct_1.tile_blocks_y = tile_blocks_y * 4
-            wc_3d.struct_1.tile_blocks_x = tile_blocks_x * 4
+            wc_3d.struct_1.tile_blocks_y = mtile_y1
+            wc_3d.struct_1.tile_blocks_x = mtile_x1
             wc_3d.struct_1.unk_24 = 0x0
             wc_3d.struct_1.tile_counts = ((tiles_y-1) << 12) | (tiles_x-1)
             wc_3d.struct_1.unk_2c = 0x8
@@ -480,8 +509,10 @@ class GPURenderer:
             wc_3d.struct_2.scissor_array = cmdbuf.scissor_array
             wc_3d.struct_2.depth_bias_array = cmdbuf.depth_bias_array
             wc_3d.struct_2.aux_fb =  wc_3d.struct_1.aux_fb
+            # ISP_ZLS_PIXELS
             wc_3d.struct_2.depth_dimensions = wc_3d.struct_1.depth_dimensions
             wc_3d.struct_2.unk_48 = 0x0
+            # ISP_ZLSCTL
             wc_3d.struct_2.depth_flags = cmdbuf.ds_flags
             wc_3d.struct_2.depth_buffer_ptr1 = cmdbuf.depth_buffer
             wc_3d.struct_2.depth_buffer_ptr2 = cmdbuf.depth_buffer
@@ -490,9 +521,10 @@ class GPURenderer:
             wc_3d.struct_2.unk_68 = [0] * 12
             wc_3d.struct_2.tvb_tilemap = tvb_tilemap._addr
             wc_3d.struct_2.tvb_heapmeta_addr = tvb_heapmeta._addr
-            wc_3d.struct_2.unk_e8 = 0x50000000 * tile_blocks
+            wc_3d.struct_2.unk_e8 = tiling_params.size1 << 24
             wc_3d.struct_2.tvb_heapmeta_addr2 = tvb_heapmeta._addr
             # 0x10000 - clear empty tiles
+            # ISP_CTL (but bits seem to have moved)
             wc_3d.struct_2.unk_f8 = 0x10280 #0x10280 # TODO: varies 0, 0x280, 0x10000, 0x10280
             wc_3d.struct_2.aux_fb_ptr = aux_fb._addr
             wc_3d.struct_2.unk_108 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
