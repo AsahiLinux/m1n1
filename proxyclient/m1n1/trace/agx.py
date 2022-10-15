@@ -678,11 +678,11 @@ class AGXTracer(ASCTracer):
             def read(off, size):
                 return self.uat.ioread(context, off & 0x7fff_ffff_ffff_ffff, size)
 
-            chexdump(kread(wi0.addr, 0x600), print_fn=self.log)
+            #chexdump(kread(wi0.addr, 0x600), print_fn=self.log)
             self.log(f"  context_id = {context:#x}")
             self.dump_buffer_manager(wi0.buffer_mgr, kread, read)
-            self.log(f"  unk_emptybuf @ {wi0.unk_emptybuf_addr:#x}:")
-            chexdump(kread(wi0.unk_emptybuf_addr, 0x1000), print_fn=self.log)
+            #self.log(f"  unk_emptybuf @ {wi0.unk_emptybuf_addr:#x}:")
+            #chexdump(kread(wi0.unk_emptybuf_addr, 0x1000), print_fn=self.log)
 
             #self.log(f"  unkptr_48 @ {wi0.unkptr_48:#x}:")
             #chexdump(read(wi0.unkptr_48, 0x1000), print_fn=self.log)
@@ -788,8 +788,8 @@ class AGXTracer(ASCTracer):
             self.log(f"    unkptr_18 @ {wi1.buf_thing.unkptr_18:#x}:")
             chexdump(read(wi1.buf_thing.unkptr_18, 0x1000), print_fn=self.log)
             self.dump_buffer_manager(wi1.buffer_mgr, kread, read)
-            self.log(f"  unk_emptybuf @ {wi1.unk_emptybuf_addr:#x}:")
-            chexdump(kread(wi1.unk_emptybuf_addr, 0x1000), print_fn=self.log)
+            #self.log(f"  unk_emptybuf @ {wi1.unk_emptybuf_addr:#x}:")
+            #chexdump(kread(wi1.unk_emptybuf_addr, 0x1000), print_fn=self.log)
             #self.log(f"  tvb_addr @ {wi1.tvb_addr:#x}:")
             #chexdump(read(wi1.tvb_addr, 0x1000), print_fn=self.log)
 
