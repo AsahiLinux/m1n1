@@ -20,7 +20,9 @@ args="$2"
 initramfs=""
 shift 2
 
-if [ -n "$1" ]; then
+if [ "$1" == "--" ]; then
+	shift
+elif [ -n "$1" ]; then
     initramfs="$(realpath "$1")"
     shift
 fi
