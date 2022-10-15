@@ -18,13 +18,21 @@ import traceback
 __all__ = []
 
 class MemoryAttr(IntEnum):
+    # ff = Normal, Outer Writeback RW, Inner Writeback RW
     Normal = 0 # Only accessed by the gfx-asc coprocessor
+    # 00 = Device nGnRnE
     Device = 1
+    # f4 = Normal, Outer Writeback RW, Inner NC
     Shared = 2 # Probally Outer-shareable. Shared with either the main cpu or AGX hardware
+    # 4f = Normal, Outer NC, Inner Writeback RW
     UNK3 = 3
+    # 00 = Device nGnRnE
     UNK4 = 4
+    # ff = Normal, Outer Writeback RW, Inner Writeback RW
     UNK5 = 5
+    # 00 = Device nGnRnE
     UNK6 = 6
+    # 00 = Device nGnRnE
     UNK7 = 7
 
 
