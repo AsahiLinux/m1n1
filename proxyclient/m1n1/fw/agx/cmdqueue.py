@@ -370,7 +370,8 @@ class JobList(ConstructClass):
 
 class GPUContextData(ConstructClass):
     subcon = Struct(
-        "unk_0" / Int16ul,
+        "unk_0" / Int8ul,
+        "unk_1" / Int8ul,
         "unk_2" / Default(Bytes(3), bytes(3)),
         "unk_5" / Int8ul,
         "unk_6" / Default(Bytes(0x18), bytes(0x18)),
@@ -382,7 +383,8 @@ class GPUContextData(ConstructClass):
     )
 
     def __init__(self):
-        self.unk_0 = 0xffff
+        self.unk_0 = 0xff
+        self.unk_1 = 0xff
         self.unk_5 = 1
         self.unk_1e = 0xff
         self.unk_1f = 0
@@ -407,7 +409,6 @@ class CommandQueuePointers(ConstructClass):
         ZPadding(12),
         "rb_size" / Int32ul,
         ZPadding(12),
-        "unk" / Default(Bytes(0x2800), bytes(0x2800)),
     )
 
     def __init__(self):

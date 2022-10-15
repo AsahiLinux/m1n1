@@ -453,7 +453,8 @@ class GPURenderer:
             wc_3d.struct_1.unk_36 = 0x0
             wc_3d.struct_1.unk_38 = 0x0
             wc_3d.struct_1.unk_3c = 0x1
-            wc_3d.struct_1.unk_40_padding = bytes(0xb0)
+            wc_3d.struct_1.unk_40 = 0
+            wc_3d.struct_1.unk_44_padding = bytes(0xac)
             wc_3d.struct_1.depth_bias_array = Start3DArrayAddr(cmdbuf.depth_bias_array)
             wc_3d.struct_1.scissor_array = Start3DArrayAddr(cmdbuf.scissor_array)
             wc_3d.struct_1.unk_110 = 0x0
@@ -533,7 +534,8 @@ class GPURenderer:
             wc_3d.struct_2.unk_148 = 0x0
             wc_3d.struct_2.unk_150 = 0x0
             wc_3d.struct_2.unk_158 = 0x1c
-            wc_3d.struct_2.unk_160_padding = bytes(0x1e0)
+            wc_3d.struct_2.unk_160 = 0
+            wc_3d.struct_2.unk_168_padding = bytes(0x1d8)
 
         if True:
             wc_3d.struct_6 = Start3DStruct6()
@@ -545,8 +547,8 @@ class GPURenderer:
             wc_3d.struct_6.unk_1c = 0xffffffff
             wc_3d.struct_6.unknown_buffer = unk_buf._addr
             wc_3d.struct_6.unk_28 = 0x0
-            wc_3d.struct_6.unk_30 = 0x1
-            wc_3d.struct_6.unk_34 = 0x1
+            wc_3d.struct_6.unk_30 = 0x0
+            wc_3d.struct_6.unk_34 = 0x0
 
         if True:
             wc_3d.struct_7 = Start3DStruct7()
@@ -556,7 +558,7 @@ class GPURenderer:
             wc_3d.struct_7.stamp_value = self.stamp_value_3d
             wc_3d.struct_7.ev_3d = ev_3d.id
             wc_3d.struct_7.unk_20 = 0x0
-            wc_3d.struct_7.unk_24 = 1 # 0x0 # check
+            wc_3d.struct_7.unk_24 = 0 # 0x0 # check
             wc_3d.struct_7.uuid = uuid_3d
             wc_3d.struct_7.prev_stamp_value = self.prev_stamp_value_3d >> 8
             wc_3d.struct_7.unk_30 = 0x0
@@ -571,13 +573,13 @@ class GPURenderer:
         ms = GPUMicroSequence(agx)
 
         start_3d = Start3DCmd()
-        start_3d.struct1 = wc_3d.struct_1
-        start_3d.struct2 = wc_3d.struct_2
+        start_3d.struct1 = wc_3d.struct_1 # 0x44 bytes!
+        start_3d.struct2 = wc_3d.struct_2 # 0x168 bytes!
         start_3d.buf_thing = buf_desc
         start_3d.stats_ptr = agx.initdata.regionB.stats_3d.stats._addr
         start_3d.busy_flag_ptr = wc_3d.busy_flag._addr
-        start_3d.struct6 = wc_3d.struct_6
-        start_3d.struct7 = wc_3d.struct_7
+        start_3d.struct6 = wc_3d.struct_6 # 4 bytes!
+        start_3d.struct7 = wc_3d.struct_7 # 4 bytes!
         start_3d.cmdqueue_ptr = self.wq_3d.info._addr
         start_3d.workitem_ptr = wc_3d._addr
         start_3d.context_id = self.ctx_id
@@ -826,7 +828,7 @@ class GPURenderer:
 
         start_ta = StartTACmd()
         start_ta.tiling_params = wc_ta.tiling_params
-        start_ta.struct2 = wc_ta.struct_2
+        start_ta.struct2 = wc_ta.struct_2 # len 0x120
         start_ta.buffer_mgr = self.buffer_mgr.info
         start_ta.buf_thing = buf_desc
         start_ta.stats_ptr = agx.initdata.regionB.stats_ta.stats._addr

@@ -1158,7 +1158,7 @@ class AGXHWDataB(ConstructClass):
         self.unk_518 = 0x0
         self.unk_51c = 0x0
         self.unk_520 = 0x0
-        self.unk_524 = 0x1
+        self.unk_524 = 0x1 # use_secure_cache_flush
         self.unk_528 = 0x0
         self.unk_52c = 0x0
         self.unk_530 = 0x0

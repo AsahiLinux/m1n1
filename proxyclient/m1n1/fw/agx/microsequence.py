@@ -217,7 +217,8 @@ class Start3DStruct1(ConstructClass):
         "unk_36" / Int16ul,
         "unk_38" / Int32ul,
         "unk_3c" / Int32ul,
-        "unk_40_padding" / HexDump(Bytes(0xb0)),
+        "unk_40" / Int32ul,
+        "unk_44_padding" / HexDump(Bytes(0xac)),
         "depth_bias_array" / Start3DArrayAddr,
         "scissor_array" / Start3DArrayAddr,
         "unk_110" / Int64ul,
@@ -289,7 +290,8 @@ class Start3DStruct2(ConstructClass):
         "unk_148" / Int64ul,
         "unk_150" / Int64ul,
         "unk_158" / Int64ul,
-        "unk_160_padding" / HexDump(Bytes(0x1e0)),
+        "unk_160" / Int64ul,
+        "unk_168_padding" / HexDump(Bytes(0x1d8)),
         Ver("..13.0 beta4", ZPadding(8)),
     )
 
