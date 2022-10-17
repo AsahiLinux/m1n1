@@ -11,7 +11,8 @@
 #include "utils.h"
 
 #define NVME_TIMEOUT          1000000
-#define NVME_SHUTDOWN_TIMEOUT (5 * NVME_TIMEOUT)
+#define NVME_ENABLE_TIMEOUT   5000000
+#define NVME_SHUTDOWN_TIMEOUT 5000000
 #define NVME_QUEUE_SIZE       64
 
 #define NVME_CC            0x14
@@ -186,7 +187,7 @@ static bool nvme_ctrl_disable(void)
 
 static bool nvme_ctrl_enable(void)
 {
-    u64 timeout = timeout_calculate(NVME_TIMEOUT);
+    u64 timeout = timeout_calculate(NVME_ENABLE_TIMEOUT);
 
     mask32(nvme_base + NVME_CC, NVME_CC_SHN, NVME_CC_EN);
     while (!(read32(nvme_base + NVME_CSTS) & NVME_CSTS_RDY) && !timeout_expired(timeout))
@@ -405,6 +406,7 @@ out_delete_cq:
     if (!nvme_exec_command(&adminq, &cmd, NULL))
         printf("nvme: delete cq command failed\n");
 out_disable_ctrl:
+    nvme_ctrl_shutdown();
     nvme_ctrl_disable();
     nvme_poll_syslog();
 out_shutdown:
