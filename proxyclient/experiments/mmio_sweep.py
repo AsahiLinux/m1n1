@@ -103,11 +103,41 @@ ps_addrs = dict()
 for dev in pmgr.devices:
 	ps = pmgr.ps_regs[dev.psreg]
 	addr = pmgr.get_reg(ps.reg)[0] + ps.offset + dev.psidx * 8
+
+	if lp.is_t6000() and dev.name.startswith("AOP_"):
+		addr = 0x292284000 + (dev.id - 403) * 8		
+
 	ps_addrs[dev.name] = addr
 	ps_deps[dev.name] = [
 		ps_dev_by_id[idx].name for idx
 		in dev.parents if idx in ps_dev_by_id
 	]
+
+if lp.is_t6000():
+	# on t6000, guess the AOP PD hierarchy (undocumented
+	# in ADT) by analogy with t8103
+	ps_deps["AOP_GPIO"] += ["AOP_FILTER"]
+	ps_deps["AOP_BASE"] += ["AOP_FILTER"]
+	ps_deps["AOP_FR"] += ["AOP_FILTER"]
+	ps_deps["AOP_SPMI0"] += ["AOP_FR"]
+	ps_deps["AOP_SPMI1"] += ["AOP_FR"]
+	ps_deps["AOP_LEAP_CLK"] += ["AOP_FILTER"]
+	ps_deps["AOP_SHIM"] += ["AOP_BASE"]
+	ps_deps["AOP_UART0"] += ["AOP_SHIM"]
+	ps_deps["AOP_UART1"] += ["AOP_SHIM"]
+	ps_deps["AOP_UART2"] += ["AOP_SHIM"]
+	ps_deps["AOP_SCM"] += ["AOP_BASE", "AOP_FR"]
+	ps_deps["AOP_CPU"] += ["AOP_BASE"]
+	ps_deps["AOP_I2CM0"] += ["AOP_FR"]
+	ps_deps["AOP_I2CM1"] += ["AOP_FR"]
+	ps_deps["AOP_MCA0"] += ["AOP_FR", "AOP_SHIM"]
+	ps_deps["AOP_MCA1"] += ["AOP_FR", "AOP_SHIM"]
+	ps_deps["AOP_SPI0"] += ["AOP_FR"]
+	ps_deps["AOP_LEAP"] += ["AOP_LEAP_CLK"]
+	ps_deps["AOP_AUDIO_SHIM"] += ["AOP_LEAP_CLK"]
+	ps_deps["AOP_AUDIO_ADMA0"] += ["AOP_FR"]
+	ps_deps["AOP_PDMC_LPD"] += ["AOP_SHIM"]
+	ps_deps["AOP_SRAM"] += ["AOP_SCM", "AOP_CPU"]
 
 def ps_pstate(name):
 	return p.read32(ps_addrs[name]) & 0x0f
