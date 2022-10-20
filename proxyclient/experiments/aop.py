@@ -10,11 +10,36 @@ from m1n1.setup import *
 from m1n1.shell import run_shell
 from m1n1.hw.dart import DART, DARTRegs
 from m1n1.fw.asc import StandardASC, ASCDummyEndpoint
+from m1n1.fw.asc.base import *
 from m1n1.fw.aop import *
 
+class OSLogMessage(Register64):
+    TYPE        = 63, 56
+
+class OSLog_Init(OSLogMessage):
+    TYPE        = 63, 56, Constant(1)
+    UNK         = 51, 0
+    DVA         = 7, 0
+
+class AOPOSLogEndpoint(ASCBaseEndpoint):
+    BASE_MESSAGE = OSLogMessage
+    SHORT = "oslog"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.started = False
+
+    @msg_handler(1, OSLog_Init)
+    def Init(self, msg):
+        self.iobuffer, self.iobuffer_dva = self.asc.ioalloc(0x1_0000)
+        self.send(OSLog_Init(DVA=self.iobuffer_dva//0x1000))
+        self.started = True
+        return True
 
 class AOPClient(StandardASC):
     ENDPOINTS = {
+        8: AOPOSLogEndpoint,
+
         0x20: ASCDummyEndpoint,
         0x21: ASCDummyEndpoint,
         0x22: ASCDummyEndpoint,
