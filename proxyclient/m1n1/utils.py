@@ -123,7 +123,7 @@ def chexundump(dump):
             decoded.extend([int(data[i:i+2], 16) for i \
                             in range(0, len(data), 2)])
         except (ValueError, TypeError) as exc:
-            raise ValueError("can't decode line: %s", line) from exc
+            raise ValueError(f"can't decode line: {line:r}") from exc
 
     return decoded
 
