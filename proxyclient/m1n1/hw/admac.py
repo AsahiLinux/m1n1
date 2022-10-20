@@ -60,6 +60,10 @@ class R_BUSWIDTH(Register32):
     WORD  = 2, 0, E_BUSWIDTH
     FRAME = 6, 4, E_FRAME
 
+class R_CARVEOUT(Register32):
+    SIZE = 31, 16
+    BASE = 15, 0
+
 class ADMACRegs(RegMap):
     TX_EN     = 0x0, Register32 # one bit per channel
     TX_EN_CLR = 0x4, Register32
@@ -81,13 +85,16 @@ class ADMACRegs(RegMap):
     # a 24 MHz always-running counter, top bit is always set
     COUNTER = 0x70, Register64
 
+    TX_SRAM_SIZE = 0x94, Register32
+    RX_SRAM_SIZE = 0x98, Register32
+
     # -- per-channel registers --
 
     CHAN_CTL = (irange(0x8000, 32, 0x200)), R_CHAN_CONTROL
 
-    CHAN_BUSWIDTH  = (irange(0x8040, 32, 0x200)), R_BUSWIDTH
-    # TODO: needs more research
-    CHAN_BURSTSIZE = (irange(0x8054, 32, 0x200)), Register32
+    CHAN_BUSWIDTH      = (irange(0x8040, 32, 0x200)), R_BUSWIDTH
+    CHAN_SRAM_CARVEOUT = (irange(0x8050, 32, 0x200)), R_CARVEOUT
+    CHAN_BURSTSIZE     = (irange(0x8054, 32, 0x200)), Register32
 
     CHAN_RESIDUE = irange(0x8064, 32, 0x200), Register32
 
@@ -242,6 +249,17 @@ class ADMACChannel(Reloadable):
     @burstsize.setter
     def burstsize(self, size):
         self.regs.CHAN_BURSTSIZE[self.ch].val = size
+
+    @property
+    def sram_carveout(self):
+        reg = self.regs.CHAN_SRAM_CARVEOUT[self.ch].reg
+        return (reg.BASE, reg.SIZE)
+
+    @sram_carveout.setter
+    def sram_carveout(self, carveout):
+        base, size = carveout
+        self.regs.CHAN_SRAM_CARVEOUT[self.ch].reg = \
+                    R_CARVEOUT(BASE=base, SIZE=size)
 
     @property
     def DESC_WRITE(self):
