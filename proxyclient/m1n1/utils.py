@@ -109,6 +109,8 @@ def chexundump(dump):
 
     decoded = bytearray()
     for line in dump.splitlines():
+        if not line:
+            continue
         try:
             cropped = line.split("|", 2)[0]
             mark, data = cropped.split(" ", 1)
