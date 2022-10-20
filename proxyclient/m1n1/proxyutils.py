@@ -51,6 +51,10 @@ class ProxyUtils(Reloadable):
             # Compat with versions that don't have heapblock yet
             self.heap_base = (self.base + ((self.ba.top_of_kernel_data + 0xffff) & ~0xffff) -
                               self.ba.phys_base)
+
+        if os.environ.get("M1N1HEAP", ""):
+            self.heap_base = int(os.environ.get("M1N1HEAP", ""), 16)
+
         self.heap_base += 128 * 1024 * 1024 # We leave 128MB for m1n1 heap
         self.heap_top = self.heap_base + self.heap_size
         self.heap = Heap(self.heap_base, self.heap_top)
