@@ -15,6 +15,8 @@
     } while (0)
 #endif
 
+#define ARRAY_SIZE(s) (sizeof(s) / sizeof((s)[0]))
+
 #define BIT(x)                 (1UL << (x))
 #define MASK(x)                (BIT(x) - 1)
 #define GENMASK(msb, lsb)      ((BIT((msb + 1) - (lsb)) - 1) << (lsb))

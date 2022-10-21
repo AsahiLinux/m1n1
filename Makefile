@@ -100,7 +100,7 @@ OBJECTS := \
 	i2c.o \
 	iodev.o \
 	iova.o \
-	kboot.o \
+	kboot.o kboot_gpu.o \
 	main.o \
 	mcc.o \
 	memory.o memory_asm.o \

@@ -33,6 +33,8 @@ static void *initrd_start = NULL;
 static size_t initrd_size = 0;
 static char *chosen_params[MAX_CHOSEN_PARAMS][2];
 
+int dt_set_gpu(void *dt);
+
 #define DT_ALIGN 16384
 
 #define bail(...)                                                                                  \
@@ -1527,6 +1529,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_atc_tunables())
         return -1;
     if (dt_set_display())
+        return -1;
+    if (dt_set_gpu(dt))
         return -1;
     if (dt_disable_missing_devs("usb-drd", "usb@", 8))
         return -1;
