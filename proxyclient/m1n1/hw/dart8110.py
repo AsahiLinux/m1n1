@@ -155,7 +155,7 @@ class DART8110Regs(RegMap):
 
     # Write bits to _PROTECT to protect them.
     # They can be unprotected by writing to _UNPROTECT unless _LOCK is written.
-    # If _LOCK is written, protection can be enabled but not disabled. 
+    # If _LOCK is written, protection can be enabled but not disabled.
     REG_PROTECT         = 0x200, R_PROTECT
     REG_UNPROTECT       = 0x204, R_PROTECT
     REG_PROTECT_LOCK    = 0x208, R_PROTECT
@@ -251,7 +251,7 @@ class DART8110(Reloadable):
     Lx_SIZE = (1 << IDX_BITS)
     IDX_MASK = Lx_SIZE - 1
 
-    def __init__(self, iface, regs, util=None, iova_range=(0x80000000, 0x90000000)):
+    def __init__(self, iface, regs, util=None):
         self.iface = iface
         self.regs = regs
         self.u = util
@@ -261,8 +261,6 @@ class DART8110(Reloadable):
         for i in range(8):
             enabled_streams |= regs.ENABLE_STREAMS[i].val << 32*i
         self.enabled_streams = enabled_streams
-        self.iova_allocator = [Heap(iova_range[0], iova_range[1], self.PAGE_SIZE)
-                               for i in range(16)]
 
     @classmethod
     def from_adt(cls, u, path, instance=0, **kwargs):
@@ -270,43 +268,6 @@ class DART8110(Reloadable):
         regs = DART8110Regs(u, dart_addr)
         dart = cls(u.iface, regs, u, **kwargs)
         return dart
-
-    def ioread(self, stream, base, size):
-        if size == 0:
-            return b""
-
-        ranges = self.iotranslate(stream, base, size)
-
-        iova = base
-        data = []
-        for addr, size in ranges:
-            if addr is None:
-                raise Exception(f"Unmapped page at iova {iova:#x}")
-            data.append(self.iface.readmem(addr, size))
-            iova += size
-
-        return b"".join(data)
-
-    def iowrite(self, stream, base, data):
-        if len(data) == 0:
-            return
-
-        ranges = self.iotranslate(stream, base, len(data))
-
-        iova = base
-        p = 0
-        for addr, size in ranges:
-            if addr is None:
-                raise Exception(f"Unmapped page at iova {iova:#x}")
-            self.iface.writemem(addr, data[p:p + size])
-            p += size
-            iova += size
-
-    def iomap(self, stream, addr, size):
-        iova = self.iova_allocator[stream].malloc(size)
-
-        self.iomap_at(stream, iova, addr, size)
-        return iova
 
     def iomap_at(self, stream, iova, addr, size):
         if size == 0:
@@ -572,10 +533,6 @@ class DART8110(Reloadable):
             print("  mode: BYPASS")
         else:
             print("  mode: UNKNOWN")
-
-    def dump_all(self):
-        for i in range(16):
-            self.dump_device(i)
 
     def dump_params(self):
         print(self.regs.PARAMS_0.reg)
