@@ -30,20 +30,41 @@ class WLANBAR0(RegMap):
     H2D_MAILBOX_0       = 0x2140, Register32
     H2D_MAILBOX_1       = 0x2144, Register32
 
+    # Linux uses these, via offset 0 instead of 0x2000
+    H2D_MAILBOX_0_ALT   = 0x140, Register32
+    H2D_MAILBOX_1_ALT   = 0x144, Register32
+    H2D_MAILBOX_0_64    = 0xa20, Register32
+    H2D_MAILBOX_1_64    = 0xa24, Register32
+    INTMASK_64          = 0xc14, Register32
+    MAILBOXINT_64       = 0xc30, Register32
+    MAILBOXMASK_64      = 0xc34, Register32
+
 class WLANSRAMEnd(RegMap):
-    SHARED_BASE = 0x00, Register32
+    PAD                 = 0x00, Register32
+    SHARED_BASE         = 0x04, Register32
 
 class WLANSRAMShared(RegMap):
+    FLAGS               = 0, Register32
     CONSOLE_ADDR        = 20, Register32
+    FWID                = 28, Register32
     MAX_RXBUFPOST       = 34, Register16
     RX_DATAOFFSET       = 36, Register32
     HTOD_MB_DATA_ADDR   = 40, Register32
     DTOH_MB_DATA_ADDR   = 44, Register32
     RING_INFO_ADDR      = 48, Register32
     DMA_SCRATCH_LEN     = 52, Register32
-    DMA_SCRATCH_ADDR    = 56, Register32
-    DMA_RINGUPD_LEN     = 64, Register32
-    DMA_RINGUPD_ADDR    = 68, Register32
+    DMA_SCRATCH_ADDR    = 56, Register64
+    HOST_SCB_ADDR       = 64, Register64
+    HOST_SCB_SIZE       = 72, Register32
+    BUZZ_DBG_PTR        = 76, Register32
+    FLAGS2              = 80, Register32
+    HOST_CAP            = 84, Register32
+    HOST_TRAP_ADDR      = 88, Register64
+    DEVICE_FATAL_LOGBUF_START = 96, Register32
+    HOFFLOAD_ADDR       = 100, Register64
+    FLAGS3              = 108, Register32
+    HOST_CAP2           = 112, Register32
+    HOST_CAP3           = 116, Register32
 
 class WLANSRAMRingInfo(RegMap):
     RINGMEM             = 0x00, Register32
@@ -242,7 +263,6 @@ class WLANTracer(PCIeDevTracer):
         self.state.ring_mem_base = None
         self.state.tcm_base = None
         self.state.tcm_size = None
-        self.state.nvram_tag = None
         self.state.ring_info = None
         self.state.ring_mem = None
         self.state.ring_info_data = {}
@@ -273,11 +293,8 @@ class WLANTracer(PCIeDevTracer):
         self.config_dart()
         return self.dart.iotranslate(self.dart_dev, addr, size)
 
-    def w_SHARED_BASE(self, tag):
-        self.state.nvram_tag = tag.value
-
     def r_SHARED_BASE(self, base):
-        if base.value == self.state.nvram_tag:
+        if base.value & 0xffff == (base.value >> 16) ^ 0xffff:
             return
 
         self.state.shared_base = base.value
@@ -339,6 +356,9 @@ class WLANTracer(PCIeDevTracer):
         if ring is not None:
             ring.poll()
 
+    w_H2D_MAILBOX_0_64 = w_H2D_MAILBOX_0
+    w_H2D_MAILBOX_0_ALT = w_H2D_MAILBOX_0
+
     def ioctlptr_req(self, pkt):
         data = self.ioread(pkt.payload.host_input_buf_addr, pkt.payload.input_buf_len)
         cmd = self.CMDS.get(pkt.payload.cmd, "unk")
@@ -374,7 +394,7 @@ class WLANTracer(PCIeDevTracer):
         if self.dart is None:
             self.dart = DART.from_adt(self.u, self.dart_path)
 
-        self.trace_regmap(self.state.tcm_base + self.SRAM_BASE + self.SRAM_SIZE - 4, 4,
+        self.trace_regmap(self.state.tcm_base + self.SRAM_BASE + self.SRAM_SIZE - 8, 8,
                           WLANSRAMEnd, name="sram")
 
     def update_shared(self):
@@ -398,8 +418,11 @@ class WLANTracer(PCIeDevTracer):
 
             self.state.ring_mem_base = self.ring_info.RINGMEM.val
 
+        self.trace_regmap(self.state.tcm_base + base, 0x100,
+                          WLANSRAMShared, name="shared")
+
         self.trace_regmap(self.state.tcm_base + self.state.ring_info_base, 0x40,
-                        WLANSRAMRingInfo, name="ringinfo")
+                          WLANSRAMRingInfo, name="ringinfo")
 
         self.ring_mem = WLANSRAMRingMem(self.hv.u,
                                         self.state.tcm_base + self.state.ring_mem_base)
