@@ -1218,6 +1218,8 @@ static int dt_set_display(void)
                                                dcpext_reserved_regions_t600x[n],
                                                ARRAY_SIZE(dcpext_reserved_regions_t600x[n]));
         }
+
+        ret = 0;
     } else {
         printf("DT: unknown compatible, skip display reserved-memory setup\n");
         return 0;
