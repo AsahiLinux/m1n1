@@ -240,7 +240,19 @@ static int dt_set_chosen(void)
 
         // We do not need to reserve the framebuffer, as it will be excluded from the usable RAM
         // range already.
+
+        // save notch height in the dcp node if present
+        if (cur_boot_args.video.height - fb_height) {
+            int dcp = fdt_path_offset(dt, "dcp");
+            if (dcp >= 0)
+                if (fdt_appendprop_u32(dt, dcp, "apple,notch-height",
+                                       cur_boot_args.video.height - fb_height))
+                    printf("FDT: couldn't set apple,notch-height\n");
+        }
     }
+    node = fdt_path_offset(dt, "/chosen");
+    if (node < 0)
+        bail("FDT: /chosen node not found in devtree\n");
 
     int ipd = adt_path_offset(adt, "/arm-io/spi3/ipd");
     if (ipd < 0)
