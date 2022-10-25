@@ -955,6 +955,10 @@ static int dt_carveout_reserved_regions(const char *dcp_alias, const char *disp_
 
     assert(num_maps <= MAX_DISP_MAPPINGS);
 
+    // return early if dcp_alias does not exists
+    if (!fdt_get_alias(dt, dcp_alias))
+        return 0;
+
     int node = adt_path_offset(adt, "/chosen/carveout-memory-map");
     if (node < 0)
         bail("ADT: '/chosen/carveout-memory-map' not found\n");
@@ -1218,8 +1222,6 @@ static int dt_set_display(void)
                                                dcpext_reserved_regions_t600x[n],
                                                ARRAY_SIZE(dcpext_reserved_regions_t600x[n]));
         }
-
-        ret = 0;
     } else {
         printf("DT: unknown compatible, skip display reserved-memory setup\n");
         return 0;
