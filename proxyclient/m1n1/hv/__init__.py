@@ -363,7 +363,7 @@ class HV(Reloadable):
         while True:
             try:
                 return func()
-            except:
+            except Exception:
                 print(f"Exception in {description}")
                 traceback.print_exc()
 
