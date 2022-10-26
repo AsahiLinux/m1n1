@@ -12,7 +12,7 @@ class GFXHandoffStruct(RegMap):
     LOCK_FW     = 0x11, Register8
     TURN        = 0x14, Register32
 
-    UNK         = 0x18, Register32
+    CUR_CTX     = 0x18, Register32
 
     FLUSH_STATE = irange(0x20, 0x41, 0x18), Register64
     FLUSH_ADDR  = irange(0x28, 0x41, 0x18), Register64
