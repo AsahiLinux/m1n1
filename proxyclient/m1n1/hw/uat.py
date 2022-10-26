@@ -275,11 +275,11 @@ class UAT(Reloadable):
         self.hv = hv
         self.pt_cache = {}
         self.dirty = set()
+        self.dirty_ranges = {}
         self.allocator = None
         self.ttbr = None
         self.initialized = False
         self.sgx_dev = self.u.adt["/arm-io/sgx"]
-        self.handoff = self.sgx_dev.gfx_handoff_base
         self.shared_region = self.sgx_dev.gfx_shared_region_base
         self.gpu_region = self.sgx_dev.gpu_region_base
         self.ttbr0_base = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
@@ -383,6 +383,7 @@ class UAT(Reloadable):
                         self.write_pte(table_addr, page >> offset, size, pte)
                     table_addr = pte.offset()
 
+        self.dirty_ranges.setdefault(ctx, []).append((start_page, end_page - start_page))
         #self.flush_dirty()
 
 
@@ -469,7 +470,7 @@ class UAT(Reloadable):
         assert addr in self.pt_cache
         table = self.pt_cache[addr]
         self.iface.writemem(addr, struct.pack(f"<{len(table)}Q", *table))
-        self.p.dc_civac(addr, 0x4000)
+        #self.p.dc_civac(addr, 0x4000)
 
     def flush_dirty(self):
         inval = False
@@ -480,8 +481,9 @@ class UAT(Reloadable):
 
         self.dirty.clear()
 
-        if inval:
-            self.u.inst("tlbi vmalle1os")
+        for ctx, ranges in self.dirty_ranges.items():
+            asid = ctx << 48
+            self.u.inst("tlbi aside1os, x0", asid)
 
     def invalidate_cache(self):
         self.pt_cache = {}
