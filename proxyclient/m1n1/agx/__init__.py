@@ -36,6 +36,8 @@ class AGX:
 
         self.log("Initializing allocations")
 
+        self.aic_base = u.adt["/arm-io/aic"].get_reg(0)[0]
+
         self.all_objects = {}
         self.tracked_objects = {}
 
@@ -187,6 +189,14 @@ class AGX:
     def kick_firmware(self):
         self.asc.db.doorbell(0x10)
 
+    def show_irqs(self):
+        hw_state = self.aic_base + 0x4200
+        irqs = []
+        for irq in self.sgx_dev.interrupts:
+            v = int(bool((self.p.read32(hw_state + (irq // 32) * 4) & (1 << (irq % 32)))))
+            irqs.append(v)
+        self.log(f' SGX IRQ state: {irqs}')
+
     def timeout(self, msg):
         if self.mon:
             self.mon.poll()
@@ -206,6 +216,7 @@ class AGX:
         self.log(f' Fault info:')
         self.log(self.initdata.regionC.fault_info)
 
+        self.show_irqs()
         self.check_fault()
         self.recover()
 
@@ -227,6 +238,7 @@ class AGX:
         self.log(f' Fault info:')
         self.log(self.initdata.regionC.fault_info)
 
+        self.show_irqs()
         self.check_fault()
         self.recover()
 
@@ -275,14 +287,18 @@ class AGX:
             status.resume.val = 1
         else:
             raise Exception("Cannot recover")
+        self.show_irqs()
 
-    def start(self):
+    def resume(self):
         self.log("Starting ASC")
         self.asc.start()
 
         self.log("Starting endpoints")
         self.asc.start_ep(0x20)
         self.asc.start_ep(0x21)
+
+    def start(self):
+        self.resume()
 
         self.init_channels()
 
