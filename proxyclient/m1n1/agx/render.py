@@ -224,7 +224,7 @@ class GPURenderer:
 
         self.buffer_mgr.increment()
 
-        aux_fb = self.ctx.uobj.new_buf(0x8000, "Aux FB thing", track=False)
+        aux_fb = self.ctx.uobj.new_buf(0x80, "Aux FB thing", track=False)
         work.add(aux_fb)
 
         #self.deflake_1 = ctx.uobj.new_buf(0x20, "Deflake 1")
@@ -401,8 +401,10 @@ class GPURenderer:
         wc_3d.tile_blocks_x = mtile_x1
         wc_3d.unk_50 = 0x0
         wc_3d.unk_58 = 0x0
-        wc_3d.uuid1 = 0x3b315cae # ??
-        wc_3d.uuid2 = 0x3b6c7b92 # ??
+
+        TAN_60 = 1.732051
+        wc_3d.merge_upper_x = TAN_60 / width
+        wc_3d.merge_upper_y = TAN_60 / height
         wc_3d.unk_68 = 0x0
         wc_3d.tile_count = tiles
 
@@ -439,9 +441,13 @@ class GPURenderer:
             wc_3d.struct_1.store_pipeline_addr = cmdbuf.store_pipeline | 4
             wc_3d.struct_1.unk_8 = 0x0
             wc_3d.struct_1.unk_c = 0x0
-            wc_3d.struct_1.uuid1 = wc_3d.uuid1
-            wc_3d.struct_1.uuid2 = wc_3d.uuid2
+
+            TAN_60 = 1.732051
+            wc_3d.struct_1.merge_upper_x = TAN_60 / width
+            wc_3d.struct_1.merge_upper_y = TAN_60 / height
+
             wc_3d.struct_1.unk_18 = 0x0
+            # ISP_MTILE_SIZE
             wc_3d.struct_1.tile_blocks_y = mtile_y1
             wc_3d.struct_1.tile_blocks_x = mtile_x1
             wc_3d.struct_1.unk_24 = 0x0
@@ -557,7 +563,7 @@ class GPURenderer:
             wc_3d.struct_7.stamp2 = self.stamp_3d2
             wc_3d.struct_7.stamp_value = self.stamp_value_3d
             wc_3d.struct_7.ev_3d = ev_3d.id
-            wc_3d.struct_7.unk_20 = 0x0
+            wc_3d.struct_7.evctl_index = 0x0
             wc_3d.struct_7.unk_24 = 0 # 0x0 # check
             wc_3d.struct_7.uuid = uuid_3d
             wc_3d.struct_7.prev_stamp_value = self.prev_stamp_value_3d >> 8
@@ -815,7 +821,7 @@ class GPURenderer:
             wc_ta.struct_3.stamp2 = self.stamp_ta2
             wc_ta.struct_3.stamp_value = self.stamp_value_ta
             wc_ta.struct_3.ev_ta = ev_ta.id
-            wc_ta.struct_3.unk_580 = 0x0 # fixed
+            wc_ta.struct_3.evctl_index = 0
             wc_ta.struct_3.unk_584 = 0x0 # 1 for boot stuff?
             wc_ta.struct_3.uuid2 = uuid_ta
             wc_ta.struct_3.prev_stamp_value = self.prev_stamp_value_ta >> 8

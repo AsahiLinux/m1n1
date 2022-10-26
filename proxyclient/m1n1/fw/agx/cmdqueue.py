@@ -75,14 +75,11 @@ class EventControl(ConstructClass):
         "unk_20" / Int32ul,
         "unk_24" / Int32ul,
         "has_ta" / Int32ul,
-        "pstamp_ta" / Int64ul,
-        "unk_ta" / HexDump(Bytes(0x18)),
+        "pstamp_ta" / Array(4, Int64ul),
         "has_3d" / Int32ul,
-        "pstamp_3d" / Int64ul,
-        "unk_3d" / HexDump(Bytes(0x18)),
+        "pstamp_3d" / Array(4, Int64ul),
         "has_cp" / Int32ul,
-        "pstamp_cp" / Int64ul,
-        "unk_cp" / HexDump(Bytes(0x18)),
+        "pstamp_cp" / Array(4, Int64ul),
         "in_list" / Int32ul,
         "list_head" / LinkedListHead,
         "unk_buf" / EventControlUnkBuf,
@@ -95,14 +92,11 @@ class EventControl(ConstructClass):
         self.unk_20 = 0
         self.unk_24 = 0
         self.has_ta = 0
-        self.pstamp_ta = 0
-        self.unk_ta = bytes(24)
+        self.pstamp_ta = [0]*4
         self.has_3d = 0
-        self.pstamp_3d = 0
-        self.unk_3d = bytes(24)
+        self.pstamp_3d = [0]*4
         self.has_cp = 0
-        self.pstamp_cp = 0
-        self.unk_cp = bytes(24)
+        self.pstamp_cp = [0]*4
         self.in_list = 0
         self.list_head = LinkedListHead()
         self.unk_buf = EventControlUnkBuf()
@@ -224,8 +218,8 @@ class WorkCommand3D(ConstructClass):
         "tile_blocks_x" / Hex(Int16ul), # * 4
         "unk_50" / Hex(Int64ul),
         "unk_58" / Hex(Int64ul),
-        "uuid1" / Hex(Int32ul), # same across repeated submits
-        "uuid2" / Hex(Int32ul), # same across repeated submits
+        "merge_upper_x" / Hex(Float32l),
+        "merge_upper_y" / Hex(Float32l),
         "unk_68" / Hex(Int64ul),
         "tile_count" / Hex(Int64ul),
 

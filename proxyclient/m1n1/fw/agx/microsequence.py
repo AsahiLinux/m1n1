@@ -203,8 +203,8 @@ class Start3DStruct1(ConstructClass):
         "store_pipeline_addr" / Int32ul,
         "unk_8" / Int32ul,
         "unk_c" / Int32ul,
-        "uuid1" / Int32ul,
-        "uuid2" / Int32ul,
+        "merge_upper_x" / Float32l,
+        "merge_upper_y" / Float32l,
         "unk_18" / Int64ul,
         "tile_blocks_y" / Int16ul, # * 4
         "tile_blocks_x" / Int16ul, # * 4
@@ -332,7 +332,7 @@ class Start3DStruct7(ConstructClass):
         "stamp2" / ROPointer(this.stamp2_addr.value, StampCounter),
         "stamp_value" / Int32ul,
         "ev_3d" / Int32ul,
-        "unk_20" / Int32ul,
+        "evctl_index" / Int32ul,
         "unk_24" / Int32ul,
         "uuid" / Int32ul,
         "prev_stamp_value" / Int32ul,
@@ -508,7 +508,7 @@ class StartTACmdStruct3(ConstructClass):
         "stamp2" / ROPointer(this.stamp2_addr.value, StampCounter),
         "stamp_value" / Int32ul,
         "ev_ta" / Int32ul,
-        "unk_580" / Int32ul,
+        "evctl_index" / Int32ul, # 0-3
         "unk_584" / Int32ul,
         "uuid2" / Int32ul,
         "prev_stamp_value" / Int32ul,
