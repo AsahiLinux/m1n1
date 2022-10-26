@@ -331,6 +331,7 @@ class AGXTracer(ASCTracer):
         self.trace_usermap = True
         self.pause_after_init = False
         self.shell_after_init = False
+        self.after_init_hook = None
         self.encoder_id_filter = None
         self.redump = False
 
@@ -1102,5 +1103,7 @@ class AGXTracer(ASCTracer):
             self.stop()
         if self.shell_after_init:
             self.hv.run_shell()
+        if self.after_init_hook:
+            self.after_init_hook()
 
 ChannelTracer = ChannelTracer._reloadcls()
