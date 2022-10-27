@@ -16,6 +16,9 @@ p.pmgr_adt_clocks_enable("/arm-io/gfx-asc")
 p.pmgr_adt_clocks_enable("/arm-io/sgx")
 
 agx = AGX(u)
+mon = RegMonitor(u, ascii=True, bufsize=0x8000000)
+agx.mon = mon
+
 sgx = agx.sgx_dev
 
 try:
@@ -54,10 +57,12 @@ try:
         agx.asc.work()
         agx.poll_channels()
 
+    agx.poll_objects()
+    mon.poll()
     r.wait()
 
     time.sleep(3)
 
 finally:
-    agx.poll_objects()
+    #agx.poll_objects()
     p.reboot()

@@ -200,7 +200,7 @@ DEV_PROPERTIES = {
     },
     "sgx": {
         "*": {
-            "perf-states": SafeGreedyRange(GPUPerfState),
+            "perf-states*": SafeGreedyRange(GPUPerfState),
             "*-kp": Float32l,
             "*-ki": Float32l,
             "*-ki-*": Float32l,
@@ -474,6 +474,9 @@ class ADTNode:
             del self.__dict__[attr]
             return
         del self._properties[attr]
+
+    def getprop(self, name, default=None):
+        return self._properties.get(name, default)
 
     @property
     def address_cells(self):

@@ -877,9 +877,9 @@ class AGXTracer(ASCTracer):
         self.mon.poll()
 
         if val == 0x10: # Kick Firmware
-            self.log("KickFirmware")
+            self.log("KickFirmware, polling")
             self.uat.invalidate_cache()
-            for chan in self.channels[13:]:
+            for chan in self.channels:
                 chan.poll()
             return
 

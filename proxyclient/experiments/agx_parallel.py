@@ -85,7 +85,7 @@ fault_cmdbuf = f.cmdbuf.clone()
 
 for i in range(RENDERERS):
     c = ctx0 if i == 0 else ctx
-    r = GPURenderer(c, 8, bm_slot=0x10 + i, queue=1)
+    r = GPURenderer(c, 32, bm_slot=0x10 + i, queue=1)
     renderers.append(r)
 
     for q in (r.wq_3d, r.wq_ta):

@@ -131,8 +131,8 @@ class BufferManagerInfo(ConstructClass):
         self.unk_78 = 0x0
         self.unk_7c = 0x0
         self.unk_80 = 0x1
-        self.unk_84 = 0x3468
-        self.unk_88 = 0x1178
+        self.unk_84 = 0x66cc
+        self.unk_88 = 0x2244
         self.unk_8c = 0x0
         self.unk_90 = bytes(0x30)
 
@@ -237,7 +237,7 @@ class Start3DStruct1(ConstructClass):
         "unk_2a8" / Int64ul,
         "depth_buffer_ptr2" / Int64ul,
         "depth_buffer_ptr3" / Int64ul,
-        "unk_2c0" / Int64ul,
+        "depth_aux_buffer_ptr" / Int64ul,
         "stencil_buffer_ptr1" / Int64ul,
         "unk_2d0" / Int64ul,
         "unk_2d8" / Int64ul,
@@ -277,7 +277,12 @@ class Start3DStruct2(ConstructClass):
         "depth_buffer_ptr2" / Int64ul,
         "stencil_buffer_ptr1" / Int64ul,
         "stencil_buffer_ptr2" / Int64ul,
-        "unk_68" / Array(12, Int64ul),
+        "unk_68" / Array(4, Int64ul),
+        "depth_aux_buffer_ptr1" / Int64ul,
+        "unk_90" / Int64ul,
+        "depth_aux_buffer_ptr2" / Int64ul,
+        "unk_a0" / Int64ul,
+        "unk_a8" / Array(4, Int64ul),
         "tvb_tilemap" / Int64ul,
         "tvb_heapmeta_addr" / Int64ul,
         "unk_e8" / Int64ul,
