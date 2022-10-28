@@ -510,7 +510,7 @@ class GPURenderer:
             wc_3d.struct_1.unk_270 = 0
             wc_3d.struct_1.reload_pipeline = Start3DClearPipelineBinding(
                 cmdbuf.partial_reload_pipeline_bind, cmdbuf.partial_reload_pipeline | 4)
-            wc_3d.struct_1.depth_flags = cmdbuf.ds_flags
+            wc_3d.struct_1.depth_flags = cmdbuf.ds_flags | 0x44
             wc_3d.struct_1.unk_290 = 0x0
             wc_3d.struct_1.depth_buffer_ptr1 = cmdbuf.depth_buffer
             wc_3d.struct_1.unk_2a0 = 0x0
