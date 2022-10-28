@@ -6,25 +6,112 @@ from m1n1.utils import *
 
 Ver.set_version(hv.u.version)
 
-trace_device("/arm-io/sgx", False)
-trace_device("/arm-io/pmp", False)
+trace_device("/arm-io/sgx", True)
+trace_device("/arm-io/pmp", True)
 trace_device("/arm-io/gfx-asc", False)
 
 from m1n1.trace.agx import AGXTracer
 AGXTracer = AGXTracer._reloadcls(True)
 
 agx_tracer = AGXTracer(hv, "/arm-io/gfx-asc", verbose=1)
-agx_tracer.trace_kernmap = False
+agx_tracer.trace_kernmap = True
+agx_tracer.trace_kernva = True
 agx_tracer.trace_usermap = False
 
+sgx = hv.adt["/arm-io/sgx"]
+
+#voltages = [400, 634, 650, 668, 715, 778, 903]
+#freqs =    [0,    600, 600, 600, 1000, 1000, 1200]
+#voltages = [400, 500, 600, 700, 800, 900, 1000]
+freqs =    [0,    1200, 1200, 1200, 1200, 1200, 1200]
+freqs =    [0,    600, 700, 800, 900, 950, 1200]
+voltages = [400, 500, 600, 700, 800, 900, 1000]
+
+##freqs =    [0,    500, 600, 700, 800, 900, 1000]
+#freqs =    [0,    500, 500, 500, 1175, 1190, 1400]
+##freqs =    [0,    0, 200, 400, 600, 800, 2500]
+##freqs =    [0,    0, 1, 2, 1, 1, 1000]
+#voltages = [1000, 1000, 2000, 4000, 4000, 4000, 1000]
+##voltages = [1000, 10000, 1000, 1000, 1000, 1000, 1000]
+
+#freqs =    [0,    500, 600, 700, 800, 900, 1000]
+freqs =    [0,    500, 500, 500, 1175, 1190, 1400]
+#freqs =    [0,    0, 200, 400, 600, 800, 2500]
+#freqs =    [0,    0, 1, 2, 1, 1, 1000]
+voltages = [1000, 1000, 1414, 2000, 4000, 4000, 1000]
+#voltages = [1000, 10000, 1000, 1000, 1000, 1000, 1000]
+
+freqs =    [0, 0, 0, 0, 0, 0, 1000]
+voltages = [0, 0, 0, 0, 0, 0, 1000]
+
+"""
+F       V
+1500    1000    208000.0
+1000    1000    180293.0
+500     1000    98684.0
+0       1000    17069.0
+0       750     8169.0
+0       500     3842.0
+0       250     1377.0
+0       100     492.0
+0       4       91.0
+0       3       86.0
+0       2       86.0
+0       1       79.0
+0       0       0
+"""
+
+clusters = [
+    22716.0,
+    22745.0,
+    22712.0,
+    22659.0,
+
+    22395.0,
+    22384.0,
+    22344.0,
+    22338.0,
+]
+
+for j in range(8):
+    for i, v in enumerate(voltages):
+        if j != 0:
+            v = 1
+        sgx.perf_states[i+j*len(voltages)].freq = freqs[i] * 1000000
+        sgx.perf_states[i+j*len(voltages)].volt = v
+        sgx.perf_states_sram[i+j*len(voltages)].freq = freqs[i] * 1000000
+        sgx.perf_states_sram[i+j*len(voltages)].volt = 1
+        if j >= 1:
+            getattr(sgx, f"perf_states{j}")[i].freq = freqs[i] * 1000000
+            getattr(sgx, f"perf_states{j}")[i].volt = v
+            getattr(sgx, f"perf_states_sram{j}")[i].freq = freqs[i] * 1000000
+            getattr(sgx, f"perf_states_sram{j}")[i].volt = 1
+
 def after_init():
-    power = [int(i) for i in agx_tracer.state.initdata.regionB.hwdata_b.perf_levels]
+    plat = hv.adt.compatible[0].lower()
+    fname = f"initdata/{datetime.datetime.now().isoformat()}-{plat}.log"
+    idlog = open(fname, "w")
+    print(f"Platform: {plat}", file=idlog)
+    fw = hv.adt["/chosen"].firmware_version.split(b"\0")[0].decode("ascii")
+    print(f"Firmware: {fw}", file=idlog)
+    sfw = hv.adt["/chosen"].system_firmware_version
+    print(f"System firmware: {sfw}", file=idlog)
+    print(file=idlog)
+
+    print("ADT SGX:", file=idlog)
+    print(sgx, file=idlog)
+    open("adt_hv.txt","w").write(str(hv.adt))
+
+    print("InitData:", file=idlog)
+    print(agx_tracer.state.initdata, file=idlog)
+
+    power = [int(i) for i in agx_tracer.state.initdata.regionB.hwdata_b.rel_max_powers]
     volt = [int(i[0]) for i in agx_tracer.state.initdata.regionB.hwdata_b.voltages]
     freq = [int(i) for i in agx_tracer.state.initdata.regionB.hwdata_b.frequencies]
 
-    print("power:", power)
-    print("volt:", volt)
-    print("freq:", freq)
+    print("p/v", [p/max(1, v) for p,v in zip(power,volt)])
+    print("p/f", [p/max(1, f) for p,f in zip(power,freq)])
+    print("p/v2", [p/max(1, (v*v)) for p,v in zip(power,volt)])
     hv.reboot()
 
 agx_tracer.after_init_hook = after_init
