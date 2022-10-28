@@ -359,7 +359,12 @@ def build_prop(path, name, v, t=None):
     elif isinstance(v, str):
         t = CString("ascii")
     elif isinstance(v, int):
-        t = Int32ul
+        if v > 0xffffffff:
+            t = Int64ul
+        else:
+            t = Int32ul
+    elif isinstance(v, float):
+        t = Float32l
     elif isinstance(v, tuple) and all(isinstance(i, int) for i in v):
         t = Array(len(v), Int32ul)
 
@@ -500,7 +505,7 @@ class ADTNode:
             raise AttributeError("#interrupt-cells")
 
     def _fmt_prop(self, k, v):
-        t, is_template = self._types[k]
+        t, is_template = self._types.get(k, (None, False))
         if is_template:
             return f"<< {v} >>"
         elif isinstance(v, ListContainer):
