@@ -69,10 +69,8 @@ CHIP_INFO = {
         max_power = 19551,
         max_freq_mhz = 1278,
         unk_87c = -220,
-        unk_89c = 1.6,
         unk_8cc = 9880,
         unk_924 = [[0] * 8] * 8,
-        unk_c30 = 1,
         unk_e48 = [[0] * 8] * 8,
         unk_e24 = 112,
         gpu_fast_die0_sensor_mask64_alt = 0x12,
@@ -84,7 +82,6 @@ CHIP_INFO = {
         shared2_unk_508 = 0xc0007,
         unk_3cf4 = [1000.0, 0, 0, 0, 0, 0, 0, 0],
         unk_3d14 = [45.0, 0, 0, 0, 0, 0, 0, 0],
-        unk_8924 = 1,
         unk_118ec = None,
         hwdb_4e0 = 0,
         hwdb_534 = 0,
@@ -93,7 +90,6 @@ CHIP_INFO = {
         hwdb_564 = 4,
         hwdb_ab8 = 0x48,
         hwdb_abc = 0x8,
-        rc_8924 = 1,
     ),
     0x6001: Container(
         chip_id = 0x6001,
@@ -101,13 +97,11 @@ CHIP_INFO = {
         max_power = 81415,
         max_freq_mhz = 1296,
         unk_87c = 900,
-        unk_89c = 4.0,
         unk_8cc = 11000,
         unk_924 = [[i, *([0] * 7)] for i in [
             9.838, 9.819, 9.826, 9.799,
             0, 0, 0, 0,
         ]],
-        unk_c30 = 0,
         unk_e48 = [[i, *([0] * 7)] for i in [
             13, 13, 13, 13, 0, 0, 0, 0,
         ]],
@@ -119,7 +113,6 @@ CHIP_INFO = {
         shared2_unk_508 = 0xcc00001,
         unk_3cf4 = [1314.0, 1330.0, 1314.0, 1288.0, 0, 0, 0, 0],
         unk_3d14 = [21.0, 21.0, 22.0, 21.0, 0, 0, 0, 0],
-        unk_8924 = 0,
         unk_118ec = [
             0, 1, 2,
             1, 1, 90, 75, 1, 1,
@@ -133,7 +126,6 @@ CHIP_INFO = {
         hwdb_564 = 5,
         hwdb_ab8 = 0x2084,
         hwdb_abc = 0x80,
-        rc_8924 = 0,
     ),
     0x6002: Container(
         chip_id = 0x6002,
@@ -141,7 +133,6 @@ CHIP_INFO = {
         max_power = 166743,
         max_freq_mhz = 1296,
         unk_87c = 900,
-        unk_89c = 4.0,
         unk_8cc = 11000,
         unk_924 = [[i, *([0] * 7)] for i in [
             9.838, 9.819, 9.826, 9.799,
@@ -174,7 +165,6 @@ CHIP_INFO = {
         hwdb_564 = 5,
         hwdb_ab8 = 0x2084,
         hwdb_abc = 0x80,
-        rc_8924 = 0,
     ),
 }
 def build_initdata(agx):

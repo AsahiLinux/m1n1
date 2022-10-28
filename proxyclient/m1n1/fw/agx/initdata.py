@@ -227,11 +227,46 @@ class AGXHWDataT8103(ConstructClass):
             self.unk_dc8 = 0
             self.unk_dcc = 0
 
+class PowerZone(ConstructClass):
+    subcon = Struct(
+        "val" / Float32l,
+        "target" / Dec(Int32ul),
+        "target_off" / Dec(Int32ul),
+        "filter_tc_x4" / Dec(Int32ul),
+        "filter_tc_xperiod" / Dec(Int32ul),
+        Ver("13.0 beta4", "unk_10" / Dec(Int32ul)),
+        Ver("13.0 beta4", "unk_14" / Dec(Int32ul)),
+        "filter_tc_neginv" / Float32l,
+        "filter_tc_inv" / Float32l,
+        "pad" / Int32ul,
+    )
+    def __init__(self, tc=None, target=None, off=None, period_ms=None):
+        self.val = 0.0
+        self.pad = 0
+        if tc is None:
+            self.target = 0
+            self.target_off = 0
+            self.filter_tc_x4 = 0
+            self.filter_tc_xperiod = 0
+            self.unk_10 = 0
+            self.unk_14 = 0
+            self.filter_tc_neginv = 0
+            self.filter_tc_inv = 0
+        else:
+            self.target = target
+            self.target_off = self.target - off
+            self.filter_tc_x4 = tc * 4
+            self.filter_tc_xperiod = tc * period_ms
+            self.unk_10 = 1320000000
+            self.unk_14 = 0
+            self.filter_tc_neginv = 1 / tc
+            self.filter_tc_inv = 1 - 1 / tc
+
 class AGXHWDataA(ConstructClass):
     subcon = Struct(
         "unk_0" / Int32ul,
-        "unk_4" / Int32ul,
-        Ver("13.0 beta4", "unk_8_0" / Int32ul),
+        "clocks_per_period" / Int32ul,
+        Ver("13.0 beta4", "clocks_per_period_2" / Int32ul),
         "unk_8" / Int32ul,
         "pwr_status" / Int32ul,
         "unk_10" / Float32l,
@@ -267,20 +302,20 @@ class AGXHWDataA(ConstructClass):
         "unk_64c" / Int32ul,
         "unk_650" / Int32ul,
         "pad_654" / Int32ul,
-        "unk_658" / Float32l,
+        "pwr_filter_a_neg" / Float32l,
         "pad_65c" / Int32ul,
-        "unk_660" / Float32l,
+        "pwr_filter_a_neg" / Float32l,
         "pad_664" / Int32ul,
-        "gpu_pwr_integral_gain" / Float32l,
+        "pwr_integral_gain" / Float32l,
         "pad_66c" / Int32ul,
-        "unk_670" / Int32ul,
+        "pwr_integral_min_clamp" / Float32l,
         "max_power_1" / Float32l,
-        "gpu_pwr_proportional_gain" / Float32l,
+        "pwr_proportional_gain" / Float32l,
         "pad_67c" / Int32ul,
-        "unk_680" / Float32l,
-        "unk_684" / Int32ul,
+        "pwr_pstate_related_k" / Float32l,
+        "pwr_pstate_max_dc_offset" / Int32sl,
         "unk_688" / Int32ul,
-        "unk_68c" / Int32ul,
+        "max_pstate_scaled_2" / Int32ul,
         "pad_690" / Int32ul,
         "unk_694" / Int32ul,
         "max_power_2" / Int32ul,
@@ -289,30 +324,30 @@ class AGXHWDataA(ConstructClass):
 
         "unk_6b4" / Int32ul,
         Ver("13.0 beta4", "unk_6b8_0" / HexDump(Bytes(0x10))),
-        "unk_6b8" / Int32ul,
+        "max_pstate_scaled_3" / Int32ul,
         "unk_6bc" / Int32ul,
 
         "pad_6c0" / HexDump(Bytes(0x14)),
 
-        "unk_6d4" / Int32ul,
+        "ppm_filter_tc_periods_x4" / Int32ul,
         "unk_6d8" / Int32ul,
 
         "pad_6dc" / Int32ul,
 
-        "unk_6e0" / Float32l,
+        "ppm_filter_a_neg" / Float32l,
         "pad_6e4" / Int32ul,
-        "unk_6e8" / Float32l,
+        "ppm_filter_a" / Float32l,
         "pad_6ec" / Int32ul,
-        "gpu_ppk_ki_d125" / Float32l,
+        "ppm_ki_dt" / Float32l,
         "pad_6f4" / Int32ul,
-        "unk_6f8" / Int32ul,
+        "pwr_integral_min_clamp" / Int32ul,
         "unk_6fc" / Float32l,
-        "gpu_ppm_kp" / Float32l,
+        "ppm_kp" / Float32l,
         "pad_704" / Int32ul,
 
         "unk_708" / Int32ul,
-        "unk_70c" / Int32ul,
-        "unk_710" / Int32ul,
+        "pwr_min_duty_cycle" / Int32ul,
+        "max_pstate_scaled_4" / Int32ul,
         "unk_714" / Int32ul,
 
         "pad_718" / Int32ul,
@@ -322,7 +357,7 @@ class AGXHWDataA(ConstructClass):
 
         "cur_power_mw_2" / Int32ul,
 
-        "unk_728" / Int32ul,
+        "ppm_filter_tc_ms" / Int32ul,
         "unk_72c" / Int32ul,
         Ver("13.0 beta4", "unk_730_0" / Int32ul),
         Ver("13.0 beta4", "unk_730_4" / Int32ul),
@@ -337,27 +372,27 @@ class AGXHWDataA(ConstructClass):
         "unk_744" / Int32ul,
         "unk_748" / Array(4, Float32l),
         "unk_758" / Int32ul,
-        "gpu_perf_tgt_utilization" / Int32ul,
+        "perf_tgt_utilization" / Int32ul,
         "pad_760" / Int32ul,
-        "gpu_perf_boost_min_util" / Int32ul,
-        "gpu_perf_boost_ce_step" / Int32ul,
-        "unk_76c" / Int32ul,
+        "perf_boost_min_util" / Int32ul,
+        "perf_boost_ce_step" / Int32ul,
+        "perf_reset_iters" / Int32ul,
         "pad_770" / Int32ul,
         "unk_774" / Int32ul,
         "unk_778" / Int32ul,
-        "unk_77c" / Int32ul,
+        "perf_filter_drop_threshold" / Int32ul,
 
-        "unk_780" / Float32l,
-        "unk_784" / Float32l,
-        "unk_788" / Float32l,
-        "unk_78c" / Float32l,
-        "gpu_perf_integral_gain" / Float32l,
-        "gpu_perf_integral_gain2" / Float32l,
-        "unk_798" / Float32l,
+        "perf_filter_a_neg" / Float32l,
+        "perf_filter_a2_neg" / Float32l,
+        "perf_filter_a" / Float32l,
+        "perf_filter_a2" / Float32l,
+        "perf_ki" / Float32l,
+        "perf_ki2" / Float32l,
+        "perf_integral_min_clamp" / Float32l,
         "unk_79c" / Float32l,
-        "gpu_perf_proportional_gain" / Float32l,
-        "gpu_perf_proportional_gain2" / Float32l,
-        "unk_7a8" / Float32l,
+        "perf_kp" / Float32l,
+        "perf_kp2" / Float32l,
+        "boost_state_unk_k" / Float32l,
 
         "base_pstate_scaled_2" / Dec(Int32ul),
         "max_pstate_scaled_2" / Dec(Int32ul),
@@ -365,8 +400,8 @@ class AGXHWDataA(ConstructClass):
 
         "pad_7b8" / Int32ul,
 
-        "use_percent" / Float32l,
-        "unk_7c0" / Int32ul,
+        "perf_cur_utilization" / Float32l,
+        "perf_tgt_utilization" / Int32ul,
 
         "pad_7c4" / HexDump(Bytes(0x18)),
 
@@ -378,27 +413,27 @@ class AGXHWDataA(ConstructClass):
         "unk_7e8" / HexDump(Bytes(0x14)),
 
         "unk_7fc" / Float32l,
-        "unk_800" / Float32l,
-        "unk_804" / Float32l,
+        "pwr_min_duty_cycle" / Float32l,
+        "max_pstate_scaled_3" / Float32l,
         "max_freq_mhz" / Int32ul,
         "pad_80c" / Int32ul,
         "unk_810" / Int32ul,
         "pad_814" / Int32ul,
-        "unk_818" / Int32ul,
+        "pwr_min_duty_cycle_2" / Int32ul,
         "unk_81c" / Int32ul,
         "pad_820" / Int32ul,
-        "unk_824" / Float32l,
-        "unk_828" / Dec(Int32ul),
+        "min_pstate_scaled_4" / Float32l,
+        "max_pstate_scaled_4" / Dec(Int32ul),
         "unk_82c" / Int32ul,
-        "unk_830" / Float32l,
-        "unk_834" / Float32l,
+        "unk_alpha_neg" / Float32l,
+        "unk_alpha" / Float32l,
         "unk_838" / Int32ul,
         "unk_83c" / Int32ul,
         "pad_840" / HexDump(Bytes(0x86c - 0x838 - 8)),
 
         "unk_86c" / Int32ul,
-        "gpu_fast_die0_sensor_mask64" / Int64ul,
-        "unk_878" / Int32ul,
+        "fast_die0_sensor_mask64" / Int64ul,
+        "fast_die0_release_temp_cc" / Int32ul,
         "unk_87c" / Int32sl,
         "unk_880" / Int32ul,
         "unk_884" / Int32ul,
@@ -407,16 +442,16 @@ class AGXHWDataA(ConstructClass):
         "pad_890" / Int32ul,
         "unk_894" / Float32l,
         "pad_898" / Int32ul,
-        "unk_89c" / Float32l,
+        "fast_die0_ki_dt" / Float32l,
         "pad_8a0" / Int32ul,
         "unk_8a4" / Int32ul,
         "unk_8a8" / Float32l,
-        "gpu_fast_die0_proportional_gain" / Float32l,
+        "fast_die0_kp" / Float32l,
         "pad_8b0" / Int32ul,
         "unk_8b4" / Int32ul,
         "unk_8b8" / Int32ul,
-        "unk_8bc" / Dec(Int32ul),
-        "unk_8c0" / Dec(Int32ul),
+        "max_pstate_scaled_5" / Dec(Int32ul),
+        "max_pstate_scaled_6" / Dec(Int32ul),
         "unk_8c4" / Int32ul,
         "unk_8c8" / Int32ul,
         "unk_8cc" / Int32ul,
@@ -424,7 +459,7 @@ class AGXHWDataA(ConstructClass):
         Ver("13.0 beta4", "unk_8e4_0" / HexDump(Bytes(0x10))),
         "unk_8e4" / Int32ul,
         "unk_8e8" / Int32ul,
-        "unk_8ec" / Dec(Int32ul),
+        "max_pstate_scaled_7" / Dec(Int32ul),
         "unk_8f0" / Int32ul,
         "unk_8f4" / Int32ul,
         "pad_8f8" / Int32ul,
@@ -433,7 +468,7 @@ class AGXHWDataA(ConstructClass):
         "unk_924" / Array(8, Array(8, Float32l)),
         "unk_a24" / Array(8, Array(8, Float32l)),
         "unk_b24" / HexDump(Bytes(0x70)),
-        "unk_b94" / Dec(Int32ul),
+        "max_pstate_scaled_8" / Dec(Int32ul),
         "freq_with_off" / Int32ul,
         "unk_b9c" / Int32ul,
         "unk_ba0" / Int64ul,
@@ -443,66 +478,46 @@ class AGXHWDataA(ConstructClass):
         "pad_bb8" / HexDump(Bytes(0xc2c - 0xbb8)),
 
         "unk_c2c" / Int32ul,
-        "unk_c30" / Int32ul,
+        "power_zone_count" / Int32ul,
         "max_power_4" / Int32ul,
         "max_power_5" / Int32ul,
         "max_power_6" / Int32ul,
         "unk_c40" / Int32ul,
         "unk_c44" / Float32l,
-        "gpu_avg_power_filter_tc_neginv" / Float32l,
-        "gpu_avg_power_filter_tc_inv" / Float32l,
-        "gpu_avg_power_filter_tc_x4" / Dec(Int32ul),
-        "gpu_avg_power_filter_tc_x8" / Dec(Int32ul),
-        Ver("13.0 beta4", "unk_c58_0" / Int32ul),
+        "avg_power_filter_a_neg" / Float32l,
+        "avg_power_filter_a" / Float32l,
+        "avg_power_filter_tc_x4" / Dec(Int32ul),
+        "avg_power_filter_tc_xperiod" / Dec(Int32ul),
+        Ver("13.0 beta4", "base_clock_mhz" / Int32ul),
         Ver("13.0 beta4", "unk_c58_4" / Int32ul),
-        "unk_c58" / Float32l,
-        "gpu_power_zone_target_0" / Dec(Int32ul),
-        "gpu_power_zone_target_1" / Dec(Int32ul),
-        "gpu_power_zone_target_2" / Dec(Int32ul),
-        "gpu_power_zone_target_3" / Dec(Int32ul),
-        Ver("13.0 beta4", "unk_c6c_0" / Dec(Int32ul)),
-        Ver("13.0 beta4", "unk_c6c_4" / Dec(Int32ul)),
-        "gpu_power_zone_filter_tc_0_neginv" / Float32l,
-        "gpu_power_zone_filter_tc_0_inv" / Float32l,
-        "pad_c74" / Int32ul,
-        "unk_c78" / Int32ul,
-        "unk_c7c" / Int32ul,
-        "unk_c80" / Int32ul,
-        "unk_c84" / Int32ul,
-        "unk_c88" / Int32ul,
-        "unk_c8c" / Int32ul,
-
-        "unk_c90" / HexDump(Bytes(0x60)),
-        Ver("13.0 beta4", "unk_cf0_0" / HexDump(Bytes(0x20))),
-        "unk_cf0" / Int32ul,
-        "unk_cf4" / Int32ul,
-        "unk_cf8" / Dec(Int32ul),
+        "power_zones" / Array(5, PowerZone),
+        "power_filter_tc_periods_x4" / Dec(Int32ul),
         "unk_cfc" / Int32ul,
         "unk_d00" / Int32ul,
-        "unk_d04" / Float32l,
+        "power_filter_a_neg" / Float32l,
         "unk_d08" / Int32ul,
-        "unk_d0c" / Float32l,
+        "power_filter_a" / Float32l,
         "unk_d10" / Int32ul,
-        "gpu_avg_power_ki_d125" / Float32l,
+        "avg_power_ki_dt" / Float32l,
         "unk_d18" / Int32ul,
         "unk_d1c" / Int32ul,
         "unk_d20" / Float32l,
-        "gpu_avg_power_kp" / Float32l,
+        "avg_power_kp" / Float32l,
         "unk_d28" / Int32ul,
         "unk_d2c" / Int32ul,
         "unk_d30" / Int32ul,
-        "unk_d34" / Int32ul,
-        "unk_d38" / Int32ul,
+        "max_pstate_scaled_9" / Int32ul,
+        "max_pstate_scaled_10" / Int32ul,
         "unk_d3c" / Int32ul,
         "max_power_7" / Float32l,
         "max_power_8" / Int32ul,
         "unk_d48" / Int32ul,
         "unk_d4c" / Int32ul,
         "unk_d50" / Int32ul,
-        Ver("13.0 beta4", "unk_d54_0" / Int32ul),
+        Ver("13.0 beta4", "base_clock_mhz_2" / Int32ul),
         Ver("13.0 beta4", "unk_d54_4" / HexDump(Bytes(0xc))),
         "unk_d54" / HexDump(Bytes(0x10)),
-        "unk_d64" / Int32ul,
+        "max_pstate_scaled_11" / Int32ul,
         "unk_d68" / Bytes(0x24),
 
         "t8103_data" / AGXHWDataT8103,
@@ -510,15 +525,15 @@ class AGXHWDataA(ConstructClass):
         "unk_dd0" / HexDump(Bytes(0x40)),
         Ver("13.0 beta4", "unk_e10_0" / AGXHWDataA130Extra),
         "unk_e10" / HexDump(Bytes(0xc)),
-        "gpu_fast_die0_sensor_mask64_2" / Int64ul,
+        "fast_die0_sensor_mask64_2" / Int64ul,
         "unk_e24" / Int32ul,
         "unk_e28" / Int32ul,
         "unk_e2c" / HexDump(Bytes(0x1c)),
         "unk_e48" / Array(8, Array(8, Float32l)),
         "unk_f48" / Array(8, Array(8, Float32l)),
         "pad_1048" / HexDump(Bytes(0x5e4)),
-        "gpu_fast_die0_sensor_mask64_alt" / Int64ul,
-        "gpu_fast_die0_sensor_present" / Int32ul,
+        "fast_die0_sensor_mask64_alt" / Int64ul,
+        "fast_die0_sensor_present" / Int32ul,
         Ver("..13.0 beta4", "unk_1638" / Array(2, Int32ul)),
         "unk_1640" / HexDump(Bytes(0x2000)),
         "unk_3640" / Int32ul,
@@ -549,9 +564,14 @@ class AGXHWDataA(ConstructClass):
 
     def __init__(self, sgx, chip_info):
         super().__init__()
+
+        base_clock_khz = 24000
+        base_clock_mhz = base_clock_khz * 1000
+        period_ms = sgx.gpu_power_sample_period
+
         self.unk_0 = 0
-        self.unk_4 = 192000
-        self.unk_8_0 = 192000
+        self.clocks_per_period = base_clock_khz * period_ms
+        self.clocks_per_period_2 = base_clock_khz * period_ms
         self.unk_8 = 0
         self.pwr_status = 4
         self.unk_10 = 1.0
@@ -590,56 +610,57 @@ class AGXHWDataA(ConstructClass):
         self.unk_64c = 625
         self.unk_650 = 0
         self.pad_654 = 0
-        self.unk_658 = 0.9968051314353943
+        self.pwr_filter_a_neg = 1 - 1 / sgx.gpu_pwr_filter_time_constant
         self.pad_65c = 0
-        self.unk_660 = 0.00319488812237978
+        self.pwr_filter_a = 1 - self.pwr_filter_a_neg
         self.pad_664 = 0
-        self.gpu_pwr_integral_gain = sgx.gpu_pwr_integral_gain
+        self.pwr_integral_gain = sgx.gpu_pwr_integral_gain
         self.pad_66c = 0
-        self.unk_670 = 0
+        self.pwr_integral_min_clamp = sgx.gpu_pwr_integral_min_clamp
         self.max_power_1 = chip_info.max_power
-        # gpu-pwr-proportional-gain
-        self.gpu_pwr_proportional_gain = sgx.gpu_pwr_proportional_gain
+        self.pwr_proportional_gain = sgx.gpu_pwr_proportional_gain
         self.pad_67c = 0
-        self.unk_680 = -600.0 / chip_info.max_power
-        self.unk_684 = 0xfffffdd0
+        self.pwr_pstate_related_k = -self.max_pstate_scaled / chip_info.max_power
+        self.pwr_pstate_max_dc_offset = sgx.gpu_pwr_min_duty_cycle - self.max_pstate_scaled
         self.unk_688 = 0
-        self.unk_68c = 600
+        self.max_pstate_scaled_2 = self.max_pstate_scaled
         self.pad_690 = 0
         self.unk_694 = 0
         self.max_power_2 = chip_info.max_power
         self.pad_69c = bytes(0x18)
         self.unk_6b4 = 0
         self.unk_6b8_0 = bytes(0x10)
-        self.unk_6b8 = 600
+        self.max_pstate_scaled_3 = self.max_pstate_scaled
         self.unk_6bc = 0
         self.pad_6c0 = bytes(0x14)
-        self.unk_6d4 = 48
+
+        # Note: integer rounding here
+        ppm_filter_tc_periods = sgx.gpu_ppm_filter_time_constant_ms // period_ms
+        self.ppm_filter_tc_periods_x4 = ppm_filter_tc_periods  * 4
         self.unk_6d8 = 0
         self.pad_6dc = 0
-        self.unk_6e0 = 0.9166666865348816
+        self.ppm_filter_a_neg = 1 - 1 / ppm_filter_tc_periods
         self.pad_6e4 = 0
-        self.unk_6e8 = 0.0833333358168602
+        self.ppm_filter_a = 1 - self.ppm_filter_a_neg
         self.pad_6ec = 0
-        self.gpu_ppk_ki_d125 = sgx.gpu_ppm_ki / 125.0
+        self.ppm_ki_dt = sgx.gpu_ppm_ki * (period_ms / 1000)
         self.pad_6f4 = 0
-        self.unk_6f8 = 0
+        self.pwr_integral_min_clamp = sgx.gpu_pwr_integral_min_clamp
         if Ver.check("13.0 beta4") or chip_info.chip_id != 0x8103:
             self.unk_6fc = 65536.0
         else:
             self.unk_6fc = 0
-        self.gpu_ppm_kp = sgx.gpu_ppm_kp
+        self.ppm_kp = sgx.gpu_ppm_kp
         self.pad_704 = 0
         self.unk_708 = 0
-        # gpu-pwr-min-duty-cycle?
-        self.unk_70c = 40
-        self.unk_710 = 600
+        self.pwr_min_duty_cycle = sgx.gpu_pwr_min_duty_cycle
+        self.max_pstate_scaled_4 = self.max_pstate_scaled
         self.unk_714 = 0
         self.pad_718 = 0
         self.unk_71c = 0.0
         self.max_power_3 = chip_info.max_power
         self.cur_power_mw_2 = 0x0
-        self.unk_728 = 100
+        self.ppm_filter_tc_ms = sgx.gpu_ppm_filter_time_constant_ms
         self.unk_72c = 0
         self.unk_730_0 = 0x232800
         self.unk_730_4 = 0
@@ -653,35 +674,36 @@ class AGXHWDataA(ConstructClass):
         self.unk_744 = 0
         self.unk_748 = [0.0, 0.0, 0.0, 0.0]
         self.unk_758 = 0
-        self.gpu_perf_tgt_utilization = sgx.gpu_perf_tgt_utilization
+        self.perf_tgt_utilization = sgx.gpu_perf_tgt_utilization
         self.pad_760 = 0
-        self.gpu_perf_boost_min_util = sgx.getprop("gpu-perf-boost-min-util", 100)
+        self.perf_boost_min_util = sgx.getprop("gpu-perf-boost-min-util", 100)
 
-        self.gpu_perf_boost_ce_step = sgx.getprop("gpu-perf-boost-ce-step", 25)
-        self.unk_76c = 6
+        self.perf_boost_ce_step = sgx.getprop("gpu-perf-boost-ce-step", 25)
+        self.perf_reset_iters = sgx.getprop("gpu-perf-reset-iters", 6)
         self.pad_770 = 0x0
         self.unk_774 = 6
         self.unk_778 = 1
-        self.unk_77c = 0x0
-        self.unk_780 = 0.8
-        self.unk_784 = 0.98
-        self.unk_788 = 0.2
-        self.unk_78c = 0.02
-        # gpu-perf-integral-gain
-        self.gpu_perf_integral_gain = sgx.getprop("gpu-perf-integral-gain", 7.895683288574219)
-        # gpu-perf-integral-gain2
-        self.gpu_perf_integral_gain2 = sgx.gpu_perf_integral_gain2
-        self.unk_798 = 0.0
+        self.perf_filter_drop_threshold = sgx.gpu_perf_filter_drop_threshold
+        self.perf_filter_a_neg = 1 - 1 / sgx.gpu_perf_filter_time_constant
+        self.perf_filter_a2_neg = 1 - 1 / sgx.gpu_perf_filter_time_constant2
+        self.perf_filter_a = 1 - self.perf_filter_a_neg
+        self.perf_filter_a2 = 1 - self.perf_filter_a2_neg
+        self.perf_ki = sgx.getprop("gpu-perf-integral-gain", 7.895683288574219)
+        self.perf_ki2 = sgx.gpu_perf_integral_gain2
+        self.perf_integral_min_clamp = sgx.gpu_perf_integral_min_clamp
         self.unk_79c = 95.0
-        self.gpu_perf_proportional_gain = sgx.getprop("gpu-perf-proportional-gain", 14.707962989807129)
-        self.gpu_perf_proportional_gain2 = sgx.gpu_perf_proportional_gain2
-        self.unk_7a8 = 3.1578948497772217
+        self.perf_kp = sgx.getprop("gpu-perf-proportional-gain", 14.707962989807129)
+        self.perf_kp2 = sgx.gpu_perf_proportional_gain2
+        base_state = sgx.getprop("gpu-perf-base-pstate", 3)
+        max_state = sgx.gpu_num_perf_states
+        boost_states = max_state - base_state
+        self.boost_state_unk_k = boost_states / 0.95
         self.base_pstate_scaled_2 = 100 * sgx.getprop("gpu-perf-base-pstate", 3)
-        self.max_pstate_scaled_2 = 100 * sgx.gpu_num_perf_states
+        self.max_pstate_scaled_2 = self.max_pstate_scaled
         self.base_pstate_scaled_3 = 100 * sgx.getprop("gpu-perf-base-pstate", 3)
         self.pad_7b8 = 0x0
-        self.use_percent = 0.0
-        self.unk_7c0 = 0x55
+        self.perf_cur_utilization = 0.0
+        self.perf_tgt_utilization = sgx.gpu_perf_tgt_utilization
         self.pad_7c4 = bytes(0x18)
         self.unk_7dc = 0x0
         self.unk_7e0_0 = bytes(0x10)
@@ -689,21 +711,20 @@ class AGXHWDataA(ConstructClass):
         self.pad_7e4 = 0x0
         self.unk_7e8 = bytes(0x14)
         self.unk_7fc = 65536.0
-        self.unk_800 = 40.0
-        self.unk_804 = 600.0
-        self.max_freq_mhz = chip_info.max_freq_mhz
+        self.pwr_min_duty_cycle = sgx.gpu_pwr_min_duty_cycle
+        self.max_pstate_scaled_3 = self.max_pstate_scaled
+        self.max_freq_mhz = sgx.perf_states[sgx.gpu_num_perf_states].freq
         self.pad_80c = 0x0
         self.unk_810 = 0x0
         self.pad_814 = 0x0
-        # gpu-pwr-min-duty-cycle?
-        self.unk_818 = 40
+        self.pwr_min_duty_cycle_2 = sgx.gpu_pwr_min_duty_cycle
         self.unk_81c = 0x0
         self.pad_820 = 0x0
-        self.unk_824 = 100.0
-        self.unk_828 = 600
+        self.min_pstate_scaled_4 = 100.0
+        self.max_pstate_scaled_4 = self.max_pstate_scaled
         self.unk_82c = 0x0
-        self.unk_830 = 0.8
-        self.unk_834 = 0.2
+        self.unk_alpha_neg = 0.8
+        self.unk_alpha = 1 - self.unk_alpha_neg
         self.unk_838 = 0x0
         self.unk_83c = 0x0
         self.pad_840 = bytes(0x2c)
@@ -711,8 +732,8 @@ class AGXHWDataA(ConstructClass):
         mask = sgx.getprop("gpu-fast-die0-sensor-mask64", None)
         if mask is None:
             mask = sgx.gpu_fast_die0_sensor_mask
-        self.gpu_fast_die0_sensor_mask64 = mask
-        self.unk_878 = 8000
+        self.fast_die0_sensor_mask64 = mask
+        self.fast_die0_release_temp_cc = 100 * sgx.getprop("gpu-fast-die0-release-temp", 80)
         self.unk_87c = chip_info.unk_87c
         self.unk_880 = 0x4
         self.unk_884 = 0x0
@@ -721,25 +742,24 @@ class AGXHWDataA(ConstructClass):
         self.pad_890 = 0x0
         self.unk_894 = 1.0
         self.pad_898 = 0x0
-        self.unk_89c = chip_info.unk_89c
+        self.fast_die0_ki_dt = sgx.gpu_fast_die0_integral_gain * (period_ms / 1000)
         self.pad_8a0 = 0x0
         self.unk_8a4 = 0x0
         self.unk_8a8 = 65536.0
-        self.gpu_fast_die0_proportional_gain = sgx.gpu_fast_die0_proportional_gain
+        self.fast_die0_kp = sgx.gpu_fast_die0_proportional_gain
         self.pad_8b0 = 0x0
         self.unk_8b4 = 0x0
-        # gpu-pwr-min-duty-cycle?
-        self.unk_8b8 = 40
-        self.unk_8bc = 600
-        self.unk_8c0 = 600
-        self.unk_8c4 = 0
+        self.unk_8b8 = sgx.gpu_pwr_min_duty_cycle
+        self.max_pstate_scaled_5 = self.max_pstate_scaled
+        self.max_pstate_scaled_6 = self.max_pstate_scaled
+        self.unk_8c4 = 100 * sgx.getprop("gpu-fast-die0-prop-tgt-delta", 0)
         self.unk_8c8 = 0
         self.unk_8cc = chip_info.unk_8cc
         self.pad_8d0 = bytes(0x14)
         self.unk_8e4_0 = bytes(0x10)
         self.unk_8e4 = 0
         self.unk_8e8 = 0
-        self.unk_8ec = 600
+        self.max_pstate_scaled_7 = self.max_pstate_scaled
         self.unk_8f0 = 0
         self.unk_8f4 = 0
         self.pad_8f8 = 0
@@ -748,7 +768,7 @@ class AGXHWDataA(ConstructClass):
         self.unk_924 = chip_info.unk_924
         self.unk_a24 = chip_info.unk_924
         self.unk_b24 = bytes(0x70)
-        self.unk_b94 = 600
+        self.max_pstate_scaled_8 = self.max_pstate_scaled
         self.freq_with_off = 0x0
         self.unk_b9c = 0
         self.unk_ba0 = 0
@@ -757,73 +777,62 @@ class AGXHWDataA(ConstructClass):
         self.unk_bb4 = 0
         self.pad_bb8 = bytes(0x74)
         self.unk_c2c = 1
-        self.unk_c30 = chip_info.unk_c30
+
+        self.power_zones = [PowerZone()] * 5
+        power_zone_count = 0
+        for i in range(5):
+            if sgx.getprop(f"gpu-power-zone-target-{i}", None) is None:
+                break
+            self.power_zones[i] = PowerZone(
+                sgx.getprop(f"gpu-power-zone-filter-tc-{i}", None),
+                sgx.getprop(f"gpu-power-zone-target-{i}", None),
+                sgx.getprop(f"gpu-power-zone-target-offset-{i}", None),
+                period_ms
+            )
+            power_zone_count += 1
+
+        self.power_zone_count = power_zone_count
         self.max_power_4 = chip_info.max_power
         self.max_power_5 = chip_info.max_power
         self.max_power_6 = chip_info.max_power
         self.unk_c40 = 0
         self.unk_c44 = 0.0
-        self.gpu_avg_power_filter_tc_neginv = 1 - 1 / sgx.gpu_avg_power_target_filter_tc
-        self.gpu_avg_power_filter_tc_inv = 1 / sgx.gpu_avg_power_target_filter_tc
-        self.gpu_avg_power_filter_tc_x4 = 4 * sgx.gpu_avg_power_target_filter_tc
-        self.gpu_avg_power_filter_tc_x8 = 8 * sgx.gpu_avg_power_target_filter_tc
-        self.unk_c58_0 = 24000000
+        self.avg_power_filter_a_neg = 1 - 1 / sgx.gpu_avg_power_target_filter_tc
+        self.avg_power_filter_a = 1 / sgx.gpu_avg_power_target_filter_tc
+        self.avg_power_filter_tc_x4 = 4 * sgx.gpu_avg_power_target_filter_tc
+        self.avg_power_filter_tc_xperiod = period_ms * sgx.gpu_avg_power_target_filter_tc
+        self.base_clock_mhz = base_clock_mhz
         self.unk_c58_4 = 0
-        self.unk_c58 = 0.0
-        # gpu-power-zone-target-0
-        base = sgx.getprop("gpu-power-zone-target-0", 0)
-        off = sgx.getprop("gpu-power-zone-target-offset-0", 0)
-        self.gpu_power_zone_target_0 = base
-        self.gpu_power_zone_target_1 = base - off
-        self.gpu_power_zone_target_2 = base - 25 * off
-        self.gpu_power_zone_target_3 = 2 * self.gpu_power_zone_target_2
-        self.unk_c6c_0 = 1320000000
-        self.unk_c6c_4 = 0
-        tc = sgx.getprop("gpu-power-zone-filter-tc-0", None)
-        if tc is None:
-            self.gpu_power_zone_filter_tc_0_inv = 0
-            self.gpu_power_zone_filter_tc_0_neginv = 0
-        else:
-            self.gpu_power_zone_filter_tc_0_inv = 1 / tc
-            self.gpu_power_zone_filter_tc_0_neginv = 1 - 1 / tc
-        self.pad_c74 = 0x0
-        self.unk_c78 = 0x0
-        self.unk_c7c = 0x0
-        self.unk_c80 = 0x0
-        self.unk_c84 = 0x0
-        self.unk_c88 = 0x0
-        self.unk_c8c = 0x0
-        self.unk_c90 = bytes(0x60)
-        self.unk_cf0_0 = bytes(0x20)
-        self.unk_cf0 = 0
-        self.unk_cf4 = 0
-        self.unk_cf8 = 500
+
+        # Note: integer rounding
+        power_filter_tc_periods = sgx.gpu_avg_power_filter_tc_ms // period_ms
+        self.power_filter_tc_periods_x4 = power_filter_tc_periods * 4
         self.unk_cfc = 0
         self.unk_d00 = 0
-        self.unk_d04 = 1 - 1 / 125
+        self.power_filter_a_neg = 1 - 1 / power_filter_tc_periods
         self.unk_d08 = 0
-        self.unk_d0c = 1 / 125
+        self.power_filter_a = 1 - self.power_filter_a_neg
         self.unk_d10 = 0
-        self.gpu_avg_power_ki_d125 = sgx.gpu_avg_power_ki_only / 125
+        self.avg_power_ki_dt = sgx.gpu_avg_power_ki_only * (period_ms / 1000)
         self.unk_d18 = 0
         self.unk_d1c = 0
         self.unk_d20 = 65536.0
-        self.gpu_avg_power_kp = sgx.gpu_avg_power_kp
+        self.avg_power_kp = sgx.gpu_avg_power_kp
         self.unk_d28 = 0
         self.unk_d2c = 0
-        self.unk_d30 = 0x28
-        self.unk_d34 = 600
-        self.unk_d38 = 600
+        self.unk_d30 = sgx.gpu_avg_power_min_duty_cycle
+        self.max_pstate_scaled_9 = self.max_pstate_scaled
+        self.max_pstate_scaled_10 = self.max_pstate_scaled
         self.unk_d3c = 0
         self.max_power_7 = chip_info.max_power
         self.max_power_8 = chip_info.max_power
         self.unk_d48 = 0
-        self.unk_d4c = 1000
+        self.unk_d4c = sgx.gpu_avg_power_filter_tc_ms
         self.unk_d50 = 0
-        self.unk_d54_0 = 24000000
+        self.base_clock_mhz_2 = base_clock_mhz
         self.unk_d54_4 = bytes(0xc)
         self.unk_d54 = bytes(0x10)
-        self.unk_d64 = 600
+        self.max_pstate_scaled_11 = self.max_pstate_scaled
         self.unk_d68 = bytes(0x24)
 
         self.t8103_data = AGXHWDataT8103(chip_info)
@@ -832,15 +841,15 @@ class AGXHWDataA(ConstructClass):
 
         self.unk_e10_0 = AGXHWDataA130Extra()
         self.unk_e10 = bytes(0xc)
-        self.gpu_fast_die0_sensor_mask64_2 = mask
+        self.fast_die0_sensor_mask64_2 = mask
         self.unk_e24 = chip_info.unk_e24
         self.unk_e28 = 1
         self.unk_e2c = bytes(0x1c)
         self.unk_e48 = chip_info.unk_e48
         self.unk_f48 = chip_info.unk_e48
         self.pad_1048 = bytes(0x5e4)
-        self.gpu_fast_die0_sensor_mask64_alt = chip_info.gpu_fast_die0_sensor_mask64_alt
-        self.gpu_fast_die0_sensor_present = chip_info.gpu_fast_die0_sensor_present
+        self.fast_die0_sensor_mask64_alt = chip_info.gpu_fast_die0_sensor_mask64_alt
+        self.fast_die0_sensor_present = chip_info.gpu_fast_die0_sensor_present
         self.unk_1638 = [0, 1]
         self.unk_1640 = bytes(0x2000)
         self.unk_3640 = 0
@@ -951,7 +960,7 @@ class AGXHWDataB(ConstructClass):
         "unk_488" / Int32ul,
         "unk_48c" / Int32ul,
         "unk_490" / Int32ul,
-        "unk_494" / Int32ul,
+        "power_sample_period" / Int32ul,
         "pad_498" / ZPadding(4),
 
         "unk_49c" / Int32ul,
@@ -1017,8 +1026,8 @@ class AGXHWDataB(ConstructClass):
         "unk_9b4" / Array(16, Float32l),
         "unk_9f4" / Array(16, Int32ul),
         "rel_max_powers" / Array(16, Int32ul),
-        "rel_unk" / Array(16, Int32ul),
-        Ver("..13.0 beta4", "min_volt" / Int32ul),
+        "rel_boost_powers" / Array(16, Int32ul),
+        Ver("..13.0 beta4", "min_sram_volt" / Dec(Int32ul)),
         Ver("..13.0 beta4", "unk_ab8" / Int32ul),
         Ver("..13.0 beta4", "unk_abc" / Int32ul),
         Ver("..13.0 beta4", "unk_ac0" / Int32ul),
@@ -1173,7 +1182,7 @@ class AGXHWDataB(ConstructClass):
         self.unk_488 = 0x0
         self.unk_48c = 0x1
         self.unk_490 = 24000
-        self.unk_494 = 0x8
+        self.power_sample_period = sgx.gpu_power_sample_period
         self.unk_49c = 0x1
         self.unk_4a0 = 0x1
         self.unk_4a4 = 0x1
@@ -1222,7 +1231,7 @@ class AGXHWDataB(ConstructClass):
         self.unk_564 = chip_info.hwdb_564
         self.num_cores_2 = chip_info.num_cores
         self.max_pstate = sgx.gpu_num_perf_states
-        self.num_pstates = sgx.perf_state_count
+        self.num_pstates = sgx.gpu_num_perf_states + 1
 
         self.frequencies = [0] * 16
         self.voltages = [[0] * 8 for i in range(16)]
@@ -1230,20 +1239,8 @@ class AGXHWDataB(ConstructClass):
         self.unk_9b4 = [0.] * 16
         self.unk_9f4 = [0] * 16
         self.rel_max_powers = [0] * 16
-        self.rel_unk = [0] * 16
-
-        self.unk_a74 = 0x0
-        self.unk_a78 = 0x0
-        self.unk_a7c = 0x0
-        self.unk_a80 = 0x0
-        if Ver.check("13.0 beta4"):
-            self.unk_a84 = 0x24
-        else:
-            self.unk_a84 = 27
-        self.unk_a88 = 73
-        self.unk_a8c = 100
-
-        self.min_volt = chip_info.min_sram_volt
+        self.rel_boost_powers = [0] * 16
+        self.min_sram_volt = chip_info.min_sram_volt
         self.unk_ab8 = chip_info.hwdb_ab8
         self.unk_abc = chip_info.hwdb_abc
         self.unk_ac0 = 0x1020
@@ -1526,6 +1523,23 @@ class InitData_FaultInfo(ConstructClass):
         self.unk_10 = 0
         self.unk_14 = 0
 
+class RCPowerZone(ConstructClass):
+    subcon = Struct(
+        "target" / Dec(Int32ul),
+        "target_off" / Dec(Int32ul),
+        "tc" / Dec(Int32ul),
+    )
+    def __init__(self, tc=None, target=None, off=None):
+        if tc is None:
+            self.target = 0
+            self.target_off = 0
+            self.tc = 0
+        else:
+            self.target = target
+            self.target_off = self.target - off
+            self.tc = tc
+
+
 class InitData_RegionC(ConstructClass):
     subcon = Struct(
         "ktrace_enable" / Int32ul,
@@ -1552,37 +1566,33 @@ class InitData_RegionC(ConstructClass):
         Ver("13.0 beta4", "unk_8900_0" / Int32ul),
         "unk_8900" / Int32ul,
         "unk_atomic" / Int32ul,
-        "unk_8908" / Int32ul,
-        "unk_890c" / Int32ul,
-        "unk_8910" / Int32ul,
+        "max_power" / Int32ul,
+        "max_pstate_scaled" / Int32ul,
+        "max_pstate_scaled_2" / Int32ul,
         "unk_8914" / Int32ul,
         "unk_8918" / Int32ul,
-        "unk_891c" / Int32ul,
+        "max_pstate_scaled_3" / Int32ul,
         "unk_8920" / Int32ul,
-        "unk_8924" / Int32ul,
-        "unk_8928" / Int32ul,
-        "unk_892c" / Float32l,
-        "unk_8930" / Float32l,
-        "unk_8934" / Int32ul,
-        "unk_8938" / Int32ul,
-        "unk_893c" / Int32ul,
-        "unk_8940" / Int32ul,
-        "unk_8944" / Int32ul,
-        "unk_8948" / Int32ul,
-        "unk_894c" / Int32ul,
-        "unk_8950" / HexDump(Bytes(0x6c)),
+        "power_zone_count" / Int32ul,
+        "avg_power_filter_tc_periods" / Int32ul,
+        "avg_power_ki_dt" / Float32l,
+        "avg_power_kp" / Float32l,
+        "avg_power_min_duty_cycle" / Int32ul,
+        "avg_power_target_filter_tc" / Int32ul,
+        "power_zones" / Array(5, RCPowerZone),
+        "unk_8978" / HexDump(Bytes(0x44)),
         Ver("13.0 beta4", "unk_89bc_0" / HexDump(Bytes(0x3c))),
         "unk_89bc" / Int32ul,
-        "unk_89c0" / Int32ul,
+        "fast_die0_release_temp" / Int32ul,
         "unk_89c4" / Int32sl,
-        "unk_89c8" / Int32ul,
-        "unk_89cc" / Float32l,
-        "unk_89d0" / Float32l,
+        "fast_die0_prop_tgt_delta" / Int32ul,
+        "fast_die0_kp" / Float32l,
+        "fast_die0_ki_dt" / Float32l,
         "unk_89d4" / HexDump(Bytes(0xc)),
         "unk_89e0" / Int32ul,
-        "unk_89e4" / Int32ul,
-        "unk_89e8" / Float32l,
-        "unk_89ec" / Float32l,
+        "max_power_2" / Int32ul,
+        "ppm_kp" / Float32l,
+        "ppm_ki_dt" / Float32l,
         "unk_89f0" / Int32ul,
         Ver("13.0 beta4", "unk_89f4_0" / HexDump(Bytes(0x8))),
         Ver("13.0 beta4", "unk_89f4_8" / Int32ul),
@@ -1615,9 +1625,9 @@ class InitData_RegionC(ConstructClass):
         Ver("13.0 beta4", "unk_1102c_c" / Int32ul),
         Ver("13.0 beta4", "unk_1102c_10" / Int32ul),
         "unk_1102c" / Int32ul,
-        "idle_to_off_timeout_ms" / Int32ul,
-        "unk_11034" / Int32ul,
-        "unk_11038" / Int32ul,
+        "idle_to_off_delay_ms" / Int32ul,
+        "fender_idle_to_off_delay_ms" / Int32ul,
+        "fw_early_wake_timeout_ms" / Int32ul,
         "pending_stamps" / Array(0x110, InitData_PendingStamp),
         "unk_117bc" / Int32ul,
         "fault_info" / InitData_FaultInfo,
@@ -1637,6 +1647,9 @@ class InitData_RegionC(ConstructClass):
     )
 
     def __init__(self, sgx, chip_info):
+        period_ms = sgx.gpu_power_sample_period
+        avg_power_filter_tc_periods = sgx.gpu_avg_power_filter_tc_ms // period_ms
+
         self.ktrace_enable = 0# 0xffffffff
         self.unk_4 = bytes(0x24)
         self.unk_28_0 = 1 # debug
@@ -1662,42 +1675,45 @@ class InitData_RegionC(ConstructClass):
         self.unk_8900 = 1
         # Accessed with OSIncrementAtomic/OSDecrementAtomic
         self.unk_atomic = 0
-        self.unk_8908 = chip_info.max_power
-        self.unk_890c = 600
-        self.unk_8910 = 600
+        self.max_power = chip_info.max_power
+        self.max_pstate_scaled = 100 * sgx.gpu_num_perf_states
+        self.max_pstate_scaled_2 = 100 * sgx.gpu_num_perf_states
         self.unk_8914 = 0
         self.unk_8918 = 0
-        self.unk_891c = 600
+        self.max_pstate_scaled_3 = 100 * sgx.gpu_num_perf_states
         self.unk_8920 = 0
-        self.unk_8924 = chip_info.rc_8924
-        self.unk_8928 = 125
-        self.unk_892c = sgx.gpu_avg_power_ki_only / 125
-        self.unk_8930 = sgx.gpu_avg_power_kp
-        self.unk_8934 = sgx.gpu_avg_power_min_duty_cycle
-        self.unk_8938 = sgx.gpu_avg_power_target_filter_tc
-        base = sgx.getprop("gpu-power-zone-target-0", 0)
-        off = sgx.getprop("gpu-power-zone-target-offset-0", 0)
-        if Ver.check("13.0 beta4"):
-            self.unk_893c = base
-        else:
-            self.unk_893c = base - 480 if base else 0
-        self.unk_8940 = base - off
-        self.unk_8944 = sgx.getprop("gpu-power-zone-filter-tc-0", 0)
-        self.unk_8948 = 0
-        self.unk_894c = 0
-        self.unk_8950 = bytes(0x6c)
+
+        self.power_zones = [RCPowerZone()] * 5
+        power_zone_count = 0
+        for i in range(5):
+            if sgx.getprop(f"gpu-power-zone-target-{i}", None) is None:
+                break
+            self.power_zones[i] = RCPowerZone(
+                sgx.getprop(f"gpu-power-zone-filter-tc-{i}", None),
+                sgx.getprop(f"gpu-power-zone-target-{i}", None),
+                sgx.getprop(f"gpu-power-zone-target-offset-{i}", None),
+            )
+            power_zone_count += 1
+
+        self.power_zone_count = power_zone_count
+        self.avg_power_filter_tc_periods = avg_power_filter_tc_periods
+        self.avg_power_ki_dt = sgx.gpu_avg_power_ki_only * (period_ms / 1000)
+        self.avg_power_kp = sgx.gpu_avg_power_kp
+        self.avg_power_min_duty_cycle = sgx.gpu_avg_power_min_duty_cycle
+        self.avg_power_target_filter_tc = sgx.gpu_avg_power_target_filter_tc
+        self.unk_8978 = bytes(0x44)
         self.unk_89bc_0 = bytes(0x3c)
         self.unk_89bc = chip_info.unk_8cc
-        self.unk_89c0 = 8000
+        self.fast_die0_release_temp = 100 * sgx.getprop("gpu-fast-die0-release-temp", 80)
         self.unk_89c4 = chip_info.unk_87c
-        self.unk_89c8 = 0
-        self.unk_89cc = sgx.gpu_fast_die0_proportional_gain
-        self.unk_89d0 = chip_info.unk_89c
+        self.fast_die0_prop_tgt_delta = 100 * sgx.getprop("gpu-fast-die0-prop-tgt-delta", 0)
+        self.fast_die0_kp = sgx.gpu_fast_die0_proportional_gain
+        self.fast_die0_ki_dt = sgx.gpu_fast_die0_integral_gain * (period_ms / 1000)
         self.unk_89d4 = bytes(0xc)
         self.unk_89e0 = 1
-        self.unk_89e4 = chip_info.max_power
-        self.unk_89e8 = sgx.gpu_ppm_kp
-        self.unk_89ec = sgx.gpu_ppm_ki / 125.0
+        self.max_power_2 = chip_info.max_power
+        self.ppm_kp = sgx.gpu_ppm_kp
+        self.ppm_ki_dt = sgx.gpu_ppm_ki * (period_ms / 1000)
         self.unk_89f0 = 0
         self.unk_89f4_0 = bytes(8)
         self.unk_89f4_8 = 1
@@ -1737,9 +1753,9 @@ class InitData_RegionC(ConstructClass):
         self.unk_1102c_c = 1
         self.unk_1102c_10 = 0
         self.unk_1102c = 0
-        self.idle_to_off_timeout_ms = 2
-        self.unk_11034 = 40
-        self.unk_11038 = 5
+        self.idle_to_off_delay_ms = sgx.getprop("gpu-idle-off-delay-ms", 2)
+        self.fender_idle_to_off_delay_ms = sgx.getprop("gpu-fender-idle-off-delay-ms", 40)
+        self.fw_early_wake_timeout_ms = sgx.getprop("gpu-fw-early-wake-timeout-ms", 5)
         self.pending_stamps = [InitData_PendingStamp() for i in range(0x110)]
         self.unk_117bc = 0
         self.fault_info = InitData_FaultInfo()
