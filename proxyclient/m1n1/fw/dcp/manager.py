@@ -119,6 +119,9 @@ class DCPManager(DCPBaseManager):
         self.swaps += 1
         self.frame = swap_id
 
+    def enable_backlight_message_ap_gated(self, unkB):
+        print(f"enable_backlight_message_ap_gated({unkB})")
+
     # wrapper for set_digital_out_mode to print information on the setted modes
     def SetDigitalOutMode(self, color_id, timing_id):
         color_mode = [x for x in self.dcpav_prop['ColorElements'] if x['ID'] == color_id][0]
@@ -160,8 +163,14 @@ class DCPManager(DCPBaseManager):
     def match_pmu_service(self):
         pass
 
+    def set_number_property(self, key, value):
+        pass
+
     def create_provider_service(self):
         return True
+
+    def is_dark_boot(self):
+        return False
 
     def read_edt_data(self, key, count, value):
         return False
@@ -234,6 +243,9 @@ class DCPManager(DCPBaseManager):
 
     def get_calendar_time_ms(self):
         return time.time_ns() // 1000_000
+
+    def update_backlight_factor_prop(self, value):
+        pass
 
     def map_buf(self, buf, vaddr, dva, unk):
         print(f"map buf {buf}, {unk}")
