@@ -449,7 +449,11 @@ IOMFBSwapRec = Struct(
     "unk_2c8" / Hex(Default(Int32ul, 0)),
     "unk_2cc" / UnkBytes(0x14),
     "unk_2e0" / Hex(Default(Int32ul, 0)),
-    "unk_2e4" / UnkBytes(0x3c),
+    "unk_2e2" / UnkBytes(0x2),
+    "bl_unk" / Hex(Int64ul), # seen: 0x0, 0x1, 0x101, 0x1_0000, 0x101_010101
+    "bl_val" / Hex(Int32ul), # range 0x10000000 - approximately 0x7fe07fc0 for 4 - 510 nits
+    "bl_power" / Hex(Int8ul), # constant 0x40, 0x00: backlight off
+    "unk_2f3" / UnkBytes(0x2d),
 )
 
 assert IOMFBSwapRec.sizeof() == 0x320
