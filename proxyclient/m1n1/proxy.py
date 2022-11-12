@@ -1126,11 +1126,11 @@ class M1N1Proxy(Reloadable):
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
 
+# To run m1n1/proxy.py as script, use:
+# $ cd <path to>/m1n1/proxyclient
+# $ python3 -m m1n1.proxy m1n1/proxy.py
 if __name__ == "__main__":
-    import serial
-    uartdev = os.environ.get("M1N1DEVICE", "/dev/m1n1")
-    usbuart = serial.Serial(uartdev, 115200)
-    uartif = UartInterface(usbuart, debug=True)
+    uartif = UartInterface(device=None, debug=True)
     print("Sending NOP...", end=' ')
     uartif.nop()
     print("OK")
