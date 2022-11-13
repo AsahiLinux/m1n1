@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
+#include <stdint.h>
+
 #include "kboot.h"
 #include "adt.h"
 #include "assert.h"
@@ -884,6 +886,22 @@ static int dt_set_atc_tunables(void)
     return 0;
 }
 
+static int dt_get_iommu_node(int node, u32 num)
+{
+    int len;
+    assert(num < 32);
+    const void *prop = fdt_getprop(dt, node, "iommus", &len);
+    if (!prop || len < 0 || (u32)len < 8 * (num + 1)) {
+        printf("FDT: unexpected 'iommus' prop / len %d\n", len);
+        return -FDT_ERR_NOTFOUND;
+    }
+
+    const fdt32_t *iommus = prop;
+    uint32_t phandle = fdt32_ld(&iommus[num * 2]);
+
+    return fdt_node_offset_by_phandle(dt, phandle);
+}
+
 static dart_dev_t *dt_init_dart_by_node(int node, u32 num)
 {
     int len;
@@ -1118,6 +1136,20 @@ static int dt_carveout_reserved_regions(const char *dcp_alias, const char *disp_
         }
     }
 
+    /* enable dart-disp0, it is disabled in device tree to avoid resetting
+     * it and breaking display scanout when booting with old m1n1 which
+     * does not lock dart-disp0.
+     */
+    if (disp_alias) {
+        int disp_node = fdt_path_offset(dt, disp_alias);
+
+        int dart_disp0 = dt_get_iommu_node(disp_node, 0);
+        if (dart_disp0 < 0)
+            bail_cleanup("DT: failed to find 'dart-disp0'\n");
+
+        if (fdt_setprop_string(dt, dart_disp0, "status", "okay") < 0)
+            bail_cleanup("DT: failed to enable 'dart-disp0'\n");
+    }
 err:
     if (dart_dcp)
         dart_shutdown(dart_dcp);
