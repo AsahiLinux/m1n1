@@ -78,6 +78,9 @@
 #define DART_T8110_TLB_CMD_OP_FLUSH_SID 1
 #define DART_T8110_TLB_CMD_STREAM       GENMASK(7, 0)
 
+#define DART_T8110_PROTECT          0x200
+#define DART_T8110_PROTECT_TTBR_TCR BIT(0)
+
 #define DART_T8110_ENABLE_STREAMS  0xc00
 #define DART_T8110_DISABLE_STREAMS 0xc20
 
@@ -340,7 +343,8 @@ void dart_lock_adt(const char *path, int instance)
         if (!(read32(base + DART_T8020_CONFIG) & DART_T8020_CONFIG_LOCK))
             set32(base + DART_T8020_CONFIG, DART_T8020_CONFIG_LOCK);
     } else if (adt_is_compatible(adt, node, "dart,t8110")) {
-        printf("dart: dart %s, locking ignored for t8110\n", path);
+        if (!(read32(base + DART_T8110_PROTECT) & DART_T8110_PROTECT_TTBR_TCR))
+            set32(base + DART_T8110_PROTECT, DART_T8110_PROTECT_TTBR_TCR);
     } else {
         printf("dart: dart %s at 0x%lx is of an unknown type\n", path, base);
     }
