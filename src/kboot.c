@@ -1176,6 +1176,23 @@ static struct disp_mapping dcpext_reserved_regions_t8103[] = {
     {"region-id-74", "region74", true, false, false},
 };
 
+static struct disp_mapping disp_reserved_regions_t8112[] = {
+    {"region-id-49", "dcp_txt", true, false, false},
+    {"region-id-50", "dcp_data", true, false, false},
+    {"region-id-57", "region57", true, false, false},
+    // boot framebuffer, mapped to dart-disp0 sid 0 and dart-dcp sid 5
+    {"region-id-14", "vram", true, true, false},
+    // The 2 following regions are mapped in dart-dcp sid 5 and dart-disp0 sid 0 and 4
+    {"region-id-94", "region94", true, true, false},
+    {"region-id-95", "region95", true, false, true},
+};
+
+static struct disp_mapping dcpext_reserved_regions_t8112[] = {
+    {"region-id-49", "dcp_txt", true, false, false},
+    {"region-id-73", "dcpext_data", true, false, false},
+    {"region-id-74", "region74", true, false, false},
+};
+
 static struct disp_mapping disp_reserved_regions_t600x[] = {
     {"region-id-50", "dcp_data", true, false, false},
     {"region-id-57", "region57", true, false, false},
@@ -1249,6 +1266,15 @@ static int dt_set_display(void)
 
         ret = dt_carveout_reserved_regions("dcpext", NULL, NULL, dcpext_reserved_regions_t8103,
                                            ARRAY_SIZE(dcpext_reserved_regions_t8103));
+    } else if (!fdt_node_check_compatible(dt, 0, "apple,t8112")) {
+        ret = dt_carveout_reserved_regions("dcp", "disp0", "disp0_piodma",
+                                           disp_reserved_regions_t8112,
+                                           ARRAY_SIZE(disp_reserved_regions_t8112));
+        if (ret)
+            return ret;
+
+        ret = dt_carveout_reserved_regions("dcpext", NULL, NULL, dcpext_reserved_regions_t8112,
+                                           ARRAY_SIZE(dcpext_reserved_regions_t8112));
     } else if (!fdt_node_check_compatible(dt, 0, "apple,t6000") ||
                !fdt_node_check_compatible(dt, 0, "apple,t6001") ||
                !fdt_node_check_compatible(dt, 0, "apple,t6002")) {
