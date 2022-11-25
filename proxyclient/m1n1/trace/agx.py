@@ -3,7 +3,7 @@
 import textwrap
 from .asc import *
 from ..hw.uat import UAT, MemoryAttr, PTE, Page_PTE, TTBR
-from ..hw.agx import SGXRegs
+from ..hw.agx import *
 
 from ..fw.agx.initdata import InitData
 from ..fw.agx.channels import *

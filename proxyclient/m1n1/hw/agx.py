@@ -2,7 +2,7 @@
 from ..utils import *
 from enum import IntEnum
 
-__all__ = ["SGXRegs", "agx_decode_unit", "R_FAULT_INFO"]
+__all__ = ["SGXRegs", "SGXInfoRegs", "agx_decode_unit", "R_FAULT_INFO"]
 
 class FAULT_REASON(IntEnum):
     INVALID = 0
@@ -23,6 +23,21 @@ class R_FAULT_INFO(Register64):
 
 class SGXRegs(RegMap):
     FAULT_INFO      = 0x17030, R_FAULT_INFO
+
+class SGXInfoRegs(RegMap):
+    CORE_MASK_0     = 0x1500, Register32,
+    CORE_MASK_1     = 0x1514, Register32,
+
+    ID_00           = 0x4000, Register32,
+    ID_04           = 0x4004, Register32,
+    ID_08           = 0x4008, Register32,
+    ID_0c           = 0x400c, Register32,
+    ID_10           = 0x4010, Register32,
+    ID_14           = 0x4014, Register32,
+    ID_18           = 0x4018, Register32,
+    ID_1c           = 0x401c, Register32,
+
+    ID_8024         = 0x8024, Register32,
 
 class UNIT_00(IntEnum):
     DCMPn           = 0x00
