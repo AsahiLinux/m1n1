@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-import itertools, fnmatch
+import itertools, fnmatch, sys
 from construct import *
 
 from .utils import AddrLookup, FourCC, SafeGreedyRange
@@ -154,6 +154,15 @@ DCBlockerConfig = Struct(
     "pad" / Hex(Int16ul),
 )
 
+Coef = ExprAdapter(Int32ul,
+                   lambda x, ctx: (x - ((x & 0x1000000) << 1)) / 65536,
+                   lambda x, ctx: int(round(x * 65536)) & 0x1ffffff)
+
+MTRPolynomFuseAGX = GreedyRange(Struct(
+    "id" / Int32ul,
+    "data" / Prefixed(Int32ul, GreedyRange(Coef)),
+))
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -167,6 +176,7 @@ DEV_PROPERTIES = {
             "device-bridges": PMGRDeviceBridges,
             "voltage-states*": SafeGreedyRange(Int32ul),
             "events": PMGREvents,
+            "mtr-polynom-fuse-agx": MTRPolynomFuseAGX,
         }
     },
     "clpc": {
