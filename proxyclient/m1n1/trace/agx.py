@@ -478,7 +478,7 @@ class AGXTracer(ASCTracer):
                 return
             self.log(f"Dumping UAT for context {ctx}")
             self.uat.invalidate_cache()
-            _, pt = self.uat.get_pt(self.uat.gpu_region + ctx * 16, 8)
+            _, pt = self.uat.get_pt(self.uat.gpu_region + ctx * 16, 2)
             pt[off & 1] = evt.data
             self.uat.dump(ctx, log=self.log)
             self.add_uatmap_tracers(ctx)
