@@ -4,7 +4,7 @@ import datetime
 from m1n1.constructutils import show_struct_trace, Ver
 from m1n1.utils import *
 
-Ver.set_version(hv.u.version)
+Ver.set_version(hv.u)
 
 from m1n1.trace.agx import AGXTracer
 AGXTracer = AGXTracer._reloadcls(True)

@@ -234,8 +234,8 @@ class PowerZone(ConstructClass):
         "target_off" / Dec(Int32ul),
         "filter_tc_x4" / Dec(Int32ul),
         "filter_tc_xperiod" / Dec(Int32ul),
-        Ver("13.0 beta4", "unk_10" / Dec(Int32ul)),
-        Ver("13.0 beta4", "unk_14" / Dec(Int32ul)),
+        Ver("V >= V13_0B4", "unk_10" / Dec(Int32ul)),
+        Ver("V >= V13_0B4", "unk_14" / Dec(Int32ul)),
         "filter_tc_neginv" / Float32l,
         "filter_tc_inv" / Float32l,
         "pad" / Int32ul,
@@ -266,7 +266,7 @@ class AGXHWDataA(ConstructClass):
     subcon = Struct(
         "unk_0" / Int32ul,
         "clocks_per_period" / Int32ul,
-        Ver("13.0 beta4", "clocks_per_period_2" / Int32ul),
+        Ver("V >= V13_0B4", "clocks_per_period_2" / Int32ul),
         "unk_8" / Int32ul,
         "pwr_status" / Int32ul,
         "unk_10" / Float32l,
@@ -280,7 +280,7 @@ class AGXHWDataA(ConstructClass):
         "unk_30" / Int32ul,
         "cur_pstate" / Int32ul,
         "unk_38" / Int32ul,
-        Ver("13.0 beta4", "unk_3c_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_3c_0" / Int32ul),
         "base_pstate_scaled" / Int32ul,
         "unk_40" / Int32ul,
         "max_pstate_scaled" / Int32ul,
@@ -288,7 +288,7 @@ class AGXHWDataA(ConstructClass):
         "min_pstate_scaled" / Int32ul,
         "freq_mhz" / Float32l,
         "unk_54" / HexDump(Bytes(0x20)),
-        Ver("13.0 beta4", "unk_74_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_74_0" / Int32ul),
         "unk_74" / Array(16, Float32l),
         "unk_b4" / HexDump(Bytes(0x100)),
         "unk_1b4" / Int32ul,
@@ -323,7 +323,7 @@ class AGXHWDataA(ConstructClass):
         "pad_69c" / HexDump(Bytes(0x18)),
 
         "unk_6b4" / Int32ul,
-        Ver("13.0 beta4", "unk_6b8_0" / HexDump(Bytes(0x10))),
+        Ver("V >= V13_0B4", "unk_6b8_0" / HexDump(Bytes(0x10))),
         "max_pstate_scaled_3" / Int32ul,
         "unk_6bc" / Int32ul,
 
@@ -359,10 +359,10 @@ class AGXHWDataA(ConstructClass):
 
         "ppm_filter_tc_ms" / Int32ul,
         "unk_72c" / Int32ul,
-        Ver("13.0 beta4", "unk_730_0" / Int32ul),
-        Ver("13.0 beta4", "unk_730_4" / Int32ul),
-        Ver("13.0 beta4", "unk_730_8" / Int32ul),
-        Ver("13.0 beta4", "unk_730_c" / Int32ul),
+        Ver("V >= V13_0B4", "unk_730_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_730_4" / Int32ul),
+        Ver("V >= V13_0B4", "unk_730_8" / Int32ul),
+        Ver("V >= V13_0B4", "unk_730_c" / Int32ul),
         "unk_730" / Float32l,
         "unk_734" / Int32ul,
 
@@ -406,7 +406,7 @@ class AGXHWDataA(ConstructClass):
         "pad_7c4" / HexDump(Bytes(0x18)),
 
         "unk_7dc" / Int32ul,
-        Ver("13.0 beta4", "unk_7e0_0" / HexDump(Bytes(0x10))),
+        Ver("V >= V13_0B4", "unk_7e0_0" / HexDump(Bytes(0x10))),
         "base_pstate_scaled_4" / Dec(Int32ul),
         "pad_7e4" / Int32ul,
 
@@ -456,7 +456,7 @@ class AGXHWDataA(ConstructClass):
         "unk_8c8" / Int32ul,
         "unk_8cc" / Int32ul,
         "pad_8d0" / HexDump(Bytes(0x14)),
-        Ver("13.0 beta4", "unk_8e4_0" / HexDump(Bytes(0x10))),
+        Ver("V >= V13_0B4", "unk_8e4_0" / HexDump(Bytes(0x10))),
         "unk_8e4" / Int32ul,
         "unk_8e8" / Int32ul,
         "max_pstate_scaled_10" / Dec(Int32ul),
@@ -488,8 +488,8 @@ class AGXHWDataA(ConstructClass):
         "avg_power_target_filter_a" / Float32l,
         "avg_power_target_filter_tc_x4" / Dec(Int32ul),
         "avg_power_target_filter_tc_xperiod" / Dec(Int32ul),
-        Ver("13.0 beta4", "base_clock_mhz" / Int32ul),
-        Ver("13.0 beta4", "unk_c58_4" / Int32ul),
+        Ver("V >= V13_0B4", "base_clock_mhz" / Int32ul),
+        Ver("V >= V13_0B4", "unk_c58_4" / Int32ul),
         "power_zones" / Array(5, PowerZone),
         "avg_power_filter_tc_periods_x4" / Dec(Int32ul),
         "unk_cfc" / Int32ul,
@@ -514,8 +514,8 @@ class AGXHWDataA(ConstructClass):
         "unk_d48" / Int32ul,
         "unk_d4c" / Int32ul,
         "unk_d50" / Int32ul,
-        Ver("13.0 beta4", "base_clock_mhz_2" / Int32ul),
-        Ver("13.0 beta4", "unk_d54_4" / HexDump(Bytes(0xc))),
+        Ver("V >= V13_0B4", "base_clock_mhz_2" / Int32ul),
+        Ver("V >= V13_0B4", "unk_d54_4" / HexDump(Bytes(0xc))),
         "unk_d54" / HexDump(Bytes(0x10)),
         "max_pstate_scaled_14" / Int32ul,
         "unk_d68" / Bytes(0x24),
@@ -523,7 +523,7 @@ class AGXHWDataA(ConstructClass):
         "t8103_data" / AGXHWDataT8103,
 
         "unk_dd0" / HexDump(Bytes(0x40)),
-        Ver("13.0 beta4", "unk_e10_0" / AGXHWDataA130Extra),
+        Ver("V >= V13_0B4", "unk_e10_0" / AGXHWDataA130Extra),
         "unk_e10" / HexDump(Bytes(0xc)),
         "fast_die0_sensor_mask64_2" / Int64ul,
         "unk_e24" / Int32ul,
@@ -534,11 +534,11 @@ class AGXHWDataA(ConstructClass):
         "pad_1048" / HexDump(Bytes(0x5e4)),
         "fast_die0_sensor_mask64_alt" / Int64ul,
         "fast_die0_sensor_present" / Int32ul,
-        Ver("..13.0 beta4", "unk_1638" / Array(2, Int32ul)),
+        Ver("V < V13_0B4", "unk_1638" / Array(2, Int32ul)),
         "unk_1640" / HexDump(Bytes(0x2000)),
         "unk_3640" / Int32ul,
         "hws1" / AGXHWDataShared1,
-        Ver("13.0 beta4", "unk_pad1" / HexDump(Bytes(0x20))),
+        Ver("V >= V13_0B4", "unk_pad1" / HexDump(Bytes(0x20))),
         "hws2" / AGXHWDataShared2,
         "unk_3bfc" / Int32ul,
         "unk_3c00" / HexDump(Bytes(0xa0)),
@@ -550,7 +550,7 @@ class AGXHWDataA(ConstructClass):
         "ts_last_poweroff" / Int64ul,
         "unk_3cd0" / Int64ul,
         "unk_3cd8" / Int64ul,
-        Ver("13.0 beta4", "unk_3ce0_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_3ce0_0" / Int32ul),
         "unk_3ce0" / Int32ul,
         "unk_3ce4" / Int32ul,
         "unk_3ce8" / Int32ul,
@@ -559,7 +559,7 @@ class AGXHWDataA(ConstructClass):
         "unk_3cf4" / Array(8, Float32l),
         "unk_3d14" / Array(8, Float32l),
         "unk_3d34" / HexDump(Bytes(0x38)),
-        Ver("13.0 beta4", "unk_3d6c" / HexDump(Bytes(0x38))),
+        Ver("V >= V13_0B4", "unk_3d6c" / HexDump(Bytes(0x38))),
     )
 
     def __init__(self, sgx, chip_info):
@@ -646,7 +646,7 @@ class AGXHWDataA(ConstructClass):
         self.ppm_ki_dt = sgx.gpu_ppm_ki * (period_ms / 1000)
         self.pad_6f4 = 0
         self.pwr_integral_min_clamp_2 = sgx.gpu_pwr_integral_min_clamp
-        if Ver.check("13.0 beta4") or chip_info.chip_id != 0x8103:
+        if Ver.check("V >= V13_0B4") or chip_info.chip_id != 0x8103:
             self.unk_6fc = 65536.0
         else:
             self.unk_6fc = 0
@@ -921,20 +921,20 @@ class IOMapping(ConstructClass):
 
 class AGXHWDataB(ConstructClass):
     subcon = Struct(
-        Ver("..13.0 beta4", "unk_0" / Int64ul),
+        Ver("V < V13_0B4", "unk_0" / Int64ul),
         "unk_8" / Int64ul,
-        Ver("..13.0 beta4", "unk_10" / Int64ul),
+        Ver("V < V13_0B4", "unk_10" / Int64ul),
         "unk_18" / Int64ul,
         "unk_20" / Int64ul,
         "unk_28" / Int64ul,
         "unk_30" / Int64ul,
         "unkptr_38" / Int64ul,
         "pad_40" / HexDump(Bytes(0x20)),
-        Ver("..13.0 beta4", "yuv_matrices" / Array(15, Array(3, Array(4, Int16sl)))),
-        Ver("13.0 beta4", "yuv_matrices" / Array(63, Array(3, Array(4, Int16sl)))),
+        Ver("V < V13_0B4", "yuv_matrices" / Array(15, Array(3, Array(4, Int16sl)))),
+        Ver("V >= V13_0B4", "yuv_matrices" / Array(63, Array(3, Array(4, Int16sl)))),
         "pad_1c8" / HexDump(Bytes(8)),
         "io_mappings" / Array(0x14, IOMapping),
-        Ver("13.0 beta4", "unk_450_0" / HexDump(Bytes(0x68))),
+        Ver("V >= V13_0B4", "unk_450_0" / HexDump(Bytes(0x68))),
         "chip_id" / Int32ul,
         "unk_454" / Int32ul,
         "unk_458" / Int32ul,
@@ -983,7 +983,7 @@ class AGXHWDataB(ConstructClass):
         "unk_4f8" / Int32ul,
         "unk_4fc" / Int32ul,
         "unk_500" / Int32ul,
-        Ver("13.0 beta4", "unk_504_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_504_0" / Int32ul),
         "unk_504" / Int32ul,
         "unk_508" / Int32ul,
         "unk_50c" / Int32ul,
@@ -998,7 +998,7 @@ class AGXHWDataB(ConstructClass):
         "unk_530" / Int32ul,
         "unk_534" / Int32ul,
         "unk_538" / Int32ul,
-        Ver("13.0 beta4", "unk_53c_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_53c_0" / Int32ul),
         "num_frags" / Int32ul,
         "unk_540" / Int32ul,
         "unk_544" / Int32ul,
@@ -1011,7 +1011,7 @@ class AGXHWDataB(ConstructClass):
         "unk_564" / Int32ul,
         "num_cores" / Int32ul,
         "max_pstate" / Int32ul,
-        Ver("..13.0 beta4", "num_pstates" / Int32ul),
+        Ver("V < V13_0B4", "num_pstates" / Int32ul),
         "frequencies" / Array(16, Dec(Int32ul)),
         "voltages" / Array(16, Array(8, Dec(Int32ul))),
         "voltages_sram" / Array(16, Array(8, Dec(Int32ul))),
@@ -1019,12 +1019,12 @@ class AGXHWDataB(ConstructClass):
         "unk_9f4" / Array(16, Int32ul),
         "rel_max_powers" / Array(16, Dec(Int32ul)),
         "rel_boost_powers" / Array(16, Dec(Int32ul)),
-        Ver("..13.0 beta4", "min_sram_volt" / Dec(Int32ul)),
-        Ver("..13.0 beta4", "unk_ab8" / Int32ul),
-        Ver("..13.0 beta4", "unk_abc" / Int32ul),
-        Ver("..13.0 beta4", "unk_ac0" / Int32ul),
+        Ver("V < V13_0B4", "min_sram_volt" / Dec(Int32ul)),
+        Ver("V < V13_0B4", "unk_ab8" / Int32ul),
+        Ver("V < V13_0B4", "unk_abc" / Int32ul),
+        Ver("V < V13_0B4", "unk_ac0" / Int32ul),
 
-        Ver("13.0 beta4", "unk_ac4_0" / HexDump(Bytes(0x1f0))),
+        Ver("V >= V13_0B4", "unk_ac4_0" / HexDump(Bytes(0x1f0))),
 
         "pad_ac4" / ZPadding(8),
         "unk_acc" / Int32ul,
@@ -1047,12 +1047,12 @@ class AGXHWDataB(ConstructClass):
         "unk_b2c" / Int32ul,
         "unk_b30" / Int32ul,
         "unk_b34" / Int32ul,
-        Ver("13.0 beta4", "unk_b38_0" / Int32ul),
-        Ver("13.0 beta4", "unk_b38_4" / Int32ul),
+        Ver("V >= V13_0B4", "unk_b38_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_b38_4" / Int32ul),
         "unk_b38" / Array(6, Int64ul),
         "unk_b68" / Int32ul,
-        Ver("13.0 beta4", "unk_b6c" / HexDump(Bytes(0xd0))),
-        Ver("13.0 beta4", "unk_c3c" / Int32ul),
+        Ver("V >= V13_0B4", "unk_b6c" / HexDump(Bytes(0xd0))),
+        Ver("V >= V13_0B4", "unk_c3c" / Int32ul),
     )
 
     def __init__(self, sgx, chip_info):
@@ -1148,7 +1148,7 @@ class AGXHWDataB(ConstructClass):
                 [    0x0,     0x0, -0x8000,     0x0],
             ],
         ]
-        if Ver.check("13.0 beta4"):
+        if Ver.check("V >= V13_0B4"):
             self.yuv_matrices = [
                 *self.yuv_matrices[:8],
                 *(24 * [[[0,0,0,0]]*3]),
@@ -1240,7 +1240,7 @@ class AGXHWDataB(ConstructClass):
         self.unk_ac4_0 = bytes(0x1f0)
         self.unk_acc = 0x0
         self.unk_ad0 = 0x0
-        if Ver.check("13.0 beta4"):
+        if Ver.check("V >= V13_0B4"):
             self.unk_ae4 = [0x0, 0x3, 0x7, 0x7]
         else:
             self.unk_ae4 = [0x0, 0xf, 0x3f, 0x3f]
@@ -1295,7 +1295,7 @@ class InitData_GPUStatsTA(ConstructClass):
         "unk_74" / Int32ul,
         "unk_timestamp" / Int64ul,
         "unk_80" / HexDump(Bytes(0x40)),
-        Ver("13.0 beta4", "unk_c0" / HexDump(Bytes(0x800))),
+        Ver("V >= V13_0B4", "unk_c0" / HexDump(Bytes(0x800))),
     )
 
     def __init__(self):
@@ -1342,7 +1342,7 @@ class InitData_GPUStats3D(ConstructClass):
         "unk_12c" / Int32ul,
         "unk_timestamp" / Int64ul,
         "unk_134" / Bytes(0x1c0 - 0x134),
-        Ver("13.0 beta4", "unk_1c0" / HexDump(Bytes(0x800))),
+        Ver("V >= V13_0B4", "unk_1c0" / HexDump(Bytes(0x800))),
     )
 
     def __init__(self):
@@ -1539,9 +1539,9 @@ class InitData_RegionC(ConstructClass):
     subcon = Struct(
         "ktrace_enable" / Int32ul,
         "unk_4" / HexDump(Bytes(0x24)),
-        Ver("13.0 beta4", "unk_28_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_28_0" / Int32ul),
         "unk_28" / Int32ul,
-        Ver("13.0 beta4", "unk_2c_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_2c_0" / Int32ul),
         "unk_2c" / Int32ul,
         "unk_30" / Int32ul,
         "unk_34" / Int32ul,
@@ -1552,13 +1552,13 @@ class InitData_RegionC(ConstructClass):
         "unk_5a" / Int32ul,
         "unk_5e" / Int32ul,
         "unk_62" / Int32ul,
-        Ver("13.0 beta4", "unk_66_0" / HexDump(Bytes(0xc))),
+        Ver("V >= V13_0B4", "unk_66_0" / HexDump(Bytes(0xc))),
         "unk_66" / Int32ul,
         "unk_6a" / HexDump(Bytes(0x16)),
         "unk_80" / HexDump(Bytes(0xf80)),
         "unk_1000" / HexDump(Bytes(0x7000)),
         "unk_8000" / HexDump(Bytes(0x900)),
-        Ver("13.0 beta4", "unk_8900_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_8900_0" / Int32ul),
         "unk_8900" / Int32ul,
         "unk_atomic" / Int32ul,
         "max_power" / Int32ul,
@@ -1576,7 +1576,7 @@ class InitData_RegionC(ConstructClass):
         "avg_power_target_filter_tc" / Int32ul,
         "power_zones" / Array(5, RCPowerZone),
         "unk_8978" / HexDump(Bytes(0x44)),
-        Ver("13.0 beta4", "unk_89bc_0" / HexDump(Bytes(0x3c))),
+        Ver("V >= V13_0B4", "unk_89bc_0" / HexDump(Bytes(0x3c))),
         "unk_89bc" / Int32ul,
         "fast_die0_release_temp" / Int32ul,
         "unk_89c4" / Int32sl,
@@ -1589,16 +1589,16 @@ class InitData_RegionC(ConstructClass):
         "ppm_kp" / Float32l,
         "ppm_ki_dt" / Float32l,
         "unk_89f0" / Int32ul,
-        Ver("13.0 beta4", "unk_89f4_0" / HexDump(Bytes(0x8))),
-        Ver("13.0 beta4", "unk_89f4_8" / Int32ul),
-        Ver("13.0 beta4", "unk_89f4_c" / HexDump(Bytes(0x50))),
+        Ver("V >= V13_0B4", "unk_89f4_0" / HexDump(Bytes(0x8))),
+        Ver("V >= V13_0B4", "unk_89f4_8" / Int32ul),
+        Ver("V >= V13_0B4", "unk_89f4_c" / HexDump(Bytes(0x50))),
         "hws1" / AGXHWDataShared1,
         "hws2" / AGXHWDataShared2,
         "unk_8fac" / HexDump(Bytes(0x60)),
-        Ver("13.0 beta4", "unk_900c_0" / HexDump(Bytes(0x28))),
+        Ver("V >= V13_0B4", "unk_900c_0" / HexDump(Bytes(0x28))),
         "unk_900c" / Int32ul,
-        Ver("13.0 beta4", "unk_9010_0" / Int32ul),
-        Ver("13.0 beta4", "unk_9010_4" / HexDump(Bytes(0x14))),
+        Ver("V >= V13_0B4", "unk_9010_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_9010_4" / HexDump(Bytes(0x14))),
         "unk_9010" / HexDump(Bytes(0x2c)),
         "unk_903c" / Int32ul,
         "unk_9040" / HexDump(Bytes(0xc0)),
@@ -1614,11 +1614,11 @@ class InitData_RegionC(ConstructClass):
         "unk_11020" / Int32ul,
         "unk_11024" / Int32ul,
         "unk_11028" / Int32ul,
-        Ver("13.0 beta4", "unk_1102c_0" / Int32ul),
-        Ver("13.0 beta4", "unk_1102c_4" / Int32ul),
-        Ver("13.0 beta4", "unk_1102c_8" / Dec(Int32ul)),
-        Ver("13.0 beta4", "unk_1102c_c" / Int32ul),
-        Ver("13.0 beta4", "unk_1102c_10" / Int32ul),
+        Ver("V >= V13_0B4", "unk_1102c_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_1102c_4" / Int32ul),
+        Ver("V >= V13_0B4", "unk_1102c_8" / Dec(Int32ul)),
+        Ver("V >= V13_0B4", "unk_1102c_c" / Int32ul),
+        Ver("V >= V13_0B4", "unk_1102c_10" / Int32ul),
         "unk_1102c" / Int32ul,
         "idle_to_off_delay_ms" / Int32ul,
         "fender_idle_to_off_delay_ms" / Int32ul,
@@ -1628,17 +1628,17 @@ class InitData_RegionC(ConstructClass):
         "fault_info" / InitData_FaultInfo,
         "counter" / Int32ul,
         "unk_118dc" / Int32ul,
-        Ver("13.0 beta4", "unk_118e0_0" / HexDump(Bytes(0x9c))),
+        Ver("V >= V13_0B4", "unk_118e0_0" / HexDump(Bytes(0x9c))),
         "unk_118e0" / Dec(Int32ul),
-        Ver("13.0 beta4", "unk_118e4_0" / Dec(Int32ul)),
+        Ver("V >= V13_0B4", "unk_118e4_0" / Dec(Int32ul)),
         "unk_118e4" / Int32ul,
         "unk_118e8" / Int32ul,
         "unk_118ec" / Array(0x15, Int8ul),
         "unk_11901" / HexDump(Bytes(0x43f)),
-        Ver("13.0 beta4", "unk_11d40" / HexDump(Bytes(0x19c))),
-        Ver("13.0 beta4", "unk_11edc" / Int32ul),
-        Ver("13.0 beta4", "unk_11ee0" / HexDump(Bytes(0x1c))),
-        Ver("13.0 beta4", "unk_11efc" / Int32ul),
+        Ver("V >= V13_0B4", "unk_11d40" / HexDump(Bytes(0x19c))),
+        Ver("V >= V13_0B4", "unk_11edc" / Int32ul),
+        Ver("V >= V13_0B4", "unk_11ee0" / HexDump(Bytes(0x1c))),
+        Ver("V >= V13_0B4", "unk_11efc" / Int32ul),
     )
 
     def __init__(self, sgx, chip_info):
@@ -1721,7 +1721,7 @@ class InitData_RegionC(ConstructClass):
         self.unk_9010_0 = 1
         self.unk_9010_4 = bytes(0x14)
         self.unk_9010 = bytes(0x2c)
-        if Ver.check("13.0 beta4"):
+        if Ver.check("V >= V13_0B4"):
             self.unk_903c = 1
         else:
             self.unk_903c = 0
@@ -1795,7 +1795,7 @@ class UatLevelInfo(ConstructClass):
 
 class InitData(ConstructClass):
     subcon = Struct(
-        Ver("13.0 beta4", "ver_info" / Array(4, Int16ul)),
+        Ver("V >= V13_0B4", "ver_info" / Array(4, Int16ul)),
         "regionA_addr" / Int64ul, # allocation size: 0x4000
         "regionA" / ROPointer(this.regionA_addr, HexDump(Bytes(0x4000))),
         "unk_8" / Default(Int32ul, 0),

@@ -698,7 +698,7 @@ class GPURenderer:
         ts1.ts2_addr = wc_3d.ts2._addr
         ts1.cmdqueue_ptr = self.wq_3d.info._addr
         ts1.unk_24 = 0x0
-        if Ver.check("13.0 beta4"):
+        if Ver.check("V >= V13_0B4"):
             ts1.unkptr_2c_0 = wc_3d.ts_flag._addr
         ts1.uuid = uuid_3d
         ts1.unk_30_padding = 0x0
@@ -715,7 +715,7 @@ class GPURenderer:
         ts2.ts2_addr = wc_3d.ts3._addr
         ts2.cmdqueue_ptr = self.wq_3d.info._addr
         ts2.unk_24 = 0x0
-        if Ver.check("13.0 beta4"):
+        if Ver.check("V >= V13_0B4"):
             ts2.unkptr_2c_0 = wc_3d.ts_flag._addr
         ts2.uuid = uuid_3d
         ts2.unk_30_padding = 0x0
@@ -947,7 +947,7 @@ class GPURenderer:
         ts1.ts2_addr = wc_ta.ts2._addr
         ts1.cmdqueue_ptr = self.wq_ta.info._addr
         ts1.unk_24 = 0x0
-        if Ver.check("13.0 beta4"):
+        if Ver.check("V >= V13_0B4"):
             ts1.unkptr_2c_0 = wc_ta.ts_flag._addr
         ts1.uuid = uuid_ta
         ts1.unk_30_padding = 0x0
@@ -964,7 +964,7 @@ class GPURenderer:
         ts2.ts2_addr = wc_ta.ts3._addr
         ts2.cmdqueue_ptr = self.wq_ta.info._addr
         ts2.unk_24 = 0x0
-        if Ver.check("13.0 beta4"):
+        if Ver.check("V >= V13_0B4"):
             ts2.unkptr_2c_0 = wc_ta.ts_flag._addr
         ts2.uuid = uuid_ta
         ts2.unk_30_padding = 0x0

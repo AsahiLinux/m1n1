@@ -646,7 +646,7 @@ class ConstructClass(ConstructClassBase, Container):
             if isinstance(subcon, Ver):
                 if not has_ver:
                     s.append("")
-                s.append(f"    #[ver({subcon.rust})]")
+                s.append(f"    #[ver({subcon.cond})]")
                 subcon = subcon.subcon
                 has_ver = True
             else:
@@ -786,10 +786,17 @@ class Ver(Subconstruct):
     try:
         _version = sys.modules["m1n1.constructutils"].Ver._version
     except (KeyError, AttributeError):
-        _version = [os.environ.get("AGX_FWVER", "0")]
+        _version = {"V": os.environ.get("AGX_FWVER", "V12_3"),
+                    "G": os.environ.get("AGX_GPU", "G13")}
+
+    MATRIX = {
+        "V": ["V12_1", "V12_3", "V12_4", "V13_0B4"],
+        "G": ["G13", "G14"],
+    }
 
     def __init__(self, version, subcon):
-        self.rust, self.min_ver, self.max_ver = self.parse_ver(version)
+        self.cond = version
+        self.vcheck = self.parse_ver(version)
         self._name = subcon.name
         self.subcon = subcon
         self.flagbuildnone = True
@@ -821,38 +828,24 @@ class Ver(Subconstruct):
 
     @classmethod
     def parse_ver(cls, version):
-        def rv(s):
-            return "V" + s.replace(" ", "").replace(".", "_").replace("beta", "b")
+        expr = version.replace("&&", " and ").replace("||", " or ")
 
-        if ".." in version:
-            v = version.split("..")
-            min_ver = cls._split_ver(v[0])
-            max_ver = cls._split_ver(v[1])
-            if v[0]:
-                rust = f"V >= {rv(v[0])} && V < {rv(v[1])}"
-            else:
-                rust = f"V < {rv(v[1])}"
-        else:
-            min_ver = cls._split_ver(version)
-            max_ver = None
-            rust = f"V >= {rv(version)}"
+        base_loc = {j: i for row in cls.MATRIX.values() for i, j in enumerate(row)}
 
-        if min_ver is None:
-            min_ver = (0,)
-        if max_ver is None:
-            max_ver = (999,)
+        def check_ver(ver):
+            loc = dict(base_loc)
+            for k, v in ver.items():
+                loc[k] = cls.MATRIX[k].index(v)
+            return eval(expr, None, loc)
 
-        return rust, min_ver, max_ver
+        return check_ver
 
     @classmethod
     def check(cls, version):
-        _, min_ver, max_ver = cls.parse_ver(version)
-        v = cls._split_ver(cls._version[0])
-        return min_ver <= v < max_ver
+        return cls.parse_ver(version)(cls._version)
 
     def _active(self):
-        v = self._split_ver(self._version[0])
-        return self.min_ver <= v < self.max_ver
+        return self.vcheck(self._version)
 
     def _parse(self, stream, context, path):
         if not self._active():
@@ -871,8 +864,13 @@ class Ver(Subconstruct):
         return self.subcon._sizeof(context, path)
 
     @classmethod
-    def set_version(cls, version):
-        cls._version[0] = version
+    def set_version_key(cls, key, version):
+        cls._version[key] = version
+
+    @classmethod
+    def set_version(cls, u):
+        cls.set_version_key("V", u.version)
+        cls.set_version_key("G", u.adt["/arm-io"].soc_generation.replace("H", "G"))
 
 def show_struct_trace(log=print):
     for addr, desc in sorted(list(g_struct_trace)):

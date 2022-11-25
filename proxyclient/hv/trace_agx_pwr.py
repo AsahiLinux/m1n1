@@ -4,7 +4,7 @@ import datetime
 from m1n1.constructutils import show_struct_trace, Ver
 from m1n1.utils import *
 
-Ver.set_version(hv.u.version)
+Ver.set_version(hv.u)
 
 trace_device("/arm-io/sgx", True)
 #trace_device("/arm-io/pmp", True)
