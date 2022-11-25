@@ -294,11 +294,40 @@ class HandoffTracer(Tracer):
     def start(self):
         self.trace_regmap(self.base, 0x4000, GFXHandoffStruct, name="regs")
 
+class SGXTracer(ADTDevTracer):
+    DEFAULT_MODE = TraceMode.HOOK
+
+    REGMAPS = [SGXRegs, SGXInfoRegs]
+    NAMES = ["sgx", "sgx-id"]
+
+    def __init__(self, hv, devpath, verbose=False):
+        super().__init__(hv, devpath, verbose=verbose)
+        self.hooks = {}
+
+    def hook_r(self, addr, width, **kwargs):
+        self.log(f"HOOK: {addr:#x}:{width}")
+
+        if addr in self.hooks:
+            val = self.hooks[addr]
+            self.log(f"  Returning: {val:#x}")
+        else:
+            xval = val = super().hook_r(addr, width, **kwargs)
+            if isinstance(val, (list, tuple)):
+                xval = list(map(hex, val))
+            else:
+                xval = hex(val)
+            self.log(f"  Read: {xval}")
+
+        return val
+
 class AGXTracer(ASCTracer):
     ENDPOINTS = {
         0x20: PongEp,
         0x21: KickEp
     }
+
+    REGMAPS = [ASCRegs]
+    NAMES = ["asc"]
 
     PAGESIZE = 0x4000
 
