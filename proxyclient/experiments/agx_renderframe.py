@@ -36,7 +36,7 @@ try:
 
     f = GPUFrame(ctx, sys.argv[1], track=False)
 
-    r = GPURenderer(ctx, 8, bm_slot=0, queue=1)
+    r = GPURenderer(ctx, 16, bm_slot=0, queue=1)
     print("==========================================")
     print("## Submitting")
     print("==========================================")

@@ -163,7 +163,7 @@ regs.update({
     #"unk_748.1": t(agx.initdata.regionB.hwdata_a.addrof("unk_748")+4),
     #"unk_748.2": t(agx.initdata.regionB.hwdata_a.addrof("unk_748")+8),
     #"unk_748.3": t(agx.initdata.regionB.hwdata_a.addrof("unk_748")+12),
-    "use_percent": t(agx.initdata.regionB.hwdata_a.addrof("use_percent")),
+    #"use_percent": t(agx.initdata.regionB.hwdata_a.addrof("use_percent")),
     #"unk_83c": t(agx.initdata.regionB.hwdata_a.addrof("unk_83c")),
     "freq_with_off": t(agx.initdata.regionB.hwdata_a.addrof("freq_with_off")),
     #"unk_ba0": t(agx.initdata.regionB.hwdata_a.addrof("unk_ba0")),
