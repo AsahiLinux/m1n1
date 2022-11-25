@@ -246,6 +246,28 @@ DAPFT8110C = Struct(
     "pad" / Array(3, Hex(Int8ul)),
 )
 
+SIODMAShimData = Struct(
+    "name" / FourCC,
+    "base" / Hex(Int64ul),
+    "length" / Hex(Int64ul),
+    "unk1" / Hex(Int32ul),
+    "unk2" / Hex(Int32ul),
+    "unk3" / Hex(Int32ul),
+    "stride" / Hex(Int32ul),
+)
+
+SIOMapRange = Struct(
+    "unk1" / FourCC,
+    "addr" / Hex(Int64ul),
+    "len" / Hex(Int64ul),
+)
+
+SIODeviceType = Struct(
+    "id" / FourCC,
+    "count" / Int32ul,
+    "unk2" / Hex(Int32ul),
+)
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -341,6 +363,13 @@ DEV_PROPERTIES = {
     "apcie*": {
         "*": {
             "apcie-*-tunables": GreedyRange(TunableLocal),
+        }
+    },
+    "sio": {
+        "*": {
+            "map-range": SIOMapRange,
+            "device-type": SafeGreedyRange(SIODeviceType),
+            "dmashim": SafeGreedyRange(SIODMAShimData),
         }
     },
 }
