@@ -274,10 +274,13 @@ class Start3DStruct2(ConstructClass):
         "depth_dimensions" / Int64ul,
         "unk_48" / Int64ul,
         "depth_flags" / Int64ul, # 0x40000 - has stencil 0x80000 - has depth
+        Ver("G >= G14", "unk_58_g14_0" / Int64ul),
+        Ver("G >= G14", "unk_58_g14_8" / Int64ul),
         "depth_buffer_ptr1" / Int64ul,
         "depth_buffer_ptr2" / Int64ul,
         "stencil_buffer_ptr1" / Int64ul,
         "stencil_buffer_ptr2" / Int64ul,
+        Ver("G >= G14", "unk_68_g14_0" / HexDump(Bytes(0x20))),
         "unk_78" / Array(4, Int64ul),
         "depth_aux_buffer_ptr1" / Int64ul,
         "unk_a0" / Int64ul,
@@ -300,7 +303,8 @@ class Start3DStruct2(ConstructClass):
         "unk_150" / Int64ul,
         "unk_158" / Int64ul,
         "unk_160" / Int64ul,
-        "unk_168_padding" / HexDump(Bytes(0x1d8)),
+        Ver("G < G14", "unk_168_padding" / HexDump(Bytes(0x1d8))),
+        Ver("G >= G14", "unk_198_padding" / HexDump(Bytes(0x1a8))),
         Ver("V < V13_0B4", ZPadding(8)),
     )
 
@@ -432,6 +436,7 @@ class Finalize3DCmd(ConstructClass):
         "unk_7c" / Int64ul, # 0
         "unk_84" / Int64ul, # 0
         "unk_8c" / Int64ul, # 0
+        Ver("G >= G14", "unk_8c_g14" / Int64ul),
         "restart_branch_offset" / Int32sl,
         "unk_98" / Int32ul, # 1
         Ver("V >= V13_0B4", "unk_9c" / HexDump(Bytes(0x10))),
@@ -459,32 +464,34 @@ class StartTACmdStruct2(ConstructClass):
         "unk_8" / Hex(Int32ul),
         "unk_c" / Hex(Int32ul),
         "tvb_tilemap" / Hex(Int64ul),
-        "unkptr_18" / Hex(Int64ul),
-        "unkptr_20" / Hex(Int64ul),
+        Ver("G < G14", "tvb_cluster_tilemaps" / Hex(Int64ul)),
+        "tpc" / Hex(Int64ul),
         "tvb_heapmeta_addr" / Hex(Int64ul), # like Start3DStruct2.tvb_end_addr with bit 63 set?
         "iogpu_unk_54" / Int32ul,
         "iogpu_unk_55" / Int32ul,
         "iogpu_unk_56" / Int64ul,
-        "unk_40" / Int64ul,
+        Ver("G < G14", "tvb_cluster_meta1" / Int64ul),
         "unk_48" / Int64ul,
         "unk_50" / Int64ul,
         "tvb_heapmeta_addr2" / Int64ul,
-        "unk_60" / Int64ul,
-        "unk_68" / Int64ul,
+        Ver("G < G14", "unk_60" / Int64ul),
+        Ver("G < G14", "core_mask" / Int64ul),
         "iogpu_deflake_1" / Int64ul,
         "iogpu_deflake_2" / Int64ul,
         "unk_80" / Int64ul,
-        "iogpu_deflake_3" / Int64ul, # context_id in bits 55:48
+        "iogpu_deflake_3" / Int64ul, # bit 50 set
         "encoder_addr" / Int64ul,
-        "unk_98" / Array(2, Hex(Int64ul)),
-        "unk_a8" / Int64ul,
+        Ver("G < G14", "tvb_cluster_meta2" / Int64ul),
+        Ver("G < G14", "tvb_cluster_meta3" / Int64ul),
+        Ver("G < G14", "tiling_control" / Int64ul),
         "unk_b0" / Array(6, Hex(Int64ul)),
         "pipeline_base" / Int64ul,
-        "unk_e8" / Int64ul,
-        "unk_f0" / Int64ul,
+        Ver("G < G14", "tvb_cluster_meta4" / Int64ul),
+        Ver("G < G14", "unk_f0" / Int64ul),
         "unk_f8" / Int64ul,
         "unk_100" / Array(3, Hex(Int64ul)),
         "unk_118" / Int32ul,
+        Ver("G >= G14", Padding(8 * 9)),
     )
 
 class StartTACmdStruct3(ConstructClass):
@@ -593,6 +600,7 @@ class FinalizeTACmd(ConstructClass):
         "unk_60" / Int32ul,
         "unk_64" / Int32ul,
         "unk_68" / Int32ul,
+        Ver("G >= G14", "unk_6c_g14" / Int64ul),
         "restart_branch_offset" / Int32sl,
         "unk_70" / Int32ul,
         Ver("V >= V13_0B4", "unk_74" / HexDump(Bytes(0x10))),
@@ -675,16 +683,6 @@ class StartComputeCmd(ConstructClass):
         "padding" / Bytes(0x154 - 0x4c),
     )
 
-    def parsed(self, ctx):
-        try:
-            if self.padding != b"\x00" * (0x154 - 0x4c):
-                raise ExplicitError("padding is not zero")
-            del self.padding
-            self._keys = [x for x in self._keys if x != "padding"]
-        except AttributeError:
-            pass
-
-
 class FinalizeComputeCmd(ConstructClass):
     subcon = Struct( # 0x64 bytes''''
         "magic" / Const(0x2a, Int32ul),
@@ -706,6 +704,7 @@ class FinalizeComputeCmd(ConstructClass):
         "unk_50" / Int32ul,
         "unk_54" / Int32ul,
         "unk_58" / Int32ul,
+        Ver("G >= G14", "unk_5c_g14" / Int64ul),
         "restart_branch_offset" / Int32sl, # realative offset from start of Finalize to StartComputeCmd
         "unk_60" / Int32ul,
     )

@@ -73,7 +73,7 @@ class EventControl(ConstructClass):
         "unk_14" / Int32ul,
         "unk_18" / Int64ul,
         "unk_20" / Int32ul,
-        "unk_24" / Int32ul,
+        "vm_slot" / Int32ul,
         "has_ta" / Int32ul,
         "pstamp_ta" / Array(4, Int64ul),
         "has_3d" / Int32ul,
@@ -81,8 +81,10 @@ class EventControl(ConstructClass):
         "has_cp" / Int32ul,
         "pstamp_cp" / Array(4, Int64ul),
         "in_list" / Int32ul,
+        Ver("G >= G14", "unk_98_g14_0" / HexDump(Bytes(0x14))),
         "list_head" / LinkedListHead,
-        "unk_buf" / EventControlUnkBuf,
+        Ver("G >= G14", "unk_a8_g14_0" / Padding(4)),
+        Ver("V >= V13_0B4", "unk_buf" / EventControlUnkBuf),
     )
 
     def __init__(self):
@@ -90,7 +92,7 @@ class EventControl(ConstructClass):
         self.unk_14 = 0
         self.unk_18 = 0
         self.unk_20 = 0
-        self.unk_24 = 0
+        self.vm_slot = 0
         self.has_ta = 0
         self.pstamp_ta = [0]*4
         self.has_3d = 0
@@ -98,6 +100,7 @@ class EventControl(ConstructClass):
         self.has_cp = 0
         self.pstamp_cp = [0]*4
         self.in_list = 0
+        self.unk_98_g14_0 = bytes(0x14)
         self.list_head = LinkedListHead()
         self.unk_buf = EventControlUnkBuf()
 
