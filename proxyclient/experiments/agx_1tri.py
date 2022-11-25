@@ -5,6 +5,11 @@ import sys, pathlib, time
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 from m1n1.setup import *
+from m1n1.constructutils import Ver
+from m1n1.utils import *
+
+Ver.set_version(u)
+
 from m1n1.shell import run_shell
 
 from m1n1.agx import AGX
