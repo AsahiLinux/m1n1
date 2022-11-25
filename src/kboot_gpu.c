@@ -22,14 +22,28 @@ struct perf_state {
     u32 volt;
 };
 
-u32 t8103_pwr_scale[] = {0, 63, 80, 108, 150, 198, 210};
+static u32 t8103_pwr_scale[] = {0, 63, 80, 108, 150, 198, 210};
 
-int calc_power_t8103(int sgx, u32 count, u32 table_count, const struct perf_state *perf_states,
-                     u32 *max_pwr)
+// TODO this isn't a static table any more
+static u32 t8112_pwr_scale[] = {0, 66, 92, 119, 153, 184, 214, 240, 240};
+
+static int calc_power_t81xx(int sgx, u32 count, u32 table_count,
+                            const struct perf_state *perf_states, u32 *max_pwr)
 {
     UNUSED(sgx);
+    u32 *pwr_scale;
+    u32 pwr_scale_count;
 
-    u32 pwr_scale_count = ARRAY_SIZE(t8103_pwr_scale);
+    switch (chip_id) {
+        case T8103:
+            pwr_scale = t8103_pwr_scale;
+            pwr_scale_count = ARRAY_SIZE(t8103_pwr_scale);
+            break;
+        case T8112:
+            pwr_scale = t8112_pwr_scale;
+            pwr_scale_count = ARRAY_SIZE(t8112_pwr_scale);
+            break;
+    }
 
     if (table_count != 1)
         bail("ADT: GPU: expected 1 perf state table but got %d\n", table_count);
@@ -38,15 +52,16 @@ int calc_power_t8103(int sgx, u32 count, u32 table_count, const struct perf_stat
         bail("ADT: GPU: expected %d perf states but got %d\n", pwr_scale_count, count);
 
     for (u32 i = 0; i < pwr_scale_count; i++)
-        max_pwr[i] = (u32)perf_states[i].volt * (u32)t8103_pwr_scale[i] * 100;
+        max_pwr[i] = (u32)perf_states[i].volt * (u32)pwr_scale[i] * 100;
 
     return 0;
 }
 
-u32 t6000_pwr_scale[] = {0, 15, 19, 25, 34, 50, 100};
+// TODO
+static u32 t6000_pwr_scale[] = {0, 15, 19, 25, 34, 50, 100};
 
-int calc_power_t600x(int sgx, u32 count, u32 table_count, const struct perf_state *perf_states,
-                     u32 *max_pwr)
+static int calc_power_t600x(int sgx, u32 count, u32 table_count,
+                            const struct perf_state *perf_states, u32 *max_pwr)
 {
     UNUSED(sgx);
     UNUSED(perf_states);
@@ -114,7 +129,8 @@ int dt_set_gpu(void *dt)
 
     switch (chip_id) {
         case T8103:
-            calc_power = calc_power_t8103;
+        case T8112:
+            calc_power = calc_power_t81xx;
             break;
         case T6000:
         case T6001:
