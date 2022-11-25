@@ -11,6 +11,7 @@ parser.add_argument('-n', '--no-sepfw', action="store_true", help="Do not preser
 parser.add_argument('-c', '--call', action="store_true", help="Use call mode")
 parser.add_argument('-r', '--raw', action="store_true", help="Image is raw")
 parser.add_argument('-E', '--entry-point', action="store", type=int, help="Entry point for the raw image", default=0x800)
+parser.add_argument('-x', '--xnu', action="store_true", help="Set up for chainloading XNU")
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
@@ -87,6 +88,11 @@ if len(args.boot_args) > 0:
     print(f"Setting boot arguments to {boot_args!r}")
     tba.cmdline = boot_args
 
+if args.xnu:
+    # Fix virt_base, since we often install m1n1 with it set to 0 which xnu does not like
+    tba.virt_base = 0xfffffe0010000000 + (tba.phys_base & (32 * 1024 * 1024 - 1))
+    tba.devtree = u.ba.devtree - u.ba.virt_base + tba.virt_base
+
 iface.writemem(image_addr + bootargs_off, BootArgs.build(tba))
 
 print(f"Copying stub...")
@@ -110,6 +116,9 @@ p.dc_cvau(stub.addr, stub.len)
 p.ic_ivau(stub.addr, stub.len)
 
 print(f"Entry point: 0x{entry:x}")
+
+if args.xnu:
+    p.display_shutdown(0)
 
 if args.call:
     print(f"Shutting down MMU...")
