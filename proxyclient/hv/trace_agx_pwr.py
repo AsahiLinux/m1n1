@@ -7,71 +7,21 @@ from m1n1.utils import *
 Ver.set_version(hv.u.version)
 
 trace_device("/arm-io/sgx", True)
-trace_device("/arm-io/pmp", True)
-trace_device("/arm-io/gfx-asc", False)
+#trace_device("/arm-io/pmp", True)
+#trace_device("/arm-io/gfx-asc", False)
 
 from m1n1.trace.agx import AGXTracer
 AGXTracer = AGXTracer._reloadcls(True)
 
 agx_tracer = AGXTracer(hv, "/arm-io/gfx-asc", verbose=1)
-agx_tracer.trace_kernmap = True
-agx_tracer.trace_kernva = True
+agx_tracer.trace_kernmap = False
+agx_tracer.trace_kernva = False
 agx_tracer.trace_usermap = False
 
 sgx = hv.adt["/arm-io/sgx"]
 
-#voltages = [400, 634, 650, 668, 715, 778, 903]
-#freqs =    [0,    600, 600, 600, 1000, 1000, 1200]
-#voltages = [400, 500, 600, 700, 800, 900, 1000]
-freqs =    [0,    1200, 1200, 1200, 1200, 1200, 1200]
-freqs =    [0,    600, 700, 800, 900, 950, 1200]
-voltages = [400, 500, 600, 700, 800, 900, 1000]
-
-##freqs =    [0,    500, 600, 700, 800, 900, 1000]
-#freqs =    [0,    500, 500, 500, 1175, 1190, 1400]
-##freqs =    [0,    0, 200, 400, 600, 800, 2500]
-##freqs =    [0,    0, 1, 2, 1, 1, 1000]
-#voltages = [1000, 1000, 2000, 4000, 4000, 4000, 1000]
-##voltages = [1000, 10000, 1000, 1000, 1000, 1000, 1000]
-
-#freqs =    [0,    500, 600, 700, 800, 900, 1000]
-freqs =    [0,    500, 500, 500, 1175, 1190, 1400]
-#freqs =    [0,    0, 200, 400, 600, 800, 2500]
-#freqs =    [0,    0, 1, 2, 1, 1, 1000]
-voltages = [1000, 1000, 1414, 2000, 4000, 4000, 1000]
-#voltages = [1000, 10000, 1000, 1000, 1000, 1000, 1000]
-
-freqs =    [0, 0, 0, 0, 0, 0, 1000]
-voltages = [0, 0, 0, 0, 0, 0, 1000]
-
-"""
-F       V
-1500    1000    208000.0
-1000    1000    180293.0
-500     1000    98684.0
-0       1000    17069.0
-0       750     8169.0
-0       500     3842.0
-0       250     1377.0
-0       100     492.0
-0       4       91.0
-0       3       86.0
-0       2       86.0
-0       1       79.0
-0       0       0
-"""
-
-clusters = [
-    22716.0,
-    22745.0,
-    22712.0,
-    22659.0,
-
-    22395.0,
-    22384.0,
-    22344.0,
-    22338.0,
-]
+freqs =    []
+voltages = []
 
 for j in range(8):
     for i, v in enumerate(voltages):
