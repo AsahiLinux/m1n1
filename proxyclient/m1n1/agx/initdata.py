@@ -36,7 +36,30 @@ def build_iomappings(agx, chip_id):
             IOMapping(), #
             IOMapping(), #
         ]
-    elif chip_id in (0x6001, 0x6002):
+    elif chip_id == 0x8112:
+        return [
+            iomap(0x204d00000, 0x14000, 0x14000, 1), # Fender
+            iomap(0x20e100000, 0x4000, 0x4000, 0), # AICTimer
+            iomap(0x23b0c4000, 0x4000, 0x4000, 1), # AICSWInt
+            iomap(0x204000000, 0x20000, 0x20000, 1), # RGX
+            IOMapping(), # UVD
+            IOMapping(), # unused
+            IOMapping(), # DisplayUnderrunWA
+            iomap(0x23b2c0000, 0x1000, 0x1000, 0), # AnalogTempSensorControllerRegs
+            IOMapping(), # PMPDoorbell
+            iomap(0x204d80000, 0x8000, 0x8000, 1), # MetrologySensorRegs
+            iomap(0x204d61000, 0x1000, 0x1000, 1), # GMGIFAFRegs
+            iomap(0x200000000, 0xd6400, 0xd6400, 1), # MCache registers
+            IOMapping(), # AICBankedRegisters
+            IOMapping(), # PMGRScratch
+            IOMapping(), # NIA Special agent idle register die 0
+            IOMapping(), # NIA Special agent idle register die 1
+            iomap(0x204e00000, 0x10000, 0x10000, 0), # CRE registers
+            iomap(0x27d050000, 0x4000, 0x4000, 0), # Streaming codec registers
+            iomap(0x23b3d0000, 0x1000, 0x1000, 0), #
+            iomap(0x23b3c0000, 0x1000, 0x1000, 0), #
+        ]
+    elif chip_id in (0x6000, 0x6001, 0x6002):
         mcc_cnt = {0x6002: 16, 0x6001: 8, 0x6000: 4}
         return [
             iomap(0x404d00000, 0x1c000, 0x1c000, 1), # Fender
@@ -73,12 +96,14 @@ CHIP_INFO = {
         unk_924 = [[0] * 8] * 8,
         unk_e48 = [[0] * 8] * 8,
         unk_e24 = 112,
+        gpu_fast_die0_sensor_mask64 = 0x12,
         gpu_fast_die0_sensor_mask64_alt = 0x12,
         gpu_fast_die0_sensor_present = 0x01,
         shared1_tab = [
             -1, 0x7282, 0x50ea, 0x370a, 0x25be, 0x1c1f, 0x16fb
-        ] + ([-1] * 9),
-        shared2_tab = [0x800, 0x1555, -1, -1, -1, -1, -1, -1],
+        ] + ([-1] * 10),
+        shared1_a4 = 0xffff,
+        shared2_tab = [0x800, 0x1555, -1, -1, -1, -1, -1, -1, 0, 0],
         shared2_unk_508 = 0xc0007,
         unk_3cf4 = [1000.0, 0, 0, 0, 0, 0, 0, 0],
         unk_3d14 = [45.0, 0, 0, 0, 0, 0, 0, 0],
@@ -86,10 +111,12 @@ CHIP_INFO = {
         hwdb_4e0 = 0,
         hwdb_534 = 0,
         num_cores = 8,
-        hwdb_560 = 11,
-        hwdb_564 = 4,
+        gpu_core = 11,
+        gpu_rev = 4,
         hwdb_ab8 = 0x48,
         hwdb_abc = 0x8,
+        hwdb_b30 = 0,
+        rel_max_powers = [0, 19, 26, 38, 60, 87, 100],
     ),
     0x6001: Container(
         chip_id = 0x6001,
@@ -106,10 +133,12 @@ CHIP_INFO = {
             13, 13, 13, 13, 0, 0, 0, 0,
         ]],
         unk_e24 = 125,
+        gpu_fast_die0_sensor_mask64 = 0x80808080,
         gpu_fast_die0_sensor_mask64_alt = 0x90909090,
         gpu_fast_die0_sensor_present = 0x0f,
-        shared1_tab = [0] + ([0xffff] * 15),
-        shared2_tab = [-1, -1, -1, -1, 0x2aa, 0xaaa, -1, -1],
+        shared1_tab = [0] + ([0xffff] * 16),
+        shared1_a4 = 0xffff,
+        shared2_tab = [-1, -1, -1, -1, 0x2aa, 0xaaa, -1, -1, 0, 0],
         shared2_unk_508 = 0xcc00001,
         unk_3cf4 = [1314.0, 1330.0, 1314.0, 1288.0, 0, 0, 0, 0],
         unk_3d14 = [21.0, 21.0, 22.0, 21.0, 0, 0, 0, 0],
@@ -122,10 +151,12 @@ CHIP_INFO = {
         hwdb_4e0 = 4,
         hwdb_534 = 1,
         num_cores = 32,
-        hwdb_560 = 13,
-        hwdb_564 = 5,
+        gpu_core = 13,
+        gpu_rev = 5,
         hwdb_ab8 = 0x2084,
         hwdb_abc = 0x80,
+        hwdb_b30 = 0,
+        rel_max_powers = [0, 15, 20, 27, 36, 52, 100],
     ),
     0x6002: Container(
         chip_id = 0x6002,
@@ -143,10 +174,12 @@ CHIP_INFO = {
             13, 13, 13, 13, 13, 13, 13, 13,
         ]],
         unk_e24 = 125,
+        gpu_fast_die0_sensor_mask64 = 0x8080808080808080,
         gpu_fast_die0_sensor_mask64_alt = 0x9090909090909090,
         gpu_fast_die0_sensor_present = 0xff,
-        shared1_tab = [0] + ([0xffff] * 15),
-        shared2_tab = [-1, -1, -1, -1, 0x2aa, 0xaaa, -1, -1],
+        shared1_tab = [0] + ([0xffff] * 16),
+        shared1_a4 = 0xffff,
+        shared2_tab = [-1, -1, -1, -1, 0x2aa, 0xaaa, -1, -1, 0, 0],
         shared2_unk_508 = 0xcc00001,
         unk_3cf4 = [1244.0, 1260.0, 1242.0, 1214.0,
                     1072.0, 1066.0, 1044.0, 1042.0],
@@ -161,10 +194,48 @@ CHIP_INFO = {
         hwdb_4e0 = 4,
         hwdb_534 = 1,
         num_cores = 64,
-        hwdb_560 = 13,
-        hwdb_564 = 5,
+        gpu_core = 13,
+        gpu_rev = 5,
         hwdb_ab8 = 0x2084,
         hwdb_abc = 0x80,
+        hwdb_b30 = 0,
+        rel_max_powers = [0, 15, 19, 25, 34, 50, 100],
+    ),
+    0x8112: Container(
+        chip_id = 0x8112,
+        min_sram_volt = 780,
+        max_power = 22800,
+        max_freq_mhz = 1398,
+        unk_87c = 900,
+        unk_8cc = 11000,
+        unk_924 = [[
+            0.0, 0.0, 0.0, 0.0,
+            5.3, 0.0, 5.3, 6.6,
+        ]] + ([[0] * 8] * 7),
+        unk_e48 = [[
+            0.0, 0.0, 0.0, 0.0,
+            5.3, 0.0, 5.3, 6.6,
+        ]] + ([[0] * 8] * 7),
+        unk_e24 = 125,
+        gpu_fast_die0_sensor_mask64 = 0x6800,
+        gpu_fast_die0_sensor_mask64_alt = 0x6800,
+        gpu_fast_die0_sensor_present = 0x02,
+        shared1_tab = [0] + ([0xffff] * 16),
+        shared1_a4 = 0,
+        shared2_tab = [-1, -1, -1, -1, -1, -1, -1, -1, 0xaa5aa, 0],
+        shared2_unk_508 = 0xc00000,
+        unk_3cf4 = [1920.0, 0, 0, 0, 0, 0, 0, 0],
+        unk_3d14 = [74.0, 0, 0, 0, 0, 0, 0, 0],
+        unk_118ec = None,
+        hwdb_4e0 = 4,
+        hwdb_534 = 0,
+        num_cores = 10,
+        gpu_core = 15,
+        gpu_rev = 3,
+        hwdb_ab8 = 0x2048,
+        hwdb_abc = 0x4000,
+        hwdb_b30 = 1,
+        rel_max_powers = [0, 18, 27, 37, 52, 66, 82, 96, 100],
     ),
 }
 def build_initdata(agx):
@@ -191,7 +262,7 @@ def build_initdata(agx):
     regionB.stats_cp = agx.kobj.new_buf(0x980, "RegionB.unkptr_180").push()
 
     # size: 0x3b80, few floats, few ints, needed for init
-    regionB.hwdata_a = agx.kobj.new(AGXHWDataA(sgx, chip_info), track=False).push()
+    regionB.hwdata_a = agx.kobj.new(AGXHWDataA(sgx, chip_info), track=False)
 
     # size: 0x80, empty
     regionB.unk_190 = agx.kobj.new_buf(0x80, "RegionB.unkptr_190").push()
@@ -203,11 +274,12 @@ def build_initdata(agx):
     hwdata = agx.kobj.new(AGXHWDataB(sgx, chip_info), track=False)
     hwdata.io_mappings = build_iomappings(agx, chosen.chip_id)
 
-    # how is this computed?
-    perf_levels = [0, 19, 26, 38, 60, 87, 100]
     k = 1.02 #?
     count = sgx.perf_state_count
     table_count = sgx.perf_state_table_count
+    base_pstate = sgx.getprop("gpu-perf-base-pstate", 3)
+    base_freq = sgx.perf_states[base_pstate].freq
+    max_freq = sgx.perf_states[count - 1].freq
     for i in range(count):
         ps = sgx.perf_states[i]
         hwdata.frequencies[i] = ps.freq // 1000000
@@ -222,14 +294,10 @@ def build_initdata(agx):
 
         regionB.hwdata_a.unk_74[i] = k
         hwdata.unk_9b4[i] = k
-        hwdata.rel_max_powers[i] = perf_levels[i]
+        hwdata.rel_max_powers[i] = chip_info.rel_max_powers[i]
+        hwdata.rel_boost_freqs[i] = max(0, int((ps.freq - base_freq) / (max_freq - base_freq) * 100))
 
-    # Mac Mini t8103
-    #hwdata.rel_unk = [0, 0, 0, 0, 36, 73, 100] + [0]*9
-    # Mac Studio t6002
-    hwdata.rel_unk = [0, 0, 0, 0, 20, 50, 100] + [0]*9
-    # Macbook 14" t6001
-    #hwdata.rel_unk = [0, 0, 10, 28, 42, 64, 100] + [0]*9
+    regionB.hwdata_a.push()
 
     regionB.hwdata_b = hwdata.push()
     regionB.hwdata_b_addr2 = hwdata._addr
@@ -315,5 +383,5 @@ def build_initdata(agx):
     initdata.regionC.push()
     initdata.push()
 
-    print(initdata.val)
+    #print(InitData.parse_stream(agx.uat.iostream(0, initdata._addr)))
     return initdata
