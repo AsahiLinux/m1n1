@@ -154,6 +154,25 @@ DCBlockerConfig = Struct(
     "pad" / Hex(Int16ul),
 )
 
+SIODMAShimData = Struct(
+    "name" / FourCC,
+    "unk" / Hex(Int32ul)[8],
+)
+
+SIOMapRange = Struct(
+    "unk1" / FourCC,
+    "unk2" / Hex(Int32ul),
+    "unk3" / Hex(Int32ul),
+    "unk4" / Hex(Int32ul),
+    "unk5" / Hex(Int32ul),
+)
+
+SIODeviceType = Struct(
+    "id" / FourCC,
+    "unk1" / Hex(Int32ul),
+    "unk2" / Hex(Int32ul),
+)
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -235,6 +254,13 @@ DEV_PROPERTIES = {
     "*alc?/audio-leap-mic*": {
         "*": {
             "audio-stream-formatter": FourCC,
+        }
+    },
+    "sio": {
+        "*": {
+            "map-range": SIOMapRange,
+            "device-type": SafeGreedyRange(SIODeviceType),
+            "dmashim": SafeGreedyRange(SIODMAShimData),
         }
     }
 }
