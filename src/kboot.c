@@ -1506,6 +1506,61 @@ static int dt_vram_reserved_region(const char *dcp_alias, const char *disp_alias
                                    disp_reserved_regions_vram, &region, 1);
 }
 
+static int dt_reserve_asc_firmware(const char *adt_path, const char *fdt_path)
+{
+    int ret = 0;
+
+    int fdt_node = fdt_path_offset(dt, fdt_path);
+    if (fdt_node < 0) {
+        printf("DT: '%s' not found\n", fdt_path);
+        return 0;
+    }
+
+    int node = adt_path_offset(adt, adt_path);
+    if (node < 0)
+        bail("ADT: '%s' not found\n", adt_path);
+
+    uint32_t dev_phandle = fdt_get_phandle(dt, fdt_node);
+    if (!dev_phandle) {
+        ret = fdt_generate_phandle(dt, &dev_phandle);
+        if (!ret)
+            ret = fdt_setprop_u32(dt, fdt_node, "phandle", dev_phandle);
+        if (ret != 0)
+            bail("DT: couldn't set '%s.phandle' property: %d\n", fdt_path, ret);
+    }
+
+    const uint64_t *segments;
+    u32 segments_len;
+
+    segments = adt_getprop(adt, node, "segment-ranges", &segments_len);
+    unsigned int num_maps = segments_len / 32;
+
+    for (unsigned i = 0; i < num_maps; i++) {
+        u64 paddr = segments[0];
+        u64 iova = segments[2];
+        u32 size = segments[3];
+        segments += 4;
+
+        char node_name[64];
+        snprintf(node_name, sizeof(node_name), "asc-firmware@%lx", paddr);
+
+        int mem_node = dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", paddr, size);
+        if (mem_node < 0)
+            return ret;
+        uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
+
+        ret = dt_device_set_reserved_mem(mem_node, node_name, dev_phandle, iova, size);
+        if (ret < 0)
+            return ret;
+
+        ret = dt_device_add_mem_region(fdt_path, mem_phandle, NULL);
+        if (ret < 0)
+            return ret;
+    }
+
+    return 0;
+}
+
 static struct disp_mapping disp_reserved_regions_t8103[] = {
     {"region-id-50", "dcp_data", true, false, false},
     {"region-id-57", "region57", true, false, false},
