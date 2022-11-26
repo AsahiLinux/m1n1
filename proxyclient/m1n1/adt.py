@@ -268,6 +268,14 @@ SIODeviceType = Struct(
     "unk2" / Hex(Int32ul),
 )
 
+ASCSegmentRange = Struct(
+    "pa" / Hex(Int64ul),
+    "unk" / Hex(Int64ul),
+    "iova" / Hex(Int64ul),
+    "size" / Hex(Int32ul),
+    "flags" / Hex(Int32ul),
+)
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -468,6 +476,9 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
         # "interrupt-parent" has "interrupt-cells" = 2
         # parsing this correctly would require a second pass
         t = Array(len(v) // 4, Int32ul)
+
+    elif name == "segment-ranges":
+        t = SafeGreedyRange(ASCSegmentRange)
 
     if t is not None:
         v = Sequence(t, Terminated).parse(v)[0]
