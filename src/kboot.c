@@ -1593,6 +1593,9 @@ int kboot_prepare_dt(void *fdt)
     if (dt_disable_missing_devs("i2c", "i2c@", 8))
         return -1;
 
+    if (dt_reserve_asc_firmware("/arm-io/sio", "/soc/sio"))
+        return -1;
+
     if (fdt_pack(dt))
         bail("FDT: fdt_pack() failed\n");
 
