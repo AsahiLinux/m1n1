@@ -840,3 +840,7 @@ class Call:
         method.print_long_args(indent, self.in_vals, self.out_vals)
         #if len(method.out_fields) - (self.ret is not None):
             #print(self.out_vals)
+
+    def get_method(self):
+        cls, method = ALL_METHODS.get(self.msg, (None, None))
+        return method
