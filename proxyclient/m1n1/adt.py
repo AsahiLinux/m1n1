@@ -276,6 +276,17 @@ ASCSegmentRange = Struct(
     "flags" / Hex(Int32ul),
 )
 
+DMAChannelsData = Struct(
+    "channo" / Hex(Int32ul),
+    "datashape" / Hex(Int32ul),
+    "timeout" / Hex(Int32ul),
+    "limit" / Hex(Int32ul),
+    "threshold" / Hex(Int32ul),
+    "unk1" / Hex(Int32ul),
+    "unk2" / Hex(Int32ul),
+    "unk3" / Hex(Int32ul),
+)
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -476,6 +487,9 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
         # "interrupt-parent" has "interrupt-cells" = 2
         # parsing this correctly would require a second pass
         t = Array(len(v) // 4, Int32ul)
+
+    elif name == "dma-channels":
+        t = SafeGreedyRange(DMAChannelsData)
 
     elif name == "segment-ranges":
         t = SafeGreedyRange(ASCSegmentRange)
