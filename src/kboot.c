@@ -2019,6 +2019,8 @@ int kboot_prepare_dt(void *fdt)
         return -1;
     if (dt_disable_missing_devs("i2c", "i2c@", 8))
         return -1;
+    if (dt_reserve_asc_firmware("/arm-io/sio", "/soc/sio"))
+        return -1;
 #ifndef RELEASE
     if (dt_transfer_virtios())
         return 1;
