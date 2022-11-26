@@ -521,7 +521,7 @@ class GPURenderer:
             wc_3d.struct_1.unk_44_padding = bytes(0xac)
             wc_3d.struct_1.depth_bias_array = Start3DArrayAddr(cmdbuf.depth_bias_array)
             wc_3d.struct_1.scissor_array = Start3DArrayAddr(cmdbuf.scissor_array)
-            wc_3d.struct_1.unk_110 = 0x0
+            wc_3d.struct_1.visibility_result_buffer = 0x0
             wc_3d.struct_1.unk_118 = 0x0
             wc_3d.struct_1.unk_120 = [0] * 37
             wc_3d.struct_1.unk_reload_pipeline = Start3DClearPipelineBinding(
@@ -577,7 +577,7 @@ class GPURenderer:
             wc_3d.struct_2.aux_fb =  wc_3d.struct_1.aux_fb
             # ISP_ZLS_PIXELS
             wc_3d.struct_2.depth_dimensions = wc_3d.struct_1.depth_dimensions
-            wc_3d.struct_2.unk_48 = 0x0
+            wc_3d.struct_2.visibility_result_buffer = 0x0
             # ISP_ZLSCTL
             wc_3d.struct_2.depth_flags = cmdbuf.ds_flags
             wc_3d.struct_2.unk_58_g14_0 = 0x4040404

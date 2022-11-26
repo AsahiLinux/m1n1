@@ -221,7 +221,7 @@ class Start3DStruct1(ConstructClass):
         "unk_44_padding" / HexDump(Bytes(0xac)),
         "depth_bias_array" / Start3DArrayAddr,
         "scissor_array" / Start3DArrayAddr,
-        "unk_110" / Int64ul,
+        "visibility_result_buffer" / Int64ul,
         "unk_118" / Int64ul,
         "unk_120" / Array(37, Int64ul),
         "unk_reload_pipeline" / Start3DClearPipelineBinding,
@@ -272,7 +272,7 @@ class Start3DStruct2(ConstructClass):
         "depth_bias_array" / Int64ul,
         "aux_fb" / AuxFBInfo,
         "depth_dimensions" / Int64ul,
-        "unk_48" / Int64ul,
+        "visibility_result_buffer" / Int64ul,
         "depth_flags" / Int64ul, # 0x40000 - has stencil 0x80000 - has depth
         Ver("G >= G14", "unk_58_g14_0" / Int64ul),
         Ver("G >= G14", "unk_58_g14_8" / Int64ul),
