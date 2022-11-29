@@ -109,6 +109,7 @@ def chexundump(dump, base=0):
 
     decoded = bytearray()
     for line in dump.splitlines():
+        line = line.strip()
         if not line:
             continue
         try:
@@ -125,7 +126,7 @@ def chexundump(dump, base=0):
             decoded.extend([int(data[i:i+2], 16) for i \
                             in range(0, len(data), 2)])
         except (ValueError, TypeError) as exc:
-            raise ValueError(f"can't decode line: {line:r}") from exc
+            raise ValueError(f"can't decode line: {repr(line)}") from exc
 
     return decoded
 

@@ -1161,6 +1161,92 @@ err:
     return ret;
 }
 
+static int dt_reserve_asc_firmware(const char *adt_path, const char *fdt_path)
+{
+    int ret = 0;
+
+    int node = adt_path_offset(adt, adt_path);
+    if (node < 0)
+        bail("ADT: '%s' not found\n", adt_path);
+
+    uint32_t max_phandle;
+    ret = fdt_find_max_phandle(dt, &max_phandle);
+    if (ret)
+        bail_cleanup("DT: failed to get max phandle: %d\n", ret);
+
+    int fdt_node = fdt_path_offset(dt, fdt_path);
+    if (fdt_node < 0)
+        bail("DT: '%s' not found\n", fdt_path);
+    int dev_phandle = fdt_get_phandle(dt, fdt_node);
+
+    if (!dev_phandle) {
+        dev_phandle = ++max_phandle;
+        ret = fdt_setprop_u32(dt, fdt_node, "phandle", dev_phandle);
+        if (ret != 0)
+            bail_cleanup("DT: couldn't set '%s.phandle' property: %d\n", fdt_path, ret);
+    }
+
+    const uint64_t *segments;
+    u32 segments_len;
+
+    segments = adt_getprop(adt, node, "segment-ranges", &segments_len);
+    unsigned int num_maps = segments_len / 32;
+
+    for (unsigned i = 0; i < num_maps; i++) {
+        u64 paddr = segments[0];
+        u64 iova = segments[2];
+        u32 size = segments[3];
+        segments += 4;
+
+        int resv_node = fdt_path_offset(dt, "/reserved-memory");
+        if (resv_node < 0)
+            bail_cleanup("DT: '/reserved-memory' not found\n");
+
+        char node_name[64];
+        snprintf(node_name, sizeof(node_name), "asc-firmware@%lx", paddr);
+        int mem_node = fdt_add_subnode(dt, resv_node, node_name);
+        if (mem_node < 0)
+            bail_cleanup("DT: failed to add '/reserved-memory/%s': %d\n", node_name, mem_node);
+
+        uint32_t mem_phandle = ++max_phandle;
+        ret = fdt_setprop_u32(dt, mem_node, "phandle", mem_phandle);
+        if (ret != 0)
+            bail_cleanup("DT: couldn't set '%s.phandle' property: %d\n", node_name, ret);
+
+        u64 reg[2] = {cpu_to_fdt64(paddr), cpu_to_fdt64(size)};
+        ret = fdt_setprop(dt, mem_node, "reg", reg, sizeof(reg));
+        if (ret != 0)
+            bail_cleanup("DT: couldn't set '%s.reg' property: %d\n", node_name, ret);
+
+        ret = fdt_setprop_empty(dt, mem_node, "no-map");
+        if (ret != 0)
+            bail_cleanup("DT: couldn't set '%s.no-map' property: %d\n", node_name, ret);
+
+        ret = fdt_appendprop_u32(dt, mem_node, "iommu-addresses", dev_phandle);
+        if (ret != 0)
+            bail_cleanup("DT: could not append phandle '%s.compatible' property: %d\n", node_name, ret);
+
+        ret = fdt_appendprop_u64(dt, mem_node, "iommu-addresses", iova);
+        if (ret != 0)
+            bail_cleanup("DT: could not append iova to '%s.iommu-addresses' property: %d\n", node_name, ret);
+
+        ret = fdt_appendprop_u64(dt, mem_node, "iommu-addresses", size);
+        if (ret != 0)
+            bail_cleanup("DT: could not append size to '%s.iommu-addresses' property: %d\n", node_name, ret);
+        
+        fdt_node = fdt_path_offset(dt, fdt_path);
+        if (fdt_node < 0)
+            bail_cleanup("DT: '%s' not found\n", fdt_path);
+
+        ret = fdt_appendprop_u32(dt, fdt_node, "memory-region", mem_phandle);
+        if (ret != 0)
+            bail_cleanup("DT: failed to append to 'memory-region' property\n");
+    }
+
+err:
+    return ret;
+}
+
 static struct disp_mapping disp_reserved_regions_t8103[] = {
     {"region-id-50", "dcp_data", true, false, false},
     {"region-id-57", "region57", true, false, false},
@@ -1531,6 +1617,9 @@ int kboot_prepare_dt(void *fdt)
     if (dt_disable_missing_devs("usb-drd", "usb@", 8))
         return -1;
     if (dt_disable_missing_devs("i2c", "i2c@", 8))
+        return -1;
+
+    if (dt_reserve_asc_firmware("/arm-io/sio", "/soc/sio"))
         return -1;
 
     if (fdt_pack(dt))
