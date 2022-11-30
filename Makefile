@@ -102,7 +102,7 @@ OBJECTS := \
 	i2c.o \
 	iodev.o \
 	iova.o \
-	kboot.o kboot_gpu.o \
+	kboot.o \
 	main.o \
 	mcc.o \
 	memory.o memory_asm.o \
@@ -130,6 +130,7 @@ OBJECTS := \
 	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS) $(RUST_LIBS)
 
 FP_OBJECTS := \
+	kboot_gpu.o \
 	math/expf.o \
 	math/exp2f_data.o \
 

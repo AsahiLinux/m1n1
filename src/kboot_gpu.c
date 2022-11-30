@@ -3,6 +3,8 @@
 #include "kboot.h"
 #include "adt.h"
 #include "assert.h"
+#include "math.h"
+#include "pmgr.h"
 #include "soc.h"
 #include "utils.h"
 
@@ -22,28 +24,96 @@ struct perf_state {
     u32 volt;
 };
 
+static int get_core_counts(u32 *count, u32 nclusters, u32 ncores)
+{
+    u64 base;
+    pmgr_adt_power_enable("/arm-io/sgx");
+
+    int adt_sgx_path[8];
+    if (adt_path_offset_trace(adt, "/arm-io/sgx", adt_sgx_path) < 0)
+        bail("ADT: GPU: Failed to get sgx\n");
+
+    if (adt_get_reg(adt, adt_sgx_path, "reg", 0, &base, NULL) < 0)
+        bail("ADT: GPU: Failed to get sgx reg 0\n");
+
+    u32 cores_lo = read32(base + 0xd01500);
+    u32 cores_hi = read32(base + 0xd01514);
+
+    u64 cores = (((u64)cores_hi) << 32) | cores_lo;
+
+    for (u32 i = 0; i < nclusters; i++) {
+        count[i] = __builtin_popcount(cores & MASK(ncores));
+        cores >>= ncores;
+    }
+
+    return 0;
+}
+
+static void adjust_leakage(float *val, u32 clusters, u32 *cores, u32 max, float uncore_fraction)
+{
+    for (u32 i = 0; i < clusters; i++) {
+        float uncore = val[i] * uncore_fraction;
+        float core = val[i] - uncore;
+
+        val[i] = uncore + (cores[i] / (float)max) * core;
+    }
+}
+
+static void load_fuses(float *out, u32 count, u64 base, u32 start, u32 width, float scale,
+                       float offset, bool flip)
+{
+    for (u32 i = 0; i < count; i++) {
+        base += (start / 32) * 4;
+        start &= 31;
+
+        u32 low = read32(base);
+        u32 high = read32(base + 4);
+        u32 val = (((((u64)high) << 32) | low) >> start) & MASK(width);
+
+        float fval = (float)val * scale + offset;
+
+        if (flip)
+            out[count - i - 1] = fval;
+        else
+            out[i] = fval;
+
+        start += width;
+    }
+}
+
 static u32 t8103_pwr_scale[] = {0, 63, 80, 108, 150, 198, 210};
 
 // TODO this isn't a static table any more
 static u32 t8112_pwr_scale[] = {0, 66, 92, 119, 153, 184, 214, 240, 240};
 
-static int calc_power_t81xx(int sgx, u32 count, u32 table_count,
-                            const struct perf_state *perf_states, u32 *max_pwr)
+static int calc_power_t81xx(u32 count, u32 table_count, const struct perf_state *core,
+                            const struct perf_state *sram, u32 *max_pwr, float *core_leak,
+                            float *sram_leak)
 {
-    UNUSED(sgx);
+    UNUSED(sram);
+    UNUSED(core_leak);
+    UNUSED(sram_leak);
     u32 *pwr_scale;
     u32 pwr_scale_count;
+    u32 core_count;
+    u32 max_cores;
 
     switch (chip_id) {
         case T8103:
             pwr_scale = t8103_pwr_scale;
             pwr_scale_count = ARRAY_SIZE(t8103_pwr_scale);
+            max_cores = 8;
             break;
         case T8112:
             pwr_scale = t8112_pwr_scale;
             pwr_scale_count = ARRAY_SIZE(t8112_pwr_scale);
             break;
+        default:
+            bail("ADT: GPU: Unsupported chip\n");
     }
+
+    if (get_core_counts(&core_count, 1, max_cores))
+        return -1;
 
     if (table_count != 1)
         bail("ADT: GPU: expected 1 perf state table but got %d\n", table_count);
@@ -52,19 +122,31 @@ static int calc_power_t81xx(int sgx, u32 count, u32 table_count,
         bail("ADT: GPU: expected %d perf states but got %d\n", pwr_scale_count, count);
 
     for (u32 i = 0; i < pwr_scale_count; i++)
-        max_pwr[i] = (u32)perf_states[i].volt * (u32)pwr_scale[i] * 100;
+        max_pwr[i] = (u32)core[i].volt * (u32)pwr_scale[i] * 100;
+
+    core_leak[0] = 1000.0;
+    sram_leak[0] = 45.0;
+
+    adjust_leakage(core_leak, 1, &core_count, max_cores, 0.12);
+    adjust_leakage(sram_leak, 1, &core_count, max_cores, 0.2);
 
     return 0;
 }
 
-// TODO
-static u32 t6000_pwr_scale[] = {0, 15, 19, 25, 34, 50, 100};
-
-static int calc_power_t600x(int sgx, u32 count, u32 table_count,
-                            const struct perf_state *perf_states, u32 *max_pwr)
+static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state *core,
+                            const struct perf_state *sram, u32 *max_pwr, float *core_leak,
+                            float *sram_leak)
 {
-    UNUSED(sgx);
-    UNUSED(perf_states);
+    const float s_sram = 4.3547606;
+    const float k_sram = 0.024927923;
+
+    // macOS difference: macOS uses a misbehaved piecewise function here
+    // Since it's obviously wrong, let's just use only the first component
+    const float s_core = 1.48461742;
+    const float k_core = 0.39013552;
+
+    const float dk_core = 8.558;
+    const float dk_sram = 0.05;
 
     u32 nclusters = 0;
     switch (chip_id) {
@@ -79,16 +161,64 @@ static int calc_power_t600x(int sgx, u32 count, u32 table_count,
             break;
     }
 
-    u32 pwr_scale_count = ARRAY_SIZE(t6000_pwr_scale);
+    u32 core_count[MAX_CLUSTERS];
+
+    if (get_core_counts(core_count, nclusters, 8))
+        return -1;
+
+    load_fuses(core_leak + 0, min(4, nclusters), 0x2922bc1b8, 25, 13, 2, 2, false);
+    load_fuses(sram_leak + 0, min(4, nclusters), 0x2922bc1cc, 4, 9, 1, 1, false);
+
+    if (nclusters == 8) {
+        load_fuses(core_leak + 4, 4, 0x22922bc1b8, 25, 13, 2, 2, true);
+        load_fuses(sram_leak + 4, 4, 0x22922bc1cc, 4, 9, 1, 1, true);
+    }
+
+    printf("FDT: GPU: Core counts: ");
+    for (u32 i = 0; i < nclusters; i++) {
+        printf("%d ", core_count[i]);
+    }
+    printf("\n");
+
+    adjust_leakage(core_leak, nclusters, core_count, 8, 0.0825);
+    adjust_leakage(sram_leak, nclusters, core_count, 8, 0.2247);
 
     if (table_count != nclusters)
         bail("ADT: GPU: expected %d perf state tables but got %d\n", nclusters, table_count);
 
-    if (count != pwr_scale_count)
-        bail("ADT: GPU: expected %d perf states but got %d\n", pwr_scale_count, count);
+    max_pwr[0] = 0;
 
-    for (u32 i = 0; i < pwr_scale_count; i++) {
-        max_pwr[i] = t6000_pwr_scale[i] * 1667430 * nclusters / 8;
+    for (u32 i = 1; i < count; i++) {
+        u32 total_mw = 0;
+
+        for (u32 j = 0; j < nclusters; j++) {
+            // macOS difference: macOS truncates Hz to integer MHz before doing this math.
+            // That's probably wrong, so let's not do that.
+
+            float mw = 0;
+            size_t idx = j * count + i;
+
+            mw += sram[idx].volt / 1000.f * sram_leak[j] * k_sram *
+                  expf(sram[idx].volt / 1000.f * s_sram);
+            mw += core[idx].volt / 1000.f * core_leak[j] * k_core *
+                  expf(core[idx].volt / 1000.f * s_core);
+
+            float sbase = sram[idx].volt / 750.f;
+            float sram_v_p = sbase * sbase * sbase;
+            mw += dk_sram * (sram[idx].freq / 1000000.f) * sram_v_p;
+
+            float cbase = core[idx].volt / 750.f;
+            float core_v_p;
+            if (core[idx].volt > 750)
+                core_v_p = cbase * cbase * cbase; // v ^ 3
+            else
+                core_v_p = cbase * cbase; // v ^ 2
+            mw += dk_core * (core[idx].freq / 1000000.f) * core_v_p;
+
+            total_mw += mw;
+        }
+
+        max_pwr[i] = total_mw * 1000;
     }
 
     return 0;
@@ -122,10 +252,31 @@ static int dt_set_region(void *dt, int sgx, const char *name, const char *path)
     return 0;
 }
 
+int fdt_set_float_array(void *dt, int node, const char *name, float *val, int count)
+{
+    fdt32_t data[MAX_CLUSTERS];
+
+    if (count > MAX_CLUSTERS)
+        bail("FDT: GPU: fdt_set_float_array() with too many values\n");
+
+    memcpy(data, val, sizeof(float) * count);
+    for (int i = 0; i < count; i++) {
+        data[i] = cpu_to_fdt32(data[i]);
+    }
+
+    if (fdt_setprop_inplace(dt, node, name, data, sizeof(u32) * count))
+        bail("FDT: GPU: Failed to set %s\n", name);
+
+    return 0;
+}
+
 int dt_set_gpu(void *dt)
 {
-    int (*calc_power)(int sgx, u32 count, u32 table_count, const struct perf_state *perf,
-                      u32 *max_pwr);
+    int (*calc_power)(u32 count, u32 table_count, const struct perf_state *perf,
+                      const struct perf_state *sram, u32 *max_pwr, float *core_leak,
+                      float *sram_leak);
+
+    printf("FDT: GPU: Initializing GPU info\n");
 
     switch (chip_id) {
         case T8103:
@@ -177,16 +328,44 @@ int dt_set_gpu(void *dt)
         bail("ADT: GPU: perf-state-table-count too large\n");
 
     u32 perf_states_len;
-    const struct perf_state *perf_states;
+    const struct perf_state *perf_states, *perf_states_sram;
 
     perf_states = adt_getprop(adt, sgx, "perf-states", &perf_states_len);
     if (!perf_states ||
         perf_states_len != sizeof(*perf_states) * perf_state_count * perf_state_table_count)
         bail("ADT: GPU: invalid perf-states length\n");
 
-    u32 max_pwr[MAX_PSTATES];
+    perf_states_sram = adt_getprop(adt, sgx, "perf-states-sram", &perf_states_len);
+    if (perf_states_sram &&
+        perf_states_len != sizeof(*perf_states) * perf_state_count * perf_state_table_count)
+        bail("ADT: GPU: invalid perf-states-sram length\n");
 
-    if (calc_power(sgx, perf_state_count, perf_state_table_count, perf_states, max_pwr))
+    u32 max_pwr[MAX_PSTATES];
+    float core_leak[MAX_CLUSTERS];
+    float sram_leak[MAX_CLUSTERS];
+
+    if (calc_power(perf_state_count, perf_state_table_count, perf_states, perf_states_sram, max_pwr,
+                   core_leak, sram_leak))
+        return -1;
+
+    printf("FDT: GPU: Max power table: ");
+    for (u32 i = 0; i < perf_state_count; i++) {
+        printf("%d ", max_pwr[i]);
+    }
+    printf("\nFDT: GPU: Core leakage table: ");
+    for (u32 i = 0; i < perf_state_table_count; i++) {
+        printf("%d.%03d ", (int)core_leak[i], ((int)(core_leak[i] * 1000) % 1000));
+    }
+    printf("\nFDT: GPU: SRAM leakage table: ");
+    for (u32 i = 0; i < perf_state_table_count; i++) {
+        printf("%d.%03d ", (int)sram_leak[i], ((int)(sram_leak[i] * 1000) % 1000));
+    }
+    printf("\n");
+
+    if (fdt_set_float_array(dt, gpu, "apple,core-leak-coef", core_leak, perf_state_table_count))
+        return -1;
+
+    if (fdt_set_float_array(dt, gpu, "apple,sram-leak-coef", sram_leak, perf_state_table_count))
         return -1;
 
     u32 i = 0;
