@@ -83,10 +83,7 @@ static void load_fuses(float *out, u32 count, u64 base, u32 start, u32 width, fl
 
 static u32 t8103_pwr_scale[] = {0, 63, 80, 108, 150, 198, 210};
 
-// TODO this isn't a static table any more
-static u32 t8112_pwr_scale[] = {0, 66, 92, 119, 153, 184, 214, 240, 240};
-
-static int calc_power_t81xx(u32 count, u32 table_count, const struct perf_state *core,
+static int calc_power_t8103(u32 count, u32 table_count, const struct perf_state *core,
                             const struct perf_state *sram, u32 *max_pwr, float *core_leak,
                             float *sram_leak)
 {
@@ -103,10 +100,6 @@ static int calc_power_t81xx(u32 count, u32 table_count, const struct perf_state 
             pwr_scale = t8103_pwr_scale;
             pwr_scale_count = ARRAY_SIZE(t8103_pwr_scale);
             max_cores = 8;
-            break;
-        case T8112:
-            pwr_scale = t8112_pwr_scale;
-            pwr_scale_count = ARRAY_SIZE(t8112_pwr_scale);
             break;
         default:
             bail("ADT: GPU: Unsupported chip\n");
@@ -137,42 +130,66 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
                             const struct perf_state *sram, u32 *max_pwr, float *core_leak,
                             float *sram_leak)
 {
-    const float s_sram = 4.3547606;
-    const float k_sram = 0.024927923;
-
-    // macOS difference: macOS uses a misbehaved piecewise function here
-    // Since it's obviously wrong, let's just use only the first component
-    const float s_core = 1.48461742;
-    const float k_core = 0.39013552;
-
-    const float dk_core = 8.558;
-    const float dk_sram = 0.05;
+    float s_sram, k_sram, s_core, k_core;
+    float dk_core, dk_sram;
+    float imax = 1000;
 
     u32 nclusters = 0;
-    switch (chip_id) {
-        case T6000:
-            nclusters = 2;
-            break;
-        case T6001:
-            nclusters = 4;
-            break;
-        case T6002:
-            nclusters = 8;
-            break;
-    }
-
+    u32 ncores = 0;
     u32 core_count[MAX_CLUSTERS];
 
-    if (get_core_counts(core_count, nclusters, 8))
-        return -1;
+    bool simple_exps = false;
+    bool adjust_leakages = true;
 
-    load_fuses(core_leak + 0, min(4, nclusters), 0x2922bc1b8, 25, 13, 2, 2, false);
-    load_fuses(sram_leak + 0, min(4, nclusters), 0x2922bc1cc, 4, 9, 1, 1, false);
+    switch (chip_id) {
+        case T6002:
+            nclusters += 4;
+            load_fuses(core_leak + 4, 4, 0x22922bc1b8, 25, 13, 2, 2, true);
+            load_fuses(sram_leak + 4, 4, 0x22922bc1cc, 4, 9, 1, 1, true);
+            // fallthrough
+        case T6001:
+            nclusters += 2;
+        case T6000:
+            nclusters += 2;
+            load_fuses(core_leak + 0, min(4, nclusters), 0x2922bc1b8, 25, 13, 2, 2, false);
+            load_fuses(sram_leak + 0, min(4, nclusters), 0x2922bc1cc, 4, 9, 1, 1, false);
 
-    if (nclusters == 8) {
-        load_fuses(core_leak + 4, 4, 0x22922bc1b8, 25, 13, 2, 2, true);
-        load_fuses(sram_leak + 4, 4, 0x22922bc1cc, 4, 9, 1, 1, true);
+            s_sram = 4.3547606;
+            k_sram = 0.024927923;
+            // macOS difference: macOS uses a misbehaved piecewise function here
+            // Since it's obviously wrong, let's just use only the first component
+            s_core = 1.48461742;
+            k_core = 0.39013552;
+            dk_core = 8.558;
+            dk_sram = 0.05;
+
+            ncores = 8;
+            adjust_leakages = true;
+            imax = 26.0;
+            break;
+        case T8112:
+            nclusters = 1;
+            load_fuses(core_leak, 1, 0x23d2c84dc, 30, 13, 2, 2, false);
+            load_fuses(sram_leak, 1, 0x23d2c84b0, 15, 9, 1, 1, false);
+
+            s_sram = 3.61619841;
+            k_sram = 0.0529281;
+            // macOS difference: macOS uses a misbehaved piecewise function here
+            // Since it's obviously wrong, let's just use only the first component
+            s_core = 1.21356187;
+            k_core = 0.43328839;
+            dk_core = 9.83196;
+            dk_sram = 0.07828;
+
+            simple_exps = true;
+            ncores = 10;
+            adjust_leakages = false; // pre-adjusted?
+            imax = 24.0;
+            break;
     }
+
+    if (get_core_counts(core_count, nclusters, ncores))
+        return -1;
 
     printf("FDT: GPU: Core counts: ");
     for (u32 i = 0; i < nclusters; i++) {
@@ -180,8 +197,10 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
     }
     printf("\n");
 
-    adjust_leakage(core_leak, nclusters, core_count, 8, 0.0825);
-    adjust_leakage(sram_leak, nclusters, core_count, 8, 0.2247);
+    if (adjust_leakages) {
+        adjust_leakage(core_leak, nclusters, core_count, ncores, 0.0825);
+        adjust_leakage(sram_leak, nclusters, core_count, ncores, 0.2247);
+    }
 
     if (table_count != nclusters)
         bail("ADT: GPU: expected %d perf state tables but got %d\n", nclusters, table_count);
@@ -204,16 +223,23 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
                   expf(core[idx].volt / 1000.f * s_core);
 
             float sbase = sram[idx].volt / 750.f;
-            float sram_v_p = sbase * sbase * sbase;
+            float sram_v_p;
+            if (simple_exps)
+                sram_v_p = sbase * sbase; // v ^ 2
+            else
+                sram_v_p = sbase * sbase * sbase; // v ^ 3
             mw += dk_sram * (sram[idx].freq / 1000000.f) * sram_v_p;
 
             float cbase = core[idx].volt / 750.f;
             float core_v_p;
-            if (core[idx].volt > 750)
-                core_v_p = cbase * cbase * cbase; // v ^ 3
-            else
+            if (simple_exps || core[idx].volt < 750)
                 core_v_p = cbase * cbase; // v ^ 2
+            else
+                core_v_p = cbase * cbase * cbase; // v ^ 3
             mw += dk_core * (core[idx].freq / 1000000.f) * core_v_p;
+
+            if (mw > imax * core[idx].volt)
+                mw = imax * core[idx].volt;
 
             total_mw += mw;
         }
@@ -280,12 +306,12 @@ int dt_set_gpu(void *dt)
 
     switch (chip_id) {
         case T8103:
-        case T8112:
-            calc_power = calc_power_t81xx;
+            calc_power = calc_power_t8103;
             break;
         case T6000:
         case T6001:
         case T6002:
+        case T8112:
             calc_power = calc_power_t600x;
             break;
         default:
