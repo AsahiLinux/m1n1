@@ -33,13 +33,15 @@ CLANG_FORMAT := clang-format
 EXTRA_CFLAGS ?= -Wstack-usage=1024
 endif
 
-CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
+BASE_CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-Werror=implicit-function-declaration -Werror=implicit-int \
 	-Wsign-compare -Wunused-parameter -Wno-multichar \
 	-ffreestanding -fpic -ffunction-sections -fdata-sections \
 	-nostdinc -isystem $(shell $(CC) -print-file-name=include) -isystem sysinc \
-	-fno-stack-protector -mgeneral-regs-only -mstrict-align -march=armv8.2-a \
+	-fno-stack-protector -mstrict-align -march=armv8.2-a \
 	$(EXTRA_CFLAGS)
+
+CFLAGS := $(BASE_CFLAGS) -mgeneral-regs-only
 
 CFG :=
 ifeq ($(RELEASE),1)
@@ -127,7 +129,13 @@ OBJECTS := \
 	wdt.o \
 	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS) $(RUST_LIBS)
 
+FP_OBJECTS := \
+	math/expf.o \
+	math/exp2f_data.o \
+
 BUILD_OBJS := $(patsubst %,build/%,$(OBJECTS))
+BUILD_FP_OBJS := $(patsubst %,build/%,$(FP_OBJECTS))
+BUILD_ALL_OBJS := $(BUILD_OBJS) $(BUILD_FP_OBJS)
 NAME := m1n1
 TARGET := m1n1.macho
 TARGET_RAW := m1n1.bin
@@ -139,7 +147,7 @@ all: update_tag update_cfg build/$(TARGET) build/$(TARGET_RAW)
 clean:
 	rm -rf build/*
 format:
-	$(CLANG_FORMAT) -i src/*.c src/*.h sysinc/*.h
+	$(CLANG_FORMAT) -i src/*.c src/math/*.c src/*.h src/math/*.h sysinc/*.h
 format-check:
 	$(CLANG_FORMAT) --dry-run --Werror src/*.c src/*.h sysinc/*.h
 rustfmt:
@@ -160,6 +168,12 @@ build/%.o: src/%.S
 	@mkdir -p "$(dir $@)"
 	@$(AS) -c $(CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
 
+$(BUILD_FP_OBJS): build/%.o: src/%.c
+	@echo "  CC[FP]  $@"
+	@mkdir -p $(DEPDIR)
+	@mkdir -p "$(dir $@)"
+	@$(CC) -c $(BASE_CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
+
 build/%.o: src/%.c
 	@echo "  CC    $@"
 	@mkdir -p $(DEPDIR)
@@ -170,13 +184,13 @@ build/%.o: src/%.c
 invoke_cc:
 	@$(CC) -c $(CFLAGS) -Isrc -o $(OBJFILE) $(CFILE)
 
-build/$(NAME).elf: $(BUILD_OBJS) m1n1.ld
+build/$(NAME).elf: $(BUILD_ALL_OBJS) m1n1.ld
 	@echo "  LD    $@"
-	@$(LD) -T m1n1.ld $(LDFLAGS) -o $@ $(BUILD_OBJS)
+	@$(LD) -T m1n1.ld $(LDFLAGS) -o $@ $(BUILD_ALL_OBJS)
 
-build/$(NAME)-raw.elf: $(BUILD_OBJS) m1n1-raw.ld
+build/$(NAME)-raw.elf: $(BUILD_ALL_OBJS) m1n1-raw.ld
 	@echo "  LDRAW $@"
-	@$(LD) -T m1n1-raw.ld $(LDFLAGS) -o $@ $(BUILD_OBJS)
+	@$(LD) -T m1n1-raw.ld $(LDFLAGS) -o $@ $(BUILD_ALL_OBJS)
 
 build/$(NAME).macho: build/$(NAME).elf
 	@echo "  MACHO $@"
