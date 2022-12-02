@@ -367,8 +367,8 @@ class GPURenderer:
         work.add(tvb_tilemap)
 
         # rogue: 0x180 * 4?
-        #tvb_heapmeta_size = 0x200
-        tvb_heapmeta_size = 0x600
+        tvb_heapmeta_size = 0x200
+        #tvb_heapmeta_size = 0x600
         tvb_heapmeta = ctx.uobj.new_buf(tvb_heapmeta_size, "TVB Heap Meta", track=False).push()
         work.add(tvb_heapmeta)
 
