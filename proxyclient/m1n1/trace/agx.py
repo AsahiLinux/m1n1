@@ -320,6 +320,16 @@ class SGXTracer(ADTDevTracer):
 
         return val
 
+    def hook_w(self, addr, val, width, **kwargs):
+        if isinstance(val, (list, tuple)):
+            xval = list(map(hex, val))
+        else:
+            xval = hex(val)
+
+        self.log(f"HOOK: {addr:#x}:{width} = {xval}")
+
+        super().hook_w(addr, val, width, **kwargs)
+
 class AGXTracer(ASCTracer):
     ENDPOINTS = {
         0x20: PongEp,
