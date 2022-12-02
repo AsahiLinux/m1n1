@@ -106,16 +106,13 @@ class ChannelTracer(Reloadable):
 
         self.channel = Channel(self.u, self.uat, self.info, channelRings[index], base=base,
                                state_fields=self.STATE_FIELDS)
-        for addr, size in self.channel.st_maps:
-            self.log(f"st_map {addr:#x} ({size:#x})")
         for i in range(self.ring_count):
             for addr, size in self.channel.rb_maps[i]:
                 self.log(f"rb_map[{i}] {addr:#x} ({size:#x})")
 
         self.set_active(self.state.active)
 
-    def state_read(self, evt, regmap=None, prefix=None):
-        off = evt.addr - self.channel.state_phys
+    def state_read(self, evt, regmap=None, prefix=None, off=None):
         ring = off // 0x30
         off = off % 0x30
 
@@ -133,8 +130,7 @@ class ChannelTracer(Reloadable):
             if self.verbose:
                 self.log(f"RD [{evt.addr:#x}] UNK[{ring}] {off:#x} = {evt.data:#x}")
 
-    def state_write(self, evt, regmap=None, prefix=None):
-        off = evt.addr - self.channel.state_phys
+    def state_write(self, evt, regmap=None, prefix=None, off=None):
         ring = off // 0x30
         off = off % 0x30
 
@@ -187,16 +183,20 @@ class ChannelTracer(Reloadable):
                     self.state.tail[ring] = self.channel.state[ring].WRITE_PTR.val
 
             for base in range(0, 0x30 * self.ring_count, 0x30):
-                self.hv.add_tracer(irange(self.channel.state_phys + base + self.RPTR, 4),
+                p = self.uat.iotranslate(0, self.channel.state_addr + base + self.RPTR, 4)[0][0]
+                self.hv.add_tracer(irange(p, 4),
                                    f"ChannelTracer/{self.name}",
                                    mode=TraceMode.SYNC,
                                    read=self.state_read,
-                                   write=self.state_write)
-                self.hv.add_tracer(irange(self.channel.state_phys + base + self.WPTR, 4),
+                                   write=self.state_write,
+                                   off=base + self.RPTR)
+                p = self.uat.iotranslate(0, self.channel.state_addr + base + self.WPTR, 4)[0][0]
+                self.hv.add_tracer(irange(p, 4),
                                    f"ChannelTracer/{self.name}",
                                    mode=TraceMode.SYNC,
                                    read=self.state_read,
-                                   write=self.state_write)
+                                   write=self.state_write,
+                                   off=base + self.WPTR)
         else:
             self.hv.clear_tracers(f"ChannelTracer/{self.name}")
         self.state.active = active

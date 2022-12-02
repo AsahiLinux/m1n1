@@ -333,7 +333,7 @@ class UAT(Reloadable):
         return UatStream(self, ctx, base, recurse)
 
     # A read/write register interface like proxy/utils objects that can be used by RegMap
-    def ioaccessor(self, ctx, base):
+    def ioaccessor(self, ctx):
         return UatAccessor(self, ctx)
 
     def iomap(self, ctx, addr, size, **flags):

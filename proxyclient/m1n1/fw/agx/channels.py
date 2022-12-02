@@ -423,9 +423,8 @@ class Channel(Reloadable):
         self.ring_defs = ring_defs
         self.info = info
 
-        self.st_maps = uat.iotranslate(0, info.state_addr, state_fields._SIZE * len(ring_defs))
-        assert len(self.st_maps) == 1
-        self.state_phys = self.st_maps[0][0]
+        self.accessor = uat.ioaccessor(0)
+        self.state_addr = info.state_addr
         self.state = []
         self.rb_base = []
         self.rb_maps = []
@@ -437,7 +436,7 @@ class Channel(Reloadable):
         for i, (msg, size, count) in enumerate(ring_defs):
             assert msg.sizeof() == size
 
-            self.state.append(state_fields(self.u, self.state_phys + 0x30 * i))
+            self.state.append(state_fields(self.accessor, self.state_addr + 0x30 * i))
             m = uat.iotranslate(0, p, size * count)
             self.rb_base.append(p)
             self.rb_maps.append(m)
