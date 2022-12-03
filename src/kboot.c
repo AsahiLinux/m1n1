@@ -986,6 +986,46 @@ static int dt_device_set_reserved_mem(int node, dart_dev_t *dart, const char *na
     return 0;
 }
 
+static int dt_get_or_add_reserved_mem(const char *node_name, u64 paddr, size_t size)
+{
+    int ret;
+    int resv_node = fdt_path_offset(dt, "/reserved-memory");
+    if (resv_node < 0)
+        bail("DT: '/reserved-memory' not found\n");
+
+    int node = fdt_subnode_offset(dt, resv_node, node_name);
+    if (node >= 0)
+        return node;
+
+    node = fdt_add_subnode(dt, resv_node, node_name);
+    if (node < 0)
+        bail("DT: failed to add node '%s' to  '/reserved-memory'\n", node_name);
+
+    uint32_t phandle;
+    ret = fdt_generate_phandle(dt, &phandle);
+    if (ret)
+        bail("DT: failed to generate phandle: %d\n", ret);
+
+    ret = fdt_setprop_u32(dt, node, "phandle", phandle);
+    if (ret != 0)
+        bail("DT: couldn't set '%s.phandle' property: %d\n", node_name, ret);
+
+    u64 reg[2] = {cpu_to_fdt64(paddr), cpu_to_fdt64(size)};
+    ret = fdt_setprop(dt, node, "reg", reg, sizeof(reg));
+    if (ret != 0)
+        bail("DT: couldn't set '%s.reg' property: %d\n", node_name, ret);
+
+    ret = fdt_setprop_string(dt, node, "compatible", "apple,resv-mem");
+    if (ret != 0)
+        bail("DT: couldn't set '%s.compatible' property: %d\n", node_name, ret);
+
+    ret = fdt_setprop_empty(dt, node, "no-map");
+    if (ret != 0)
+        bail("DT: couldn't set '%s.no-map' property: %d\n", node_name, ret);
+
+    return node;
+}
+
 static int dt_set_dcp_firmware(const char *alias)
 {
     const char *path = fdt_get_alias(dt, alias);
@@ -1112,41 +1152,16 @@ static int dt_carveout_reserved_regions(const char *dcp_alias, const char *disp_
         piodma_phandle = fdt_get_phandle(dt, piodma_node);
     }
 
-    uint32_t max_phandle;
-    ret = fdt_find_max_phandle(dt, &max_phandle);
-    if (ret)
-        bail_cleanup("DT: failed to get max phandle: %d\n", ret);
-
     for (unsigned i = 0; i < num_maps; i++) {
         const char *name = maps[i].mem_fdt;
         char node_name[64];
 
-        int resv_node = fdt_path_offset(dt, "/reserved-memory");
-        if (resv_node < 0)
-            bail_cleanup("DT: '/reserved-memory' not found\n");
-
         snprintf(node_name, sizeof(node_name), "%s@%lx", name, region[i].paddr);
-        int mem_node = fdt_add_subnode(dt, resv_node, node_name);
+        int mem_node = dt_get_or_add_reserved_mem(node_name, region[i].paddr, region[i].size);
         if (mem_node < 0)
-            bail_cleanup("DT: failed to add '%s' /reserved-memory subnode: %d\n", node_name, ret);
+            goto err;
 
-        uint32_t mem_phandle = ++max_phandle;
-        ret = fdt_setprop_u32(dt, mem_node, "phandle", mem_phandle);
-        if (ret != 0)
-            bail_cleanup("DT: couldn't set '%s.phandle' property: %d\n", node_name, ret);
-
-        u64 reg[2] = {cpu_to_fdt64(region[i].paddr), cpu_to_fdt64(region[i].size)};
-        ret = fdt_setprop(dt, mem_node, "reg", reg, sizeof(reg));
-        if (ret != 0)
-            bail_cleanup("DT: couldn't set '%s.reg' property: %d\n", node_name, ret);
-
-        ret = fdt_setprop_string(dt, mem_node, "compatible", "apple,dcp");
-        if (ret != 0)
-            bail_cleanup("DT: couldn't set '%s.compatible' property: %d\n", node_name, ret);
-
-        ret = fdt_setprop_empty(dt, mem_node, "no-map");
-        if (ret != 0)
-            bail_cleanup("DT: couldn't set '%s.no-map' property: %d\n", node_name, ret);
+        uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
 
         if (maps[i].map_dcp && dart_dcp) {
             ret = dt_device_set_reserved_mem(mem_node, dart_dcp, node_name, dcp_phandle,
