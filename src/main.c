@@ -12,6 +12,7 @@
 #include "display.h"
 #include "exception.h"
 #include "fb.h"
+#include "firmware.h"
 #include "gxf.h"
 #include "heapblock.h"
 #include "mcc.h"
@@ -140,6 +141,7 @@ void m1n1_main(void)
     printf("Running in EL%lu\n\n", mrs(CurrentEL) >> 2);
 
     get_device_info();
+    firmware_init();
 
     heapblock_init();
 
