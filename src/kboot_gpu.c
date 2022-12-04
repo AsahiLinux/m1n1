@@ -3,6 +3,7 @@
 #include "kboot.h"
 #include "adt.h"
 #include "assert.h"
+#include "firmware.h"
 #include "math.h"
 #include "pmgr.h"
 #include "soc.h"
@@ -392,6 +393,12 @@ int dt_set_gpu(void *dt)
         return -1;
 
     if (fdt_set_float_array(dt, gpu, "apple,sram-leak-coef", sram_leak, perf_state_table_count))
+        return -1;
+
+    if (firmware_set_fdt(dt, gpu, "apple,firmware-version", &os_firmware))
+        return -1;
+
+    if (firmware_set_fdt(dt, gpu, "apple,firmware-compat", &os_firmware))
         return -1;
 
     u32 i = 0;
