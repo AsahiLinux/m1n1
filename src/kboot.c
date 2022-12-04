@@ -8,6 +8,7 @@
 #include "dapf.h"
 #include "devicetree.h"
 #include "exception.h"
+#include "firmware.h"
 #include "malloc.h"
 #include "memory.h"
 #include "pcie.h"
@@ -32,6 +33,8 @@ static int dt_bufsize = 0;
 static void *initrd_start = NULL;
 static size_t initrd_size = 0;
 static char *chosen_params[MAX_CHOSEN_PARAMS][2];
+
+extern const char *const m1n1_version;
 
 int dt_set_gpu(void *dt);
 
@@ -274,6 +277,25 @@ static int dt_set_chosen(void)
             printf("ADT: kblang-calibration not found, no keyboard layout\n");
         }
     }
+
+    if (fdt_setprop(dt, node, "asahi,iboot1-version", system_firmware.iboot,
+                    strlen(system_firmware.iboot) + 1))
+        bail("FDT: couldn't set asahi,iboot1-version");
+
+    if (fdt_setprop(dt, node, "asahi,system-fw-version", system_firmware.string,
+                    strlen(system_firmware.string) + 1))
+        bail("FDT: couldn't set asahi,system-fw-version");
+
+    if (fdt_setprop(dt, node, "asahi,iboot2-version", os_firmware.iboot,
+                    strlen(os_firmware.iboot) + 1))
+        bail("FDT: couldn't set asahi,iboot2-version");
+
+    if (fdt_setprop(dt, node, "asahi,os-fw-version", os_firmware.string,
+                    strlen(os_firmware.string) + 1))
+        bail("FDT: couldn't set asahi,os-fw-version");
+
+    if (fdt_setprop(dt, node, "asahi,m1n1-stage2-version", m1n1_version, strlen(m1n1_version) + 1))
+        bail("FDT: couldn't set asahi,m1n1-stage2-version");
 
     if (dt_set_rng_seed_sep(node))
         return dt_set_rng_seed_adt(node);
