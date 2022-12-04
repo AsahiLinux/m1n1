@@ -47,6 +47,14 @@ else
 fi
 
 if [ -n "$initramfs" ]; then
+    initramfs_size=$(stat --printf='%s' "$initramfs")
+    python - << EOF >>"$TMPDIR/m1n1-linux.bin"
+import os, sys
+
+magic = b'm1n1_initramfs'
+size = int(${initramfs_size}).to_bytes(4, byteorder='little')
+os.write(sys.stdout.fileno(), magic + size)
+EOF
     cat "$initramfs" >>"$TMPDIR/m1n1-linux.bin"
 fi
 
