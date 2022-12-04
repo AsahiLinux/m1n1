@@ -1268,6 +1268,37 @@ static struct disp_mapping dcpext_reserved_regions_t600x[MAX_DCPEXT][2] = {
 
 #define ARRAY_SIZE(s) (sizeof(s) / sizeof((s)[0]))
 
+static int dt_set_dcp_firmware(const char *alias)
+{
+    const char *path = fdt_get_alias(dt, alias);
+
+    if (!path)
+        return 0;
+
+    int node = fdt_path_offset(dt, path);
+    if (node < 0)
+        return 0;
+
+    if (firmware_set_fdt(dt, node, "apple,firmware-version", &os_firmware) < 0)
+        bail("FDT: Could not set apple,firmware-version for %s\n", path);
+
+    const struct fw_version_info *compat;
+
+    switch (os_firmware.version) {
+        case V12_4:
+            compat = &fw_versions[V12_3];
+            break;
+        default:
+            compat = &os_firmware;
+            break;
+    }
+
+    if (firmware_set_fdt(dt, node, "apple,firmware-compat", compat) < 0)
+        bail("FDT: Could not set apple,firmware-compat for %s\n", path);
+
+    return 0;
+}
+
 static int dt_set_display(void)
 {
     /* lock dart-disp0 to prevent old software from resetting it */
@@ -1281,6 +1312,11 @@ static int dt_set_display(void)
      * they are missing. */
 
     int ret = 0;
+
+    ret = dt_set_dcp_firmware("dcp");
+    if (ret)
+        return ret;
+
     if (!fdt_node_check_compatible(dt, 0, "apple,t8103")) {
         ret = dt_carveout_reserved_regions("dcp", "disp0", "disp0_piodma",
                                            disp_reserved_regions_t8103,
@@ -1312,6 +1348,9 @@ static int dt_set_display(void)
             char dcpext_alias[16];
 
             snprintf(dcpext_alias, sizeof(dcpext_alias), "dcpext%d", n);
+            ret = dt_set_dcp_firmware(dcpext_alias);
+            if (ret)
+                break;
             ret = dt_carveout_reserved_regions(dcpext_alias, NULL, NULL,
                                                dcpext_reserved_regions_t600x[n],
                                                ARRAY_SIZE(dcpext_reserved_regions_t600x[n]));
