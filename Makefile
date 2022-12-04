@@ -170,7 +170,7 @@ build/%.o: src/%.S
 	@$(AS) -c $(CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
 
 $(BUILD_FP_OBJS): build/%.o: src/%.c
-	@echo "  CC[FP]  $@"
+	@echo "  CC FP $@"
 	@mkdir -p $(DEPDIR)
 	@mkdir -p "$(dir $@)"
 	@$(CC) -c $(BASE_CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
