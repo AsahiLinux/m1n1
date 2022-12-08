@@ -1043,6 +1043,7 @@ static int dt_set_dcp_firmware(const char *alias)
     const struct fw_version_info *compat;
 
     switch (os_firmware.version) {
+        case V12_3_1:
         case V12_4:
             compat = &fw_versions[V12_3];
             break;

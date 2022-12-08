@@ -398,7 +398,18 @@ int dt_set_gpu(void *dt)
     if (firmware_set_fdt(dt, gpu, "apple,firmware-version", &os_firmware))
         return -1;
 
-    if (firmware_set_fdt(dt, gpu, "apple,firmware-compat", &os_firmware))
+    const struct fw_version_info *compat;
+
+    switch (os_firmware.version) {
+        case V12_3_1:
+            compat = &fw_versions[V12_3];
+            break;
+        default:
+            compat = &os_firmware;
+            break;
+    }
+
+    if (firmware_set_fdt(dt, gpu, "apple,firmware-compat", compat))
         return -1;
 
     u32 i = 0;
