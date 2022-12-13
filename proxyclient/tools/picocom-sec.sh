@@ -13,6 +13,11 @@ Darwin)
     SECDEV="$DEFAULT_SECDEV" ;;
 esac
 
+if [ "$M1N1DEVICE" ] ; then
+    SECDEV="$M1N1DEVICE"
+    echo "warning: overriding device name from M1N1DEVICE environment variable ($DECDEV)!"
+fi
+
 # The secondary UART device shows up when m1n1 boots on the tethered machine
 echo "Waiting for UART device file '$SECDEV' to appear (Ctrl+C to abort)..."
 
