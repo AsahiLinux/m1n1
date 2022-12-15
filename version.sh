@@ -7,8 +7,8 @@ if [ -n "$M1N1_VERSION_TAG" ]; then
     version="$M1N1_VERSION_TAG"
 elif [ -e ".git" ]; then
     version="$(git describe --tags --always --dirty)"
-elif [ "${dirbase:0:5}" == "m1n1-" ]; then
-    version="${dirbase:5}"
+elif [ "$(echo "${dirbase}" | cut -c1-5)" = "m1n1-" ]; then
+    version=$(echo "${dirbase}" | cut -c6-)
     version="v${version##v}"
 else
     version="unknown"
