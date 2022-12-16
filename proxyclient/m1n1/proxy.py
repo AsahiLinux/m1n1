@@ -620,6 +620,8 @@ class M1N1Proxy(Reloadable):
     P_DISPLAY_INIT = 0x1100
     P_DISPLAY_CONFIGURE = 0x1101
     P_DISPLAY_SHUTDOWN = 0x1102
+    P_DISPLAY_START_DCP = 0x1103
+    P_DISPLAY_IS_EXTERNAL = 0x1104
 
     P_DAPF_INIT_ALL = 0x1200
     P_DAPF_INIT = 0x1201
@@ -1074,6 +1076,10 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_DISPLAY_CONFIGURE, cfg)
     def display_shutdown(self, mode):
         return self.request(self.P_DISPLAY_SHUTDOWN, mode)
+    def display_start_dcp(self):
+        return self.request(self.P_DISPLAY_START_DCP)
+    def display_is_external(self):
+        return self.request(self.P_DISPLAY_IS_EXTERNAL)
 
     def dapf_init_all(self):
         return self.request(self.P_DAPF_INIT_ALL)

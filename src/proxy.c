@@ -550,6 +550,12 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_DISPLAY_SHUTDOWN:
             display_shutdown(request->args[0]);
             break;
+        case P_DISPLAY_START_DCP:
+            display_start_dcp();
+            break;
+        case P_DISPLAY_IS_EXTERNAL:
+            reply->retval = display_is_external;
+            break;
 
         case P_DAPF_INIT_ALL:
             reply->retval = dapf_init_all();

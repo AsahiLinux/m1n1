@@ -117,8 +117,9 @@ p.ic_ivau(stub.addr, stub.len)
 
 print(f"Entry point: 0x{entry:x}")
 
-if args.xnu:
-    p.display_shutdown(0)
+if args.xnu and p.display_is_external():
+    if p.display_start_dcp() >= 0:
+        p.display_shutdown(0)
 
 if args.call:
     print(f"Shutting down MMU...")
