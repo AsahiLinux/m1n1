@@ -1066,18 +1066,22 @@ struct disp_mapping {
     bool map_piodma;
 };
 
+struct mem_region {
+    u64 paddr;
+    u64 size;
+};
+
+static int dt_add_reserved_regions(const char *dcp_alias, const char *disp_alias,
+                                   const char *piodma_alias, struct disp_mapping *maps,
+                                   struct mem_region *region, u32 num_maps);
+
 static int dt_carveout_reserved_regions(const char *dcp_alias, const char *disp_alias,
                                         const char *piodma_alias, struct disp_mapping *maps,
                                         u32 num_maps)
 {
     int ret = 0;
-    dart_dev_t *dart_dcp = NULL, *dart_disp = NULL, *dart_piodma = NULL;
-    uint32_t dcp_phandle = 0, disp_phandle = 0, piodma_phandle = 0;
 
-    struct {
-        u64 paddr;
-        u64 size;
-    } region[MAX_DISP_MAPPINGS];
+    struct mem_region region[MAX_DISP_MAPPINGS];
 
     assert(num_maps <= MAX_DISP_MAPPINGS);
 
@@ -1111,6 +1115,17 @@ static int dt_carveout_reserved_regions(const char *dcp_alias, const char *disp_
         region[i].paddr = phys_map[0];
         region[i].size = phys_map[1];
     }
+
+    return dt_add_reserved_regions(dcp_alias, disp_alias, piodma_alias, maps, region, num_maps);
+}
+
+static int dt_add_reserved_regions(const char *dcp_alias, const char *disp_alias,
+                                   const char *piodma_alias, struct disp_mapping *maps,
+                                   struct mem_region *region, u32 num_maps)
+{
+    int ret = 0;
+    dart_dev_t *dart_dcp = NULL, *dart_disp = NULL, *dart_piodma = NULL;
+    uint32_t dcp_phandle = 0, disp_phandle = 0, piodma_phandle = 0;
 
     /* Check for display device aliases, if one is missing assume it is an old DT
      * without display nodes and return without error.
