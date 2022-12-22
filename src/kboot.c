@@ -1251,11 +1251,42 @@ static int dt_carveout_reserved_regions(const char *dcp_alias, const char *disp_
                                    region, num_maps);
 }
 
+static struct disp_mapping disp_reserved_regions_vram[] = {
+    // boot framebuffer, mapped to dart-disp0 sid 0 and dart-dcp sid 0/5
+    {"vram", "framebuffer", true, true, false},
+};
+
+static int dt_vram_reserved_region(const char *dcp_alias, const char *disp_alias)
+{
+    int ret = 0;
+    int adt_path[4];
+    struct mem_region region;
+
+    // return early if dcp_alias does not exists
+    if (!fdt_get_alias(dt, dcp_alias))
+        return 0;
+
+    int node = adt_path_offset_trace(adt, "/vram", adt_path);
+
+    if (node < 0)
+        bail("ADT: '/vram' not found\n");
+
+    int pp = 0;
+    while (adt_path[pp])
+        pp++;
+    adt_path[pp + 1] = 0;
+
+    ret = adt_get_reg(adt, adt_path, "reg", 0, &region.paddr, &region.size);
+    if (ret < 0)
+        bail("ADT: failed to read /vram/reg\n");
+
+    return dt_add_reserved_regions(dcp_alias, disp_alias, NULL, "framebuffer",
+                                   disp_reserved_regions_vram, &region, 1);
+}
+
 static struct disp_mapping disp_reserved_regions_t8103[] = {
     {"region-id-50", "dcp_data", true, false, false},
     {"region-id-57", "region57", true, false, false},
-    // boot framebuffer, mapped to dart-disp0 sid 0 and dart-dcp sid 0
-    {"region-id-14", "vram", true, true, false},
     // The 2 following regions are mapped in dart-dcp sid 0 and dart-disp0 sid 0 and 4
     {"region-id-94", "region94", true, true, false},
     {"region-id-95", "region95", true, false, true},
@@ -1270,8 +1301,6 @@ static struct disp_mapping disp_reserved_regions_t8112[] = {
     {"region-id-49", "dcp_txt", true, false, false},
     {"region-id-50", "dcp_data", true, false, false},
     {"region-id-57", "region57", true, false, false},
-    // boot framebuffer, mapped to dart-disp0 sid 0 and dart-dcp sid 5
-    {"region-id-14", "vram", true, true, false},
     // The 2 following regions are mapped in dart-dcp sid 5 and dart-disp0 sid 0 and 4
     {"region-id-94", "region94", true, true, false},
     {"region-id-95", "region95", true, false, true},
@@ -1286,8 +1315,6 @@ static struct disp_mapping dcpext_reserved_regions_t8112[] = {
 static struct disp_mapping disp_reserved_regions_t600x[] = {
     {"region-id-50", "dcp_data", true, false, false},
     {"region-id-57", "region57", true, false, false},
-    // boot framebuffer, mapped to dart-disp0 sid 0 and dart-dcp sid 0
-    {"region-id-14", "vram", true, true, false},
     // The 2 following regions are mapped in dart-dcp sid 0 and dart-disp0 sid 0 and 4
     {"region-id-94", "region94", true, true, false},
     {"region-id-95", "region95", true, false, true},
@@ -1387,8 +1414,10 @@ static int dt_set_display(void)
         printf("DT: unknown compatible, skip display reserved-memory setup\n");
         return 0;
     }
+    if (ret)
+        return ret;
 
-    return ret;
+    return dt_vram_reserved_region("dcp", "disp0");
 }
 
 static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix, int max_devs)
