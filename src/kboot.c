@@ -986,7 +986,8 @@ static int dt_device_set_reserved_mem(int node, dart_dev_t *dart, const char *na
     return 0;
 }
 
-static int dt_get_or_add_reserved_mem(const char *node_name, u64 paddr, size_t size)
+static int dt_get_or_add_reserved_mem(const char *node_name, const char *compat, u64 paddr,
+                                      size_t size)
 {
     int ret;
     int resv_node = fdt_path_offset(dt, "/reserved-memory");
@@ -1015,7 +1016,7 @@ static int dt_get_or_add_reserved_mem(const char *node_name, u64 paddr, size_t s
     if (ret != 0)
         bail("DT: couldn't set '%s.reg' property: %d\n", node_name, ret);
 
-    ret = fdt_setprop_string(dt, node, "compatible", "apple,resv-mem");
+    ret = fdt_setprop_string(dt, node, "compatible", compat);
     if (ret != 0)
         bail("DT: couldn't set '%s.compatible' property: %d\n", node_name, ret);
 
@@ -1072,8 +1073,9 @@ struct mem_region {
 };
 
 static int dt_add_reserved_regions(const char *dcp_alias, const char *disp_alias,
-                                   const char *piodma_alias, struct disp_mapping *maps,
-                                   struct mem_region *region, u32 num_maps)
+                                   const char *piodma_alias, const char *compat,
+                                   struct disp_mapping *maps, struct mem_region *region,
+                                   u32 num_maps)
 {
     int ret = 0;
     dart_dev_t *dart_dcp = NULL, *dart_disp = NULL, *dart_piodma = NULL;
@@ -1125,7 +1127,8 @@ static int dt_add_reserved_regions(const char *dcp_alias, const char *disp_alias
         char node_name[64];
 
         snprintf(node_name, sizeof(node_name), "%s@%lx", name, region[i].paddr);
-        int mem_node = dt_get_or_add_reserved_mem(node_name, region[i].paddr, region[i].size);
+        int mem_node = dt_get_or_add_reserved_mem(node_name, compat, region[i].paddr,
+                                                  region[i].size);
         if (mem_node < 0)
             goto err;
 
@@ -1244,7 +1247,8 @@ static int dt_carveout_reserved_regions(const char *dcp_alias, const char *disp_
         region[i].size = phys_map[1];
     }
 
-    return dt_add_reserved_regions(dcp_alias, disp_alias, piodma_alias, maps, region, num_maps);
+    return dt_add_reserved_regions(dcp_alias, disp_alias, piodma_alias, "apple,asc-mem", maps,
+                                   region, num_maps);
 }
 
 static struct disp_mapping disp_reserved_regions_t8103[] = {
