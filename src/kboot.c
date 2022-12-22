@@ -1027,6 +1027,28 @@ static int dt_get_or_add_reserved_mem(const char *node_name, const char *compat,
     return node;
 }
 
+static int dt_device_add_mem_region(const char *alias, uint32_t phandle, const char *name)
+{
+    int ret;
+    int dev_node = fdt_path_offset(dt, alias);
+    if (dev_node < 0)
+        bail("DT: failed to get node for alias '%s'\n", alias);
+
+    ret = fdt_appendprop_u32(dt, dev_node, "memory-region", phandle);
+    if (ret != 0)
+        bail("DT: failed to append to 'memory-region' property\n");
+
+    dev_node = fdt_path_offset(dt, alias);
+    if (dev_node < 0)
+        bail("DT: failed to update node for alias '%s'\n", alias);
+
+    ret = fdt_appendprop_string(dt, dev_node, "memory-region-names", name);
+    if (ret != 0)
+        bail("DT: failed to append to 'memory-region-names' property\n");
+
+    return 0;
+}
+
 static int dt_set_dcp_firmware(const char *alias)
 {
     const char *path = fdt_get_alias(dt, alias);
@@ -1156,28 +1178,19 @@ static int dt_add_reserved_regions(const char *dcp_alias, const char *disp_alias
         /* modify device nodes after filling /reserved-memory to avoid
          * reloading mem_node's offset */
         if (maps[i].map_dcp && dcp_alias) {
-            int dev_node = fdt_path_offset(dt, dcp_alias);
-            if (dev_node < 0)
-                bail_cleanup("DT: failed to get node for alias '%s'\n", dcp_alias);
-            ret = fdt_appendprop_u32(dt, dev_node, "memory-region", mem_phandle);
-            if (ret != 0)
-                bail_cleanup("DT: failed to append to 'memory-region' property\n");
+            ret = dt_device_add_mem_region(dcp_alias, mem_phandle, maps[i].mem_fdt);
+            if (ret < 0)
+                goto err;
         }
         if (maps[i].map_disp && disp_alias) {
-            int dev_node = fdt_path_offset(dt, disp_alias);
-            if (dev_node < 0)
-                bail_cleanup("DT: failed to get node for alias '%s'\n", disp_alias);
-            ret = fdt_appendprop_u32(dt, dev_node, "memory-region", mem_phandle);
-            if (ret != 0)
-                bail_cleanup("DT: failed to append to 'memory-region' property\n");
+            ret = dt_device_add_mem_region(disp_alias, mem_phandle, maps[i].mem_fdt);
+            if (ret < 0)
+                goto err;
         }
         if (maps[i].map_piodma && piodma_alias) {
-            int dev_node = fdt_path_offset(dt, piodma_alias);
-            if (dev_node < 0)
-                bail_cleanup("DT: failed to get node for alias '%s\n", piodma_alias);
-            ret = fdt_appendprop_u32(dt, dev_node, "memory-region", mem_phandle);
-            if (ret != 0)
-                bail_cleanup("DT: failed to append to 'memory-region' property\n");
+            ret = dt_device_add_mem_region(piodma_alias, mem_phandle, maps[i].mem_fdt);
+            if (ret < 0)
+                goto err;
         }
     }
 
