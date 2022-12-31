@@ -1073,54 +1073,6 @@ struct mem_region {
 
 static int dt_add_reserved_regions(const char *dcp_alias, const char *disp_alias,
                                    const char *piodma_alias, struct disp_mapping *maps,
-                                   struct mem_region *region, u32 num_maps);
-
-static int dt_carveout_reserved_regions(const char *dcp_alias, const char *disp_alias,
-                                        const char *piodma_alias, struct disp_mapping *maps,
-                                        u32 num_maps)
-{
-    int ret = 0;
-
-    struct mem_region region[MAX_DISP_MAPPINGS];
-
-    assert(num_maps <= MAX_DISP_MAPPINGS);
-
-    // return early if dcp_alias does not exists
-    if (!fdt_get_alias(dt, dcp_alias))
-        return 0;
-
-    ret = dt_set_dcp_firmware(dcp_alias);
-    if (ret)
-        return ret;
-
-    int node = adt_path_offset(adt, "/chosen/carveout-memory-map");
-    if (node < 0)
-        bail("ADT: '/chosen/carveout-memory-map' not found\n");
-
-    /* read physical addresses of reserved memory regions */
-    /* do this up front to avoid errors after modifying the DT */
-    for (unsigned i = 0; i < num_maps; i++) {
-
-        int ret;
-        u64 phys_map[2];
-        struct disp_mapping *map = &maps[i];
-        const char *name = map->region_adt;
-
-        ret = ADT_GETPROP_ARRAY(adt, node, name, phys_map);
-        if (ret != sizeof(phys_map))
-            bail("ADT: could not get carveout memory '%s'\n", name);
-        if (!phys_map[0] || !phys_map[1])
-            bail("ADT: carveout memory '%s'\n", name);
-
-        region[i].paddr = phys_map[0];
-        region[i].size = phys_map[1];
-    }
-
-    return dt_add_reserved_regions(dcp_alias, disp_alias, piodma_alias, maps, region, num_maps);
-}
-
-static int dt_add_reserved_regions(const char *dcp_alias, const char *disp_alias,
-                                   const char *piodma_alias, struct disp_mapping *maps,
                                    struct mem_region *region, u32 num_maps)
 {
     int ret = 0;
@@ -1249,6 +1201,50 @@ err:
         dart_shutdown(dart_piodma);
 
     return ret;
+}
+
+static int dt_carveout_reserved_regions(const char *dcp_alias, const char *disp_alias,
+                                        const char *piodma_alias, struct disp_mapping *maps,
+                                        u32 num_maps)
+{
+    int ret = 0;
+
+    struct mem_region region[MAX_DISP_MAPPINGS];
+
+    assert(num_maps <= MAX_DISP_MAPPINGS);
+
+    // return early if dcp_alias does not exists
+    if (!fdt_get_alias(dt, dcp_alias))
+        return 0;
+
+    ret = dt_set_dcp_firmware(dcp_alias);
+    if (ret)
+        return ret;
+
+    int node = adt_path_offset(adt, "/chosen/carveout-memory-map");
+    if (node < 0)
+        bail("ADT: '/chosen/carveout-memory-map' not found\n");
+
+    /* read physical addresses of reserved memory regions */
+    /* do this up front to avoid errors after modifying the DT */
+    for (unsigned i = 0; i < num_maps; i++) {
+
+        int ret;
+        u64 phys_map[2];
+        struct disp_mapping *map = &maps[i];
+        const char *name = map->region_adt;
+
+        ret = ADT_GETPROP_ARRAY(adt, node, name, phys_map);
+        if (ret != sizeof(phys_map))
+            bail("ADT: could not get carveout memory '%s'\n", name);
+        if (!phys_map[0] || !phys_map[1])
+            bail("ADT: carveout memory '%s'\n", name);
+
+        region[i].paddr = phys_map[0];
+        region[i].size = phys_map[1];
+    }
+
+    return dt_add_reserved_regions(dcp_alias, disp_alias, piodma_alias, maps, region, num_maps);
 }
 
 static struct disp_mapping disp_reserved_regions_t8103[] = {
