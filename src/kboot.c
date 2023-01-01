@@ -25,6 +25,7 @@
 #define MAX_CHOSEN_PARAMS 16
 
 #define MAX_ATC_DEVS 8
+#define MAX_CIO_DEVS 8
 
 #define MAX_DISP_MAPPINGS 8
 
@@ -760,7 +761,7 @@ struct atc_tunable {
 } PACKED;
 static_assert(sizeof(struct atc_tunable) == 12, "Invalid atc_tunable size");
 
-struct atc_tunable_info {
+struct adt_tunable_info {
     const char *adt_name;
     const char *fdt_name;
     size_t reg_offset;
@@ -768,7 +769,7 @@ struct atc_tunable_info {
     bool required;
 };
 
-static const struct atc_tunable_info atc_tunables[] = {
+static const struct adt_tunable_info atc_tunables[] = {
     /* global tunables applied after power on or reset */
     {"tunable_ATC0AXI2AF", "apple,tunable-axi2af", 0x0, 0x4000, true},
     {"tunable_ATC_FABRIC", "apple,tunable-common", 0x45000, 0x4000, true},
@@ -802,7 +803,7 @@ static const struct atc_tunable_info atc_tunables[] = {
 };
 
 static int dt_append_atc_tunable(int adt_node, int fdt_node,
-                                 const struct atc_tunable_info *tunable_info)
+                                 const struct adt_tunable_info *tunable_info)
 {
     u32 tunables_len;
     const struct atc_tunable *tunable_adt =
@@ -906,6 +907,144 @@ static int dt_set_atc_tunables(void)
         snprintf(fdt_alias, sizeof(fdt_alias), "atcphy%d", i);
 
         dt_copy_atc_tunables(adt_path, fdt_alias);
+    }
+
+    return 0;
+}
+
+static const struct adt_tunable_info acio_tunables[] = {
+    /* NHI tunables */
+    {"hi_up_tx_desc_fabric_tunables", "apple,tunable-nhi", 0xf0000, 0x4000, true},
+    {"hi_up_tx_data_fabric_tunables", "apple,tunable-nhi", 0xec000, 0x4000, true},
+    {"hi_up_rx_desc_fabric_tunables", "apple,tunable-nhi", 0xe8000, 0x4000, true},
+    {"hi_up_wr_fabric_tunables", "apple,tunable-nhi", 0xf4000, 0x4000, true},
+    {"hi_up_merge_fabric_tunables", "apple,tunable-nhi", 0xf8000, 0x4000, true},
+    {"hi_dn_merge_fabric_tunables", "apple,tunable-nhi", 0xfc000, 0x4000, true},
+    {"fw_int_ctl_management_tunables", "apple,tunable-nhi", 0x4000, 0x4000, true},
+    /* M3 tunables */
+    {"top_tunables", "apple,tunable-m3", 0x0, 0x4000, true},
+    {"hbw_fabric_tunables", "apple,tunable-m3", 0x4000, 0x4000, true},
+    {"lbw_fabric_tunables", "apple,tunable-m3", 0x8000, 0x4000, true},
+    /* PCIe adapter tunables */
+    {"pcie_adapter_regs_tunables", "apple,tunable-pcie-adapter", 0x0, 0x4000, true},
+};
+
+struct acio_tunable {
+    u32 offset;
+    u32 size;
+    u64 mask;
+    u64 value;
+} PACKED;
+static_assert(sizeof(struct acio_tunable) == 24, "Invalid acio_tunable size");
+
+/*
+ * This is *almost* identical to dt_append_atc_tunable except for the different
+ * tunable struct and that tunable->size is in bytes instead of bits.
+ * If only C had generics that aren't macros :-(
+ */
+static int dt_append_acio_tunable(int adt_node, int fdt_node,
+                                  const struct adt_tunable_info *tunable_info)
+{
+    u32 tunables_len;
+    const struct acio_tunable *tunable_adt =
+        adt_getprop(adt, adt_node, tunable_info->adt_name, &tunables_len);
+
+    if (!tunable_adt) {
+        printf("ADT: tunable %s not found\n", tunable_info->adt_name);
+
+        if (tunable_info->required)
+            return -1;
+        else
+            return 0;
+    }
+
+    if (tunables_len % sizeof(*tunable_adt)) {
+        printf("ADT: tunable %s with invalid length %d\n", tunable_info->adt_name, tunables_len);
+        return -1;
+    }
+
+    u32 n_tunables = tunables_len / sizeof(*tunable_adt);
+    for (size_t j = 0; j < n_tunables; j++) {
+        const struct acio_tunable *tunable = &tunable_adt[j];
+
+        if (tunable->size != 4) {
+            printf("kboot: ACIO tunable has invalid size %d\n", tunable->size);
+            return -1;
+        }
+
+        if (tunable->offset % tunable->size) {
+            printf("kboot: ACIO tunable has unaligned offset %x\n", tunable->offset);
+            return -1;
+        }
+
+        if (tunable->offset + tunable->size > tunable_info->reg_size) {
+            printf("kboot: ACIO tunable has invalid offset %x\n", tunable->offset);
+            return -1;
+        }
+
+        if (fdt_appendprop_u32(dt, fdt_node, tunable_info->fdt_name,
+                               tunable->offset + tunable_info->reg_offset) < 0)
+            return -1;
+        if (fdt_appendprop_u32(dt, fdt_node, tunable_info->fdt_name, tunable->mask) < 0)
+            return -1;
+        if (fdt_appendprop_u32(dt, fdt_node, tunable_info->fdt_name, tunable->value) < 0)
+            return -1;
+    }
+
+    return 0;
+}
+
+static int dt_copy_acio_tunables(const char *adt_path, const char *dt_alias)
+{
+    int ret;
+    int adt_node = adt_path_offset(adt, adt_path);
+    if (adt_node < 0)
+        return -1;
+
+    const char *fdt_path = fdt_get_alias(dt, dt_alias);
+    if (fdt_path == NULL)
+        bail("FDT: Unable to find alias %s\n", dt_alias);
+
+    int fdt_node = fdt_path_offset(dt, fdt_path);
+    if (fdt_node < 0)
+        bail("FDT: Unable to find path %s for alias %s\n", fdt_path, dt_alias);
+
+    u32 drom_len;
+    const u8 *drom_blob = adt_getprop(adt, adt_node, "thunderbolt-drom", &drom_len);
+    if (!drom_blob || !drom_len)
+        bail("ADT: Failed to get thunderbolt-drom");
+
+    fdt_setprop(dt, fdt_node, "apple,thunderbolt-drom", drom_blob, drom_len);
+    for (size_t i = 0; i < sizeof(acio_tunables) / sizeof(*acio_tunables); ++i) {
+        ret = dt_append_acio_tunable(adt_node, fdt_node, &acio_tunables[i]);
+        if (ret)
+            bail_cleanup("ADT: unable to convert '%s' tunable", acio_tunables[i].adt_name);
+    }
+
+    return 0;
+
+err:
+    fdt_delprop(dt, fdt_node, "apple,thunderbolt-drom");
+    fdt_delprop(dt, fdt_node, "apple,tunable-nhi");
+    fdt_delprop(dt, fdt_node, "apple,tunable-m3");
+    fdt_delprop(dt, fdt_node, "apple,tunable-pcie-adapter");
+
+    return -1;
+}
+
+static int dt_set_acio_tunables(void)
+{
+    char adt_path[32];
+    char fdt_alias[32];
+
+    for (int i = 0; i < MAX_CIO_DEVS; ++i) {
+        memset(adt_path, 0, sizeof(adt_path));
+        snprintf(adt_path, sizeof(adt_path), "/arm-io/acio%d", i);
+
+        memset(fdt_alias, 0, sizeof(adt_path));
+        snprintf(fdt_alias, sizeof(fdt_alias), "acio%d", i);
+
+        dt_copy_acio_tunables(adt_path, fdt_alias);
     }
 
     return 0;
@@ -1727,6 +1866,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_uboot())
         return -1;
     if (dt_set_atc_tunables())
+        return -1;
+    if (dt_set_acio_tunables())
         return -1;
     if (dt_set_display())
         return -1;
