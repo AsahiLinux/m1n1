@@ -24,6 +24,12 @@ Colorimetry = "Colorimetry" / Enum(Int32ul,
     DCIP3 = 3,
 )
 
+Colorspace = "Colorspace" / Enum(Int32ul,
+    SRGB = 1,
+    Native = 2,
+    BT2020 = 3,
+)
+
 SurfaceFormat = "SurfaceFormat" / Enum(Int32ul,
     BGRA = 1,
     BGRA2 = 2,
@@ -72,7 +78,7 @@ ColorMode = Struct(
     "eotf" / EOTF,
     "encoding" / Encoding,
     "bpp" / Int32ul,
-    Padding(4),
+    "unk" / Int32ul,
 )
 
 ColorModeList = Struct(
@@ -108,7 +114,7 @@ IBootLayerInfo = Struct(
     "width" / Int32ul,
     "height" / Int32ul,
     "surface_fmt" / SurfaceFormat,
-    "colorspace" / Int32ul,
+    "colorspace" / Colorspace,
     "eotf" / EOTF,
     "transform" / Transform,
     Padding(3)

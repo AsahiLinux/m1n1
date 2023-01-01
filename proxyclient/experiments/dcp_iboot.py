@@ -10,7 +10,7 @@ from m1n1.setup import *
 from m1n1.shell import run_shell
 from m1n1 import asm
 from m1n1.hw.dart import DART, DARTRegs
-from m1n1.fw.dcp.iboot import DCPIBootClient, SurfaceFormat, EOTF, Transform, AddrFormat
+from m1n1.fw.dcp.iboot import DCPIBootClient, SurfaceFormat, EOTF, Transform, AddrFormat, Colorspace
 from m1n1.proxyutils import RegMonitor
 
 print(f"Framebuffer at {u.ba.video.base:#x}")
@@ -87,7 +87,7 @@ layer = Container(
     width = u.ba.video.width,
     height = u.ba.video.height,
     surface_fmt = SurfaceFormat.w30r,
-    colorspace = 2,
+    colorspace = Colorspace.SCRGBFixed,
     eotf = EOTF.GAMMA_SDR,
     transform = Transform.NONE,
 )
