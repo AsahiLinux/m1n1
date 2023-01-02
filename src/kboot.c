@@ -1127,8 +1127,8 @@ static int dt_add_reserved_regions(const char *dcp_alias, const char *disp_alias
         char node_name[64];
 
         snprintf(node_name, sizeof(node_name), "%s@%lx", name, region[i].paddr);
-        int mem_node = dt_get_or_add_reserved_mem(node_name, compat, region[i].paddr,
-                                                  region[i].size);
+        int mem_node =
+            dt_get_or_add_reserved_mem(node_name, compat, region[i].paddr, region[i].size);
         if (mem_node < 0)
             goto err;
 
