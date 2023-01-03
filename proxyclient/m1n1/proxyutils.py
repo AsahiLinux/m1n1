@@ -22,10 +22,14 @@ SIMD_Q = Array(32, BytesInteger(16, swapped=True))
 # This isn't perfect, since multiple versions could have the same
 # iBoot version, but it's good enough
 VERSION_MAP = {
+    "iBoot-7429.41.5": "V12_0_1",
     "iBoot-7429.61.2": "V12_1",
+    "iBoot-7429.81.3": "V12_2",
     "iBoot-7459.101.2": "V12_3",
     "iBoot-7459.121.3": "V12_4",
-    "iBoot-8419.0.151.0.1": "V13_0B4",
+    "iBoot-7459.141.1": "V12_5",
+    "iBoot-8419.41.10": "V12_6_1",
+    "iBoot-8419.60.44": "V12_6_2",
 }
 
 class ProxyUtils(Reloadable):

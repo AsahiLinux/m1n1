@@ -84,7 +84,7 @@ class EventControl(ConstructClass):
         Ver("G >= G14", "unk_98_g14_0" / HexDump(Bytes(0x14))),
         "list_head" / LinkedListHead,
         Ver("G >= G14", "unk_a8_g14_0" / Padding(4)),
-        Ver("V >= V13_0B4", "unk_buf" / EventControlUnkBuf),
+        Ver("V >= V12_6_1", "unk_buf" / EventControlUnkBuf),
     )
 
     def __init__(self):
@@ -201,7 +201,7 @@ class WorkCommand3D(ConstructClass):
     subcon = Struct(
         "addr" / Tell,
         "magic" / Const(0x1, Hex(Int32ul)),
-        Ver("V >= V13_0B4", "counter" / Int64ul),
+        Ver("V >= V12_6_1", "counter" / Int64ul),
         "context_id" / Hex(Int32ul),
         "unk_8" / Hex(Int32ul),
         "microsequence_ptr" / Hex(Int64ul), # Command list
@@ -243,11 +243,11 @@ class WorkCommand3D(ConstructClass):
         "unk_918" / Int64ul,
         "unk_920" / Int32ul,
         "unk_924" / Int32ul,
-        Ver("V >= V13_0B4", "unk_928_0" / Int32ul),
-        Ver("V >= V13_0B4", "unk_928_4" / Int8ul),
-        Ver("V >= V13_0B4", "ts_flag" / TsFlag),
-        Ver("V >= V13_0B4", "unk_5e6" / Default(Int16ul, 0)),
-        Ver("V >= V13_0B4", "unk_5e8" / Default(HexDump(Bytes(0x20)), bytes(0x20))),
+        Ver("V >= V12_6_1", "unk_928_0" / Int32ul),
+        Ver("V >= V12_6_1", "unk_928_4" / Int8ul),
+        Ver("V >= V12_6_1", "ts_flag" / TsFlag),
+        Ver("V >= V12_6_1", "unk_5e6" / Default(Int16ul, 0)),
+        Ver("V >= V12_6_1", "unk_5e8" / Default(HexDump(Bytes(0x20)), bytes(0x20))),
         "pad_928" / Default(HexDump(Bytes(0x18)), bytes(0x18)),
     )
 
@@ -284,7 +284,7 @@ class WorkCommandTA(ConstructClass):
     subcon = Struct(
         "addr" / Tell,
         "magic" / Const(0x0, Hex(Int32ul)),
-        Ver("V >= V13_0B4", "counter" / Int64ul),
+        Ver("V >= V12_6_1", "counter" / Int64ul),
         "context_id" / Hex(Int32ul),
         "unk_8" / Hex(Int32ul),
         "event_control_addr" / Hex(Int64ul),
@@ -325,13 +325,13 @@ class WorkCommandTA(ConstructClass):
         "unk_5d0" / Int32ul,
         "unk_5d4" / Int8ul,
         "pad_5d5" / Default(HexDump(Bytes(0x3)), bytes(0x3)),
-        Ver("V >= V13_0B4", "unk_5e0" / Int32ul),
-        Ver("V >= V13_0B4", "unk_5e4" / Int8ul),
-        Ver("V >= V13_0B4", "ts_flag" / TsFlag),
-        Ver("V >= V13_0B4", "unk_5e6" / Default(Int16ul, 0)),
-        Ver("V >= V13_0B4", "unk_5e8" / Default(HexDump(Bytes(0x18)), bytes(0x18))),
+        Ver("V >= V12_6_1", "unk_5e0" / Int32ul),
+        Ver("V >= V12_6_1", "unk_5e4" / Int8ul),
+        Ver("V >= V12_6_1", "ts_flag" / TsFlag),
+        Ver("V >= V12_6_1", "unk_5e6" / Default(Int16ul, 0)),
+        Ver("V >= V12_6_1", "unk_5e8" / Default(HexDump(Bytes(0x18)), bytes(0x18))),
         "pad_5d8" / Default(HexDump(Bytes(0x8)), bytes(0x8)),
-        Ver("V >= V13_0B4", "pad_5e0" / Default(HexDump(Bytes(0x18)), bytes(0x18))),
+        Ver("V >= V12_6_1", "pad_5e0" / Default(HexDump(Bytes(0x18)), bytes(0x18))),
     )
 
 class UnknownWorkCommand(ConstructClass):

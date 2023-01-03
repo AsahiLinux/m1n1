@@ -80,7 +80,7 @@ class BufferManagerInfo(ConstructClass):
         "unk_10" / Int32ul,
         "gpu_counter2" / Int32ul,
         "unk_18" / Int32ul,
-        Ver("V < V13_0B4", "unk_1c" / Int32ul),
+        Ver("V < V12_6_1", "unk_1c" / Int32ul),
         "page_list_addr" / Int64ul,
         "page_list_size" / Int32ul,
         "page_count" / Int32ul,
@@ -186,7 +186,7 @@ class AuxFBInfo(ConstructClass):
         "unk2" / Int32ul,
         "width" / Dec(Int32ul),
         "height" / Dec(Int32ul),
-        Ver("V >= V13_0B4", "unk3" / Int64ul),
+        Ver("V >= V12_6_1", "unk3" / Int64ul),
     )
 
     def __init__(self, unk1, unk2, width, height):
@@ -259,7 +259,7 @@ class Start3DStruct1(ConstructClass):
         "unk_37c" / Int32ul,
         "unk_380" / Int64ul,
         "unk_388" / Int64ul,
-        Ver("V >= V13_0B4", "unk_390_0" / Int64ul),
+        Ver("V >= V12_6_1", "unk_390_0" / Int64ul),
         "depth_dimensions" / Int64ul,
     )
 
@@ -305,7 +305,7 @@ class Start3DStruct2(ConstructClass):
         "unk_160" / Int64ul,
         Ver("G < G14", "unk_168_padding" / HexDump(Bytes(0x1d8))),
         Ver("G >= G14", "unk_198_padding" / HexDump(Bytes(0x1a8))),
-        Ver("V < V13_0B4", ZPadding(8)),
+        Ver("V < V12_6_1", ZPadding(8)),
     )
 
 class BufferThing(ConstructClass):
@@ -404,8 +404,8 @@ class Start3DCmd(ConstructClass):
         "attachments" / Array(16, Attachment),
         "num_attachments" / Int32ul,
         "unk_190" / Int32ul,
-        Ver("V >= V13_0B4", "unk_194" / Int64ul),
-        Ver("V >= V13_0B4", "unkptr_19c" / Int64ul),
+        Ver("V >= V12_6_1", "unk_194" / Int64ul),
+        Ver("V >= V12_6_1", "unkptr_19c" / Int64ul),
     )
 
 
@@ -439,7 +439,7 @@ class Finalize3DCmd(ConstructClass):
         Ver("G >= G14", "unk_8c_g14" / Int64ul),
         "restart_branch_offset" / Int32sl,
         "unk_98" / Int32ul, # 1
-        Ver("V >= V13_0B4", "unk_9c" / HexDump(Bytes(0x10))),
+        Ver("V >= V12_6_1", "unk_9c" / HexDump(Bytes(0x10))),
     )
 
 class TilingParameters(ConstructClass):
@@ -570,9 +570,9 @@ class StartTACmd(ConstructClass):
         "unk_16c" / Int32ul,
         "unk_170" / Int64ul,
         "unk_178" / Int32ul,
-        Ver("V >= V13_0B4", "unk_17c" / Int32ul),
-        Ver("V >= V13_0B4", "unkptr_180" / Int64ul),
-        Ver("V >= V13_0B4", "unk_188" / Int32ul),
+        Ver("V >= V12_6_1", "unk_17c" / Int32ul),
+        Ver("V >= V12_6_1", "unkptr_180" / Int64ul),
+        Ver("V >= V12_6_1", "unk_188" / Int32ul),
     )
 
 class FinalizeTACmd(ConstructClass):
@@ -603,7 +603,7 @@ class FinalizeTACmd(ConstructClass):
         Ver("G >= G14", "unk_6c_g14" / Int64ul),
         "restart_branch_offset" / Int32sl,
         "unk_70" / Int32ul,
-        Ver("V >= V13_0B4", "unk_74" / HexDump(Bytes(0x10))),
+        Ver("V >= V12_6_1", "unk_74" / HexDump(Bytes(0x10))),
     )
 
 class ComputeArgs(ConstructClass):
@@ -738,7 +738,7 @@ class TimestampCmd(ConstructClass):
         "ts2" / ROPointer(this.ts2_addr, TimeStamp),
         "cmdqueue_ptr" / Int64ul,
         "unk_24" / Int64ul,
-        Ver("V >= V13_0B4", "unkptr_2c_0" / Int64ul),
+        Ver("V >= V12_6_1", "unkptr_2c_0" / Int64ul),
         "uuid" / Int32ul,
         "unk_30_padding" / Int32ul,
     )
