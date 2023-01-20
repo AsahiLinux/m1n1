@@ -121,7 +121,7 @@ class ChannelTracer(Reloadable):
         if off == self.WPTR:
             if self.verbose:
                 self.log(f"RD [{evt.addr:#x}] WPTR[{ring}] = {evt.data:#x}")
-            self.poll_ring(ring)
+            self.poll_ring(ring, evt.data)
         elif off == self.RPTR:
             if self.verbose:
                 self.log(f"RD [{evt.addr:#x}] RPTR[{ring}] = {evt.data:#x}")
@@ -139,7 +139,7 @@ class ChannelTracer(Reloadable):
         if off == self.WPTR:
             if self.verbose:
                 self.log(f"WR [{evt.addr:#x}] WPTR[{ring}] = {evt.data:#x}")
-            self.poll_ring(ring)
+            self.poll_ring(ring, evt.data)
         elif off == self.RPTR:
             if self.verbose:
                 self.log(f"WR [{evt.addr:#x}] RPTR[{ring}] = {evt.data:#x}")
@@ -158,11 +158,12 @@ class ChannelTracer(Reloadable):
         for i in range(self.ring_count):
             self.poll_ring(i)
 
-    def poll_ring(self, ring):
+    def poll_ring(self, ring, tail=None):
         msgcls, size, count = self.channel.ring_defs[ring]
 
         cur = self.state.tail[ring]
-        tail = self.channel.state[ring].WRITE_PTR.val
+        if tail is None:
+            tail = self.channel.state[ring].WRITE_PTR.val
         if tail >= count:
             raise Exception(f"Message index {tail:#x} >= {count:#x}")
         if cur != tail:
