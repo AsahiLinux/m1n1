@@ -24,6 +24,9 @@ const struct fw_version_info fw_versions[NUM_FW_VERSIONS] = {
     // {V12_6, "12.6", {12, 6, 0}, 3, "iBoot-7459.141.1"},
     [V13_0B4] = {V13_0B4, "13.0 beta4", {12, 99, 4}, 3, "iBoot-8419.0.151.0.1"},
     [V13_0] = {V13_0, "13.0", {13, 0, 0}, 3, "iBoot-8419.41.10"},
+    [V13_1] = {V13_1, "13.1", {13, 1, 0}, 3, "iBoot-8419.60.44"},
+    [V13_2] = {V13_2, "13.2", {13, 2, 0}, 3, "iBoot-8419.80.7"},
+
 };
 
 int firmware_set_fdt(void *fdt, int node, const char *prop, const struct fw_version_info *ver)
