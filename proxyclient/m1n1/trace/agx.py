@@ -711,6 +711,9 @@ class AGXTracer(ASCTracer):
 
 
     def handle_ta(self, wi):
+        if wi.cmd is None:
+            return
+
         self.log(f"Got TA WI{wi.cmd.magic:d}")
         self.last_ta = wi
 
@@ -749,9 +752,8 @@ class AGXTracer(ASCTracer):
                 i = i.cmd
                 if isinstance(i, StartTACmd):
                     self.log(f"  # StartTACmd")
-                    self.log(f"    buf_thing @ {i.buf_thing_addr:#x}: {i.buf_thing!s}")
-                    self.log(f"      unkptr_18 @ {i.buf_thing.unkptr_18:#x}:")
-                    chexdump(read(i.buf_thing.unkptr_18, 0x100), print_fn=self.log)
+
+
                     self.log(f"    unkptr_24 @ {i.unkptr_24:#x}:")
                     chexdump(read(i.unkptr_24, 0x100), print_fn=self.log)
                     self.log(f"    unk_5c @ {i.unkptr_5c:#x}:")
@@ -761,6 +763,21 @@ class AGXTracer(ASCTracer):
                     self.log(f"  # FinalizeTACmd")
 
 
+            self.log(f"    buf_thing @ {wi0.buf_thing_addr:#x}: {wi0.buf_thing!s}")
+            self.log(f"      unkptr_18 @ {wi0.buf_thing.unkptr_18:#x}::")
+            chexdump(read(wi0.buf_thing.unkptr_18, 0x80), print_fn=self.log)
+
+            if getattr(wi0.struct_2, "tvb_cluster_meta1", None):
+                size = wi0.struct_2.tvb_cluster_meta2 - (wi0.struct_2.tvb_cluster_meta1 & 0xffffffffff)
+                data = read(wi0.struct_2.tvb_cluster_meta1, size)
+                rsize = len(data.rstrip(b"\x00\x00\x00\x00"))
+                self.log(f"      meta1 @ {wi0.struct_2.tvb_cluster_meta1:#x} ({size:#x}/{rsize:#x}):")
+                chexdump(data, print_fn=self.log)
+                blocks = wi0.struct_2.tvb_cluster_meta1 >> 50
+                tc = wi0.tiling_params.tile_count
+                xt = (tc & 0xfff) + 1
+                yt = ((tc >> 12) & 0xfff) + 1
+                self.log(f"      TILES {xt} {yt} {blocks} {size:#x}")
             #self.uat.dump(context, self.log)
 
     def handle_3d(self, wi):
@@ -801,8 +818,8 @@ class AGXTracer(ASCTracer):
             #chexdump(read(cmd3d.struct2.pipeline_base, 0x100), print_fn=self.log)
 
             self.log(f"  buf_thing @ {cmd3d.buf_thing_addr:#x}: {cmd3d.buf_thing!s}")
-            #self.log(f"    unkptr_18 @ {cmd3d.buf_thing.unkptr_18:#x}:")
-            #chexdump(read(cmd3d.buf_thing.unkptr_18, 0x1000), print_fn=self.log)
+            self.log(f"    unkptr_18 @ {cmd3d.buf_thing.unkptr_18:#x}:")
+            chexdump(read(cmd3d.buf_thing.unkptr_18, 0x80), print_fn=self.log)
 
             #self.log(f"  unk_24 @ {cmd3d.unkptr_24:#x}: {cmd3d.unk_24!s}")
             self.log(f"  struct6 @ {cmd3d.struct6_addr:#x}: {cmd3d.struct6!s}")
@@ -835,9 +852,9 @@ class AGXTracer(ASCTracer):
                 self.log(f"  unkptr_64 @ {cmdfin.unkptr_64:#x}:")
                 chexdump(kread(cmdfin.unkptr_64, 0x118), print_fn=self.log)
 
-            self.log(f"  buf_thing @ {wi1.buf_thing_addr:#x}: {wi1.buf_thing!s}")
-            self.log(f"    unkptr_18 @ {wi1.buf_thing.unkptr_18:#x}:")
-            chexdump(read(wi1.buf_thing.unkptr_18, 0x1000), print_fn=self.log)
+            #self.log(f"  buf_thing @ {wi1.buf_thing_addr:#x}: {wi1.buf_thing!s}")
+            #self.log(f"    unkptr_18 @ {wi1.buf_thing.unkptr_18:#x}:")
+            #chexdump(read(wi1.buf_thing.unkptr_18, 0x1000), print_fn=self.log)
             self.dump_buffer_manager(wi1.buffer_mgr, kread, read)
             #self.log(f"  unk_emptybuf @ {wi1.unk_emptybuf_addr:#x}:")
             #chexdump(kread(wi1.unk_emptybuf_addr, 0x1000), print_fn=self.log)
