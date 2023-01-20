@@ -138,6 +138,7 @@ class WorkCommandCP(ConstructClass):
     subcon = Struct(
         "addr" / Tell,
         "magic" / Const(0x3, Hex(Int32ul)),
+        Ver("V >= V13_0B4", "counter" / Int64ul),
         "unk_4" / Hex(Int32ul),
         "context_id" / Hex(Int32ul),
         "event_control_addr" / Hex(Int64ul),
@@ -159,10 +160,13 @@ class WorkCommandCP(ConstructClass):
         "unk_2c8" / Int32ul,
         "unk_2cc" / Int32ul,
         "client_sequence" / Int8ul,
-        "unk_2d1" / Int8ul,
-        "unk_2d2" / Int16ul,
+        "pad_2d1" / Default(HexDump(Bytes(0x3)), bytes(0x3)),
         "unk_2d4" / Int32ul,
         "unk_2d8" / Int8ul,
+        Ver("V >= V13_0B4", "unk_ts" / TimeStamp),
+        Ver("V >= V13_0B4", "unk_2e1" / Default(HexDump(Bytes(0x1c)), bytes(0x1c))),
+        Ver("V >= V13_0B4", "unk_flag" / Flag),
+        Ver("V >= V13_0B4", "unk_pad" / Default(HexDump(Bytes(0x10)), bytes(0x10))),
         "pad_2d9" / Default(HexDump(Bytes(0x7)), bytes(0x7)),
     )
 

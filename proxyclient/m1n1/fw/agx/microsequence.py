@@ -687,10 +687,12 @@ class ComputeInfo(ConstructClass):
 # Related to "IOGPU Misc"
 class ComputeInfo2(ConstructClass):
     subcon = Struct(
+        Ver("V >= V13_0B4", "unk_0_0" / ZPadding(4)),
         "unk_0" / HexDump(Bytes(0x24)),
         "iogpu_deflake_1" / Int64ul,
         "encoder_end" / Int64ul,
-        "unk_34" / HexDump(Bytes(0x2c)),
+        "unk_34" / HexDump(Bytes(0x28)),
+        Ver("V < V13_0B4", "unk_5c" / ZPadding(4)),
     )
 
 class StartComputeCmd(ConstructClass):
@@ -712,6 +714,9 @@ class StartComputeCmd(ConstructClass):
         "unk_44" / Int32ul,
         "uuid" / Int32ul,
         "padding" / Bytes(0x154 - 0x4c),
+        Ver("V >= V13_0B4", "unk_flag_addr" / Int64ul),
+        Ver("V >= V13_0B4", "counter" / Int64ul),
+        Ver("V >= V13_0B4", "event_ctrl_buf_addr" / Int64ul),
     )
 
 class FinalizeComputeCmd(ConstructClass):
@@ -720,7 +725,7 @@ class FinalizeComputeCmd(ConstructClass):
         "unkptr_4" / Int64ul, # same as ComputeStartCmd.unkptr_14
         "cmdqueue_ptr" / Int64ul, # points back to the submitinfo
         "context_id" / Int32ul,
-        "unk_18" / Int32ul,
+        Ver("V < V13_0B4", "unk_18" / Int32ul),
         "unkptr_1c" / Int64ul, # same as ComputeStartCmd.unkptr_3c
         "unk_24" / Int32ul,
         "uuid" / Int32ul,  # uuid for tracking?
@@ -735,9 +740,12 @@ class FinalizeComputeCmd(ConstructClass):
         "unk_50" / Int32ul,
         "unk_54" / Int32ul,
         "unk_58" / Int32ul,
-        Ver("G >= G14", "unk_5c_g14" / Int64ul),
+        Ver("G == G14 && V < V13_0B4", "unk_5c_g14" / Int64ul),
         "restart_branch_offset" / Int32sl, # realative offset from start of Finalize to StartComputeCmd
         "unk_60" / Int32ul,
+        Ver("V >= V13_0B4", "unk_64" / HexDump(Bytes(0xd))),
+        Ver("V >= V13_0B4", "unkptr_71" / Int64ul),
+        Ver("V >= V13_0B4", "pad_79" / ZPadding(7)),
     )
 
 class EndCmd(ConstructClass):
