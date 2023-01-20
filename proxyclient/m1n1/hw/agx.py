@@ -13,11 +13,13 @@ class FAULT_REASON(IntEnum):
     UNK = 5
 
 class R_FAULT_INFO(Register64):
-    ADDR        = 63, 24
-    WRITE       = 23
+    ADDR        = 63, 30
+    SIDEBAND    = 29, 23
     CONTEXT     = 22, 17
     UNIT        = 16, 9
-    UNK_8       = 8
+    LEVEL       = 8, 7
+    UNK_5       = 6, 5
+    READ        = 4
     REASON      = 3, 1, FAULT_REASON
     FAULTED     = 0
 
