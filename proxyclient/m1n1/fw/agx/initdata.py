@@ -621,6 +621,7 @@ class AGXHWDataA(ConstructClass):
         "t81xx_data" / AGXHWDataT81xx,
 
         "unk_dd0" / HexDump(Bytes(0x40)),
+        Ver("V >= V13_2", "unk_e10_pad" / HexDump(Bytes(0x10))),
         Ver("V >= V13_0B4", "unk_e10_0" / AGXHWDataA130Extra),
         "unk_e10" / HexDump(Bytes(0xc)),
         "fast_die0_sensor_mask64_2" / Int64ul,
@@ -944,6 +945,7 @@ class AGXHWDataA(ConstructClass):
 
         self.unk_dd0 = bytes(0x40)
 
+        self.unk_e10_pad = bytes(0x10)
         self.unk_e10_0 = AGXHWDataA130Extra(self.max_pstate_scaled)
         self.unk_e10 = bytes(0xc)
         self.fast_die0_sensor_mask64_2 = chip_info.gpu_fast_die0_sensor_mask64
@@ -1646,7 +1648,9 @@ class RCPowerZone(ConstructClass):
 class InitData_RegionC(ConstructClass):
     subcon = Struct(
         "ktrace_enable" / Int32ul,
-        "unk_4" / HexDump(Bytes(0x24)),
+        "unk_4" / HexDump(Bytes(0x20)),
+        Ver("V >= V13_2", "unk_24_0" / Int32ul),
+        "unk_24" / Int32ul,
         Ver("V >= V13_0B4", "unk_28_0" / Int32ul),
         "unk_28" / Int32ul,
         Ver("V >= V13_0B4", "unk_2c_0" / Int32ul),
@@ -1666,7 +1670,7 @@ class InitData_RegionC(ConstructClass):
         "unk_80" / HexDump(Bytes(0xf80)),
         "unk_1000" / HexDump(Bytes(0x7000)),
         "unk_8000" / HexDump(Bytes(0x900)),
-        Ver("V >= V13_0B4", "unk_8900_0" / Int32ul),
+        Ver("V >= V13_0B4 && V < V13_2", "unk_8900_0" / Int32ul),
         "unk_8900" / Int32ul,
         "unk_atomic" / Int32ul,
         "max_power" / Int32ul,
@@ -1756,7 +1760,9 @@ class InitData_RegionC(ConstructClass):
         avg_power_filter_tc_periods = sgx.gpu_avg_power_filter_tc_ms // period_ms
 
         self.ktrace_enable = 0# 0xffffffff
-        self.unk_4 = bytes(0x24)
+        self.unk_4 = bytes(0x20)
+        self.unk_24_0 = 3000
+        self.unk_24 = 0
         self.unk_28_0 = 1 # debug
         self.unk_28 = 1
         self.unk_2c_0 = 0
