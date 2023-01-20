@@ -1093,7 +1093,7 @@ class AGXTracer(ASCTracer):
             queue.set_active(True)
         self.trace_uatrange(0, self.state.initdata.regionA_addr, 0x4000, name="regionA")
         self.trace_uatrange(0, self.state.initdata.regionB_addr, 0x6bc0, name="regionB")
-        self.trace_uatrange(0, self.state.initdata.regionC_addr, 0x11d40, name="regionC")
+        #self.trace_uatrange(0, self.state.initdata.regionC_addr, 0x11d40, name="regionC")
         self.trace_uatrange(0, self.state.initdata.regionB.buffer_mgr_ctl_addr, 0x4000, name="Buffer manager ctl")
 
     def add_mon_regions(self):
