@@ -466,7 +466,7 @@ class GPURenderer:
         wc_3d.unk_914 = 0
         wc_3d.unk_918 = 0
         wc_3d.unk_920 = 0
-        wc_3d.unk_924 = 1
+        wc_3d.client_sequence = 1
         # Ventura
         wc_3d.unk_928_0 = 0
         wc_3d.unk_928_4 = 0
@@ -820,7 +820,7 @@ class GPURenderer:
         wc_ta.unk_5c8 = 0
         wc_ta.unk_5cc = 0
         wc_ta.unk_5d0 = 0
-        wc_ta.unk_5d4 = 1 #0x27 #1
+        wc_ta.client_sequence = 1
         # Ventura
         wc_ta.unk_5d8_0 = 0
         wc_ta.unk_5d8_4 = 0

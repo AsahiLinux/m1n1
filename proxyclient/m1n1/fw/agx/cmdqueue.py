@@ -45,6 +45,12 @@ class WorkCommandInitBM(ConstructClass):
         "stamp_value" / Hex(Int32ul),  # 0x100
     )
 
+class Flag(ConstructValueClass):
+    subcon = Hex(Int32ul)
+
+    def __init__(self):
+        self.value = 0
+
 class LinkedListHead(ConstructClass):
     subcon = Struct(
         "prev" / Int64ul,
@@ -179,12 +185,6 @@ class WorkCommand1_UnkBuf2(ConstructClass):
         "unk_10" / Int64ul,
     )
 
-class Flag(ConstructValueClass):
-    subcon = Hex(Int32ul)
-
-    def __init__(self):
-        self.value = 0
-
 class WorkCommand3D(ConstructClass):
     """
     For 3D
@@ -255,7 +255,8 @@ class WorkCommand3D(ConstructClass):
         "unk_914" / Int32ul,
         "unk_918" / Int64ul,
         "unk_920" / Int32ul,
-        "unk_924" / Int32ul,
+        "client_sequence" / Int8ul,
+        "pad_925" / Default(HexDump(Bytes(0x3)), bytes(0x3)),
         Ver("V >= V13_0B4", "unk_928_0" / Int32ul),
         Ver("V >= V13_0B4", "unk_928_4" / Int8ul),
         Ver("V >= V13_0B4", "unk_ts" / TimeStamp),
@@ -335,7 +336,7 @@ class WorkCommandTA(ConstructClass):
         "unk_5c8" / Int32ul,
         "unk_5cc" / Int32ul,
         "unk_5d0" / Int32ul,
-        "unk_5d4" / Int8ul,
+        "client_sequence" / Int8ul,
         "pad_5d5" / Default(HexDump(Bytes(0x3)), bytes(0x3)),
         Ver("V >= V13_0B4", "unk_5d8_0" / Int32ul),
         Ver("V >= V13_0B4", "unk_5d8_4" / Int8ul),
