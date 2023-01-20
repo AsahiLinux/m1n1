@@ -467,6 +467,35 @@ ComponentTypes = Struct(
 
 #ComponentTypes = Bytes(8)
 
+CLA_Chroma = 0
+CLA_Luma = 1
+CLA_Alpha = 2
+
+ARGB_RedLuma = 0
+ARGB_GreenCb = 1
+ARGB_BlueCr = 2
+ARGB_Alpha = 3
+
+kIOSurfaceAddressFormatLinear = 0
+kIOSurfaceAddressFormatIndirect = 1
+kIOSurfaceAddressFormatTwiddled = 2
+kIOSurfaceAddressFormatTiled = 3
+kIOSurfaceAddressFormatReference = 4
+
+kIOSurfaceCompressionTypeNone = 0
+kIOSurfaceCompressionTypeHTPC = 1
+kIOSurfaceCompressionTypeAGX = 2
+kIOSurfaceCompressionTypeInterchange = 3
+kIOSurfaceCompressionTypeInterchangeLossy = 4
+
+kInterchangeSizeNone = 0
+kInterchangeSizeLarge = 1
+kInterchangeSizeNormal = 2
+
+kInterchangeLinear = 0
+kInterchangeCompressed = 1
+kInterchangeUncompressed = 2
+
 PlaneInfo = Struct(
     "width" / Int32ul,
     "height" / Int32ul,
@@ -483,6 +512,25 @@ PlaneInfo = Struct(
 )
 
 assert PlaneInfo.sizeof() == 0x50
+
+CompressionInfo = Struct(
+    "tile_w" / Int32ul,
+    "tile_h" / Int32ul,
+    "meta_offset" / Int32ul,
+    "data_offset" / Int32ul,
+    "tile_meta_bytes" / Int32ul,
+    "tiles_w" / Int32ul,
+    "tiles_h" / Int32ul,
+    "unk1" / Default(Int32ul, 0),
+    "compression_type" / Default(Int32ul, 3),
+    "unk3" / Default(Int32ul, 0),
+    "pad" / Padding(3),
+    "tile_bytes" / Int32ul,
+    "row_stride" / Int32ul,
+    "pad2" / Padding(1),
+)
+
+assert PlaneInfo.sizeof() == 0x34
 
 IOSurface = Struct(
     "is_tiled" / bool_,
@@ -509,7 +557,7 @@ IOSurface = Struct(
     "has_comp" / Bool(Int64ul),
     "planes" / Default(SizedArray(MAX_PLANES, "plane_cnt", PlaneInfo), []),
     "has_planes" / Bool(Int64ul),
-    "compression_info" / Default(SizedArray(MAX_PLANES, "plane_cnt", UnkBytes(0x34)), []),
+    "compression_info" / Default(SizedArray(MAX_PLANES, "plane_cnt", CompressionInfo), []),
     "has_compr_info" / Bool(Int64ul),
     "unk_1f5" / Int32ul,
     "unk_1f9" / Int32ul,
