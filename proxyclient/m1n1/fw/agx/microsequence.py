@@ -436,7 +436,7 @@ class Finalize3DCmd(ConstructClass):
         "unk_7c" / Int64ul, # 0
         "unk_84" / Int64ul, # 0
         "unk_8c" / Int64ul, # 0
-        Ver("G >= G14", "unk_8c_g14" / Int64ul),
+        Ver("G == G14 && V < V13_0B4", "unk_8c_g14" / Int64ul),
         "restart_branch_offset" / Int32sl,
         "unk_98" / Int32ul, # 1
         Ver("V >= V13_0B4", "unk_9c" / HexDump(Bytes(0x10))),
@@ -600,7 +600,7 @@ class FinalizeTACmd(ConstructClass):
         "unk_60" / Int32ul,
         "unk_64" / Int32ul,
         "unk_68" / Int32ul,
-        Ver("G >= G14", "unk_6c_g14" / Int64ul),
+        Ver("G == G14 && V < V13_0B4", "unk_6c_g14" / Int64ul),
         "restart_branch_offset" / Int32sl,
         "unk_70" / Int32ul,
         Ver("V >= V13_0B4", "unk_74" / HexDump(Bytes(0x10))),
@@ -738,7 +738,7 @@ class TimestampCmd(ConstructClass):
         "ts2" / ROPointer(this.ts2_addr, TimeStamp),
         "cmdqueue_ptr" / Int64ul,
         "unk_24" / Int64ul,
-        Ver("V >= V13_0B4", "unkptr_2c_0" / Int64ul),
+        Ver("V >= V13_0B4", "unk_ts_addr" / Int64ul),
         "uuid" / Int32ul,
         "unk_30_padding" / Int32ul,
     )

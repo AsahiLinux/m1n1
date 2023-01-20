@@ -81,9 +81,9 @@ class EventControl(ConstructClass):
         "has_cp" / Int32ul,
         "pstamp_cp" / Array(4, Int64ul),
         "in_list" / Int32ul,
-        Ver("G >= G14", "unk_98_g14_0" / HexDump(Bytes(0x14))),
+        Ver("G >= G14 && V < V13_0B4", "unk_98_g14_0" / HexDump(Bytes(0x14))),
         "list_head" / LinkedListHead,
-        Ver("G >= G14", "unk_a8_g14_0" / ZPadding(4)),
+        Ver("G >= G14 && V < V13_0B4", "unk_a8_g14_0" / ZPadding(4)),
         Ver("V >= V13_0B4", "unk_buf" / EventControlUnkBuf),
     )
 
@@ -245,9 +245,8 @@ class WorkCommand3D(ConstructClass):
         "unk_924" / Int32ul,
         Ver("V >= V13_0B4", "unk_928_0" / Int32ul),
         Ver("V >= V13_0B4", "unk_928_4" / Int8ul),
-        Ver("V >= V13_0B4", "ts_flag" / TsFlag),
-        Ver("V >= V13_0B4", "unk_5e6" / Default(Int16ul, 0)),
-        Ver("V >= V13_0B4", "unk_5e8" / Default(HexDump(Bytes(0x20)), bytes(0x20))),
+        Ver("V >= V13_0B4", "unk_ts" / TimeStamp),
+        Ver("V >= V13_0B4", "unk_928_d" / Default(HexDump(Bytes(0x1b)), bytes(0x1b))),
         "pad_928" / Default(HexDump(Bytes(0x18)), bytes(0x18)),
     )
 
@@ -325,11 +324,10 @@ class WorkCommandTA(ConstructClass):
         "unk_5d0" / Int32ul,
         "unk_5d4" / Int8ul,
         "pad_5d5" / Default(HexDump(Bytes(0x3)), bytes(0x3)),
-        Ver("V >= V13_0B4", "unk_5e0" / Int32ul),
-        Ver("V >= V13_0B4", "unk_5e4" / Int8ul),
-        Ver("V >= V13_0B4", "ts_flag" / TsFlag),
-        Ver("V >= V13_0B4", "unk_5e6" / Default(Int16ul, 0)),
-        Ver("V >= V13_0B4", "unk_5e8" / Default(HexDump(Bytes(0x18)), bytes(0x18))),
+        Ver("V >= V13_0B4", "unk_5d8_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_5d8_4" / Int8ul),
+        Ver("V >= V13_0B4", "unk_ts" / TimeStamp),
+        Ver("V >= V13_0B4", "unk_5d8_d" / Default(HexDump(Bytes(0x13)), bytes(0x13))),
         "pad_5d8" / Default(HexDump(Bytes(0x8)), bytes(0x8)),
         Ver("V >= V13_0B4", "pad_5e0" / Default(HexDump(Bytes(0x18)), bytes(0x18))),
     )

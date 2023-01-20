@@ -128,6 +128,7 @@ class StatsMsg_Power(ConstructClass):
         ZPadding(0x18), # ??? why the hole? never written...
         "power" / Hex(Int64ul),
         ZPadding(0xc), # Confirmed padding
+        Ver("V >= V13_0B4", ZPadding(0x10)),
     )
 
     def __str__(self):
@@ -138,6 +139,7 @@ class StatsMsg_PowerOn(ConstructClass):
         "msg_type" / Hex(Const(0x02, Int32ul)),
         "power_off_ticks" / Dec(Int64ul),
         ZPadding(0x24), # Confirmed padding
+        Ver("V >= V13_0B4", ZPadding(0x10)),
     )
     def __str__(self):
         t = self.power_off_ticks / 24000000
@@ -148,6 +150,7 @@ class StatsMsg_PowerOff(ConstructClass):
         "msg_type" / Hex(Const(0x03, Int32ul)),
         "power_on_ticks" / Dec(Int64ul),
         ZPadding(0x24), # Confirmed padding
+        Ver("V >= V13_0B4", ZPadding(0x10)),
     )
     def __str__(self):
         t = self.power_on_ticks / 24000000
@@ -162,6 +165,7 @@ class StatsMsg_Util(ConstructClass):
         "util3" / Dec(Int32ul),
         "util4" / Dec(Int32ul),
         ZPadding(0x14), # Confirmed padding
+        Ver("V >= V13_0B4", ZPadding(0x10)),
     )
     def __str__(self):
         return f"Utilization: {self.util1:>3d}% {self.util2:>3d}% {self.util3:>3d}% {self.util4:>3d}%"
@@ -175,6 +179,7 @@ class StatsMsg_AvgPower(ConstructClass):
         "unk4" / Hex(Int32ul),
         "avg_power" / Dec(Int32ul),
         ZPadding(0x14), # Confirmed padding
+        Ver("V >= V13_0B4", ZPadding(0x10)),
     )
 
     def __str__(self):
@@ -189,6 +194,7 @@ class StatsMsg_Temp(ConstructClass):
         "tmin" / Hex(Int32ul),
         "tmax" / Hex(Int32ul),
         ZPadding(0x14), # Confirmed padding
+        Ver("V >= V13_0B4", ZPadding(0x10)),
     )
 
     def __str__(self):
@@ -207,6 +213,7 @@ class StatsMsg_PowerState(ConstructClass):
         "unk4" / Dec(Int32ul),
         "unk5" / Dec(Int32ul),
         ZPadding(4), # Confirmed padding
+        Ver("V >= V13_0B4", ZPadding(0x10)),
     )
 
     def __str__(self):
@@ -221,6 +228,7 @@ class StatsMsg_FWBusy(ConstructClass):
         "timestamp" / Hex(Int64ul),
         "flag" / Int32ul,
         ZPadding(0x20), # Confirmed padding
+        Ver("V >= V13_0B4", ZPadding(0x10)),
     )
 
     def __str__(self):
@@ -235,6 +243,7 @@ class StatsMsg_PState(ConstructClass):
         "ps_max" / Dec(Int32ul),
         "unk3" / Dec(Int32ul),
         ZPadding(0x14), # Confirmed padding
+        Ver("V >= V13_0B4", ZPadding(0x10)),
     )
     def __str__(self):
         return f"PState: {self.ps_min:d}..{self.ps_max:d} ({self.unk1:d}/{self.unk3:d})"
@@ -249,12 +258,18 @@ class StatsMsg_TempSensor(ConstructClass):
         "tmin" / Dec(Int32ul),
         "tmax" / Dec(Int32ul),
         ZPadding(0x14), # Confirmed padding
+        Ver("V >= V13_0B4", ZPadding(0x10)),
     )
     def __str__(self):
         temp = self.raw_value / float(self.scale) / 64.0
         return f"TempSensor: #{self.sensor_id:d} {temp:.2f}°C s={self.scale:d} tmin={self.tmin:d} tmax={self.tmax:d}"
 
-StatsMsg = FixedSized(0x30, Select(
+if Ver.check("V < V13_0B4"):
+    StatsSize = 0x30
+else:
+    StatsSize = 0x40
+
+StatsMsg = FixedSized(StatsSize, Select(
     StatsMsg_Power,
     StatsMsg_PowerOn,
     StatsMsg_PowerOff,
@@ -396,7 +411,7 @@ channelRings = (
             (FWLogMsg, 0xd8, 0x100),                # unk 5
         ],
         [(KTraceMsg, 0x38, 0x200)],
-        [(HexDump(Bytes(0x60)), 0x60, 0x100)],
+        [(StatsMsg, StatsSize, 0x100)],
         [(FWCtlMsg, 0x14, 0x100)],
     ]
 )

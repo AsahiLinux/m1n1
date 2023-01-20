@@ -470,7 +470,7 @@ class GPURenderer:
         # Ventura
         wc_3d.unk_928_0 = 0
         wc_3d.unk_928_4 = 0
-        wc_3d.ts_flag = TsFlag()
+        wc_3d.unk_ts = TimeStamp()
 
         # cmdbuf.ds_flags
         # 0 - no depth
@@ -703,7 +703,7 @@ class GPURenderer:
         ts1.cmdqueue_ptr = self.wq_3d.info._addr
         ts1.unk_24 = 0x0
         if Ver.check("V >= V13_0B4"):
-            ts1.unkptr_2c_0 = wc_3d.ts_flag._addr
+            ts1.unk_ts_addr = wc_3d.unk_ts._addr
         ts1.uuid = uuid_3d
         ts1.unk_30_padding = 0x0
         ms.append(ts1)
@@ -720,7 +720,7 @@ class GPURenderer:
         ts2.cmdqueue_ptr = self.wq_3d.info._addr
         ts2.unk_24 = 0x0
         if Ver.check("V >= V13_0B4"):
-            ts2.unkptr_2c_0 = wc_3d.ts_flag._addr
+            ts2.unk_ts_addr = wc_3d.unk_ts._addr
         ts2.uuid = uuid_3d
         ts2.unk_30_padding = 0x0
         ms.append(ts2)
@@ -822,9 +822,9 @@ class GPURenderer:
         wc_ta.unk_5d0 = 0
         wc_ta.unk_5d4 = 1 #0x27 #1
         # Ventura
-        wc_ta.unk_5e0 = 0
-        wc_ta.unk_5e4 = 0
-        wc_ta.ts_flag = TsFlag()
+        wc_ta.unk_5d8_0 = 0
+        wc_ta.unk_5d8_4 = 0
+        wc_ta.unk_ts = TimeStamp()
 
         # Structures embedded in WorkCommandTA
         if True:
@@ -953,7 +953,7 @@ class GPURenderer:
         ts1.cmdqueue_ptr = self.wq_ta.info._addr
         ts1.unk_24 = 0x0
         if Ver.check("V >= V13_0B4"):
-            ts1.unkptr_2c_0 = wc_ta.ts_flag._addr
+            ts1.unk_ts_addr = wc_ta.unk_ts._addr
         ts1.uuid = uuid_ta
         ts1.unk_30_padding = 0x0
         ms.append(ts1)
@@ -970,7 +970,7 @@ class GPURenderer:
         ts2.cmdqueue_ptr = self.wq_ta.info._addr
         ts2.unk_24 = 0x0
         if Ver.check("V >= V13_0B4"):
-            ts2.unkptr_2c_0 = wc_ta.ts_flag._addr
+            ts2.unk_ts_addr = wc_ta.unk_ts._addr
         ts2.uuid = uuid_ta
         ts2.unk_30_padding = 0x0
         ms.append(ts2)
