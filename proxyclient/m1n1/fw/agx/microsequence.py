@@ -491,7 +491,7 @@ class StartTACmdStruct2(ConstructClass):
         "unk_f8" / Int64ul,
         "unk_100" / Array(3, Hex(Int64ul)),
         "unk_118" / Int32ul,
-        Ver("G >= G14", Padding(8 * 9)),
+        Ver("G >= G14", ZPadding(8 * 9)),
     )
 
 class StartTACmdStruct3(ConstructClass):

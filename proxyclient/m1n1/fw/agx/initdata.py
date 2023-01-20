@@ -38,7 +38,7 @@ class InitData_FWStatus(ConstructClass):
 
 class AGXHWDataShared1(ConstructClass):
     subcon = Struct(
-        "table" / Array(17, Int32sl),
+        "table" / Array(16, Int32sl),
         "unk_44" / HexDump(Bytes(0x60)),
         "unk_a4" / Int32ul,
         "unk_a8" / Int32ul,
@@ -635,6 +635,7 @@ class AGXHWDataA(ConstructClass):
         Ver("V < V13_0B4", "unk_1638" / Array(2, Int32ul)),
         "unk_1640" / HexDump(Bytes(0x2000)),
         "unk_3640" / Int32ul,
+        "unk_3644" / Int32ul,
         "hws1" / AGXHWDataShared1,
         Ver("V >= V13_0B4", "unk_pad1" / HexDump(Bytes(0x20))),
         "hws2" / AGXHWDataShared2,
@@ -951,6 +952,7 @@ class AGXHWDataA(ConstructClass):
         self.unk_1638 = [0, 1]
         self.unk_1640 = bytes(0x2000)
         self.unk_3640 = 0
+        self.unk_3644 = 0
         self.hws1 = AGXHWDataShared1(chip_info)
         self.unk_pad1 = bytes(0x20)
         self.hws2 = AGXHWDataShared2(chip_info)
@@ -1692,6 +1694,7 @@ class InitData_RegionC(ConstructClass):
         Ver("V >= V13_0B4", "unk_89f4_0" / HexDump(Bytes(0x8))),
         Ver("V >= V13_0B4", "unk_89f4_8" / Int32ul),
         Ver("V >= V13_0B4", "unk_89f4_c" / HexDump(Bytes(0x50))),
+        "unk_89f4" / Int32ul,
         "hws1" / AGXHWDataShared1,
         "hws2" / AGXHWDataShared2,
         "hws3" / AGXHWDataShared3,
@@ -1814,6 +1817,7 @@ class InitData_RegionC(ConstructClass):
         self.unk_89f4_0 = bytes(8)
         self.unk_89f4_8 = 1
         self.unk_89f4_c = bytes(0x50)
+        self.unk_89f4 = 0
         self.hws1 = AGXHWDataShared1(chip_info)
         self.hws2 = AGXHWDataShared2(chip_info)
         self.hws3 = AGXHWDataShared3(chip_info)

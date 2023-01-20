@@ -83,7 +83,7 @@ class EventControl(ConstructClass):
         "in_list" / Int32ul,
         Ver("G >= G14", "unk_98_g14_0" / HexDump(Bytes(0x14))),
         "list_head" / LinkedListHead,
-        Ver("G >= G14", "unk_a8_g14_0" / Padding(4)),
+        Ver("G >= G14", "unk_a8_g14_0" / ZPadding(4)),
         Ver("V >= V13_0B4", "unk_buf" / EventControlUnkBuf),
     )
 
