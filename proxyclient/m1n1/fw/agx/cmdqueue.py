@@ -136,15 +136,28 @@ class WorkCommandCP(ConstructClass):
         "context_id" / Hex(Int32ul),
         "event_control_addr" / Hex(Int64ul),
         "event_control" / ROPointer(this.event_control_addr, EventControl),
-
-        # This struct embeeds some data that the Control List has pointers back to, but doesn't
-        # seem to be actually part of this struct
-        Padding(0x1e8 - 0x14),
-
-        # offset 000001e8
+        "unk_buf" / HexDump(Bytes(0x54)),
+        "compute_info" / ComputeInfo,
+        "unk_b8" / HexDump(Bytes(0x1e8 - 0xcc)),
         "microsequence_ptr" / Hex(Int64ul),
         "microsequence_size" / Hex(Int32ul),
         "microsequence" / ROPointer(this.microsequence_ptr, MicroSequence),
+        "compute_info2" / ComputeInfo2,
+        "encoder_params" / EncoderParams,
+        "job_meta" / JobMeta,
+        "ts1" / TimeStamp,
+        "ts2" / TimeStamp,
+        "ts3" / TimeStamp,
+        "unk_2c0" / Int32ul,
+        "unk_2c4" / Int32ul,
+        "unk_2c8" / Int32ul,
+        "unk_2cc" / Int32ul,
+        "client_sequence" / Int8ul,
+        "unk_2d1" / Int8ul,
+        "unk_2d2" / Int16ul,
+        "unk_2d4" / Int32ul,
+        "unk_2d8" / Int8ul,
+        "pad_2d9" / Default(HexDump(Bytes(0x7)), bytes(0x7)),
     )
 
 class WorkCommand0_UnkBuf(ConstructValueClass):
