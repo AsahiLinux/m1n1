@@ -1067,7 +1067,9 @@ class DCPTracer(ASCTracer):
         0x20: SystemService,
         0x21: TestService,
         0x22: DCPExpertService,
-        0x23: Disp0Service,
+        # Disp0 / DCP iboot as used by m1n1 is incompatible with the generic
+        # EPICEp tracer, disable it for now
+        #0x23: Disp0Service,
         0x24: DPAVController,
         0x25: EPICEp, # dcpav-power-ep
         0x26: DPSACService,
