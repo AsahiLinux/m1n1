@@ -697,6 +697,7 @@ static void dt_set_uboot_dm_preloc(int node)
 {
     // Tell U-Boot to bind this node early
     fdt_setprop_empty(dt, node, "u-boot,dm-pre-reloc");
+    fdt_setprop_empty(dt, node, "bootph-all");
 
     // Make sure the power domains are bound early as well
     int pds_size;
