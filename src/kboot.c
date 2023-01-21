@@ -660,6 +660,29 @@ static int dt_set_bluetooth(void)
     return 0;
 }
 
+static int dt_set_multitouch(void)
+{
+    const char *path = fdt_get_alias(dt, "touchbar0");
+    if (path == NULL)
+        return 0;
+
+    int node = fdt_path_offset(dt, path);
+    if (node < 0)
+        bail("FDT: alias points at nonexistent node");
+
+    int anode = adt_path_offset(adt, "/arm-io/spi0/multi-touch");
+    if (anode < 0)
+        bail("ADT /arm-io/spi0/multi-touch not found\n");
+
+    u32 len;
+    const u8 *cal_blob = adt_getprop(adt, anode, "multi-touch-calibration", &len);
+    if (!cal_blob || !len)
+        bail("ADT: Failed to get multi-touch-calibration");
+
+    fdt_setprop(dt, node, "apple,z2-cal-blob", cal_blob, len);
+    return 0;
+}
+
 static int dt_set_wifi(void)
 {
     int anode = adt_path_offset(adt, "/arm-io/wlan");
@@ -1872,6 +1895,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_display())
         return -1;
     if (dt_set_gpu(dt))
+        return -1;
+    if (dt_set_multitouch())
         return -1;
     if (dt_disable_missing_devs("usb-drd", "usb@", 8))
         return -1;
