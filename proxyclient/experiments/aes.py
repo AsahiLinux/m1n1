@@ -6,7 +6,6 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 from m1n1.setup import *
 from m1n1.shell import run_shell
 from m1n1.hw.dart import DART
-from m1n1.hw.dart8110 import DART8110
 from m1n1.hw.aes import *
 
 def aes_set_custom_key(
@@ -116,13 +115,7 @@ def test_custom_key(key, keygen=0):
 
 p.pmgr_adt_clocks_enable("/arm-io/aes")
 
-dart_path = "/arm-io/dart-sio"
-
-if u.adt[dart_path].compatible[0] == "dart,t8110":
-    dart = DART8110.from_adt(u, dart_path)
-else:
-    dart = DART.from_adt(u, dart_path)
-
+dart = DART.from_adt(u, "/arm-io/dart-sio")
 dart.initialize()
 
 aes_base, _ = u.adt["/arm-io/aes"].get_reg(0)
