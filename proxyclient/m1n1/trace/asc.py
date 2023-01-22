@@ -141,19 +141,20 @@ class BaseASCTracer(ADTDevTracer):
 
     def ioread(self, dva, size):
         if self.dart:
-            return self.dart.ioread(0, dva & 0xFFFFFFFFF, size)
+            return self.dart.ioread(self.stream, dva & 0xFFFFFFFFF, size)
         else:
             return self.hv.iface.readmem(dva, size)
 
     def iowrite(self, dva, data):
         if self.dart:
-            return self.dart.iowrite(0, dva & 0xFFFFFFFFF, data)
+            return self.dart.iowrite(self.stream, dva & 0xFFFFFFFFF, data)
         else:
             return self.hv.iface.writemem(dva, data)
 
-    def start(self, dart=None):
+    def start(self, dart=None, stream=0):
         super().start()
         self.dart = dart
+        self.stream = stream
         self.msgmap = {}
         for name in dir(self):
             i = getattr(self, name)
@@ -172,6 +173,7 @@ class BaseASCTracer(ADTDevTracer):
                     continue
                 ep = v(self, k)
                 ep.dart = dart
+                ep.stream = stream
                 self.epmap[k] = ep
                 if k in self.state.ep:
                     ep.state.__dict__.update(self.state.ep[k])
