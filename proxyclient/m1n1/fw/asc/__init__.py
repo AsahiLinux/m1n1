@@ -67,7 +67,7 @@ class StandardASC(ASC):
             return self.iface.readmem(dva, size)
 
         if self.dart:
-            return self.dart.ioread(self.stream, dva & 0xFFFFFFFF, size)
+            return self.dart.ioread(self.stream, dva & 0xFFFFFFFFF, size)
         else:
             return self.iface.readmem(dva, size)
 
@@ -76,7 +76,7 @@ class StandardASC(ASC):
             return self.iface.writemem(dva, data)
 
         if self.dart:
-            return self.dart.iowrite(self.stream, dva & 0xFFFFFFFF, data)
+            return self.dart.iowrite(self.stream, dva & 0xFFFFFFFFF, data)
         else:
             return self.iface.writemem(dva, data)
 
@@ -85,7 +85,7 @@ class StandardASC(ASC):
             return [(dva, size)]
 
         if self.dart:
-            return self.dart.iotranslate(self.stream, dva & 0xFFFFFFFF, size)
+            return self.dart.iotranslate(self.stream, dva & 0xFFFFFFFFF, size)
         else:
             return [(dva, size)]
 
