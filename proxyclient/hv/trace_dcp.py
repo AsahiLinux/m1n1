@@ -15,10 +15,12 @@ from m1n1.fw.afk.epic import *
 if True:
     dcp_adt_path = "/arm-io/dcp"
     dcp_dart_adt_path = "/arm-io/dart-dcp"
+    dcp_dart_mapper_adt_path = "/arm-io/dart-dcp/mapper-dcp"
     disp0_dart_adt_path = "/arm-io/dart-disp0"
 else:
     dcp_adt_path = "/arm-io/dcpext"
     dcp_dart_adt_path = "/arm-io/dart-dcpext"
+    dcp_dart_mapper_adt_path = "/arm-io/dart-dcpext/mapper-dcpext"
     disp0_dart_adt_path = "/arm-io/dart-dispext0"
 
 trace_device(dcp_adt_path, True, ranges=[1])
@@ -44,7 +46,7 @@ class AFKRingBufSniffer(AFKRingBuf):
         return struct.unpack("<I", self.read_buf(2 * self.BLOCK_SIZE, 4))[0]
 
     def read_buf(self, off, size):
-        return self.ep.dart.ioread(0, self.base + off, size)
+        return self.ep.dart.ioread(self.ep.stream, self.base + off, size)
 
 class AFKEp(EP):
     BASE_MESSAGE = AFKEPMessage
@@ -301,7 +303,7 @@ class EPICEp(AFKEp):
                 self.log(f"Response {sub.type:#x}: {cmd.retcode:#x}")
                 return
 
-            data = self.dart.ioread(0, cmd.rxbuf, cmd.rxlen)
+            data = self.dart.ioread(self.stream, cmd.rxbuf, cmd.rxlen)
             rgroup, rcmd, rlen, rmagic = struct.unpack("<2xHIII", data[:16])
             if rmagic != 0x69706378:
                 self.log("Warning: Invalid EPICStandardService response magic")
@@ -318,7 +320,7 @@ class EPICEp(AFKEp):
         payload = fd.read()
 
         if sub.type == 0xc0 and cmd.txbuf:
-            data = self.dart.ioread(0, cmd.txbuf, cmd.txlen)
+            data = self.dart.ioread(self.stream, cmd.txbuf, cmd.txlen)
             sgroup, scmd, slen, sfooter  = struct.unpack("<2xHIII48x", data[:64])
             sdata = data[64:64+slen] if slen else None
 
@@ -334,7 +336,7 @@ class EPICEp(AFKEp):
                 chexdump(payload, print_fn=self.log)
             if cmd.txbuf:
                 self.log(f"TX buf @ {cmd.txbuf:#x} ({cmd.txlen:#x} bytes):")
-                chexdump(self.dart.ioread(0, cmd.txbuf, cmd.txlen), print_fn=self.log)
+                chexdump(self.dart.ioread(self.stream, cmd.txbuf, cmd.txlen), print_fn=self.log)
 
 KNOWN_MSGS = {
     "A000": "IOMFB::UPPipeAP_H13P::late_init_signal()",
@@ -695,7 +697,7 @@ class DCPCallChannel(Reloadable):
 
         state = DCPCallState()
 
-        data = self.dcpep.dart.ioread(0, self.state.shmem_iova + self.buf + msg.OFF, msg.LEN)
+        data = self.dcpep.dart.ioread(self.dcpep.stream, self.state.shmem_iova + self.buf + msg.OFF, msg.LEN)
         tag = data[:4][::-1].decode("ascii")
         in_len, out_len = struct.unpack("<II", data[4:12])
         data_in = data[12:12 + in_len]
@@ -738,7 +740,7 @@ class DCPCallChannel(Reloadable):
         if self.state.show_acks:
             self.log(f"{dir}ACK {self.name}.{msg.OFF:x} ({msg})")
 
-        data_out = self.dcpep.dart.ioread(0, self.state.shmem_iova + state.out_addr, state.out_len)
+        data_out = self.dcpep.dart.ioread(self.dcpep.stream, self.state.shmem_iova + state.out_addr, state.out_len)
 
         verb = self.dcpep.get_verbosity(state.tag)
         if verb >= 3 and state.out_len > 0:
@@ -1088,6 +1090,7 @@ class DCPTracer(ASCTracer):
         #iomon.poll()
 
 
+dcp_sid = u.adt[dcp_dart_mapper_adt_path].reg
 
 dart_dcp_tracer = DARTTracer(hv, dcp_dart_adt_path)
 dart_dcp_tracer.start()
@@ -1097,7 +1100,7 @@ dart_disp0_tracer.start()
 
 def readmem_iova(addr, size, readfn):
     try:
-        return dart_dcp_tracer.dart.ioread(0, addr, size)
+        return dart_dcp_tracer.dart.ioread(dcp_sid, addr, size)
     except Exception as e:
         print(e)
         return None
@@ -1105,6 +1108,6 @@ def readmem_iova(addr, size, readfn):
 iomon.readmem = readmem_iova
 
 dcp_tracer = DCPTracer(hv, dcp_adt_path, verbose=1)
-dcp_tracer.start(dart_dcp_tracer.dart)
+dcp_tracer.start(dart_dcp_tracer.dart, stream=dcp_sid)
 
 #dcp_tracer.ep.dcpep.state.dumpfile = open("dcp.log", "a")
