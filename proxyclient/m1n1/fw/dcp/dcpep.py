@@ -13,7 +13,7 @@ class DCPMessage(Register64):
 
 class DCPEp_SetShmem(DCPMessage):
     DVA         = 63, 16
-    FLAG        = 7, 4, Constant(4)
+    FLAG        = 7, 4
     TYPE        = 3, 0, Constant(0)
 
 class DCPEp_InitComplete(DCPMessage):
