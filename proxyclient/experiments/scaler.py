@@ -4,7 +4,7 @@ import sys, pathlib
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 
 from m1n1.setup import *
-from m1n1.hw.dart8110 import DART8110
+from m1n1.hw.dart import DART
 from m1n1.hw.scaler import *
 from m1n1.utils import *
 import struct
@@ -17,7 +17,7 @@ DART_ADT = '/arm-io/dart-scaler0'
 p.pmgr_adt_clocks_enable(DART_ADT)
 p.pmgr_adt_clocks_enable(SCALER_ADT)
 
-dart = DART8110.from_adt(u, DART_ADT)
+dart = DART.from_adt(u, DART_ADT)
 dart.initialize()
 
 scaler_base, _ = u.adt[SCALER_ADT].get_reg(0)
