@@ -806,7 +806,7 @@ class DCPEp(EP):
     @msg(0, DIR.TX, DCPEp_SetShmem)
     def SetShmem(self, msg):
         self.log(f"Shared memory DVA: {msg.DVA:#x}")
-        self.state.shmem_iova = msg.DVA & 0xffffffff
+        self.state.shmem_iova = msg.DVA & 0xfffffffff
         self.add_mon()
 
     @msg(2, DIR.TX, DCPEp_Msg)
