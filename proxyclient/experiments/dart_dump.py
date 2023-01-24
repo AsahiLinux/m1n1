@@ -7,15 +7,13 @@ import struct
 
 from m1n1.setup import *
 from m1n1 import asm
-from m1n1.hw.dart import DART, DARTRegs
+from m1n1.hw.dart import DART
 
 if len(sys.argv) > 1:
     dart_name = sys.argv[1]
 else:
     dart_name = "dart-disp0"
 
-# disp0 DART
-# note that there's another range just before this one
-disp0 = DART.from_adt(u, "arm-io/" + dart_name)
-disp0.dump_all()
-disp0.regs.dump_regs()
+dart = DART.from_adt(u, "arm-io/" + dart_name)
+dart.dump_all()
+dart.dart.regs.dump_regs()
