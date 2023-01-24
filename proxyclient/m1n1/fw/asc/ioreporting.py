@@ -31,9 +31,15 @@ class ASCIOReportingEndpoint(ASCBaseEndpoint):
             self.log("WARNING: trying to reset iobuffer!")
 
         self.bufsize = align(0x1000 * msg.SIZE, 0x4000)
-        self.iobuffer, self.iobuffer_dva = self.asc.ioalloc(self.bufsize)
-        self.log(f"buf {self.iobuffer:#x} / {self.iobuffer_dva:#x}")
-        self.send(IOReporting_GetBuf(DVA=self.iobuffer_dva, SIZE=self.bufsize // 0x1000))
+
+        if msg.DVA != 0:
+            self.iobuffer = self.iobuffer_dva = msg.DVA
+            self.log(f"buf {self.iobuffer:#x} / {self.iobuffer_dva:#x}")
+        else:
+            self.iobuffer, self.iobuffer_dva = self.asc.ioalloc(self.bufsize)
+            self.log(f"buf {self.iobuffer:#x} / {self.iobuffer_dva:#x}")
+            self.send(IOReporting_GetBuf(DVA=self.iobuffer_dva, SIZE=self.bufsize // 0x1000))
+
         return True
 
     @msg_handler(0xc, IOReporting_Start)
