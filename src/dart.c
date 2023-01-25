@@ -587,6 +587,16 @@ static void *dart_translate_internal(dart_dev_t *dart, uintptr_t iova, int silen
     u32 ttbr = (iova >> 36) & 0x3;
     u32 l1_index = (iova >> 25) & 0x7ff;
 
+    if ((int)ttbr >= dart->params->ttbr_count) {
+        printf("dart[%lx %u]: ttbr out of range: %d\n", dart->regs, dart->device, ttbr);
+        return NULL;
+    }
+
+    if (!dart->l1[ttbr]) {
+        printf("dart[%lx %u]: l1[%u] is not set\n", dart->regs, dart->device, ttbr);
+        return NULL;
+    }
+
     if (!(dart->l1[ttbr][l1_index] & DART_PTE_VALID) && !silent) {
         printf("dart[%lx %u]: l1 translation failure %x %lx\n", dart->regs, dart->device, l1_index,
                iova);
