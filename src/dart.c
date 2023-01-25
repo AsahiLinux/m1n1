@@ -657,7 +657,7 @@ u64 dart_find_iova(dart_dev_t *dart, s64 start, size_t len)
     if (start < 0 || start % SZ_16K)
         return -1;
 
-    uintptr_t end = 1LLU << 32;
+    uintptr_t end = 1LLU << 36;
     uintptr_t iova = start;
 
     while (iova + len <= end) {
