@@ -70,7 +70,7 @@
 #define RTKIT_MIN_VERSION 11
 #define RTKIT_MAX_VERSION 12
 
-#define IOVA_MASK GENMASK(31, 0)
+#define IOVA_MASK GENMASK(35, 0)
 
 enum rtkit_power_state {
     RTKIT_POWER_OFF = 0x00,
