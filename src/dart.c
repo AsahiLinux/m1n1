@@ -396,23 +396,24 @@ dart_dev_t *dart_init_fdt(void *dt, u32 phandle, int device, bool keep_pts)
 
 int dart_setup_pt_region(dart_dev_t *dart, const char *path, int device, u64 vm_base)
 {
-    /* only device 0 of dart-dcp and dart-disp0 are of interest */
-    if (device != 0)
-        return -1;
-
     int node = adt_path_offset(adt, path);
     if (node < 0) {
         printf("dart: Error getting DART node %s\n", path);
         return -1;
     }
+    char pt_region_str[24];
+    snprintf(pt_region_str, sizeof(pt_region_str), "pt-region-%d", device);
+    char l2_tt_str[24];
+    snprintf(l2_tt_str, sizeof(l2_tt_str), "l2-tt-%d", device);
 
-    const struct adt_property *pt_region = adt_get_property(adt, node, "pt-region-0");
+    const struct adt_property *pt_region = adt_get_property(adt, node, pt_region_str);
     if (pt_region && pt_region->size == 16) {
         u64 region[2];
         memcpy(region, pt_region->value, sizeof(region));
         u64 tbl_count = (region[1] - region[0]) / SZ_16K;
         if (tbl_count > 64) {
-            printf("dart: dart %s ignoring large pt-region-0, %lu L2 tables\n", path, tbl_count);
+            printf("dart: dart %s ignoring large %s, %lu L2 tables\n", path, pt_region_str,
+                   tbl_count);
             return -1;
         }
         /* first index is the l1 table, cap at 2 or else macOS hates it */
@@ -440,10 +441,10 @@ int dart_setup_pt_region(dart_dev_t *dart, const char *path, int device, u64 vm_
             dart->l1[ttbr][idx] = offset | DART_PTE_VALID;
         }
 
-        u64 l2_tt_0[2] = {region[0], tbl_count};
-        int ret = adt_setprop(adt, node, "l2-tt-0", &l2_tt_0, sizeof(l2_tt_0));
+        u64 l2_tt[2] = {region[0], tbl_count};
+        int ret = adt_setprop(adt, node, l2_tt_str, &l2_tt, sizeof(l2_tt));
         if (ret < 0) {
-            printf("dart: failed to update '%s/l2-tt-0'\n", path);
+            printf("dart: failed to update '%s/%s'\n", path, l2_tt_str);
         }
 
         dart->params->tlb_invalidate(dart);
