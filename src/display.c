@@ -118,7 +118,8 @@ static uintptr_t display_map_fb(uintptr_t iova, u64 paddr, u64 size)
         u64 iova_disp0 = 0;
         u64 iova_dcp = 0;
 
-        iova_dcp = dart_find_iova(dcp->dart_dcp, iova_dcp, size);
+        // start scanning for free iova space on vm-base
+        iova_dcp = dart_find_iova(dcp->dart_dcp, dart_vm_base(dcp->dart_dcp), size);
         if (DART_IS_ERR(iova_dcp)) {
             printf("display: failed to find IOVA for fb of %06zx bytes (dcp)\n", size);
             return iova_dcp;
