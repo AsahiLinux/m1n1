@@ -41,7 +41,7 @@ dcp_dev_t *dcp_init(const char *dcp_path, const char *dcp_dart_path, const char 
     // set disp0's page tables at dart-dcp's vm-base
     dart_setup_pt_region(dcp->dart_disp, disp_dart_path, 0, vm_base);
 
-    dcp->iovad_dcp = iovad_init(0x10000000, 0x20000000);
+    dcp->iovad_dcp = iovad_init(vm_base + 0x10000000, vm_base + 0x20000000);
 
     dcp->asc = asc_init(dcp_path);
     if (!dcp->asc) {
