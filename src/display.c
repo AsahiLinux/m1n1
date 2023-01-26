@@ -126,7 +126,7 @@ static uintptr_t display_map_fb(uintptr_t iova, u64 paddr, u64 size)
         }
 
         // try to map the fb to the same IOVA on disp0
-        iova_disp0 = dart_find_iova(dcp->dart_dcp, iova_dcp, size);
+        iova_disp0 = dart_find_iova(dcp->dart_disp, iova_dcp, size);
         if (DART_IS_ERR(iova_disp0)) {
             printf("display: failed to find IOVA for fb of %06zx bytes (disp0)\n", size);
             return iova_disp0;
