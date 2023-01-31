@@ -11,6 +11,8 @@
 #include "utils.h"
 #include "xnuboot.h"
 
+#include "dcp/dptxep.h"
+
 #define DISPLAY_STATUS_DELAY   100
 #define DISPLAY_STATUS_RETRIES 20
 
@@ -24,6 +26,7 @@
 
 static dcp_dev_t *dcp;
 static dcp_iboot_if_t *iboot;
+static dcp_dptx_if_t *dptx;
 static u64 fb_dva;
 static u64 fb_size;
 bool display_is_external;
@@ -198,6 +201,24 @@ int display_start_dcp(void)
         dcp_shutdown(dcp, false);
         return -1;
     }
+
+    // Power on
+    int ret;
+    if ((ret = dcp_ib_set_power(iboot, true)) < 0) {
+        printf("display: failed to set power\n");
+        return ret;
+    }
+
+    dptx = dcp_dptx_init(dcp);
+    if (!dptx) {
+        printf("display: failed to initialize DCP iBoot interface\n");
+        dcp_ib_shutdown(iboot);
+        iboot = NULL;
+        dcp_shutdown(dcp, false);
+        return -1;
+    }
+
+    dcp_dptx_connect(dptx, 0);
 
     return 0;
 }
@@ -491,6 +512,8 @@ int display_init(void)
 void display_shutdown(dcp_shutdown_mode mode)
 {
     if (iboot) {
+        if (dptx)
+            dcp_dptx_shutdown(dptx);
         dcp_ib_shutdown(iboot);
         switch (mode) {
             case DCP_QUIESCED:
