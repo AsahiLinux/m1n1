@@ -225,6 +225,7 @@ bool rtkit_unmap(rtkit_dev_t *rtk, u64 dva, size_t sz)
             rtkit_printf("sart_remove_allowed_region failed (0x%lx, 0x%lx)\n", dva, sz);
         return true;
     } else if (rtk->dart) {
+        dva &= ~rtk->dva_base;
         dart_unmap(rtk->dart, dva & IOVA_MASK, sz);
         iova_free(rtk->dart_iovad, dva & IOVA_MASK, sz);
         return true;
@@ -277,7 +278,7 @@ static bool rtkit_handle_buffer_request(rtkit_dev_t *rtk, struct rtkit_message *
     u64 addr = FIELD_GET(MSG_BUFFER_REQUEST_IOVA, msg->msg);
 
     if (addr) {
-        bfr->dva = addr;
+        bfr->dva = addr & ~rtk->dva_base;
         bfr->sz = sz;
         bfr->bfr = dart_translate(rtk->dart, bfr->dva & IOVA_MASK);
         if (!bfr->bfr) {
@@ -302,7 +303,7 @@ static bool rtkit_handle_buffer_request(rtkit_dev_t *rtk, struct rtkit_message *
     reply.msg0 = FIELD_PREP(MGMT_TYPE, MSG_BUFFER_REQUEST);
     reply.msg0 |= FIELD_PREP(MSG_BUFFER_REQUEST_SIZE, n_4kpages);
     if (!addr)
-        reply.msg0 |= FIELD_PREP(MSG_BUFFER_REQUEST_IOVA, bfr->dva);
+        reply.msg0 |= FIELD_PREP(MSG_BUFFER_REQUEST_IOVA, bfr->dva | rtk->dva_base);
 
     if (!asc_send(rtk->asc, &reply)) {
         rtkit_printf("unable to send buffer reply\n");
