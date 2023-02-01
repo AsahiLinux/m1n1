@@ -331,6 +331,13 @@ int display_configure(const char *config)
     int timing_cnt, color_cnt;
     int hpd = 0, retries = 0;
 
+    /* trigger HPD on dptx endpoint, triggers a request from dcp to configure
+     * the dptx-phy config (lane count/link rate) but according to dcp's
+     * syslog the AP is not ready for hotplug event and dcp_ib_get_hpd() will
+     * timeout.
+     */
+    dcp_dptx_hpd(dptx, 0, true);
+
     /* After boot DCP does not immediately report a connected display. Retry getting display
      * information for 2 seconds.
      */
