@@ -4,6 +4,8 @@
 #ifndef __APPLE_DCP_DPTXEP_H__
 #define __APPLE_DCP_DPTXEP_H__
 
+#include "dp_phy.h"
+
 #include "../dcp.h"
 #include "../types.h"
 
@@ -51,7 +53,7 @@ enum dptx_link_rate {
 dcp_dptx_if_t *dcp_dptx_init(dcp_dev_t *dcp);
 int dcp_dptx_shutdown(dcp_dptx_if_t *dptx);
 
-int dcp_dptx_connect(dcp_dptx_if_t *dptx, u32 port);
+int dcp_dptx_connect(dcp_dptx_if_t *dptx, dptx_phy_t *phy, u32 port);
 int dcp_dptx_disconnect(dcp_dptx_if_t *dptx, u32 port);
 int dcp_dptx_hpd(dcp_dptx_if_t *dptx, u32 port, bool hpd);
 

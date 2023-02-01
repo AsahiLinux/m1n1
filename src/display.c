@@ -11,6 +11,7 @@
 #include "utils.h"
 #include "xnuboot.h"
 
+#include "dcp/dp_phy.h"
 #include "dcp/dptxep.h"
 
 #define DISPLAY_STATUS_DELAY   100
@@ -218,7 +219,8 @@ int display_start_dcp(void)
         return -1;
     }
 
-    dcp_dptx_connect(dptx, 0);
+    dptx_phy_t *dpphy = dptx_phy_init("/arm-io/dptx-phy");
+    dcp_dptx_connect(dptx, dpphy, 0);
 
     return 0;
 }

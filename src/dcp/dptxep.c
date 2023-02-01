@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "dptxep.h"
+#include "dp_phy.h"
 #include "malloc.h"
 #include "parser.h"
 
@@ -65,6 +66,7 @@ struct epic_service_call {
 typedef struct dcp_dptx_if {
     afk_epic_ep_t *epic; // ensure an afk_epic_ep_t pointer can be used as dcp_dptx_if_t
     dcp_dev_t *dcp;
+    dptx_phy_t *phy;
 
     int channel;
     struct dptx_port port[2];
@@ -363,6 +365,10 @@ static int dptxport_call_set_tiled_display_hint(afk_epic_service_t *service, voi
 static int dptxport_call(afk_epic_service_t *service, u32 idx, const void *data, size_t data_size,
                          void *reply, size_t reply_size)
 {
+    dcp_dptx_if_t *dptx = service->intf;
+    if (dptx->phy)
+        dptx_phy_configure(dptx->phy, idx);
+
     switch (idx) {
         case DPTX_APCALL_WILL_CHANGE_LINKG_CONFIG:
             return dptxport_call_will_change_link_config(service);
@@ -460,10 +466,12 @@ static const afk_epic_service_ops_t dcp_dptx_ops = {
     .call = dptxport_call,
 };
 
-int dcp_dptx_connect(dcp_dptx_if_t *dptx, u32 port)
+int dcp_dptx_connect(dcp_dptx_if_t *dptx, dptx_phy_t *phy, u32 port)
 {
     if (!dptx->port[port].service)
         return -1;
+
+    dptx->phy = phy;
 
     // dptx->port[port].atcphy = phy;
     // dptxport_validate_connection(dptx->port[port].service, 0, 5, 0);
