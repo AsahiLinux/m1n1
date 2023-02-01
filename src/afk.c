@@ -440,7 +440,7 @@ static int afk_epic_handle_std_service(afk_epic_ep_t *epic, int channel, struct 
         sub->type = CODE_STD_SERVICE;
         sub->seq = sub_seq; // service->seq++;
         sub->flags = 0x08;
-        sub->inline_len = payload_size;
+        sub->inline_len = payload_size - 4;
 
         memcpy(msg + sizeof(struct epic_hdr) + sizeof(struct epic_sub_hdr), reply, payload_size);
 
