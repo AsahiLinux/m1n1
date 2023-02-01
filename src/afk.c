@@ -156,17 +156,22 @@ bool afk_rb_init(afk_epic_ep_t *epic, struct afk_rb *rb, u64 base, u64 size)
     return true;
 }
 
-static int afk_epic_poll(afk_epic_t *afk, int endpoint)
+static int afk_epic_poll(afk_epic_t *afk, int endpoint, u32 count)
 {
     int ret;
     struct rtkit_message msg;
 
-    while ((ret = rtkit_recv(afk->rtk, &msg)) == 0)
+    while (count-- > 0 && (ret = rtkit_recv(afk->rtk, &msg)) == 0)
         ;
 
     if (ret < 0) {
         printf("EPIC: rtkit_recv failed!\n");
         return ret;
+    }
+
+    if (ret == 0) {
+        printf("EPIC: rtkit_recv timed out!\n");
+        return -1;
     }
 
     if (msg.ep < 0x20 || msg.ep >= 0x30 || !afk->endpoint[msg.ep - 0x20]) {
@@ -260,9 +265,18 @@ static int afk_epic_rx(afk_epic_ep_t *epic, struct afk_qe **qe)
 
     u32 rptr = rb->hdr->rptr;
 
+    if (epic->ep == 0x2a && rptr != rb->hdr->wptr) {
+        bool can_read = rtkit_can_recv(epic->afk->rtk);
+        if (can_read) {
+            ret = afk_epic_poll(epic->afk, epic->ep, 1);
+            if (ret < 0)
+                return ret;
+        }
+    }
+
     while (rptr == rb->hdr->wptr) {
         do {
-            ret = afk_epic_poll(epic->afk, epic->ep);
+            ret = afk_epic_poll(epic->afk, epic->ep, UINT32_MAX);
             if (ret < 0)
                 return ret;
         } while (ret == 0);
@@ -618,7 +632,7 @@ afk_epic_ep_t *afk_epic_start_ep(afk_epic_t *afk, int endpoint, bool notify)
     }
 
     while (!epic->started) {
-        int ret = afk_epic_poll(epic->afk, endpoint);
+        int ret = afk_epic_poll(epic->afk, endpoint, UINT32_MAX);
         if (ret < 0)
             break;
         else if (ret > 0)
@@ -642,7 +656,7 @@ int afk_epic_shutdown_ep(afk_epic_ep_t *epic)
     }
 
     while (epic->started) {
-        int ret = afk_epic_poll(epic->afk, epic->ep);
+        int ret = afk_epic_poll(epic->afk, epic->ep, UINT32_MAX);
         if (ret < 0)
             break;
     }
