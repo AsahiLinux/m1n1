@@ -499,6 +499,13 @@ int display_init(void)
         return -1;
     }
 
+    // HACK: disable non-working display config on j473ap
+    int model_node = adt_path_offset(adt, "/");
+    if (model_node >= 0 && adt_is_compatible(adt, model_node, "J473AP")) {
+        printf("display: j473 is not support\n");
+        return 0;
+    }
+
     display_is_external = adt_getprop(adt, node, "external", NULL);
     if (display_is_external)
         printf("display: Display is external\n");
