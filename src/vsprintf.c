@@ -176,7 +176,7 @@
 #define PRINT_C_SHORT 2
 #define PRINT_C_LONG  3
 #define PRINT_C_LLONG 4
-//#define PRINT_C_LDOUBLE         5
+// #define PRINT_C_LDOUBLE         5
 #define PRINT_C_SIZE    6
 #define PRINT_C_PTRDIFF 7
 #define PRINT_C_INTMAX  8
