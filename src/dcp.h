@@ -3,6 +3,7 @@
 #ifndef DCP_H
 #define DCP_H
 
+#include "afk.h"
 #include "asc.h"
 #include "dart.h"
 #include "rtkit.h"
@@ -32,6 +33,7 @@ typedef struct {
     iova_domain_t *iovad_dcp;
     asc_dev_t *asc;
     rtkit_dev_t *rtkit;
+    afk_epic_t *afk;
 
     dptx_port_t *port;
 } dcp_dev_t;

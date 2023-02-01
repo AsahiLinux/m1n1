@@ -500,7 +500,7 @@ dcp_dptx_if_t *dcp_dptx_init(dcp_dev_t *dcp)
         return NULL;
 
     dptx->dcp = dcp;
-    dptx->epic = afk_epic_init(dcp->rtkit, DCP_DPTX_ENDPOINT);
+    dptx->epic = afk_epic_start_ep(dcp->afk, DCP_DPTX_ENDPOINT, true);
     if (!dptx->epic) {
         printf("dcp-dptx: failed to initialize EPIC\n");
         goto err_free;
@@ -531,7 +531,7 @@ dcp_dptx_if_t *dcp_dptx_init(dcp_dev_t *dcp)
     return dptx;
 
 err_shutdown:
-    afk_epic_shutdown(dptx->epic);
+    afk_epic_shutdown_ep(dptx->epic);
 err_free:
     free(dptx);
     return NULL;
@@ -539,7 +539,7 @@ err_free:
 
 int dcp_dptx_shutdown(dcp_dptx_if_t *dptx)
 {
-    afk_epic_shutdown(dptx->epic);
+    afk_epic_shutdown_ep(dptx->epic);
 
     free(dptx);
     return 0;

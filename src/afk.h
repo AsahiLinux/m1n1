@@ -9,6 +9,7 @@
 
 #define MAX_PENDING_CMDS 8
 
+typedef struct afk_epic afk_epic_t;
 typedef struct afk_epic_ep afk_epic_ep_t;
 
 typedef struct afk_epic_service_ops afk_epic_service_ops_t;
@@ -57,8 +58,11 @@ typedef struct afk_epic_service_ops {
                 void *reply, size_t reply_size);
 } afk_epic_service_ops_t;
 
-afk_epic_ep_t *afk_epic_init(rtkit_dev_t *rtkit, int endpoint);
-int afk_epic_shutdown(afk_epic_ep_t *epic);
+afk_epic_t *afk_epic_init(rtkit_dev_t *rtkit);
+int afk_epic_shutdown(afk_epic_t *afk);
+
+afk_epic_ep_t *afk_epic_start_ep(afk_epic_t *afk, int endpoint, bool notify);
+int afk_epic_shutdown_ep(afk_epic_ep_t *epic);
 
 int afk_epic_start_channel(afk_epic_ep_t *epic, const afk_epic_service_ops_t *ops, void *intf,
                            const char *name);
