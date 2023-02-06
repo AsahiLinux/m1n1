@@ -304,8 +304,8 @@ bool nvme_init(void)
 
     u32 cg;
     if (ADT_GETPROP(adt, node, "clock-gates", &cg) < 0) {
-        printf("nvme: Error getting NVMe clock-gates\n");
-        return NULL;
+        printf("nvme: clock-gates not set\n");
+        cg = 0;
     }
     nvme_die = FIELD_GET(PMGR_DIE_ID, cg);
     printf("nvme: ANS is on die %d\n", nvme_die);
