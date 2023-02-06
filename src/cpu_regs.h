@@ -53,6 +53,9 @@
 #define HID4_ENABLE_LFSR_STALL_STQ_REPLAY        BIT(53)
 
 #define SYS_IMP_APL_HID5           sys_reg(3, 0, 15, 5, 0)
+#define HID5_BLZ_UNK_19_18_MASK    GENMASK(19, 18)
+#define HID5_BLZ_UNK18             BIT(18)
+#define HID5_BLZ_UNK19             BIT(19)
 #define HID5_DISABLE_FILL_2C_MERGE BIT(61)
 
 #define SYS_IMP_APL_HID6             sys_reg(3, 0, 15, 6, 0)
