@@ -42,6 +42,13 @@ void init_t8112_avalanche(int rev)
     reg_set(SYS_IMP_APL_HID3, HID3_DEV_PCIE_THROTTLE_ENABLE);
     reg_set(SYS_IMP_APL_HID18, HID18_AVL_UNK27 | HID18_AVL_UNK29);
     reg_set(SYS_IMP_APL_HID16, HID16_AVL_UNK12);
+
+    if (rev == 0) {
+        reg_set(SYS_IMP_APL_HID7, HID7_FORCE_NONSPEC_IF_SPEC_FLUSH_POINTER_INVALID_AND_MP_VALID);
+
+        reg_mask(SYS_IMP_APL_HID7, HID7_FORCE_NONSPEC_TARGET_TIMER_SEL_MASK,
+                 HID7_FORCE_NONSPEC_TARGET_TIMER_SEL(3));
+    }
 }
 
 void init_t6021_avalanche(int rev)
