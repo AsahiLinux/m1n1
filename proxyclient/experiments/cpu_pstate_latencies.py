@@ -15,7 +15,9 @@ TEST_CPUS = [1, 4]
 CLUSTER_PSTATE = 0x20020
 CLUSTER_STATUS = 0x20050
 
-if u.adt["/chosen"].chip_id == 0x8103:
+chip_id = u.adt["/chosen"].chip_id
+
+if chip_id == 0x8103:
     CREG = [
         0x210e00000,
         0x211e00000,
@@ -23,7 +25,7 @@ if u.adt["/chosen"].chip_id == 0x8103:
 
     MAX_PSTATE = [5, 15]
 
-elif u.adt["/chosen"].chip_id == 0x8112:
+elif chip_id == 0x8112 or chip_id == 0x6021:
     CREG = [
         0x210e00000,
         0x211e00000,
