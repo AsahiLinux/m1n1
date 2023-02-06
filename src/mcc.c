@@ -264,6 +264,8 @@ int mcc_init(void)
         return mcc_init_t8103(node, path);
     } else if (adt_is_compatible(adt, node, "mcc,t6000")) {
         return mcc_init_t6000(node, path);
+    } else if (adt_is_compatible(adt, node, "mcc,t6020")) {
+        return mcc_init_t6000(node, path);
     } else {
         printf("MCC: Unsupported version\n");
         return -1;
