@@ -18,6 +18,8 @@
 #define MIDR_PART_T8110_AVALANCHE 0x31
 #define MIDR_PART_T8112_BLIZZARD  0x32
 #define MIDR_PART_T8112_AVALANCHE 0x33
+#define MIDR_PART_T6020_BLIZZARD  0x34
+#define MIDR_PART_T6020_AVALANCHE 0x35
 #define MIDR_PART_T6021_BLIZZARD  0x38
 #define MIDR_PART_T6021_AVALANCHE 0x39
 
@@ -31,6 +33,8 @@ void init_t6000_firestorm(int rev);
 void init_t6001_firestorm(int rev);
 void init_t8112_blizzard(void);
 void init_t8112_avalanche(int rev);
+void init_t6020_blizzard(void);
+void init_t6020_avalanche(int rev);
 void init_t6021_blizzard(void);
 void init_t6021_avalanche(int rev);
 
@@ -91,6 +95,16 @@ const char *init_cpu(void)
         case MIDR_PART_T8112_BLIZZARD:
             cpu = "M2 Blizzard";
             init_t8112_blizzard();
+            break;
+
+        case MIDR_PART_T6020_AVALANCHE:
+            cpu = "M2 Pro Avalanche";
+            init_t6020_avalanche(rev);
+            break;
+
+        case MIDR_PART_T6020_BLIZZARD:
+            cpu = "M2 Pro Blizzard";
+            init_t6020_blizzard();
             break;
 
         case MIDR_PART_T6021_AVALANCHE:
