@@ -70,6 +70,13 @@ static const struct cluster_t t6000_clusters[] = {
     {},
 };
 
+static const struct cluster_t t6021_clusters[] = {
+    {"ECPU0", 0x210e20000, false, 5},
+    {"PCPU0", 0x211e20000, false, 6},
+    {"PCPU1", 0x212e20000, false, 6},
+    {},
+};
+
 static const struct cluster_t t6002_clusters[] = {
     {"ECPU0", 0x0210e20000, false, 5},
     {"PCPU0", 0x0211e20000, false, 7},
@@ -102,6 +109,9 @@ int cpufreq_init(void)
             break;
         case T6002:
             cluster = t6002_clusters;
+            break;
+        case T6021:
+            cluster = t6021_clusters;
             break;
         case T8112:
             cluster = t8112_clusters;
