@@ -164,6 +164,21 @@ MTRPolynomFuseAGX = GreedyRange(Struct(
     "data" / Prefixed(Int32ul, GreedyRange(Coef)),
 ))
 
+SpeakerThieleSmall = Struct(
+    "unk0" / Int16ul,
+    "unk1" / Int16ul,
+    "speakers" / GreedyRange(Struct(
+        "pad0" / Hex(Int32ul),
+        "r_mohm" / Int16ul,
+        "temp" / Int16ul,
+        "pad1" / Hex(Int32ul),
+        "pad2" / Hex(Int32ul),
+        "pad3" / Hex(Int16ul),
+        "name" / FourCC,
+    )),
+    "checksum" / Hex(Int16ul),
+)
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -247,7 +262,12 @@ DEV_PROPERTIES = {
         "*": {
             "audio-stream-formatter": FourCC,
         }
-    }
+    },
+    "audio": {
+        "*": {
+            "speaker-thiele-small": SpeakerThieleSmall,
+        },
+    },
 }
 
 def parse_prop(node, path, node_name, name, v, is_template=False):
