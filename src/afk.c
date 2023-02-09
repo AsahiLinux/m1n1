@@ -338,7 +338,7 @@ static void afk_epic_rx_ack(afk_epic_ep_t *epic)
     dma_mb();
 
     rptr = ALIGN_UP(rptr + sizeof(*hdr) + hdr->size, 1 << BLOCK_SHIFT);
-    assert(rptr < rb->bufsz);
+    assert(rptr <= rb->bufsz);
     if (rptr == rb->bufsz)
         rptr = 0;
     rb->hdr->rptr = rptr;
