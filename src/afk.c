@@ -302,6 +302,8 @@ static int afk_epic_tx(afk_epic_ep_t *epic, u32 channel, u32 type, void *data, s
 
     wptr += size;
     wptr = ALIGN_UP(wptr, 1 << BLOCK_SHIFT);
+    if (wptr >= rb->bufsz)
+        wptr = 0;
 
     memcpy(hdr + 1, data, size);
 
