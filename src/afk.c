@@ -19,7 +19,6 @@ struct afk_rb_hdr {
 struct afk_rb {
     bool ready;
     struct afk_rb_hdr *hdr;
-    u32 rptr;
     void *buf;
     size_t bufsz;
 };
