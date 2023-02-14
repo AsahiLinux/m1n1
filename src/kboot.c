@@ -1165,16 +1165,10 @@ static u64 dart_get_mapping(dart_dev_t *dart, const char *path, u64 paddr, size_
     return iova;
 }
 
-static int dt_device_set_reserved_mem(int node, dart_dev_t *dart, const char *name,
-                                      uint32_t phandle, u64 paddr, u64 size)
+static int dt_device_set_reserved_mem(int node, const char *name, uint32_t phandle, u64 iova,
+                                      u64 size)
 {
     int ret;
-
-    u64 iova = dart_get_mapping(dart, name, paddr, size);
-    if (DART_IS_ERR(iova)) {
-        printf("ADT: no mapping found for '%s' 0x%012lx iova:0x%08lx)\n", name, paddr, iova);
-        return 0;
-    }
 
     ret = fdt_appendprop_u32(dt, node, "iommu-addresses", phandle);
     if (ret != 0)
@@ -1189,6 +1183,18 @@ static int dt_device_set_reserved_mem(int node, dart_dev_t *dart, const char *na
         bail("DT: could not append size to '%s.iommu-addresses' property: %d\n", name, ret);
 
     return 0;
+}
+
+static int dt_device_set_reserved_mem_from_dart(int node, dart_dev_t *dart, const char *name,
+                                                uint32_t phandle, u64 paddr, u64 size)
+{
+    u64 iova = dart_get_mapping(dart, name, paddr, size);
+    if (DART_IS_ERR(iova)) {
+        printf("ADT: no mapping found for '%s' (0x%012lx iova:0x%08lx)\n", name, paddr, iova);
+        return 0;
+    }
+
+    return dt_device_set_reserved_mem(node, name, phandle, iova, size);
 }
 
 static int dt_get_or_add_reserved_mem(const char *node_name, const char *compat, u64 paddr,
@@ -1366,20 +1372,20 @@ static int dt_add_reserved_regions(const char *dcp_alias, const char *disp_alias
         uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
 
         if (maps[i].map_dcp && dart_dcp) {
-            ret = dt_device_set_reserved_mem(mem_node, dart_dcp, node_name, dcp_phandle,
-                                             region[i].paddr, region[i].size);
+            ret = dt_device_set_reserved_mem_from_dart(mem_node, dart_dcp, node_name, dcp_phandle,
+                                                       region[i].paddr, region[i].size);
             if (ret != 0)
                 goto err;
         }
         if (maps[i].map_disp && dart_disp) {
-            ret = dt_device_set_reserved_mem(mem_node, dart_disp, node_name, disp_phandle,
-                                             region[i].paddr, region[i].size);
+            ret = dt_device_set_reserved_mem_from_dart(mem_node, dart_disp, node_name, disp_phandle,
+                                                       region[i].paddr, region[i].size);
             if (ret != 0)
                 goto err;
         }
         if (maps[i].map_piodma && dart_piodma) {
-            ret = dt_device_set_reserved_mem(mem_node, dart_piodma, node_name, piodma_phandle,
-                                             region[i].paddr, region[i].size);
+            ret = dt_device_set_reserved_mem_from_dart(
+                mem_node, dart_piodma, node_name, piodma_phandle, region[i].paddr, region[i].size);
             if (ret != 0)
                 goto err;
         }
