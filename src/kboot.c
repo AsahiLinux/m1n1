@@ -1253,6 +1253,9 @@ static int dt_device_add_mem_region(const char *alias, uint32_t phandle, const c
     if (dev_node < 0)
         bail("DT: failed to update node for alias '%s'\n", alias);
 
+    if (!name)
+        return 0;
+
     ret = fdt_appendprop_string(dt, dev_node, "memory-region-names", name);
     if (ret != 0)
         bail("DT: failed to append to 'memory-region-names' property\n");
