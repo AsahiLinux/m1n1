@@ -1173,7 +1173,7 @@ static int dt_device_set_reserved_mem(int node, const char *name, uint32_t phand
 
     ret = fdt_appendprop_u32(dt, node, "iommu-addresses", phandle);
     if (ret != 0)
-        bail("DT: could not append phandle '%s.compatible' property: %d\n", name, ret);
+        bail("DT: could not append phandle to '%s.iommu-addresses' property: %d\n", name, ret);
 
     ret = fdt_appendprop_u64(dt, node, "iommu-addresses", iova);
     if (ret != 0)
