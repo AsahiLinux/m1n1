@@ -116,6 +116,108 @@ static u32 port_count;
 static u64 port_base[8];
 
 #define SHARED_REG_COUNT 6
+#define MAX_PCIEC_COUNT  8
+
+static int pciec_init_dev(unsigned int idx)
+{
+    char path[32];
+    int adt_path[8];
+    int adt_offset;
+
+    snprintf(path, sizeof(path), "/arm-io/apciec%d", idx);
+    adt_offset = adt_path_offset_trace(adt, path, adt_path);
+    if (adt_offset < 0) {
+        printf("pciec: Error getting node %s, skipping initialization\n", path);
+        return 0;
+    }
+
+    if (!adt_is_compatible(adt, adt_offset, "apciec,t8103")) {
+        printf("pciec: Unsupported compatible for %s\n", path);
+        return -1;
+    }
+
+    u32 reg_len;
+    if (!adt_getprop(adt, adt_offset, "reg", &reg_len)) {
+        printf("pciec: Error getting reg length for %s\n", path);
+        return -1;
+    }
+
+    if ((reg_len / 16) != 5) {
+        printf("pciec: Unsupported reg length %d for %s\n", reg_len, path);
+        return -1;
+    }
+
+    u64 config_base;
+    if (adt_get_reg(adt, adt_path, "reg", 0, &config_base, NULL)) {
+        printf("pciec: Error getting reg with index %d for %s\n", 0, path);
+        return -1;
+    }
+
+    u64 rc_base;
+    if (adt_get_reg(adt, adt_path, "reg", 1, &rc_base, NULL)) {
+        printf("pciec: Error getting reg with index %d for %s\n", 1, path);
+        return -1;
+    }
+
+    u64 port_base;
+    if (adt_get_reg(adt, adt_path, "reg", 2, &port_base, NULL)) {
+        printf("pciec: Error getting reg with index %d for %s\n", 2, path);
+        return -1;
+    }
+
+    if (pmgr_adt_power_enable(path)) {
+        printf("pciec: Error enabling power for %s\n", path);
+        return -1;
+    }
+
+    /* ??? */
+    write32(rc_base + 0x4, 0);
+
+    set32(port_base + APCIE_PORT_APPCLK, APCIE_PORT_APPCLK_EN);
+    set32(port_base + APCIE_PORT_RESET, APCIE_PORT_RESET_DIS);
+
+    if (poll32(port_base + APCIE_PORT_STATUS, APCIE_PORT_STATUS_RUN, APCIE_PORT_STATUS_RUN,
+               250000)) {
+        printf("pciec: Port failed to come up on %s\n", path);
+        return -1;
+    }
+
+    if (poll32(port_base + APCIE_PORT_LINKSTS, APCIE_PORT_LINKSTS_BUSY, 0, 250000)) {
+        printf("pciec: Port failed to become idle on %s\n", path);
+        return -1;
+    }
+
+    if (tunables_apply_local(path, "apcie-config-tunables", 2)) {
+        printf("pciec: Error applying %s for %s\n", "atc-apcie-debug-tunables", path);
+        return -1;
+    }
+
+    if (tunables_apply_local(path, "atc-apcie-rc-tunables", 0)) {
+        printf("pciec: Error applying %s for %s\n", "atc-apcie-rc-tunables", path);
+        return -1;
+    }
+
+    if (tunables_apply_local(path, "atc-apcie-fabric-tunables", 3)) {
+        printf("pciec: Error applying %s for %s\n", "atc-apcie-fabric-tunables", path);
+        return -1;
+    }
+
+    if (tunables_apply_local(path, "atc-apcie-debug-tunables", 4)) {
+        printf("pciec: Error applying %s for %s\n", "atc-apcie-debug-tunables", path);
+        return -1;
+    }
+
+    printf("pciec: Intialized %s\n", path);
+    return 0;
+}
+
+int pciec_init(void)
+{
+    for (int i = 0; i < MAX_PCIEC_COUNT; ++i)
+        pciec_init_dev(i);
+
+    return 0;
+}
 
 int pcie_init(void)
 {
