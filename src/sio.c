@@ -76,10 +76,82 @@ static void *add_fwdata(size_t size, u32 param_id)
     return p;
 }
 
+#define PARAM_UNK_000b     0x000b
+#define PARAM_PANIC_BUFFER 0x000f
+#define PARAM_MAP_RANGE    0x001a
+#define PARAM_DEVICE_TYPE  0x001c
+#define PARAM_TUNABLES     0x001e
+#define PARAM_DMASHIM_DATA 0x0022
+#define PARAM_UNK_030d     0x030d
+
+struct copy_rule {
+    const char *prop;
+    int fw_param;
+    bool keyed;
+    int blobsize;
+    u32 nkeys;
+    const char *keys[9];
+};
+
+#define SPACER "\xff\xff\xff\xff"
+
+struct copy_rule copy_rules[] = {
+    {
+        .prop = "asio-ascwrap-tunables",
+        .fw_param = PARAM_TUNABLES,
+    },
+    {
+        .blobsize = 0x1b80,
+        .fw_param = PARAM_UNK_000b,
+    },
+    {
+        .blobsize = 0x1e000,
+        .fw_param = PARAM_PANIC_BUFFER,
+    },
+    {
+        // peformance endpoint? FIFO?
+        .blobsize = 0x4000,
+        .fw_param = PARAM_UNK_030d,
+    },
+    {
+        .prop = "map-range",
+        .fw_param = PARAM_MAP_RANGE,
+        .blobsize = 16,
+        .keyed = true,
+        .keys = {SPACER, SPACER, SPACER, "MISC", NULL},
+    },
+    {
+        .prop = "dmashim",
+        .fw_param = PARAM_DMASHIM_DATA,
+        .blobsize = 32,
+        .keyed = true,
+        .keys = {"SSPI", "SUAR", "SAUD", "ADMA", "AAUD", NULL},
+    },
+    {
+        // it seems 'device_type' must go after 'dmashim'
+        .prop = "device-type",
+        .fw_param = PARAM_DEVICE_TYPE,
+        .blobsize = 8,
+        .keyed = true,
+        .keys = {"dSPI", "dUAR", "dMCA", "dDPA", "dPDM", "dALE", "dAMC", "dAPD", NULL},
+    },
+};
+
+int find_key_index(const char *keylist[], u32 needle)
+{
+    int i;
+    for (i = 0; keylist[i]; i++) {
+        const char *s = keylist[i];
+        u32 key = ((u32)s[0]) << 24 | ((u32)s[1]) << 16 | ((u32)s[2]) << 8 | s[3];
+        if (key == needle)
+            break;
+    }
+    return i;
+}
+
 int sio_setup_fwdata(void)
 {
     int ret = -ENOMEM;
-    u32 len;
 
     if (sio_fwdata)
         return 0;
@@ -102,97 +174,50 @@ int sio_setup_fwdata(void)
         goto err_inval;
     }
 
-    {
-        const u8 *prop = adt_getprop(adt, node, "asio-ascwrap-tunables", &len);
-        u8 *asio_tunables = add_fwdata(len, 0x1e);
-        if (!asio_tunables)
-            goto err_nomem;
-        memcpy8(asio_tunables, (void *)prop, len);
-    }
+    for (int i = 0; i < (int)ARRAY_SIZE(copy_rules); i++) {
+        struct copy_rule *rule = &copy_rules[i];
+        u32 len;
 
-    u8 *unk_0b = add_fwdata(0x1b80, 0xb);
-    if (!unk_0b)
-        goto err_nomem;
-    u8 *unk_0f = add_fwdata(0x1e000, 0xf); // crash dump memory
-    if (!unk_0f)
-        goto err_nomem;
-    u8 *unk_ep3_0d = add_fwdata(0x4000, 0x30d); // peformance endpoint? FIFO?
-    if (!unk_ep3_0d)
-        goto err_nomem;
+        if (!rule->prop) {
+            if (!add_fwdata(rule->blobsize, rule->fw_param))
+                goto err_nomem;
 
-    {
-        u8 *map_range = add_fwdata(0x50, 0x1a);
-        if (!map_range)
-            goto err_nomem;
-        const u32 *prop = adt_getprop(adt, node, "map-range", &len);
-        if (len != 20 || prop[0] != (u32)SIO_KEY(MISC)) {
-            printf("%s: bad 'map-range' property (%d, %x)\n", __func__, len, prop[0]);
+            continue;
+        }
+
+        const u8 *adt_blob = adt_getprop(adt, node, rule->prop, &len);
+        if (!adt_blob) {
+            printf("%s: missing ADT property '%s'\n", __func__, rule->prop);
             goto err_inval;
         }
-        memcpy8(map_range + 48, (void *)(prop + 1), 16);
-    }
 
-    {
-        u8 *dmashim = add_fwdata(0xa0, 0x22);
-        if (!dmashim)
-            goto err_nomem;
-        const u32 *prop = adt_getprop(adt, node, "dmashim", &len);
-        for (; len >= 36; len -= 36) {
-            switch (prop[0]) {
-                case SIO_KEY(SSPI):
-                    memcpy8(dmashim, (void *)(prop + 1), 32);
-                    break;
-
-                case SIO_KEY(SUAR):
-                    memcpy8(dmashim + 32, (void *)(prop + 1), 32);
-                    break;
-
-                case SIO_KEY(SAUD):
-                    memcpy8(dmashim + 64, (void *)(prop + 1), 32);
-                    break;
-
-                case SIO_KEY(ADMA):
-                    break;
-
-                case SIO_KEY(AAUD):
-                    break;
-
-                default:
-                    printf("%s: unknown 'dmashim' entry %x\n", __func__, prop[0]);
-            };
-
-            prop += 9;
+        if (!rule->keyed) {
+            u8 *sio_blob = add_fwdata(len, rule->fw_param);
+            if (!sio_blob)
+                goto err_nomem;
+            memcpy8(sio_blob, (void *)adt_blob, len);
+            continue;
         }
-    }
 
-    { // it seems 'device_type' must go after 'dmashim'
-        u8 *device_type = add_fwdata(0x40, 0x1c);
-        if (!device_type)
-            goto err_nomem;
-        const u32 *prop = adt_getprop(adt, node, "device-type", &len);
-        for (; len >= 12; len -= 12) {
-            switch (prop[0]) {
-                case SIO_KEY(dSPI):
-                    memcpy8(device_type, (void *)(prop + 1), 8);
-                    break;
+        int nkeys = find_key_index(rule->keys, 0);
+        u8 *sio_blob = add_fwdata(nkeys * rule->blobsize, rule->fw_param);
+        if (len % (rule->blobsize + 4) != 0) {
+            printf("%s: bad length %d of ADT property '%s', expected multiple of %d + 4\n",
+                   __func__, len, rule->prop, rule->blobsize);
+        }
 
-                case SIO_KEY(dUAR):
-                    memcpy8(device_type + 8, (void *)(prop + 1), 8);
-                    break;
+        for (u32 off = 0; off + rule->blobsize <= len; off += (rule->blobsize + 4)) {
+            const u8 *p = &adt_blob[off];
+            u32 key = *((u32 *)p);
+            int key_idx = find_key_index(rule->keys, key);
 
-                case SIO_KEY(dMCA):
-                    memcpy8(device_type + 16, (void *)(prop + 1), 8);
-                    break;
+            if (key_idx >= nkeys) {
+                printf("%s: unknown key %x found in ADT property '%s'\n", __func__, key,
+                       rule->prop);
+                goto err_inval;
+            }
 
-                case SIO_KEY(dDPA):
-                    memcpy8(device_type + 24, (void *)(prop + 1), 8);
-                    break;
-
-                default:
-                    printf("%s: unknown 'device-type' entry %x\n", __func__, prop[0]);
-            };
-
-            prop += 3;
+            memcpy8(sio_blob + (key_idx * rule->blobsize), (void *)(p + 4), rule->blobsize);
         }
     }
 
