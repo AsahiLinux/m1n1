@@ -15,6 +15,7 @@
 #include "pcie.h"
 #include "pmgr.h"
 #include "sep.h"
+#include "sio.h"
 #include "smp.h"
 #include "tunables.h"
 #include "types.h"
@@ -1724,6 +1725,72 @@ static int dt_set_display(void)
     return dt_vram_reserved_region("dcp", "disp0");
 }
 
+static int dt_set_sio_fwdata(void)
+{
+    const char *path = "/soc/sio";
+
+    int node = fdt_path_offset(dt, path);
+    if (node < 0) {
+        printf("FDT: '%s' node not found\n", path);
+        return 0;
+    }
+
+    int ret = sio_setup_fwdata();
+    if (ret < 0)
+        bail("DT: failed to set up SIO firmware data: %d\n", ret);
+
+    int phandle = fdt_get_phandle(dt, node);
+    uint32_t max_phandle;
+    ret = fdt_find_max_phandle(dt, &max_phandle);
+    if (ret)
+        bail("DT: failed to get max phandle: %d\n", ret);
+
+    if (!phandle) {
+        phandle = ++max_phandle;
+        ret = fdt_setprop_u32(dt, node, "phandle", phandle);
+        if (ret != 0)
+            bail("DT: couldn't set '%s.phandle' property: %d\n", path, ret);
+    }
+
+    for (int i = 0; i < sio_num_fwdata; i++) {
+        struct sio_mapping *mapping = &sio_fwdata[i];
+
+        char node_name[64];
+        snprintf(node_name, sizeof(node_name), "sio-firmware-data@%lx", mapping->phys);
+
+        int mem_node =
+            dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", mapping->phys, mapping->size);
+        if (mem_node < 0)
+            return ret;
+        uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
+
+        int ret =
+            dt_device_set_reserved_mem(mem_node, node_name, phandle, mapping->iova, mapping->size);
+        if (ret < 0)
+            return ret;
+
+        ret = dt_device_add_mem_region(path, mem_phandle, NULL);
+        if (ret < 0)
+            return ret;
+    }
+
+    node = fdt_path_offset(dt, path);
+    if (node < 0)
+        bail("DT: '%s' not found\n", path);
+
+    for (int i = 0; i < sio_num_fwparams; i++) {
+        struct sio_fwparam *param = &sio_fwparams[i];
+
+        if (fdt_appendprop_u32(dt, node, "apple,sio-firmware-params", param->key))
+            bail("DT: couldn't append to SIO parameters\n");
+
+        if (fdt_appendprop_u32(dt, node, "apple,sio-firmware-params", param->value))
+            bail("DT: couldn't append to SIO parameters\n");
+    }
+
+    return 0;
+}
+
 static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix, int max_devs)
 {
     int ret = -1;
@@ -2033,6 +2100,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_disable_missing_devs("i2c", "i2c@", 8))
         return -1;
     if (dt_reserve_asc_firmware("/arm-io/sio", "/soc/sio"))
+        return -1;
+    if (dt_set_sio_fwdata())
         return -1;
 #ifndef RELEASE
     if (dt_transfer_virtios())
