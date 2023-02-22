@@ -116,6 +116,7 @@ OBJECTS := \
 	rtkit.o \
 	sart.o \
 	sep.o \
+	sio.o \
 	smp.o \
 	start.o \
 	startup.o \
