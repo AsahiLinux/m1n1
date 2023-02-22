@@ -42,7 +42,7 @@ static void *alloc_mapped_data(size_t size, u64 *iova)
     else
         mapping->iova = *iova = ALIGN_UP((mapping - 1)->iova + (mapping - 1)->size, SZ_16K);
     mapping->size = ALIGN_UP(size, SZ_4K);
-    mapping->phys = (u64)memalign(SZ_16K, ALIGN_UP(size, SZ_16K));
+    mapping->phys = top_of_memory_alloc(size);
     memset64((void *)mapping->phys, 0, ALIGN_UP(mapping->size, SZ_16K));
 
 done:
@@ -211,7 +211,9 @@ err:
     for (int i = 0; i < MAX_FWDATA; i++) {
         if (!sio_fwdata[i].size)
             break;
-        free((void *)sio_fwdata[i].phys);
+        // No way to give back memory with the top of memory
+        // allocator.
+        // free((void *)sio_fwdata[i].phys);
     }
     free(sio_fwdata);
     free(sio_fwparams);
