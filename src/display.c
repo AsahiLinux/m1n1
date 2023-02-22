@@ -370,12 +370,7 @@ int display_configure(const char *config)
             return -1;
         }
 
-        cur_boot_args.mem_size -= size;
-        fb_pa = cur_boot_args.phys_base + cur_boot_args.mem_size;
-        /* add guard page between RAM and framebuffer */
-        // TODO: update mapping?
-        cur_boot_args.mem_size -= SZ_16K;
-
+        fb_pa = top_of_memory_alloc(size);
         memset((void *)fb_pa, 0, size);
 
         tmp_dva = iova_alloc(dcp->iovad_dcp, size);
