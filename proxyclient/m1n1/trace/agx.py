@@ -612,8 +612,18 @@ class AGXTracer(ASCTracer):
         stream.meta_fn = lambda a, b: self.meta_gpuvm(context, a, b)
         return stream
 
+    def mitigate_exploits(self):
+        def hook(addr, val, width):
+            return 0 # Begone, GPU kernel mode in user contexts
+
+        for i in range(1, 64):
+            addr = self.gpu_region + i * 16 + 8
+            self.hv.add_tracer(irange(addr, 8), "UATMitigation", TraceMode.HOOK, None, hook)
+
     def start(self):
         super().start()
+
+        #self.mitigate_exploits()
 
         self.clear_ttbr_tracers()
         self.clear_uatmap_tracers()
