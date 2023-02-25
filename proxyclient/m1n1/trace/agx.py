@@ -374,6 +374,7 @@ class AGXTracer(ASCTracer):
         self.shell_after_init = False
         self.after_init_hook = None
         self.encoder_id_filter = None
+        self.exclude_context_id = None
         self.redump = False
 
         self.vmcnt = 0
@@ -657,6 +658,13 @@ class AGXTracer(ASCTracer):
                     if wi.cmd.magic == 3:
                         # CP
                         if not self.encoder_id_filter(wi.cmd.encoder_params.encoder_id):
+                            return True
+            if self.exclude_context_id is not None:
+                for wi in work_items:
+                    if wi.cmd is None:
+                        self.log("wi.cmd is none?")
+                    if wi.cmd and wi.cmd.magic in (0, 1, 3):
+                        if self.exclude_context_id == wi.cmd.context_id:
                             return True
             for wi in work_items:
                 self.log(str(wi))
