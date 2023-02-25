@@ -1375,11 +1375,27 @@ class AGXHWDataB(ConstructClass):
         self.unk_b6c = bytes(0xd0)
         self.unk_c3c = 0x19
 
-class InitData_BufferMgrCtl(ConstructValueClass):
-    subcon = Array(126, Bytes(0x10))
+class BufferMgrCtl(ConstructClass):
+    subcon = Struct(
+        "unk_0" / Int32ul,
+        "unk_4" / Int32ul,
+        "unk_8" / Int32ul,
+        "unk_c" / Int32ul,
+    )
 
     def __init__(self):
-        self.value = [bytes(0x10)] * 126
+        self.unk_0 = 0
+        self.unk_4 = 0
+        self.unk_8 = 0
+        self.unk_c = 0
+
+class InitData_BufferMgrCtl(ConstructClass):
+    subcon = Struct(
+        "array" / Array(127, BufferMgrCtl)
+    )
+
+    def __init__(self):
+        self.array = [BufferMgrCtl() for i in range(127)]
 
 class InitData_GPUQueueStatsTA(ConstructClass):
     subcon = Struct(
@@ -1530,9 +1546,9 @@ class InitData_RegionB(ConstructClass):
         "unk_1d0" / Int32ul,
         "unk_1d4" / Int32ul,
         "unk_1d8" / HexDump(Bytes(0x3c)),
+        "buffer_mgr_ctl_gpu_addr" / Int64ul, # Size: 0x4000
         "buffer_mgr_ctl_addr" / Int64ul, # Size: 0x4000
-        "buffer_mgr_ctl" / ROPointer(this.buffer_mgr_ctl_addr, InitData_BufferMgrCtl),
-        "buffer_mgr_ctl_addr2" / Int64ul, # Size: 0x4000
+        "buffer_mgr_ctl" / ROPointer(this.buffer_mgr_ctl_addr, Array(127, BufferMgrCtl)),
         # Written to by DC_09
         "unk_224" / HexDump(Bytes(0x685c)),
         "unk_6a80" / Int32ul,
