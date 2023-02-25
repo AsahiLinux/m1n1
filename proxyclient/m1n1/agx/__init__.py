@@ -59,20 +59,20 @@ class AGX:
         self.asc.mgmt.verbose = 0
 
         self.kobj = GPUAllocator(self, "kernel",
-                                 self.kern_va_base, 0x10000000,
-                                 AttrIndex=MemoryAttr.Shared, AP=1, guard_pages=4)
+                                 self.kern_va_base, 0x20000000,
+                                 AttrIndex=MemoryAttr.Shared, AP=1, guard_pages=1)
         self.cmdbuf = GPUAllocator(self, "cmdbuf",
-                                   self.kern_va_base + 0x10000000, 0x10000000,
-                                   AttrIndex=MemoryAttr.Shared, AP=0, guard_pages=4)
+                                   self.kern_va_base + 0x20000000, 0x20000000,
+                                   AttrIndex=MemoryAttr.Shared, AP=0, guard_pages=1)
         self.kshared = GPUAllocator(self, "kshared",
-                                    self.kern_va_base + 0x20000000, 0x10000000,
-                                    AttrIndex=MemoryAttr.Shared, AP=1, guard_pages=4)
+                                    self.kern_va_base + 0x40000000, 0x20000000,
+                                    AttrIndex=MemoryAttr.Shared, AP=1, guard_pages=1)
         self.kshared2 = GPUAllocator(self, "kshared2",
-                                     self.kern_va_base + 0x30000000, 0x100000,
-                                     AttrIndex=MemoryAttr.Shared, AP=0, PXN=1, guard_pages=4)
+                                     self.kern_va_base + 0x60000000, 0x100000,
+                                     AttrIndex=MemoryAttr.Shared, AP=0, PXN=1, guard_pages=1)
 
-        self.io_allocator = Heap(self.kern_va_base + 0x38000000,
-                                 self.kern_va_base + 0x40000000,
+        self.io_allocator = Heap(self.kern_va_base + 0x68000000,
+                                 self.kern_va_base + 0x70000000,
                                  block=self.PAGE_SIZE)
 
         self.mon = None
