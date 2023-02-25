@@ -13,8 +13,11 @@ agx_tracer = AGXTracer(hv, "/arm-io/gfx-asc", verbose=1)
 
 agx_tracer.pause_after_init = True
 agx_tracer.trace_usermap = False
-agx_tracer.trace_kernmap = False
+agx_tracer.trace_kernmap = True
+agx_tracer.trace_userva = False
+agx_tracer.trace_kernva = True
 agx_tracer.redump = True
+agx_tracer.exclude_context_id = 1
 
 agx_tracer.start()
 
@@ -33,3 +36,10 @@ def pause_tracing(ctx):
 
 hv.add_hvcall(100, resume_tracing)
 hv.add_hvcall(101, pause_tracing)
+
+trace_device("/arm-io/sgx", True)
+#trace_device("/arm-io/mcc", True)
+node = hv.adt["/arm-io/sgx"]
+addr, size = node.get_reg(0)
+hv.trace_range(irange(addr, 0x1000000), TraceMode.SYNC, name="sgx")
+hv.trace_range(irange(addr + 0x2408000, 0x4000), TraceMode.OFF, name="sgx")
