@@ -654,6 +654,10 @@ class AGXTracer(ASCTracer):
                         # 3D
                         if not self.encoder_id_filter(wi.cmd.struct_6.encoder_id):
                             return True
+                    if wi.cmd.magic == 3:
+                        # CP
+                        if not self.encoder_id_filter(wi.cmd.encoder_params.encoder_id):
+                            return True
             for wi in work_items:
                 self.log(str(wi))
                 if msg.queue_type == 2:

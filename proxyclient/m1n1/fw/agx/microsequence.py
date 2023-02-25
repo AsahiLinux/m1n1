@@ -713,7 +713,9 @@ class StartComputeCmd(ConstructClass):
         "computeinfo2" / ROPointer(this.computeinfo2_addr, ComputeInfo2),
         "unk_44" / Int32ul,
         "uuid" / Int32ul,
-        "padding" / Bytes(0x154 - 0x4c),
+        "attachments" / Array(16, Attachment),
+        "num_attachments" / Int32ul,
+        "padding" / Bytes(4),
         Ver("V >= V13_0B4", "unk_flag_addr" / Int64ul),
         Ver("V >= V13_0B4", "counter" / Int64ul),
         Ver("V >= V13_0B4", "event_ctrl_buf_addr" / Int64ul),
@@ -746,6 +748,47 @@ class FinalizeComputeCmd(ConstructClass):
         Ver("V >= V13_0B4", "unk_64" / HexDump(Bytes(0xd))),
         Ver("V >= V13_0B4", "unkptr_71" / Int64ul),
         Ver("V >= V13_0B4", "pad_79" / ZPadding(7)),
+    )
+
+class StartBlitCmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x26, Int32ul),
+        "unkptr_4" / Int64ul,
+        "unkptr_c" / Int64ul,
+        "unk_14" / Int64ul,
+        "unkptr_1c" / Int64ul,
+        "unkptr_24" / Int64ul,
+        "context_id" / Int32ul,
+        "unk_30" / Int32ul,
+        "submission_id" / Int32ul,
+        "unk_38" / Int32ul,
+        "unk_3c" / Int32ul,
+        "unk_40" / Int32ul,
+        "unkptr_44" / Int64ul,
+        "unkptr_4c" / Int64ul,
+        "uuid" / Int32ul,
+        "unk_2c" / Int32ul,
+        "attachments" / Array(16, Attachment),
+        "num_attachments" / Int32ul,
+        "unk_160" / Int32ul,
+    )
+
+class FinalizeBlitCmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x27, Int32ul),
+        "unkptr_4" / Int64ul,
+        "unkptr_c" / Int64ul,
+        "context_id" / Int32ul,
+        "unk_18" / Int32ul,
+        "unkptr_1c" / Int64ul,
+        "uuid" / Int32ul,
+        "unk_28" / Int32ul,
+        "stamp_addr" / Int64ul,
+        "stamp" / ROPointer(this.stamp_addr, StampCounter),
+        "stamp_value" / Int32ul,
+        "unk_38" / HexDump(Bytes(0x24)),
+        "restart_branch_offset" / Int32sl, # relative
+        "unk_60" / Int32ul,
     )
 
 class EndCmd(ConstructClass):
@@ -818,6 +861,8 @@ class MicroSequence(ConstructValueClass):
                 0x23: FinalizeTACmd,
                 0x24: Start3DCmd,
                 0x25: Finalize3DCmd,
+                0x26: StartBlitCmd,
+                0x27: FinalizeBlitCmd,
                 0x29: StartComputeCmd,
                 0x2a: FinalizeComputeCmd,
             }, default=Error)
