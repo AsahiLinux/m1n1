@@ -205,7 +205,7 @@ class GPURenderer:
         self.event_control.event_count.val = 0
         self.event_control.event_count.push()
 
-        self.event_control.generation = 0
+        self.event_control.submission_id = 0
         self.event_control.cur_count = 0
         self.event_control.unk_10 = 0x50
         self.event_control.push()
@@ -216,6 +216,8 @@ class GPURenderer:
         self.ev_3d = ev_3d = self.agx.event_mgr.allocate_event()
 
         self.work = []
+
+        self.ev_idx = 0
 
     def submit(self, cmdbuf, wait_for=None):
         nclusters = 8
@@ -634,10 +636,10 @@ class GPURenderer:
             wc_3d.struct_7.stamp2 = self.stamp_3d2
             wc_3d.struct_7.stamp_value = self.stamp_value_3d
             wc_3d.struct_7.ev_3d = ev_3d.id
-            wc_3d.struct_7.evctl_index = 0x0
+            wc_3d.struct_7.evctl_index = self.ev_idx
             wc_3d.struct_7.unk_24 = 1
             wc_3d.struct_7.uuid = uuid_3d
-            wc_3d.struct_7.prev_stamp_value = self.prev_stamp_value_3d >> 8
+            wc_3d.struct_7.queue_cmd_count = 0
             wc_3d.struct_7.unk_30 = 0x0
 
         wc_3d.set_addr() # Update inner structure addresses
@@ -661,10 +663,10 @@ class GPURenderer:
         start_3d.workitem_ptr = wc_3d._addr
         start_3d.context_id = self.ctx_id
         start_3d.unk_50 = 0x1
-        start_3d.event_generation = self.event_control.generation
+        start_3d.submission_id = self.event_control.submission_id
         start_3d.buffer_mgr_slot = self.buffer_mgr_slot
         start_3d.unk_5c = 0x0
-        start_3d.prev_stamp_value = self.prev_stamp_value_3d >> 8
+        start_3d.queue_cmd_count = self.prev_stamp_value_3d >> 8
         start_3d.unk_68 = 0x0
         start_3d.unk_buf_ptr = wc_3d.unk_758._addr
         start_3d.unk_buf2_ptr = wc_3d.unk_buf2._addr
@@ -896,10 +898,10 @@ class GPURenderer:
             wc_ta.struct_3.stamp2 = self.stamp_ta2
             wc_ta.struct_3.stamp_value = self.stamp_value_ta
             wc_ta.struct_3.ev_ta = ev_ta.id
-            wc_ta.struct_3.evctl_index = 0
+            wc_ta.struct_3.evctl_index = self.ev_idx
             wc_ta.struct_3.unk_584 = 0x0 # 1 for boot stuff?
             wc_ta.struct_3.uuid2 = uuid_ta
-            wc_ta.struct_3.prev_stamp_value = self.prev_stamp_value_ta >> 8
+            wc_ta.struct_3.queue_cmd_count = 0
             wc_ta.struct_3.unk_590 = 0 # sometimes 1?
 
         wc_ta.set_addr() # Update inner structure addresses
@@ -916,7 +918,7 @@ class GPURenderer:
         start_ta.cmdqueue_ptr = self.wq_ta.info._addr
         start_ta.context_id = self.ctx_id
         start_ta.unk_38 = 1
-        start_ta.event_generation = self.event_control.generation
+        start_ta.submission_id = self.event_control.submission_id
         start_ta.buffer_mgr_slot = self.buffer_mgr_slot
         start_ta.unk_48 = 0#1 #0
         start_ta.unk_50 = 0
@@ -1015,6 +1017,9 @@ class GPURenderer:
         self.wq_ta.submit(wc_ta)
 
         self.agx.log("Submit done")
+
+        #self.ev_idx = (self.ev_idx + 1) % 4
+
         return work
 
     def run(self):

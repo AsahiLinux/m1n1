@@ -348,7 +348,7 @@ class Start3DStruct7(ConstructClass):
         "evctl_index" / Int32ul,
         "unk_24" / Int32ul,
         "uuid" / Int32ul,
-        "prev_stamp_value" / Int32ul,
+        "queue_cmd_count" / Int32ul,
         "unk_30" / Int32ul,
     )
 
@@ -390,10 +390,10 @@ class Start3DCmd(ConstructClass):
         "workitem_ptr" / Int64ul, # points back at the WorkItem that this command came from
         "context_id" / Int32ul,
         "unk_50" / Int32ul,
-        "event_generation" / Int32ul,
+        "submission_id" / Int32ul,
         "buffer_mgr_slot" / Int32ul,
         "unk_5c" / Int32ul,
-        "prev_stamp_value" / Int64ul, # 0
+        "queue_cmd_count" / Int64ul, # 0
         "unk_68" / Int32ul, # 0
         "unk_buf_ptr" / Int64ul,
         "unk_buf2_ptr" / Int64ul, # 0x18 bytes
@@ -527,7 +527,7 @@ class StartTACmdStruct3(ConstructClass):
         "evctl_index" / Int32ul, # 0-3
         "unk_584" / Int32ul,
         "uuid2" / Int32ul,
-        "prev_stamp_value" / Int32ul,
+        "queue_cmd_count" / Int32ul,
         "unk_590" / Int32ul,
     )
 
@@ -551,7 +551,7 @@ class StartTACmd(ConstructClass):
         "cmdqueue_ptr" / Int64ul,
         "context_id" / Int32ul,
         "unk_38" / Int32ul,
-        "event_generation" / Int32ul,
+        "submission_id" / Int32ul,
         "buffer_mgr_slot" / Int64ul,
         "unk_48" / Int64ul,
         "unk_50" / Int32ul,
@@ -626,7 +626,7 @@ class JobMeta(ConstructClass):
         "evctl_index" / Int32ul,
         "unk_20" / Int32ul,
         "uuid" / Int32ul,
-        "prev_stamp_value" / Int32ul,
+        "queue_cmd_count" / Int32ul,
     )
 
 class EncoderParams(ConstructClass):

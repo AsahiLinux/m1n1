@@ -73,7 +73,7 @@ class EventControl(ConstructClass):
     subcon = Struct(
         "event_count_addr" / Int64ul,
         "event_count" / ROPointer(this.event_count_addr, Int32ul),
-        "generation" / Int32ul,
+        "submission_id" / Int32ul,
         "cur_count" / Int32ul,
         "unk_10" / Int32ul,
         "unk_14" / Int32ul,
