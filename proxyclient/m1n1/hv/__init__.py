@@ -495,6 +495,10 @@ class HV(Reloadable):
             raise Exception(f"VM hook with unexpected mapping at {data.addr:#x}: {maps[0][0].name}")
 
         if not data.flags.WRITE:
+            if mode == TraceMode.HOOK and not read:
+                mode = TraceMode.SYNC
+                first += 1
+
             if mode == TraceMode.HOOK:
                 val = self.shellwrap(lambda: read(data.addr, 8 << data.flags.WIDTH, **kwargs),
                                      f"Tracer {ident}:read (HOOK)", update=do_update, needs_ret=True)
@@ -553,6 +557,9 @@ class HV(Reloadable):
                 wval = val[0]
             else:
                 wval = val
+
+            if mode == TraceMode.HOOK and not write:
+                mode = TraceMode.SYNC
 
             if mode == TraceMode.HOOK:
                 self.shellwrap(lambda: write(data.addr, wval, 8 << data.flags.WIDTH, **kwargs),
