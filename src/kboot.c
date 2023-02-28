@@ -13,6 +13,7 @@
 #include "firmware.h"
 #include "iodev.h"
 #include "isp.h"
+#include "kboot_atc.h"
 #include "malloc.h"
 #include "mcc.h"
 #include "memory.h"
@@ -907,14 +908,6 @@ static int dt_set_uboot(void)
     return 0;
 }
 
-struct atc_tunable {
-    u32 offset : 24;
-    u32 size : 8;
-    u32 mask;
-    u32 value;
-} PACKED;
-static_assert(sizeof(struct atc_tunable) == 12, "Invalid atc_tunable size");
-
 struct adt_tunable_info {
     const char *adt_name;
     const char *fdt_name;
@@ -923,151 +916,7 @@ struct adt_tunable_info {
     bool required;
 };
 
-static const struct adt_tunable_info atc_tunables[] = {
-    /* global tunables applied after power on or reset */
-    {"tunable_ATC0AXI2AF", "apple,tunable-axi2af", 0x0, 0x4000, true},
-    {"tunable_ATC_FABRIC", "apple,tunable-common", 0x45000, 0x4000, true},
-    {"tunable_AUS_CMN_TOP", "apple,tunable-common", 0x800, 0x4000, true},
-    {"tunable_AUS_CMN_SHM", "apple,tunable-common", 0xa00, 0x4000, true},
-    {"tunable_AUSPLL_CORE", "apple,tunable-common", 0x2200, 0x4000, true},
-    {"tunable_AUSPLL_TOP", "apple,tunable-common", 0x2000, 0x4000, true},
-    {"tunable_CIO3PLL_CORE", "apple,tunable-common", 0x2a00, 0x4000, true},
-    {"tunable_CIO3PLL_TOP", "apple,tunable-common", 0x2800, 0x4000, true},
-    {"tunable_CIO_CIO3PLL_TOP", "apple,tunable-common", 0x2800, 0x4000, false},
-    {"tunable_USB_ACIOPHY_TOP", "apple,tunable-common", 0x0, 0x4000, true},
-    /* lane-specific tunables applied after a cable is connected */
-    {"tunable_DP_LN0_AUSPMA_TX_TOP", "apple,tunable-lane0-dp", 0xc000, 0x1000, true},
-    {"tunable_DP_LN1_AUSPMA_TX_TOP", "apple,tunable-lane1-dp", 0x13000, 0x1000, true},
-    {"tunable_USB_LN0_AUSPMA_RX_TOP", "apple,tunable-lane0-usb", 0x9000, 0x1000, true},
-    {"tunable_USB_LN0_AUSPMA_RX_EQ", "apple,tunable-lane0-usb", 0xa000, 0x1000, true},
-    {"tunable_USB_LN0_AUSPMA_RX_SHM", "apple,tunable-lane0-usb", 0xb000, 0x1000, true},
-    {"tunable_USB_LN0_AUSPMA_TX_TOP", "apple,tunable-lane0-usb", 0xc000, 0x1000, true},
-    {"tunable_USB_LN1_AUSPMA_RX_TOP", "apple,tunable-lane1-usb", 0x10000, 0x1000, true},
-    {"tunable_USB_LN1_AUSPMA_RX_EQ", "apple,tunable-lane1-usb", 0x11000, 0x1000, true},
-    {"tunable_USB_LN1_AUSPMA_RX_SHM", "apple,tunable-lane1-usb", 0x12000, 0x1000, true},
-    {"tunable_USB_LN1_AUSPMA_TX_TOP", "apple,tunable-lane1-usb", 0x13000, 0x1000, true},
-    {"tunable_CIO_LN0_AUSPMA_RX_TOP", "apple,tunable-lane0-cio", 0x9000, 0x1000, true},
-    {"tunable_CIO_LN0_AUSPMA_RX_EQ", "apple,tunable-lane0-cio", 0xa000, 0x1000, true},
-    {"tunable_CIO_LN0_AUSPMA_RX_SHM", "apple,tunable-lane0-cio", 0xb000, 0x1000, true},
-    {"tunable_CIO_LN0_AUSPMA_TX_TOP", "apple,tunable-lane0-cio", 0xc000, 0x1000, true},
-    {"tunable_CIO_LN1_AUSPMA_RX_TOP", "apple,tunable-lane1-cio", 0x10000, 0x1000, true},
-    {"tunable_CIO_LN1_AUSPMA_RX_EQ", "apple,tunable-lane1-cio", 0x11000, 0x1000, true},
-    {"tunable_CIO_LN1_AUSPMA_RX_SHM", "apple,tunable-lane1-cio", 0x12000, 0x1000, true},
-    {"tunable_CIO_LN1_AUSPMA_TX_TOP", "apple,tunable-lane1-cio", 0x13000, 0x1000, true},
-};
-
-static int dt_append_atc_tunable(int adt_node, int fdt_node,
-                                 const struct adt_tunable_info *tunable_info)
-{
-    u32 tunables_len;
-    const struct atc_tunable *tunable_adt =
-        adt_getprop(adt, adt_node, tunable_info->adt_name, &tunables_len);
-
-    if (!tunable_adt) {
-        printf("ADT: tunable %s not found\n", tunable_info->adt_name);
-
-        if (tunable_info->required)
-            return -1;
-        else
-            return 0;
-    }
-
-    if (tunables_len % sizeof(*tunable_adt)) {
-        printf("ADT: tunable %s with invalid length %d\n", tunable_info->adt_name, tunables_len);
-        return -1;
-    }
-
-    u32 n_tunables = tunables_len / sizeof(*tunable_adt);
-    for (size_t j = 0; j < n_tunables; j++) {
-        const struct atc_tunable *tunable = &tunable_adt[j];
-
-        if (tunable->size != 32) {
-            printf("kboot: ATC tunable has invalid size %d\n", tunable->size);
-            return -1;
-        }
-
-        if (tunable->offset % (tunable->size / 8)) {
-            printf("kboot: ATC tunable has unaligned offset %x\n", tunable->offset);
-            return -1;
-        }
-
-        if (tunable->offset + (tunable->size / 8) > tunable_info->reg_size) {
-            printf("kboot: ATC tunable has invalid offset %x\n", tunable->offset);
-            return -1;
-        }
-
-        if (fdt_appendprop_u32(dt, fdt_node, tunable_info->fdt_name,
-                               tunable->offset + tunable_info->reg_offset) < 0)
-            return -1;
-        if (fdt_appendprop_u32(dt, fdt_node, tunable_info->fdt_name, tunable->mask) < 0)
-            return -1;
-        if (fdt_appendprop_u32(dt, fdt_node, tunable_info->fdt_name, tunable->value) < 0)
-            return -1;
-    }
-
-    return 0;
-}
-
-static void dt_copy_atc_tunables(const char *adt_path, const char *dt_alias)
-{
-    int ret;
-
-    int adt_node = adt_path_offset(adt, adt_path);
-    if (adt_node < 0)
-        return;
-
-    const char *fdt_path = fdt_get_alias(dt, dt_alias);
-    if (fdt_path == NULL) {
-        printf("FDT: Unable to find alias %s\n", dt_alias);
-        return;
-    }
-
-    int fdt_node = fdt_path_offset(dt, fdt_path);
-    if (fdt_node < 0) {
-        printf("FDT: Unable to find path %s for alias %s\n", fdt_path, dt_alias);
-        return;
-    }
-
-    for (size_t i = 0; i < sizeof(atc_tunables) / sizeof(*atc_tunables); ++i) {
-        ret = dt_append_atc_tunable(adt_node, fdt_node, &atc_tunables[i]);
-        if (ret)
-            goto cleanup;
-    }
-
-    return;
-
-cleanup:
-    /*
-     * USB3 and Thunderbolt won't work if something went wrong. Clean up to make
-     * sure we don't leave half-filled properties around so that we can at least
-     * try to boot with USB2 support only.
-     */
-    for (size_t i = 0; i < sizeof(atc_tunables) / sizeof(*atc_tunables); ++i)
-        fdt_delprop(dt, fdt_node, atc_tunables[i].fdt_name);
-
-    printf("FDT: Unable to setup ATC tunables for %s - USB3/Thunderbolt will not work\n", adt_path);
-}
-
-static int dt_set_atc_tunables(void)
-{
-    char adt_path[32];
-    char fdt_alias[32];
-
-    for (int i = 0; i < MAX_ATC_DEVS; ++i) {
-        memset(adt_path, 0, sizeof(adt_path));
-        snprintf(adt_path, sizeof(adt_path), "/arm-io/atc-phy%d", i);
-
-        memset(fdt_alias, 0, sizeof(adt_path));
-        snprintf(fdt_alias, sizeof(fdt_alias), "atcphy%d", i);
-
-        dt_copy_atc_tunables(adt_path, fdt_alias);
-    }
-
-    return 0;
-}
-
-static const struct adt_tunable_info acio_tunables[] = {
-    /* NHI tunables */
+static const struct adt_tunable_info usb4_nhi_tunables[] = {
     {"hi_up_tx_desc_fabric_tunables", "apple,tunable-nhi", 0xf0000, 0x4000, true},
     {"hi_up_tx_data_fabric_tunables", "apple,tunable-nhi", 0xec000, 0x4000, true},
     {"hi_up_rx_desc_fabric_tunables", "apple,tunable-nhi", 0xe8000, 0x4000, true},
@@ -1075,11 +924,15 @@ static const struct adt_tunable_info acio_tunables[] = {
     {"hi_up_merge_fabric_tunables", "apple,tunable-nhi", 0xf8000, 0x4000, true},
     {"hi_dn_merge_fabric_tunables", "apple,tunable-nhi", 0xfc000, 0x4000, true},
     {"fw_int_ctl_management_tunables", "apple,tunable-nhi", 0x4000, 0x4000, true},
-    /* M3 tunables */
-    {"top_tunables", "apple,tunable-m3", 0x0, 0x4000, true},
-    {"hbw_fabric_tunables", "apple,tunable-m3", 0x4000, 0x4000, true},
-    {"lbw_fabric_tunables", "apple,tunable-m3", 0x8000, 0x4000, true},
-    /* PCIe adapter tunables */
+};
+
+static const struct adt_tunable_info usb4_rc_tunables[] = {
+    {"top_tunables", "apple,tunable-rc", 0x0, 0x4000, true},
+    {"hbw_fabric_tunables", "apple,tunable-rc", 0x4000, 0x4000, true},
+    {"lbw_fabric_tunables", "apple,tunable-rc", 0x8000, 0x4000, true},
+};
+
+static const struct adt_tunable_info usb4_pcie_adapter_tunables[] = {
     {"pcie_adapter_regs_tunables", "apple,tunable-pcie-adapter", 0x0, 0x4000, true},
 };
 
@@ -1148,9 +1001,8 @@ static int dt_append_acio_tunable(int adt_node, int fdt_node,
     return 0;
 }
 
-static int dt_copy_acio_tunables(const char *adt_path, const char *dt_alias)
+static int dt_copy_usb4_drom(const char *adt_path, const char *dt_alias)
 {
-    int ret;
     int adt_node = adt_path_offset(adt, adt_path);
     if (adt_node < 0)
         return -1;
@@ -1168,20 +1020,36 @@ static int dt_copy_acio_tunables(const char *adt_path, const char *dt_alias)
     if (!drom_blob || !drom_len)
         bail("ADT: Failed to get thunderbolt-drom\n");
 
-    fdt_setprop(dt, fdt_node, "apple,thunderbolt-drom", drom_blob, drom_len);
-    for (size_t i = 0; i < sizeof(acio_tunables) / sizeof(*acio_tunables); ++i) {
-        ret = dt_append_acio_tunable(adt_node, fdt_node, &acio_tunables[i]);
+    return fdt_setprop(dt, fdt_node, "apple,thunderbolt-drom", drom_blob, drom_len);
+}
+
+static int dt_copy_acio_tunables(const char *adt_path, const char *dt_alias,
+                                 const struct adt_tunable_info *tunables, size_t n_tunables)
+{
+    int ret;
+    int adt_node = adt_path_offset(adt, adt_path);
+    if (adt_node < 0)
+        return -1;
+
+    const char *fdt_path = fdt_get_alias(dt, dt_alias);
+    if (fdt_path == NULL)
+        bail("FDT: Unable to find alias %s\n", dt_alias);
+
+    int fdt_node = fdt_path_offset(dt, fdt_path);
+    if (fdt_node < 0)
+        bail("FDT: Unable to find path %s for alias %s\n", fdt_path, dt_alias);
+
+    for (size_t i = 0; i < n_tunables; ++i) {
+        ret = dt_append_acio_tunable(adt_node, fdt_node, &tunables[i]);
         if (ret)
-            bail_cleanup("ADT: unable to convert '%s' tunable\n", acio_tunables[i].adt_name);
+            bail_cleanup("ADT: unable to convert '%s' tunable", tunables[i].adt_name);
     }
 
     return 0;
 
 err:
-    fdt_delprop(dt, fdt_node, "apple,thunderbolt-drom");
-    fdt_delprop(dt, fdt_node, "apple,tunable-nhi");
-    fdt_delprop(dt, fdt_node, "apple,tunable-m3");
-    fdt_delprop(dt, fdt_node, "apple,tunable-pcie-adapter");
+    for (size_t i = 0; i < n_tunables; ++i)
+        fdt_delprop(dt, fdt_node, tunables[i].fdt_name);
 
     return -1;
 }
@@ -1195,10 +1063,93 @@ static int dt_set_acio_tunables(void)
         memset(adt_path, 0, sizeof(adt_path));
         snprintf(adt_path, sizeof(adt_path), "/arm-io/acio%d", i);
 
-        memset(fdt_alias, 0, sizeof(adt_path));
-        snprintf(fdt_alias, sizeof(fdt_alias), "acio%d", i);
+        memset(fdt_alias, 0, sizeof(fdt_alias));
+        snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_rc", i);
+        dt_copy_acio_tunables(adt_path, fdt_alias, usb4_rc_tunables,
+                              sizeof(usb4_rc_tunables) / sizeof(*usb4_rc_tunables));
 
-        dt_copy_acio_tunables(adt_path, fdt_alias);
+        memset(fdt_alias, 0, sizeof(fdt_alias));
+        snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_pcie_adapter", i);
+        dt_copy_acio_tunables(adt_path, fdt_alias, usb4_pcie_adapter_tunables,
+                              sizeof(usb4_pcie_adapter_tunables) /
+                                  sizeof(*usb4_pcie_adapter_tunables));
+
+        memset(fdt_alias, 0, sizeof(fdt_alias));
+        snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_nhi", i);
+        dt_copy_acio_tunables(adt_path, fdt_alias, usb4_nhi_tunables,
+                              sizeof(usb4_nhi_tunables) / sizeof(*usb4_nhi_tunables));
+        dt_copy_usb4_drom(adt_path, fdt_alias);
+    }
+
+    return 0;
+}
+
+static const struct adt_tunable_info pciec_tunables[] = {
+    {"atc-apcie-debug-tunables", "apple,tunable-debug", 0, 0x2000, true},
+    {"atc-apcie-fabric-tunables", "apple,tunable-fabric", 0, 0x4000, true},
+    {"atc-apcie-rc-tunables", "apple,tunable-rc", 0, 0x4000, true},
+};
+static const struct adt_tunable_info pciec_port_tunable = {
+    .adt_name = "apcie-config-tunables",
+    .fdt_name = "apple,tunable",
+    .reg_offset = 0,
+    .reg_size = 0x4000,
+    .required = true,
+};
+
+static int dt_copy_pciec_tunables(const char *adt_path, const char *dt_alias)
+{
+    int ret;
+    int adt_node = adt_path_offset(adt, adt_path);
+
+    if (adt_node < 0)
+        return -1;
+
+    const char *fdt_path = fdt_get_alias(dt, dt_alias);
+    if (fdt_path == NULL)
+        bail("FDT: Unable to find alias %s\n", dt_alias);
+
+    int fdt_node = fdt_path_offset(dt, fdt_path);
+    if (fdt_node < 0)
+        bail("FDT: Unable to find path %s for alias %s\n", fdt_path, dt_alias);
+
+    int fdt_port_node = fdt_first_subnode(dt, fdt_node);
+    if (fdt_port_node < 0)
+        bail("FDT: Unable to find port node for %s\n", fdt_path);
+
+    ret = dt_append_acio_tunable(adt_node, fdt_port_node, &pciec_port_tunable);
+    if (ret)
+        bail_cleanup("PCIEC: unable to convert '%s' tunable", pciec_tunables[0].adt_name);
+
+    for (size_t i = 0; i < sizeof(pciec_tunables) / sizeof(*pciec_tunables); ++i) {
+        ret = dt_append_acio_tunable(adt_node, fdt_node, &pciec_tunables[i]);
+        if (ret)
+            bail_cleanup("PCIEC: unable to convert '%s' tunable", pciec_tunables[i].adt_name);
+    }
+
+    return 0;
+
+err:
+    for (size_t i = 0; i < sizeof(pciec_tunables) / sizeof(*pciec_tunables); ++i)
+        fdt_delprop(dt, fdt_node, pciec_tunables[i].fdt_name);
+    fdt_delprop(dt, fdt_port_node, pciec_port_tunable.fdt_name);
+
+    return -1;
+}
+
+static int dt_set_pcie_tunables(void)
+{
+    char adt_path[32];
+    char fdt_alias[32];
+
+    for (int i = 0; i < MAX_CIO_DEVS; ++i) {
+        memset(adt_path, 0, sizeof(adt_path));
+        snprintf(adt_path, sizeof(adt_path), "/arm-io/apciec%d", i);
+
+        memset(fdt_alias, 0, sizeof(adt_path));
+        snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_pcie", i);
+
+        dt_copy_pciec_tunables(adt_path, fdt_alias);
     }
 
     return 0;
@@ -2469,9 +2420,11 @@ int kboot_prepare_dt(void *fdt)
         return -1;
     if (dt_set_uboot())
         return -1;
-    if (dt_set_atc_tunables())
+    if (kboot_setup_atc(dt))
         return -1;
     if (dt_set_acio_tunables())
+        return -1;
+    if (dt_set_pcie_tunables())
         return -1;
     if (dt_set_display())
         return -1;
