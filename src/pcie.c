@@ -321,17 +321,23 @@ int pcie_init(void)
 
         u32 max_speed;
         if (ADT_GETPROP(adt, bridge_offset, "maximum-link-speed", &max_speed) >= 0) {
-            /* Apple changed how they announce the link speed for the 10gb nic
-             * at the latest in MacOS 12.3. The "lan-10gb" subnode has now a
-             * "target-link-speed" property and "maximum-link-speed" remains
-             * at 1.
+            /* Some devices override "maximum-link-speed" in the device child nodes.
+             * The property used for the link speed seems to be ad-hoc made up.
+             * The 10 GB ethernet adapter uses "target-link-speed" and the SD card
+             * reader uses "expected-link-speed". Assume that PCIe link speed override
+             * resides in the first (only?) child node.
              */
-            int lan_10gb = adt_subnode_offset(adt, bridge_offset, "lan-10gb");
-            if (lan_10gb > 0) {
-                int target_speed;
-                if (ADT_GETPROP(adt, lan_10gb, "target-link-speed", &target_speed) >= 0) {
-                    if (target_speed > 0)
+            if (max_speed == 1) {
+                int np = adt_first_child_offset(adt, bridge_offset);
+                if (np >= 0) {
+                    int target_speed;
+                    if (ADT_GETPROP(adt, np, "target-link-speed", &target_speed) >= 0 &&
+                        target_speed > 0) {
                         max_speed = target_speed;
+                    } else if (ADT_GETPROP(adt, np, "expected-link-speed", &target_speed) >= 0 &&
+                               target_speed > 0) {
+                        max_speed = target_speed;
+                    }
                 }
             }
 
