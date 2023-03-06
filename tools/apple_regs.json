@@ -312,6 +312,7 @@
             {"name": "TRAP_HID",                        "msb": 50, "lsb": 50},
             {"name": "TRAP_s3_0_c15_c12_1z2",           "msb": 51, "lsb": 51},
             {"name": "TRAP_ACC",                        "msb": 52, "lsb": 52},
+            {"name": "TRAP_PMUV3",                      "msb": 56, "lsb": 56},
             {"name": "TRAP_PM",                         "msb": 57, "lsb": 57},
             {"name": "TRAP_UPM",                        "msb": 58, "lsb": 58},
             {"name": "TRAP_s3_1z7_c15_cx_3",            "msb": 59, "lsb": 59}
