@@ -5,12 +5,15 @@ from io import BytesIO
 
 from enum import IntEnum
 
+from m1n1.constructutils import Ver
 from m1n1.proxyutils import RegMonitor
 from m1n1.utils import *
 from m1n1.trace.dart import DARTTracer
 from m1n1.trace.asc import ASCTracer, EP, EPState, msg, msg_log, DIR
 from m1n1.fw.afk.rbep import *
 from m1n1.fw.afk.epic import *
+
+Ver.set_version(hv.u)
 
 if True:
     dcp_adt_path = "/arm-io/dcp"
