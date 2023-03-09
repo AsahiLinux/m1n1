@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 
 from m1n1.utils import *
+from m1n1.constructutils import Ver
 from m1n1.fw.dcp.ipc import *
 
 class DCPAVPropHandler:
@@ -45,6 +46,12 @@ def parse_log(fd):
             op = op_stack[chan].pop()
             assert int(off, 0) == op.off
             op.ack(bytes.fromhex(out_data))
+        elif optype == "VERSION":
+            for arg in args.strip().split(" "):
+                version = arg.split(":")
+                if len(version) == 2:
+                    Ver.set_version_key(version[0], version[1])
+            continue
         else:
             raise Exception(f"Unknown log cmd {optype}")
 
