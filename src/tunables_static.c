@@ -190,16 +190,16 @@ static void tunables_apply(struct sequence *seq)
     }
 }
 
-int power_and_apply(const char *path, struct sequence *seq)
+int power_and_apply(const char *path, struct sequence *seqs)
 {
     if (pmgr_adt_power_enable(path) < 0) {
         printf("tunables: Failed to enable power: %s\n", path);
         return -1;
     }
 
-    while (seq->base != UINT32_MAX) {
-        tunables_apply(seq);
-        seq++;
+    while (seqs->base != UINT64_MAX) {
+        tunables_apply(seqs);
+        seqs++;
     }
 
     if (pmgr_adt_power_disable(path) < 0) {
