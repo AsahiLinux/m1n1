@@ -266,19 +266,6 @@ static int dt_set_chosen(void)
     if (ipd < 0)
         ipd = adt_path_offset(adt, "/arm-io/dockchannel-mtp/mtp-transport/keyboard");
 
-    if (ipd < 0) {
-        printf("ADT: no keyboard found\n");
-    } else {
-        u32 len;
-        const u8 *kblang = adt_getprop(adt, ipd, "kblang-calibration", &len);
-        if (kblang && len >= 2) {
-            if (fdt_setprop_u32(dt, node, "asahi,kblang-code", kblang[1]))
-                bail("FDT: couldn't set asahi,kblang-code");
-        } else {
-            printf("ADT: kblang-calibration not found, no keyboard layout\n");
-        }
-    }
-
     if (fdt_setprop(dt, node, "asahi,iboot1-version", system_firmware.iboot,
                     strlen(system_firmware.iboot) + 1))
         bail("FDT: couldn't set asahi,iboot1-version");
@@ -680,6 +667,53 @@ static int dt_set_multitouch(void)
         bail("ADT: Failed to get multi-touch-calibration");
 
     fdt_setprop(dt, node, "apple,z2-cal-blob", cal_blob, len);
+    return 0;
+}
+
+#include "keyboard_types.h"
+
+static int dt_set_ipd(void)
+{
+    int chosen = fdt_path_offset(dt, "/chosen");
+    if (chosen < 0)
+        bail("FDT: /chosen node not found in devtree\n");
+
+    int ipd = adt_path_offset(adt, "/arm-io/spi3/ipd");
+    if (ipd < 0)
+        ipd = adt_path_offset(adt, "/arm-io/dockchannel-mtp/mtp-transport/keyboard");
+
+    if (ipd < 0) {
+        printf("ADT: no keyboard found\n");
+        return 0;
+    }
+
+    u32 len;
+    const u8 *kblang = adt_getprop(adt, ipd, "kblang-calibration", &len);
+    if (!kblang || len < 2) {
+        printf("ADT: kblang-calibration not found, no keyboard layout\n");
+        return 0;
+    }
+    u8 code = kblang[1];
+
+    if (fdt_setprop_u32(dt, chosen, "asahi,kblang-code", code))
+        bail("FDT: couldn't set asahi,kblang-code");
+
+    const char *path = fdt_get_alias(dt, "keyboard");
+    if (path == NULL)
+        return 0;
+
+    int node = fdt_path_offset(dt, path);
+    if (node < 0)
+        bail("FDT: keyboard alias points at nonexistent node");
+
+    if (fdt_setprop_u32(dt, node, "apple,keyboard-layout-id", code))
+        bail("FDT: couldn't set apple,keyboard-layout-id");
+
+    if (code >= ARRAY_SIZE(keyboard_types))
+        printf("ADT: kblang code out of range, not setting country code\n");
+    else if (fdt_setprop_u32(dt, node, "hid-country-code", keyboard_types[code]))
+        bail("FDT: couldn't set hid-country-code");
+
     return 0;
 }
 
@@ -1897,6 +1931,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_gpu(dt))
         return -1;
     if (dt_set_multitouch())
+        return -1;
+    if (dt_set_ipd())
         return -1;
     if (dt_disable_missing_devs("usb-drd", "usb@", 8))
         return -1;
