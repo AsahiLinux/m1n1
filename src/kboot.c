@@ -262,10 +262,6 @@ static int dt_set_chosen(void)
     if (node < 0)
         bail("FDT: /chosen node not found in devtree\n");
 
-    int ipd = adt_path_offset(adt, "/arm-io/spi3/ipd");
-    if (ipd < 0)
-        ipd = adt_path_offset(adt, "/arm-io/dockchannel-mtp/mtp-transport/keyboard");
-
     if (fdt_setprop(dt, node, "asahi,iboot1-version", system_firmware.iboot,
                     strlen(system_firmware.iboot) + 1))
         bail("FDT: couldn't set asahi,iboot1-version");
