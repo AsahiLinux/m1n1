@@ -155,6 +155,8 @@ static void *load_kernel(void *p, size_t size)
 static size_t chosen_cnt = 0;
 static char *chosen[MAX_CHOSEN_VARS];
 
+static bool enable_tso = false;
+
 static bool check_var(u8 **p)
 {
     char *val = memchr(*p, '=', strnlen((char *)*p, MAX_VAR_NAME + 1));
@@ -179,6 +181,8 @@ static bool check_var(u8 **p)
         chainload_spec = val;
     } else if (IS_VAR("display=")) {
         display_configure(val);
+    } else if (IS_VAR("tso=")) {
+        enable_tso = val[0] == '1';
     } else {
         printf("Unknown variable %s\n", *p);
     }
@@ -226,6 +230,13 @@ static void *load_one_payload(void *start, size_t size)
     }
 }
 
+void do_enable_tso(void)
+{
+    u64 actlr = mrs(ACTLR_EL1);
+    actlr |= BIT(1); // Enable TSO
+    msr(ACTLR_EL1, actlr);
+}
+
 int payload_run(void)
 {
     const char *target = adt_getprop(adt, 0, "target-type", NULL);
@@ -255,6 +266,17 @@ int payload_run(void)
 
     if (kernel && fdt) {
         smp_start_secondaries();
+        if (enable_tso) {
+
+            do_enable_tso();
+            for (int i = 1; i < MAX_CPUS; i++) {
+                if (smp_is_alive(i)) {
+                    smp_call0(i, do_enable_tso);
+                    smp_wait(i);
+                }
+            }
+            kboot_set_chosen("apple,tso", "");
+        }
 
         for (size_t i = 0; i < chosen_cnt; i++) {
             char *val = memchr(chosen[i], '=', MAX_VAR_NAME + 1);
