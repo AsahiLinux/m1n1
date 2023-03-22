@@ -14,6 +14,7 @@ parser.add_argument('--compression', choices=['auto', 'none', 'gz', 'xz'], defau
 parser.add_argument('-b', '--bootargs', type=str, metavar='"boot arguments"')
 parser.add_argument('-t', '--tty', type=str)
 parser.add_argument('-u', '--u-boot', type=pathlib.Path, help="load u-boot before linux")
+parser.add_argument('-T', '--tso', action="store_true", help="enable TSO")
 args = parser.parse_args()
 
 from m1n1.setup import *
@@ -111,6 +112,18 @@ if args.u_boot:
     boot_addr = uboot_addr
 
 p.smp_start_secondaries()
+
+if args.tso:
+    print("Enabling TSO:")
+    actlr = u.mrs("ACTLR_EL1")
+    actlr |= (1 << 1) # TSO
+    print("  CPU #0")
+    u.msr("ACTLR_EL1", actlr)
+    for i in range(1, 64):
+        if p.smp_is_alive(i):
+            print(f"  CPU #{i}")
+            u.msr("ACTLR_EL1", actlr, call=lambda addr, *args: p.smp_call_sync(i, addr & ~REGION_RX_EL1, *args))
+    p.kboot_set_chosen("apple,tso", "")
 
 if p.kboot_prepare_dt(dtb_addr):
     print("DT prepare failed")
