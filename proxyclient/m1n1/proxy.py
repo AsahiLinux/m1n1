@@ -548,6 +548,7 @@ class M1N1Proxy(Reloadable):
     P_SMP_CALL_SYNC = 0x502
     P_SMP_WAIT = 0x503
     P_SMP_SET_WFE_MODE = 0x504
+    P_SMP_IS_ALIVE = 0x505
 
     P_HEAPBLOCK_ALLOC = 0x600
     P_MALLOC = 0x601
@@ -940,6 +941,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_SMP_WAIT, cpu)
     def smp_set_wfe_mode(self, mode):
         return self.request(self.P_SMP_SET_WFE_MODE, mode)
+    def smp_is_alive(self, cpu):
+        return self.request(self.P_SMP_IS_ALIVE, cpu)
 
     def heapblock_alloc(self, size):
         return self.request(self.P_HEAPBLOCK_ALLOC, size)
