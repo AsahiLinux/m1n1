@@ -180,3 +180,23 @@ bool is_heap(void *addr)
 
     return p > top_of_kernel_data && p < top_of_ram;
 }
+
+// TODO: update mapping?
+u64 top_of_memory_alloc(size_t size)
+{
+    static bool guard_page_inserted = false;
+    cur_boot_args.mem_size -= ALIGN_UP(size, SZ_16K);
+    u64 ret = cur_boot_args.phys_base + cur_boot_args.mem_size;
+
+    if (!guard_page_inserted) {
+        cur_boot_args.mem_size -= SZ_16K;
+        guard_page_inserted = true;
+    } else {
+        // If the guard page was already there, move it down and allocate
+        // above it -- this is accomplished by simply shifting the allocated
+        // region by one page up.
+        ret += SZ_16K;
+    }
+
+    return ret;
+}
