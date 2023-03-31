@@ -422,7 +422,7 @@ BufferDescriptor = uint64_t
 SwapCompleteData = Bytes(0x12)
 SwapInfoBlob = Struct(
     "unk" / Bytes(0x6c4),
-    Ver("V >= V13_2", "unk_13_2" / Bytes(0x1)),
+    Ver("V >= V13_2", "unk_13_2" / Bytes(0x10)),
 )
 
 SWAP_SURFACES = 4
@@ -783,8 +783,8 @@ class IOMobileFramebufferAP(IPCObject):
         A465 = flush_supportsPower
         A466 = abort_swaps_dcp
         A469 = update_dfb
-        A470 = setPowerState
-        A471 = isKeepOnScreen
+        A471 = setPowerState
+        A472 = isKeepOnScreen
 
     # FW version dependent callbacks
     if Ver.check("V < V13_2"):
