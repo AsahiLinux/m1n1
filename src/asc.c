@@ -52,7 +52,7 @@ asc_dev_t *asc_init(const char *path)
     asc->cpu_base = base;
     asc->base = base + 0x8000;
 
-    clear32(base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
+    // clear32(base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
     return asc;
 }
 
@@ -74,6 +74,11 @@ void asc_cpu_start(asc_dev_t *asc)
 void asc_cpu_stop(asc_dev_t *asc)
 {
     clear32(asc->cpu_base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
+}
+
+bool asc_cpu_running(asc_dev_t *asc)
+{
+    return read32(asc->cpu_base + ASC_CPU_CONTROL) & ASC_CPU_CONTROL_START;
 }
 
 bool asc_can_recv(asc_dev_t *asc)
