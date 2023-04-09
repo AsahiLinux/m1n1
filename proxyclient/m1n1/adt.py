@@ -275,6 +275,8 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
 
     if is_template:
         t = CString("ascii")
+        v = Sequence(t, Terminated).parse(v)[0]
+        return t, v
 
     dev_props = None
     for k, pt in DEV_PROPERTIES.items():
