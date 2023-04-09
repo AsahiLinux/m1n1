@@ -1463,8 +1463,9 @@ class HV(Reloadable):
             return ret
 
         atc = f"ATC{self.iodev - IODEV.USB0}_USB"
+        atc_aon = f"ATC{self.iodev - IODEV.USB0}_USB_AON"
 
-        hook_devs = ["UART0", atc]
+        hook_devs = ["UART0", atc, atc_aon]
 
         pmgr = self.adt["/arm-io/pmgr"]
         dev_by_name = {dev.name: dev for dev in pmgr.devices}
