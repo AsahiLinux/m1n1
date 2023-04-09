@@ -14,6 +14,8 @@
 #include "uartproxy.h"
 #include "utils.h"
 
+extern uint64_t ram_base;
+
 #define PAGE_SIZE       0x4000
 #define CACHE_LINE_SIZE 64
 #define CACHE_LINE_LOG2 6
@@ -325,8 +327,12 @@ int hv_map(u64 from, u64 to, u64 size, u64 incr)
     }
 
     // L3 mappings to boundary
-    chunk = ALIGN_DOWN(min(size, ALIGN_UP(from, BIT(VADDR_L2_OFFSET_BITS)) - from),
-                       BIT(VADDR_L3_OFFSET_BITS));
+    u64 boundary = ALIGN_UP(from, MASK(VADDR_L2_OFFSET_BITS));
+    // CPU CTRR doesn't like L2 mappings crossing CTRR boundaries!
+    // Map everything below the m1n1 base as L3
+    if (boundary >= ram_base && boundary < (u64)_base)
+        boundary = ALIGN_UP((u64)_base, MASK(VADDR_L2_OFFSET_BITS));
+    chunk = ALIGN_DOWN(min(size, boundary - from), BIT(VADDR_L3_OFFSET_BITS));
     if (chunk) {
         hv_pt_map_l3(from, to, chunk, incr);
         from += chunk;
