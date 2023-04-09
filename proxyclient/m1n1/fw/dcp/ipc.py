@@ -425,6 +425,8 @@ SWAP_SURFACES = 4
 
 Rect = NamedTuple("rect", "x y w h", Int32ul[4])
 
+ActiveRegion = NamedTuple("rect", "max_x max_y min_w max_w", Int32ul[4])
+
 IOMFBSwapRec = Struct(
     "ts1" / Default(Int64ul, 0),
     "ts2" / Default(Int64ul, 0),
@@ -444,8 +446,11 @@ IOMFBSwapRec = Struct(
     "dst_rect" / Rect[SWAP_SURFACES],
     "swap_enabled" / Hex(Int32ul),
     "swap_completed" / Hex(Int32ul),
-    "unk_10c" / Hex(Default(Int32ul, 0)),
-    "unk_110" / UnkBytes(0x1b8),
+    "bg_color" / Hex(Default(Int32ul, 0)),
+    "unk_110" / UnkBytes(0x30),
+    "active_region_enable" / Default(Int32ul[SWAP_SURFACES], [0]*SWAP_SURFACES),
+    "active_regions" / Default(ActiveRegion[SWAP_SURFACES], [(0,0,0,0)] * SWAP_SURFACES),
+    "unk_190" / UnkBytes(0x138),
     "unk_2c8" / Hex(Default(Int32ul, 0)),
     "unk_2cc" / UnkBytes(0x14),
     "unk_2e0" / Hex(Default(Int32ul, 0)),
