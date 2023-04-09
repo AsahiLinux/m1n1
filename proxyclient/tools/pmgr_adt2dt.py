@@ -9,6 +9,7 @@ import argparse, pathlib
 from m1n1 import adt
 
 parser = argparse.ArgumentParser(description='Convert ADT PMGR nodes to Device Tree format')
+parser.add_argument("-m", "--multidie", action="store_true")
 parser.add_argument('input', type=pathlib.Path)
 args = parser.parse_args()
 
@@ -21,6 +22,18 @@ dev_by_id = {dev.id: dev for dev in pmgr.devices}
 
 blocks = {}
 maxaddr = {}
+
+def die_node(s):
+    if args.multidie:
+        return f"DIE_NODE({s})"
+    else:
+        return s
+
+def die_label(s):
+    if args.multidie:
+        return f"DIE_LABEL({s})"
+    else:
+        return s
 
 for i, dev in enumerate(pmgr.devices):
     if dev.flags.no_ps:
@@ -61,17 +74,17 @@ for i, ((base, size), devices) in enumerate(sorted(blocks.items())):
         assert base <= addr <= (base + size)
 
         print()
-        print(f"\tps_{dev.name.lower()}: power-controller@{offset:x} {{")
+        print(f"\t{die_node('ps_' + dev.name.lower())}: power-controller@{offset:x} {{")
         print(f"\t\tcompatible = {ps_compatible};")
         print(f"\t\treg = <{offset:#x} 4>;")
         print( "\t\t#power-domain-cells = <0>;")
         print( "\t\t#reset-cells = <0>;")
-        print(f'\t\tlabel = "{dev.name.lower()}";')
+        print(f'\t\tlabel = {die_label(dev.name.lower())};')
         if dev.flags.critical:
             print("\t\tapple,always-on;")
 
         if any(dev.parents):
-            domains = [f"<&ps_{dev_by_id[idx].name.lower()}>" for idx in dev.parents if idx]
+            domains = [f"<&{die_node('ps_'+dev_by_id[idx].name.lower())}>" for idx in dev.parents if idx]
             print(f"\t\tpower-domains = {', '.join(domains)};")
 
         print( "\t};")
