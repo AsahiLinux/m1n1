@@ -427,6 +427,9 @@ int pcie_init(void)
         set32(port_base[port] + APCIE_PORT_APPCLK, APCIE_PORT_APPCLK_EN);
 
         if (pcie_regs->type == APCIE_T602X) {
+            clear32(port_phy_base[port] + APCIE_PHY_CTRL,
+                    APCIE_PHY_CTRL_CLK0REQ | APCIE_PHY_CTRL_CLK1REQ);
+
             set32(port_phy_base[port] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0REQ);
             if (poll32(port_phy_base[port] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0ACK,
                        APCIE_PHY_CTRL_CLK0ACK, 50000)) {
@@ -471,6 +474,8 @@ int pcie_init(void)
                 printf("pcie: Port failed to become idle on %s\n", bridge);
                 return -1;
             }
+
+            udelay(1000);
 
             write32(port_ltssm_base[port] + 0x10, 0x2);
             write32(port_ltssm_base[port] + 0x1c, 0x4);
