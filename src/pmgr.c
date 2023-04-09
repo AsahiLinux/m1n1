@@ -195,6 +195,26 @@ static int pmgr_adt_devices_set_mode(const char *path, u8 target_mode, int recur
     return ret;
 }
 
+static int pmgr_adt_device_set_mode(const char *path, u32 index, u8 target_mode, int recurse)
+{
+    const u32 *devices;
+    u32 n_devices;
+    int ret = 0;
+
+    if (pmgr_adt_find_devices(path, &devices, &n_devices) < 0)
+        return -1;
+
+    if (index >= n_devices)
+        return -1;
+
+    u16 device = FIELD_GET(PMGR_DEVICE_ID, devices[index]);
+    u8 die = FIELD_GET(PMGR_DIE_ID, devices[index]);
+    if (pmgr_set_mode_recursive(die, device, target_mode, recurse))
+        ret = -1;
+
+    return ret;
+}
+
 int pmgr_adt_power_enable(const char *path)
 {
     int ret = pmgr_adt_devices_set_mode(path, PMGR_PS_ACTIVE, true);
@@ -204,6 +224,17 @@ int pmgr_adt_power_enable(const char *path)
 int pmgr_adt_power_disable(const char *path)
 {
     return pmgr_adt_devices_set_mode(path, PMGR_PS_PWRGATE, false);
+}
+
+int pmgr_adt_power_enable_index(const char *path, u32 index)
+{
+    int ret = pmgr_adt_device_set_mode(path, index, PMGR_PS_ACTIVE, true);
+    return ret;
+}
+
+int pmgr_adt_power_disable_index(const char *path, u32 index)
+{
+    return pmgr_adt_device_set_mode(path, index, PMGR_PS_PWRGATE, false);
 }
 
 static int pmgr_reset_device(int die, const struct pmgr_device *dev)
