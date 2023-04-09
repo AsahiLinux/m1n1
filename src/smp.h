@@ -6,7 +6,7 @@
 #include "types.h"
 #include "utils.h"
 
-#define MAX_CPUS 20
+#define MAX_CPUS 24
 
 #define SECONDARY_STACK_SIZE 0x10000
 extern u8 *secondary_stacks[MAX_CPUS];
