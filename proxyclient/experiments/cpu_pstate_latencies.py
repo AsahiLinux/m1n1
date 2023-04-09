@@ -17,7 +17,7 @@ CLUSTER_STATUS = 0x20050
 
 chip_id = u.adt["/chosen"].chip_id
 
-if chip_id == 0x8103:
+if chip_id in (0x8103, 0x6000, 0x6001, 0x6002):
     CREG = [
         0x210e00000,
         0x211e00000,
@@ -25,13 +25,16 @@ if chip_id == 0x8103:
 
     MAX_PSTATE = [5, 15]
 
-elif chip_id == 0x8112 or chip_id == 0x6021:
+elif chip_id in (0x8121, 0x6020, 0x6021, 0x6022):
     CREG = [
         0x210e00000,
         0x211e00000,
     ]
 
-    MAX_PSTATE = [7, 17]
+    if chip_id == 0x8112:
+        MAX_PSTATE = [7, 17]
+    else:
+        MAX_PSTATE = [7, 19]
 
 code = u.malloc(0x1000)
 
