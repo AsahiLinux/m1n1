@@ -1565,6 +1565,17 @@ static struct disp_mapping dcpext_reserved_regions_t600x[MAX_DCPEXT][2] = {
     },
 };
 
+static struct disp_mapping disp_reserved_regions_t602x[] = {
+    {"region-id-49", "dcp_txt", true, false, false},
+    {"region-id-50", "dcp_data", true, false, false},
+    {"region-id-57", "region57", true, false, false},
+    // The 2 following regions are mapped in dart-dcp sid 0 and dart-disp0 sid 0 and 4
+    {"region-id-94", "region94", true, true, false},
+    {"region-id-95", "region95", true, false, true},
+    // used on M1 Pro/Max/Ultra, mapped to dcp and disp0
+    {"region-id-157", "region157", true, true, false},
+};
+
 #define ARRAY_SIZE(s) (sizeof(s) / sizeof((s)[0]))
 
 static int dt_set_display(void)
@@ -1616,6 +1627,13 @@ static int dt_set_display(void)
                                                dcpext_reserved_regions_t600x[n],
                                                ARRAY_SIZE(dcpext_reserved_regions_t600x[n]));
         }
+    } else if (!fdt_node_check_compatible(dt, 0, "apple,t6020") ||
+               !fdt_node_check_compatible(dt, 0, "apple,t6021")) {
+        ret = dt_carveout_reserved_regions("dcp", "disp0", "disp0_piodma",
+                                           disp_reserved_regions_t602x,
+                                           ARRAY_SIZE(disp_reserved_regions_t602x));
+        if (ret)
+            return ret;
     } else {
         printf("DT: unknown compatible, skip display reserved-memory setup\n");
         return 0;
