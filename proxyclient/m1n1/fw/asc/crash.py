@@ -210,12 +210,13 @@ class ASCCrashLogEndpoint(ASCBaseEndpoint):
             return self.handle_getbuf(msg)
 
     def handle_getbuf(self, msg):
-        size = align(0x1000 * msg.SIZE, 0x4000)
 
         if msg.DVA:
+            size = 0x1000 * msg.SIZE
             self.iobuffer_dva = msg.DVA
             self.log(f"buf prealloc at dva {self.iobuffer_dva:#x}")
         else:
+            size = align(0x1000 * msg.SIZE, 0x4000)
             self.iobuffer, self.iobuffer_dva = self.asc.ioalloc(size)
             self.log(f"buf {self.iobuffer:#x} / {self.iobuffer_dva:#x}")
             self.send(CrashLogMessage(TYPE=1, SIZE=size // 0x1000, DVA=self.iobuffer_dva))
