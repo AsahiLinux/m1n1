@@ -231,7 +231,8 @@ dart_dev_t *dart_init(uintptr_t base, u8 device, bool keep_pts, enum dart_type_t
             set32(dart->regs + DART_T8020_ENABLED_STREAMS, BIT(device & 0x1f));
             break;
         case DART_T8110:
-            // TODO locked dart
+            if (read32(dart->regs + DART_T8110_PROTECT) & DART_T8110_PROTECT_TTBR_TCR)
+                dart->locked = true;
             write32(dart->regs + DART_T8110_ENABLE_STREAMS + 4 * (device >> 5), BIT(device & 0x1f));
             break;
     }
