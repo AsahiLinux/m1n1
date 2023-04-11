@@ -11,6 +11,9 @@
 #include "utils.h"
 #include "xnuboot.h"
 
+#include "dcp/dp_phy.h"
+#include "dcp/dptxep.h"
+
 #define DISPLAY_STATUS_DELAY   100
 #define DISPLAY_STATUS_RETRIES 20
 
@@ -24,6 +27,7 @@
 
 static dcp_dev_t *dcp;
 static dcp_iboot_if_t *iboot;
+static dcp_dptx_if_t *dptx;
 static u64 fb_dva;
 static u64 fb_size;
 bool display_is_external;
@@ -199,6 +203,25 @@ int display_start_dcp(void)
         return -1;
     }
 
+    // Power on
+    int ret;
+    if ((ret = dcp_ib_set_power(iboot, true)) < 0) {
+        printf("display: failed to set power\n");
+        return ret;
+    }
+
+    dptx = dcp_dptx_init(dcp);
+    if (!dptx) {
+        printf("display: failed to initialize DCP iBoot interface\n");
+        dcp_ib_shutdown(iboot);
+        iboot = NULL;
+        dcp_shutdown(dcp, false);
+        return -1;
+    }
+
+    dptx_phy_t *dpphy = dptx_phy_init("/arm-io/dptx-phy");
+    dcp_dptx_connect(dptx, dpphy, 0);
+
     return 0;
 }
 
@@ -308,6 +331,13 @@ int display_configure(const char *config)
     int timing_cnt, color_cnt;
     int hpd = 0, retries = 0;
 
+    /* trigger HPD on dptx endpoint, triggers a request from dcp to configure
+     * the dptx-phy config (lane count/link rate) but according to dcp's
+     * syslog the AP is not ready for hotplug event and dcp_ib_get_hpd() will
+     * timeout.
+     */
+    dcp_dptx_hpd(dptx, 0, true);
+
     /* After boot DCP does not immediately report a connected display. Retry getting display
      * information for 2 seconds.
      */
@@ -369,12 +399,7 @@ int display_configure(const char *config)
             return -1;
         }
 
-        cur_boot_args.mem_size -= size;
-        fb_pa = cur_boot_args.phys_base + cur_boot_args.mem_size;
-        /* add guard page between RAM and framebuffer */
-        // TODO: update mapping?
-        cur_boot_args.mem_size -= SZ_16K;
-
+        fb_pa = top_of_memory_alloc(size);
         memset((void *)fb_pa, 0, size);
 
         tmp_dva = iova_alloc(dcp->iovad_dcp, size);
@@ -469,6 +494,13 @@ int display_init(void)
         return -1;
     }
 
+    // HACK: disable non-working display config on j473ap
+    int model_node = adt_path_offset(adt, "/");
+    if (model_node >= 0 && adt_is_compatible(adt, model_node, "J473AP")) {
+        printf("display: j473 is not support\n");
+        return 0;
+    }
+
     display_is_external = adt_getprop(adt, node, "external", NULL);
     if (display_is_external)
         printf("display: Display is external\n");
@@ -491,6 +523,8 @@ int display_init(void)
 void display_shutdown(dcp_shutdown_mode mode)
 {
     if (iboot) {
+        if (dptx)
+            dcp_dptx_shutdown(dptx);
         dcp_ib_shutdown(iboot);
         switch (mode) {
             case DCP_QUIESCED:

@@ -92,13 +92,14 @@ dcp_iboot_if_t *dcp_ib_init(dcp_dev_t *dcp)
         return NULL;
 
     iboot->dcp = dcp;
-    iboot->epic = afk_epic_init(dcp->rtkit, DCP_IBOOT_ENDPOINT);
+    iboot->epic = afk_epic_start_ep(dcp->afk, DCP_IBOOT_ENDPOINT, false);
     if (!iboot->epic) {
         printf("dcp-iboot: failed to initialize EPIC\n");
         goto err_free;
     }
 
-    iboot->channel = afk_epic_start_interface(iboot->epic, "disp0-service", TXBUF_LEN, RXBUF_LEN);
+    iboot->channel =
+        afk_epic_start_interface(iboot->epic, NULL, NULL, "disp0-service", TXBUF_LEN, RXBUF_LEN);
 
     if (iboot->channel < 0) {
         printf("dcp-iboot: failed to initialize disp0 service\n");
@@ -108,7 +109,7 @@ dcp_iboot_if_t *dcp_ib_init(dcp_dev_t *dcp)
     return iboot;
 
 err_shutdown:
-    afk_epic_shutdown(iboot->epic);
+    afk_epic_shutdown_ep(iboot->epic);
 err_free:
     free(iboot);
     return NULL;
@@ -116,7 +117,7 @@ err_free:
 
 int dcp_ib_shutdown(dcp_iboot_if_t *iboot)
 {
-    afk_epic_shutdown(iboot->epic);
+    afk_epic_shutdown_ep(iboot->epic);
 
     free(iboot);
     return 0;
@@ -130,7 +131,7 @@ static int dcp_ib_cmd(dcp_iboot_if_t *iboot, int op, size_t in_size)
     iboot->txcmd.op = op;
     iboot->txcmd.len = sizeof(struct txcmd) + in_size;
 
-    return afk_epic_command(iboot->epic, iboot->channel, 0xc0, iboot->txbuf,
+    return afk_epic_command(iboot->epic, iboot->channel, 0, 0xc0, iboot->txbuf,
                             sizeof(struct txcmd) + in_size, iboot->rxbuf, &rxsize);
 }
 

@@ -110,8 +110,12 @@ dcp = DCPClient(u, dcp_addr, dart, disp_dart)
 dcp.dva_offset = getattr(u.adt["/arm-io/dcp"][0], "asc_dram_mask", 0)
 
 dcp.start()
+dcp.start_ep(0x20)
 dcp.start_ep(0x37)
 dcp.dcpep.initialize()
+
+dcp.system.wait_for("system")
+dcp.system.system.setProperty("gAFKConfigLogMask", 0xffff)
 
 mgr = DCPManager(dcp.dcpep, compat)
 
@@ -193,16 +197,28 @@ width = mgr.display_width()
 height = mgr.display_height()
 
 surface_id = 3
+surface_ov_id = 4
+
+ov_dst_x = 200
+ov_dst_y = 100
+ov_height = 256
+ov_width = 256
 
 swap_rec = Container(
     flags1 = 0x861202,
     flags2 = 0x04,
     swap_id = swapid.val,
     surf_ids = [surface_id, 0, 0, 0],
-    src_rect = [[0, 0, width, height],[0,0,0,0],[0,0,0,0],[0,0,0,0]],
+    src_rect = [[0, 0, width, height],
+                [0,0,ov_height,ov_width],
+                [0,0,0,0],
+                [0,0,0,0]],
     surf_flags = [1, 0, 0, 0],
     surf_unk = [0, 0, 0, 0],
-    dst_rect = [[0, 0, width, height],[0,0,0,0],[0,0,0,0],[0,0,0,0]],
+    dst_rect = [[0, 0, width, height],
+                [ov_dst_x,ov_dst_y,ov_dst_x + ov_height,ov_dst_y + ov_width],
+                [0,0,0,0],
+                [0,0,0,0]],
     swap_enabled = 0x80000007,
     swap_completed = 0x80000007,
     bl_unk = 0x1,
@@ -213,7 +229,7 @@ swap_rec = Container(
 surf = Container(
     is_tiled = False,
     unk_1 = False,
-    unk_2 = False,
+    unk_2 = True, # needs be true for overlay with "xf4p"
     plane_cnt = 0,
     plane_cnt2 = 0,
     format = "BGRA",
@@ -229,6 +245,32 @@ surf = Container(
     buf_size = width * height * 4,
     surface_id = surface_id,
     has_comp = True,
+    has_planes = True,
+    has_compr_info = False,
+    unk_1f5 = 0,
+    unk_1f9 = 0,
+)
+
+surf_ov = Container(
+    is_tiled = False,
+    unk_1 = True,
+    unk_2 = True,
+    plane_cnt = 0,
+    plane_cnt2 = 0,
+    format = "xf4p",
+    xfer_func = 1,
+    colorspace = 2,
+    stride = ov_width * 4, # has to be 64-byte aligned
+    pix_size = 4,
+    pel_w = 1,
+    pel_h = 1,
+    offset = 0,
+    width = ov_width,
+    height = ov_height,
+    buf_size = ov_width * ov_height * 4,
+    surface_id = surface_ov_id,
+    has_comp = True,
+    has_planes = True,
     has_planes = True,
     has_compr_info = False,
     unk_1f5 = 0,
@@ -329,9 +371,17 @@ for i, color in enumerate(colors):
 
 iova = disp_dart.iomap(0, buf, fb_size)
 
-surfaces = [surf, None, None, None]
+
+ov_size = align_up(ov_width * ov_height * 4, 2 * 0x4000)
+ov_buf = u.memalign(0x4000, ov_size)
+p.memset32(ov_buf, 230 | 768 << 10 | 768 << 20,  ov_width * ov_height * 4)
+
+ov_iova = disp_dart.iomap(0, ov_buf, ov_size)
+
+
+surfaces = [surf, surf_ov, None, None]
 #surfaces = [compressed_surf, None, None, None]
-surfAddr = [iova, 0, 0, 0]
+surfAddr = [iova, ov_iova, 0, 0]
 
 def submit():
     swap_rec.swap_id = swapid.val

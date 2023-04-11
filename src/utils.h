@@ -440,5 +440,6 @@ extern struct vector_args next_stage;
 void deep_wfi(void);
 
 bool is_heap(void *addr);
+u64 top_of_memory_alloc(size_t size);
 
 #endif
