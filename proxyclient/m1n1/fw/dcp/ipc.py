@@ -640,6 +640,9 @@ class UnifiedPipeline2(IPCObject):
     setDCPAVPropChunk = Callback(bool_, "setDCPAVPropChunk", data=HexDump(SizedBytes(0x1000, "length")), offset=uint, length=uint)
     setDCPAVPropEnd = Callback(bool_, "setDCPAVPropEnd", key=string(0x40))
 
+    get_tiling_state = Callback(bool_, "get_tiling_state", event=uint, param=uint, value=InOutPtr(uint))
+    set_tiling_state = Callback(bool_, "set_tiling_state", event=uint, param=uint, value=InOutPtr(uint))
+
     if Ver.check("V < V13_2"):
         D112 = set_idle_caching_state_ap
         D116 = start_hardware_boot
@@ -651,7 +654,9 @@ class UnifiedPipeline2(IPCObject):
         D124 = setDCPAVPropEnd
     else:
         D112 = create_nvram_service
-        D113 = set_idle_caching_state_ap
+        D113 = get_tiling_state
+        D114 = set_tiling_state
+        D115 = set_idle_caching_state_ap
         D119 = start_hardware_boot
         D120 = is_dark_boot
         D121 = is_waking_from_hibernate
