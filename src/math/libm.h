@@ -63,6 +63,9 @@ union ldshape {
 /* Support signaling NaNs.  */
 #define WANT_SNAN 0
 
+#define WANT_ERRNO       0
+#define WANT_ERRNO_UFLOW 0
+
 #if WANT_SNAN
 #error SNaN is unsupported
 #else
@@ -263,7 +266,7 @@ static inline float __math_oflowf(uint32_t sign)
     return __math_xflowf(sign, 0x1p97f);
 }
 
-float __math_uflowf(uint32_t sign)
+static inline float __math_uflowf(uint32_t sign)
 {
     return __math_xflowf(sign, 0x1p-95f);
 }

@@ -12,5 +12,6 @@
 #endif
 
 float expf(float);
+float powf(float, float);
 
 #endif

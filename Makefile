@@ -134,6 +134,8 @@ FP_OBJECTS := \
 	kboot_gpu.o \
 	math/expf.o \
 	math/exp2f_data.o \
+	math/powf.o \
+	math/powf_data.o
 
 BUILD_OBJS := $(patsubst %,build/%,$(OBJECTS))
 BUILD_FP_OBJS := $(patsubst %,build/%,$(FP_OBJECTS))
