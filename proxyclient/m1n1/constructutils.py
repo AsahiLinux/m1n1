@@ -796,7 +796,7 @@ class Ver(Subconstruct):
 
     MATRIX = {
         "V": ["V12_1", "V12_3", "V12_4", "V13_0B4", "V13_0B5", "V13_0B6", "V13_2", "V13_3"],
-        "G": ["G13", "G14"],
+        "G": ["G13", "G14", "G14X"],
     }
 
     def __init__(self, version, subcon):
@@ -875,7 +875,10 @@ class Ver(Subconstruct):
     @classmethod
     def set_version(cls, u):
         cls.set_version_key("V", u.version)
-        cls.set_version_key("G", u.adt["/arm-io"].soc_generation.replace("H", "G"))
+        gpu = u.adt["/arm-io"].soc_generation.replace("H", "G")
+        if gpu == "G14" and u.adt["/chosen"].chip_id < 0x8000:
+            gpu = "G14X"
+        cls.set_version_key("G", gpu)
 
 def show_struct_trace(log=print):
     for addr, desc in sorted(list(g_struct_trace)):
