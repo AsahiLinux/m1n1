@@ -142,6 +142,18 @@ GPUPerfState = Struct(
     "volt" / Int32ul,
 )
 
+GPUPerfState64 = Struct(
+    "volt" / Int64ul,
+    "freq" / Int64ul,
+)
+
+GPUPerfStates64 = Struct(
+    "base" / Int64ul,
+    "count" / Int64ul,
+    "states" / GreedyRange(GPUPerfState64),
+    "min_sram_volt" / Int64ul,
+)
+
 SpeakerConfig = Struct(
     "rx_slot" / Int8ul,
     "amp_gain" / Int8ul,
@@ -227,6 +239,8 @@ DEV_PROPERTIES = {
     "sgx": {
         "*": {
             "perf-states*": SafeGreedyRange(GPUPerfState),
+            "afr-perf-states": GPUPerfStates64,
+            "cs-perf-states": GPUPerfStates64,
             "*-kp": Float32l,
             "*-ki": Float32l,
             "*-ki-*": Float32l,
@@ -418,7 +432,9 @@ class ADTNode:
 
             path = self._parent_path + _name
 
+            raw = {}
             for p in val.properties:
+                raw[p.name] = p.value
                 is_template = bool(p.size & 0x80000000)
                 try:
                     t, v = parse_prop(self, path, _name, p.name, p.value, is_template)
@@ -434,6 +450,7 @@ class ADTNode:
                     t, v = parse_prop(self, path, _name, k, self._properties[k], is_template)
                     self._types[k] = t, is_template
                     self._properties[k] = v
+                    assert build_prop(self._path, k, v, t=t) == raw[k]
 
             for c in val.children:
                 node = ADTNode(c, f"{self._path}/", parent=self)
