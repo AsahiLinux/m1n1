@@ -1180,9 +1180,9 @@ class AGXTracer(ASCTracer):
             self.log("Pausing tracing")
             self.pause()
             self.stop()
-        if self.shell_after_init:
-            self.hv.run_shell()
         if self.after_init_hook:
             self.after_init_hook()
+        if self.shell_after_init:
+            self.hv.run_shell()
 
 ChannelTracer = ChannelTracer._reloadcls()
