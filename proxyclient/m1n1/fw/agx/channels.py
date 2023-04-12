@@ -483,7 +483,8 @@ class Channel(Reloadable):
         assert index < count
         addr = self.rb_base[ring] + index * size
         stream = self.uat.iostream(0, addr)
-        stream.meta_fn = lambda a, b: meta_fn(0, a, b)
+        if meta_fn is not None:
+            stream.meta_fn = lambda a, b: meta_fn(0, a, b)
         return msgcls.parse_stream(stream)
 
     def clear_message(self, ring, index):
