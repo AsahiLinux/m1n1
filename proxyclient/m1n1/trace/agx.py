@@ -793,17 +793,17 @@ class AGXTracer(ASCTracer):
             self.log(f"      unkptr_18 @ {wi0.buf_thing.unkptr_18:#x}::")
             chexdump(read(wi0.buf_thing.unkptr_18, 0x80), print_fn=self.log)
 
-            if getattr(wi0.struct_2, "tvb_cluster_meta1", None):
-                size = wi0.struct_2.tvb_cluster_meta2 - (wi0.struct_2.tvb_cluster_meta1 & 0xffffffffff)
-                data = read(wi0.struct_2.tvb_cluster_meta1, size)
-                rsize = len(data.rstrip(b"\x00\x00\x00\x00"))
-                self.log(f"      meta1 @ {wi0.struct_2.tvb_cluster_meta1:#x} ({size:#x}/{rsize:#x}):")
-                chexdump(data, print_fn=self.log)
-                blocks = wi0.struct_2.tvb_cluster_meta1 >> 50
-                tc = wi0.tiling_params.tile_count
-                xt = (tc & 0xfff) + 1
-                yt = ((tc >> 12) & 0xfff) + 1
-                self.log(f"      TILES {xt} {yt} {blocks} {size:#x}")
+            # if getattr(wi0.struct_2, "tvb_cluster_meta1", None):
+            #     size = wi0.struct_2.tvb_cluster_meta2 - (wi0.struct_2.tvb_cluster_meta1 & 0xffffffffff)
+            #     data = read(wi0.struct_2.tvb_cluster_meta1, size)
+            #     rsize = len(data.rstrip(b"\x00\x00\x00\x00"))
+            #     self.log(f"      meta1 @ {wi0.struct_2.tvb_cluster_meta1:#x} ({size:#x}/{rsize:#x}):")
+            #     chexdump(data, print_fn=self.log)
+            #     blocks = wi0.struct_2.tvb_cluster_meta1 >> 50
+            #     tc = wi0.tiling_params.tile_count
+            #     xt = (tc & 0xfff) + 1
+            #     yt = ((tc >> 12) & 0xfff) + 1
+            #     self.log(f"      TILES {xt} {yt} {blocks} {size:#x}")
             #self.uat.dump(context, self.log)
 
     def handle_3d(self, wi):
@@ -830,8 +830,8 @@ class AGXTracer(ASCTracer):
             cmd3d = wi1.microsequence.value[0].cmd
 
             self.log(f" 3D:")
-            self.log(f"  struct1 @ {cmd3d.struct1_addr:#x}: {cmd3d.struct1!s}")
-            self.log(f"  struct2 @ {cmd3d.struct2_addr:#x}: {cmd3d.struct2!s}")
+            #self.log(f"  struct1 @ {cmd3d.struct1_addr:#x}: {cmd3d.struct1!s}")
+            #self.log(f"  struct2 @ {cmd3d.struct2_addr:#x}: {cmd3d.struct2!s}")
             #self.log(f"    tvb_start_addr @ {cmd3d.struct2.tvb_start_addr:#x}:")
             #if cmd3d.struct2.tvb_start_addr:
                 #chexdump(read(cmd3d.struct2.tvb_start_addr, 0x1000), print_fn=self.log)
