@@ -80,7 +80,7 @@ class BufferManagerInfo(ConstructClass):
         "unk_10" / Int32ul,
         "gpu_counter2" / Int32ul,
         "unk_18" / Int32ul,
-        Ver("V < V13_0B4", "unk_1c" / Int32ul),
+        Ver("V < V13_0B4 || G >= G14X", "unk_1c" / Int32ul),
         "page_list_addr" / Int64ul,
         "page_list_size" / Int32ul,
         "page_count" / Int32ul,
@@ -136,6 +136,16 @@ class BufferManagerInfo(ConstructClass):
         self.unk_8c = 0x0
         self.unk_90 = bytes(0x30)
 
+class RegisterDefinition(ConstructClass):
+    subcon = Struct(
+        "number" / Int32ul,
+        "data" / Int64ul,
+    )
+
+    def __init__(self, number, data):
+        super().__init__()
+        self.number = number
+        self.data = data
 
 class Start3DClearPipelineBinding(ConstructClass):
     subcon = Struct(
@@ -218,7 +228,11 @@ class Start3DStruct1(ConstructClass):
         "unk_38" / Int32ul,
         "unk_3c" / Int32ul,
         "unk_40" / Int32ul,
-        "unk_44_padding" / HexDump(Bytes(0xac)),
+        "unk_44_padding" / HexDump(Bytes(0x9c)),
+        "registers_addr" / Int64ul,
+        "register_count" / Int16ul,
+        "registers_length" / Int16ul,
+        "unk_d8" / Int32ul,
         "depth_bias_array" / Start3DArrayAddr,
         "scissor_array" / Start3DArrayAddr,
         "visibility_result_buffer" / Int64ul,
@@ -248,7 +262,8 @@ class Start3DStruct1(ConstructClass):
         "aux_fb_unk0" / Int32ul,
         "unk_30c" / Int32ul,
         "aux_fb" / AuxFBInfo,
-        "unk_320_padding" / HexDump(Bytes(0x10)),
+        "s2_unk_f8" / Int32ul,
+        "unk_324_padding" / HexDump(Bytes(0xc)),
         "unk_partial_store_pipeline" / Start3DStorePipelineBinding,
         "partial_store_pipeline" / Start3DStorePipelineBinding,
         "depth_clear_val2" / Float32l,
@@ -310,16 +325,19 @@ class Start3DStruct2(ConstructClass):
 
 class BufferThing(ConstructClass):
     subcon = Struct(
+        Ver("G >= G14X", "unkptr_0_0" / Int64ul),
+        Ver("G >= G14X", "unkptr_0_8" / Int64ul),
         "unk_0" / Int64ul,
         "unk_8" / Int64ul,
         "unk_10" / Int64ul,
         "unkptr_18" / Int64ul,
         "unk_20" / Int32ul,
+        Ver("V >= V13_3", "unk_28" / Int64ul),
         "bm_misc_addr" / Int64ul,
         "bm_misc" / ROPointer(this.bm_misc_addr, BufferManagerMisc),
         "unk_2c" / Int32ul,
-        "unk_30" / Int64ul,
-        "unk_38" / Int64ul,
+        Ver("G < G14X", "unk_30" / Int64ul),
+        Ver("G < G14X", "unk_38" / Int64ul),
     )
 
 class Start3DStruct6(ConstructClass):
@@ -333,11 +351,13 @@ class Start3DStruct6(ConstructClass):
         "unknown_buffer" / Int64ul,
         "unk_28" / Int64ul,
         "unk_30" / Int32ul,
-        "unk_34" / Int64ul,
+        "unk_34" / Int32ul,
+        "unk_38" / Int32ul,
     )
 
 class Start3DStruct7(ConstructClass):
     subcon = Struct(
+        Ver("V >= V13_3", "unk_0_0" / Int32ul),
         "unk_0" / Int64ul,
         "stamp1_addr" / WrappedPointer, # same contents as below
         "stamp1" / ROPointer(this.stamp1_addr.value, StampCounter),
@@ -375,9 +395,8 @@ class Start3DCmd(ConstructClass):
     subcon = Struct( # 0x194 bytes''''
         "magic" / Const(0x24, Int32ul),
         "struct1_addr" / Int64ul, # empty before run. Output? WorkCommand3D + 0x3c0
-        "struct1" / ROPointer(this.struct1_addr, Start3DStruct1),
         "struct2_addr" / Int64ul, # ??  WorkCommand3D + 0x78
-        "struct2" / ROPointer(this.struct2_addr, Start3DStruct2),
+        Ver("G >= G14X", "registers_addr" / Int64ul),
         "buf_thing_addr" / Int64ul,
         "buf_thing" / ROPointer(this.buf_thing_addr, BufferThing),
         "stats_ptr" / Int64ul,
@@ -397,6 +416,7 @@ class Start3DCmd(ConstructClass):
         "unk_68" / Int32ul, # 0
         "unk_buf_ptr" / Int64ul,
         "unk_buf2_ptr" / Int64ul, # 0x18 bytes
+        Ver("V >= V13_3", "unk_7c_0" / Int64ul),
         "unk_7c" / Int32ul,
         "unk_80" / Int32ul,
         "unk_84" / Int32ul,
@@ -431,6 +451,7 @@ class Finalize3DCmd(ConstructClass):
         "workitem_ptr" / Int64ul,
         "unk_5c" / Int64ul,
         "unk_buf_ptr" / Int64ul, # Same as Start3DCmd.unkptr_6c
+        Ver("V >= V13_3", "unk_6c_0" / Int64ul),
         "unk_6c" / Int64ul, # 0
         "unk_74" / Int64ul, # 0
         "unk_7c" / Int64ul, # 0
@@ -540,9 +561,8 @@ class StartTACmd(ConstructClass):
     subcon = Struct(
         "magic" / Const(0x22, Int32ul),
         "tiling_params_addr" / Int64ul,
-        "tiling_params" / ROPointer(this.tiling_params_addr, TilingParameters),
         "struct2_addr" / Int64ul,
-        "struct2" / ROPointer(this.struct2_addr, StartTACmdStruct2),
+        Ver("G >= G14X", "registers_addr" / Int64ul),
         "buffer_mgr_addr" / Int64ul,
         "buffer_mgr" / ROPointer(this.buffer_mgr_addr, BufferManagerInfo),
         "buf_thing_addr" / Int64ul,
@@ -839,6 +859,20 @@ class WaitForInterruptCmd(ConstructClass):
         self.unk_2 = unk_2
         self.unk_3 = unk_3
 
+class Wait2Cmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x02, Int8ul),
+        "unk_1" / Int8ul,
+        "unk_2" / Int8ul,
+        "unk_3" / Int8ul,
+    )
+
+    def __init__(self, unk_1, unk_2, unk_3):
+        super().__init__()
+        self.unk_1 = unk_1
+        self.unk_2 = unk_2
+        self.unk_3 = unk_3
+
 class NopCmd(ConstructClass):
     # This doesn't exist
     subcon = Struct(
@@ -1024,6 +1058,7 @@ class MicroSequence(ConstructValueClass):
             #Probe(lookahead=32),
             "cmd" / Switch(this.op & 0x3f, {
                 0x01: WaitForInterruptCmd,
+                0x02: Wait2Cmd,
                 0x03: DoorbellCmd,
                 #0x04: write sgx u8
                 #0x05: write sgx u32

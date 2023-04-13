@@ -242,9 +242,10 @@ class WorkCommand3D(ConstructClass):
         "merge_upper_y" / Hex(Float32l),
         "unk_68" / Hex(Int64ul),
         "tile_count" / Hex(Int64ul),
-
         # Embedded structures that are also pointed to by other stuff
-        "struct_2" / Start3DStruct2,
+        Ver("G < G14X", "struct_2" / Start3DStruct2),
+        Ver("G >= G14X", "registers" / Array(128, RegisterDefinition)),
+        Ver("G >= G14X", "unkpad_g14x" / Default(HexDump(Bytes(0x20)), bytes(0x20))),
         "struct_1" / Start3DStruct1,
         "unk_758" / Flag,
         "unk_75c" / Flag,
@@ -315,11 +316,16 @@ class WorkCommandTA(ConstructClass):
         "unk_34" / Hex(Int32ul),
 
         # Embedded structures that are also pointed to by other stuff
-        "struct_2" / StartTACmdStruct2, # 0x11c bytes
-        "unk_154" / HexDump(Bytes(0x268)), # unknown
-        "tiling_params" / TilingParameters, # 0x2c bytes
-        "unk_3e8" / HexDump(Bytes(0x74)), # unknown
-
+        Ver("G >= G14X", "registers" / Array(128, RegisterDefinition)),
+        Ver("G >= G14X", "unk_154" / HexDump(Bytes(0x100))), # unknown
+        Ver("G < G14X", "struct_2" / StartTACmdStruct2), # 0x11c bytes
+        Ver("G < G14X", "unk_154" / HexDump(Bytes(0x268))), # unknown
+        Ver("G < G14X", "tiling_params" / TilingParameters), # unknown
+        Ver("G < G14X", "unk_3e8" / HexDump(Bytes(0x64))), # unknown
+        "registers_addr" / Int64ul,
+        "register_count" / Int16ul,
+        "registers_length" / Int16ul,
+        "unk_pad" / Int32ul,
         "unkptr_45c" / Int64ul,
         "tvb_size" / Int64ul,
         "microsequence_ptr" / Hex(Int64ul),
@@ -537,11 +543,11 @@ class CommandQueueInfo(ConstructClass):
         "unk_94" / Int32ul,
         "pending" / Int32ul,
         "unk_9c" / Int32ul,
-        Ver("V >= V13_2", "unk_a0_0" / Int32ul),
+        Ver("V >= V13_2 && G < G14X", "unk_a0_0" / Int32ul),
         "gpu_context_addr" / Hex(Int64ul), # GPU managed context, shared between 3D and TA. Passed to DC_DestroyContext
         "gpu_context" / ROPointer(this.gpu_context_addr, GPUContextData),
         "unk_a8" / Int64ul,
-        Ver("V >= V13_2", "unk_b0" / Int32ul),
+        Ver("V >= V13_2 && G < G14X", "unk_b0" / Int32ul),
         # End of struct
     )
 

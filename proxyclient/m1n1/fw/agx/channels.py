@@ -8,7 +8,7 @@ from .cmdqueue import *
 
 __all__ = ["channelNames", "channelRings", "DeviceControlMsg", "EventMsg", "StatsMsg"]
 
-if Ver.check("G >= G14 && V >= V13_2"):
+if Ver.check("G >= G14 && V >= V13_2 && G < G14X"):
     RunCmdQueueSize = 0x40
 else:
     RunCmdQueueSize = 0x30
@@ -22,7 +22,7 @@ class RunCmdQueueMsg(ConstructClass):
         "event_number" / Default(Int32ul, 0),
         "new_queue" / Default(Int32ul, 0),
         "data" / HexDump(Default(Bytes(0x18), bytes(0x18))),
-        Ver("G >= G14 && V >= V13_2", ZPadding(0x10)),
+        Ver("G >= G14 && V >= V13_2 && G < G14X", ZPadding(0x10)),
     )
 
     TYPES = {
