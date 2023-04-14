@@ -1161,8 +1161,10 @@ static int dt_device_set_reserved_mem(int node, dart_dev_t *dart, const char *na
     int ret;
 
     u64 iova = dart_get_mapping(dart, name, paddr, size);
-    if (DART_IS_ERR(iova))
-        bail("ADT: no mapping found for '%s' 0x%012lx iova:0x%08lx)\n", name, paddr, iova);
+    if (DART_IS_ERR(iova)) {
+        printf("ADT: no mapping found for '%s' 0x%012lx iova:0x%08lx)\n", name, paddr, iova);
+        return 0;
+    }
 
     ret = fdt_appendprop_u32(dt, node, "iommu-addresses", phandle);
     if (ret != 0)
