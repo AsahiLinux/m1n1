@@ -242,6 +242,7 @@ DEV_PROPERTIES = {
             "afr-perf-states": GPUPerfStates64,
             "cs-perf-states": GPUPerfStates64,
             "*-kp": Float32l,
+            "*-kp-1": Float32l,
             "*-ki": Float32l,
             "*-ki-*": Float32l,
             "*-gain*": Float32l,
