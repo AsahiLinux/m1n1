@@ -1687,6 +1687,18 @@ class HV(Reloadable):
         self.adt["chosen"]["memory-map"].BootArgs = (guest_base + self.bootargs_off, bootargs_size)
         if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
             self.adt["chosen"]["memory-map"].preoslog = (guest_base + preoslog_off, preoslog_size)
+        if hasattr(self.u.adt["chosen"]["memory-map"], "Kernel_mach__header"):
+            self.adt["chosen"]["memory-map"].Kernel_mach__header = (guest_base, 0)
+
+        for name in ("mtp", "aop"):
+            if name in self.adt["/arm-io"]:
+                iop = self.adt[f"/arm-io/{name}"]
+                nub = self.adt[f"/arm-io/{name}/iop-{name}-nub"]
+                if iop.segment_names.endswith(";__OS_LOG"):
+                    iop.segment_names = iop.segment_names[:-9]
+                    nub.segment_names = nub.segment_names[:-9]
+                    iop.segment_ranges = iop.segment_ranges[:-32]
+                    nub.segment_ranges = nub.segment_ranges[:-32]
 
         print(f"Setting up bootargs at 0x{guest_base + self.bootargs_off:x}...")
 
