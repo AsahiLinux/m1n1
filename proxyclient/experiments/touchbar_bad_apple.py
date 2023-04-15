@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+import sys, pathlib
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
+
+from m1n1.setup import *
 from m1n1.hw.dart import DART
 from m1n1.utils import *
 
@@ -8,7 +14,7 @@ height = 60
 stride = 64
 
 def make_fb():
-    width = 80
+    width = 2040
     fb_size = align_up(width * stride * 4, 8 * 0x4000)
     buf = u.memalign(0x4000, fb_size)
     return (dart.iomap(0, buf, fb_size), buf)
@@ -73,20 +79,18 @@ def flush(pipe):
  for i in pipe:
   p.write32(0x2282010c0, i)
 
-data = open('out.bin', 'rb').read()
-def play():
+def play(f):
     frame = 0
-    while 1:
-        iova, base = make_fb()
-        for y in range(60):
-            for x in range(80):
-                pix = data[(x + y * 80 + frame * 80 * 60) * 3]
-                pos = base + ((60 - y) + x * 64) * 4
-                if pix < 128:
-                    p.write32(pos, 0)
-                else:
-                    p.write32(pos, 0x00FFFFFF)
+    iova, base = make_fb()
+    while True:
+        data = f.read(80 * 64 * 4)
+        if not data:
+            break
+        for i in range(25):
+            iface.writemem(base + i * 80 * 64 * 4, data)
         flush(make_pipe(iova))
+        time.sleep(0.033)
         frame += 1
 
-play()
+with open('out.bin', 'rb') as f:
+    play(f)
