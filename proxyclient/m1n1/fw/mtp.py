@@ -20,13 +20,13 @@ class GPIOInit(ConstructClass):
 class InitBlock(ConstructClass):
     subcon = Struct(
         "type" / Int16ul,
-        "subtype" / Int16ul,
         "length" / Int16ul,
         "payload" / FixedSized(this.length,
                    Switch(this.type, {
                        0: HIDDescriptor,
                        1: GPIOInit,
-                       2: Bytes(0),
+                       2: GreedyBytes, # Unknown 6 bytes terminator
+                       7: GreedyBytes, # Device name
                    }, default=GreedyBytes))
     )
 
@@ -37,6 +37,7 @@ class InitMsg(ConstructClass):
         "unk" / Const(0x00, Int8ul),
         "device_id" / Int8ul,
         "device_name" / PaddedString(16, "ascii"),
+        "more_packets" / Int16ul,
         "msg" / RepeatUntil(lambda obj, lst, ctx: lst[-1].type == 2, InitBlock)
     )
 
@@ -254,7 +255,6 @@ class MTPCommInterface(MTPInterface):
                     self.log(f"Got HID descriptor for {iface}:")
                     iface.descriptor = blk.payload.descriptor
                     self.log(hexdump(iface.descriptor))
-                    iface.initialize()
                 elif isinstance(blk.payload, GPIOInit):
                     self.log(f"GPIO Init: {blk.payload}")
                     prop = getattr(self.proto.node[msg.device_name],
@@ -263,6 +263,8 @@ class MTPCommInterface(MTPInterface):
                     val = prop.args[1]
                     self.log(f"GPIO key: {key}")
                     self.gpios[(msg.device_id, blk.payload.gpio_id)] = key, val
+            if not msg.more_packets:
+                iface.initialize()
         elif isinstance(msg, GPIORequestMsg):
             self.log(f"GPIO request: {msg}")
             smcep = self.proto.smc.epmap[0x20]
@@ -275,6 +277,9 @@ class MTPCommInterface(MTPInterface):
             ackmsg.unk = 0
             ackmsg.msg = msg
             self.device_control(ackmsg)
+        else:
+            self.log("Unknown message!")
+            print(msg)
 
     def ack(self, retcode, msg):
         msg = DeviceControlAck.parse(msg)
