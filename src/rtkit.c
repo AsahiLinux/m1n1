@@ -438,15 +438,7 @@ int rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
                 }
                 break;
             case RTKIT_EP_OSLOG:
-                switch (msgtype) {
-                    case MSG_OSLOG_INIT:
-                        msg->msg = FIELD_PREP(MGMT_TYPE, MSG_OSLOG_ACK);
-                        if (!rtkit_send(rtk, msg))
-                            rtkit_printf("unable to ACK oslog init message\n");
-                        break;
-                    default:
-                        rtkit_printf("unknown oslog message %x\n", msgtype);
-                }
+                rtkit_printf("unknown oslog message %lx\n", msg->msg);
                 break;
             default:
                 rtkit_printf("message to unknown system endpoint 0x%02x: %lx\n", msg->ep, msg->msg);
