@@ -653,9 +653,17 @@ static int dt_set_multitouch(void)
     if (node < 0)
         bail("FDT: alias points at nonexistent node");
 
-    int anode = adt_path_offset(adt, "/arm-io/spi0/multi-touch");
+    const char *adt_touchbar;
+    if (fdt_node_check_compatible(dt, 0, "apple,j293") == 0)
+        adt_touchbar = "/arm-io/spi0/multi-touch";
+    else if (fdt_node_check_compatible(dt, 0, "apple,j493") == 0)
+        adt_touchbar = "/arm-io/spi3/touch-bar";
+    else
+        return 0;
+
+    int anode = adt_path_offset(adt, adt_touchbar);
     if (anode < 0)
-        bail("ADT /arm-io/spi0/multi-touch not found\n");
+        bail("ADT: touchbar node %s not found\n", adt_touchbar);
 
     u32 len;
     const u8 *cal_blob = adt_getprop(adt, anode, "multi-touch-calibration", &len);
