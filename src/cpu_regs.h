@@ -113,6 +113,9 @@
 #define HID13_RESET_CYCLES(x)       (((unsigned long)x) << 60)
 #define HID13_RESET_CYCLES_MASK     (0xFUL << 60)
 
+#define SYS_IMP_APL_HID14             sys_reg(3, 0, 15, 15, 0)
+#define HID14_ENABLE_NEX_POWER_GATING BIT(32)
+
 #define SYS_IMP_APL_HID16         sys_reg(3, 0, 15, 15, 2)
 #define HID16_AVL_UNK12           BIT(12)
 #define HID16_SPAREBIT0           BIT(56)

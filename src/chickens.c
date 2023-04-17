@@ -50,6 +50,12 @@ const char *init_cpu(void)
     else
         reg_set(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA | HID4_DISABLE_DC_SW_L2_OPS);
 
+    /* Enable NEX powergating, the reset cycles might be overriden by chickens */
+    if (!is_ecore()) {
+        reg_mask(SYS_IMP_APL_HID13, HID13_RESET_CYCLES_MASK, HID13_RESET_CYCLES(12));
+        reg_set(SYS_IMP_APL_HID14, HID14_ENABLE_NEX_POWER_GATING);
+    }
+
     uint64_t midr = mrs(MIDR_EL1);
     int part = FIELD_GET(MIDR_PART, midr);
     int rev = (FIELD_GET(MIDR_REV_HIGH, midr) << 4) | FIELD_GET(MIDR_REV_LOW, midr);
