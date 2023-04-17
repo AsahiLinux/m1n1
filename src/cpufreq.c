@@ -10,8 +10,7 @@
 
 #define CLUSTER_PSTATE_BUSY     BIT(31)
 #define CLUSTER_PSTATE_SET      BIT(25)
-#define CLUSTER_PSTATE_DESIRED2 GENMASK(15, 12)
-#define CLUSTER_PSTATE_DESIRED1 GENMASK(3, 0)
+#define CLUSTER_PSTATE_DESIRED1 GENMASK(4, 0)
 
 #define CLUSTER_CONFIG_ENABLE BIT(63)
 #define CLUSTER_CONFIG_DVMR1  BIT(32)
@@ -41,9 +40,8 @@ int cpufreq_init_cluster(const struct cluster_t *cluster)
     val = read64(cluster->base + CLUSTER_PSTATE);
 
     if (FIELD_GET(CLUSTER_PSTATE_DESIRED1, val) != cluster->boot_pstate) {
-        val &= CLUSTER_PSTATE_DESIRED1 | CLUSTER_PSTATE_DESIRED2;
-        val |= CLUSTER_PSTATE_SET | FIELD_PREP(CLUSTER_PSTATE_DESIRED1, cluster->boot_pstate) |
-               FIELD_PREP(CLUSTER_PSTATE_DESIRED2, cluster->boot_pstate);
+        val &= ~CLUSTER_PSTATE_DESIRED1;
+        val |= CLUSTER_PSTATE_SET | FIELD_PREP(CLUSTER_PSTATE_DESIRED1, cluster->boot_pstate);
         printf("cpufreq: Switching cluster %s to P-State %d\n", cluster->name,
                cluster->boot_pstate);
         write64(cluster->base + CLUSTER_PSTATE, val);
