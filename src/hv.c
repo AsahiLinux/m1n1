@@ -80,6 +80,9 @@ void hv_init(void)
     // Compute tick interval
     hv_tick_interval = mrs(CNTFRQ_EL0) / HV_TICK_RATE;
 
+    // Set deep WFI back to defaults
+    reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
+
     sysop("dsb ishst");
     sysop("tlbi alle1is");
     sysop("dsb ish");
@@ -168,6 +171,8 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
     msr(CNTHCTL_EL2, info->cnthctl);
     msr(SYS_IMP_APL_SPRR_CONFIG_EL1, info->sprr_config);
     msr(SYS_IMP_APL_GXF_CONFIG_EL1, info->gxf_config);
+
+    reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
 
     if (gxf_enabled())
         gl2_call(hv_set_gxf_vbar, 0, 0, 0, 0);
