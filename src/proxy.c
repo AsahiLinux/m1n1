@@ -112,6 +112,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_REBOOT:
             reboot();
             break;
+        case P_SLEEP:
+            cpu_sleep(request->args[0]);
+            break;
 
         case P_WRITE64:
             exc_guard = GUARD_SKIP;

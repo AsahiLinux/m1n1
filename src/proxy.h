@@ -23,6 +23,7 @@ typedef enum {
     P_GET_SIMD_STATE,
     P_PUT_SIMD_STATE,
     P_REBOOT,
+    P_SLEEP,
 
     P_WRITE64 = 0x100, // Generic register functions
     P_WRITE32,

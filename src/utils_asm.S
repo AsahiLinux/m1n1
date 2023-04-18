@@ -178,3 +178,41 @@ deep_wfi:
     msr SYS_IMP_APL_CYC_OVRD, x0
 
     ret
+
+.globl cpu_sleep
+.type cpu_sleep, @function
+cpu_sleep:
+    cmp x0, #0
+    bne 1f
+
+    mrs x1, SYS_IMP_APL_CYC_OVRD
+    and x1, x1, #~CYC_OVRD_IRQ_MODE_MASK
+    orr x1, x1, #CYC_OVRD_IRQ_MODE(2)
+    and x1, x1, #~CYC_OVRD_FIQ_MODE_MASK
+    orr x1, x1, #CYC_OVRD_FIQ_MODE(2)
+    msr SYS_IMP_APL_CYC_OVRD, x1
+1:
+
+    cmp x0, #0
+    beq 2f
+
+    mrs x1, SYS_IMP_APL_ACC_OVRD
+    orr x1, x1, #ACC_OVRD_PWR_DN_SRM(3)
+    and x1, x1, #~ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP_MASK
+    orr x1, x1, #ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP(2)
+    orr x1, x1, #ACC_OVRD_TRAIN_DOWN_LINK(3)
+    orr x1, x1, #ACC_OVRD_POWER_DOWN_CPM(3)
+    orr x1, x1, #ACC_OVRD_DISABLE_PIO_ON_WFI_CPU
+    orr x1, x1, #ACC_OVRD_DEEP_SLEEP
+    msr SYS_IMP_APL_ACC_OVRD, x1
+2:
+
+    mrs x1, SYS_IMP_APL_CYC_OVRD
+    orr x1, x1, #CYC_OVRD_WFI_MODE(3)
+    orr x1, x1, #CYC_OVRD_DISABLE_WFI_RET
+    msr SYS_IMP_APL_CYC_OVRD, x1
+
+3:
+    isb
+    wfi
+    b 3b

@@ -488,6 +488,7 @@ class M1N1Proxy(Reloadable):
     P_GET_SIMD_STATE = 0x00e
     P_PUT_SIMD_STATE = 0x00f
     P_REBOOT = 0x010
+    P_SLEEP = 0x011
 
     P_WRITE64 = 0x100
     P_WRITE32 = 0x101
@@ -744,6 +745,8 @@ class M1N1Proxy(Reloadable):
         self.request(self.P_PUT_SIMD_STATE, buf)
     def reboot(self):
         self.request(self.P_REBOOT, no_reply=True)
+    def sleep(self, deep=False):
+        self.request(self.P_SLEEP, deep, no_reply=True)
 
     def write64(self, addr, data):
         '''write 8 byte value to given address'''

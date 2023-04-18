@@ -430,6 +430,7 @@ extern u32 board_id, chip_id;
 
 extern struct vector_args next_stage;
 
+void cpu_sleep(bool deep) __attribute__((noreturn));
 void deep_wfi(void);
 
 bool is_heap(void *addr);
