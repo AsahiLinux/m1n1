@@ -221,6 +221,22 @@
 #define CYC_OVRD_WFI_MODE_MASK   (3UL << 24)
 #define CYC_OVRD_DISABLE_WFI_RET BIT(0)
 
+#define SYS_IMP_APL_ACC_OVRD sys_reg(3, 5, 15, 6, 0)
+
+#define ACC_OVRD_PWR_DN_SRM(x)               (((unsigned long)x) << 13)
+#define ACC_OVRD_PWR_DN_SRM_MASK             GENMASK(14, 13)
+#define ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP(x)   (((unsigned long)x) << 15)
+#define ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP_MASK GENMASK(16, 15)
+#define ACC_OVRD_TRAIN_DOWN_LINK(x)          (((unsigned long)x) << 17)
+#define ACC_OVRD_TRAIN_DOWN_LINK_MASK        GENMASK(18, 17)
+#define ACC_OVRD_POWER_DOWN_CPM(x)           (((unsigned long)x) << 25)
+#define ACC_OVRD_POWER_DOWN_CPM_MASK         GENMASK(26, 25)
+#define ACC_OVRD_CPM_WAKE_UP(x)              (((unsigned long)x) << 27)
+#define ACC_OVRD_CPM_WAKE_UP_MASK            GENMASK(28, 27)
+#define ACC_OVRD_DISABLE_CLK_DTR             BIT(29)
+#define ACC_OVRD_DISABLE_PIO_ON_WFI_CPU      BIT(32)
+#define ACC_OVRD_DEEP_SLEEP                  BIT(34)
+
 #define SYS_IMP_APL_UPMCR0 sys_reg(3, 7, 15, 0, 4)
 #define UPMCR0_IMODE_OFF   (0 << 16)
 #define UPMCR0_IMODE_AIC   (2 << 16)
