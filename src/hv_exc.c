@@ -385,6 +385,7 @@ static void hv_exc_exit(struct exc_info *ctx)
     reg_set(SYS_IMP_APL_PMCR0, PERCPU(exc_entry_pmcr0_cnt));
     msr(CNTVOFF_EL2, stolen_time);
     spin_unlock(&bhl);
+    hv_maybe_exit();
     __atomic_or_fetch(&hv_cpus_in_guest, BIT(smp_id()), __ATOMIC_ACQUIRE);
 
     hv_set_spsr(ctx->spsr);

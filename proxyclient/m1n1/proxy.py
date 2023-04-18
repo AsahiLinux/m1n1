@@ -597,6 +597,7 @@ class M1N1Proxy(Reloadable):
     P_HV_WRITE_HCR = 0xc0c
     P_HV_MAP_VIRTIO = 0xc0d
     P_VIRTIO_PUT_BUFFER = 0xc0e
+    P_HV_EXIT_CPU = 0xc0f
 
     P_FB_INIT = 0xd00
     P_FB_SHUTDOWN = 0xd01
@@ -1038,6 +1039,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_HV_MAP_VIRTIO, base, config)
     def virtio_put_buffer(self, base, qu, idx, length):
         return self.request(self.P_VIRTIO_PUT_BUFFER, base, qu, idx, length)
+    def hv_exit_cpu(self, cpu=-1):
+        return self.request(self.P_HV_EXIT_CPU, cpu)
 
     def fb_init(self):
         return self.request(self.P_FB_INIT)

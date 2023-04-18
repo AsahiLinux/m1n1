@@ -29,7 +29,7 @@ int hv_pinned_cpu;
 int hv_want_cpu;
 
 static bool hv_has_ecv;
-static bool hv_should_exit;
+static bool hv_should_exit[MAX_CPUS];
 bool hv_started_cpus[MAX_CPUS];
 u64 hv_cpus_in_guest;
 u64 hv_saved_sp[MAX_CPUS];
@@ -111,7 +111,7 @@ static void hv_set_gxf_vbar(void)
 
 void hv_start(void *entry, u64 regs[4])
 {
-    hv_should_exit = false;
+    memset(hv_should_exit, 0, sizeof(hv_should_exit));
     memset(hv_started_cpus, 0, sizeof(hv_started_cpus));
     hv_started_cpus[0] = 1;
 
@@ -148,10 +148,17 @@ void hv_start(void *entry, u64 regs[4])
 
     hv_wdt_stop();
 
-    hv_should_exit = true;
     printf("HV: Exiting hypervisor (main CPU)\n");
 
-    for (int i = 0; i < MAX_CPUS; i++) {
+    spin_unlock(&bhl);
+    // Wait a bit for the guest CPUs to exit on their own if they are in the process.
+    udelay(200000);
+    spin_lock(&bhl);
+
+    hv_started_cpus[0] = false;
+
+    for (int i = 1; i < MAX_CPUS; i++) {
+        hv_should_exit[i] = true;
         if (hv_started_cpus[i]) {
             printf("HV: Waiting for CPU %d to exit\n", i);
             spin_unlock(&bhl);
@@ -201,11 +208,11 @@ static void hv_enter_secondary(void *entry, u64 regs[4])
 
     spin_lock(&bhl);
 
-    hv_should_exit = true;
     printf("HV: Exiting from CPU %d\n", smp_id());
 
     __atomic_and_fetch(&hv_cpus_in_guest, ~BIT(smp_id()), __ATOMIC_ACQUIRE);
 
+    hv_started_cpus[smp_id()] = false;
     spin_unlock(&bhl);
 }
 
@@ -226,6 +233,15 @@ void hv_start_secondary(int cpu, void *entry, u64 regs[4])
 
     iodev_console_flush();
     smp_call4(cpu, hv_enter_secondary, (u64)entry, (u64)regs, 0, 0);
+}
+
+void hv_exit_cpu(int cpu)
+{
+    if (cpu == -1)
+        cpu = smp_id();
+
+    printf("HV: Requesting exit of CPU#%d from the guest\n", cpu);
+    hv_should_exit[cpu] = true;
 }
 
 void hv_rendezvous(void)
@@ -343,7 +359,7 @@ void hv_arm_tick(bool secondary)
 
 void hv_maybe_exit(void)
 {
-    if (hv_should_exit) {
+    if (hv_should_exit[smp_id()]) {
         hv_exit_guest();
     }
 }

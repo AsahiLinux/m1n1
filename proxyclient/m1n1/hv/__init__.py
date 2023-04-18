@@ -107,7 +107,7 @@ class HV(Reloadable):
         self.wdt_cpu = None
         self.smp = True
         self.hook_exceptions = False
-        self.started_cpus = set()
+        self.started_cpus = {}
         self.started = False
         self.ctx = None
         self.hvcall_handlers = {}
@@ -658,7 +658,6 @@ class HV(Reloadable):
             MDSCR_EL1,
         }
         ro = {
-            CYC_OVRD_EL1,
             ACC_CFG_EL1,
             ACC_OVRD_EL1,
         }
@@ -673,7 +672,15 @@ class HV(Reloadable):
             shadow.add(DBGWVRn_EL1(i))
 
         value = 0
-        if enc in shadow:
+        if enc == CYC_OVRD_EL1 and iss.DIR == MSR_DIR.WRITE:
+            if iss.Rt != 31:
+                value = ctx.regs[iss.Rt]
+            self.log(f"Skip: msr {name}, x{iss.Rt} = {value:x}")
+            if value & 1:
+                self.log("Guest is shutting down CPU")
+                self.p.hv_exit_cpu()
+                del self.started_cpus[self.ctx.cpu_id]
+        elif enc in shadow:
             if iss.DIR == MSR_DIR.READ:
                 value = self.sysreg[self.ctx.cpu_id].setdefault(enc, 0)
                 self.log(f"Shadow: mrs x{iss.Rt}, {name} = {value:x}")
@@ -1503,6 +1510,34 @@ class HV(Reloadable):
             self.map_hook(addr, 4, read=lambda base, off, width: pg_overrides[base + off])
             self.add_tracer(irange(addr, 4), "PMGR HACK", TraceMode.RESERVED)
 
+        cpu_hack = [
+            # 0x210e20020,
+            # 0x211e20020,
+            # 0x212e20020,
+        ]
+
+        def wh(base, off, data, width):
+            if isinstance(data, list):
+                data = data[0]
+            self.log(f"CPU W {base:x}+{off:x}:{width} = 0x{data:x}: Dangerous write")
+
+        for addr in cpu_hack:
+            self.map_hook(addr, 8, write=wh)
+            self.add_tracer(irange(addr, 8), "CPU HACK", TraceMode.RESERVED)
+
+        def cpu_state_rh(base, off, width):
+            data = ret = self.p.read64(base + off)
+            die = base // 0x20_0000_0000
+            cluster = (base >> 24) & 0xf
+            cpu = (base >> 20) & 0xf
+            for i, j in self.started_cpus.items():
+                if j == (die, cluster, cpu):
+                    break
+            else:
+                ret &= ~0xff
+            self.log(f"CPU STATE R {base:x}+{off:x}:{width} = 0x{data:x} -> 0x{ret:x}")
+            return ret
+
         def cpustart_wh(base, off, data, width):
             self.log(f"CPUSTART W {base:x}+{off:x}:{width} = 0x{data:x}")
             if off >= 8:
@@ -1512,6 +1547,9 @@ class HV(Reloadable):
                 for i in range(32):
                     if data & (1 << i):
                         self.start_secondary(die, cluster, i)
+                        cpu_state = 0x210050100 | (die << 27) | (cluster << 24) | (i << 20)
+                        self.map_hook(cpu_state, 8, read=cpu_state_rh)
+                        self.add_tracer(irange(addr, 8), "CPU STATE HACK", TraceMode.RESERVED)
 
         die_count = self.adt["/arm-io"].die_count if hasattr(self.adt["/arm-io"], "die-count") else 1
 
@@ -1546,7 +1584,7 @@ class HV(Reloadable):
         self.log(f" CPU #{index}: RVBAR = {entry:#x}")
 
         self.sysreg[index] = {}
-        self.started_cpus.add(index)
+        self.started_cpus[index] = (die, cluster, cpu)
         self.p.hv_start_secondary(index, entry)
 
     def setup_adt(self):
@@ -1867,7 +1905,7 @@ class HV(Reloadable):
         # Does not return
 
         self.started = True
-        self.started_cpus.add(0)
+        self.started_cpus[0] = (0, 0, 0)
         self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)
 
 from .. import trace
