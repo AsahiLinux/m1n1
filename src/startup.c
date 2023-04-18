@@ -117,5 +117,9 @@ void _cpu_reset_c(void *stack)
     printf("  CPU: %s\n", type);
 
     exception_initialize();
-    smp_secondary_entry();
+
+    if (mrs(MPIDR_EL1) & 0xffffff)
+        smp_secondary_entry();
+    else
+        m1n1_main();
 }
