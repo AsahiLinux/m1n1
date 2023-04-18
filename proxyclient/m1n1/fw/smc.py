@@ -153,6 +153,9 @@ class SMCEndpoint(ASCBaseEndpoint):
     def read32b(self, key):
         return struct.unpack(">I", self.read(key, 4))[0]
 
+    def read32f(self, key):
+        return struct.unpack("<f", self.read(key, 4))[0]
+
     def write64(self, key, data):
         self.write(key, struct.pack("<Q", data))
 
