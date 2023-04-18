@@ -5,6 +5,8 @@
 #include "kboot.h"
 #include "adt.h"
 #include "assert.h"
+#include "clk.h"
+#include "cpufreq.h"
 #include "dapf.h"
 #include "devicetree.h"
 #include "exception.h"
@@ -15,6 +17,7 @@
 #include "pmgr.h"
 #include "sep.h"
 #include "smp.h"
+#include "tunables.h"
 #include "types.h"
 #include "usb.h"
 #include "utils.h"
@@ -1977,6 +1980,10 @@ int kboot_prepare_dt(void *fdt)
 
 int kboot_boot(void *kernel)
 {
+    tunables_apply_static();
+    clk_init();
+    cpufreq_init();
+
     usb_init();
     pcie_init();
     dapf_init_all();

@@ -7,8 +7,6 @@
 
 #include "adt.h"
 #include "aic.h"
-#include "clk.h"
-#include "cpufreq.h"
 #include "display.h"
 #include "exception.h"
 #include "fb.h"
@@ -24,7 +22,6 @@
 #include "sep.h"
 #include "smp.h"
 #include "string.h"
-#include "tunables.h"
 #include "uart.h"
 #include "uartproxy.h"
 #include "usb.h"
@@ -154,7 +151,6 @@ void m1n1_main(void)
     wdt_disable();
 #ifndef BRINGUP
     pmgr_init();
-    tunables_apply_static();
 
 #ifdef USE_FB
     display_init();
@@ -170,8 +166,6 @@ void m1n1_main(void)
 #endif
 #endif
 
-    clk_init();
-    cpufreq_init();
     sep_init();
 #endif
 
