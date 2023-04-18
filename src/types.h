@@ -49,12 +49,21 @@ typedef s64 ssize_t;
 #define SZ_1M  (1 << 20)
 #define SZ_32M (1 << 25)
 
+#define BIT(x)                 (1UL << (x))
+#define MASK(x)                (BIT(x) - 1)
+#define GENMASK(msb, lsb)      ((BIT((msb + 1) - (lsb)) - 1) << (lsb))
+#define _FIELD_LSB(field)      ((field) & ~(field - 1))
+#define FIELD_PREP(field, val) ((val) * (_FIELD_LSB(field)))
+#define FIELD_GET(field, val)  (((val) & (field)) / _FIELD_LSB(field))
+
 #ifdef __ASSEMBLER__
 
+#define ULONG(x)                         (x)
 #define sys_reg(op0, op1, CRn, CRm, op2) s##op0##_##op1##_c##CRn##_c##CRm##_##op2
 
 #else
 
+#define ULONG(x)                         ((unsigned long)(x))
 #define sys_reg(op0, op1, CRn, CRm, op2) , _S, op0, op1, CRn, CRm, op2
 
 #endif

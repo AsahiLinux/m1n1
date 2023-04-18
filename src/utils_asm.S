@@ -154,7 +154,7 @@ put_simd_state:
 .type deep_wfi, @function
 deep_wfi:
     mrs x0, SYS_IMP_APL_CYC_OVRD
-    orr x1, x0, #(3L << 24)
+    orr x1, x0, #CYC_OVRD_WFI_MODE(3)
     msr SYS_IMP_APL_CYC_OVRD, x1
 
     stp x30, x0, [sp, #-16]!

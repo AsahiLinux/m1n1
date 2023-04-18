@@ -17,13 +17,6 @@
 
 #define ARRAY_SIZE(s) (sizeof(s) / sizeof((s)[0]))
 
-#define BIT(x)                 (1UL << (x))
-#define MASK(x)                (BIT(x) - 1)
-#define GENMASK(msb, lsb)      ((BIT((msb + 1) - (lsb)) - 1) << (lsb))
-#define _FIELD_LSB(field)      ((field) & ~(field - 1))
-#define FIELD_PREP(field, val) ((val) * (_FIELD_LSB(field)))
-#define FIELD_GET(field, val)  (((val) & (field)) / _FIELD_LSB(field))
-
 #define ALIGN_UP(x, a)   (((x) + ((a)-1)) & ~((a)-1))
 #define ALIGN_DOWN(x, a) ((x) & ~((a)-1))
 
