@@ -202,7 +202,7 @@ struct usb_device_qualifier_descriptor {
  */
 #define make_usb_string_descriptor(str)                                                            \
     {                                                                                              \
-        .bLength = sizeof(struct usb_string_descriptor) + sizeof(u##str),                          \
+        .bLength = sizeof(struct usb_string_descriptor) + sizeof(u##str) - 2,                      \
         .bDescriptorType = USB_STRING_DESCRIPTOR, .bString = u##str                                \
     }
 

@@ -10,6 +10,7 @@
 #include "../build/build_tag.h"
 
 #include "usb_dwc3.h"
+#include "adt.h"
 #include "dart.h"
 #include "malloc.h"
 #include "memory.h"
@@ -136,7 +137,8 @@ static const struct usb_string_descriptor str_manufacturer =
     make_usb_string_descriptor("Asahi Linux");
 static const struct usb_string_descriptor str_product =
     make_usb_string_descriptor("m1n1 uartproxy " BUILD_TAG);
-static const struct usb_string_descriptor str_serial = make_usb_string_descriptor("P-0");
+static const struct usb_string_descriptor str_serial_dummy = make_usb_string_descriptor("P-0");
+static const struct usb_string_descriptor *str_serial;
 
 static const struct usb_string_descriptor_languages str_langs = {
     .bLength = sizeof(str_langs) + 2,
@@ -526,6 +528,30 @@ static void usb_dwc3_ep_set_stall(dwc3_dev_t *dev, u8 ep, u8 stall)
         usb_dwc3_ep_command(dev, ep, DWC3_DEPCMD_CLEARSTALL, 0, 0, 0);
 }
 
+static void usb_build_serial(void)
+{
+    if (str_serial)
+        return;
+
+    const char *serial = adt_getprop(adt, 0, "serial-number", NULL);
+    if (!serial || !serial[0]) {
+        str_serial = &str_serial_dummy;
+        return;
+    }
+
+    size_t len = strlen(serial);
+    size_t size = sizeof(struct usb_string_descriptor) + 2 * len;
+
+    struct usb_string_descriptor *desc = malloc(size);
+    memset(desc, 0, size);
+    desc->bLength = size;
+    desc->bDescriptorType = USB_STRING_DESCRIPTOR;
+    for (size_t i = 0; i < len; i++)
+        desc->bString[i] = serial[i];
+
+    str_serial = desc;
+}
+
 static void usb_cdc_get_string_descriptor(u32 index, const void **descriptor, u16 *descriptor_len)
 {
     switch (index) {
@@ -542,8 +568,9 @@ static void usb_cdc_get_string_descriptor(u32 index, const void **descriptor, u1
             *descriptor_len = str_product.bLength;
             break;
         case STRING_DESCRIPTOR_SERIAL:
-            *descriptor = &str_serial;
-            *descriptor_len = str_serial.bLength;
+            usb_build_serial();
+            *descriptor = str_serial;
+            *descriptor_len = str_serial->bLength;
             break;
         default:
             *descriptor = NULL;
