@@ -14,6 +14,7 @@ extern u8 *secondary_stacks[MAX_CPUS];
 void smp_secondary_entry(void);
 
 void smp_start_secondaries(void);
+void smp_stop_secondaries(bool deep_sleep);
 
 #define smp_call0(i, f)          smp_call4(i, f, 0, 0, 0, 0)
 #define smp_call1(i, f, a)       smp_call4(i, f, a, 0, 0, 0)

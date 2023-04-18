@@ -36,7 +36,10 @@ u8 *secondary_stacks[MAX_CPUS] = {dummy_stack};
 static bool wfe_mode = false;
 
 static int target_cpu;
+static int cpu_nodes[MAX_CPUS];
 static struct spin_table spin_table[MAX_CPUS];
+static u64 pmgr_reg;
+static u64 cpu_start_off;
 
 extern u8 _vectors_start[0];
 
@@ -79,7 +82,7 @@ void smp_secondary_entry(void)
     }
 }
 
-static void smp_start_cpu(int index, int die, int cluster, int core, u64 rvbar, u64 cpu_start_base)
+static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u64 cpu_start_base)
 {
     int i;
 
@@ -99,7 +102,7 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 rvbar, 
 
     sysop("dmb sy");
 
-    write64(rvbar, (u64)_vectors_start);
+    write64(impl, (u64)_vectors_start);
 
     cpu_start_base += die * PMGR_DIE_OFFSET;
 
@@ -110,14 +113,14 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 rvbar, 
     // Actually start the core
     write32(cpu_start_base + 0x8 + 4 * cluster, 1 << core);
 
-    for (i = 0; i < 500; i++) {
+    for (i = 0; i < 100; i++) {
         sysop("dmb ld");
         if (spin_table[index].flag)
             break;
         udelay(1000);
     }
 
-    if (i >= 500)
+    if (i >= 100)
         printf("Failed!\n");
     else
         printf("  Started.\n");
@@ -125,12 +128,58 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 rvbar, 
     _reset_stack = dummy_stack + DUMMY_STACK_SIZE;
 }
 
+static void smp_stop_cpu(int index, int die, int cluster, int core, u64 impl, u64 cpu_start_base,
+                         bool deep_sleep)
+{
+    int i;
+
+    if (index >= MAX_CPUS)
+        return;
+
+    if (!spin_table[index].flag)
+        return;
+
+    printf("Stopping CPU %d (%d:%d:%d)... ", index, die, cluster, core);
+
+    cpu_start_base += die * PMGR_DIE_OFFSET;
+
+    // Request CPU stop
+    write32(cpu_start_base + 0x0, 1 << (4 * cluster + core));
+
+    // Put the CPU to sleep
+    smp_call1(index, cpu_sleep, deep_sleep);
+
+    // If going into deep sleep, powering off the last core in a cluster kills our register
+    // access, so just wait a bit.
+    if (deep_sleep) {
+        udelay(10000);
+        printf("  Presumed stopped.\n");
+        memset(&spin_table[index], 0, sizeof(struct spin_table));
+        return;
+    }
+
+    // Check that it actually shut down
+    for (i = 0; i < 50; i++) {
+        sysop("dmb ld");
+        if (!(read64(impl + 0x100) & 0xff))
+            break;
+        udelay(1000);
+    }
+
+    if (i >= 50) {
+        printf("Failed!\n");
+    } else {
+        printf("  Stopped.\n");
+
+        memset(&spin_table[index], 0, sizeof(struct spin_table));
+    }
+}
+
 void smp_start_secondaries(void)
 {
     printf("Starting secondary CPUs...\n");
 
     int pmgr_path[8];
-    u64 pmgr_reg;
 
     if (adt_path_offset_trace(adt, "/arm-io/pmgr", pmgr_path) < 0) {
         printf("Error getting /arm-io/pmgr node\n");
@@ -146,9 +195,6 @@ void smp_start_secondaries(void)
         printf("Error getting /cpus node\n");
         return;
     }
-
-    int cpu_nodes[MAX_CPUS];
-    u64 cpu_start_off;
 
     memset(cpu_nodes, 0, sizeof(cpu_nodes));
 
@@ -206,6 +252,32 @@ void smp_start_secondaries(void)
     }
 
     spin_table[0].mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
+}
+
+void smp_stop_secondaries(bool deep_sleep)
+{
+    printf("Stopping secondary CPUs...\n");
+    smp_set_wfe_mode(true);
+
+    for (int i = 1; i < MAX_CPUS; i++) {
+        int node = cpu_nodes[i];
+
+        if (!node)
+            continue;
+
+        u32 reg;
+        u64 cpu_impl_reg[2];
+        if (ADT_GETPROP(adt, node, "reg", &reg) < 0)
+            continue;
+        if (ADT_GETPROP_ARRAY(adt, node, "cpu-impl-reg", cpu_impl_reg) < 0)
+            continue;
+
+        u8 core = FIELD_GET(CPU_REG_CORE, reg);
+        u8 cluster = FIELD_GET(CPU_REG_CLUSTER, reg);
+        u8 die = FIELD_GET(CPU_REG_DIE, reg);
+
+        smp_stop_cpu(i, die, cluster, core, cpu_impl_reg[0], pmgr_reg + cpu_start_off, deep_sleep);
+    }
 }
 
 void smp_send_ipi(int cpu)

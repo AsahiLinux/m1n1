@@ -327,6 +327,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_SMP_START_SECONDARIES:
             smp_start_secondaries();
             break;
+        case P_SMP_STOP_SECONDARIES:
+            smp_stop_secondaries(request->args[0]);
+            break;
         case P_SMP_CALL:
             smp_call4(request->args[0], (void *)request->args[1], request->args[2],
                       request->args[3], request->args[4], request->args[5]);
