@@ -671,6 +671,8 @@ class M1N1Proxy(Reloadable):
                 if (i < (len(args) - 1)) and args[i + 1] is None:
                     args[i + 1] = len(arg)
                 arg = p
+            if arg < 0:
+                arg &= (1 << 64) - 1
             args2.append(arg)
         try:
             return self._request(opcode, *args2, **kwargs)
