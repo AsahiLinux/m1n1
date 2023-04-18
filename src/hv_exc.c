@@ -289,21 +289,25 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
         case SYSREG_ISS(SYS_IMP_APL_IPI_RR_LOCAL_EL1): {
             assert(!is_read);
             u64 mpidr = (regs[rt] & 0xff) | (mrs(MPIDR_EL1) & 0xffff00);
-            msr(SYS_IMP_APL_IPI_RR_LOCAL_EL1, regs[rt]);
             for (int i = 0; i < MAX_CPUS; i++)
-                if (mpidr == smp_get_mpidr(i))
+                if (mpidr == smp_get_mpidr(i)) {
                     pcpu[i].ipi_queued = true;
-            return true;
+                    msr(SYS_IMP_APL_IPI_RR_LOCAL_EL1, regs[rt]);
+                    return true;
+                }
+            return false;
         }
         case SYSREG_ISS(SYS_IMP_APL_IPI_RR_GLOBAL_EL1):
             assert(!is_read);
             u64 mpidr = (regs[rt] & 0xff) | ((regs[rt] & 0xff0000) >> 8);
-            msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, regs[rt]);
             for (int i = 0; i < MAX_CPUS; i++) {
-                if (mpidr == (smp_get_mpidr(i) & 0xffff))
+                if (mpidr == (smp_get_mpidr(i) & 0xffff)) {
                     pcpu[i].ipi_queued = true;
+                    msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, regs[rt]);
+                    return true;
+                }
             }
-            return true;
+            return false;
         case SYSREG_ISS(SYS_IMP_APL_IPI_SR_EL1):
             if (is_read)
                 regs[rt] = PERCPU(ipi_pending) ? IPI_SR_PENDING : 0;
