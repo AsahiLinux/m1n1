@@ -11,7 +11,8 @@
 
 #define CLUSTER_PSTATE_BUSY     BIT(31)
 #define CLUSTER_PSTATE_SET      BIT(25)
-#define CLUSTER_PSTATE_UNK      BIT(20)
+#define CLUSTER_PSTATE_UNK_M2   BIT(22)
+#define CLUSTER_PSTATE_UNK_M1   BIT(20)
 #define CLUSTER_PSTATE_DESIRED2 GENMASK(16, 12)
 #define CLUSTER_PSTATE_DESIRED1 GENMASK(4, 0)
 
@@ -62,13 +63,26 @@ void cpufreq_fixup_cluster(const struct cluster_t *cluster)
 {
     u64 val = read64(cluster->base + CLUSTER_PSTATE);
 
-    // Older versions of m1n1 stage 1 erroneously cleared CLUSTER_PSTATE_UNK, so put it back for
+    // Older versions of m1n1 stage 1 erroneously cleared CLUSTER_PSTATE_UNK_Mx, so put it back for
     // firmwares it supported (don't touch anything newer, which includes newer devices).
     // Also clear the CLUSTER_PSTATE_DESIRED2 field since it doesn't seem to do anything, and isn't
     // used on newer chips.
     if (os_firmware.version != V_UNKNOWN && os_firmware.version <= V13_3) {
-        if (!(val & CLUSTER_PSTATE_UNK) || (val & CLUSTER_PSTATE_DESIRED2)) {
-            val |= CLUSTER_PSTATE_UNK;
+        u64 bits = 0;
+        switch (chip_id) {
+            case T8103:
+            case T6000 ... T6002:
+                bits = CLUSTER_PSTATE_UNK_M1;
+                break;
+            case T8112:
+            case T6020 ... T6021:
+                bits = CLUSTER_PSTATE_UNK_M2;
+                break;
+            default:
+                return;
+        }
+        if (!(val & bits) || (val & CLUSTER_PSTATE_DESIRED2)) {
+            val |= bits;
             val &= ~CLUSTER_PSTATE_DESIRED2;
             printf("cpufreq: Correcting setting for cluster %s\n", cluster->name);
             write64(cluster->base + CLUSTER_PSTATE, val);
