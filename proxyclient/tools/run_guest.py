@@ -113,3 +113,8 @@ if args.shell:
     run_shell(hv.shell_locals, "Entering hypervisor shell. Type ^D to start the guest.")
 
 hv.start()
+
+run_shell(hv.shell_locals, "Hypervisor exited. Entering shell.")
+
+p.smp_stop_secondaries(True)
+p.sleep(True)
