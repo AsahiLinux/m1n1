@@ -31,7 +31,7 @@ int hv_want_cpu;
 static bool hv_has_ecv;
 static bool hv_should_exit;
 bool hv_started_cpus[MAX_CPUS];
-u32 hv_cpus_in_guest;
+u64 hv_cpus_in_guest;
 u64 hv_saved_sp[MAX_CPUS];
 
 struct hv_secondary_info_t {
@@ -139,11 +139,11 @@ void hv_start(void *entry, u64 regs[4])
     hv_arm_tick(false);
     hv_pinned_cpu = -1;
     hv_want_cpu = -1;
-    hv_cpus_in_guest = 1;
+    hv_cpus_in_guest = BIT(smp_id());
 
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
 
-    __atomic_sub_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
+    __atomic_and_fetch(&hv_cpus_in_guest, ~BIT(smp_id()), __ATOMIC_ACQUIRE);
     spin_lock(&bhl);
 
     hv_wdt_stop();
@@ -204,7 +204,7 @@ static void hv_enter_secondary(void *entry, u64 regs[4])
     hv_should_exit = true;
     printf("HV: Exiting from CPU %d\n", smp_id());
 
-    __atomic_sub_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
+    __atomic_and_fetch(&hv_cpus_in_guest, ~BIT(smp_id()), __ATOMIC_ACQUIRE);
 
     spin_unlock(&bhl);
 }
@@ -222,7 +222,7 @@ void hv_start_secondary(int cpu, void *entry, u64 regs[4])
 
     printf("HV: Entering guest secondary %d at %p\n", cpu, entry);
     hv_started_cpus[cpu] = true;
-    __atomic_add_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
+    __atomic_or_fetch(&hv_cpus_in_guest, BIT(smp_id()), __ATOMIC_ACQUIRE);
 
     iodev_console_flush();
     smp_call4(cpu, hv_enter_secondary, (u64)entry, (u64)regs, 0, 0);
@@ -230,6 +230,8 @@ void hv_start_secondary(int cpu, void *entry, u64 regs[4])
 
 void hv_rendezvous(void)
 {
+    int timeout = 1000000;
+
     if (!__atomic_load_n(&hv_cpus_in_guest, __ATOMIC_ACQUIRE))
         return;
 
@@ -239,8 +241,14 @@ void hv_rendezvous(void)
             smp_send_ipi(i);
         }
     }
-    while (__atomic_load_n(&hv_cpus_in_guest, __ATOMIC_ACQUIRE))
-        ;
+
+    while (timeout--) {
+        if (!__atomic_load_n(&hv_cpus_in_guest, __ATOMIC_ACQUIRE))
+            return;
+    }
+
+    panic("HV: Failed to rendezvous, missing CPUs: 0x%lx\n",
+          __atomic_load_n(&hv_cpus_in_guest, __ATOMIC_ACQUIRE));
 }
 
 bool hv_switch_cpu(int cpu)

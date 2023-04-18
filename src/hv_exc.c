@@ -36,7 +36,7 @@ void hv_exit_guest(void) __attribute__((noreturn));
 static u64 stolen_time = 0;
 static u64 exc_entry_time;
 
-extern u32 hv_cpus_in_guest;
+extern u64 hv_cpus_in_guest;
 extern int hv_pinned_cpu;
 extern int hv_want_cpu;
 
@@ -367,7 +367,7 @@ static void hv_exc_entry(struct exc_info *ctx)
     if (!(mrs(ISR_EL1) & 0x100))
         sysop("msr daifclr, 4");
 
-    __atomic_sub_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
+    __atomic_and_fetch(&hv_cpus_in_guest, ~BIT(smp_id()), __ATOMIC_ACQUIRE);
     spin_lock(&bhl);
     hv_wdt_breadcrumb('X');
     exc_entry_time = mrs(CNTPCT_EL0);
@@ -385,7 +385,7 @@ static void hv_exc_exit(struct exc_info *ctx)
     reg_set(SYS_IMP_APL_PMCR0, PERCPU(exc_entry_pmcr0_cnt));
     msr(CNTVOFF_EL2, stolen_time);
     spin_unlock(&bhl);
-    __atomic_add_fetch(&hv_cpus_in_guest, 1, __ATOMIC_ACQUIRE);
+    __atomic_or_fetch(&hv_cpus_in_guest, BIT(smp_id()), __ATOMIC_ACQUIRE);
 
     hv_set_spsr(ctx->spsr);
     hv_set_elr(ctx->elr);
