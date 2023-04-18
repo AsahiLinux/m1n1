@@ -270,16 +270,12 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
             if (is_read) {
                 regs[rt] = mrs(SYS_IMP_APL_CYC_OVRD);
             } else {
-                msr(SYS_IMP_APL_CYC_OVRD,
-                    regs[rt] & ~(CYC_OVRD_DISABLE_WFI_RET | CYC_OVRD_FIQ_MODE_MASK));
                 if (regs[rt] & (CYC_OVRD_DISABLE_WFI_RET | CYC_OVRD_FIQ_MODE_MASK))
-                    printf("msr(SYS_IMP_APL_CYC_OVRD, 0x%08lx): Filtered WFI RET disable and/or "
-                           "FIQ mode\n",
-                           regs[rt]);
+                    return false;
+                msr(SYS_IMP_APL_CYC_OVRD, regs[rt]);
             }
             return true;
             /* clang-format off */
-
         /* IPI handling */
         SYSREG_PASS(SYS_IMP_APL_IPI_CR_EL1)
         /* clang-format on */

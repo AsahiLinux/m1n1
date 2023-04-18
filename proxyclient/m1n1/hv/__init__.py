@@ -658,6 +658,7 @@ class HV(Reloadable):
             MDSCR_EL1,
         }
         ro = {
+            CYC_OVRD_EL1,
             ACC_CFG_EL1,
             ACC_OVRD_EL1,
         }
