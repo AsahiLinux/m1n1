@@ -153,7 +153,11 @@ put_simd_state:
 .globl deep_wfi
 .type deep_wfi, @function
 deep_wfi:
-    str x30, [sp, #-16]!
+    mrs x0, SYS_IMP_APL_CYC_OVRD
+    orr x1, x0, #(3L << 24)
+    msr SYS_IMP_APL_CYC_OVRD, x1
+
+    stp x30, x0, [sp, #-16]!
     stp x28, x29, [sp, #-16]!
     stp x26, x27, [sp, #-16]!
     stp x24, x25, [sp, #-16]!
@@ -161,15 +165,7 @@ deep_wfi:
     stp x20, x21, [sp, #-16]!
     stp x18, x19, [sp, #-16]!
 
-    mrs x0, SYS_IMP_APL_CYC_OVRD
-    orr x0, x0, #(3L << 24)
-    msr SYS_IMP_APL_CYC_OVRD, x0
-
     wfi
-
-    mrs x0, SYS_IMP_APL_CYC_OVRD
-    bic x0, x0, #(1L << 24)
-    msr SYS_IMP_APL_CYC_OVRD, x0
 
     ldp x18, x19, [sp], #16
     ldp x20, x21, [sp], #16
@@ -177,6 +173,8 @@ deep_wfi:
     ldp x24, x25, [sp], #16
     ldp x26, x27, [sp], #16
     ldp x28, x29, [sp], #16
-    ldr x30, [sp], #16
+    ldp x30, x0, [sp], #16
+
+    msr SYS_IMP_APL_CYC_OVRD, x0
 
     ret
