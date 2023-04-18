@@ -12,7 +12,8 @@
 #include "usb.h"
 #include "utils.h"
 
-#define HV_TICK_RATE 1000
+#define HV_TICK_RATE      1000
+#define HV_SLOW_TICK_RATE 1
 
 DECLARE_SPINLOCK(bhl);
 
@@ -22,10 +23,12 @@ void hv_exit_guest(void) __attribute__((noreturn));
 extern char _hv_vectors_start[0];
 
 u64 hv_tick_interval;
+u64 hv_secondary_tick_interval;
 
 int hv_pinned_cpu;
 int hv_want_cpu;
 
+static bool hv_has_ecv;
 static bool hv_should_exit;
 bool hv_started_cpus[MAX_CPUS];
 u32 hv_cpus_in_guest;
@@ -60,9 +63,6 @@ void hv_init(void)
     smp_set_wfe_mode(true);
     hv_wdt_init();
 
-    // Enable physical timer for EL1
-    msr(CNTHCTL_EL2, CNTHCTL_EL1PTEN | CNTHCTL_EL1PCTEN);
-
     hv_pt_init();
 
     // Configure hypervisor defaults
@@ -79,6 +79,21 @@ void hv_init(void)
 
     // Compute tick interval
     hv_tick_interval = mrs(CNTFRQ_EL0) / HV_TICK_RATE;
+
+    hv_has_ecv = mrs(ID_AA64MMFR0_EL1) & (0xfULL << 60);
+
+    if (hv_has_ecv) {
+        printf("HV: ECV enabled\n");
+        reg_set(CNTHCTL_EL2,
+                CNTHCTL_EL1NVVCT | CNTHCTL_EL1NVPCT | CNTHCTL_EL1TVT | CNTHCTL_EL1PCTEN);
+        hv_secondary_tick_interval = mrs(CNTFRQ_EL0) / HV_SLOW_TICK_RATE;
+    } else {
+        printf("HV: No ECV supported\n");
+        // Enable physical timer for EL1
+        msr(CNTHCTL_EL2, CNTHCTL_EL1PTEN | CNTHCTL_EL1PCTEN);
+
+        hv_secondary_tick_interval = hv_tick_interval;
+    }
 
     // Set deep WFI back to defaults
     reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
@@ -121,7 +136,7 @@ void hv_start(void *entry, u64 regs[4])
     hv_secondary_info.sprr_config = mrs(SYS_IMP_APL_SPRR_CONFIG_EL1);
     hv_secondary_info.gxf_config = mrs(SYS_IMP_APL_GXF_CONFIG_EL1);
 
-    hv_arm_tick();
+    hv_arm_tick(false);
     hv_pinned_cpu = -1;
     hv_want_cpu = -1;
     hv_cpus_in_guest = 1;
@@ -177,7 +192,7 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
     if (gxf_enabled())
         gl2_call(hv_set_gxf_vbar, 0, 0, 0, 0);
 
-    hv_arm_tick();
+    hv_arm_tick(true);
 }
 
 static void hv_enter_secondary(void *entry, u64 regs[4])
@@ -309,9 +324,12 @@ void hv_set_elr(u64 val)
         return msr(ELR_EL2, val);
 }
 
-void hv_arm_tick(void)
+void hv_arm_tick(bool secondary)
 {
-    msr(CNTP_TVAL_EL0, hv_tick_interval);
+    if (secondary)
+        msr(CNTP_TVAL_EL0, hv_secondary_tick_interval);
+    else
+        msr(CNTP_TVAL_EL0, hv_tick_interval);
     msr(CNTP_CTL_EL0, CNTx_CTL_ENABLE);
 }
 

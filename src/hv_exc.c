@@ -207,6 +207,13 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
         /* Some kind of timer */
         SYSREG_PASS(sys_reg(3, 7, 15, 1, 1));
         SYSREG_PASS(sys_reg(3, 7, 15, 3, 1));
+        /* Architectural timer, for ECV */
+        SYSREG_MAP(SYS_CNTV_CTL_EL0, SYS_CNTV_CTL_EL02)
+        SYSREG_MAP(SYS_CNTV_CVAL_EL0, SYS_CNTV_CVAL_EL02)
+        SYSREG_MAP(SYS_CNTV_TVAL_EL0, SYS_CNTV_TVAL_EL02)
+        SYSREG_MAP(SYS_CNTP_CTL_EL0, SYS_CNTP_CTL_EL02)
+        SYSREG_MAP(SYS_CNTP_CVAL_EL0, SYS_CNTP_CVAL_EL02)
+        SYSREG_MAP(SYS_CNTP_TVAL_EL0, SYS_CNTP_TVAL_EL02)
         /* Spammy stuff seen on t600x p-cores */
         SYSREG_PASS(sys_reg(3, 2, 15, 12, 0));
         SYSREG_PASS(sys_reg(3, 2, 15, 13, 0));
@@ -451,7 +458,7 @@ void hv_exc_fiq(struct exc_info *ctx)
     if (smp_id() != interruptible_cpu && !(mrs(ISR_EL1) & 0x40) && hv_want_cpu == -1) {
         // Non-interruptible CPU and it was just a timer tick (or spurious), so just update FIQs
         hv_update_fiq();
-        hv_arm_tick();
+        hv_arm_tick(true);
         return;
     }
 
@@ -461,9 +468,12 @@ void hv_exc_fiq(struct exc_info *ctx)
 
     // Only poll for HV events in the interruptible CPU
     if (tick) {
-        if (smp_id() == interruptible_cpu)
+        if (smp_id() == interruptible_cpu) {
             hv_tick(ctx);
-        hv_arm_tick();
+            hv_arm_tick(false);
+        } else {
+            hv_arm_tick(true);
+        }
     }
 
     if (mrs(CNTV_CTL_EL0) == (CNTx_CTL_ISTATUS | CNTx_CTL_ENABLE)) {
