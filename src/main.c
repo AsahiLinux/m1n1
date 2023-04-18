@@ -7,6 +7,7 @@
 
 #include "adt.h"
 #include "aic.h"
+#include "cpufreq.h"
 #include "display.h"
 #include "exception.h"
 #include "fb.h"
@@ -166,6 +167,7 @@ void m1n1_main(void)
 #endif
 #endif
 
+    cpufreq_fixup();
     sep_init();
 #endif
 

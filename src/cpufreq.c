@@ -2,6 +2,7 @@
 
 #include "cpufreq.h"
 #include "adt.h"
+#include "firmware.h"
 #include "soc.h"
 #include "utils.h"
 
@@ -10,6 +11,8 @@
 
 #define CLUSTER_PSTATE_BUSY     BIT(31)
 #define CLUSTER_PSTATE_SET      BIT(25)
+#define CLUSTER_PSTATE_UNK      BIT(20)
+#define CLUSTER_PSTATE_DESIRED2 GENMASK(16, 12)
 #define CLUSTER_PSTATE_DESIRED1 GENMASK(4, 0)
 
 #define CLUSTER_CONFIG_ENABLE BIT(63)
@@ -55,6 +58,24 @@ int cpufreq_init_cluster(const struct cluster_t *cluster)
     return 0;
 }
 
+void cpufreq_fixup_cluster(const struct cluster_t *cluster)
+{
+    u64 val = read64(cluster->base + CLUSTER_PSTATE);
+
+    // Older versions of m1n1 stage 1 erroneously cleared CLUSTER_PSTATE_UNK, so put it back for
+    // firmwares it supported (don't touch anything newer, which includes newer devices).
+    // Also clear the CLUSTER_PSTATE_DESIRED2 field since it doesn't seem to do anything, and isn't
+    // used on newer chips.
+    if (os_firmware.version != V_UNKNOWN && os_firmware.version <= V13_3) {
+        if (!(val & CLUSTER_PSTATE_UNK) || (val & CLUSTER_PSTATE_DESIRED2)) {
+            val |= CLUSTER_PSTATE_UNK;
+            val &= ~CLUSTER_PSTATE_DESIRED2;
+            printf("cpufreq: Correcting setting for cluster %s\n", cluster->name);
+            write64(cluster->base + CLUSTER_PSTATE, val);
+        }
+    }
+}
+
 static const struct cluster_t t8103_clusters[] = {
     {"ECPU", 0x210e20000, false, 5},
     {"PCPU", 0x211e20000, true, 7},
@@ -91,34 +112,35 @@ static const struct cluster_t t6020_clusters[] = {
     {},
 };
 
+const struct cluster_t *cpufreq_get_clusters(void)
+{
+    switch (chip_id) {
+        case T8103:
+            return t8103_clusters;
+        case T6000:
+        case T6001:
+            return t6000_clusters;
+        case T6002:
+            return t6002_clusters;
+        case T8112:
+            return t8112_clusters;
+        case T6020:
+        case T6021:
+            return t6020_clusters;
+        default:
+            printf("cpufreq: Chip 0x%x is unsupported\n", chip_id);
+            return NULL;
+    }
+}
+
 int cpufreq_init(void)
 {
     printf("cpufreq: Initializing clusters\n");
 
-    const struct cluster_t *cluster;
+    const struct cluster_t *cluster = cpufreq_get_clusters();
 
-    switch (chip_id) {
-        case T8103:
-            cluster = t8103_clusters;
-            break;
-        case T6000:
-        case T6001:
-            cluster = t6000_clusters;
-            break;
-        case T6002:
-            cluster = t6002_clusters;
-            break;
-        case T6020:
-        case T6021:
-            cluster = t6020_clusters;
-            break;
-        case T8112:
-            cluster = t8112_clusters;
-            break;
-        default:
-            printf("cpufreq: Chip 0x%x is unsupported\n", chip_id);
-            return -1;
-    }
+    if (!cluster)
+        return -1;
 
     bool err = false;
     while (cluster->base) {
@@ -126,4 +148,16 @@ int cpufreq_init(void)
     }
 
     return err ? -1 : 0;
+}
+
+void cpufreq_fixup(void)
+{
+    const struct cluster_t *cluster = cpufreq_get_clusters();
+
+    if (!cluster)
+        return;
+
+    while (cluster->base) {
+        cpufreq_fixup_cluster(cluster++);
+    }
 }

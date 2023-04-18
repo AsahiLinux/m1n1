@@ -4,5 +4,6 @@
 #define CPUFREQ_H
 
 int cpufreq_init(void);
+void cpufreq_fixup(void);
 
 #endif
