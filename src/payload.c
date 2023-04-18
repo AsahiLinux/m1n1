@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "../build/build_cfg.h"
+#include "../build/build_tag.h"
+
 #include "payload.h"
 #include "adt.h"
 #include "assert.h"
@@ -152,8 +155,15 @@ static void *load_kernel(void *p, size_t size)
 
 #define MAX_CHOSEN_VARS 16
 
+#ifdef CHAINLOADING
+static size_t chosen_cnt = 1;
+static char *chosen[MAX_CHOSEN_VARS] = {
+    "chosen.m1n1-stage1-version=" BUILD_TAG,
+};
+#else
 static size_t chosen_cnt = 0;
 static char *chosen[MAX_CHOSEN_VARS];
+#endif
 
 static bool enable_tso = false;
 
