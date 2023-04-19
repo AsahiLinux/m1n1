@@ -52,7 +52,7 @@ class DC_DestroyContext(ConstructClass):
         "unk_18" / Hex(Int32ul),
         "context_addr" / Hex(Int64ul),
         "rest" / HexDump(Default(Bytes(0xc), bytes(0xc))),
-        Ver("G >= G14 && V >= V13_2", ZPadding(0x10)),
+        Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
     )
 
 class DC_Write32(ConstructClass):
@@ -65,7 +65,7 @@ class DC_Write32(ConstructClass):
         "unk_18" / Int32ul,
         "unk_1c" / Int32ul,
         "rest" / HexDump(Default(Bytes(0x10), bytes(0x10))),
-        Ver("G >= G14 && V >= V13_2", ZPadding(0x10)),
+        Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
     )
 
 class DC_Write32B(ConstructClass):
@@ -78,14 +78,15 @@ class DC_Write32B(ConstructClass):
         "unk_18" / Int32ul,
         "unk_1c" / Int32ul,
         "rest" / HexDump(Default(Bytes(0x10), bytes(0x10))),
-        Ver("G >= G14 && V >= V13_2", ZPadding(0x10)),
+        Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
     )
 
 class DC_Init(ConstructClass):
     subcon =  Struct (
-        "msg_type" / Const(0x19, Int32ul),
+        Ver("V < V13_3", "msg_type" / Const(0x19, Int32ul)),
+        Ver("V >= V13_3", "msg_type" / Const(0x1a, Int32ul)),
         "data" / HexDump(Default(Bytes(0x2c), bytes(0x2c))),
-        Ver("G >= G14 && V >= V13_2", ZPadding(0x10)),
+        Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
     )
 
 class DC_09(ConstructClass):
@@ -95,14 +96,14 @@ class DC_09(ConstructClass):
         "unkptr_c" / Int64ul,
         "unk_14" / Int64ul,
         "data" /  HexDump(Default(Bytes(0x14), bytes(0x14))),
-        Ver("G >= G14 && V >= V13_2", ZPadding(0x10)),
+        Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
     )
 
 class DC_Any(ConstructClass):
     subcon =  Struct (
         "msg_type" / Int32ul,
         "data" / HexDump(Default(Bytes(0x2c), bytes(0x2c))),
-        Ver("G >= G14 && V >= V13_2", ZPadding(0x10)),
+        Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
     )
 
 class DC_1e(ConstructClass):
@@ -111,24 +112,24 @@ class DC_1e(ConstructClass):
         "unk_4" / Int64ul,
         "unk_c" / Int64ul,
         "data" /  HexDump(Default(Bytes(0x1c), bytes(0x1c))),
-        Ver("G >= G14 && V >= V13_2", ZPadding(0x10)),
+        Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
     )
 
 class DC_UpdateIdleTS(ConstructClass):
     subcon = Struct (
         "msg_type" / Const(0x23, Int32ul),
         "data" / HexDump(Default(Bytes(0x2c), bytes(0x2c))),
-        Ver("G >= G14 && V >= V13_2", ZPadding(0x10)),
+        Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
     )
 
 class UnknownMsg(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Int32ul),
         "data" / HexDump(Bytes(0x2c)),
-        Ver("G >= G14 && V >= V13_2", ZPadding(0x10)),
+        Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
     )
 
-if Ver.check("G >= G14 && V >= V13_2"):
+if Ver.check("G == G14 && V >= V13_2"):
     DeviceControlSize = 0x40
 else:
     DeviceControlSize = 0x30

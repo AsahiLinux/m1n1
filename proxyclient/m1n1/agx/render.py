@@ -238,14 +238,18 @@ class GPURenderer:
         deflake_2_size = 0x280
         deflake_3_size = 0x20
 
+        # 4 * 0x40 on M2 Max?
+        if Ver.check("G >= G14X"):
+            deflake_3_size = 0x40
+
         # t6002 - 9 times larger instead of 8? works with 8...
         deflake_1_size *= nclusters
         deflake_2_size *= nclusters
         deflake_3_size *= nclusters
 
-        deflake_1 = self.ctx.uobj.new_buf(deflake_1_size, "Deflake 1", track=True)
-        deflake_2 = self.ctx.uobj.new_buf(deflake_2_size, "Deflake 2", track=True)
-        deflake_3 = self.ctx.uobj.new_buf(deflake_3_size, "Deflake 3", track=True)
+        deflake_1 = self.ctx.uobj.new_buf(deflake_1_size, "Deflake 1", track=False)
+        deflake_2 = self.ctx.uobj.new_buf(deflake_2_size, "Deflake 2", track=False)
+        deflake_3 = self.ctx.uobj.new_buf(deflake_3_size, "Deflake 3", track=False)
         work.add(deflake_1)
         work.add(deflake_2)
         work.add(deflake_3)
@@ -347,13 +351,13 @@ class GPURenderer:
         tpc_size = tpc_entry_size * tmtiles_x * tmtiles_y * nclusters
 
         if self.tpc_size < tpc_size:
-            self.tpc = ctx.uobj.new_buf(tpc_size, "TPC", track=True).push()
+            self.tpc = ctx.uobj.new_buf(tpc_size, "TPC", track=False).push()
             self.tpc_size = tpc_size
 
         depth_aux_buffer_addr = 0
         if cmdbuf.depth_buffer:
             size = align_pot(max(width, tile_width)) * align_pot(max(height, tile_width)) // 32
-            depth_aux_buffer = self.ctx.uobj.new_buf(size, "Depth Aux", track=True)
+            depth_aux_buffer = self.ctx.uobj.new_buf(size, "Depth Aux", track=False)
             work.add(depth_aux_buffer)
             depth_aux_buffer_addr = depth_aux_buffer._addr
 
@@ -366,7 +370,7 @@ class GPURenderer:
 
         #tvb_tilemap_size = 0x80 * mtile_stride
         tvb_tilemap_size = tilemap_size
-        tvb_tilemap = ctx.uobj.new_buf(tvb_tilemap_size, "TVB Tilemap", track=True).push()
+        tvb_tilemap = ctx.uobj.new_buf(tvb_tilemap_size, "TVB Tilemap", track=False).push()
         work.tvb_tilemap_size = tvb_tilemap_size
         work.tvb_tilemap = tvb_tilemap
         work.add(tvb_tilemap)
@@ -377,14 +381,18 @@ class GPURenderer:
         tvb_heapmeta = ctx.uobj.new_buf(tvb_heapmeta_size, "TVB Heap Meta", track=False).push()
         work.add(tvb_heapmeta)
 
-        unk_tile_buf1 = self.ctx.uobj.new_buf(tvb_tilemap_size * nclusters, "Unk tile buf 1", track=True)
+        unk_tile_buf1 = self.ctx.uobj.new_buf(tvb_tilemap_size * nclusters, "Unk tile buf 1", track=False)
         print("tvb_tilemap_size", hex(tvb_tilemap_size))
-        unk_tile_buf2 = self.ctx.uobj.new_buf(0x4 * nclusters, "Unk tile buf 2", track=True)
+        unk_tile_buf2 = self.ctx.uobj.new_buf(0x4 * nclusters, "Unk tile buf 2", track=False)
         #size = 0xc0 * nclusters
         size = 0xc80
-        unk_tile_buf3 = self.ctx.uobj.new_buf(size, "Unk tile buf 3", track=True)
-        unk_tile_buf4 = self.ctx.uobj.new_buf(0x280 * nclusters, "Unk tile buf 4", track=True)
-        unk_tile_buf5 = self.ctx.uobj.new_buf(0x30 * nclusters, "Unk tile buf 5", track=True)
+        unk_tile_buf3 = self.ctx.uobj.new_buf(size, "Unk tile buf 3", track=False)
+        f4 = 0x280
+        #f4 = 0x400 # t602x?
+        unk_tile_buf4 = self.ctx.uobj.new_buf(f4 * nclusters, "Unk tile buf 4", track=False)
+        f5 = 0x30
+        #f5 = 0x980
+        unk_tile_buf5 = self.ctx.uobj.new_buf(f5 * nclusters, "Unk tile buf 5", track=False)
         work.add(unk_tile_buf1)
         work.add(unk_tile_buf2)
         work.add(unk_tile_buf3)
@@ -394,16 +402,19 @@ class GPURenderer:
         ##### Buffer stuff?
 
         # buffer related?
-        bufferthing_buf = ctx.uobj.new_buf(0x80, "BufferThing.unkptr_18", track=True)
+        bufferthing_buf = ctx.uobj.new_buf(0x80, "BufferThing.unkptr_18", track=False)
         work.add(bufferthing_buf)
 
         work.buf_desc = buf_desc = agx.kobj.new(BufferThing, track=False)
         work.add(buf_desc)
+        buf_desc.unk0_addr = self.buffer_mgr.get_scene()
+        buf_desc.unk0_addr2 = buf_desc.unk0_addr
         buf_desc.unk_0 = 0x0
         buf_desc.unk_8 = 0x0
         buf_desc.unk_10 = 0x0
         buf_desc.unkptr_18 = bufferthing_buf._addr
         buf_desc.unk_20 = 0x0
+        buf_desc.unk_28 = 0x0
         buf_desc.bm_misc_addr = self.buffer_mgr.misc_obj._addr
         buf_desc.unk_2c = 0x0
         buf_desc.unk_30 = 0x0
@@ -420,7 +431,7 @@ class GPURenderer:
 
         ##### 3D barrier command
 
-        barrier_cmd = agx.kobj.new(WorkCommandBarrier, track=False)
+        barrier_cmd = agx.kobj.new(WorkCommandBarrier, track=False, align=0x20)
         work.add(barrier_cmd)
         barrier_cmd.stamp = self.stamp_ta2
         barrier_cmd.wait_value = self.stamp_value_ta
@@ -432,9 +443,36 @@ class GPURenderer:
 
         self.wq_3d.submit(barrier_cmd)
 
+        process_empty_tiles = True
+        no_clear_pipeline_textures = True
+        msaa_zs = False
+
+        unk1 = False
+
+        samples = 1
+        layers = 1
+        tile_config = 0x10000
+        if not unk1:
+            tile_config |= 0x280
+        if layers > 1:
+            tile_config |= 1
+        if process_empty_tiles:
+            tile_config |= 0x10000
+
+        utile_config = 0xa000 | {1:0, 2:1, 4:2}[samples]
+        ppp_multisamplectl = 0x88
+
+        iogpu_unk_214 = 0xc000
+
+        tib_blocks = 8
+        large_tib = tib_blocks > 8
+        set_when_reloading_z_or_s = False
+
+        TAN_60 = 1.732051
+
         ##### 3D execution
 
-        work.wc_3d = wc_3d = agx.kobj.new(WorkCommand3D, track=False)
+        work.wc_3d = wc_3d = agx.cmdbuf.new(WorkCommand3D, track=False, align=0x20)
         work.add(work.wc_3d)
         wc_3d.counter = 0
         wc_3d.context_id = self.ctx_id
@@ -444,14 +482,13 @@ class GPURenderer:
         wc_3d.buf_thing = buf_desc
         wc_3d.unk_emptybuf_addr = self.unk_emptybuf._addr
         wc_3d.tvb_tilemap = tvb_tilemap._addr
-        wc_3d.unk_40 = 0x88
-        wc_3d.unk_48 = 0x1
+        wc_3d.unk_40 = ppp_multisamplectl
+        wc_3d.unk_48 = samples
         wc_3d.tile_blocks_y = mtile_y1
         wc_3d.tile_blocks_x = mtile_x1
         wc_3d.unk_50 = 0x0
         wc_3d.unk_58 = 0x0
 
-        TAN_60 = 1.732051
         wc_3d.merge_upper_x = TAN_60 / width
         wc_3d.merge_upper_y = TAN_60 / height
         wc_3d.unk_68 = 0x0
@@ -477,35 +514,16 @@ class GPURenderer:
         wc_3d.unk_928_4 = 0
         wc_3d.unk_ts = TimeStamp()
 
-        # cmdbuf.ds_flags
-        # 0 - no depth
-        # 0x80000 - depth store enable
-        # 0x08000 - depth load enable
-
-        # 0x00044 - compressed depth
-
-        # 0x40000 - stencil store enable
-        # 0x04000 - stencil load enable
-        # 0x00110 - compressed stencil
-
-        # Z store format
-        # 0x4000000 - Depth16Unorm
-
-        # For Depth16Unorm: 0x40000 here also
-        # AFBI.[  0.  4] unk1 = 0x4c000
-
-        # ASAHI_CMDBUF_SET_WHEN_RELOADING_Z_OR_S
-        # Actually set when loading *and* storing Z, OR loading *and* storing S
+        use_registers = Ver.check("G >= G14X")
 
         # Structures embedded in WorkCommand3D
-        if True:
+        if not use_registers:
             wc_3d.struct_1 = Start3DStruct1()
             wc_3d.struct_1.store_pipeline_bind = cmdbuf.store_pipeline_bind
             wc_3d.struct_1.store_pipeline_addr = cmdbuf.store_pipeline | 4
             wc_3d.struct_1.unk_8 = 0x0
             wc_3d.struct_1.unk_c = 0x0
 
-            TAN_60 = 1.732051
             wc_3d.struct_1.merge_upper_x = TAN_60 / width
             wc_3d.struct_1.merge_upper_y = TAN_60 / height
 
@@ -515,7 +533,7 @@ class GPURenderer:
             wc_3d.struct_1.tile_blocks_x = mtile_x1
             wc_3d.struct_1.unk_24 = 0x0
             wc_3d.struct_1.tile_counts = ((tiles_y-1) << 12) | (tiles_x-1)
-            wc_3d.struct_1.unk_2c = 0x8
+            wc_3d.struct_1.unk_2c = tib_blocks
             wc_3d.struct_1.depth_clear_val1 = cmdbuf.depth_clear_value
             wc_3d.struct_1.stencil_clear_val1 = cmdbuf.stencil_clear_value
             wc_3d.struct_1.unk_35 = 0x7 # clear flags? 2 = depth 4 = stencil?
@@ -524,59 +542,13 @@ class GPURenderer:
             wc_3d.struct_1.unk_3c = 0x1
             wc_3d.struct_1.unk_40 = 0
             wc_3d.struct_1.unk_44_padding = bytes(0xac)
-            wc_3d.struct_1.depth_bias_array = Start3DArrayAddr(cmdbuf.depth_bias_array)
-            wc_3d.struct_1.scissor_array = Start3DArrayAddr(cmdbuf.scissor_array)
-            wc_3d.struct_1.visibility_result_buffer = 0x0
-            wc_3d.struct_1.unk_118 = 0x0
-            wc_3d.struct_1.unk_120 = [0] * 37
-            wc_3d.struct_1.unk_reload_pipeline = Start3DClearPipelineBinding(
-                cmdbuf.partial_reload_pipeline_bind, cmdbuf.partial_reload_pipeline | 4)
-            wc_3d.struct_1.unk_258 = 0
-            wc_3d.struct_1.unk_260 = 0
-            wc_3d.struct_1.unk_268 = 0
-            wc_3d.struct_1.unk_270 = 0
-            wc_3d.struct_1.reload_pipeline = Start3DClearPipelineBinding(
-                cmdbuf.partial_reload_pipeline_bind, cmdbuf.partial_reload_pipeline | 4)
-            wc_3d.struct_1.depth_flags = cmdbuf.ds_flags | 0x44
-            wc_3d.struct_1.unk_290 = 0x0
-            wc_3d.struct_1.depth_buffer_ptr1 = cmdbuf.depth_buffer
-            wc_3d.struct_1.unk_2a0 = 0x0
-            wc_3d.struct_1.unk_2a8 = 0x0
-            wc_3d.struct_1.depth_buffer_ptr2 = cmdbuf.depth_buffer
-            wc_3d.struct_1.depth_buffer_ptr3 = cmdbuf.depth_buffer
-            wc_3d.struct_1.depth_aux_buffer_ptr = depth_aux_buffer_addr
-            wc_3d.struct_1.stencil_buffer_ptr1 = cmdbuf.stencil_buffer
-            wc_3d.struct_1.unk_2d0 = 0x0
-            wc_3d.struct_1.unk_2d8 = 0x0
-            wc_3d.struct_1.stencil_buffer_ptr2 = cmdbuf.stencil_buffer
-            wc_3d.struct_1.stencil_buffer_ptr3 = cmdbuf.stencil_buffer
-            wc_3d.struct_1.stencil_aux_buffer_ptr = stencil_aux_buffer_addr
-            wc_3d.struct_1.unk_2f8 = [0x0, 0x0]
-            wc_3d.struct_1.aux_fb_unk0 = 4 #0x8 # sometimes 4
-            wc_3d.struct_1.unk_30c = 0x0
-            wc_3d.struct_1.aux_fb = AuxFBInfo(0xc000, 0, width, height)
-            wc_3d.struct_1.unk_320_padding = bytes(0x10)
-            wc_3d.struct_1.unk_partial_store_pipeline = Start3DStorePipelineBinding(
-                cmdbuf.partial_store_pipeline_bind, cmdbuf.partial_store_pipeline | 4)
-            wc_3d.struct_1.partial_store_pipeline = Start3DStorePipelineBinding(
-                cmdbuf.partial_store_pipeline_bind, cmdbuf.partial_store_pipeline | 4)
-            wc_3d.struct_1.depth_clear_val2 = cmdbuf.depth_clear_value
-            wc_3d.struct_1.stencil_clear_val2 = cmdbuf.stencil_clear_value
-            wc_3d.struct_1.unk_375 = 3
-            wc_3d.struct_1.unk_376 = 0x0
-            wc_3d.struct_1.unk_378 = 0x10
-            wc_3d.struct_1.unk_37c = 0x0
-            wc_3d.struct_1.unk_380 = 0x0
-            wc_3d.struct_1.unk_388 = 0x0
-            wc_3d.struct_1.unk_390_0 = 0x0 # Ventura
-            wc_3d.struct_1.depth_dimensions = (width - 1) | ((height - 1) << 15)
 
-        if True:
+        if not use_registers:
             wc_3d.struct_2 = Start3DStruct2()
-            wc_3d.struct_2.unk_0 = 0xa000
+            wc_3d.struct_2.unk_0 = utile_config
             wc_3d.struct_2.clear_pipeline = Start3DClearPipelineBinding(
                 cmdbuf.load_pipeline_bind, cmdbuf.load_pipeline | 4)
-            wc_3d.struct_2.unk_18 = 0x88
+            wc_3d.struct_2.unk_18 = ppp_multisamplectl
             wc_3d.struct_2.scissor_array = cmdbuf.scissor_array
             wc_3d.struct_2.depth_bias_array = cmdbuf.depth_bias_array
             wc_3d.struct_2.aux_fb =  wc_3d.struct_1.aux_fb
@@ -607,7 +579,7 @@ class GPURenderer:
             wc_3d.struct_2.tvb_heapmeta_addr2 = tvb_heapmeta._addr
             # 0x10000 - clear empty tiles
             # ISP_CTL (but bits seem to have moved)
-            wc_3d.struct_2.unk_f8 = 0x10280 #0x10280 # TODO: varies 0, 0x280, 0x10000, 0x10280
+            wc_3d.struct_2.unk_f8 = tile_config
             wc_3d.struct_2.aux_fb_ptr = aux_fb._addr
             wc_3d.struct_2.unk_108 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
             wc_3d.struct_2.pipeline_base = self.ctx.pipeline_base
@@ -619,21 +591,170 @@ class GPURenderer:
             wc_3d.struct_2.unk_168_padding = bytes(0x1d8)
             wc_3d.struct_2.unk_198_padding = bytes(0x1a8)
 
+        def fui(v):
+            return struct.unpack("<I", struct.pack("<f", v))[0]
+
+        if use_registers:
+            regs = {
+                0x1739:     1,
+                0x10009:    utile_config,                       # s2.unk_0 utile_config
+                0x15379:    cmdbuf.store_pipeline_bind,         # s1.store_pipeline_bind
+                0x15381:    cmdbuf.store_pipeline | 4,          # s1.store_pipeline_addr
+                0x15369:    cmdbuf.load_pipeline_bind,          # s2.clear_pipeline.bind
+                0x15371:    cmdbuf.load_pipeline | 4,           # s2.clear_pipeline.addr
+                0x15131:    fui(TAN_60 / width),                # ISP_MERGE_UPPER_X
+                0x15139:    fui(TAN_60 / height),               # ISP_MERGE_UPPER_Y
+                0x100a1:    0x0,
+                0x15069:    0,
+                0x15071:    0,                                  # pointer
+                0x16058:    0,
+                0x10019:    ppp_multisamplectl,                 # PPP_MULTISAMPLECTL
+                0x100b1:    mtile_y1 | (mtile_x1 << 16),        # ISP_MTILE_SIZE
+                0x16030:    mtile_y1 | (mtile_x1 << 16),        # ISP_MTILE_SIZE
+                0x100d9:    ((tiles_y-1) << 12) | (tiles_x-1),  # TE_SCREEN
+                0x16098:    tvb_heapmeta._addr,                 # tvb_heapmeta_addr?
+                0x15109:    cmdbuf.scissor_array,               # ISP_SCISSOR_BASE
+                0x15101:    cmdbuf.depth_bias_array,            # ISP_DBIAS_BASE
+                0x15021:    0,                                  # s2.aux_fb.unk_1
+                0x15211:    (height << 32) | width,             # s2.aux_fb.{width, height}
+                0x15049:    0,                                  # s2.aux_fb.unk3
+                0x10051:    tib_blocks,                         # s1.unk_2c
+                0x15321:    (width - 1) | ((height - 1) << 15), # ISP_ZLS_PIXELS
+                0x15301:    fui(cmdbuf.depth_clear_value),      # ISP_BGOBJDEPTH
+                0x15309:    cmdbuf.stencil_clear_value | 0x300, # ISP_BGOBJVALS
+                0x15311:    0,                                  # ISP_OCLQRY_BASE
+                0x15319:    cmdbuf.ds_flags,                    # ISP_ZLSCTL
+                0x15349:    0x4040404,                          # s2.unk_58_g14_0
+                0x15351:    0,                                  # s2.unk_58_g14_8
+                0x15329:    cmdbuf.depth_buffer,                # ISP_ZLOAD_BASE
+                0x15331:    cmdbuf.depth_buffer,                # ISP_ZSTORE_BASE
+                0x15339:    cmdbuf.stencil_buffer,              # ISP_STENCIL_LOAD_BASE
+                0x15341:    cmdbuf.stencil_buffer,              # ISP_STENCIL_STORE_BASE
+                0x15231:    0,
+                0x15221:    0,
+                0x15239:    0,
+                0x15229:    0,
+                0x15401:    0,
+                0x15421:    0,
+                0x15409:    0,
+                0x15429:    0,
+                0x153c1:    depth_aux_buffer_addr,
+                0x15411:    0,
+                0x153c9:    depth_aux_buffer_addr,
+                0x15431:    0,
+                0x153d1:    stencil_aux_buffer_addr,
+                0x15419:    0,
+                0x153d9:    stencil_aux_buffer_addr,
+                0x15439:    0,
+                0x16429:    tvb_tilemap._addr,                  # tvb_tilemap
+                0x16060:    tvb_heapmeta._addr,                 # tvb_heapmeta_addr
+                0x16431:    (4 * tiling_params.size1) << 24,    # s2.unk_e8
+                0x10039:    tile_config,                        # tile_config ISP_CTL?
+                0x16451:    0x0,                                # tile offset Y/X
+                0x11821:    0x0,                                # some shader?
+                0x11829:    0,
+                0x11f79:    0,
+                0x15359:    0,
+                0x10069:    self.ctx.pipeline_base,             # USC_EXEC_BASE_ISP
+                0x16020:    0,
+                0x16461:    aux_fb._addr,                       # aux_fb_ptr?
+                0x16090:    aux_fb._addr,                       # aux_fb_ptr?
+                0x120a1:    0x1c,                               # s2.unk_158
+                0x160a8:    0,
+                0x16068:    (
+                                0x0000000_00036011 |
+                                ((tiles_x-1) << 44) |
+                                ((tiles_y-1) << 53) |
+                                (0 if unk1 else 0x20_00000000) |
+                                ((utile_config & 0xf000) << 28)
+                            ),
+                0x160b8:    0x0,
+            }
+
+            if False:
+                regs[0x10211] = 0x134
+                regs[0x10420] = 0x134
+                regs[0x1c838] = 0x1
+                regs[0x1ca28] = 0x1502961540
+                regs[0x1731] = 0x1
+
+            wc_3d.registers = [RegisterDefinition(k, v) for k, v in regs.items()]
+            reg_count = len(wc_3d.registers)
+            wc_3d.registers += [RegisterDefinition(0, 0) for i in range(len(regs), 128)]
+
+        wc_3d.set_addr() # Update inner structure addresses
+
+        if True:
+            wc_3d.struct_3 = Start3DStruct3()
+            wc_3d.struct_3.registers_addr = wc_3d.registers[0]._addr
+            wc_3d.struct_3.register_count = reg_count
+            wc_3d.struct_3.registers_length = reg_count * 12
+            wc_3d.struct_3.unk_d8 = 0
+            wc_3d.struct_3.depth_bias_array = Start3DArrayAddr(cmdbuf.depth_bias_array)
+            wc_3d.struct_3.scissor_array = Start3DArrayAddr(cmdbuf.scissor_array)
+            wc_3d.struct_3.visibility_result_buffer = 0x0
+            wc_3d.struct_3.unk_118 = 0x0
+            wc_3d.struct_3.unk_120 = [0] * 37
+            wc_3d.struct_3.unk_reload_pipeline = Start3DClearPipelineBinding(
+                cmdbuf.partial_reload_pipeline_bind, cmdbuf.partial_reload_pipeline | 4)
+            wc_3d.struct_3.unk_258 = 0
+            wc_3d.struct_3.unk_260 = 0
+            wc_3d.struct_3.unk_268 = 0
+            wc_3d.struct_3.unk_270 = 0
+            wc_3d.struct_3.reload_pipeline = Start3DClearPipelineBinding(
+                cmdbuf.partial_reload_pipeline_bind, cmdbuf.partial_reload_pipeline | 4)
+            wc_3d.struct_3.depth_flags = cmdbuf.ds_flags | 0x44
+            wc_3d.struct_3.unk_290 = 0x0
+            wc_3d.struct_3.depth_buffer_ptr1 = cmdbuf.depth_buffer
+            wc_3d.struct_3.unk_2a0 = 0x0
+            wc_3d.struct_3.unk_2a8 = 0x0
+            wc_3d.struct_3.depth_buffer_ptr2 = cmdbuf.depth_buffer
+            wc_3d.struct_3.depth_buffer_ptr3 = cmdbuf.depth_buffer
+            wc_3d.struct_3.depth_aux_buffer_ptr = depth_aux_buffer_addr
+            wc_3d.struct_3.stencil_buffer_ptr1 = cmdbuf.stencil_buffer
+            wc_3d.struct_3.unk_2d0 = 0x0
+            wc_3d.struct_3.unk_2d8 = 0x0
+            wc_3d.struct_3.stencil_buffer_ptr2 = cmdbuf.stencil_buffer
+            wc_3d.struct_3.stencil_buffer_ptr3 = cmdbuf.stencil_buffer
+            wc_3d.struct_3.stencil_aux_buffer_ptr = stencil_aux_buffer_addr
+            wc_3d.struct_3.unk_2f8 = [0x0, 0x0]
+            wc_3d.struct_3.aux_fb_unk0 = tib_blocks
+            wc_3d.struct_3.unk_30c = 0x0
+            wc_3d.struct_3.aux_fb = AuxFBInfo(iogpu_unk_214, 0, width, height)
+            wc_3d.struct_3.s2_unk_f8 = tile_config
+            wc_3d.struct_3.unk_324_padding = bytes(0xc)
+            wc_3d.struct_3.unk_partial_store_pipeline = Start3DStorePipelineBinding(
+                cmdbuf.partial_store_pipeline_bind, cmdbuf.partial_store_pipeline | 4)
+            wc_3d.struct_3.partial_store_pipeline = Start3DStorePipelineBinding(
+                cmdbuf.partial_store_pipeline_bind, cmdbuf.partial_store_pipeline | 4)
+            wc_3d.struct_3.depth_clear_val2 = cmdbuf.depth_clear_value
+            wc_3d.struct_3.stencil_clear_val2 = cmdbuf.stencil_clear_value
+            wc_3d.struct_3.unk_375 = 3
+            wc_3d.struct_3.unk_376 = 0x0
+            wc_3d.struct_3.unk_378 = 0x10
+            wc_3d.struct_3.unk_37c = 0x0
+            wc_3d.struct_3.unk_380 = 0x0
+            wc_3d.struct_3.unk_388 = 0x0
+            wc_3d.struct_3.unk_390_0 = 0x0 # Ventura
+            wc_3d.struct_3.depth_dimensions = (width - 1) | ((height - 1) << 15)
+
         if True:
             wc_3d.struct_6 = Start3DStruct6()
             wc_3d.struct_6.tvb_overflow_count = 0x0
-            wc_3d.struct_6.unk_8 = 0x0 # 1?
-            wc_3d.struct_6.unk_c = 0x0 # 1?
+            wc_3d.struct_6.unk_8 = int(set_when_reloading_z_or_s)
+            wc_3d.struct_6.unk_c = int(large_tib)
             wc_3d.struct_6.unk_10 = 0x0
             wc_3d.struct_6.encoder_id = cmdbuf.encoder_id
             wc_3d.struct_6.unk_1c = 0xffffffff
             wc_3d.struct_6.unknown_buffer = unk_buf._addr
             wc_3d.struct_6.unk_28 = 0x0
-            wc_3d.struct_6.unk_30 = 0x0
-            wc_3d.struct_6.unk_34 = 0x0
+            wc_3d.struct_6.unk_30 = int(process_empty_tiles)
+            wc_3d.struct_6.unk_34 = int(no_clear_pipeline_textures)
+            wc_3d.struct_6.unk_38 = int(msaa_zs)
 
         if True:
             wc_3d.struct_7 = Start3DStruct7()
+            wc_3d.struct_7.unk_0_0 = 0x0
             wc_3d.struct_7.unk_0 = 0x0
             wc_3d.struct_7.stamp1 = self.stamp_3d1
             wc_3d.struct_7.stamp2 = self.stamp_3d2
@@ -643,7 +764,7 @@ class GPURenderer:
             wc_3d.struct_7.unk_24 = 1
             wc_3d.struct_7.uuid = uuid_3d
             wc_3d.struct_7.queue_cmd_count = 0
-            wc_3d.struct_7.unk_30 = 0x0
+            wc_3d.struct_7.unk_30 = int(unk1)
 
         wc_3d.set_addr() # Update inner structure addresses
         #print("WC3D", hex(wc_3d._addr))
@@ -657,8 +778,14 @@ class GPURenderer:
             self.mshook_3d(self, work, ms)
 
         start_3d = Start3DCmd()
-        start_3d.struct1 = wc_3d.struct_1 # 0x44 bytes!
-        start_3d.struct2 = wc_3d.struct_2 # 0x168 bytes!
+        if not use_registers:
+            start_3d.struct1_addr = wc_3d.struct_1._addr # 0x44 bytes!
+            start_3d.struct2_addr = wc_3d.struct_2._addr # 0x168 bytes!
+            start_3d.registers_addr = 0
+        else:
+            start_3d.struct1_addr = 0
+            start_3d.struct2_addr = 0
+            start_3d.registers_addr = wc_3d.registers[0]._addr
         start_3d.buf_thing = buf_desc
         start_3d.stats_ptr = agx.initdata.regionB.stats_3d.stats._addr
         start_3d.busy_flag_ptr = wc_3d.busy_flag._addr
@@ -670,17 +797,18 @@ class GPURenderer:
         start_3d.unk_50 = 0x1
         start_3d.submission_id = self.event_control.submission_id
         start_3d.buffer_mgr_slot = self.buffer_mgr_slot
-        start_3d.unk_5c = 0x0
+        start_3d.unk_5c = int(large_tib)
         start_3d.queue_cmd_count = self.prev_stamp_value_3d >> 8
         start_3d.unk_68 = 0x0
         start_3d.unk_buf_ptr = wc_3d.unk_758._addr
         start_3d.unk_buf2_ptr = wc_3d.unk_buf2._addr
+        start_3d.unk_7c_0 = 0x0
         start_3d.unk_7c = 0x0
         start_3d.unk_80 = 0x0
-        start_3d.unk_84 = 0x0
+        start_3d.unk_84 = int(unk1)
         start_3d.uuid = uuid_3d
         start_3d.attachments = []
-        start_3d.unk_194 = 0
+        start_3d.counter = wc_3d.counter
         start_3d.unkptr_19c = self.event_control.unk_buf._addr
 
         work.fb = None
@@ -715,7 +843,10 @@ class GPURenderer:
         ts1.unk_30_padding = 0x0
         ms.append(ts1)
 
-        ms.append(WaitForInterruptCmd(0, 1, 0))
+        if Ver.check("G >= G14X"):
+            ms.append(Wait2Cmd())
+        else:
+            ms.append(WaitForInterruptCmd(0, 1, 0))
 
         ts2 = TimestampCmd()
         ts2.unk_1 = 0x0
@@ -748,6 +879,7 @@ class GPURenderer:
         finish_3d.workitem_ptr = wc_3d._addr
         finish_3d.unk_5c = self.ctx_id
         finish_3d.unk_buf_ptr = wc_3d.unk_758._addr
+        finish_3d.unk_6c_0 = 0
         finish_3d.unk_6c = 0
         finish_3d.unk_74 = 0
         finish_3d.unk_7c = 0
@@ -772,7 +904,7 @@ class GPURenderer:
 
         #print(ctx_info)
         if wait_for is not None:
-            barrier_cmd = agx.kobj.new(WorkCommandBarrier, track=False)
+            barrier_cmd = agx.kobj.new(WorkCommandBarrier, track=False, align=0x20)
             work.add(barrier_cmd)
             if not isinstance(wait_for, tuple):
                 barrier_cmd.stamp = wait_for.renderer.stamp_3d2
@@ -789,7 +921,7 @@ class GPURenderer:
             self.wq_ta.submit(barrier_cmd)
 
         if not self.buffer_mgr_initialized:
-            wc_initbm = agx.kobj.new(WorkCommandInitBM, track=False)
+            wc_initbm = agx.kobj.new(WorkCommandInitBM, track=False, align=0x20)
             work.add(wc_initbm)
             wc_initbm.context_id = self.ctx_id
             wc_initbm.buffer_mgr_slot = self.buffer_mgr_slot
@@ -804,7 +936,7 @@ class GPURenderer:
 
         ##### TA execution
 
-        work.wc_ta = wc_ta = agx.kobj.new(WorkCommandTA, track=False)
+        work.wc_ta = wc_ta = agx.cmdbuf.new(WorkCommandTA, track=False, align=0x20)
         work.add(work.wc_ta)
         wc_ta.context_id = self.ctx_id
         wc_ta.counter = 1
@@ -816,7 +948,6 @@ class GPURenderer:
         wc_ta.unk_emptybuf_addr = wc_3d.unk_emptybuf_addr
         wc_ta.unk_34 = 0x0
 
-        wc_ta.unk_154 = bytes(0x268)
         wc_ta.unk_3e8 = bytes(0x74)
         wc_ta.unk_594 = WorkCommand0_UnkBuf()
 
@@ -834,12 +965,14 @@ class GPURenderer:
         wc_ta.unk_ts = TimeStamp()
 
         # Structures embedded in WorkCommandTA
-        if True:
+        if not use_registers:
             wc_ta.tiling_params = tiling_params
 
-        if True:
+        import random
+
+        if not use_registers:
             wc_ta.struct_2 = StartTACmdStruct2()
-            wc_ta.struct_2.unk_0 = 0x200
+            wc_ta.struct_2.unk_0 = 0 if unk1 else 0x200
             wc_ta.struct_2.unk_8 = 0x1e3ce508 # fixed
             wc_ta.struct_2.unk_c = 0x1e3ce508 # fixed
             wc_ta.struct_2.tvb_tilemap = tvb_tilemap._addr
@@ -850,7 +983,7 @@ class GPURenderer:
             wc_ta.struct_2.iogpu_unk_55 = 0x3a0012 # fixed
             wc_ta.struct_2.iogpu_unk_56 = 0x1 # fixed
             wc_ta.struct_2.tvb_cluster_meta1 = unk_tile_buf2._addr | 0x4_0000_0000_0000
-            wc_ta.struct_2.unk_48 = 0xa000
+            wc_ta.struct_2.unk_48 = utile_config
             wc_ta.struct_2.unk_50 = 0x88 # fixed
             wc_ta.struct_2.tvb_heapmeta_addr2 = tvb_heapmeta._addr
             wc_ta.struct_2.unk_60 = 0x0 # fixed
@@ -871,6 +1004,92 @@ class GPURenderer:
             wc_ta.struct_2.unk_f8 = 0x8c60 # fixed
             wc_ta.struct_2.unk_100 = [0x0, 0x0, 0x0] # fixed
             wc_ta.struct_2.unk_118 = 0x1c # fixed
+
+            wc_ta.registers_addr = 0
+            wc_ta.register_count = 0
+            wc_ta.registers_length = 0
+        else:
+            regs = {
+                0x10141:    (0 if unk1 else 0x200),               # s2.unk_0
+                0x1c039:    tvb_tilemap._addr,
+                0x1c9c8:    tvb_tilemap._addr,
+                0x1c041:    unk_tile_buf1._addr,                # s2.tvb_cluster_tilemaps
+                0x1c9d0:    unk_tile_buf1._addr,
+                0x1c0a1:    self.tpc._addr,                     # TE_TPC_ADDR
+                0x1c031:    tvb_heapmeta._addr | 0x8000_0000_0000_0000,
+                0x1c9c0:    tvb_heapmeta._addr | 0x8000_0000_0000_0000,
+                0x1c051:    0x3a0012006b0003,                   # iogpu_unk_54/55
+                0x1c061:    1,                                  # iogpu_unk_56
+                0x10149:    utile_config,                       # s2.unk_48 utile_config
+                0x10139:    ppp_multisamplectl,                 # PPP_MULTISAMPLECTL
+                0x10111:    deflake_1._addr,
+                0x1c9b0:    deflake_1._addr,
+                0x10119:    deflake_2._addr,
+                0x1c9b8:    deflake_2._addr,
+                0x1c958:    1,                                  # s2.unk_80
+                0x1c950:    deflake_3._addr | 0x4_0000_0000_0000,
+                0x1c930:    0,                                  # VCE related addr, lsb to enable
+                0x1c880:    cmdbuf.encoder_ptr,                 # VDM_CTRL_STREAM_BASE
+                0x1c898:    0x0,                                # if lsb set, faults in UL1C0, possibly missing addr.
+                0x1c948:    unk_tile_buf3._addr,                # tvb_cluster_meta2
+                0x1c888:    unk_tile_buf4._addr,                # tvb_cluster_meta3
+                0x1c890:    0x180341,                           # tvb_tiling_control
+                0x1c918:    0x4,
+                0x1c079:    tvb_heapmeta._addr,
+                0x1c9d8:    tvb_heapmeta._addr,
+                0x1c089:    0,
+                0x1c9e0:    0,
+                0x16c41:    unk_tile_buf5._addr,                # tvb_cluster_meta4
+                0x1ca40:    unk_tile_buf5._addr,                # tvb_cluster_meta4
+                0x1c9a8:    0x1c, # + meta1_blocks?             # min_free_tvb_pages?
+                0x1c920:    unk_tile_buf2._addr,                # ??? | meta1_blocks?
+                0x10151:    0,
+                0x1c199:    0,
+                0x1c1a1:    0,
+                0x1c1a9:    0,                                  # 0x10151 bit 1 enables
+                0x1c1b1:    0,
+                0x1c1b9:    0,
+                0x10061:    self.ctx.pipeline_base,             # USC_EXEC_BASE_TA
+                0x11801:    0,                                  # some shader?
+                0x11809:    0,                                  # maybe arg?
+                0x11f71:    0,
+                0x1c0b1:    tiling_params.size1,                # TE_PSG
+                0x1c850:    tiling_params.size1,
+                0x10131:    tiling_params.unk_4,
+                0x10121:    tiling_params.unk_8,                # PPP_CTRL
+                0x10129:    tiling_params.x_max | (tiling_params.y_max << 16),  # PPP_SCREEN
+                0x101b9:    tiling_params.tile_count,           # TE_SCREEN
+                0x1c069:    tiling_params.x_blocks,             # TE_MTILE1
+                0x1c071:    tiling_params.y_blocks,             # TE_MTILE2
+                0x1c081:    tiling_params.size2,                # TE_MTILE
+                0x1c0a9:    tiling_params.size3,                # TE_TPC
+                0x10171:    tiling_params.unk_24,
+                0x10169:    tiling_params.unk_28,               # TA_RENDER_TARGET_MAX
+                0x12099:    0,
+                0x1c9e8:    0,
+            }
+
+            if False:
+                regs[0x10209] = 0x133
+                regs[0x1c9f0] = 0x133
+                regs[0x1c830] = 0x1
+                regs[0x1c9f0] = 0x1502960fa0
+                regs[0x16c39] = 0x1502960fa0
+                regs[0x1c910] = 0xa0000b0125
+                regs[0x1c8e0] = 0xff # core_mask_0
+                regs[0x1c8e8] = 0x00 # core_mask_1
+
+            wc_ta.registers = [RegisterDefinition(k, v) for k, v in regs.items()]
+            ta_reg_count = len(wc_ta.registers)
+            wc_ta.registers += [RegisterDefinition(0, 0) for i in range(len(regs), 128)]
+
+            wc_ta.set_addr() # Update inner structure addresses
+
+            wc_ta.registers_addr = wc_ta.registers[0]._addr
+            wc_ta.register_count = ta_reg_count
+            wc_ta.registers_length = ta_reg_count * 12
+
+        wc_ta.unk_pad = 0
 
         if True:
             wc_ta.struct_3 = StartTACmdStruct3()
@@ -897,17 +1116,17 @@ class GPURenderer:
             wc_ta.struct_3.unk_548 = 0x0 # fixed
             wc_ta.struct_3.unk_550 = [
                 0x0, 0x0, # fixed
-                0x0, # 1 for boot stuff?
+                0x0, # memoryless_rts_used
                 0x0, 0x0, 0x0] # fixed
             wc_ta.struct_3.stamp1 = self.stamp_ta1
             wc_ta.struct_3.stamp2 = self.stamp_ta2
             wc_ta.struct_3.stamp_value = self.stamp_value_ta
             wc_ta.struct_3.ev_ta = ev_ta.id
             wc_ta.struct_3.evctl_index = self.ev_idx
-            wc_ta.struct_3.unk_584 = 0x0 # 1 for boot stuff?
+            wc_ta.struct_3.unk_584 = 0x0 # flush_stamps
             wc_ta.struct_3.uuid2 = uuid_ta
             wc_ta.struct_3.queue_cmd_count = 0
-            wc_ta.struct_3.unk_590 = 0 # sometimes 1?
+            wc_ta.struct_3.unk_590 = int(unk1)
 
         wc_ta.set_addr() # Update inner structure addresses
         #print("wc_ta", wc_ta)
@@ -917,8 +1136,14 @@ class GPURenderer:
             self.mshook_ta(self, work, ms)
 
         start_ta = StartTACmd()
-        start_ta.tiling_params = wc_ta.tiling_params
-        start_ta.struct2 = wc_ta.struct_2 # len 0x120
+        if not use_registers:
+            start_ta.tiling_params_addr = wc_ta.tiling_params._addr
+            start_ta.struct2_addr = wc_ta.struct_2._addr # len 0x120
+            start_ta.registers_addr = 0
+        else:
+            start_ta.tiling_params_addr = 0
+            start_ta.struct2_addr = 0
+            start_ta.registers_addr = wc_ta.registers[0]._addr
         start_ta.buffer_mgr = self.buffer_mgr.info
         start_ta.buf_thing = buf_desc
         start_ta.stats_ptr = agx.initdata.regionB.stats_ta.stats._addr
@@ -929,11 +1154,11 @@ class GPURenderer:
         start_ta.buffer_mgr_slot = self.buffer_mgr_slot
         start_ta.unk_48 = 0#1 #0
         start_ta.unk_50 = 0
-        start_ta.struct3 = wc_ta.struct_3
+        start_ta.struct3_addr = wc_ta.struct_3._addr
 
         start_ta.unkptr_5c = wc_ta.unk_594._addr
         start_ta.unk_64 = 0x0 # fixed
-        start_ta.unk_68 = 0x0 # sometimes 1?
+        start_ta.unk_68 = int(unk1) # sometimes 1?
         start_ta.uuid = uuid_ta
         start_ta.unk_70 = 0x0 # fixed
         start_ta.unk_74 = [ # fixed
@@ -946,9 +1171,8 @@ class GPURenderer:
         start_ta.unk_16c = 0x0 # fixed
         start_ta.unk_170 = 0x0 # fixed
         start_ta.unk_178 = 0x0 # fixed?
-        start_ta.unk_17c = 0x0
+        start_ta.counter = wc_ta.counter
         start_ta.unkptr_180 = self.event_control.unk_buf._addr
-        start_ta.unk_188 = 0x0
 
         start_ta_offset = ms.append(start_ta)
 
@@ -967,7 +1191,10 @@ class GPURenderer:
         ts1.unk_30_padding = 0x0
         ms.append(ts1)
 
-        ms.append(WaitForInterruptCmd(1, 0, 0))
+        if Ver.check("G >= G14X"):
+            ms.append(Wait2Cmd())
+        else:
+            ms.append(WaitForInterruptCmd(0, 1, 0))
 
         ts2 = TimestampCmd()
         ts2.unk_1 = 0x0
@@ -991,7 +1218,7 @@ class GPURenderer:
         finish_ta.cmdqueue_ptr = self.wq_ta.info._addr
         finish_ta.context_id = self.ctx_id
         finish_ta.unk_28 = 0x0 # fixed
-        finish_ta.struct3 = wc_ta.struct_3
+        finish_ta.struct3_addr = wc_ta.struct_3._addr
         finish_ta.unk_34 = 0x0 # fixed
         finish_ta.uuid = uuid_ta
         finish_ta.stamp = self.stamp_ta2
@@ -1010,6 +1237,12 @@ class GPURenderer:
         ms.append(finish_ta)
 
         ms.finalize()
+
+        print(wc_ta)
+        print(hex(wc_ta.struct_3._addr))
+        print(hex(finish_ta.struct3_addr))
+        print(hex(wc_ta._addr))
+        ms.dump()
 
         work.add(ms.obj)
 

@@ -229,6 +229,55 @@ class Start3DStruct1(ConstructClass):
         "unk_3c" / Int32ul,
         "unk_40" / Int32ul,
         "unk_44_padding" / HexDump(Bytes(0x9c)),
+    )
+
+class Start3DStruct2(ConstructClass):
+    subcon = Struct(
+        "unk_0" / Int64ul,
+        "clear_pipeline" / Start3DClearPipelineBinding,
+        "unk_18" / Int64ul,
+        "scissor_array" / Int64ul,
+        "depth_bias_array" / Int64ul,
+        "aux_fb" / AuxFBInfo,
+        "depth_dimensions" / Int64ul,
+        "visibility_result_buffer" / Int64ul,
+        "depth_flags" / Int64ul, # 0x40000 - has stencil 0x80000 - has depth
+        Ver("G >= G14", "unk_58_g14_0" / Int64ul),
+        Ver("G >= G14", "unk_58_g14_8" / Int64ul),
+        "depth_buffer_ptr1" / Int64ul,
+        "depth_buffer_ptr2" / Int64ul,
+        "stencil_buffer_ptr1" / Int64ul,
+        "stencil_buffer_ptr2" / Int64ul,
+        Ver("G >= G14", "unk_68_g14_0" / HexDump(Bytes(0x20))),
+        "unk_78" / Array(4, Int64ul),
+        "depth_aux_buffer_ptr1" / Int64ul,
+        "unk_a0" / Int64ul,
+        "depth_aux_buffer_ptr2" / Int64ul,
+        "unk_b0" / Int64ul,
+        "stencil_aux_buffer_ptr1" / Int64ul,
+        "unk_c0" / Int64ul,
+        "stencil_aux_buffer_ptr2" / Int64ul,
+        "unk_d0" / Int64ul,
+        "tvb_tilemap" / Int64ul,
+        "tvb_heapmeta_addr" / Int64ul,
+        "unk_e8" / Int64ul,
+        "tvb_heapmeta_addr2" / Int64ul,
+        "unk_f8" / Int64ul,
+        "aux_fb_ptr" / Int64ul,
+        "unk_108" / Array(6, Int64ul),
+        "pipeline_base" / Int64ul,
+        "unk_140" / Int64ul,
+        "unk_148" / Int64ul,
+        "unk_150" / Int64ul,
+        "unk_158" / Int64ul,
+        "unk_160" / Int64ul,
+        Ver("G < G14", "unk_168_padding" / HexDump(Bytes(0x1d8))),
+        Ver("G >= G14", "unk_198_padding" / HexDump(Bytes(0x1a8))),
+        Ver("V < V13_0B4", ZPadding(8)),
+    )
+
+class Start3DStruct3(ConstructClass):
+    subcon = Struct(
         "registers_addr" / Int64ul,
         "register_count" / Int16ul,
         "registers_length" / Int16ul,
@@ -278,55 +327,11 @@ class Start3DStruct1(ConstructClass):
         "depth_dimensions" / Int64ul,
     )
 
-class Start3DStruct2(ConstructClass):
-    subcon = Struct(
-        "unk_0" / Int64ul,
-        "clear_pipeline" / Start3DClearPipelineBinding,
-        "unk_18" / Int64ul,
-        "scissor_array" / Int64ul,
-        "depth_bias_array" / Int64ul,
-        "aux_fb" / AuxFBInfo,
-        "depth_dimensions" / Int64ul,
-        "visibility_result_buffer" / Int64ul,
-        "depth_flags" / Int64ul, # 0x40000 - has stencil 0x80000 - has depth
-        Ver("G >= G14", "unk_58_g14_0" / Int64ul),
-        Ver("G >= G14", "unk_58_g14_8" / Int64ul),
-        "depth_buffer_ptr1" / Int64ul,
-        "depth_buffer_ptr2" / Int64ul,
-        "stencil_buffer_ptr1" / Int64ul,
-        "stencil_buffer_ptr2" / Int64ul,
-        Ver("G >= G14", "unk_68_g14_0" / HexDump(Bytes(0x20))),
-        "unk_78" / Array(4, Int64ul),
-        "depth_aux_buffer_ptr1" / Int64ul,
-        "unk_a0" / Int64ul,
-        "depth_aux_buffer_ptr2" / Int64ul,
-        "unk_b0" / Int64ul,
-        "stencil_aux_buffer_ptr1" / Int64ul,
-        "unk_c0" / Int64ul,
-        "stencil_aux_buffer_ptr2" / Int64ul,
-        "unk_d0" / Int64ul,
-        "tvb_tilemap" / Int64ul,
-        "tvb_heapmeta_addr" / Int64ul,
-        "unk_e8" / Int64ul,
-        "tvb_heapmeta_addr2" / Int64ul,
-        "unk_f8" / Int64ul,
-        "aux_fb_ptr" / Int64ul,
-        "unk_108" / Array(6, Int64ul),
-        "pipeline_base" / Int64ul,
-        "unk_140" / Int64ul,
-        "unk_148" / Int64ul,
-        "unk_150" / Int64ul,
-        "unk_158" / Int64ul,
-        "unk_160" / Int64ul,
-        Ver("G < G14", "unk_168_padding" / HexDump(Bytes(0x1d8))),
-        Ver("G >= G14", "unk_198_padding" / HexDump(Bytes(0x1a8))),
-        Ver("V < V13_0B4", ZPadding(8)),
-    )
-
 class BufferThing(ConstructClass):
     subcon = Struct(
-        Ver("G >= G14X", "unkptr_0_0" / Int64ul),
-        Ver("G >= G14X", "unkptr_0_8" / Int64ul),
+        Ver("G >= G14X", "unk0_addr" / Int64ul),
+        Ver("G >= G14X", "unk0_addr2" / Int64ul),
+        # Ver("G >= G14X", "unk0" / ROPointer(this.unk0_addr, Array(8, Int32ul))),
         "unk_0" / Int64ul,
         "unk_8" / Int64ul,
         "unk_10" / Int64ul,
@@ -424,7 +429,7 @@ class Start3DCmd(ConstructClass):
         "attachments" / Array(16, Attachment),
         "num_attachments" / Int32ul,
         "unk_190" / Int32ul,
-        Ver("V >= V13_0B4", "unk_194" / Int64ul),
+        Ver("V >= V13_0B4", "counter" / Int64ul),
         Ver("V >= V13_0B4", "unkptr_19c" / Int64ul),
     )
 
@@ -576,7 +581,6 @@ class StartTACmd(ConstructClass):
         "unk_48" / Int64ul,
         "unk_50" / Int32ul,
         "struct3_addr" / Int64ul,
-        "struct3" / ROPointer(this.struct3_addr, StartTACmdStruct3),
         "unkptr_5c" / Int64ul,
         "unk_5c" / ROPointer(this.unkptr_5c, HexDump(Bytes(0x18))),
         "unk_64" / Int32ul,
@@ -589,10 +593,9 @@ class StartTACmd(ConstructClass):
         "unk_168" / Int32ul,
         "unk_16c" / Int32ul,
         "unk_170" / Int64ul,
-        "unk_178" / Int32ul,
-        Ver("V >= V13_0B4", "unk_17c" / Int32ul),
+        Ver("V >= V13_0B4", "counter" / Int64ul),
         Ver("V >= V13_0B4", "unkptr_180" / Int64ul),
-        Ver("V >= V13_0B4", "unk_188" / Int32ul),
+        "unk_178" / Int32ul,
     )
 
 class FinalizeTACmd(ConstructClass):
@@ -607,7 +610,6 @@ class FinalizeTACmd(ConstructClass):
         "context_id" / Int32ul,
         "unk_28" / Int32ul,
         "struct3_addr" / Int64ul,
-        "struct3" / ROPointer(this.struct3_addr, StartTACmdStruct3),
         "unk_34" / Int32ul,
         "uuid" / Int32ul,
         "stamp_addr" / Int64ul,
@@ -861,17 +863,8 @@ class WaitForInterruptCmd(ConstructClass):
 
 class Wait2Cmd(ConstructClass):
     subcon = Struct(
-        "magic" / Const(0x02, Int8ul),
-        "unk_1" / Int8ul,
-        "unk_2" / Int8ul,
-        "unk_3" / Int8ul,
+        "magic" / Const(0x02, Int32ul),
     )
-
-    def __init__(self, unk_1, unk_2, unk_3):
-        super().__init__()
-        self.unk_1 = unk_1
-        self.unk_2 = unk_2
-        self.unk_3 = unk_3
 
 class NopCmd(ConstructClass):
     # This doesn't exist

@@ -32,7 +32,10 @@ class AGX:
 
         self.asc_dev = u.adt["/arm-io/gfx-asc"]
         self.sgx_dev = u.adt["/arm-io/sgx"]
-        self.sgx = SGXRegs(u, self.sgx_dev.get_reg(0)[0])
+        if self.sgx_dev.compatible[0] in ("gpu,t6020", "gpu,t6021"):
+            self.sgx = SGXRegsT602X(u, self.sgx_dev.get_reg(0)[0])
+        else:
+            self.sgx = SGXRegs(u, self.sgx_dev.get_reg(0)[0])
 
         self.log("Initializing allocations")
 
@@ -60,16 +63,25 @@ class AGX:
 
         self.kobj = GPUAllocator(self, "kernel",
                                  self.kern_va_base, 0x20000000,
-                                 AttrIndex=MemoryAttr.Shared, AP=1, guard_pages=1)
+                                 AttrIndex=MemoryAttr.Shared, AP=1, guard_pages=16)
         self.cmdbuf = GPUAllocator(self, "cmdbuf",
                                    self.kern_va_base + 0x20000000, 0x20000000,
-                                   AttrIndex=MemoryAttr.Shared, AP=0, guard_pages=1)
+                                   AttrIndex=MemoryAttr.Shared, AP=1, UXN=1, PXN=1, guard_pages=16)
         self.kshared = GPUAllocator(self, "kshared",
                                     self.kern_va_base + 0x40000000, 0x20000000,
-                                    AttrIndex=MemoryAttr.Shared, AP=1, guard_pages=1)
+                                    AttrIndex=MemoryAttr.Shared, AP=1, guard_pages=16)
         self.kshared2 = GPUAllocator(self, "kshared2",
                                      self.kern_va_base + 0x60000000, 0x100000,
-                                     AttrIndex=MemoryAttr.Shared, AP=0, PXN=1, guard_pages=1)
+                                     AttrIndex=MemoryAttr.Shared, AP=0, PXN=1, guard_pages=16)
+        self.kgpurw = GPUAllocator(self, "kernel GPU RW",
+                                 self.kern_va_base + 0x70000000, 0x1000000,
+                                 AttrIndex=MemoryAttr.Shared, AP=0, UXN=1, PXN=1)
+
+        self.klow = GPUAllocator(self, "kernel_low",
+                                 0x1500000000, 0x100000,
+                                 AttrIndex=MemoryAttr.Shared, AP=0, UXN=1, PXN=1)
+        self.klow.align_to_end = False
+
 
         self.io_allocator = Heap(self.kern_va_base + 0x68000000,
                                  self.kern_va_base + 0x70000000,
@@ -266,10 +278,15 @@ class AGX:
         if not fault_info.FAULTED:
             return
 
-        fault_addr = fault_info.ADDR
+        fault_addr = getattr(self.sgx, "FAULT_ADDR", None).val
+        if fault_addr is not None:
+            fault_addr <<= 6
+        else:
+            fault_addr = fault_info.ADDR
+
         if fault_addr & 0x8000000000:
             fault_addr |= 0xffffff8000000000
-        base, obj = self.find_object(fault_addr)
+        base, obj = self.find_object(fault_addr, ctx=fault_info.CONTEXT)
         info = ""
         if obj is not None:
             info = f" ({obj!s} + {fault_addr - base:#x})"

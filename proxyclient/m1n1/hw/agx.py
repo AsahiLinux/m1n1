@@ -2,7 +2,7 @@
 from ..utils import *
 from enum import IntEnum
 
-__all__ = ["SGXRegs", "SGXInfoRegs", "agx_decode_unit", "R_FAULT_INFO"]
+__all__ = ["SGXRegs", "SGXRegsT602X", "SGXInfoRegs", "agx_decode_unit", "R_FAULT_INFO"]
 
 class FAULT_REASON(IntEnum):
     INVALID = 0
@@ -25,6 +25,10 @@ class R_FAULT_INFO(Register64):
 
 class SGXRegs(RegMap):
     FAULT_INFO      = 0x17030, R_FAULT_INFO
+
+class SGXRegsT602X(RegMap):
+    FAULT_INFO      = 0xd8c0, R_FAULT_INFO
+    FAULT_ADDR      = 0xd8c8, Register64
 
 class SGXInfoRegs(RegMap):
     CORE_MASK_0     = 0x1500, Register32,
@@ -84,7 +88,27 @@ class UNIT_A0(IntEnum):
     GL2CC_META7     = 0xb7
     GL2CC_MB        = 0xb8
 
-class UNIT_E0(IntEnum):
+class UNIT_D0_T602X(IntEnum):
+    gCDM_CS         = 0xd0
+    gCDM_ID         = 0xd1
+    gCDM_CSR        = 0xd2
+    gCDM_CSW        = 0xd3
+    gCDM_CTXR       = 0xd4
+    gCDM_CTXW       = 0xd5
+    gIPP            = 0xd6
+    gIPP_CS         = 0xd7
+    gKSM_RCE        = 0xd8
+
+class UNIT_E0_T602X(IntEnum):
+    gPM_SPn         = 0xe0
+    gVDM_CSD_SPn    = 0xe1
+    gVDM_SSD_SPn    = 0xe2
+    gVDM_ILF_SPn    = 0xe3
+    gVDM_TFP_SPn    = 0xe4
+    gVDM_MMB_SPn    = 0xe5
+    gRDE_SPn        = 0xe6
+
+class UNIT_E0_T8103(IntEnum):
     gPM_SPn         = 0xe0
     gVDM_CSD_SPn    = 0xe1
     gVDM_SSD_SPn    = 0xe2
@@ -106,8 +130,10 @@ def agx_decode_unit(v):
     if v < 0xa0:
         group = v >> 4
         return UNIT_00(v & 0x0f).name.replace("n", str(group))
-    elif v < 0xe0:
+    elif v < 0xd0:
         return UNIT_A0(v).name
+    elif v < 0xe0:
+        return UNIT_D0_T602X(v).name
     else:
         group = (v >> 4) & 1
-        return UNIT_E0(v & 0xef).name.replace("n", str(group))
+        return UNIT_E0_T8103(v & 0xef).name.replace("n", str(group))

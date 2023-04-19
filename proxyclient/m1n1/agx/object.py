@@ -195,7 +195,7 @@ class GPUAllocator:
     def make_stream(self, base):
         return self.agx.uat.iostream(self.ctx, base, recurse=False)
 
-    def new(self, objtype, name=None, track=True, **kwargs):
+    def new(self, objtype, name=None, track=True, align=1, **kwargs):
         obj = GPUObject(self, objtype)
         obj._stream = self.make_stream
         if name is not None:
@@ -208,7 +208,7 @@ class GPUAllocator:
         paddr = self.agx.u.memalign(self.page_size, size_align)
         off = 0
         if self.align_to_end:
-            off = size_align - obj._size
+            off = size_align - align_up(obj._size, align)
 
         flags = dict(self.flags)
         flags.update(kwargs)

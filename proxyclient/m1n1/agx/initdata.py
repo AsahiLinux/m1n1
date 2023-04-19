@@ -366,8 +366,9 @@ def build_initdata(agx):
 
     # size: 0x180, Empty
     # 13.0: grew
+    # 13.3: grew again
     #regionB.stats_cp = agx.kobj.new_buf(0x180, "RegionB.unkptr_180").push()
-    regionB.stats_cp = agx.kobj.new_buf(0x980, "RegionB.unkptr_180").push()
+    regionB.stats_cp = agx.kobj.new_buf(0x980 + 0x800, "RegionB.stats_cp").push()
 
     # size: 0x3b80, few floats, few ints, needed for init
     regionB.hwdata_a = agx.kobj.new(AGXHWDataA(sgx, chip_info), track=False)
@@ -446,7 +447,7 @@ def build_initdata(agx):
     regionB.unk_1c8 = agx.kobj.new_buf(0x1000, "RegionB.unkptr_1c8").push()
 
     # Size: 0x4000
-    regionB.buffer_mgr_ctl = agx.kobj.new(InitData_BufferMgrCtl, track=True).push()
+    regionB.buffer_mgr_ctl = agx.klow.new(InitData_BufferMgrCtl, track=True).push()
     regionB.buffer_mgr_ctl_gpu_addr = regionB.buffer_mgr_ctl._addr
 
     regionB.unk_6a80 = 0

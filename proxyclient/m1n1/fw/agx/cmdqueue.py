@@ -24,6 +24,7 @@ class WorkCommandBarrier(ConstructClass):
         "stamp_self" / Int32ul,
         "uuid" / Int32ul,
         "unk" / Default(Int32ul, 0),
+        Ver("G >= G14X", "pad" / ZPadding(0x20)),
     )
 
 class WorkCommandInitBM(ConstructClass):
@@ -244,9 +245,10 @@ class WorkCommand3D(ConstructClass):
         "tile_count" / Hex(Int64ul),
         # Embedded structures that are also pointed to by other stuff
         Ver("G < G14X", "struct_2" / Start3DStruct2),
+        Ver("G < G14X", "struct_1" / Start3DStruct1),
         Ver("G >= G14X", "registers" / Array(128, RegisterDefinition)),
-        Ver("G >= G14X", "unkpad_g14x" / Default(HexDump(Bytes(0x20)), bytes(0x20))),
-        "struct_1" / Start3DStruct1,
+        Ver("G >= G14X", "unk_g14x" / Default(Array(64, Int32ul), [0]*64)),
+        "struct_3" / Start3DStruct3,
         "unk_758" / Flag,
         "unk_75c" / Flag,
         "unk_buf" / WorkCommand1_UnkBuf,
@@ -266,7 +268,7 @@ class WorkCommand3D(ConstructClass):
         Ver("V >= V13_0B4", "unk_928_4" / Int8ul),
         Ver("V >= V13_0B4", "unk_ts" / TimeStamp),
         Ver("V >= V13_0B4", "unk_928_d" / Default(HexDump(Bytes(0x1b)), bytes(0x1b))),
-        "pad_928" / Default(HexDump(Bytes(0x18)), bytes(0x18)),
+        Ver("V >= V13_3", "unk_pad2" / Default(HexDump(Bytes(0x3c)), bytes(0x3c))),
     )
 
 class WorkCommand0_UnkBuf(ConstructValueClass):
@@ -317,9 +319,9 @@ class WorkCommandTA(ConstructClass):
 
         # Embedded structures that are also pointed to by other stuff
         Ver("G >= G14X", "registers" / Array(128, RegisterDefinition)),
-        Ver("G >= G14X", "unk_154" / HexDump(Bytes(0x100))), # unknown
+        Ver("G >= G14X", "unk_154" / Default(HexDump(Bytes(0x100)), bytes(0x100))), # unknown
         Ver("G < G14X", "struct_2" / StartTACmdStruct2), # 0x11c bytes
-        Ver("G < G14X", "unk_154" / HexDump(Bytes(0x268))), # unknown
+        Ver("G < G14X", "unk_154" / Default(HexDump(Bytes(0x268)), bytes(0x268))), # unknown
         Ver("G < G14X", "tiling_params" / TilingParameters), # unknown
         Ver("G < G14X", "unk_3e8" / HexDump(Bytes(0x64))), # unknown
         "registers_addr" / Int64ul,
@@ -353,7 +355,7 @@ class WorkCommandTA(ConstructClass):
         Ver("V >= V13_0B4", "unk_ts" / TimeStamp),
         Ver("V >= V13_0B4", "unk_5d8_d" / Default(HexDump(Bytes(0x13)), bytes(0x13))),
         "pad_5d8" / Default(HexDump(Bytes(0x8)), bytes(0x8)),
-        Ver("V >= V13_0B4", "pad_5e0" / Default(HexDump(Bytes(0x18)), bytes(0x18))),
+        Ver("V >= V13_3", "unk_pad2" / Default(HexDump(Bytes(0xc)), bytes(0xc))),
     )
 
 class WorkCommandBlit(ConstructClass):

@@ -206,8 +206,14 @@ class GPUBufferManager:
         self.pages_per_block = 4
         self.block_size = self.pages_per_block * self.page_size
 
+        self.scene_max = 48
+
         self.page_list = context.uobj.new(Array(0x10000 // 4, Int32ul), "BM PageList", track=False)
         self.block_list = context.uobj.new(Array(0x8000 // 4, Int32ul), "BM BlockList", track=False)
+        self.scene_list = agx.kgpurw.new(Array(self.scene_max, Int32ul), "BM SceneList", track=True)
+
+        self.scene_list.val = [0] * 48
+        self.scene_list.push()
 
         self.info = info = agx.kobj.new(BufferManagerInfo)
         info.page_list_addr = self.page_list._addr
@@ -227,7 +233,13 @@ class GPUBufferManager:
         self.block_list.push()
         self.page_list.push()
 
+        self.scene_idx = 0
+
         info.push()
+
+    def get_scene(self):
+        self.scene_idx = (self.scene_idx + 1) % self.scene_max
+        return self.scene_list._addr + self.scene_idx * 4
 
     def increment(self):
         self.counter_obj.count += 1

@@ -1447,54 +1447,66 @@ class InitData_GPUQueueStatsTA(ConstructClass):
         "unk_14" / Int32ul,
     )
     def __init__(self):
+        self.unk_0 = bytes(0x18)
         self.busy = 0
         self.unk_4 = 0
         self.cur_cmdqueue = 0
         self.cur_count = 0
         self.unk_14 = 0
+        self.unk_18 = bytes(0x50)
 
 class InitData_GPUStatsTA(ConstructClass):
     subcon = Struct(
         "unk_4" / Int32ul,
-        "queues" / Array(4, InitData_GPUQueueStatsTA),
+        Ver("V < V13_0B4", "queues" / Array(4, InitData_GPUQueueStatsTA)),
+        Ver("V >= V13_0B4", "queues" / Array(8, InitData_GPUQueueStatsTA)),
         "unk_68" / Bytes(0x8),
         "unk_70" / Int32ul,
         "unk_74" / Int32ul,
-        "unk_timestamp" / Int64ul,
+        Ver("V >= V13_0B4", "unk_c0" / HexDump(Bytes(0x558))),
+        "unk_timestamp" / Array(16, Int64ul),
         "unk_80" / HexDump(Bytes(0x40)),
-        Ver("V >= V13_0B4", "unk_c0" / HexDump(Bytes(0x5c4))),
+        Ver("V >= V13_3", "unk_684" / HexDump(Bytes(0x800))),
     )
 
     def __init__(self):
         self.unk_4 = 0
-        self.queues = [InitData_GPUQueueStatsTA() for i in range(4)]
+        if Ver.check("V >= V13_0B4"):
+            self.queues = [InitData_GPUQueueStatsTA() for i in range(8)]
+        else:
+            self.queues = [InitData_GPUQueueStatsTA() for i in range(4)]
         self.unk_68 = bytes(0x8)
         self.unk_70 = 0
         self.unk_74 = 0
-        self.unk_timestamp = 0
+        self.unk_timestamp = [0]*16
         self.unk_80 = bytes(0x40)
-        self.unk_c0 = bytes(0x5c4)
+        self.unk_c0 = bytes(0x558)
+        self.unk_684 = bytes(0x800)
 
 class InitData_GPUQueueStats3D(ConstructClass):
     subcon = Struct(
         "busy" / Int32ul,
+        Ver("V >= V13_0B4", ZPadding(4)),
         "cur_cmdqueue" / Int64ul,
         "unk_c" / Int32ul,
         "unk_10" / Int32ul,
-        "unk_14" / HexDump(Bytes(0x28 - 0x14)),
+        "unk_14" / HexDump(Bytes(0x10)),
+        Ver("V < V13_0B4", ZPadding(4)),
     )
     def __init__(self):
         self.busy = 0
         self.cur_cmdqueue = 0
         self.unk_c = 0
         self.unk_10 = 0
-        self.unk_14 = bytes(0x14)
+        self.unk_14 = bytes(0x10)
 
 class InitData_GPUStats3D(ConstructClass):
     subcon = Struct(
         "unk_0" / Bytes(0x18),
-        "queues" / Array(4, InitData_GPUQueueStats3D),
-        Ver("G >= G14X", "unk_d0_0" / Default(HexDump(Bytes(0x910)), bytes(0x910))),
+        Ver("G >= G14X", "unk_d0_0" / Default(HexDump(Bytes(0x50)), bytes(0x50))),
+        Ver("V < V13_0B4", "queues" / Array(4, InitData_GPUQueueStats3D)),
+        Ver("V >= V13_0B4", "queues" / Array(8, InitData_GPUQueueStats3D)),
+        Ver("G >= G14X", "unk_d0_0" / Default(HexDump(Bytes(0x820)), bytes(0x820))),
         "unk_d0" / HexDump(Bytes(0x38)),
         "tvb_overflows_1" / Int32ul,
         "tvb_overflows_2" / Int32ul,
@@ -1515,7 +1527,10 @@ class InitData_GPUStats3D(ConstructClass):
 
     def __init__(self):
         self.unk_0 = bytes(0x18)
-        self.queues = [InitData_GPUQueueStats3D() for i in range(4)]
+        if Ver.check("V >= V13_0B4"):
+            self.queues = [InitData_GPUQueueStats3D() for i in range(8)]
+        else:
+            self.queues = [InitData_GPUQueueStats3D() for i in range(4)]
         self.unk_68 = 0
         self.cur_cmdqueue = 0
         self.unk_d0 = bytes(0x38)
@@ -1622,7 +1637,7 @@ class InitData_RegionB(ConstructClass):
         "unk_ctr5" / Int32ul,
         "unk_6afc" / Int32ul,
         "pad_6b00" / HexDump(Bytes(0x38)),
-        Ver("G >= G14X", ZPadding(0x4800)),
+        Ver("G >= G14X", "pad_6b00_extra" / HexDump(Bytes(0x4800))),
         "unk_6b38" / Int32ul,
         "pad_6b3c" / HexDump(Bytes(0x84)),
     )
@@ -1635,6 +1650,7 @@ class InitData_RegionB(ConstructClass):
         self.unk_224 = bytes(0x685c)
         self.unkpad_6a88 = bytes(0x14)
         self.pad_6b00 = bytes(0x38)
+        self.pad_6b00_extra = bytes(0x4800)
         self.unk_6b38 = 0xff
         self.pad_6b3c = bytes(0x84)
 
@@ -1816,12 +1832,13 @@ class InitData_RegionC(ConstructClass):
         Ver("V >= V13_0B4", "unk_118e4_0" / Dec(Int32ul)),
         "unk_118e4" / Int32ul,
         "unk_118e8" / Int32ul,
-        "unk_118ec" / Array(0x800, Int8ul),
-        "unk_11901" / HexDump(Bytes(0x7e)),
+        "unk_118ec" / Array(0x400, Int8ul),
+        "unk_11901" / HexDump(Bytes(0x54)),
         Ver("V >= V13_0B4", "unk_11d40" / HexDump(Bytes(0x19c))),
         Ver("V >= V13_0B4", "unk_11edc" / Int32ul),
         Ver("V >= V13_0B4", "unk_11ee0" / HexDump(Bytes(0x1c))),
         Ver("V >= V13_0B4", "unk_11efc" / Int32ul),
+        Ver("V >= V13_3", "unk_11f00" / HexDump(Bytes(0x280))),
     )
 
     def __init__(self, sgx, chip_info):
@@ -1956,12 +1973,13 @@ class InitData_RegionC(ConstructClass):
         self.unk_118e4 = 0
         self.unk_118e8 = 0 if chip_info.unk_118ec is None else 1
         self.unk_118ec = chip_info.unk_118ec or []
-        self.unk_118ec += [0] * (2048 - len(self.unk_118ec))
-        self.unk_11901 = bytes(126)
+        self.unk_118ec += [0] * (1024 - len(self.unk_118ec))
+        self.unk_11901 = bytes(0x54)
         self.unk_11d40 = bytes(0x19c)
         self.unk_11edc = 0
         self.unk_11ee0 = bytes(0x1c)
         self.unk_11efc = 0
+        self.unk_11f00 = bytes(0x280)
 
 class UatLevelInfo(ConstructClass):
     subcon = Struct(
