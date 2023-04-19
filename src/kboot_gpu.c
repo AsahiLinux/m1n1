@@ -438,6 +438,8 @@ int dt_set_gpu(void *dt)
         case T6001:
         case T6002:
         case T8112:
+        case T6020:
+        case T6021:
             calc_power = calc_power_t600x;
             break;
         default:
