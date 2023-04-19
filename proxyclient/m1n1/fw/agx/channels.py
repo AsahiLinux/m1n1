@@ -43,7 +43,8 @@ class RunCmdQueueMsg(ConstructClass):
 
 class DC_DestroyContext(ConstructClass):
     subcon =  Struct (
-        "msg_type" / Const(0x17, Int32ul),
+        Ver("V < V13_3", "msg_type" / Const(0x17, Int32ul)),
+        Ver("V >= V13_3", "msg_type" / Const(0x18, Int32ul)),
         "unk_4" / Hex(Int32ul),
         "unk_8" / Hex(Int32ul),
         "unk_c" / Hex(Int32ul),
@@ -57,7 +58,8 @@ class DC_DestroyContext(ConstructClass):
 
 class DC_Write32(ConstructClass):
     subcon =  Struct (
-        "msg_type" / Const(0x18, Int32ul),
+        Ver("V < V13_3", "msg_type" / Const(0x18, Int32ul)),
+        Ver("V >= V13_3", "msg_type" / Const(0x19, Int32ul)),
         "addr" / Hex(Int64ul),
         "data" / Int32ul,
         "unk_10" / Int32ul,

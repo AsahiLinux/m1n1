@@ -282,7 +282,7 @@ class AGX:
         if fault_addr is not None:
             fault_addr <<= 6
         else:
-            fault_addr = fault_info.ADDR
+            fault_addr = fault_info.ADDR << 6
 
         if fault_addr & 0x8000000000:
             fault_addr |= 0xffffff8000000000

@@ -76,7 +76,7 @@ def build_iomappings(agx, chip_id):
             iomap(0x204d61000, 0x1000, 0x1000, 1), # GMGIFAFRegs
             iomap(0x200000000, mcc_cnt[chip_id] * 0xd8000, 0xd8000, 1), # MCache registers
             IOMapping(), # AICBankedRegisters
-            IOMapping(), # PMPDoorbell
+            IOMapping(), # PMGRScratch
             iomap(0x2643c4000, 0x1000, 0x1000, 1), # NIA Special agent idle register die 0
             iomap(0x22643c4000, 0x1000, 0x1000, 1) if chip_id == 0x6002 else IOMapping(), # NIA Special agent idle register die 1
             IOMapping(), # CRE registers
@@ -100,7 +100,7 @@ def build_iomappings(agx, chip_id):
             IOMapping(), # GMGIFAFRegs
             iomap(0x200000000, mcc_cnt[chip_id] * 0xd8000, 0xd8000, 1), # MCache registers
             iomap(0x28e118000, 0x4000, 0x4000, 0), # AICBankedRegisters
-            IOMapping(), # PMPDoorbell
+            IOMapping(), # PMGRScratch
             IOMapping(), # NIA Special agent idle register die 0
             IOMapping(), # NIA Special agent idle register die 1
             IOMapping(), # CRE registers
@@ -264,6 +264,15 @@ CHIP_INFO = {
         hwdb_abc = 0x4000,
         hwdb_b30 = 1,
         rel_max_powers = [0, 18, 27, 37, 52, 66, 82, 96, 100],
+        shared2_t1_coef = 7200,
+        shared2_t2 = [0xf07, 0x4c0, 0x6c0, 0x8c0, 0xac0, 0xc40, 0xdc0, 0xec0, 0xf80],
+        shared2_t3_coefs = [None, 20.0, 28.0, 36.0, 44.0, 50.0, 56.0, 60.0, 63.0],
+        shared2_t3_scales = [9, 3209, 10400],
+        unk_hws2_0 = 0,
+        unk_hws2_4 = [0] * 8,
+        unk_hws2_24 = 0,
+        sram_base = 0x404d60000,
+        sram_size = 0x20000,
         shared3_unk = 5,
         shared3_tab = [
             10700, 10700, 10700, 10700,
@@ -271,9 +280,6 @@ CHIP_INFO = {
             1000, 10700, 10700, 10700,
             10700, 10700, 10700, 10700,
         ],
-        unk_hws2_0 = 0,
-        unk_hws2_4 = [0] * 8,
-        unk_hws2_24 = 0,
         rc_unk_54 = 0xffff,
     ),
     0x6021: Container(
@@ -326,7 +332,7 @@ CHIP_INFO = {
         rel_max_powers = [0, 19, 26, 36, 48, 63, 79, 91, 100],
         shared2_t1_coef = 11000,
         shared2_t2 = [0xf07, 0x4c0, 0x680, 0x8c0, 0xa80, 0xc40, 0xd80, 0xec0, 0xf40],
-        shared2_t3_coefs = [None, 10.0, 13.5, 18.0, 21.5, 25.0, 27.5, 30.0, 31.0],
+        shared2_t3_coefs = [None, 20.0, 27.0, 36.0, 43.0, 50.0, 55.0, 60.0, 62.0],
         shared2_t3_scales = [9, 3209, 10400],
         unk_hws2_0 = 700,
         unk_hws2_4 = [1.0, 0.8, 0.2, 0.9, 0.1, 0.25, 0.7, 0.9],

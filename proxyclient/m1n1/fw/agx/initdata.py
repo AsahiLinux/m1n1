@@ -105,7 +105,7 @@ class AGXHWDataShared2T8112(ConstructClass):
             f_ghz = sgx.perf_states[i].freq / 1000000
             v_max = max(sgx.perf_states[i + j * count].volt / 1000 for j in range(table_count))
             t1.append(int(1000 * chip_info.shared2_t1_coef / (f_ghz * v_max)))
-            x = 1000 * chip_info.shared2_t3_coefs[i] / (f_ghz * v_max * 3.0)
+            x = 1000 * chip_info.shared2_t3_coefs[i] / (f_ghz * v_max * 6.0)
             for j, scale in enumerate(chip_info.shared2_t3_scales):
                 t3[j].append(int(x * scale))
 
