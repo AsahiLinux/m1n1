@@ -709,9 +709,9 @@ class ConstructClass(ConstructClassBase, Container):
                     t += "::ver"
 
             for n in array_len[::-1]:
-                t = f"[{t}; {n:#x}]"
+                t = f"Array<{n:#x}, {t}>"
 
-            s.append(f"    {name}: {t},")
+            s.append(f"    pub(crate) {name}: {t},")
 
             if has_ver:
                 s.append("")
