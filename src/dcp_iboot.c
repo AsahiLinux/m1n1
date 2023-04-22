@@ -3,6 +3,7 @@
 #include "dcp_iboot.h"
 #include "afk.h"
 #include "assert.h"
+#include "firmware.h"
 #include "malloc.h"
 #include "string.h"
 #include "utils.h"
@@ -80,6 +81,17 @@ struct swap_set_layer_cmd {
     u32 unk;
     u32 layer_id;
     dcp_layer_t layer;
+    dcp_rect_t src;
+    dcp_rect_t dst;
+    u32 unk2;
+} PACKED;
+
+struct swap_set_layer_cmd_v13_3 {
+    u32 unk;
+    u32 layer_id;
+    dcp_layer_t layer;
+    u32 unk3; // possibly part of layer
+    u32 unk4; // possibly part of layer
     dcp_rect_t src;
     dcp_rect_t dst;
     u32 unk2;
@@ -204,8 +216,8 @@ int dcp_ib_swap_begin(dcp_iboot_if_t *iboot)
     return resp->swap_id;
 }
 
-int dcp_ib_swap_set_layer(dcp_iboot_if_t *iboot, int layer_id, dcp_layer_t *layer,
-                          dcp_rect_t *src_rect, dcp_rect_t *dst_rect)
+static int swap_set_layer_v12_3(dcp_iboot_if_t *iboot, int layer_id, dcp_layer_t *layer,
+                                dcp_rect_t *src_rect, dcp_rect_t *dst_rect)
 {
     struct swap_set_layer_cmd *cmd = (void *)iboot->txcmd.payload;
     memset(cmd, 0, sizeof(*cmd));
@@ -215,6 +227,28 @@ int dcp_ib_swap_set_layer(dcp_iboot_if_t *iboot, int layer_id, dcp_layer_t *laye
     cmd->dst = *dst_rect;
 
     return dcp_ib_cmd(iboot, IBOOT_SWAP_SET_LAYER, sizeof(*cmd));
+}
+
+static int swap_set_layer_v13_3(dcp_iboot_if_t *iboot, int layer_id, dcp_layer_t *layer,
+                                dcp_rect_t *src_rect, dcp_rect_t *dst_rect)
+{
+    struct swap_set_layer_cmd_v13_3 *cmd = (void *)iboot->txcmd.payload;
+    memset(cmd, 0, sizeof(*cmd));
+    cmd->layer_id = layer_id;
+    cmd->layer = *layer;
+    cmd->src = *src_rect;
+    cmd->dst = *dst_rect;
+
+    return dcp_ib_cmd(iboot, IBOOT_SWAP_SET_LAYER, sizeof(*cmd));
+}
+
+int dcp_ib_swap_set_layer(dcp_iboot_if_t *iboot, int layer_id, dcp_layer_t *layer,
+                          dcp_rect_t *src_rect, dcp_rect_t *dst_rect)
+{
+    if (os_firmware.version < V13_3)
+        return swap_set_layer_v12_3(iboot, layer_id, layer, src_rect, dst_rect);
+    else
+        return swap_set_layer_v13_3(iboot, layer_id, layer, src_rect, dst_rect);
 }
 
 int dcp_ib_swap_end(dcp_iboot_if_t *iboot)
