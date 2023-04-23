@@ -18,9 +18,11 @@ buf = u.memalign(0x4000, fb_size)
 
 colors = [0xDD0000, 0xFE6230, 0xFEF600, 0x00BB00, 0x009BFE, 0x000083, 0x30009B]
 for i, color in enumerate(colors):
-    lines = stride // len(colors)
-    offset = i * lines * width * 4
-    p.memset32(buf + offset, color, lines * width * 4)
+    lines = width // len(colors)
+    offset = i * lines * stride * 4
+    for j in range(lines):
+        p.memset32(buf + offset + j * stride * 4, color, height * 2)
+        p.memset32(buf + offset + j * stride * 4 + height * 2, 0xffffffff^color, height * 2)
 
 
 
