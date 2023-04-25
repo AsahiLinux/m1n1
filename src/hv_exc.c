@@ -146,6 +146,11 @@ void hv_set_time_stealing(bool enabled, bool reset)
         stolen_time = 0;
 }
 
+void hv_add_time(s64 time)
+{
+    stolen_time -= (u64)time;
+}
+
 static void hv_update_fiq(void)
 {
     u64 hcr = mrs(HCR_EL2);

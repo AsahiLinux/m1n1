@@ -77,6 +77,7 @@ void virtio_put_buffer(u64 base, int qu, u32 id, u32 len);
 /* Exceptions */
 void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type, void *extra);
 void hv_set_time_stealing(bool enabled, bool reset);
+void hv_add_time(s64 time);
 
 /* WDT */
 void hv_wdt_pet(void);
