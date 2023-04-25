@@ -2,7 +2,6 @@
 #![no_std]
 #![deny(unsafe_op_in_unsafe_fn)]
 #![feature(alloc_error_handler)]
-#![feature(mixed_integer_ops)]
 #![feature(new_uninit)]
 
 #[macro_use]
