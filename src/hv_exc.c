@@ -192,7 +192,7 @@ static void hv_update_fiq(void)
             _msr(sr_tkn(sr), regs[rt]);                                                            \
         return true;
 
-static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
+static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
 {
     u64 reg = iss & (ESR_ISS_MSR_OP0 | ESR_ISS_MSR_OP2 | ESR_ISS_MSR_OP1 | ESR_ISS_MSR_CRn |
                      ESR_ISS_MSR_CRm);
@@ -267,6 +267,27 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
         SYSREG_PASS(sys_reg(1, 0, 8, 1, 2)) // TLBI ASIDE1OS
         SYSREG_PASS(sys_reg(1, 0, 8, 5, 1)) // TLBI RVAE1OS
 
+        case SYSREG_ISS(SYS_IMP_APL_IPI_SR_EL1):
+            if (is_read)
+                regs[rt] = PERCPU(ipi_pending) ? IPI_SR_PENDING : 0;
+            else if (regs[rt] & IPI_SR_PENDING)
+                PERCPU(ipi_pending) = false;
+            return true;
+
+        /* shadow the interrupt mode and state flag */
+        case SYSREG_ISS(SYS_IMP_APL_PMCR0):
+            if (is_read) {
+                u64 val = (mrs(SYS_IMP_APL_PMCR0) & ~PMCR0_IMODE_MASK) | PERCPU(pmc_irq_mode);
+                regs[rt] =
+                    val | (PERCPU(pmc_pending) ? PMCR0_IACT : 0) | PERCPU(exc_entry_pmcr0_cnt);
+            } else {
+                PERCPU(pmc_pending) = !!(regs[rt] & PMCR0_IACT);
+                PERCPU(pmc_irq_mode) = regs[rt] & PMCR0_IMODE_MASK;
+                PERCPU(exc_entry_pmcr0_cnt) = regs[rt] & PMCR0_CNT_MASK;
+                msr(SYS_IMP_APL_PMCR0, regs[rt] & ~PERCPU(exc_entry_pmcr0_cnt));
+            }
+            return true;
+
         /*
          * Handle this one here because m1n1/Linux (will) use it for explicit cpuidle.
          * We can pass it through; going into deep sleep doesn't break the HV since we
@@ -285,6 +306,27 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
             /* clang-format off */
         /* IPI handling */
         SYSREG_PASS(SYS_IMP_APL_IPI_CR_EL1)
+        /* M1RACLES reg, handle here due to silly 12.0 "mitigation" */
+        case SYSREG_ISS(sys_reg(3, 5, 15, 10, 1)):
+            if (is_read)
+                regs[rt] = 0;
+            return true;
+    }
+    return false;
+}
+
+static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
+{
+    u64 reg = iss & (ESR_ISS_MSR_OP0 | ESR_ISS_MSR_OP2 | ESR_ISS_MSR_OP1 | ESR_ISS_MSR_CRn |
+                     ESR_ISS_MSR_CRm);
+    u64 rt = FIELD_GET(ESR_ISS_MSR_Rt, iss);
+    bool is_read = iss & ESR_ISS_MSR_DIR;
+
+    u64 *regs = ctx->regs;
+
+    regs[31] = 0;
+
+    switch (reg) {
         /* clang-format on */
         case SYSREG_ISS(SYS_IMP_APL_IPI_RR_LOCAL_EL1): {
             assert(!is_read);
@@ -308,25 +350,6 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
                 }
             }
             return false;
-        case SYSREG_ISS(SYS_IMP_APL_IPI_SR_EL1):
-            if (is_read)
-                regs[rt] = PERCPU(ipi_pending) ? IPI_SR_PENDING : 0;
-            else if (regs[rt] & IPI_SR_PENDING)
-                PERCPU(ipi_pending) = false;
-            return true;
-        /* shadow the interrupt mode and state flag */
-        case SYSREG_ISS(SYS_IMP_APL_PMCR0):
-            if (is_read) {
-                u64 val = (mrs(SYS_IMP_APL_PMCR0) & ~PMCR0_IMODE_MASK) | PERCPU(pmc_irq_mode);
-                regs[rt] =
-                    val | (PERCPU(pmc_pending) ? PMCR0_IACT : 0) | PERCPU(exc_entry_pmcr0_cnt);
-            } else {
-                PERCPU(pmc_pending) = !!(regs[rt] & PMCR0_IACT);
-                PERCPU(pmc_irq_mode) = regs[rt] & PMCR0_IMODE_MASK;
-                PERCPU(exc_entry_pmcr0_cnt) = regs[rt] & PMCR0_CNT_MASK;
-                msr(SYS_IMP_APL_PMCR0, regs[rt] & ~PERCPU(exc_entry_pmcr0_cnt));
-            }
-            return true;
 #ifdef DEBUG_PMU_IRQ
         case SYSREG_ISS(SYS_IMP_APL_PMC0):
             if (is_read) {
@@ -338,17 +361,12 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
             }
             return true;
 #endif
-        /* M1RACLES reg, handle here due to silly 12.0 "mitigation" */
-        case SYSREG_ISS(sys_reg(3, 5, 15, 10, 1)):
-            if (is_read)
-                regs[rt] = 0;
-            return true;
     }
 
     return false;
 }
 
-static void hv_exc_entry(struct exc_info *ctx)
+static void hv_get_context(struct exc_info *ctx)
 {
     ctx->spsr = hv_get_spsr();
     ctx->elr = hv_get_elr();
@@ -362,7 +380,10 @@ static void hv_exc_entry(struct exc_info *ctx)
     ctx->mpidr = mrs(MPIDR_EL1);
 
     sysop("isb");
+}
 
+static void hv_exc_entry(void)
+{
     // Enable SErrors in the HV, but only if not already pending
     if (!(mrs(ISR_EL1) & 0x100))
         sysop("msr daifclr, 4");
@@ -397,9 +418,35 @@ static void hv_exc_exit(struct exc_info *ctx)
 void hv_exc_sync(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('S');
-    hv_exc_entry(ctx);
+    hv_get_context(ctx);
     bool handled = false;
     u32 ec = FIELD_GET(ESR_EC, ctx->esr);
+
+    switch (ec) {
+        case ESR_EC_MSR:
+            hv_wdt_breadcrumb('m');
+            handled = hv_handle_msr_unlocked(ctx, FIELD_GET(ESR_ISS, ctx->esr));
+            break;
+        case ESR_EC_IMPDEF:
+            hv_wdt_breadcrumb('a');
+            switch (FIELD_GET(ESR_ISS, ctx->esr)) {
+                case ESR_ISS_IMPDEF_MSR:
+                    handled = hv_handle_msr_unlocked(ctx, ctx->afsr1);
+                    break;
+            }
+            break;
+    }
+
+    if (handled) {
+        hv_wdt_breadcrumb('#');
+        ctx->elr += 4;
+        hv_set_elr(ctx->elr);
+        hv_update_fiq();
+        hv_wdt_breadcrumb('s');
+        return;
+    }
+
+    hv_exc_entry();
 
     switch (ec) {
         case ESR_EC_DABORT_LOWER:
@@ -439,7 +486,8 @@ void hv_exc_sync(struct exc_info *ctx)
 void hv_exc_irq(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('I');
-    hv_exc_entry(ctx);
+    hv_get_context(ctx);
+    hv_exc_entry();
     hv_exc_proxy(ctx, START_EXCEPTION_LOWER, EXC_IRQ, NULL);
     hv_exc_exit(ctx);
     hv_wdt_breadcrumb('i');
@@ -469,7 +517,8 @@ void hv_exc_fiq(struct exc_info *ctx)
 
     // Slow (single threaded) path
     hv_wdt_breadcrumb('F');
-    hv_exc_entry(ctx);
+    hv_get_context(ctx);
+    hv_exc_entry();
 
     // Only poll for HV events in the interruptible CPU
     if (tick) {
@@ -521,7 +570,8 @@ void hv_exc_fiq(struct exc_info *ctx)
 void hv_exc_serr(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('E');
-    hv_exc_entry(ctx);
+    hv_get_context(ctx);
+    hv_exc_entry();
     hv_exc_proxy(ctx, START_EXCEPTION_LOWER, EXC_SERROR, NULL);
     hv_exc_exit(ctx);
     hv_wdt_breadcrumb('e');
