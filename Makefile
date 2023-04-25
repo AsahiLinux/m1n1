@@ -49,7 +49,7 @@ CFG += RELEASE
 endif
 
 # Required for no_std + alloc for now
-export RUSTUP_TOOLCHAIN=nightly
+export RUSTC_BOOTSTRAP=1
 RUST_LIB := librust.a
 RUST_LIBS :=
 ifeq ($(CHAINLOADING),1)

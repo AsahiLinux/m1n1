@@ -29,7 +29,7 @@ jobs:
 
       - name: Install nightly rust
         run: |
-          export RUSTUP_TOOLCHAIN=nightly
+          export RUSTUP_TOOLCHAIN=stable
           rustup target install aarch64-unknown-none-softfloat
 
       - name: Build
