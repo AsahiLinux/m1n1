@@ -760,7 +760,17 @@ class AGXTracer(ASCTracer):
             context = wi0.context_id
 
             def read(off, size):
-                return self.uat.ioread(context, off & 0x7fff_ffff_ffff_ffff, size)
+                data = b""
+                while size > 0:
+                    boundary = (off + 0x4000) & ~0x3fff
+                    block = min(size, boundary - off)
+                    try:
+                        data += self.uat.ioread(context, off & 0x7fff_ffff_ffff_ffff, block)
+                    except Exception:
+                        break
+                    off += block
+                    size -= block
+                return data
 
             #chexdump(kread(wi0.addr, 0x600), print_fn=self.log)
             self.log(f"  context_id = {context:#x}")
@@ -809,6 +819,22 @@ class AGXTracer(ASCTracer):
             #     yt = ((tc >> 12) & 0xfff) + 1
             #     self.log(f"      TILES {xt} {yt} {blocks} {size:#x}")
             #self.uat.dump(context, self.log)
+
+            regs = getattr(wi0, "registers", None)
+            if regs is not None:
+                for reg in regs:
+                    if reg.number == 0x1c920: # meta1
+                        self.log(f"      meta1 @ {reg.data:#x}:")
+                        data = read(reg.data, 0x41000)
+                        chexdump(data, print_fn=self.log)
+                    elif reg.number == 0x1c041: # clustering tilemaps
+                        self.log(f"      cl_tilemaps @ {reg.data:#x}:")
+                        data = read(reg.data, 0x100000)
+                        chexdump(data, print_fn=self.log)
+                    elif reg.number == 0x1c039: # tilemaps
+                        self.log(f"      tilemap @ {reg.data:#x}:")
+                        data = read(reg.data, 0x100000)
+                        chexdump(data, print_fn=self.log)
 
     def handle_3d(self, wi):
         self.log(f"Got 3D WI{wi.cmdid:d}")
