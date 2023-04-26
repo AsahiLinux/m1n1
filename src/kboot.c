@@ -2071,8 +2071,6 @@ int kboot_prepare_dt(void *fdt)
         return -1;
     if (dt_set_serial_number())
         return -1;
-    if (dt_set_memory())
-        return -1;
     if (dt_set_cpus())
         return -1;
     if (dt_set_mac_addresses())
@@ -2107,6 +2105,14 @@ int kboot_prepare_dt(void *fdt)
     if (dt_transfer_virtios())
         return 1;
 #endif
+
+    /*
+     * Set the /memory node late since we might be allocating from the top of memory
+     * in one of the above devicetree prep functions, and we want an up-to-date value
+     * for the usable memory span to make it into the devicetree.
+     */
+    if (dt_set_memory())
+        return -1;
 
     if (fdt_pack(dt))
         bail("FDT: fdt_pack() failed\n");
