@@ -537,7 +537,8 @@ class CommandQueueInfo(ConstructClass):
         "unk_54" / Int32sl,
         "unk_58" / Hex(Int64ul), # 0
         "busy" / Hex(Int32ul), # 1 = gpu busy
-        "pad1" / ZPadding(0x20),
+        "pad1" / ZPadding(0x1c),
+        "unk_80" / Hex(Int32ul),
         "blocked_on_barrier" / Hex(Int32ul),
         "unk_88" / Int32ul,
         "unk_8c" / Int32ul,
