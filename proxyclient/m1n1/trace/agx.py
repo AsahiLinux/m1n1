@@ -376,6 +376,7 @@ class AGXTracer(ASCTracer):
         self.encoder_id_filter = None
         self.exclude_context_id = None
         self.redump = False
+        self.skip_asc_tracing = True
 
         self.vmcnt = 0
         self.readlog = {}
@@ -621,7 +622,10 @@ class AGXTracer(ASCTracer):
             self.hv.add_tracer(irange(addr, 8), "UATMitigation", TraceMode.HOOK, None, hook)
 
     def start(self):
-        super().start()
+        if self.skip_asc_tracing and getattr(self.state, "initdata", None) is not None:
+            super().stop()
+        else:
+            super().start()
 
         #self.mitigate_exploits()
 
@@ -1175,6 +1179,8 @@ class AGXTracer(ASCTracer):
         self.log("Mon regions")
         self.mon.show_regions(log=self.log)
 
+        if self.skip_asc_tracing:
+            super().stop()
 
         if self.pause_after_init:
             self.log("Pausing tracing")
