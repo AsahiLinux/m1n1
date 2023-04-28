@@ -104,6 +104,7 @@ class AFKEp(EP):
 
     @msg(0xa2, DIR.TX, AFKEP_Send)
     def Send(self, msg):
+        self.log(f">TX msg:{msg}")
         for data in self.txbuf.read():
             if self.state.verbose >= 3:
                 self.log(f">TX rptr={self.txbuf.state.rptr:#x}")
@@ -115,6 +116,7 @@ class AFKEp(EP):
 
     @msg(0x85, DIR.RX, AFKEPMessage)
     def Recv(self, msg):
+        self.log(f"<RX msg:{msg}")
         for data in self.rxbuf.read():
             if self.state.verbose >= 3:
                 self.log(f"<RX rptr={self.rxbuf.state.rptr:#x}")
@@ -249,6 +251,10 @@ class EPICEp(AFKEp):
         hdr = EPICHeader.parse_stream(fd)
         sub = EPICSubHeader.parse_stream(fd)
 
+        self.log(f"{dir}Ch {hdr.channel} Type {hdr.type} Ver {hdr.version} Tag {hdr.seq}")
+        self.log(f"  Len {sub.length} Ver {sub.version} Cat {sub.category} Type {sub.type:#x} Seq {sub.seq}")
+        # chexdump(data, print_fn=self.log)
+
         if sub.category == EPICCategory.REPORT:
             self.handle_report(hdr, sub, fd)
         elif sub.category == EPICCategory.NOTIFY:
@@ -257,10 +263,6 @@ class EPICEp(AFKEp):
             self.handle_reply(hdr, sub, fd)
         elif sub.category == EPICCategory.COMMAND:
             self.handle_cmd(hdr, sub, fd)
-        else:
-            self.log(f"{dir}Ch {hdr.channel} Type {hdr.type} Ver {hdr.version} Tag {hdr.seq}")
-            self.log(f"  Len {sub.length} Ver {sub.version} Cat {sub.category} Type {sub.type:#x} Seq {sub.seq}")
-            chexdump(data, print_fn=self.log)
 
     def handle_report_init(self, hdr, sub, fd):
             init = EPICAnnounce.parse_stream(fd)
@@ -304,6 +306,10 @@ class EPICEp(AFKEp):
                 return
 
             data = self.dart.ioread(self.stream, cmd.rxbuf, cmd.rxlen)
+            if len(data) < 16:
+                self.log(f"EPIC: short reply, len={len(data)}")
+                chexdump(data, print_fn=self.log)
+                return
             rgroup, rcmd, rlen, rmagic = struct.unpack("<2xHIII", data[:16])
             if rmagic != 0x69706378:
                 self.log("Warning: Invalid EPICStandardService response magic")
@@ -321,6 +327,10 @@ class EPICEp(AFKEp):
 
         if sub.type == 0xc0 and cmd.txbuf:
             data = self.dart.ioread(self.stream, cmd.txbuf, cmd.txlen)
+            if len(data) < 64:
+                self.log(f"EPIC: short cmd, len={len(data)}")
+                chexdump(data, print_fn=self.log)
+                return
             sgroup, scmd, slen, sfooter  = struct.unpack("<2xHIII48x", data[:64])
             sdata = data[64:64+slen] if slen else None
 
@@ -1023,20 +1033,26 @@ class DCPDPTXPortEpicTracer(EPICServiceTracer):
     @epic_service_cmd(0, 8)
     def setPowerState(self, data):
         self.log("> setPowerState")
+        chexdump(data, print_fn=self.log)
     @epic_service_reply(0, 8)
     def setPowerState_reply(self, data):
         self.log("< setPowerState")
+        chexdump(data, print_fn=self.log)
 
     @epic_service_cmd(0, 13)
     def connectTo(self, data):
         unk1, target = struct.unpack("<II24x", data)
         target = DCPDPTXRemotePortTarget(target)
         self.log(f"> connectTo(target={target}, unk1=0x{unk1:x})")
+        chexdump(data, print_fn=self.log)
     @epic_service_reply(0, 13)
     def connectTo_reply(self, data):
+        if len(data) < 32:
+            self.log(f"< connectTo() short data len={len(data)}")
         unk1, target = struct.unpack("<II24x", data)
         target = DCPDPTXRemotePortTarget(target)
         self.log(f"< connectTo(target={target}, unk1=0x{unk1:x})")
+        chexdump(data, print_fn=self.log)
 
     @epic_service_cmd(0, 14)
     def validateConnection(self, data):
