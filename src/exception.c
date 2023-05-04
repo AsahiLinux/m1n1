@@ -306,11 +306,17 @@ void exc_sync(u64 *regs)
 
 void exc_irq(u64 *regs)
 {
+    u64 spsr = in_gl12() ? mrs(SYS_IMP_APL_SPSR_GL1) : mrs(SPSR_EL1);
     u32 reason = aic_ack();
 
-    printf("Exception: IRQ (from %s) die: %lu type: %lu num: %lu mpidr: %lx\n",
-           get_exception_source(0), FIELD_GET(AIC_EVENT_DIE, reason),
-           FIELD_GET(AIC_EVENT_TYPE, reason), FIELD_GET(AIC_EVENT_NUM, reason), mrs(MPIDR_EL1));
+    do {
+        printf("Exception: IRQ (from %s) die: %lu type: %lu num: %lu mpidr: %lx cnt: %lx\n",
+               get_exception_source(spsr), FIELD_GET(AIC_EVENT_DIE, reason),
+               FIELD_GET(AIC_EVENT_TYPE, reason), FIELD_GET(AIC_EVENT_NUM, reason), mrs(MPIDR_EL1),
+               mrs(CNTPCT_EL0));
+
+        reason = aic_ack();
+    } while (reason);
 
     UNUSED(regs);
     // print_regs(regs);
@@ -318,7 +324,8 @@ void exc_irq(u64 *regs)
 
 void exc_fiq(u64 *regs)
 {
-    printf("Exception: FIQ (from %s)\n", get_exception_source(0));
+    u64 spsr = in_gl12() ? mrs(SYS_IMP_APL_SPSR_GL1) : mrs(SPSR_EL1);
+    printf("Exception: FIQ (from %s) cnt: %lx\n", get_exception_source(spsr), mrs(CNTPCT_EL0));
 
     u64 reg = mrs(CNTP_CTL_EL0);
     if (reg == 0x5) {
