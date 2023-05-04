@@ -348,6 +348,15 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_SMP_IS_ALIVE:
             reply->retval = smp_is_alive(request->args[0]);
             break;
+        case P_SMP_CALL_EL1:
+            smp_call4(request->args[0], el1_call, request->args[1], request->args[2],
+                      request->args[3], request->args[4]);
+            break;
+        case P_SMP_CALL_EL1_SYNC:
+            smp_call4(request->args[0], el1_call, request->args[1], request->args[2],
+                      request->args[3], request->args[4]);
+            reply->retval = smp_wait(request->args[0]);
+            break;
 
         case P_HEAPBLOCK_ALLOC:
             reply->retval = (u64)heapblock_alloc(request->args[0]);

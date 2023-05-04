@@ -551,6 +551,8 @@ class M1N1Proxy(Reloadable):
     P_SMP_SET_WFE_MODE = 0x504
     P_SMP_IS_ALIVE = 0x505
     P_SMP_STOP_SECONDARIES = 0x506
+    P_SMP_CALL_EL1 = 0x507
+    P_SMP_CALL_SYNC_EL1 = 0x508
 
     P_HEAPBLOCK_ALLOC = 0x600
     P_MALLOC = 0x601
@@ -953,6 +955,14 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_SMP_IS_ALIVE, cpu)
     def smp_stop_secondaries(self, deep_sleep=False):
         self.request(self.P_SMP_STOP_SECONDARIES, deep_sleep)
+    def smp_call_el1(self, cpu, addr, *args):
+        if len(args) > 3:
+            raise ValueError("Too many arguments")
+        self.request(self.P_SMP_CALL_EL1, cpu, addr, *args)
+    def smp_call_sync_el1(self, cpu, addr, *args):
+        if len(args) > 3:
+            raise ValueError("Too many arguments")
+        return self.request(self.P_SMP_CALL_SYNC_EL1, cpu, addr, *args)
 
     def heapblock_alloc(self, size):
         return self.request(self.P_HEAPBLOCK_ALLOC, size)
