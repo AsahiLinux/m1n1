@@ -46,7 +46,7 @@ const char *init_cpu(void)
 
     /* This is performed unconditionally on all cores (necessary?) */
     if (is_ecore())
-        reg_set(SYS_IMP_APL_EHID4, HID4_DISABLE_DC_MVA | HID4_DISABLE_DC_SW_L2_OPS);
+        reg_set(SYS_IMP_APL_EHID4, EHID4_DISABLE_DC_MVA | EHID4_DISABLE_DC_SW_L2_OPS);
     else
         reg_set(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA | HID4_DISABLE_DC_SW_L2_OPS);
 
@@ -136,7 +136,7 @@ const char *init_cpu(void)
 
     // Enable IRQs (at least necessary on t600x)
     // XXX 0 causes pathological behavior in EL1, 2 works.
-    msr(s3_4_c15_c10_4, 2);
+    msr(SYS_IMP_APL_SIQ_CFG_EL1, 2);
 
     sysop("isb");
 

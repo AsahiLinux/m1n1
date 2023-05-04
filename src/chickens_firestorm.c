@@ -13,7 +13,7 @@ static void init_common_firestorm(void)
     reg_clr(SYS_IMP_APL_HID3, HID3_DEV_PCIE_THROTTLE_ENABLE | HID3_DISABLE_ARBITER_FIX_BIF_CRD);
 
     // "Post-silicon tuning of STNT widget contiguous counter threshold"
-    reg_mask(SYS_IMP_APL_HID4, HID4_STNT_COUNTER_THRESHOLD_MASK, HID4_STNT_COUNTER_THRESHOLD(3));
+    reg_mask(SYS_IMP_APL_HID4, HID4_CNF_CNTR_THRESH_MASK, HID4_CNF_CNTR_THRESH(3));
 
     // "Sibling Merge in LLC can cause UC load to violate ARM Memory Ordering Rules."
     reg_set(SYS_IMP_APL_HID5, HID5_DISABLE_FILL_2C_MERGE);
@@ -62,7 +62,7 @@ void init_t8103_firestorm(int rev)
 
     if (rev >= 0x10) {
         reg_set(SYS_IMP_APL_HID4,
-                HID4_ENABLE_LFSR_STALL_LOAD_PIPE_2_ISSUE | HID4_ENABLE_LFSR_STALL_STQ_REPLAY);
+                HID4_ENABLE_LFSR_STALL_LOAD_PIPE2_ISSUE | HID4_ENABLE_LFSR_STALL_STQ_REPLAY);
 
         reg_set(SYS_IMP_APL_HID9, HID9_FIX_BUG_55719865);
         reg_set(SYS_IMP_APL_HID11, HID11_ENABLE_FIX_UC_55719865);
@@ -86,7 +86,7 @@ void init_t6000_firestorm(int rev)
         reg_set(SYS_IMP_APL_HID1, HID1_ENABLE_MDSB_STALL_PIPELINE_ECO | HID1_ENABLE_BR_KILL_LIMIT);
 
         reg_set(SYS_IMP_APL_HID4,
-                HID4_ENABLE_LFSR_STALL_LOAD_PIPE_2_ISSUE | HID4_ENABLE_LFSR_STALL_STQ_REPLAY);
+                HID4_ENABLE_LFSR_STALL_LOAD_PIPE2_ISSUE | HID4_ENABLE_LFSR_STALL_STQ_REPLAY);
 
         reg_set(SYS_IMP_APL_HID18, HID18_SPAREBIT17);
     }
@@ -99,7 +99,7 @@ void init_t6001_firestorm(int rev)
     reg_set(SYS_IMP_APL_HID1, HID1_ENABLE_MDSB_STALL_PIPELINE_ECO);
 
     reg_set(SYS_IMP_APL_HID4,
-            HID4_ENABLE_LFSR_STALL_LOAD_PIPE_2_ISSUE | HID4_ENABLE_LFSR_STALL_STQ_REPLAY);
+            HID4_ENABLE_LFSR_STALL_LOAD_PIPE2_ISSUE | HID4_ENABLE_LFSR_STALL_STQ_REPLAY);
 
     reg_set(SYS_IMP_APL_HID9, HID9_FIX_BUG_55719865);
 
