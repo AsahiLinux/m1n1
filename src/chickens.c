@@ -135,7 +135,8 @@ const char *init_cpu(void)
     msr(SYS_IMP_APL_AMX_CTL_EL1, 0x100);
 
     // Enable IRQs (at least necessary on t600x)
-    msr(s3_4_c15_c10_4, 0);
+    // XXX 0 causes pathological behavior in EL1, 2 works.
+    msr(s3_4_c15_c10_4, 2);
 
     sysop("isb");
 
