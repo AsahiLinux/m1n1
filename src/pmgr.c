@@ -121,23 +121,30 @@ static int pmgr_set_mode_recursive(u8 die, u16 id, u8 target_mode, bool recurse)
     if (pmgr_find_device(id, &device))
         return -1;
 
-    if (!(device->flags & PMGR_FLAG_VIRTUAL)) {
+    if (target_mode == 0 && !(device->flags & PMGR_FLAG_VIRTUAL)) {
         uintptr_t addr = pmgr_device_get_addr(die, device);
         if (!addr)
             return -1;
         if (pmgr_set_mode(addr, target_mode))
             return -1;
     }
-    if (!recurse)
-        return 0;
 
-    for (int i = 0; i < 2; i++) {
-        if (device->parent[i]) {
-            u16 parent = FIELD_GET(PMGR_DEVICE_ID, device->parent[i]);
-            int ret = pmgr_set_mode_recursive(die, parent, target_mode, true);
-            if (ret < 0)
-                return ret;
+    if (recurse)
+        for (int i = 0; i < 2; i++) {
+            if (device->parent[i]) {
+                u16 parent = FIELD_GET(PMGR_DEVICE_ID, device->parent[i]);
+                int ret = pmgr_set_mode_recursive(die, parent, target_mode, true);
+                if (ret < 0)
+                    return ret;
+            }
         }
+
+    if (target_mode != 0 && !(device->flags & PMGR_FLAG_VIRTUAL)) {
+        uintptr_t addr = pmgr_device_get_addr(die, device);
+        if (!addr)
+            return -1;
+        if (pmgr_set_mode(addr, target_mode))
+            return -1;
     }
 
     return 0;
