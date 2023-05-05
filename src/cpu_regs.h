@@ -161,7 +161,7 @@
 #define HID4_FORCE_ST_LNCH_NO_OLDER_LD                           BIT(7)
 #define HID4_DISABLE_LD_RTR_AHEAD_OLDER_ST                       BIT(8)
 #define HID4_DISABLE_SPEC_LS_REDIRECT                            BIT(9)
-#define HID4_DISABLE_SPEC_LDREX_PLAN_B                           BIT(0)
+#define HID4_DISABLE_SPEC_LDREX_PLAN_B                           BIT(10)
 #define HID4_DISABLE_DC_MVA                                      BIT(11)
 #define HID4_ENABLE_CORE_CLK_OBS_TO_SOC                          BIT(12)
 #define HID4_RCC_FORCE_ALL_LSI_L6_CLKS_ON                        BIT(13)
