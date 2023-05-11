@@ -28,6 +28,10 @@ class CS42L84(I2CRegMapDev):
     REGMAP     = CS42L84Regs
     ADDRESSING = (0, 2)
 
+class SSM3515(I2CRegMapDev):
+    REGMAP     = SSM3515Regs
+    ADDRESSING = (0, 1)
+
 gpios = {}
 for node in u.adt["/arm-io"]:
     if node.name.endswith("gpio") or node.name.endswith("gpio0"):
@@ -49,6 +53,7 @@ for node in u.adt["/arm-io"]:
             "audio-control,tas5770": TAS5770,
             "audio-control,sn012776": SN012776,
             "audio-control,cs42l84": CS42L84,
+            "audio-control,ssm3515": SSM3515,
         }.get(devnode.compatible[0], None)
 
         if not dcls:
@@ -58,7 +63,7 @@ for node in u.adt["/arm-io"]:
         dev.node = devnode
         i2c[n].devs.append(dev)
 
-        if type(dev) in [TAS5770, SN012776]:
+        if type(dev) in [TAS5770, SN012776, SSM3515]:
             spks.append(dev)
         else:
             hp = dev
