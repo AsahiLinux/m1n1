@@ -939,7 +939,7 @@ class Call:
 
         cls, method = ALL_METHODS.get(self.msg, (None, None))
         if cls is None:
-            print(log + f"{self.in_size:#x}/{self.out_size:#x}")
+            print(log + f"unknown: {self.in_size:#x}/{self.out_size:#x}")
             return
 
         log += f"{cls.__name__}::{method.name}("
