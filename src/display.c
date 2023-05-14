@@ -462,6 +462,14 @@ int display_configure(const char *config)
 
 int display_init(void)
 {
+    // HACK: disable non-working display config on j473/j474s
+    int model_node = adt_path_offset(adt, "/");
+    if (model_node >= 0 && (adt_is_compatible(adt, model_node, "J473AP") ||
+                            adt_is_compatible(adt, model_node, "J474sAP"))) {
+        printf("display: skipping init on non-supported j473/j474s\n");
+        return 0;
+    }
+
     int node = adt_path_offset(adt, "/arm-io/disp0");
 
     if (node < 0) {
