@@ -168,6 +168,22 @@ def epic_service_reply(group, cmd):
         return x
     return f
 
+def epic_service_notify(group, cmd):
+    def f(x):
+        x.is_notify = True
+        x.group = group
+        x.cmd = cmd
+        return x
+    return f
+
+def epic_service_notify_ack(group, cmd):
+    def f(x):
+        x.is_notify_ack = True
+        x.group = group
+        x.cmd = cmd
+        return x
+    return f
+
 class EPICServiceTracer(Reloadable):
     def __init__(self, tracer, ep, key):
         self.tracer = tracer
@@ -176,6 +192,8 @@ class EPICServiceTracer(Reloadable):
 
         self.cmdmap = {}
         self.replymap = {}
+        self.notifymap = {}
+        self.notifyackmap = {}
         for name in dir(self):
             i = getattr(self, name)
             if not callable(i):
@@ -184,6 +202,10 @@ class EPICServiceTracer(Reloadable):
                 self.cmdmap[i.group, i.cmd] = getattr(self, name)
             if getattr(i, "is_reply", False):
                 self.replymap[i.group, i.cmd] = getattr(self, name)
+            if getattr(i, "is_notify", False):
+                self.notifymap[i.group, i.cmd] = getattr(self, name)
+            if getattr(i, "is_notify_ack", False):
+                self.notifyackmap[i.group, i.cmd] = getattr(self, name)
 
     def log(self, msg):
         self.ep.log(f"[{self.key}] {msg}")
@@ -204,6 +226,24 @@ class EPICServiceTracer(Reloadable):
         replyfn = self.replymap.get((sgroup, scmd), None)
         if replyfn:
             replyfn(sdata)
+        else:
+            self.log(f"< unknown group {sgroup}; command {scmd}")
+            if sdata:
+                chexdump(sdata, print_fn=self.log)
+
+    def handle_notify(self, sgroup, scmd, sdata):
+        notifyfn = self.notifymap.get((sgroup, scmd), None)
+        if notifyfn:
+            notifyfn(sdata)
+        else:
+            self.log(f"< unknown group {sgroup}; command {scmd}")
+            if sdata:
+                chexdump(sdata, print_fn=self.log)
+
+    def handle_notify_ack(self, sgroup, scmd, sdata):
+        notifyackfn = self.notifyackmap.get((sgroup, scmd), None)
+        if notifyackfn:
+            notifyackfn(sdata)
         else:
             self.log(f"< unknown group {sgroup}; command {scmd}")
             if sdata:
@@ -263,7 +303,10 @@ class EPICEp(AFKEp):
         elif sub.category == EPICCategory.NOTIFY:
             self.handle_notify(hdr, sub, fd)
         elif sub.category == EPICCategory.REPLY:
-            self.handle_reply(hdr, sub, fd)
+            if hdr.type == EPICType.NOTIFY_ACK:
+                self.handle_notify_ack(hdr, sub, fd)
+            else:
+                self.handle_reply(hdr, sub, fd)
         elif sub.category == EPICCategory.COMMAND:
             self.handle_cmd(hdr, sub, fd)
 
@@ -295,7 +338,29 @@ class EPICEp(AFKEp):
 
     def handle_notify(self, hdr, sub, fd):
         self.log(f"Notify:")
-        chexdump(fd.read(), print_fn=self.log)
+        data = fd.read()
+        rgroup, rcmd, rlen, rmagic = struct.unpack("<2xHIII", data[4:20])
+        if rmagic != 0x69706378:
+            self.log("Warning: Invalid EPICStandardService notify magic")
+        srv = self.chan_map.get(hdr.channel, None)
+        if srv:
+            srv.handle_notify(rgroup, rcmd, data[4:] if rlen else None)
+        else:
+            self.log(f"[???] < group {rgroup} command {rcmd}")
+            chexdump(data, print_fn=lambda msg: self.log(f"[???] {msg}"))
+
+    def handle_notify_ack(self, hdr, sub, fd):
+        self.log(f"NotifyAck:")
+        data = fd.read()
+        rgroup, rcmd, rlen, rmagic = struct.unpack("<2xHIII", data[4:20])
+        if rmagic != 0x69706378:
+            self.log("Warning: Invalid EPICStandardService notify magic")
+        srv = self.chan_map.get(hdr.channel, None)
+        if srv:
+            srv.handle_notify_ack(rgroup, rcmd, data[4:] if rlen else None)
+        else:
+            self.log(f"[???] > group {rgroup} command {rcmd}")
+            chexdump(data, print_fn=lambda msg: self.log(f"[???] {msg}"))
 
     def handle_reply(self, hdr, sub, fd):
         if sub.inline_len:
@@ -319,6 +384,9 @@ class EPICEp(AFKEp):
 
             srv = self.chan_map.get(hdr.channel, None)
             if srv:
+                if rgroup == 8 and rcmd == 10 and (rlen < 32 or (len(data) - 64) < 32):
+                    self.log(f"hotPlugDetectChangeOccurred: rlen:{rlen} len(data):{len(data)} rxlen:{cmd.rxlen}\ncmd:{cmd}")
+                    chexdump(data, print_fn=self.log)
                 srv.handle_reply(rgroup, rcmd, data[64:64+rlen] if rlen else None)
             else:
                 self.log(f"[???] < group {rgroup} command {rcmd}")
@@ -1070,12 +1138,239 @@ class DCPDPTXPortEpicTracer(EPICServiceTracer):
 
     @epic_service_cmd(8, 10)
     def hotPlugDetectChangeOccurred(self, data):
+        self.log(f"> hotPlugDetectChangeOccurred()")
+        chexdump(data, print_fn=self.log)
         unk = struct.unpack("<16x?15x", data)[0]
         self.log(f"> hotPlugDetectChangeOccurred(unk={unk})")
     @epic_service_reply(8, 10)
     def hotPlugDetectChangeOccurred_reply(self, data):
-        unk = struct.unpack("<16x?15x", data)[0]
-        self.log(f"< hotPlugDetectChangeOccurred(unk={unk})")
+        if len(data) < 32:
+            self.log(f"< hotPlugDetectChangeOccurred()")
+            chexdump(data, print_fn=self.log)
+        else:
+            unk = struct.unpack("<16x?15x", data)[0]
+            self.log(f"< hotPlugDetectChangeOccurred(unk={unk})")
+
+    @epic_service_notify(0, 0)
+    def apcall_activate(self, data):
+        self.log(f"< DPTX_APCALL_ACTIVATE)")
+    @epic_service_notify_ack(0, 0)
+    def apcall_activate_ack(self, data):
+        self.log(f"> DPTX_APCALL_ACTIVATE)")
+
+    @epic_service_notify(0, 1)
+    def apcall_deactivate(self, data):
+        self.log(f"< DPTX_APCALL_DEACTIVATE)")
+    @epic_service_notify_ack(0, 1)
+    def apcall_deactivate_ack(self, data):
+        self.log(f"> DPTX_APCALL_DEACTIVATE)")
+
+    @epic_service_notify(0, 2)
+    def apcall_max_drive_settings(self, data):
+        self.log(f"< DPTX_APCALL_GET_MAX_DRIVE_SETTINGS)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 2)
+    def apcall_max_drive_settings_ack(self, data):
+        self.log(f"> DPTX_APCALL_GET_MAX_DRIVE_SETTINGS)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 3)
+    def apcall_set_drive_settings(self, data):
+        self.log(f"< DPTX_APCALL_SET_DRIVE_SETTINGS)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 3)
+    def apcall_set_drive_settings_ack(self, data):
+        self.log(f"> DPTX_APCALL_SET_DRIVE_SETTINGS)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 4)
+    def apcall_get_drive_settings(self, data):
+        self.log(f"< DPTX_APCALL_GET_DRIVE_SETTINGS)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 4)
+    def apcall_get_drive_settings_ack(self, data):
+        self.log(f"> DPTX_APCALL_GET_DRIVE_SETTINGS)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 5)
+    def apcall_will_change_link_cfg(self, data):
+        self.log(f"< DPTX_APCALL_WILL_CHANGE_LINK_CONFIG)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 5)
+    def apcall_will_change_link_cfg_ack(self, data):
+        self.log(f"> DPTX_APCALL_WILL_CHANGE_LINK_CONFIG)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 6)
+    def apcall_did_change_link_cfg(self, data):
+        self.log(f"< DPTX_APCALL_DID_CHANGE_LINK_CONFIG)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 6)
+    def apcall_did_change_link_cfg_ack(self, data):
+        self.log(f"> DPTX_APCALL_DID_CHANGE_LINK_CONFIG)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 7)
+    def apcall_max_link_rate(self, data):
+        self.log(f"< DPTX_APCALL_GET_MAX_LINK_RATE)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 7)
+    def apcall_max_link_rate_ack(self, data):
+        self.log(f"> DPTX_APCALL_GET_MAX_LINK_RATE)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 8)
+    def apcall_get_link_rate(self, data):
+        self.log(f"< DPTX_APCALL_GET_LINK_RATE)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 8)
+    def apcall_get_link_rate_ack(self, data):
+        self.log(f"> DPTX_APCALL_GET_LINK_RATE)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 9)
+    def apcall_set_link_rate(self, data):
+        self.log(f"< DPTX_APCALL_SET_LINK_RATE)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 9)
+    def apcall_set_link_rate_ack(self, data):
+        self.log(f"> DPTX_APCALL_SET_LINK_RATE)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 10)
+    def apcall_max_lane_count(self, data):
+        self.log(f"< DPTX_APCALL_GET_MAX_LANE_COUNT)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 10)
+    def apcall_max_lane_count_ack(self, data):
+        self.log(f"> DPTX_APCALL_GET_MAX_LANE_COUNT)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 11)
+    def apcall_get_active_lane_count(self, data):
+        self.log(f"< DPTX_APCALL_GET_ACTIVE_LANE_COUNT)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 11)
+    def apcall_get_active_lane_count_ack(self, data):
+        self.log(f"> DPTX_APCALL_GET_ACTIVE_LANE_COUNT)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 12)
+    def apcall_set_active_lane_count(self, data):
+        self.log(f"< DPTX_APCALL_SET_ACTIVE_LANE_COUNT)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 12)
+    def apcall_set_active_lane_count_ack(self, data):
+        self.log(f"> DPTX_APCALL_SET_ACTIVE_LANE_COUNT)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 13)
+    def apcall_supports_downspread(self, data):
+        self.log(f"< DPTX_APCALL_GET_SUPPORTS_DOWN_SPREAD)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 13)
+    def apcall_supports_downspread_ack(self, data):
+        self.log(f"> DPTX_APCALL_GET_SUPPORTS_DOWN_SPREAD)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 14)
+    def apcall_get_downspread(self, data):
+        self.log(f"< DPTX_APCALL_GET_DOWN_SPREAD)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 14)
+    def apcall_get_downspread_ack(self, data):
+        self.log(f"> DPTX_APCALL_GET_DOWN_SPREAD)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 15)
+    def apcall_set_downspread(self, data):
+        self.log(f"< DPTX_APCALL_SET_DOWN_SPREAD)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 15)
+    def apcall_set_downspread_ack(self, data):
+        self.log(f"> DPTX_APCALL_SET_DOWN_SPREAD)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 16)
+    def apcall_supports_lane_map(self, data):
+        self.log(f"< DPTX_APCALL_GET_SUPPORTS_LANE_MAPPING)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 16)
+    def apcall_supports_lane_map_ack(self, data):
+        self.log(f"> DPTX_APCALL_GET_SUPPORTS_LANE_MAPPING)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 17)
+    def apcall_set_lane_map(self, data):
+        self.log(f"< DPTX_APCALL_SET_LANE_MAP)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 17)
+    def apcall_set_lane_map_ack(self, data):
+        self.log(f"> DPTX_APCALL_SET_LANE_MAP)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 18)
+    def apcall_supports_hpd(self, data):
+        self.log(f"< DPTX_APCALL_GET_SUPPORTS_HPD)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 18)
+    def apcall_supports_hpd_ack(self, data):
+        self.log(f"> DPTX_APCALL_GET_SUPPORTS_HPD)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 19)
+    def apcall_force_hpd(self, data):
+        self.log(f"< DPTX_APCALL_FORCE_HOTPLUG_DETECT)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 19)
+    def apcall_force_hpd_ack(self, data):
+        self.log(f"> DPTX_APCALL_FORCE_HOTPLUG_DETECT)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 20)
+    def apcall_inactive_sink(self, data):
+        self.log(f"< DPTX_APCALL_INACTIVE_SINK_DETECTED)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 20)
+    def apcall_inactive_sink_ack(self, data):
+        self.log(f"> DPTX_APCALL_INACTIVE_SINK_DETECTED)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 21)
+    def apcall_set_tiled_hints(self, data):
+        self.log(f"< DPTX_APCALL_SET_TILED_DISPLAY_HINTS)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 21)
+    def apcall_set_tiled_hints_ack(self, data):
+        self.log(f"> DPTX_APCALL_SET_TILED_DISPLAY_HINTS)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 22)
+    def apcall_dev_not_responding(self, data):
+        self.log(f"< DPTX_APCALL_DEVICE_NOT_RESPONDING)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 22)
+    def apcall_dev_not_responding_ack(self, data):
+        self.log(f"> DPTX_APCALL_DEVICE_NOT_RESPONDING)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 23)
+    def apcall_dev_busy_timeout(self, data):
+        self.log(f"< DPTX_APCALL_DEVICE_BUSY_TIMEOUT)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 23)
+    def apcall_dev_busy_timeout_ack(self, data):
+        self.log(f"> DPTX_APCALL_DEVICE_BUSY_TIMEOUT)")
+        chexdump(data, print_fn=self.log)
+
+    @epic_service_notify(0, 24)
+    def apcall_dev_not_started(self, data):
+        self.log(f"< APCALL_DEVICE_NOT_STARTED)")
+        chexdump(data, print_fn=self.log)
+    @epic_service_notify_ack(0, 24)
+    def apcall_dev_not_started_ack(self, data):
+        self.log(f"> APCALL_DEVICE_NOT_STARTED)")
+        chexdump(data, print_fn=self.log)
 
 class DPTXPortService(EPICEp):
     NAME = "dptxport"
