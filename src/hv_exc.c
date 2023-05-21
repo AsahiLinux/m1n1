@@ -283,13 +283,11 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         case SYSREG_ISS(SYS_IMP_APL_PMCR0):
             if (is_read) {
                 u64 val = (mrs(SYS_IMP_APL_PMCR0) & ~PMCR0_IMODE_MASK) | PERCPU(pmc_irq_mode);
-                regs[rt] =
-                    val | (PERCPU(pmc_pending) ? PMCR0_IACT : 0) | PERCPU(exc_entry_pmcr0_cnt);
+                regs[rt] = val | (PERCPU(pmc_pending) ? PMCR0_IACT : 0);
             } else {
                 PERCPU(pmc_pending) = !!(regs[rt] & PMCR0_IACT);
                 PERCPU(pmc_irq_mode) = regs[rt] & PMCR0_IMODE_MASK;
-                PERCPU(exc_entry_pmcr0_cnt) = regs[rt] & PMCR0_CNT_MASK;
-                msr(SYS_IMP_APL_PMCR0, regs[rt] & ~PERCPU(exc_entry_pmcr0_cnt));
+                msr(SYS_IMP_APL_PMCR0, regs[rt]);
             }
             return true;
 
