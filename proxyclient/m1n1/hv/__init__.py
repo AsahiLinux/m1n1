@@ -1429,9 +1429,9 @@ class HV(Reloadable):
         self.u.msr(MDSCR_EL1, MDSCR(MDE=1).value)
 
         # Enable AMX
-        amx_ctl = AMX_CTL(self.u.mrs(AMX_CTL_EL1))
+        amx_ctl = AMX_CONFIG(self.u.mrs(AMX_CONFIG_EL1))
         amx_ctl.EN_EL1 = 1
-        self.u.msr(AMX_CTL_EL1, amx_ctl.value)
+        self.u.msr(AMX_CONFIG_EL1, amx_ctl.value)
 
         # Set guest AP keys
         self.u.msr(VMKEYLO_EL2, 0x4E7672476F6E6147)

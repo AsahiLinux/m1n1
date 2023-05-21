@@ -291,7 +291,7 @@ class HACR(Register64):
     TRAP_UPM = 58
     TRAP_s3_1z7_c15_cx_3 = 59
 
-class AMX_CTL(Register64):
+class AMX_CONFIG(Register64):
     EN = 63
     EN_EL1 = 62
 
