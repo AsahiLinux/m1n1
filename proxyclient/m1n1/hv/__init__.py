@@ -1383,6 +1383,7 @@ class HV(Reloadable):
         self.iface.set_handler(START.HV, HV_EVENT.WDT_BARK, self.handle_bark)
         self.iface.set_handler(START.HV, HV_EVENT.CPU_SWITCH, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.VIRTIO, self.handle_virtio)
+        self.iface.set_handler(START.HV, HV_EVENT.PANIC, self.handle_bark)
         self.iface.set_event_handler(EVENT.MMIOTRACE, self.handle_mmiotrace)
         self.iface.set_event_handler(EVENT.IRQTRACE, self.handle_irqtrace)
 

@@ -48,6 +48,7 @@ typedef enum _hv_entry_type {
     HV_WDT_BARK,
     HV_CPU_SWITCH,
     HV_VIRTIO,
+    HV_PANIC,
 } hv_entry_type;
 
 /* VM */
@@ -87,6 +88,14 @@ void hv_wdt_init(void);
 void hv_wdt_start(int cpu);
 void hv_wdt_stop(void);
 void hv_wdt_breadcrumb(char c);
+void hv_do_panic(void);
+
+#define hv_panic(fmt, ...)                                                                         \
+    do {                                                                                           \
+        debug_printf("HV panic:" fmt, ##__VA_ARGS__);                                              \
+        hv_do_panic();                                                                             \
+        flush_and_reboot();                                                                        \
+    } while (0)
 
 /* Utilities */
 void hv_write_hcr(u64 val);

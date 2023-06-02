@@ -263,8 +263,8 @@ void hv_rendezvous(void)
             return;
     }
 
-    panic("HV: Failed to rendezvous, missing CPUs: 0x%lx\n",
-          __atomic_load_n(&hv_cpus_in_guest, __ATOMIC_ACQUIRE));
+    hv_panic("HV: Failed to rendezvous, missing CPUs: 0x%lx (current: %d)\n",
+             __atomic_load_n(&hv_cpus_in_guest, __ATOMIC_ACQUIRE), smp_id());
 }
 
 bool hv_switch_cpu(int cpu)
@@ -369,6 +369,8 @@ void hv_tick(struct exc_info *ctx)
     hv_wdt_pet();
     iodev_handle_events(uartproxy_iodev);
     if (iodev_can_read(uartproxy_iodev)) {
+        printf("HV: User interrupt\n");
+        iodev_console_flush();
         if (hv_pinned_cpu == -1 || hv_pinned_cpu == smp_id())
             hv_exc_proxy(ctx, START_HV, HV_USER_INTERRUPT, NULL);
     }

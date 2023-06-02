@@ -3,6 +3,7 @@
 #include "hv.h"
 #include "adt.h"
 #include "smp.h"
+#include "string.h"
 #include "uart.h"
 #include "utils.h"
 
@@ -12,24 +13,60 @@ static bool hv_wdt_active = false;
 static bool hv_wdt_enabled = false;
 static volatile u64 hv_wdt_timestamp = 0;
 static u64 hv_wdt_timeout = 0;
-static volatile u64 hv_wdt_breadcrumbs;
+static volatile u64 hv_wdt_breadcrumbs[MAX_CPUS] = {0};
 
 static int hv_wdt_cpu;
 
 static u64 cpu_dbg_base = 0;
 
+void hv_do_panic(void)
+{
+    printf("Breadcrumbs:\n");
+    for (int cpu = 0; cpu < MAX_CPUS; cpu++) {
+        if (cpu > 0 && !smp_is_alive(cpu))
+            continue;
+
+        u64 tmp = hv_wdt_breadcrumbs[cpu];
+
+        printf("CPU %2d: ", cpu);
+        for (int i = 56; i >= 0; i -= 8) {
+            char c = (tmp >> i) & 0xff;
+            if (c)
+                printf("%c", c);
+        }
+        printf("\n");
+    }
+
+    printf("Attempting to enter proxy\n");
+    iodev_console_flush();
+
+    struct uartproxy_msg_start start = {
+        .reason = START_HV,
+        .code = HV_WDT_BARK,
+    };
+
+    uartproxy_run(&start);
+}
+
 void hv_wdt_bark(void)
 {
-    u64 tmp = hv_wdt_breadcrumbs;
     uart_puts("HV watchdog: bark!");
 
     uart_printf("Breadcrumbs: ");
-    for (int i = 56; i >= 0; i -= 8) {
-        char c = (tmp >> i) & 0xff;
-        if (c)
-            uart_putchar(c);
+    for (int cpu = 0; cpu < MAX_CPUS; cpu++) {
+        if (cpu > 0 && !smp_is_alive(cpu))
+            continue;
+
+        u64 tmp = hv_wdt_breadcrumbs[cpu];
+
+        uart_printf("CPU %2d: ", cpu);
+        for (int i = 56; i >= 0; i -= 8) {
+            char c = (tmp >> i) & 0xff;
+            if (c)
+                uart_putchar(c);
+        }
+        uart_putchar('\n');
     }
-    uart_putchar('\n');
 
     uart_puts("Attempting to enter proxy");
 
@@ -82,10 +119,11 @@ void hv_wdt_resume(void)
 
 void hv_wdt_breadcrumb(char c)
 {
-    u64 tmp = hv_wdt_breadcrumbs;
+    u64 cpu = mrs(TPIDR_EL2);
+    u64 tmp = hv_wdt_breadcrumbs[cpu];
     tmp <<= 8;
     tmp |= c;
-    hv_wdt_breadcrumbs = tmp;
+    hv_wdt_breadcrumbs[cpu] = tmp;
     sysop("dmb ish");
 }
 
@@ -112,7 +150,7 @@ void hv_wdt_start(int cpu)
         return;
 
     hv_wdt_cpu = cpu;
-    hv_wdt_breadcrumbs = 0;
+    memset((void *)hv_wdt_breadcrumbs, 0, sizeof(hv_wdt_breadcrumbs));
     hv_wdt_timeout = mrs(CNTFRQ_EL0) * WDT_TIMEOUT;
     hv_wdt_pet();
     hv_wdt_active = true;
