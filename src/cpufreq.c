@@ -6,8 +6,7 @@
 #include "soc.h"
 #include "utils.h"
 
-#define CLUSTER_PSTATE 0x20
-#define CLUSTER_CONFIG 0x6b8
+#define CLUSTER_PSTATE 0x20020
 
 #define CLUSTER_PSTATE_BUSY     BIT(31)
 #define CLUSTER_PSTATE_SET      BIT(25)
@@ -15,10 +14,6 @@
 #define CLUSTER_PSTATE_UNK_M1   BIT(20)
 #define CLUSTER_PSTATE_DESIRED2 GENMASK(16, 12)
 #define CLUSTER_PSTATE_DESIRED1 GENMASK(4, 0)
-
-#define CLUSTER_CONFIG_ENABLE BIT(63)
-#define CLUSTER_CONFIG_DVMR1  BIT(32)
-#define CLUSTER_CONFIG_DVMR2  BIT(31)
 
 #define CLUSTER_SWITCH_TIMEOUT 100
 
@@ -31,17 +26,7 @@ struct cluster_t {
 
 int cpufreq_init_cluster(const struct cluster_t *cluster)
 {
-    u64 enable = CLUSTER_CONFIG_ENABLE;
-    if (cluster->dvmr)
-        enable |= CLUSTER_CONFIG_DVMR1 | CLUSTER_CONFIG_DVMR2;
-
-    u64 val = read64(cluster->base + CLUSTER_CONFIG);
-    if ((val & enable) != enable) {
-        printf("cpufreq: Configuring cluster %s (dvmr: %d)\n", cluster->name, cluster->dvmr);
-        write64(cluster->base + CLUSTER_CONFIG, val | enable);
-    }
-
-    val = read64(cluster->base + CLUSTER_PSTATE);
+    u64 val = read64(cluster->base + CLUSTER_PSTATE);
 
     if (FIELD_GET(CLUSTER_PSTATE_DESIRED1, val) != cluster->boot_pstate) {
         val &= ~CLUSTER_PSTATE_DESIRED1;
@@ -91,38 +76,38 @@ void cpufreq_fixup_cluster(const struct cluster_t *cluster)
 }
 
 static const struct cluster_t t8103_clusters[] = {
-    {"ECPU", 0x210e20000, false, 5},
-    {"PCPU", 0x211e20000, true, 7},
+    {"ECPU", 0x210e00000, false, 5},
+    {"PCPU", 0x211e00000, true, 7},
     {},
 };
 
 static const struct cluster_t t6000_clusters[] = {
-    {"ECPU0", 0x210e20000, false, 5},
-    {"PCPU0", 0x211e20000, false, 7},
-    {"PCPU1", 0x212e20000, false, 7},
+    {"ECPU0", 0x210e00000, false, 5},
+    {"PCPU0", 0x211e00000, false, 7},
+    {"PCPU1", 0x212e00000, false, 7},
     {},
 };
 
 static const struct cluster_t t6002_clusters[] = {
-    {"ECPU0", 0x0210e20000, false, 5},
-    {"PCPU0", 0x0211e20000, false, 7},
-    {"PCPU1", 0x0212e20000, false, 7},
-    {"ECPU1", 0x2210e20000, false, 5},
-    {"PCPU2", 0x2211e20000, false, 7},
-    {"PCPU3", 0x2212e20000, false, 7},
+    {"ECPU0", 0x0210e00000, false, 5},
+    {"PCPU0", 0x0211e00000, false, 7},
+    {"PCPU1", 0x0212e00000, false, 7},
+    {"ECPU1", 0x2210e00000, false, 5},
+    {"PCPU2", 0x2211e00000, false, 7},
+    {"PCPU3", 0x2212e00000, false, 7},
     {},
 };
 
 static const struct cluster_t t8112_clusters[] = {
-    {"ECPU", 0x210e20000, false, 7},
-    {"PCPU", 0x211e20000, true, 6},
+    {"ECPU", 0x210e00000, false, 7},
+    {"PCPU", 0x211e00000, true, 6},
     {},
 };
 
 static const struct cluster_t t6020_clusters[] = {
-    {"ECPU0", 0x210e20000, false, 5},
-    {"PCPU0", 0x211e20000, false, 6},
-    {"PCPU1", 0x212e20000, false, 6},
+    {"ECPU0", 0x210e00000, false, 5},
+    {"PCPU0", 0x211e00000, false, 6},
+    {"PCPU1", 0x212e00000, false, 6},
     {},
 };
 
