@@ -394,3 +394,17 @@ int pmgr_init(void)
 
     return 0;
 }
+
+u32 pmgr_get_feature(const char *name)
+{
+    u32 val = 0;
+
+    int node = adt_path_offset(adt, "/arm-io/pmgr");
+    if (node < 0)
+        return 0;
+
+    if (ADT_GETPROP(adt, node, name, &val) < 0)
+        return 0;
+
+    return val;
+}

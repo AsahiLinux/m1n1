@@ -4,6 +4,7 @@
 #include "adt.h"
 #include "firmware.h"
 #include "soc.h"
+#include "pmgr.h"
 #include "utils.h"
 
 #define CLUSTER_PSTATE 0x20020

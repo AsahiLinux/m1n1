@@ -23,4 +23,6 @@ int pmgr_adt_reset(const char *path);
 
 int pmgr_reset(int die, const char *name);
 
+u32 pmgr_get_feature(const char *name);
+
 #endif
