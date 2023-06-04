@@ -3,18 +3,22 @@
 #include "cpufreq.h"
 #include "adt.h"
 #include "firmware.h"
-#include "soc.h"
 #include "pmgr.h"
+#include "soc.h"
 #include "utils.h"
 
 #define CLUSTER_PSTATE 0x20020
 
-#define CLUSTER_PSTATE_BUSY     BIT(31)
-#define CLUSTER_PSTATE_SET      BIT(25)
-#define CLUSTER_PSTATE_UNK_M2   BIT(22)
-#define CLUSTER_PSTATE_UNK_M1   BIT(20)
-#define CLUSTER_PSTATE_DESIRED2 GENMASK(16, 12)
-#define CLUSTER_PSTATE_DESIRED1 GENMASK(4, 0)
+#define CLUSTER_PSTATE_FIXED_FREQ_PLL_RECLOCK BIT(42)
+#define CLUSTER_PSTATE_BUSY                   BIT(31)
+#define CLUSTER_PSTATE_SET                    BIT(25)
+#define CLUSTER_PSTATE_M2_APSC_DIS            BIT(23)
+#define CLUSTER_PSTATE_M1_APSC_DIS            BIT(22)
+#define CLUSTER_PSTATE_UNK_M2                 BIT(22)
+#define CLUSTER_PSTATE_UNK_M1                 BIT(20)
+#define CLUSTER_PSTATE_DESIRED2               GENMASK(15, 12)
+#define CLUSTER_PSTATE_APSC_BUSY              BIT(7)
+#define CLUSTER_PSTATE_DESIRED1               GENMASK(4, 0)
 
 #define CLUSTER_SWITCH_TIMEOUT 100
 
@@ -22,18 +26,30 @@ struct cluster_t {
     const char *name;
     u64 base;
     bool pcluster;
-    uint32_t boot_pstate;
+    uint32_t apsc_pstate;
+    uint32_t default_pstate;
 };
 
-int cpufreq_init_cluster(const struct cluster_t *cluster)
+struct feat_t {
+    const char *name;
+    u64 offset;
+    u64 clear;
+    u64 set;
+    u64 wait;
+    bool pcluster_only;
+};
+
+static int set_pstate(const struct cluster_t *cluster, uint32_t pstate)
 {
     u64 val = read64(cluster->base + CLUSTER_PSTATE);
 
-    if (FIELD_GET(CLUSTER_PSTATE_DESIRED1, val) != cluster->boot_pstate) {
+    if (FIELD_GET(CLUSTER_PSTATE_DESIRED1, val) != pstate) {
         val &= ~CLUSTER_PSTATE_DESIRED1;
-        val |= CLUSTER_PSTATE_SET | FIELD_PREP(CLUSTER_PSTATE_DESIRED1, cluster->boot_pstate);
-        printf("cpufreq: Switching cluster %s to P-State %d\n", cluster->name,
-               cluster->boot_pstate);
+        val |= CLUSTER_PSTATE_SET | FIELD_PREP(CLUSTER_PSTATE_DESIRED1, pstate);
+        if (chip_id == T8103 || chip_id <= T6002) {
+            val &= ~CLUSTER_PSTATE_DESIRED2;
+            val |= CLUSTER_PSTATE_SET | FIELD_PREP(CLUSTER_PSTATE_DESIRED2, pstate);
+        }
         write64(cluster->base + CLUSTER_PSTATE, val);
         if (poll32(cluster->base + CLUSTER_PSTATE, CLUSTER_PSTATE_BUSY, 0, CLUSTER_SWITCH_TIMEOUT) <
             0) {
@@ -41,6 +57,62 @@ int cpufreq_init_cluster(const struct cluster_t *cluster)
             return -1;
         }
     }
+
+    return 0;
+}
+
+int cpufreq_init_cluster(const struct cluster_t *cluster, const struct feat_t *features)
+{
+    /* Reset P-State to the APSC p-state */
+
+    if (cluster->apsc_pstate && set_pstate(cluster, cluster->apsc_pstate))
+        return -1;
+
+    /* CPU complex features */
+
+    for (; features->name; features++) {
+        if (features->pcluster_only && !cluster->pcluster)
+            continue;
+
+        u64 reg = cluster->base + features->offset;
+
+        if (pmgr_get_feature(features->name))
+            mask64(reg, features->clear, features->set);
+        else
+            mask64(reg, features->set, features->clear);
+
+        if (features->wait && poll32(reg, features->wait, 0, CLUSTER_SWITCH_TIMEOUT) < 0) {
+            printf("cpufreq: Timed out waiting for feature %s on cluster %s\n", features->name,
+                   cluster->name);
+            return -1;
+        }
+    }
+
+    /* Unknown */
+    write64(cluster->base + 0x440f8, 1);
+
+    /* Initialize APSC */
+    set64(cluster->base + 0x200f8, BIT(40));
+    switch (chip_id) {
+        case T8103: {
+            u64 lo = read64(cluster->base + 0x70000 + cluster->apsc_pstate * 0x20);
+            u64 hi = read64(cluster->base + 0x70008 + cluster->apsc_pstate * 0x20);
+            write64(cluster->base + 0x70210, lo);
+            write64(cluster->base + 0x70218, hi);
+            break;
+        }
+        case T8112: {
+            u64 lo = read64(cluster->base + 0x78000 + cluster->apsc_pstate * 0x40);
+            u64 hi = read64(cluster->base + 0x78008 + cluster->apsc_pstate * 0x40);
+            write64(cluster->base + 0x7ffe8, lo);
+            write64(cluster->base + 0x7fff0, hi);
+            break;
+        }
+    }
+
+    /* Default P-State */
+    if (cluster->default_pstate && set_pstate(cluster, cluster->default_pstate))
+        return -1;
 
     return 0;
 }
@@ -77,38 +149,38 @@ void cpufreq_fixup_cluster(const struct cluster_t *cluster)
 }
 
 static const struct cluster_t t8103_clusters[] = {
-    {"ECPU", 0x210e00000, false, 5},
-    {"PCPU", 0x211e00000, true, 7},
+    {"ECPU", 0x210e00000, false, 1, 5},
+    {"PCPU", 0x211e00000, true, 1, 7},
     {},
 };
 
 static const struct cluster_t t6000_clusters[] = {
-    {"ECPU0", 0x210e00000, false, 5},
-    {"PCPU0", 0x211e00000, true, 7},
-    {"PCPU1", 0x212e00000, true, 7},
+    {"ECPU0", 0x210e00000, false, 1, 5},
+    {"PCPU0", 0x211e00000, true, 1, 7},
+    {"PCPU1", 0x212e00000, true, 1, 7},
     {},
 };
 
 static const struct cluster_t t6002_clusters[] = {
-    {"ECPU0", 0x0210e00000, false, 5},
-    {"PCPU0", 0x0211e00000, true, 7},
-    {"PCPU1", 0x0212e00000, true, 7},
-    {"ECPU1", 0x2210e00000, false, 5},
-    {"PCPU2", 0x2211e00000, true, 7},
-    {"PCPU3", 0x2212e00000, true, 7},
+    {"ECPU0", 0x0210e00000, false, 1, 5},
+    {"PCPU0", 0x0211e00000, true, 1, 7},
+    {"PCPU1", 0x0212e00000, true, 1, 7},
+    {"ECPU1", 0x2210e00000, false, 1, 5},
+    {"PCPU2", 0x2211e00000, true, 1, 7},
+    {"PCPU3", 0x2212e00000, true, 1, 7},
     {},
 };
 
 static const struct cluster_t t8112_clusters[] = {
-    {"ECPU", 0x210e00000, false, 7},
-    {"PCPU", 0x211e00000, true, 6},
+    {"ECPU", 0x210e00000, false, 1, 7},
+    {"PCPU", 0x211e00000, true, 1, 6},
     {},
 };
 
 static const struct cluster_t t6020_clusters[] = {
-    {"ECPU0", 0x210e00000, false, 5},
-    {"PCPU0", 0x211e00000, true, 6},
-    {"PCPU1", 0x212e00000, true, 6},
+    {"ECPU0", 0x210e00000, false, 1, 5},
+    {"PCPU0", 0x211e00000, true, 1, 6},
+    {"PCPU1", 0x212e00000, true, 1, 6},
     {},
 };
 
@@ -133,18 +205,69 @@ const struct cluster_t *cpufreq_get_clusters(void)
     }
 }
 
+static const struct feat_t t8103_features[] = {
+    {"cpu-apsc", CLUSTER_PSTATE, CLUSTER_PSTATE_M1_APSC_DIS, 0, CLUSTER_PSTATE_APSC_BUSY, false},
+    {"ppt-thrtl", 0x48400, 0, BIT(63), 0, false},
+    {"llc-thrtl", 0x40240, 0, BIT(63), 0, false},
+    {"amx-thrtl", 0x40250, 0, BIT(63), 0, false},
+    {"cpu-fixed-freq-pll-relock", CLUSTER_PSTATE, 0, CLUSTER_PSTATE_FIXED_FREQ_PLL_RECLOCK, 0,
+     false},
+    {},
+};
+
+static const struct feat_t t8112_features[] = {
+    {"cpu-apsc", CLUSTER_PSTATE, CLUSTER_PSTATE_M2_APSC_DIS, 0, CLUSTER_PSTATE_APSC_BUSY, false},
+    {"ppt-thrtl", 0x40270, 0, BIT(63), 0, false},
+    {"ppt-thrtl", 0x48408, 0, BIT(63), 0, false},
+    {"ppt-thrtl", 0x48b30, 0, BIT(0), 0, true},
+    {"ppt-thrtl", 0x20078, 0, BIT(0), 0, true},
+    {"ppt-thrtl", 0x48400, 0, BIT(63), 0, false},
+    {"amx-thrtl", 0x40250, 0, BIT(63), 0, false},
+    {"cpu-fixed-freq-pll-relock", CLUSTER_PSTATE, 0, CLUSTER_PSTATE_FIXED_FREQ_PLL_RECLOCK, 0,
+     false},
+    {},
+};
+
+static const struct feat_t t6020_features[] = {
+    {"cpu-apsc", CLUSTER_PSTATE, CLUSTER_PSTATE_M2_APSC_DIS, 0, CLUSTER_PSTATE_APSC_BUSY, false},
+    {"ppt-thrtl", 0x48400, 0, BIT(63), 0, false},
+    {"llc-thrtl", 0x40270, 0, BIT(63), 0, false},
+    {"amx-thrtl", 0x40250, 0, BIT(63), 0, false},
+    {"cpu-fixed-freq-pll-relock", CLUSTER_PSTATE, 0, CLUSTER_PSTATE_FIXED_FREQ_PLL_RECLOCK, 0,
+     false},
+    {},
+};
+
+const struct feat_t *cpufreq_get_features(void)
+{
+    switch (chip_id) {
+        case T8103:
+        case T6000 ... T6002:
+            return t8103_features;
+        case T8112:
+            return t8112_features;
+        case T6020:
+        case T6021:
+            return t6020_features;
+        default:
+            printf("cpufreq: Chip 0x%x is unsupported\n", chip_id);
+            return NULL;
+    }
+}
+
 int cpufreq_init(void)
 {
     printf("cpufreq: Initializing clusters\n");
 
     const struct cluster_t *cluster = cpufreq_get_clusters();
+    const struct feat_t *features = cpufreq_get_features();
 
-    if (!cluster)
+    if (!cluster || !features)
         return -1;
 
     bool err = false;
     while (cluster->base) {
-        err |= cpufreq_init_cluster(cluster++);
+        err |= cpufreq_init_cluster(cluster++, features);
     }
 
     return err ? -1 : 0;
