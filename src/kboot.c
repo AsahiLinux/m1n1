@@ -6,7 +6,6 @@
 #include "adt.h"
 #include "assert.h"
 #include "clk.h"
-#include "cpufreq.h"
 #include "dapf.h"
 #include "devicetree.h"
 #include "exception.h"
@@ -1982,7 +1981,6 @@ int kboot_boot(void *kernel)
 {
     tunables_apply_static();
     clk_init();
-    cpufreq_init();
 
     usb_init();
     pcie_init();

@@ -169,6 +169,7 @@ typedef enum {
     P_DAPF_INIT_ALL = 0x1200,
     P_DAPF_INIT,
 
+    P_CPUFREQ_INIT = 0x1300,
 } ProxyOp;
 
 #define S_OK     0

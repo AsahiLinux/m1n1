@@ -7,6 +7,7 @@
 #include "adt.h"
 #include "assert.h"
 #include "chainload.h"
+#include "cpufreq.h"
 #include "display.h"
 #include "heapblock.h"
 #include "kboot.h"
@@ -284,6 +285,7 @@ int payload_run(void)
     }
 
     if (kernel && fdt) {
+        cpufreq_init();
         smp_start_secondaries();
         if (enable_tso) {
 

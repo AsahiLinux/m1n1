@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "proxy.h"
+#include "cpufreq.h"
 #include "dapf.h"
 #include "dart.h"
 #include "display.h"
@@ -586,6 +587,10 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_DAPF_INIT:
             reply->retval = dapf_init((const char *)request->args[0]);
+            break;
+
+        case P_CPUFREQ_INIT:
+            reply->retval = cpufreq_init();
             break;
 
         default:
