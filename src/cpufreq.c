@@ -21,7 +21,7 @@
 struct cluster_t {
     const char *name;
     u64 base;
-    bool dvmr;
+    bool pcluster;
     uint32_t boot_pstate;
 };
 
@@ -84,18 +84,18 @@ static const struct cluster_t t8103_clusters[] = {
 
 static const struct cluster_t t6000_clusters[] = {
     {"ECPU0", 0x210e00000, false, 5},
-    {"PCPU0", 0x211e00000, false, 7},
-    {"PCPU1", 0x212e00000, false, 7},
+    {"PCPU0", 0x211e00000, true, 7},
+    {"PCPU1", 0x212e00000, true, 7},
     {},
 };
 
 static const struct cluster_t t6002_clusters[] = {
     {"ECPU0", 0x0210e00000, false, 5},
-    {"PCPU0", 0x0211e00000, false, 7},
-    {"PCPU1", 0x0212e00000, false, 7},
+    {"PCPU0", 0x0211e00000, true, 7},
+    {"PCPU1", 0x0212e00000, true, 7},
     {"ECPU1", 0x2210e00000, false, 5},
-    {"PCPU2", 0x2211e00000, false, 7},
-    {"PCPU3", 0x2212e00000, false, 7},
+    {"PCPU2", 0x2211e00000, true, 7},
+    {"PCPU3", 0x2212e00000, true, 7},
     {},
 };
 
@@ -107,8 +107,8 @@ static const struct cluster_t t8112_clusters[] = {
 
 static const struct cluster_t t6020_clusters[] = {
     {"ECPU0", 0x210e00000, false, 5},
-    {"PCPU0", 0x211e00000, false, 6},
-    {"PCPU1", 0x212e00000, false, 6},
+    {"PCPU0", 0x211e00000, true, 6},
+    {"PCPU1", 0x212e00000, true, 6},
     {},
 };
 
