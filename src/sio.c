@@ -204,6 +204,7 @@ int sio_setup_fwdata(void)
         if (len % (rule->blobsize + 4) != 0) {
             printf("%s: bad length %d of ADT property '%s', expected multiple of %d + 4\n",
                    __func__, len, rule->prop, rule->blobsize);
+            goto err_inval;
         }
 
         for (u32 off = 0; off + rule->blobsize <= len; off += (rule->blobsize + 4)) {
