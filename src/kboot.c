@@ -1727,7 +1727,7 @@ static int dt_set_display(void)
 
 static int dt_set_sio_fwdata(void)
 {
-    const char *path = "/soc/sio";
+    const char *path = "sio";
 
     int node = fdt_path_offset(dt, path);
     if (node < 0) {
@@ -2097,7 +2097,7 @@ int kboot_prepare_dt(void *fdt)
         return -1;
     if (dt_disable_missing_devs("i2c", "i2c@", 8))
         return -1;
-    if (dt_reserve_asc_firmware("/arm-io/sio", "/soc/sio"))
+    if (dt_reserve_asc_firmware("/arm-io/sio", "sio"))
         return -1;
     if (dt_set_sio_fwdata())
         return -1;
