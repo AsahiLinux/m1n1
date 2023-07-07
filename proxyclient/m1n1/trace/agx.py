@@ -404,6 +404,7 @@ class AGXTracer(ASCTracer):
         self.redump = False
         self.skip_asc_tracing = True
         self.cmd_dump_dir = None
+        self.buffer_mgr_map = {}
 
         self.vmcnt = 0
         self.readlog = {}
@@ -722,6 +723,16 @@ class AGXTracer(ASCTracer):
                 elif msg.queue_type == 0:
                     self.handle_ta(wi)
                     self.queue_ta = queue
+        elif msg.__class__.__name__ == "GrowTVBMsg":
+            addr = self.buffer_mgr_map.get(msg.bm_id, 0)
+            if addr:
+                info = BufferManagerInfo.parse_stream(self.get_stream(0, addr))
+                self.log(f"BM info: {info}")
+        elif msg.__class__.__name__ == "DC_GrowTVBAck":
+            addr = self.buffer_mgr_map.get(msg.bm_id, 0)
+            if addr:
+                info = BufferManagerInfo.parse_stream(self.get_stream(0, addr))
+                self.log(f"BM info: {info}")
         return True
 
     def handle_event(self, msg):
@@ -802,6 +813,7 @@ class AGXTracer(ASCTracer):
             #chexdump(kread(wi0.addr, 0x600), print_fn=self.log)
             self.log(f"  context_id = {context:#x}")
             self.dump_buffer_manager(wi0.buffer_mgr, kread, read)
+            self.buffer_mgr_map[wi0.buffer_mgr_slot] = wi0.buffer_mgr_addr
             #self.log(f"  unk_emptybuf @ {wi0.unk_emptybuf_addr:#x}:")
             #chexdump(kread(wi0.unk_emptybuf_addr, 0x1000), print_fn=self.log)
 
