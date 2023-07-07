@@ -5,6 +5,7 @@ from .object import GPUObject, GPUAllocator
 from .initdata import build_initdata
 from .channels import *
 from .event import GPUEventManager
+from ..constructutils import Ver
 from ..proxy import IODEV
 from ..malloc import Heap
 from ..hw.uat import UAT, MemoryAttr
@@ -255,11 +256,15 @@ class AGX:
         self.recover()
 
     def show_pending_stamps(self):
+        if Ver.check("V >= V13_5B4"):
+            info_bits = 4
+        else:
+            info_bits = 3
         self.initdata.regionC.pull()
         self.log(f' Pending stamps:')
-        for i in self.initdata.regionC.pending_stamps:
+        for (off, i) in enumerate(self.initdata.regionC.pending_stamps):
             if i.info or i.wait_value:
-                self.log(f"  - #{i.info >> 3:3d}: {i.info & 0x7}/{i.wait_value:#x}")
+                self.log(f"  - [{off}] #{i.info >> info_bits:3d}: {i.info & ((1 << info_bits) - 1)}/{i.wait_value:#x}")
             i.info = 0
             i.wait_value = 0
             tmp = i.regmap()
