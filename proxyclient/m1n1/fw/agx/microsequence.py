@@ -775,12 +775,52 @@ class FinalizeComputeCmd(ConstructClass):
         Ver("V >= V13_0B4", "pad_79" / ZPadding(7)),
     )
 
+class BlitInfo(ConstructClass):
+    subcon = Struct(
+        "unk_18" / Int64ul,
+        "unk_20" / Int64ul,
+        "unk_28" / Int64ul,
+        "unk_30" / Int64ul,
+        "unk_38" / Int64ul,
+        "unk_40" / Int64ul,
+        "unk_48" / HexDump(Bytes(0xa0)),
+        "unkptr_e8" / Int64ul,
+        "unk_f0" / Int64ul,
+        "unkptr_f8" / Int64ul,
+        "pipeline_base" / Int64ul,
+        "unk_108" / Int64ul,
+        "unk_110" / HexDump(Bytes(0x248)),
+        "unk_358" / Int32ul,
+        "unk_35c" / Int32ul,
+        "unk_360" / Int32ul,
+        "unk_364" / Int32ul,
+        "unk_368" / Float32l,
+        "unk_36c" / Float32l,
+        "unk_370" / Int64ul,
+        "unk_378" / Int64ul,
+        "unk_380" / Int64ul,
+        "unk_388" / Int64ul,
+        "unk_390" / HexDump(Bytes(0xa8)),
+    )
+
+class BlitInfo2(ConstructClass):
+    subcon = Struct(
+        "unk_0" / HexDump(Bytes(0x24)),
+        "unk_24" / Int64ul,
+        "unk_470" / Int64ul,
+        "unk_478" / Int32ul,
+        "unk_47c" / Int32ul,
+        "unk_480" / Int64ul,
+        "unk_488" / Int64ul,
+    )
+
 class StartBlitCmd(ConstructClass):
     subcon = Struct(
         "magic" / Const(0x26, Int32ul),
         "unkptr_4" / Int64ul,
         "unkptr_c" / Int64ul,
-        "unk_14" / Int64ul,
+        "registers_addr" / Int64ul,
+        Ver("G >= G14X", "unk_1c_0" / Int32ul),
         "unkptr_1c" / Int64ul,
         "unkptr_24" / Int64ul,
         "context_id" / Int32ul,
@@ -792,10 +832,12 @@ class StartBlitCmd(ConstructClass):
         "unkptr_44" / Int64ul,
         "unkptr_4c" / Int64ul,
         "uuid" / Int32ul,
-        "unk_2c" / Int32ul,
+        Ver("G < G14X", "unk_2c" / Int32ul),
         "attachments" / Array(16, Attachment),
         "num_attachments" / Int32ul,
         "unk_160" / Int32ul,
+        Ver("V >= V13_0B4", "counter" / Int64ul),
+        Ver("V >= V13_0B4", "unkptr_19c" / Int64ul),
     )
 
 class FinalizeBlitCmd(ConstructClass):
@@ -807,13 +849,28 @@ class FinalizeBlitCmd(ConstructClass):
         "unk_18" / Int32ul,
         "unkptr_1c" / Int64ul,
         "uuid" / Int32ul,
-        "unk_28" / Int32ul,
+        Ver("V < V13_3", "unk_28" / Int32ul),
         "stamp_addr" / Int64ul,
         "stamp" / ROPointer(this.stamp_addr, StampCounter),
         "stamp_value" / Int32ul,
         "unk_38" / HexDump(Bytes(0x24)),
         "restart_branch_offset" / Int32sl, # relative
         "unk_60" / Int32ul,
+        Ver("V >= V13_0B4", "unk_5d8_0" / Int32ul),
+        Ver("V >= V13_0B4", "unk_5d8_4" / Int8ul),
+        Ver("V >= V13_0B4", "evctl_buf_addr" / Int64ul),
+        Ver("V >= V13_0B4", "unk_5d8_4" / Array(3, Int8ul)),
+        Ver("V >= V13_0B4", "unk_0" / Int32ul),
+        Ver("V >= V13_0B4", "unkptr_1" / Int64ul),
+        Ver("V >= V13_0B4", "unkptr_2" / Int64ul),
+        Ver("V >= V13_0B4", "unkptr_3" / Int64ul),
+        Ver("V >= V13_0B4", "unkptr_4" / Int64ul),
+        Ver("V >= V13_0B4", "unkptr_5" / Int64ul),
+        Ver("V >= V13_0B4", "unk_9c" / Int64ul),
+        Ver("V >= V13_0B4", "unkptr_6" / Int64ul),
+        Ver("V >= V13_0B4", "unk_ac" / HexDump(Bytes(0x30))),
+        Ver("V >= V13_0B4", "unk_dc" / Int32ul),
+        Ver("V >= V13_0B4", "unk_e0" / HexDump(Bytes(0x14))),
     )
 
 class EndCmd(ConstructClass):
