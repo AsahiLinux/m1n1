@@ -599,7 +599,11 @@ class ConstructClass(ConstructClassBase, Container):
         for k in list(self):
             if k.startswith("_"):
                 continue
-            yield k, self[k]
+            v = self[k]
+            if getattr(v, "HAS_VALUE", None):
+                yield k, v.value
+            else:
+                yield k, v
 
     def addrof(self, name):
         return self._addr + self._off[name][0]
@@ -724,6 +728,7 @@ class ConstructValueClass(ConstructClassBase):
 
         the value is stored as .value
     """
+    HAS_VALUE = True
 
     def __eq__(self, other):
         return self.value == other.value
