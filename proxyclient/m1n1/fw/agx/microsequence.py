@@ -696,7 +696,7 @@ class ComputeInfo(ConstructClass):
         "iogpu_deflake_5" / Int64ul, # size 8, null
         "pipeline_base" / Int64ul, # 0x11_00000000: Used for certain "short" pointers like pipelines (and shaders?)
         "unk_38" / Int64ul, # always 0x8c60
-        "unk_40" / Int32ul, # 0x98000; bit 0: explicit thread layout?
+        "helper_program" / Int32ul, # 0x98000; bit 0: enable
         "unk_44" / Int32ul, # 0
         "compute_layout_addr" / Int64ul, # work layout
         "unk_50" / Int32ul, # 0x40 - Size? only if work layout is provided
@@ -704,6 +704,7 @@ class ComputeInfo(ConstructClass):
         "unk_58" / Int32ul, # 1
         "unk_5c" / Int32ul, # 0
         "iogpu_unk_40" / Int32ul, # 0x1c
+        "unk_pad" / ZPadding(0xec),
     )
 
 # Related to "IOGPU Misc"
@@ -713,7 +714,9 @@ class ComputeInfo2(ConstructClass):
         "unk_0" / HexDump(Bytes(0x24)),
         "iogpu_deflake_1" / Int64ul,
         "encoder_end" / Int64ul,
-        "unk_34" / HexDump(Bytes(0x28)),
+        "unk_34" / HexDump(Bytes(0x20)),
+        "unk_g14x" / Int32ul,
+        "unk_58" / Int32ul,
         Ver("V < V13_0B4", "unk_5c" / ZPadding(4)),
     )
 
@@ -722,7 +725,7 @@ class StartComputeCmd(ConstructClass):
         "magic" / Const(0x29, Int32ul),
         "unk_buf_addr" / Int64ul, # Pointer to WorkCommandCP.unk_buf
         "computeinfo_addr" / Int64ul,
-        "computeinfo" / ROPointer(this.computeinfo_addr, ComputeInfo),
+        Ver("G >= G14X", "registers_addr" / Int64ul),
         "stats_ptr" / Int64ul,
         "cmdqueue_ptr" / Int64ul,
         "context_id" / Int32ul, # 4
@@ -750,7 +753,7 @@ class FinalizeComputeCmd(ConstructClass):
         "cmdqueue_ptr" / Int64ul, # points back to the submitinfo
         "context_id" / Int32ul,
         Ver("V < V13_0B4", "unk_18" / Int32ul),
-        "unkptr_1c" / Int64ul, # same as ComputeStartCmd.unkptr_3c
+        "computeinfo2_addr" / Int64ul, # same as ComputeStartCmd.unkptr_3c
         "unk_24" / Int32ul,
         "uuid" / Int32ul,  # uuid for tracking?
         "stamp" / Int64ul,
