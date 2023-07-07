@@ -34,6 +34,7 @@ VERSION_MAP = {
     "iBoot-8419.60.44": "V13_1",
     "iBoot-8419.80.7": "V13_2",
     "iBoot-8422.100.650": "V13_3",
+    "iBoot-8422.140.50.0.2": "V13_5B4",
 }
 
 class ProxyUtils(Reloadable):

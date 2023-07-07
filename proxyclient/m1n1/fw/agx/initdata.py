@@ -575,6 +575,7 @@ class AGXHWDataA(ConstructClass):
         "unk_bb0" / Int32ul,
         "unk_bb4" / Int32ul,
         Ver("V >= V13_3", "pad_bb8_0" / Default(HexDump(Bytes(0x200)), bytes(0x200))),
+        Ver("V >= V13_5B4", "pad_bb8_200" / Default(HexDump(Bytes(8)), bytes(8))),
         "pad_bb8" / HexDump(Bytes(0xc2c - 0xbb8)),
 
         "unk_c2c" / Int32ul,
@@ -1062,7 +1063,8 @@ class AGXHWDataB(ConstructClass):
         "pad_1c8" / HexDump(Bytes(8)),
         Ver("V < V13_0B4", "io_mappings" / Array(0x14, IOMapping)),
         Ver("V >= V13_0B4 && V < V13_3", "io_mappings" / Array(0x17, IOMapping)),
-        Ver("V >= V13_3", "io_mappings" / Array(0x18, IOMapping)),
+        Ver("V >= V13_3 && V < V13_5B4", "io_mappings" / Array(0x18, IOMapping)),
+        Ver("V >= V13_5B4", "io_mappings" / Array(0x19, IOMapping)),
         Ver("V >= V13_0B4", "sgx_sram_ptr" / Int64ul),
         "chip_id" / Int32ul,
         "unk_454" / Int32ul,
@@ -1196,6 +1198,7 @@ class AGXHWDataB(ConstructClass):
         Ver("V >= V13_0B4", "unk_b6c" / HexDump(Bytes(0xd0))),
         Ver("G >= G14X", "unk_c3c_0" / Default(HexDump(Bytes(0x8)), bytes(0x8))),
         Ver("G >= G14X && V < V13_3", "unk_c3c_8" / Default(HexDump(Bytes(0x30)), bytes(0x30))),
+        Ver("G >= G14X && V >= V13_5B4", "unk_c3c_8" / Default(HexDump(Bytes(0x20)), bytes(0x20))),
         Ver("V >= V13_0B4", "unk_c3c" / Int32ul),
     )
 
