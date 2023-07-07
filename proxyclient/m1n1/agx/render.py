@@ -541,7 +541,7 @@ class GPURenderer:
             wc_3d.struct_1.unk_38 = 0x0
             wc_3d.struct_1.unk_3c = 0x1
             wc_3d.struct_1.unk_40 = 0
-            wc_3d.struct_1.unk_44_padding = bytes(0xac)
+            wc_3d.struct_1.unk_44_padding = bytes(0x9c)
 
         if not use_registers:
             wc_3d.struct_2 = Start3DStruct2()
@@ -551,9 +551,9 @@ class GPURenderer:
             wc_3d.struct_2.unk_18 = ppp_multisamplectl
             wc_3d.struct_2.scissor_array = cmdbuf.scissor_array
             wc_3d.struct_2.depth_bias_array = cmdbuf.depth_bias_array
-            wc_3d.struct_2.aux_fb =  wc_3d.struct_1.aux_fb
+            wc_3d.struct_2.aux_fb = AuxFBInfo(iogpu_unk_214, 0, width, height)
             # ISP_ZLS_PIXELS
-            wc_3d.struct_2.depth_dimensions = wc_3d.struct_1.depth_dimensions
+            wc_3d.struct_2.depth_dimensions = (width - 1) | ((height - 1) << 15)
             wc_3d.struct_2.visibility_result_buffer = 0x0
             # ISP_ZLSCTL
             wc_3d.struct_2.depth_flags = cmdbuf.ds_flags
@@ -686,9 +686,14 @@ class GPURenderer:
 
         if True:
             wc_3d.struct_3 = Start3DStruct3()
-            wc_3d.struct_3.registers_addr = wc_3d.registers[0]._addr
-            wc_3d.struct_3.register_count = reg_count
-            wc_3d.struct_3.registers_length = reg_count * 12
+            if use_registers:
+                wc_3d.struct_3.registers_addr = wc_3d.registers[0]._addr
+                wc_3d.struct_3.register_count = reg_count
+                wc_3d.struct_3.registers_length = reg_count * 12
+            else:
+                wc_3d.struct_3.registers_addr = 0
+                wc_3d.struct_3.register_count = 0
+                wc_3d.struct_3.registers_length = 0
             wc_3d.struct_3.unk_d8 = 0
             wc_3d.struct_3.depth_bias_array = Start3DArrayAddr(cmdbuf.depth_bias_array)
             wc_3d.struct_3.scissor_array = Start3DArrayAddr(cmdbuf.scissor_array)
@@ -704,7 +709,7 @@ class GPURenderer:
             wc_3d.struct_3.reload_pipeline = Start3DClearPipelineBinding(
                 cmdbuf.partial_reload_pipeline_bind, cmdbuf.partial_reload_pipeline | 4)
             wc_3d.struct_3.depth_flags = cmdbuf.ds_flags | 0x44
-            wc_3d.struct_3.unk_290 = 0x0
+            wc_3d.struct_3.unk_290 = 0x4040404
             wc_3d.struct_3.depth_buffer_ptr1 = cmdbuf.depth_buffer
             wc_3d.struct_3.unk_2a0 = 0x0
             wc_3d.struct_3.unk_2a8 = 0x0
@@ -721,7 +726,10 @@ class GPURenderer:
             wc_3d.struct_3.aux_fb_unk0 = tib_blocks
             wc_3d.struct_3.unk_30c = 0x0
             wc_3d.struct_3.aux_fb = AuxFBInfo(iogpu_unk_214, 0, width, height)
-            wc_3d.struct_3.s2_unk_f8 = tile_config
+            if use_registers:
+                wc_3d.struct_3.s2_unk_f8 = tile_config
+            else:
+                wc_3d.struct_3.s2_unk_f8 = 0
             wc_3d.struct_3.unk_324_padding = bytes(0xc)
             wc_3d.struct_3.unk_partial_store_pipeline = Start3DStorePipelineBinding(
                 cmdbuf.partial_store_pipeline_bind, cmdbuf.partial_store_pipeline | 4)
@@ -948,7 +956,7 @@ class GPURenderer:
         wc_ta.unk_emptybuf_addr = wc_3d.unk_emptybuf_addr
         wc_ta.unk_34 = 0x0
 
-        wc_ta.unk_3e8 = bytes(0x74)
+        wc_ta.unk_3e8 = bytes(0x64)
         wc_ta.unk_594 = WorkCommand0_UnkBuf()
 
         wc_ta.ts1 = TimeStamp(0)
@@ -1194,7 +1202,7 @@ class GPURenderer:
         if Ver.check("G >= G14X"):
             ms.append(Wait2Cmd())
         else:
-            ms.append(WaitForInterruptCmd(0, 1, 0))
+            ms.append(WaitForInterruptCmd(1, 0, 0))
 
         ts2 = TimestampCmd()
         ts2.unk_1 = 0x0

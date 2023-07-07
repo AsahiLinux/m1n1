@@ -283,9 +283,9 @@ class AGX:
         if not fault_info.FAULTED:
             return
 
-        fault_addr = getattr(self.sgx, "FAULT_ADDR", None).val
+        fault_addr = getattr(self.sgx, "FAULT_ADDR", None)
         if fault_addr is not None:
-            fault_addr <<= 6
+            fault_addr = fault_addr.val << 6
         else:
             fault_addr = fault_info.ADDR << 6
 

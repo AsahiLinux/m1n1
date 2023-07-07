@@ -274,7 +274,7 @@ class WorkCommand3D(ConstructClass):
         Ver("V >= V13_0B4", "unk_928_4" / Int8ul),
         Ver("V >= V13_0B4", "unk_ts" / TimeStamp),
         Ver("V >= V13_0B4", "unk_928_d" / Default(HexDump(Bytes(0x1b)), bytes(0x1b))),
-        Ver("V >= V13_3", "unk_pad2" / Default(HexDump(Bytes(0x3c)), bytes(0x3c))),
+        Ver("V == V13_3", "unk_pad2" / Default(HexDump(Bytes(0x3c)), bytes(0x3c))),
     )
 
 class WorkCommand0_UnkBuf(ConstructValueClass):
@@ -549,6 +549,7 @@ class CommandQueueInfo(ConstructClass):
         self.unk_58 = 0x0
         self.busy = 0x0
         self.blocked_on_barrier = 0x0
+        self.unk_80 = 0
         self.unk_88 = 0
         self.unk_8c = 0
         self.unk_90 = 0

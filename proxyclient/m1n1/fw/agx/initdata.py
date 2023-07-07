@@ -286,7 +286,7 @@ class AGXHWDataT81xx(ConstructClass):
         "unk_dcc" / Int32ul,
     )
     def __init__(self, sgx, chip_info):
-        if chip_info.chip_id in (0x8103, 0x8112):
+        if chip_info.chip_id in (0x8103, 0x8112) and Ver.check("V < V13_3"):
             self.unk_d8c = 0x80000000
             self.unk_d90 = 4
             self.unk_d94 = 0
@@ -979,7 +979,10 @@ class AGXHWDataA(ConstructClass):
         self.unk_3644 = 0
         self.hws1 = AGXHWDataShared1(chip_info)
         self.hws2 = AGXHWDataShared2(sgx, chip_info)
-        self.unk_hws2 = [0 if i == 0xffff else i // 2 for i in self.hws2.unk_38.curve2.t1]
+        if Ver.check("G >= G14X"):
+            self.unk_hws2 = [0 if i == 0xffff else i // 2 for i in self.hws2.unk_38.curve2.t1]
+        else:
+            self.unk_hws2 = [0] * 16
         self.unk_3c00 = 0
         self.unk_3c04 = 0
         self.hws3 = AGXHWDataShared3(chip_info)
@@ -1197,8 +1200,8 @@ class AGXHWDataB(ConstructClass):
         "unk_b68" / Int32ul,
         Ver("V >= V13_0B4", "unk_b6c" / HexDump(Bytes(0xd0))),
         Ver("G >= G14X", "unk_c3c_0" / Default(HexDump(Bytes(0x8)), bytes(0x8))),
-        Ver("G >= G14X && V < V13_3", "unk_c3c_8" / Default(HexDump(Bytes(0x30)), bytes(0x30))),
-        Ver("G >= G14X && V >= V13_5B4", "unk_c3c_8" / Default(HexDump(Bytes(0x20)), bytes(0x20))),
+        Ver("G < G14X && V >= V13_5B4", "unk_c3c_8" / Default(HexDump(Bytes(0x10)), bytes(0x10))),
+        Ver("V >= V13_5B4", "unk_c3c_10" / Default(HexDump(Bytes(0x20)), bytes(0x20))),
         Ver("V >= V13_0B4", "unk_c3c" / Int32ul),
     )
 
@@ -1461,20 +1464,20 @@ class InitData_GPUQueueStatsTA(ConstructClass):
 class InitData_GPUStatsTA(ConstructClass):
     subcon = Struct(
         "unk_4" / Int32ul,
-        Ver("V < V13_0B4", "queues" / Array(4, InitData_GPUQueueStatsTA)),
-        Ver("V >= V13_0B4", "queues" / Array(8, InitData_GPUQueueStatsTA)),
+        Ver("G < G14X", "queues" / Array(4, InitData_GPUQueueStatsTA)),
+        Ver("G >= G14X", "queues" / Array(8, InitData_GPUQueueStatsTA)),
         "unk_68" / Bytes(0x8),
         "unk_70" / Int32ul,
         "unk_74" / Int32ul,
         Ver("V >= V13_0B4", "unk_c0" / HexDump(Bytes(0x558))),
         "unk_timestamp" / Array(16, Int64ul),
         "unk_80" / HexDump(Bytes(0x40)),
-        Ver("V >= V13_3", "unk_684" / HexDump(Bytes(0x800))),
+        Ver("G >= G14X", "unk_684" / HexDump(Bytes(0x800))),
     )
 
     def __init__(self):
         self.unk_4 = 0
-        if Ver.check("V >= V13_0B4"):
+        if Ver.check("G >= G14X"):
             self.queues = [InitData_GPUQueueStatsTA() for i in range(8)]
         else:
             self.queues = [InitData_GPUQueueStatsTA() for i in range(4)]
@@ -1507,8 +1510,8 @@ class InitData_GPUStats3D(ConstructClass):
     subcon = Struct(
         "unk_0" / Bytes(0x18),
         Ver("G >= G14X", "unk_d0_0" / Default(HexDump(Bytes(0x50)), bytes(0x50))),
-        Ver("V < V13_0B4", "queues" / Array(4, InitData_GPUQueueStats3D)),
-        Ver("V >= V13_0B4", "queues" / Array(8, InitData_GPUQueueStats3D)),
+        Ver("G < G14X", "queues" / Array(4, InitData_GPUQueueStats3D)),
+        Ver("G >= G14X", "queues" / Array(8, InitData_GPUQueueStats3D)),
         Ver("G >= G14X", "unk_d0_0" / Default(HexDump(Bytes(0x820)), bytes(0x820))),
         "unk_d0" / HexDump(Bytes(0x38)),
         "tvb_overflows_1" / Int32ul,
@@ -1530,7 +1533,7 @@ class InitData_GPUStats3D(ConstructClass):
 
     def __init__(self):
         self.unk_0 = bytes(0x18)
-        if Ver.check("V >= V13_0B4"):
+        if Ver.check("G >= G14X"):
             self.queues = [InitData_GPUQueueStats3D() for i in range(8)]
         else:
             self.queues = [InitData_GPUQueueStats3D() for i in range(4)]
@@ -1856,7 +1859,7 @@ class InitData_RegionC(ConstructClass):
         self.debug = 0
         self.unk_28_4 = 0
         self.unk_28 = 1
-        if Ver.check("V >= V13_3"):
+        if Ver.check("G >= G14X"):
             self.unk_2c_0 = 1
         else:
             self.unk_2c_0 = 0
@@ -1966,7 +1969,7 @@ class InitData_RegionC(ConstructClass):
         self.idle_to_off_delay_ms = sgx.getprop("gpu-idle-off-delay-ms", 2)
         self.fender_idle_to_off_delay_ms = sgx.getprop("gpu-fender-idle-off-delay-ms", 40)
         self.fw_early_wake_timeout_ms = sgx.getprop("gpu-fw-early-wake-timeout-ms", 5)
-        self.pending_stamps = [InitData_PendingStamp() for i in range(0x110)]
+        self.pending_stamps = [InitData_PendingStamp() for i in range(0x100)]
         self.unk_117bc = 0
         self.fault_info = InitData_FaultInfo()
         self.counter = 0

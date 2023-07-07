@@ -59,6 +59,11 @@ def build_iomappings(agx, chip_id):
             iomap(0x27d050000, 0x4000, 0x4000, 0), # Streaming codec registers
             iomap(0x23b3d0000, 0x1000, 0x1000, 0), #
             iomap(0x23b3c0000, 0x1000, 0x1000, 0), #
+            IOMapping(),
+            IOMapping(),
+            IOMapping(),
+            IOMapping(),
+            IOMapping(),
         ]
     elif chip_id in (0x6000, 0x6001, 0x6002):
         mcc_cnt = {0x6002: 16, 0x6001: 8, 0x6000: 4}
@@ -111,6 +116,7 @@ def build_iomappings(agx, chip_id):
             iomap(0x404eac000, 0x4000, 0x4000, 1),
             IOMapping(),
             IOMapping(),
+            IOMapping(),
         ]
 
 CHIP_INFO = {
@@ -125,7 +131,9 @@ CHIP_INFO = {
         unk_e48 = [[0] * 8] * 8,
         unk_e24 = 112,
         gpu_fast_die0_sensor_mask64 = 0x12,
+        gpu_fast_die1_sensor_mask64 = 0,
         gpu_fast_die0_sensor_mask64_alt = 0x12,
+        gpu_fast_die1_sensor_mask64_alt = 0,
         gpu_fast_die0_sensor_present = 0x01,
         shared1_tab = [
             -1, 0x7282, 0x50ea, 0x370a, 0x25be, 0x1c1f, 0x16fb
@@ -162,7 +170,9 @@ CHIP_INFO = {
         ]],
         unk_e24 = 125,
         gpu_fast_die0_sensor_mask64 = 0x80808080,
+        gpu_fast_die1_sensor_mask64 = 0,
         gpu_fast_die0_sensor_mask64_alt = 0x90909090,
+        gpu_fast_die1_sensor_mask64_alt = 0,
         gpu_fast_die0_sensor_present = 0x0f,
         shared1_tab = [0xffff] * 16,
         shared1_a4 = 0xffff,
@@ -170,6 +180,7 @@ CHIP_INFO = {
         shared2_unk_508 = 0xcc00001,
         unk_3cf4 = [1314.0, 1330.0, 1314.0, 1288.0, 0, 0, 0, 0],
         unk_3d14 = [21.0, 21.0, 22.0, 21.0, 0, 0, 0, 0],
+        unk_3d34_0 = [0, 0, 0, 0, 0, 0, 0, 0],
         unk_118ec = [
             0, 1, 2,
             1, 1, 90, 75, 1, 1,
@@ -203,7 +214,9 @@ CHIP_INFO = {
         ]],
         unk_e24 = 125,
         gpu_fast_die0_sensor_mask64 = 0x8080808080808080,
+        gpu_fast_die1_sensor_mask64 = 0,
         gpu_fast_die0_sensor_mask64_alt = 0x9090909090909090,
+        gpu_fast_die1_sensor_mask64_alt = 0,
         gpu_fast_die0_sensor_present = 0xff,
         shared1_tab = [0xffff] * 16,
         shared1_a4 = 0xffff,
@@ -212,6 +225,7 @@ CHIP_INFO = {
         unk_3cf4 = [1244.0, 1260.0, 1242.0, 1214.0,
                     1072.0, 1066.0, 1044.0, 1042.0],
         unk_3d14 = [18.0, 18.0, 18.0, 17.0, 15.0, 15.0, 15.0, 14.0],
+        unk_3d34_0 = [0, 0, 0, 0, 0, 0, 0, 0],
         unk_8924 = 0,
         unk_118ec = [
             0, 1, 2,
@@ -238,15 +252,17 @@ CHIP_INFO = {
         unk_8cc = 11000,
         unk_924 = [[
             0.0, 0.0, 0.0, 0.0,
-            5.3, 0.0, 5.3, 6.6,
+            5.3, 0.0, 5.3, 5.3,
         ]] + ([[0] * 8] * 7),
         unk_e48 = [[
             0.0, 0.0, 0.0, 0.0,
-            5.3, 0.0, 5.3, 6.6,
+            5.3, 0.0, 5.3, 5.3,
         ]] + ([[0] * 8] * 7),
         unk_e24 = 125,
         gpu_fast_die0_sensor_mask64 = 0x6800,
+        gpu_fast_die1_sensor_mask64 = 0,
         gpu_fast_die0_sensor_mask64_alt = 0x6800,
+        gpu_fast_die1_sensor_mask64_alt = 0,
         gpu_fast_die0_sensor_present = 0x02,
         shared1_tab = [0xffff] * 16,
         shared1_a4 = 0,
@@ -254,6 +270,7 @@ CHIP_INFO = {
         shared2_unk_508 = 0xc00000,
         unk_3cf4 = [1920.0, 0, 0, 0, 0, 0, 0, 0],
         unk_3d14 = [74.0, 0, 0, 0, 0, 0, 0, 0],
+        unk_3d34_0 = [0, 0, 0, 0, 0, 0, 0, 0],
         unk_118ec = None,
         hwdb_4e0 = 4,
         hwdb_534 = 0,
@@ -271,8 +288,8 @@ CHIP_INFO = {
         unk_hws2_0 = 0,
         unk_hws2_4 = [0] * 8,
         unk_hws2_24 = 0,
-        sram_base = 0x404d60000,
-        sram_size = 0x20000,
+        sram_base = 0,
+        sram_size = 0,
         shared3_unk = 5,
         shared3_tab = [
             10700, 10700, 10700, 10700,
@@ -354,9 +371,9 @@ def build_initdata(agx):
 
     initdata = agx.kshared.new(InitData)
 
-    if Ver.check("V == V13_3 && G == G14X"):
+    if Ver.check("V >= V13_3 && G == G14X"):
         initdata.ver_info = (0xb390, 0x70f8, 0x601, 0xb0)
-    elif Ver.check("V == V13_3 && G == G14"):
+    elif Ver.check("V >= V13_3 && G == G14"):
         initdata.ver_info = (0x6ba0, 0x1f28, 0x601, 0xb0)
     else:
         initdata.ver_info = (1, 1, 16, 1)
@@ -394,6 +411,8 @@ def build_initdata(agx):
         hwdata.sgx_sram_ptr = virt
         agx.uat.iomap_at(0, virt, chip_info.sram_base, chip_info.sram_size,
                          AttrIndex=MemoryAttr.Shared)
+    else:
+        hwdata.sgx_sram_ptr = 0
 
     k = 1.02 #?
     count = sgx.perf_state_count
@@ -426,6 +445,11 @@ def build_initdata(agx):
         hwdata.cs_voltages = [[(ps.volt // 1000), 0]
                               for ps in cs_pstates.states] + [[0, 0]] * (16 - cs_pstates.count)
         hwdata.cs_voltages_sram = [[max(i[0], cs_pstates.min_sram_volt // 1000) if i[0] else 0, 0] for i in hwdata.cs_voltages]
+    else:
+        hwdata.cs_max_pstate = 0
+        hwdata.cs_frequencies = [0] * 16
+        hwdata.cs_voltages = [[0, 0]] * 16
+        hwdata.cs_voltages_sram = [[0, 0]] * 16
 
     afr_pstates = sgx.getprop("afr-perf-states", None)
     if afr_pstates:
@@ -435,6 +459,11 @@ def build_initdata(agx):
         hwdata.afr_voltages = [[(ps.volt // 1000), 0]
                               for ps in afr_pstates.states] + [[0, 0]] * (8 - afr_pstates.count)
         hwdata.afr_voltages_sram = [[max(i[0], afr_pstates.min_sram_volt // 1000) if i[0] else 0, 0] for i in hwdata.afr_voltages]
+    else:
+        hwdata.afr_max_pstate = 0
+        hwdata.afr_frequencies = [0] * 8
+        hwdata.afr_voltages = [[0, 0]] * 8
+        hwdata.afr_voltages_sram = [[0, 0]] * 8
 
     regionB.hwdata_a.push()
 
