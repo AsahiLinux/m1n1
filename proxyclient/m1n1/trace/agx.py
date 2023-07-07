@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 
-import textwrap
+import textwrap, os.path, json, datetime
 from .asc import *
 from ..hw.uat import UAT, MemoryAttr, PTE, Page_PTE, TTBR
 from ..hw.agx import *
@@ -211,13 +211,15 @@ class FWCtlChannelTracer(ChannelTracer):
     RPTR = 0x00
 
 class CommandQueueTracer(Reloadable):
-    def __init__(self, tracer, info_addr, new_queue):
+    def __init__(self, tracer, info_addr, new_queue, queue_type):
         self.tracer = tracer
         self.uat = tracer.uat
         self.hv = tracer.hv
         self.u = self.hv.u
         self.verbose = False
         self.info_addr = info_addr
+        self.dumpfile = None
+        self.queue_type = queue_type
 
         if info_addr not in tracer.state.queues:
             self.state = CommandQueueState()
@@ -230,6 +232,20 @@ class CommandQueueTracer(Reloadable):
         if new_queue:
             self.state.rptr = 0
 
+            if tracer.cmd_dump_dir:
+                qtype = ["TA", "3D", "CP"][queue_type]
+                fname = f"{datetime.datetime.now().isoformat()}-{tracer.state.queue_seq:04d}-{qtype}.json"
+                self.dumpfile = open(os.path.join(tracer.cmd_dump_dir, fname), "w")
+                json.dump({
+                    "compatible": tracer.dev_sgx.compatible,
+                    "chip_id": tracer.chip_id,
+                    "version": Ver._version,
+                    "type": qtype,
+                }, self.dumpfile)
+                self.dumpfile.write("\n")
+                self.dumpfile.flush()
+                tracer.state.queue_seq += 1
+
         self.update_info()
 
     def update_info(self):
@@ -241,6 +257,10 @@ class CommandQueueTracer(Reloadable):
     @property
     def rb_size(self):
         return self.info.pointers.rb_size
+
+    def json_default(self, val):
+        print(repr(val))
+        return None
 
     def get_workitems(self, workmsg):
         self.tracer.uat.invalidate_cache()
@@ -268,7 +288,12 @@ class CommandQueueTracer(Reloadable):
             self.log(f"WI item @{rptr:#x}: {pointer:#x}")
             if pointer:
                 stream.seek(pointer, 0)
-                yield CmdBufWork.parse_stream(stream)
+                wi = CmdBufWork.parse_stream(stream)
+                if self.dumpfile:
+                    json.dump(wi, self.dumpfile, default=self.json_default)
+                    self.dumpfile.write("\n")
+                    self.dumpfile.flush()
+                yield wi
             rptr = (rptr + 1) % self.rb_size
 
         self.state.rptr = rptr
@@ -348,6 +373,7 @@ class AGXTracer(ASCTracer):
         self.channels = []
         self.uat = UAT(hv.iface, hv.u, hv)
         self.mon = RegMonitor(hv.u, ascii=True, log=hv.log)
+        self.chip_id = hv.u.adt["/chosen"].chip_id
         self.dev_sgx = hv.u.adt["/arm-io/sgx"]
         self.sgx = SGXRegs(hv.u, self.dev_sgx.get_reg(0)[0])
         self.gpu_region = getattr(self.dev_sgx, "gpu-region-base")
@@ -377,6 +403,7 @@ class AGXTracer(ASCTracer):
         self.exclude_context_id = None
         self.redump = False
         self.skip_asc_tracing = True
+        self.cmd_dump_dir = None
 
         self.vmcnt = 0
         self.readlog = {}
@@ -388,11 +415,11 @@ class AGXTracer(ASCTracer):
         self.last_3d = None
         self.last_cp = None
 
-    def get_cmdqueue(self, info_addr, new_queue):
+    def get_cmdqueue(self, info_addr, new_queue, queue_type):
         if info_addr in self.cmdqueues and not new_queue:
             return self.cmdqueues[info_addr]
 
-        cmdqueue = CommandQueueTracer(self, info_addr, new_queue)
+        cmdqueue = CommandQueueTracer(self, info_addr, new_queue, queue_type)
         self.cmdqueues[info_addr] = cmdqueue
 
         return cmdqueue
@@ -655,13 +682,13 @@ class AGXTracer(ASCTracer):
         self.mon.add(va, size, name, readfn= lambda a, s: self.uat.ioread(ctx, a, s))
 
     def handle_ringmsg(self, msg):
-        if isinstance(msg, FlagMsg):
+        if msg.__class__.__name__ == "FlagMsg":
             self.log(f"== Event flag notification ==")
             self.handle_event(msg)
             return
-        elif isinstance(msg, RunCmdQueueMsg):
+        elif msg.__class__.__name__ == "RunCmdQueueMsg":
             self.log(f"== Work notification (type {msg.queue_type})==")
-            queue = self.get_cmdqueue(msg.cmdqueue_addr, msg.new_queue)
+            queue = self.get_cmdqueue(msg.cmdqueue_addr, msg.new_queue, msg.queue_type)
             work_items = list(queue.get_workitems(msg))
             if self.encoder_id_filter is not None:
                 for wi in work_items:
@@ -790,16 +817,16 @@ class AGXTracer(ASCTracer):
 
             for i in wi0.microsequence.value:
                 i = i.cmd
-                if isinstance(i, StartTACmd):
+                if i.__class__.__name__ == "StartTACmd":
                     self.log(f"  # StartTACmd")
 
 
-                    self.log(f"    unkptr_24 @ {i.unkptr_24:#x}:")
-                    chexdump(read(i.unkptr_24, 0x100), print_fn=self.log)
-                    self.log(f"    unk_5c @ {i.unkptr_5c:#x}:")
-                    chexdump(read(i.unkptr_5c, 0x100), print_fn=self.log)
+                    # self.log(f"    unkptr_24 @ {i.unkptr_24:#x}:")
+                    # chexdump(read(i.unkptr_24, 0x100), print_fn=self.log)
+                    # self.log(f"    unk_5c @ {i.unkptr_5c:#x}:")
+                    # chexdump(read(i.unkptr_5c, 0x100), print_fn=self.log)
 
-                elif isinstance(i, FinalizeTACmd):
+                elif i.__class__.__name__ == "FinalizeTACmd":
                     self.log(f"  # FinalizeTACmd")
 
 
@@ -1098,6 +1125,7 @@ class AGXTracer(ASCTracer):
         self.state.channel_info = []
         self.state.channels = {}
         self.state.queues = {}
+        self.state.queue_seq = 0
 
     def init_channels(self):
         if self.channels:
