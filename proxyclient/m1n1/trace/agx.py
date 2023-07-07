@@ -594,6 +594,9 @@ class AGXTracer(ASCTracer):
                            paddr=paddr,
                            ctx=ctx)
 
+        if ctx == 0:
+            self.clear_stats_tracers()
+
     def event_gpuvm(self, evt, iova, paddr, name=None, base=None, ctx=None):
         off = evt.addr - paddr
         iova += off
@@ -1208,6 +1211,33 @@ class AGXTracer(ASCTracer):
             self.mon_addva(0, initdata.unkptr_20.unkptr_0, 0x40, "unkptr_20.unkptr_0")
             self.mon_addva(0, initdata.unkptr_20.unkptr_8, 0x40, "unkptr_20.unkptr_8")
 
+    def clear_gpuvm_range(self, ctx, iova, length):
+        while length > 0:
+            page = iova & ~0x3fff
+            off = iova & 0x3fff
+            block = min(0x4000 - off, length)
+            page &= 0xfffffffffff
+            print(f"Clear {ctx} {page:#x} {block:#x}")
+            paddr = self.va_to_pa.get((ctx, page), None)
+            if paddr:
+                print(f" pa {paddr + off:#x}")
+                self.hv.del_tracer(irange(paddr + off, block), f"GPUVM/{ctx}")
+            length -= block
+            iova += block
+
+    def clear_stats_tracers(self):
+        if not self.state.initdata:
+            return
+
+        self.clear_gpuvm_range(
+            0,
+            self.state.initdata.regionB.channels.Stats.state_addr,
+            0x30)
+        self.clear_gpuvm_range(
+            0,
+            self.state.initdata.regionB.channels.Stats.ringbuffer_addr,
+            0x100 * StatsSize)
+
     def pong_init(self, addr):
         self.log("UAT at init time:")
         self.uat.invalidate_cache()
@@ -1219,6 +1249,7 @@ class AGXTracer(ASCTracer):
         self.log(initdata)
 
         self.add_mon_regions()
+        self.clear_stats_tracers()
 
         #self.initdata.regionB.mon(lambda addr, size, name: self.mon_addva(0, addr, size, name))
 
