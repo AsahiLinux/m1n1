@@ -482,8 +482,12 @@ def build_initdata(agx):
     regionB.unk_1c8 = agx.kobj.new_buf(0x1000, "RegionB.unkptr_1c8").push()
 
     # Size: 0x4000
-    regionB.buffer_mgr_ctl = agx.klow.new(InitData_BufferMgrCtl, track=True).push()
-    regionB.buffer_mgr_ctl_gpu_addr = regionB.buffer_mgr_ctl._addr
+    regionB.buffer_mgr_ctl = agx.kshared.new(InitData_BufferMgrCtl, track=True).push()
+
+    agx.uat.iomap_at(0, 0x420000000, regionB.buffer_mgr_ctl._paddr_align, 0x4000,
+                     AttrIndex=MemoryAttr.Shared, AP=0, UXN=1, PXN=1)
+
+    regionB.buffer_mgr_ctl_gpu_addr = 0x420000000 + (regionB.buffer_mgr_ctl._addr & 0x3fff)
 
     regionB.unk_6a80 = 0
     regionB.gpu_idle = 0
