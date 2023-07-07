@@ -6,7 +6,7 @@ from m1n1.constructutils import *
 from construct import *
 from .cmdqueue import *
 
-__all__ = ["channelNames", "channelRings", "DeviceControlMsg", "EventMsg", "StatsMsg"]
+__all__ = ["channelNames", "channelRings", "DeviceControlMsg", "EventMsg", "StatsMsg", "StatsSize"]
 
 if Ver.check("G >= G14 && V >= V13_2 && G < G14X"):
     RunCmdQueueSize = 0x40
@@ -101,6 +101,17 @@ class DC_09(ConstructClass):
         Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
     )
 
+class DC_GrowTVBAck(ConstructClass):
+    subcon =  Struct (
+        "msg_type" / Const(0xd, Int32ul),
+        "unk_4" / Int32ul,
+        "bm_id" / Int32ul,
+        "vm_id" / Int32ul,
+        "counter" / Int32ul,
+        "rest" / HexDump(Default(Bytes(0x1c), bytes(0x1c))),
+        Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
+    )
+
 class DC_Any(ConstructClass):
     subcon =  Struct (
         "msg_type" / Int32ul,
@@ -142,6 +153,7 @@ DeviceControlMsg = FixedSized(DeviceControlSize, Select(
     DC_UpdateIdleTS,
     DC_1e,
     DC_Write32,
+    DC_GrowTVBAck,
     UnknownMsg,
 ))
 
@@ -337,10 +349,20 @@ class TimeoutMsg(ConstructClass):
         "unkpad_16" / HexDump(Bytes(0x38 - 0x10)),
     )
 
+class GrowTVBMsg(ConstructClass):
+    subcon = Struct (
+        "msg_type" / Hex(Const(7, Int32ul)),
+        "vm_id" / Hex(Int32ul),
+        "bm_id" / Hex(Int32ul),
+        "counter" / Hex(Int32ul),
+        "tail" / HexDump(Bytes(0x38 - 0x10)),
+    )
+
 EventMsg = FixedSized(0x38, Select(
     FaultMsg,
     FlagMsg,
     TimeoutMsg,
+    GrowTVBMsg,
     HexDump(Bytes(0x38)),
 ))
 
