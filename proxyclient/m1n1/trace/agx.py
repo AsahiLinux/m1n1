@@ -900,7 +900,7 @@ class AGXTracer(ASCTracer):
             self.log(f"      unkptr_18 @ {wi0.buf_thing.unkptr_18:#x}::")
             chexdump(read(wi0.buf_thing.unkptr_18, 0x80), print_fn=self.log)
 
-            if getattr(wi0, "struct2", None):
+            if getattr(wi0, "struct_2", None):
                 data = read(wi0.struct_2.tvb_cluster_meta1, 0x100000)
                 self.log(f"      meta1 @ {wi0.struct_2.tvb_cluster_meta1:#x}:")
                 chexdump(data, print_fn=self.log)
