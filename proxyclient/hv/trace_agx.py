@@ -14,6 +14,12 @@ from m1n1.trace.agx import AGXTracer
 AGXTracer = AGXTracer._reloadcls(True)
 
 agx_tracer = AGXTracer(hv, "/arm-io/gfx-asc", verbose=1)
+agx_tracer.trace_usermap = False
+agx_tracer.trace_kernmap = False
+agx_tracer.trace_userva = False
+agx_tracer.trace_kernva = False
+agx_tracer.redump = False
+agx_tracer.cmd_dump_dir = "gfxdumps"
 
 #agx_tracer.encoder_id_filter = lambda i: (i >> 16) == 0xc0de
 agx_tracer.start()

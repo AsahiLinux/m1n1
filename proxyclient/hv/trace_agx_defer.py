@@ -13,11 +13,12 @@ agx_tracer = AGXTracer(hv, "/arm-io/gfx-asc", verbose=1)
 
 agx_tracer.pause_after_init = True
 agx_tracer.trace_usermap = False
-agx_tracer.trace_kernmap = True
+agx_tracer.trace_kernmap = False
 agx_tracer.trace_userva = False
-agx_tracer.trace_kernva = True
+agx_tracer.trace_kernva = False
 agx_tracer.redump = True
 agx_tracer.exclude_context_id = 1
+agx_tracer.cmd_dump_dir = "gfxdumps"
 
 agx_tracer.start()
 
