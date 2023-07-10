@@ -246,6 +246,7 @@ class CommandQueueTracer(Reloadable):
                 self.dumpfile.flush()
                 tracer.state.queue_seq += 1
 
+        self.tracer.uat.invalidate_cache()
         self.update_info()
 
     def update_info(self):
