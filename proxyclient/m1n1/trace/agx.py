@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 
-import textwrap, os.path, json, datetime
+import textwrap, os.path, json, datetime, ctypes
 from .asc import *
 from ..hw.uat import UAT, MemoryAttr, PTE, Page_PTE, TTBR
 from ..hw.agx import *
@@ -416,6 +416,54 @@ class AGXTracer(ASCTracer):
         self.last_3d = None
         self.last_cp = None
 
+        self.agxdecode = None
+
+        libagxdecode = os.getenv("AGXDECODE", None)
+        if libagxdecode:
+            self.init_agxdecode(libagxdecode)
+
+    def init_agxdecode(self, path):
+        # Hack to make sure we reload the lib when it changes
+        # tpath = os.getenv("XDG_RUNTIME_DIR", "/tmp") + "/" + str(time.time()) + ".so"
+        # os.symlink(path, tpath)
+        # lib = ctypes.cdll.LoadLibrary(tpath)
+        lib = ctypes.cdll.LoadLibrary(path)
+
+        self.agxdecode = lib
+
+        read_gpu_mem = ctypes.CFUNCTYPE(ctypes.c_size_t, ctypes.c_uint64, ctypes.c_size_t, ctypes.c_void_p)
+        stream_write = ctypes.CFUNCTYPE(ctypes.c_ssize_t, ctypes.POINTER(ctypes.c_char), ctypes.c_size_t)
+
+        class libagxdecode_config(ctypes.Structure):
+            _fields_ = [
+                ("chip_id", ctypes.c_uint32),
+                ("read_gpu_mem", read_gpu_mem),
+                ("stream_write", stream_write),
+            ]
+
+        def _read_gpu_mem(addr, size, data):
+            if addr < 0x100000000:
+                addr |= 0x1100000000
+            buf = self.read_func(addr, size)
+            ctypes.memmove(data, buf, len(buf))
+            return len(buf)
+
+        def _stream_write(buf, size):
+            self.log(buf[:size].decode("ascii"))
+            return size
+
+        # Keep refs
+        self._read_gpu_mem = read_gpu_mem(_read_gpu_mem)
+        self._stream_write = stream_write(_stream_write)
+
+        config = libagxdecode_config(self.chip_id, self._read_gpu_mem, self._stream_write)
+
+        self.agxdecode.libagxdecode_init(ctypes.pointer(config))
+
+        self.agxdecode.libagxdecode_vdm.argtypes = [ctypes.c_uint64, ctypes.c_char_p, ctypes.c_bool]
+        self.agxdecode.libagxdecode_cdm.argtypes = [ctypes.c_uint64, ctypes.c_char_p, ctypes.c_bool]
+        self.agxdecode.libagxdecode_usc.argtypes = [ctypes.c_uint64, ctypes.c_char_p, ctypes.c_bool]
+
     def get_cmdqueue(self, info_addr, new_queue, queue_type):
         if info_addr in self.cmdqueues and not new_queue:
             return self.cmdqueues[info_addr]
@@ -813,6 +861,8 @@ class AGXTracer(ASCTracer):
                     size -= block
                 return data
 
+            self.read_func = read
+
             #chexdump(kread(wi0.addr, 0x600), print_fn=self.log)
             self.log(f"  context_id = {context:#x}")
             self.dump_buffer_manager(wi0.buffer_mgr, kread, read)
@@ -874,7 +924,10 @@ class AGXTracer(ASCTracer):
                 data = read(wi0.struct_2.tvb_tilemap, 0x100000)
                 self.log(f"      tilemaps @ {wi0.struct_2.tvb_tilemap:#x}: ({len(data):#x})")
                 chexdump(data, print_fn=self.log)
-            #self.uat.dump(context, self.log)
+
+                if self.agxdecode:
+                    self.log("Decode VDM")
+                    self.agxdecode.libagxdecode_vdm(wi0.struct_2.encoder_addr, b"VDM", True)
 
             regs = getattr(wi0, "registers", None)
             if regs is not None:
