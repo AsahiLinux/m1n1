@@ -168,7 +168,7 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
                             float *afr_leak)
 {
     float s_sram, k_sram, s_core, k_core, s_cs, k_cs;
-    float dk_core, dk_sram, dk_cs;
+    float dk_core, dk_sram = 0, dk_cs;
     float imax = 1000;
 
     u32 nclusters = 0;
@@ -198,8 +198,8 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
             // Since it's obviously wrong, let's just use only the first component
             s_core = 1.48461742;
             k_core = 0.39013552;
-            dk_core = 8.558;
-            dk_sram = 0.05;
+            dk_core = 1.06975;
+            dk_sram = 0.00625;
 
             ncores = 8;
             adjust_leakages = true;
@@ -216,8 +216,8 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
             // Since it's obviously wrong, let's just use only the first component
             s_core = 1.21356187;
             k_core = 0.43328839;
-            dk_core = 9.83196;
-            dk_sram = 0.07828;
+            dk_core = 0.983196;
+            dk_sram = 0.007828;
 
             simple_exps = true;
             ncores = 10;
@@ -225,26 +225,40 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
             imax = 24.0;
             break;
         case T6021:
-            nclusters += 2;
-        case T6020:
-            nclusters += 2;
-            load_fuses(core_leak + 0, min(4, nclusters), 0x29e2cc1f8, 4, 13, 2, 2, false);
-            load_fuses(sram_leak + 0, min(4, nclusters), 0x29e2cc208, 19, 9, 1, 1, false);
-            load_fuses(cs_leak + 0, 1, 0x29e2cc204, 8, 12, 1, 1, false);
-            load_fuses(afr_leak + 0, 1, 0x29e2cc210, 0, 12, 1, 1, false);
-
+            nclusters += 4;
             s_sram = 5.80760758;
             k_sram = 0.00707453862;
             // macOS difference: macOS uses a misbehaved piecewise function here
             // Since it's obviously wrong, let's just use only the first component
-            s_core = 1.25194765;
-            k_core = 0.559222951;
-            dk_core = 9.50675529;
-            dk_sram = 0.0753;
+            s_core = 1.24554153;
+            k_core = 0.56203084;
 
             s_cs = 1.8593429;
             k_cs = 0.1629485;
             dk_cs = 4.49158089;
+
+            goto t602x;
+
+        case T6020:
+            nclusters = 2;
+            s_sram = 5.02191218;
+            k_sram = 0.0145621013;
+            // macOS difference: macOS uses a misbehaved piecewise function here
+            // Since it's obviously wrong, let's just use only the first component
+            s_core = 1.21006932;
+            k_core = 0.52776378;
+
+            s_cs = 1.81949284;
+            k_cs = 0.1565765;
+            dk_cs = 1.88830323;
+
+        t602x:
+            dk_core = 1.0007;
+            dk_sram = 0.007955;
+            load_fuses(core_leak + 0, min(4, nclusters), 0x29e2cc1f8, 4, 13, 2, 2, false);
+            load_fuses(sram_leak + 0, min(4, nclusters), 0x29e2cc208, 19, 9, 1, 1, false);
+            load_fuses(cs_leak + 0, 1, 0x29e2cc204, 8, 12, 1, 1, false);
+            load_fuses(afr_leak + 0, 1, 0x29e2cc210, 0, 12, 1, 1, false);
 
             simple_exps = true;
             ncores = 10;
@@ -298,7 +312,7 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
                 sram_v_p = sbase * sbase; // v ^ 2
             else
                 sram_v_p = sbase * sbase * sbase; // v ^ 3
-            mw += dk_sram * (sram[idx].freq / 1000000.f) * sram_v_p;
+            mw += dk_sram * core_count[j] * (sram[idx].freq / 1000000.f) * sram_v_p;
 
             float cbase = core[idx].volt / 750.f;
             float core_v_p;
@@ -306,7 +320,7 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
                 core_v_p = cbase * cbase; // v ^ 2
             else
                 core_v_p = cbase * cbase * cbase; // v ^ 3
-            mw += dk_core * (core[idx].freq / 1000000.f) * core_v_p;
+            mw += dk_core * core_count[j] * (core[idx].freq / 1000000.f) * core_v_p;
 
             if (mw > imax * core[idx].volt)
                 mw = imax * core[idx].volt;
