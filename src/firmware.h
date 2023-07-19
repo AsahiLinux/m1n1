@@ -19,6 +19,8 @@ enum fw_version {
     V13_1,
     V13_2,
     V13_3,
+    V13_5B4,
+    V13_5,
     NUM_FW_VERSIONS,
 };
 
