@@ -617,6 +617,9 @@ int dt_set_gpu(void *dt)
         case V12_3_1:
             compat = &fw_versions[V12_3];
             break;
+        case V13_5B4:
+            compat = &fw_versions[V13_5];
+            break;
         default:
             compat = &os_firmware;
             break;
