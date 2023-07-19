@@ -11,6 +11,7 @@
 #include "types.h"
 #include "utils.h"
 #include "xnuboot.h"
+#include "assert.h"
 
 #ifdef CHAINLOADING
 int rust_load_image(const char *spec, void **image, size_t *size);
@@ -21,6 +22,9 @@ extern u8 _chainload_stub_end[];
 
 int chainload_image(void *image, size_t size, char **vars, size_t var_cnt)
 {
+    // Here `new_base` is trivially the same as `_base` because we want stage 2
+    // m1n1 code to completely overwrite stage 1 m1n1, but we _could_ make
+    // them different. They don't have to be the same
     u64 new_base = (u64)_base;
     size_t image_size = size;
 
@@ -61,6 +65,9 @@ int chainload_image(void *image, size_t size, char **vars, size_t var_cnt)
     size_t stub_size = _chainload_stub_end - _chainload_stub_start;
 
     void *new_image = malloc(image_size + stub_size);
+    // The chainloading stub copies the m1n1 binary image starting from address
+    // `new_image` over to `new_base`. For the copy to work, this assertion must hold
+    assert(new_base <= (u64)new_image || new_base >= (u64)new_image + image_size + stub_size);
 
     // Copy m1n1
     memcpy(new_image, image, size);
