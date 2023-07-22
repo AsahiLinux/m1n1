@@ -52,6 +52,7 @@ endif
 export RUSTC_BOOTSTRAP=1
 RUST_LIB := librust.a
 RUST_LIBS :=
+# You will need CHAINLOADING=1 if you want to build a stage 1 m1n1
 ifeq ($(CHAINLOADING),1)
 CFG += CHAINLOADING
 RUST_LIBS += $(RUST_LIB)

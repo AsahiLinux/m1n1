@@ -1,3 +1,11 @@
+/*
+ * Linker file used to build macho based m1n1 (from which the m1n1 binary is extracted via objcopy)
+ *
+ * The m1n1 binary obtained is typically used in stage 1 m1n1. The macho based m1n1 is strictly not
+ * required in recent versions of macOS as we can go via the elf based m1n1 (see m1n1-raw.ld)
+ */
+
+/* This is where m1n1 starts running from, see start.S */
 ENTRY(_start)
 
 /* Fake virtual load address for the mach-o */

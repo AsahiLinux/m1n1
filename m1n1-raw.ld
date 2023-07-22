@@ -1,3 +1,11 @@
+/*
+ * Linker file used to build elf based m1n1 (from which the raw m1n1 binary is extracted via objcopy)
+ *
+ * The m1n1 binary obtained is typically used in stage 2 m1n1. It can also be used for stage 1 m1n1
+ * in recent macOS versions.
+ */
+
+/* This is where m1n1 starts running, see start.S */
 ENTRY(_start)
 
 _stack_size = 0x20000;
