@@ -6,3 +6,7 @@ __pycache__
 *.swp
 *.orig
 *.rej
+# .cache added by clangd
+.cache
+compile_commands.json
+rust/target
