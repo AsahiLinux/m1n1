@@ -975,7 +975,7 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
                 if (!hook(ctx, ipa, val, true, width))
                     return false;
                 dprintf("HV: SPTE_HOOK[W] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr, far, ipa,
-                        1 << width, hook, wval);
+                        1 << width, hook, val);
                 break;
             }
             case SPTE_PROXY_HOOK_RW:
