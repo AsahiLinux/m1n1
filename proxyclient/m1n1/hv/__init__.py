@@ -289,6 +289,14 @@ class HV(Reloadable):
             self.del_tracer(zone, "PrintTracer")
 
     def pt_update(self):
+        '''
+        Update stage 2 address translation page tables
+
+        Not only is this method called at specific points in the hypervisor exception
+        handling flow, it is also called before the VM starts in the Hypervisor for the first
+        time; when this method is invoked at that point, it will setup many of the initial
+        page table entries required for stage 2 translation (normal system ram, mmios mostly).
+        '''
         if not self.dirty_maps:
             return
 
@@ -1372,6 +1380,8 @@ class HV(Reloadable):
         print("Initializing hypervisor over iodev %s" % self.iodev)
         self.p.hv_init()
 
+        # When m1n1 hypervisor running on the target informs us about an exception/event,
+        # we need to know what handlers to invoke. We do that here.
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.SYNC, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.IRQ, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.FIQ, self.handle_exception)
@@ -1457,7 +1467,9 @@ class HV(Reloadable):
         self.add_tracer(zone, "VUART", TraceMode.RESERVED)
 
     def map_essential(self):
-        # Things we always map/take over, for the hypervisor to work
+        '''
+        Things we always map/take over, for the hypervisor to work
+        '''
         _pmgr = {}
 
         def wh(base, off, data, width):
@@ -1663,8 +1675,10 @@ class HV(Reloadable):
     def disable_time_stealing(self):
         self.p.hv_set_time_stealing(False)
 
-
     def load_raw(self, image, entryoffset=0x800, use_xnu_symbols=False, vmin=0):
+        '''
+        Loads the raw image that will run into the VM after some additions/adjustments
+        '''
         sepfw_start, sepfw_length = self.u.adt["chosen"]["memory-map"].SEPFW
         tc_start, tc_size = self.u.adt["chosen"]["memory-map"].TrustCache
         if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
@@ -1687,7 +1701,12 @@ class HV(Reloadable):
         self.ram_base = self.phys_base & ~0xffffffff
         self.ram_size = self.u.ba.mem_size_actual
         guest_base += 16 << 20 # ensure guest starts within a 16MB aligned region of mapped RAM
+        # Within a VM, we provide the ADT ourselves by copying it in at address `adt_base`.
+        # This is different from machine boot into EL2 where iBoot gives us the ADT.
         self.adt_base = guest_base
+        # The assumption here is that ADT changed size remains within the aligned up size of
+        # the old ADT after making our adjustments/changes. This is OK because we're really
+        # making very small adjustments.
         guest_base += align(self.u.ba.devtree_size)
         tc_base = guest_base
         guest_base += align(tc_size)
@@ -1879,6 +1898,9 @@ class HV(Reloadable):
         self.pt_update()
 
         adt_blob = self.adt.build()
+        # This ADT is a slightly modified version of the original ADT provided by iBoot.
+        # See `load_raw()` and `setup_adt()` for instance for the adjustments that we
+        # make to the ADT.
         print(f"Uploading ADT (0x{len(adt_blob):x} bytes)...")
         self.iface.writemem(self.adt_base, adt_blob)
 
