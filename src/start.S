@@ -139,8 +139,6 @@ cpu_reset:
     ldr x1, [x1]
     mov sp, x1
 
-    ldr x2, [sp, #-8]
-
     mov w0, 'K'
     bl debug_putc
 
