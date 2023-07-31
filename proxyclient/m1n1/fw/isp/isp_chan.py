@@ -100,9 +100,7 @@ class ISPChannel:
 		rsp = self._handle(req=req)
 		if (rsp == None): return None
 		self.write_msg(rsp, self.cursor)
-		self.isp.regs.ISP_IRQ_ACK.val = self.isp.regs.ISP_IRQ_INTERRUPT.val
 		self.isp.regs.ISP_IRQ_DOORBELL.val = self.doorbell
-		time.sleep(0.05)  # TODO Why does it die without this? Why 0.05-0.10??
 		self.update_cursor()
 		return rsp
 
