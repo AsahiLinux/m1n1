@@ -56,6 +56,7 @@ static int get_core_counts(u32 *count, u32 nclusters, u32 ncores)
             cores[1] = read32(base + 0xd01514);
             /* fallthrough */
         case T8103:
+        case T8112:
         case T6000:
         case T6001:
             cores[0] = read32(base + 0xd01500);
