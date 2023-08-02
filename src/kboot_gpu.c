@@ -438,6 +438,7 @@ static int fdt_set_aux_opp(void *dt, int gpu, const char *prop, const struct aux
 
 int dt_set_gpu(void *dt)
 {
+    bool has_cs_afr = false;
     int (*calc_power)(u32 count, u32 table_count, const struct perf_state *core,
                       const struct perf_state *sram, const struct aux_perf_states *cs, u32 *max_pwr,
                       float *core_leak, float *sram_leak, float *cs_leak, float *afr_leak);
@@ -448,12 +449,14 @@ int dt_set_gpu(void *dt)
         case T8103:
             calc_power = calc_power_t8103;
             break;
+        case T6020:
+        case T6021:
+            has_cs_afr = true;
+            /* fallthrough */
         case T6000:
         case T6001:
         case T6002:
         case T8112:
-        case T6020:
-        case T6021:
             calc_power = calc_power_t600x;
             break;
         default:
@@ -511,6 +514,12 @@ int dt_set_gpu(void *dt)
 
     perf_states_afr = adt_getprop(adt, sgx, "afr-perf-states", NULL);
     perf_states_cs = adt_getprop(adt, sgx, "cs-perf-states", NULL);
+
+    if (has_cs_afr && !perf_states_cs)
+        bail("ADT: GPU: cs-perf-states not found\n");
+
+    if (has_cs_afr && !perf_states_afr)
+        bail("ADT: GPU: afr-perf-states not found\n");
 
     u32 max_pwr[MAX_PSTATES];
     float core_leak[MAX_CLUSTERS];
@@ -572,7 +581,7 @@ int dt_set_gpu(void *dt)
         bail("FDT: GPU: Expected %d operating points, but found %d\n", perf_state_count, i);
 
     u32 dies = 1;
-    if (perf_states_cs) {
+    if (has_cs_afr) {
         int ret = fdt_set_aux_opp(dt, gpu, "apple,cs-opp", perf_states_cs, dies);
         if (ret)
             return ret;
@@ -587,7 +596,7 @@ int dt_set_gpu(void *dt)
         printf("\n");
     }
 
-    if (perf_states_afr) {
+    if (has_cs_afr) {
         int ret = fdt_set_aux_opp(dt, gpu, "apple,afr-opp", perf_states_afr, dies);
         if (ret)
             return ret;
