@@ -148,10 +148,10 @@ GPUPerfState64 = Struct(
 )
 
 GPUPerfStates64 = Struct(
-    "base" / Int64ul,
+    "dies" / Int64ul,
     "count" / Int64ul,
-    "states" / GreedyRange(GPUPerfState64),
-    "min_sram_volt" / Int64ul,
+    "states" / Array(this.dies, Array(this.count, GPUPerfState64)),
+    "min_sram_volt" / Array(this.dies, Int64ul),
 )
 
 SpeakerConfig = Struct(
