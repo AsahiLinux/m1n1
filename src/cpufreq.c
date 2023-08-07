@@ -133,7 +133,7 @@ void cpufreq_fixup_cluster(const struct cluster_t *cluster)
                 bits = CLUSTER_PSTATE_UNK_M1;
                 break;
             case T8112:
-            case T6020 ... T6021:
+            case T6020 ... T6022:
                 bits = CLUSTER_PSTATE_UNK_M2;
                 break;
             default:
@@ -198,6 +198,7 @@ const struct cluster_t *cpufreq_get_clusters(void)
             return t8112_clusters;
         case T6020:
         case T6021:
+        case T6022:
             return t6020_clusters;
         default:
             printf("cpufreq: Chip 0x%x is unsupported\n", chip_id);
@@ -248,6 +249,7 @@ const struct feat_t *cpufreq_get_features(void)
             return t8112_features;
         case T6020:
         case T6021:
+        case T6022:
             return t6020_features;
         default:
             printf("cpufreq: Chip 0x%x is unsupported\n", chip_id);

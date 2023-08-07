@@ -63,6 +63,7 @@ static int get_core_counts(u32 *count, u32 nclusters, u32 ncores)
             break;
         case T6020:
         case T6021:
+        case T6022:
             cores[0] = read32(base + 0xe01500);
             cores[1] = read32(base + 0xe01504);
             cores[2] = read32(base + 0xe01508);
@@ -225,6 +226,13 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
             adjust_leakages = false; // pre-adjusted?
             imax = 24.0;
             break;
+        case T6022:
+            nclusters += 4;
+            load_fuses(core_leak + 4, min(4, nclusters), 0x229e2cc1f8, 4, 13, 2, 2, false);
+            load_fuses(sram_leak + 4, min(4, nclusters), 0x229e2cc208, 19, 9, 1, 1, false);
+            load_fuses(cs_leak + 1, 1, 0x229e2cc204, 8, 12, 1, 1, false);
+            load_fuses(afr_leak + 1, 1, 0x229e2cc210, 0, 12, 1, 1, false);
+            // fallthrough
         case T6021:
             nclusters += 4;
             s_sram = 5.80760758;
@@ -452,6 +460,7 @@ int dt_set_gpu(void *dt)
             break;
         case T6020:
         case T6021:
+        case T6022:
             has_cs_afr = true;
             /* fallthrough */
         case T6000:
