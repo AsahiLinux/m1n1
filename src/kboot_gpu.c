@@ -434,7 +434,7 @@ static int fdt_set_aux_opp(void *dt, int gpu, const char *prop, const struct aux
             bail("FDT: GPU: Expected %d operating points, but found more\n", count);
 
         if (fdt_setprop_inplace(dt, opp, "opp-microvolt", &volts, sizeof(u32) * dies))
-            bail("FDT: GPU: Failed to set opp-microvolt for PS %d\n", i);
+            bail("FDT: GPU: Failed to set opp-microvolt for aux PS %d\n", i);
 
         if (fdt_setprop_inplace_u64(dt, opp, "opp-hz", ps->states[i].freq))
             bail("FDT: GPU: Failed to set opp-hz for PS %d\n", i);
@@ -452,20 +452,27 @@ int dt_set_gpu(void *dt)
                       const struct perf_state *sram, const struct aux_perf_states *cs, u32 *max_pwr,
                       float *core_leak, float *sram_leak, float *cs_leak, float *afr_leak);
 
+    u32 dies = 1;
+
     printf("FDT: GPU: Initializing GPU info\n");
 
     switch (chip_id) {
         case T8103:
             calc_power = calc_power_t8103;
             break;
-        case T6020:
-        case T6021:
         case T6022:
+            dies = 2;
+            // fallthrough
+        case T6021:
+        case T6020:
             has_cs_afr = true;
-            /* fallthrough */
-        case T6000:
-        case T6001:
+            calc_power = calc_power_t600x;
+            break;
         case T6002:
+            dies = 2;
+            // fallthrough
+        case T6001:
+        case T6000:
         case T8112:
             calc_power = calc_power_t600x;
             break;
@@ -590,7 +597,6 @@ int dt_set_gpu(void *dt)
     if (i != perf_state_count)
         bail("FDT: GPU: Expected %d operating points, but found %d\n", perf_state_count, i);
 
-    u32 dies = 1;
     if (has_cs_afr) {
         int ret = fdt_set_aux_opp(dt, gpu, "apple,cs-opp", perf_states_cs, dies);
         if (ret)
