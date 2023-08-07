@@ -3,6 +3,7 @@
 #include "adt.h"
 #include "pcie.h"
 #include "pmgr.h"
+#include "string.h"
 #include "tunables.h"
 #include "utils.h"
 
@@ -98,6 +99,9 @@
 #define DWC_DBI_LINK_WIDTH               GENMASK(12, 8)
 #define DWC_DBI_SPEED_CHANGE             BIT(17)
 
+#define PHY_STRIDE   0x4000
+#define PHYIP_STRIDE 0x40000
+
 struct fuse_bits {
     u16 src_reg;
     u16 tgt_reg;
@@ -174,27 +178,45 @@ static const struct reg_info regs_t602x = {
 };
 
 static bool pcie_initialized = false;
-static u64 rc_base;
-static u64 phy_common_base;
-static u64 phy_base;
-static u64 phy_ip_base;
-static u64 fuse_base;
-static u32 port_count;
-static u64 port_base[8];
-static u64 port_ltssm_base[8];
-static u64 port_phy_base[8];
-static u64 port_intr2axi_base[8];
-static const struct reg_info *pcie_regs;
 
-int pcie_init(void)
+enum PCIE_CONTROLLERS {
+    APCIE,
+    APCIE_GE0,
+    APCIE_GE1,
+    NUM_CONTROLLERS,
+};
+
+#define MAX_PHYS 4
+
+struct state {
+    int num_phys;
+    u64 rc_base;
+    u64 phy_common_base;
+    u64 phy_base[MAX_PHYS];
+    u64 phy_ip_base[MAX_PHYS];
+    u64 fuse_base;
+    u32 port_count;
+    u64 port_base[8];
+    u64 port_ltssm_base[8];
+    u64 port_phy_base[8];
+    u64 port_intr2axi_base[8];
+    const struct reg_info *pcie_regs;
+    bool initialized;
+};
+
+static struct state controllers[NUM_CONTROLLERS];
+
+static int pcie_init_controller(int controller, const char *path)
 {
-    const char *path = "/arm-io/apcie";
+    struct state *state = &controllers[controller];
     int adt_path[8];
     int adt_offset;
+    u32 lane_mode = DWC_DBI_PORT_LINK_MODE_1_LANE;
+    u32 link_width = 1;
     const struct fuse_bits *fuse_bits;
 
-    if (pcie_initialized)
-        return 0;
+    state->initialized = false;
+    state->num_phys = 1;
 
     adt_offset = adt_path_offset_trace(adt, path, adt_path);
     if (adt_offset < 0) {
@@ -204,62 +226,97 @@ int pcie_init(void)
 
     if (adt_is_compatible(adt, adt_offset, "apcie,t8103")) {
         fuse_bits = pcie_fuse_bits_t8103;
-        pcie_regs = &regs_t8xxx_t600x;
+        state->pcie_regs = &regs_t8xxx_t600x;
         printf("pcie: Initializing t8103 PCIe controller\n");
     } else if (adt_is_compatible(adt, adt_offset, "apcie,t6000")) {
         fuse_bits = pcie_fuse_bits_t6000;
-        pcie_regs = &regs_t8xxx_t600x;
+        state->pcie_regs = &regs_t8xxx_t600x;
         printf("pcie: Initializing t6000 PCIe controller\n");
     } else if (adt_is_compatible(adt, adt_offset, "apcie,t8112")) {
         fuse_bits = pcie_fuse_bits_t8112;
-        pcie_regs = &regs_t8xxx_t600x;
+        state->pcie_regs = &regs_t8xxx_t600x;
         printf("pcie: Initializing t8112 PCIe controller\n");
     } else if (adt_is_compatible(adt, adt_offset, "apcie,t6020")) {
         fuse_bits = NULL;
-        pcie_regs = &regs_t602x;
+        state->pcie_regs = &regs_t602x;
         printf("pcie: Initializing t6020 PCIe controller\n");
+    } else if (adt_is_compatible(adt, adt_offset, "apcie-ge,t6020")) {
+        u32 lane_cfg;
+        fuse_bits = NULL;
+        state->pcie_regs = &regs_t602x;
+
+        printf("pcie: Initializing t6020 PCIe GE controller\n");
+        if (ADT_GETPROP(adt, adt_offset, "lane-cfg", &lane_cfg) < 0) {
+            printf("pcie: Error getting lane_cfg for %s\n", path);
+            return -1;
+        }
+        switch (lane_cfg) {
+            case 0:
+                state->num_phys = 4;
+                lane_mode = DWC_DBI_PORT_LINK_MODE_16_LANES;
+                link_width = 16;
+                break;
+            case 1:
+                state->num_phys = 2;
+                lane_mode = DWC_DBI_PORT_LINK_MODE_8_LANES;
+                link_width = 8;
+                break;
+            default:
+                printf("pcie: Unknown lane config %d for %s\n", lane_cfg, path);
+                return -1;
+        }
     } else {
         printf("pcie: Unsupported compatible\n");
         return -1;
     }
 
-    if (ADT_GETPROP(adt, adt_offset, "#ports", &port_count) < 0) {
+    if (ADT_GETPROP(adt, adt_offset, "#ports", &state->port_count) < 0) {
         printf("pcie: Error getting port count for %s\n", path);
         return -1;
     }
 
     u64 config_base;
-    if (adt_get_reg(adt, adt_path, "reg", pcie_regs->config_idx, &config_base, NULL)) {
-        printf("pcie: Error getting reg with index %d for %s\n", pcie_regs->config_idx, path);
+    if (adt_get_reg(adt, adt_path, "reg", state->pcie_regs->config_idx, &config_base, NULL)) {
+        printf("pcie: Error getting reg with index %d for %s\n", state->pcie_regs->config_idx,
+               path);
         return -1;
     }
 
-    if (adt_get_reg(adt, adt_path, "reg", pcie_regs->rc_idx, &rc_base, NULL)) {
-        printf("pcie: Error getting reg with index %d for %s\n", pcie_regs->rc_idx, path);
+    if (adt_get_reg(adt, adt_path, "reg", state->pcie_regs->rc_idx, &state->rc_base, NULL)) {
+        printf("pcie: Error getting reg with index %d for %s\n", state->pcie_regs->rc_idx, path);
         return -1;
     }
 
-    if (pcie_regs->phy_common_idx != -1) {
-        if (adt_get_reg(adt, adt_path, "reg", pcie_regs->phy_common_idx, &phy_common_base, NULL)) {
-            printf("pcie: Error getting reg with index %d for %s\n", pcie_regs->phy_idx, path);
+    if (state->pcie_regs->phy_common_idx != -1) {
+        if (adt_get_reg(adt, adt_path, "reg", state->pcie_regs->phy_common_idx,
+                        &state->phy_common_base, NULL)) {
+            printf("pcie: Error getting reg with index %d for %s\n", state->pcie_regs->phy_idx,
+                   path);
             return -1;
         }
     } else {
-        phy_common_base = 0;
+        state->phy_common_base = 0;
     }
 
-    if (adt_get_reg(adt, adt_path, "reg", pcie_regs->phy_idx, &phy_base, NULL)) {
-        printf("pcie: Error getting reg with index %d for %s\n", pcie_regs->phy_idx, path);
+    if (adt_get_reg(adt, adt_path, "reg", state->pcie_regs->phy_idx, &state->phy_base[0], NULL)) {
+        printf("pcie: Error getting reg with index %d for %s\n", state->pcie_regs->phy_idx, path);
         return -1;
     }
 
-    if (adt_get_reg(adt, adt_path, "reg", pcie_regs->phy_ip_idx, &phy_ip_base, NULL)) {
-        printf("pcie: Error getting reg with index %d for %s\n", pcie_regs->phy_ip_idx, path);
+    if (adt_get_reg(adt, adt_path, "reg", state->pcie_regs->phy_ip_idx, &state->phy_ip_base[0],
+                    NULL)) {
+        printf("pcie: Error getting reg with index %d for %s\n", state->pcie_regs->phy_ip_idx,
+               path);
         return -1;
     }
 
-    if (adt_get_reg(adt, adt_path, "reg", pcie_regs->fuse_idx, &fuse_base, NULL)) {
-        printf("pcie: Error getting reg with index %d for %s\n", pcie_regs->fuse_idx, path);
+    for (int phy = 1; phy < state->num_phys; phy++) {
+        state->phy_base[phy] = state->phy_base[0] + PHY_STRIDE * phy;
+        state->phy_ip_base[phy] = state->phy_ip_base[0] + PHYIP_STRIDE * phy;
+    }
+
+    if (adt_get_reg(adt, adt_path, "reg", state->pcie_regs->fuse_idx, &state->fuse_base, NULL)) {
+        printf("pcie: Error getting reg with index %d for %s\n", state->pcie_regs->fuse_idx, path);
         return -1;
     }
 
@@ -269,15 +326,15 @@ int pcie_init(void)
         return -1;
     }
 
-    int port_regs = (reg_len / 16) - pcie_regs->shared_reg_count;
+    int port_regs = (reg_len / 16) - state->pcie_regs->shared_reg_count;
 
-    if (port_regs % port_count) {
+    if (port_regs % state->port_count) {
         printf("pcie: %d port registers do not evenly divide into %d ports\n", port_regs,
-               port_count);
+               state->port_count);
         return -1;
     }
 
-    int port_reg_cnt = port_regs / port_count;
+    int port_reg_cnt = port_regs / state->port_count;
     printf("pcie: ADT uses %d reg entries per port\n", port_reg_cnt);
 
     if (pmgr_adt_power_enable(path)) {
@@ -285,17 +342,18 @@ int pcie_init(void)
         return -1;
     }
 
-    if (tunables_apply_local(path, "apcie-axi2af-tunables", pcie_regs->axi_idx)) {
+    if (tunables_apply_local(path, "apcie-axi2af-tunables", state->pcie_regs->axi_idx)) {
         printf("pcie: Error applying %s for %s\n", "apcie-axi2af-tunables", path);
         return -1;
     }
 
     /* ??? */
-    write32(rc_base + 0x4, 0);
+    if (controller == APCIE)
+        write32(state->rc_base + 0x4, 0);
 
     if (!adt_getprop(adt, adt_offset, "apcie-common-tunables", NULL)) {
         printf("pcie: No common tunables\n");
-    } else if (tunables_apply_local(path, "apcie-common-tunables", pcie_regs->rc_idx)) {
+    } else if (tunables_apply_local(path, "apcie-common-tunables", state->pcie_regs->rc_idx)) {
         printf("pcie: Error applying %s for %s\n", "apcie-common-tunables", path);
         return -1;
     }
@@ -306,81 +364,105 @@ int pcie_init(void)
 
     if (!adt_getprop(adt, adt_offset, "apcie-phy-tunables", NULL)) {
         printf("pcie: No PHY tunables\n");
-    } else if (tunables_apply_local(path, "apcie-phy-tunables", pcie_regs->phy_idx)) {
+    } else if (tunables_apply_local(path, "apcie-phy-tunables", state->pcie_regs->phy_idx)) {
         printf("pcie: Error applying %s for %s\n", "apcie-phy-tunables", path);
         return -1;
     }
 
-    if (pcie_regs->type == APCIE_T602X) {
-        if (poll32(phy_common_base + APCIE_PHYCMN_CLK, APCIE_PHYCMN_CLK_100MHZ,
+    if (state->pcie_regs->type == APCIE_T602X) {
+        if (poll32(state->phy_common_base + APCIE_PHYCMN_CLK, APCIE_PHYCMN_CLK_100MHZ,
                    APCIE_PHYCMN_CLK_100MHZ, 250000)) {
             printf("pcie: Reference clock not available\n");
             return -1;
         }
     }
 
-    set32(phy_base + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0REQ);
-    if (poll32(phy_base + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0ACK, APCIE_PHY_CTRL_CLK0ACK, 50000)) {
-        printf("pcie: Timeout enabling PHY CLK0\n");
-        return -1;
-    }
+    for (int phy = 0; phy < state->num_phys; phy++) {
+        set32(state->phy_base[phy] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0REQ);
+        if (poll32(state->phy_base[phy] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0ACK,
+                   APCIE_PHY_CTRL_CLK0ACK, 50000)) {
+            printf("pcie: Timeout enabling PHY CLK0\n");
+            return -1;
+        }
 
-    set32(phy_base + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK1REQ);
-    if (poll32(phy_base + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK1ACK, APCIE_PHY_CTRL_CLK1ACK, 50000)) {
-        printf("pcie: Timeout enabling PHY CLK1\n");
-        return -1;
-    }
+        set32(state->phy_base[phy] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK1REQ);
+        if (poll32(state->phy_base[phy] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK1ACK,
+                   APCIE_PHY_CTRL_CLK1ACK, 50000)) {
+            printf("pcie: Timeout enabling PHY CLK1\n");
+            return -1;
+        }
 
-    clear32(phy_base + APCIE_PHY_CTRL, APCIE_PHY_CTRL_RESET);
-    udelay(1);
-
-    /* ??? */
-    if (pcie_regs->type == APCIE_T81XX) {
-        set32(rc_base + APCIE_PHYIF_CTRL, APCIE_PHYIF_CTRL_RUN);
+        clear32(state->phy_base[phy] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_RESET);
         udelay(1);
-    } else if (pcie_regs->type == APCIE_T602X) {
-        set32(phy_base + 4, 0x01);
+
+        /* ??? */
+        if (state->pcie_regs->type == APCIE_T81XX) {
+            set32(state->rc_base + APCIE_PHYIF_CTRL, APCIE_PHYIF_CTRL_RUN);
+            udelay(1);
+        } else if (state->pcie_regs->type == APCIE_T602X) {
+            set32(state->phy_base[phy] + 4, 0x01);
+        }
+
+        /* Apply "fuses". */
+        for (int i = 0; fuse_bits && fuse_bits[i].width; i++) {
+            u32 fuse;
+            fuse = (read32(state->fuse_base + fuse_bits[i].src_reg) >> fuse_bits[i].src_bit);
+            fuse &= (1 << fuse_bits[i].width) - 1;
+            mask32(state->phy_ip_base[phy] + fuse_bits[i].tgt_reg,
+                   ((1 << fuse_bits[i].width) - 1) << fuse_bits[i].tgt_bit,
+                   fuse << fuse_bits[i].tgt_bit);
+        }
+
+        char pll_prop[64];
+        char auspma_prop[64];
+
+        if (state->num_phys == 1) {
+            strcpy(pll_prop, "apcie-phy-ip-pll-tunables");
+            strcpy(auspma_prop, "apcie-phy-ip-auspma-tunables");
+        } else {
+            snprintf(pll_prop, sizeof(pll_prop), "apcie-phy-%d-ip-pll-tunables", phy);
+            snprintf(auspma_prop, sizeof(auspma_prop), "apcie-phy-%d-ip-auspma-tunables", phy);
+        }
+
+        if (tunables_apply_local_addr(path, pll_prop, state->phy_ip_base[phy])) {
+            printf("pcie: Error applying %s for %s\n", pll_prop, path);
+            return -1;
+        }
+        if (tunables_apply_local_addr(path, auspma_prop, state->phy_ip_base[phy])) {
+            printf("pcie: Error applying %s for %s\n", auspma_prop, path);
+            return -1;
+        }
+
+        if (state->pcie_regs->type == APCIE_T602X) {
+            set32(state->phy_base[phy] + 4, 0x10);
+        }
     }
 
-    /* Apply "fuses". */
-    for (int i = 0; fuse_bits && fuse_bits[i].width; i++) {
-        u32 fuse;
-        fuse = (read32(fuse_base + fuse_bits[i].src_reg) >> fuse_bits[i].src_bit);
-        fuse &= (1 << fuse_bits[i].width) - 1;
-        mask32(phy_ip_base + fuse_bits[i].tgt_reg,
-               ((1 << fuse_bits[i].width) - 1) << fuse_bits[i].tgt_bit,
-               fuse << fuse_bits[i].tgt_bit);
-    }
-
-    if (tunables_apply_local(path, "apcie-phy-ip-pll-tunables", pcie_regs->phy_ip_idx)) {
-        printf("pcie: Error applying %s for %s\n", "apcie-phy-ip-pll-tunables", path);
-        return -1;
-    }
-    if (tunables_apply_local(path, "apcie-phy-ip-auspma-tunables", pcie_regs->phy_ip_idx)) {
-        printf("pcie: Error applying %s for %s\n", "apcie-phy-ip-auspma-tunables", path);
-        return -1;
-    }
-
-    if (pcie_regs->type == APCIE_T602X) {
-        set32(phy_base + 4, 0x10);
-        mask32(phy_common_base + APCIE_PHYCMN_CLK, APCIE_PHYCMN_CLK_MODE,
+    if (state->pcie_regs->type == APCIE_T602X) {
+        mask32(state->phy_common_base + APCIE_PHYCMN_CLK, APCIE_PHYCMN_CLK_MODE,
                FIELD_PREP(APCIE_PHYCMN_CLK_MODE, 1));
-        if (poll32(phy_base + 0x8, 1, 1, 250000)) {
+
+        // Why always PHY 1 in this case?
+        u32 off = state->num_phys > 1 ? PHY_STRIDE : 0;
+        if (poll32(state->phy_base[0] + off + 0x8, 1, 1, 250000)) {
             printf("pcie: PHY clock enable timed out\n");
             return -1;
         }
-        set32(phy_base + APCIE_PHY_CTRL, 0x300);
-        write32(rc_base + 0x54, 0x140);
-        write32(rc_base + 0x50, 0x1);
-        if (poll32(rc_base + 0x58, 1, 1, 250000)) {
+        for (int phy = 0; phy < state->num_phys; phy++) {
+            set32(state->phy_base[phy] + APCIE_PHY_CTRL, 0x300);
+        }
+        write32(state->rc_base + 0x54, 0x140);
+        write32(state->rc_base + 0x50, 0x1);
+        if (poll32(state->rc_base + 0x58, 1, 1, 250000)) {
             printf("pcie: Failed to initialize RC thing\n");
             return -1;
         }
-        clear32(rc_base + 0x3c, 0x1);
+        if (controller == APCIE)
+            clear32(state->rc_base + 0x3c, 0x1);
         pmgr_adt_power_disable_index(path, 1);
     }
 
-    for (u32 port = 0; port < port_count; port++) {
+    for (u32 port = 0; port < state->port_count; port++) {
         char bridge[64];
         int bridge_offset;
 
@@ -388,136 +470,166 @@ int pcie_init(void)
          * Initialize RC port.
          */
 
-        snprintf(bridge, sizeof(bridge), "/arm-io/apcie/pci-bridge%d", port);
+        switch (controller) {
+            case APCIE:
+                snprintf(bridge, sizeof(bridge), "/arm-io/apcie/pci-bridge%d", port);
+                break;
+            case APCIE_GE0:
+                strcpy(bridge, "/arm-io/apcie-ge0/pci-ge0-bridge");
+                break;
+            case APCIE_GE1:
+                strcpy(bridge, "/arm-io/apcie-ge1/pci-ge1-bridge");
+                break;
+        }
 
         if ((bridge_offset = adt_path_offset(adt, bridge)) < 0)
             continue;
 
         printf("pcie: Initializing port %d\n", port);
 
-        if (adt_get_reg(adt, adt_path, "reg", port * port_reg_cnt + pcie_regs->shared_reg_count,
-                        &port_base[port], NULL)) {
+        if (adt_get_reg(adt, adt_path, "reg",
+                        port * port_reg_cnt + state->pcie_regs->shared_reg_count,
+                        &state->port_base[port], NULL)) {
             printf("pcie: Error getting reg with index %d for %s\n",
-                   port * port_reg_cnt + pcie_regs->shared_reg_count, path);
+                   port * port_reg_cnt + state->pcie_regs->shared_reg_count, path);
             return -1;
         }
 
-        if (adt_get_reg(adt, adt_path, "reg", port * port_reg_cnt + pcie_regs->shared_reg_count + 1,
-                        &port_ltssm_base[port], NULL)) {
+        if (adt_get_reg(adt, adt_path, "reg",
+                        port * port_reg_cnt + state->pcie_regs->shared_reg_count + 1,
+                        &state->port_ltssm_base[port], NULL)) {
             printf("pcie: Error getting reg with index %d for %s\n",
-                   port * port_reg_cnt + pcie_regs->shared_reg_count + 1, path);
+                   port * port_reg_cnt + state->pcie_regs->shared_reg_count + 1, path);
             return -1;
         }
 
-        if (adt_get_reg(adt, adt_path, "reg", port * port_reg_cnt + pcie_regs->shared_reg_count + 2,
-                        &port_phy_base[port], NULL)) {
+        if (adt_get_reg(adt, adt_path, "reg",
+                        port * port_reg_cnt + state->pcie_regs->shared_reg_count + 2,
+                        &state->port_phy_base[port], NULL)) {
             printf("pcie: Error getting reg with index %d for %s\n",
-                   port * port_reg_cnt + pcie_regs->shared_reg_count + 2, path);
+                   port * port_reg_cnt + state->pcie_regs->shared_reg_count + 2, path);
             return -1;
         }
 
         if (port_reg_cnt >= 5) {
             if (adt_get_reg(adt, adt_path, "reg",
-                            port * port_reg_cnt + pcie_regs->shared_reg_count + 4,
-                            &port_intr2axi_base[port], NULL)) {
+                            port * port_reg_cnt + state->pcie_regs->shared_reg_count + 4,
+                            &state->port_intr2axi_base[port], NULL)) {
                 printf("pcie: Error getting reg with index %d for %s\n",
-                       port * port_reg_cnt + pcie_regs->shared_reg_count + 4, path);
+                       port * port_reg_cnt + state->pcie_regs->shared_reg_count + 4, path);
                 return -1;
             }
         } else {
-            port_intr2axi_base[port] = 0;
+            state->port_intr2axi_base[port] = 0;
         }
 
-        if (pcie_regs->type == APCIE_T602X) {
-            set32(rc_base + 0x3c, 0x1);
+        if (state->pcie_regs->type == APCIE_T602X) {
+            set32(state->rc_base + 0x3c, 0x1);
 
             // ??????
-            write32(port_base[port] + 0x10, 0x2);
-            write32(port_base[port] + 0x88, 0x110);
-            write32(port_base[port] + 0x100, 0xffffffff);
-            write32(port_base[port] + 0x148, 0xffffffff);
-            write32(port_base[port] + 0x210, 0xffffffff);
-            write32(port_base[port] + 0x80, 0x0);
-            write32(port_base[port] + 0x84, 0x0);
-            write32(port_base[port] + 0x104, 0x7fffffff);
-            write32(port_base[port] + 0x124, 0x100);
-            write32(port_base[port] + 0x16c, 0x0);
-            write32(port_base[port] + 0x13c, 0x10);
-            write32(port_base[port] + 0x800, 0x100100);
-            write32(port_base[port] + 0x808, 0x1000ff);
-            write32(port_base[port] + 0x82c, 0x0);
+            if (controller == APCIE)
+                write32(state->port_base[port] + 0x10, 0x2);
+            write32(state->port_base[port] + 0x88, 0x110);
+            write32(state->port_base[port] + 0x100, 0xffffffff);
+            write32(state->port_base[port] + 0x148, 0xffffffff);
+            write32(state->port_base[port] + 0x210, 0xffffffff);
+            write32(state->port_base[port] + 0x80, 0x0);
+            write32(state->port_base[port] + 0x84, 0x0);
+            write32(state->port_base[port] + 0x104, 0x7fffffff);
+            write32(state->port_base[port] + 0x124, 0x100);
+            write32(state->port_base[port] + 0x16c, 0x0);
+            write32(state->port_base[port] + 0x13c, 0x10);
+            write32(state->port_base[port] + 0x800, 0x100100);
+            write32(state->port_base[port] + 0x808, 0x1000ff);
+            write32(state->port_base[port] + 0x82c, 0x0);
             for (int i = 0; i < 512; i++)
-                write32(port_base[port] + APCIE_T602X_PORT_MSIMAP + 4 * i, 0);
-            write32(port_base[port] + 0x397c, 0x0);
-            write32(port_base[port] + 0x130, 0x3000000);
-            write32(port_base[port] + 0x140, 0x10);
-            write32(port_base[port] + 0x144, 0x253770);
-            write32(port_base[port] + 0x21c, 0x0);
-            write32(port_base[port] + 0x834, 0x0);
+                write32(state->port_base[port] + APCIE_T602X_PORT_MSIMAP + 4 * i, 0);
+            write32(state->port_base[port] + 0x397c, 0x0);
+            if (controller == APCIE)
+                write32(state->port_base[port] + 0x130, 0x3000000);
+            else
+                write32(state->port_base[port] + 0x130, 0x3000008);
+            write32(state->port_base[port] + 0x140, 0x10);
+            write32(state->port_base[port] + 0x144, 0x253770);
+            write32(state->port_base[port] + 0x21c, 0x0);
+            write32(state->port_base[port] + 0x834, 0x0);
+            if (controller != APCIE)
+                write32(state->port_base[port] + 0x83c, 0x0);
         }
 
-        if (tunables_apply_local_addr(bridge, "apcie-config-tunables", port_base[port])) {
+        if (tunables_apply_local_addr(bridge, "apcie-config-tunables", state->port_base[port])) {
             printf("pcie: Error applying %s for %s\n", "apcie-config-tunables", bridge);
             return -1;
         }
 
-        set32(port_base[port] + APCIE_PORT_APPCLK, APCIE_PORT_APPCLK_EN);
+        set32(state->port_base[port] + APCIE_PORT_APPCLK, APCIE_PORT_APPCLK_EN);
 
-        if (pcie_regs->type == APCIE_T602X) {
-            clear32(port_phy_base[port] + APCIE_PHY_CTRL,
+        if (state->pcie_regs->type == APCIE_T602X) {
+            clear32(state->port_phy_base[port] + APCIE_PHY_CTRL,
                     APCIE_PHY_CTRL_CLK0REQ | APCIE_PHY_CTRL_CLK1REQ);
 
-            set32(port_phy_base[port] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0REQ);
-            if (poll32(port_phy_base[port] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0ACK,
+            set32(state->port_phy_base[port] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0REQ);
+            if (poll32(state->port_phy_base[port] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0ACK,
                        APCIE_PHY_CTRL_CLK0ACK, 50000)) {
                 printf("pcie: Timeout enabling PHY CLK0\n");
                 return -1;
             }
 
-            set32(port_phy_base[port] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK1REQ);
-            if (poll32(port_phy_base[port] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK1ACK,
+            set32(state->port_phy_base[port] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK1REQ);
+            if (poll32(state->port_phy_base[port] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK1ACK,
                        APCIE_PHY_CTRL_CLK1ACK, 50000)) {
                 printf("pcie: Timeout enabling PHY CLK1\n");
                 return -1;
             }
 
-            clear32(port_phy_base[port] + APCIE_PHY_CTRL, 0x4000);
-            set32(port_phy_base[port] + APCIE_PHY_CTRL, 0x200);
-            set32(port_phy_base[port] + APCIE_PHY_CTRL, 0x400);
+            clear32(state->port_phy_base[port] + APCIE_PHY_CTRL, 0x4000);
+            set32(state->port_phy_base[port] + APCIE_PHY_CTRL, 0x200);
+            set32(state->port_phy_base[port] + APCIE_PHY_CTRL, 0x400);
 
-            set32(port_base[port] + APCIE_T602X_PORT_RESET, APCIE_PORT_RESET_DIS);
+            set32(state->port_base[port] + APCIE_T602X_PORT_RESET, APCIE_PORT_RESET_DIS);
         } else {
             /* PERSTN */
-            set32(port_base[port] + APCIE_PORT_RESET, APCIE_PORT_RESET_DIS);
+            set32(state->port_base[port] + APCIE_PORT_RESET, APCIE_PORT_RESET_DIS);
         }
 
-        if (poll32(port_base[port] + APCIE_PORT_STATUS, APCIE_PORT_STATUS_RUN,
+        if (poll32(state->port_base[port] + APCIE_PORT_STATUS, APCIE_PORT_STATUS_RUN,
                    APCIE_PORT_STATUS_RUN, 250000)) {
             printf("pcie: Port failed to come up on %s\n", bridge);
             return -1;
         }
 
-        if (poll32(port_base[port] + APCIE_PORT_LINKSTS, APCIE_PORT_LINKSTS_BUSY, 0, 250000)) {
+        if (state->pcie_regs->type == APCIE_T602X && controller != APCIE) {
+            write32(state->port_ltssm_base[port] + 0x10, 0x2);
+            write32(state->port_ltssm_base[port] + 0x1c, 0x4);
+            set32(state->port_ltssm_base[port] + 0x20, 0x2);
+            write32(state->port_ltssm_base[port] + 0x14, 0x1);
+
+            clear32(state->port_base[port] + APCIE_PORT_APPCLK, 0x100);
+        }
+
+        if (poll32(state->port_base[port] + APCIE_PORT_LINKSTS, APCIE_PORT_LINKSTS_BUSY, 0,
+                   250000)) {
             printf("pcie: Port failed to become idle on %s\n", bridge);
             return -1;
         }
 
         /* Do it again? */
-        if (pcie_regs->type == APCIE_T602X) {
-            clear32(port_base[port] + APCIE_T602X_PORT_RESET, APCIE_PORT_RESET_DIS);
-            set32(port_base[port] + APCIE_T602X_PORT_RESET, APCIE_PORT_RESET_DIS);
+        if (state->pcie_regs->type == APCIE_T602X && controller == APCIE) {
+            clear32(state->port_base[port] + APCIE_T602X_PORT_RESET, APCIE_PORT_RESET_DIS);
+            set32(state->port_base[port] + APCIE_T602X_PORT_RESET, APCIE_PORT_RESET_DIS);
 
-            if (poll32(port_base[port] + APCIE_PORT_LINKSTS, APCIE_PORT_LINKSTS_BUSY, 0, 250000)) {
-                printf("pcie: Port failed to become idle on %s\n", bridge);
+            if (poll32(state->port_base[port] + APCIE_PORT_LINKSTS, APCIE_PORT_LINKSTS_BUSY, 0,
+                       250000)) {
+                printf("pcie: Port failed to become idle (2) on %s\n", bridge);
                 return -1;
             }
 
             udelay(1000);
 
-            write32(port_ltssm_base[port] + 0x10, 0x2);
-            write32(port_ltssm_base[port] + 0x1c, 0x4);
-            set32(port_ltssm_base[port] + 0x20, 0x2);
-            write32(port_ltssm_base[port] + 0x14, 0x1);
+            write32(state->port_ltssm_base[port] + 0x10, 0x2);
+            write32(state->port_ltssm_base[port] + 0x1c, 0x4);
+            set32(state->port_ltssm_base[port] + 0x20, 0x2);
+            write32(state->port_ltssm_base[port] + 0x14, 0x1);
         }
 
         /* Make Designware PCIe Core registers writable. */
@@ -577,36 +689,54 @@ int pcie_init(void)
             set32(config_base + DWC_DBI_LINK_WIDTH_SPEED_CONTROL, DWC_DBI_SPEED_CHANGE);
         }
 
-        /* Max link width 1 */
+        /* Max link width */
         mask32(config_base + DWC_DBI_PORT_LINK_CONTROL, DWC_DBI_PORT_LINK_MODE,
-               FIELD_PREP(DWC_DBI_PORT_LINK_MODE, DWC_DBI_PORT_LINK_MODE_1_LANE));
+               FIELD_PREP(DWC_DBI_PORT_LINK_MODE, lane_mode));
         mask32(config_base + DWC_DBI_LINK_WIDTH_SPEED_CONTROL, DWC_DBI_LINK_WIDTH,
-               FIELD_PREP(DWC_DBI_LINK_WIDTH, 1));
+               FIELD_PREP(DWC_DBI_LINK_WIDTH, link_width));
         mask32(config_base + PCIE_CAP_BASE + PCIE_LNKCAP, PCIE_LNKCAP_MLW,
-               FIELD_PREP(PCIE_LNKCAP_MLW, 1));
+               FIELD_PREP(PCIE_LNKCAP_MLW, link_width));
 
         /* Make Designware PCIe Core registers readonly. */
         clear32(config_base + DWC_DBI_RO_WR, DWC_DBI_RO_WR_EN);
 
-        if (pcie_regs->type == APCIE_T602X) {
-            write32(port_base[port] + 0x4020, 0x3);
-            write32(port_intr2axi_base[port] + 0x80, 0x1);
+        if (state->pcie_regs->type == APCIE_T602X) {
+            write32(state->port_base[port] + 0x4020, 0x3);
+            if (state->port_intr2axi_base[port])
+                write32(state->port_intr2axi_base[port] + 0x80, 0x1);
 
-            clear32(rc_base + 0x3c, 0x1);
+            clear32(state->rc_base + 0x3c, 0x1);
             for (int i = 0; i < 32; i++)
-                write32(port_base[port] + APCIE_T602X_PORT_MSIMAP + 4 * i, 0x80000000 | i);
+                write32(state->port_base[port] + APCIE_T602X_PORT_MSIMAP + 4 * i, 0x80000000 | i);
         }
 
-        read32(port_base[port] + APCIE_PORT_LINKSTS);
+        read32(state->port_base[port] + APCIE_PORT_LINKSTS);
 
         /* Move to the next PCIe device on this bus. */
         config_base += (1 << 15);
     }
 
-    pcie_initialized = true;
-    printf("pcie: Initialized.\n");
+    printf("pcie: Initialized controller %d\n", controller);
+    state->initialized = true;
 
     return 0;
+}
+
+int pcie_init(void)
+{
+    bool success = false;
+
+    if (pcie_initialized)
+        return 0;
+
+    success |= pcie_init_controller(APCIE, "/arm-io/apcie") == 0;
+    success |= pcie_init_controller(APCIE_GE0, "/arm-io/apcie-ge0") == 0;
+    success |= pcie_init_controller(APCIE_GE1, "/arm-io/apcie-ge1") == 0;
+
+    if (success)
+        pcie_initialized = true;
+
+    return success ? 0 : -1;
 }
 
 int pcie_shutdown(void)
@@ -614,17 +744,28 @@ int pcie_shutdown(void)
     if (!pcie_initialized)
         return 0;
 
-    for (u32 port = 0; port < port_count; port++) {
-        if (pcie_regs->type == APCIE_T602X)
-            clear32(port_base[port] + APCIE_T602X_PORT_RESET, APCIE_PORT_RESET_DIS);
-        else
-            clear32(port_base[port] + APCIE_PORT_RESET, APCIE_PORT_RESET_DIS);
-        clear32(port_base[port] + APCIE_PORT_APPCLK, APCIE_PORT_APPCLK_EN);
-    }
+    for (u32 controller = 0; controller < NUM_CONTROLLERS; controller++) {
+        struct state *state = &controllers[controller];
 
-    clear32(phy_base + APCIE_PHY_CTRL, APCIE_PHY_CTRL_RESET);
-    clear32(phy_base + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK1REQ);
-    clear32(phy_base + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0REQ);
+        if (!state->initialized)
+            continue;
+
+        for (u32 port = 0; port < state->port_count; port++) {
+            if (state->pcie_regs->type == APCIE_T602X)
+                clear32(state->port_base[port] + APCIE_T602X_PORT_RESET, APCIE_PORT_RESET_DIS);
+            else
+                clear32(state->port_base[port] + APCIE_PORT_RESET, APCIE_PORT_RESET_DIS);
+            clear32(state->port_base[port] + APCIE_PORT_APPCLK, APCIE_PORT_APPCLK_EN);
+        }
+
+        for (int phy = 0; phy < state->num_phys; phy++) {
+            clear32(state->phy_base[phy] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_RESET);
+            clear32(state->phy_base[phy] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK1REQ);
+            clear32(state->phy_base[phy] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0REQ);
+        }
+
+        state->initialized = false;
+    }
 
     pcie_initialized = false;
     printf("pcie: Shutdown.\n");
