@@ -1560,7 +1560,7 @@ class HV(Reloadable):
                 cpu_start = 0x54000 + die * 0x20_0000_0000
             elif chip_id in (0x8112,):
                 cpu_start = 0x34000 + die * 0x20_0000_0000
-            elif chip_id in (0x6020, 0x6021):
+            elif chip_id in (0x6020, 0x6021, 0x6022):
                 cpu_start = 0x28000 + die * 0x20_0000_0000
             else:
                 self.log("CPUSTART unknown for this SoC!")
