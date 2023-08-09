@@ -32,7 +32,7 @@ struct aux_perf_state {
 };
 
 struct aux_perf_states {
-    u64 base;
+    u64 dies;
     u64 count;
     struct aux_perf_state states[];
 };
@@ -173,6 +173,7 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
     float dk_core, dk_sram = 0, dk_cs;
     float imax = 1000;
 
+    u32 ndies = 1;
     u32 nclusters = 0;
     u32 ncores = 0;
     u32 core_count[MAX_CLUSTERS];
@@ -183,6 +184,7 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
 
     switch (chip_id) {
         case T6002:
+            ndies = 2;
             nclusters += 4;
             load_fuses(core_leak + 4, 4, 0x22922bc1b8, 25, 13, 2, 2, true);
             load_fuses(sram_leak + 4, 4, 0x22922bc1cc, 4, 9, 1, 1, true);
@@ -227,9 +229,10 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
             imax = 24.0;
             break;
         case T6022:
+            ndies = 2;
             nclusters += 4;
-            load_fuses(core_leak + 4, min(4, nclusters), 0x229e2cc1f8, 4, 13, 2, 2, false);
-            load_fuses(sram_leak + 4, min(4, nclusters), 0x229e2cc208, 19, 9, 1, 1, false);
+            load_fuses(core_leak + 4, min(4, nclusters), 0x229e2cc1f8, 4, 13, 2, 2, true);
+            load_fuses(sram_leak + 4, min(4, nclusters), 0x229e2cc208, 19, 9, 1, 1, true);
             load_fuses(cs_leak + 1, 1, 0x229e2cc204, 8, 12, 1, 1, false);
             load_fuses(afr_leak + 1, 1, 0x229e2cc210, 0, 12, 1, 1, false);
             // fallthrough
@@ -340,18 +343,20 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
         // CS gets added after the imax limit
 
         if (has_cs) {
-            float mw = 0;
+            for (u32 j = 0; j < ndies; j++) {
+                float mw = 0;
 
-            int csi = min(i, cs->count - 1);
-            u32 cs_mv = cs->states[csi].volt / 1000;
-            u32 cs_hz = cs->states[csi].freq;
+                int csi = j * cs->count + min(i, cs->count - 1);
+                u32 cs_mv = cs->states[csi].volt / 1000;
+                u32 cs_hz = cs->states[csi].freq;
 
-            mw += cs_mv / 1000.f * cs_leak[0] * k_cs * expf(cs_mv / 1000.f * s_cs);
-            float csbase = cs_mv / 750.f;
-            float cs_v_p = powf(csbase, 1.8);
-            mw += dk_cs * (cs_hz / 1000000.f) * cs_v_p;
+                mw += cs_mv / 1000.f * cs_leak[j] * k_cs * expf(cs_mv / 1000.f * s_cs);
+                float csbase = cs_mv / 750.f;
+                float cs_v_p = powf(csbase, 1.8);
+                mw += dk_cs * (cs_hz / 1000000.f) * cs_v_p;
 
-            total_mw += mw;
+                total_mw += mw;
+            }
         }
 
         max_pwr[i] = total_mw * 1000;
@@ -427,7 +432,7 @@ static int fdt_set_aux_opp(void *dt, int gpu, const char *prop, const struct aux
         fdt32_t volts[MAX_DIES];
 
         for (u32 j = 0; j < dies; j++) {
-            volts[j] = cpu_to_fdt32(ps->states[i].volt);
+            volts[j] = cpu_to_fdt32(ps->states[i + j * ps->count].volt);
         }
 
         if (i >= count)
