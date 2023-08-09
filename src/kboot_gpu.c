@@ -170,7 +170,7 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
                             float *afr_leak)
 {
     float s_sram, k_sram, s_core, k_core, s_cs, k_cs;
-    float dk_core, dk_sram = 0, dk_cs;
+    float dk_core, dk_sram = 0, dk_cs = 0;
     float imax = 1000;
 
     u32 ndies = 1;
@@ -235,19 +235,24 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
             load_fuses(sram_leak + 4, min(4, nclusters), 0x229e2cc208, 19, 9, 1, 1, true);
             load_fuses(cs_leak + 1, 1, 0x229e2cc204, 8, 12, 1, 1, false);
             load_fuses(afr_leak + 1, 1, 0x229e2cc210, 0, 12, 1, 1, false);
+
+            // For some reason, this one is different on T6022...
+            dk_cs = 6.7;
             // fallthrough
         case T6021:
+            if (!dk_cs)
+                dk_cs = 4.492;
+
             nclusters += 4;
-            s_sram = 5.80760758;
-            k_sram = 0.00707453862;
+            s_sram = 5.808;
+            k_sram = 0.00707;
             // macOS difference: macOS uses a misbehaved piecewise function here
             // Since it's obviously wrong, let's just use only the first component
             s_core = 1.24554153;
             k_core = 0.56203084;
 
-            s_cs = 1.8593429;
-            k_cs = 0.1629485;
-            dk_cs = 4.49158089;
+            s_cs = 1.87;
+            k_cs = 0.162;
 
             goto t602x;
 
@@ -260,13 +265,13 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
             s_core = 1.21006932;
             k_core = 0.52776378;
 
-            s_cs = 1.81949284;
-            k_cs = 0.1565765;
-            dk_cs = 1.88830323;
+            s_cs = 1.8;
+            k_cs = 0.162;
+            dk_cs = 1.889;
 
         t602x:
-            dk_core = 1.0007;
-            dk_sram = 0.007955;
+            dk_core = 1.00075;
+            dk_sram = 0.00785;
             load_fuses(core_leak + 0, min(4, nclusters), 0x29e2cc1f8, 4, 13, 2, 2, false);
             load_fuses(sram_leak + 0, min(4, nclusters), 0x29e2cc208, 19, 9, 1, 1, false);
             load_fuses(cs_leak + 0, 1, 0x29e2cc204, 8, 12, 1, 1, false);
