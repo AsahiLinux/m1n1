@@ -1144,7 +1144,7 @@ static dart_dev_t *dt_init_dart_by_node(int node, u32 num)
     u32 iommu_phandle = fdt32_ld(&iommus[num * 2]);
     u32 iommu_stream = fdt32_ld(&iommus[num * 2 + 1]);
 
-    printf("FDT: iommu phande:%u stream:%u\n", iommu_phandle, iommu_stream);
+    printf("FDT: iommu phandle:%u stream:%u\n", iommu_phandle, iommu_stream);
 
     return dart_init_fdt(dt, iommu_phandle, iommu_stream, true);
 }
