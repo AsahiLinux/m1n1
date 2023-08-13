@@ -384,7 +384,7 @@ class EPICEp(AFKEp):
 
             srv = self.chan_map.get(hdr.channel, None)
             if srv:
-                if rgroup == 8 and rcmd == 10 and (rlen < 32 or (len(data) - 64) < 32):
+                if rgroup == 8 and rcmd == 8 and (rlen < 32 or (len(data) - 64) < 32):
                     self.log(f"hotPlugDetectChangeOccurred: rlen:{rlen} len(data):{len(data)} rxlen:{cmd.rxlen}\ncmd:{cmd}")
                     chexdump(data, print_fn=self.log)
                 srv.handle_reply(rgroup, rcmd, data[64:64+rlen] if rlen else None)
@@ -1101,22 +1101,22 @@ class DCPDPTXRemotePortTarget(Register32):
 class DCPDPTXPortEpicTracer(EPICServiceTracer):
     NAME = "dcpdptx-port-epic"
 
-    @epic_service_cmd(0, 8)
+    @epic_service_cmd(0, 6)
     def setPowerState(self, data):
         self.log("> setPowerState")
         chexdump(data, print_fn=self.log)
-    @epic_service_reply(0, 8)
+    @epic_service_reply(0, 6)
     def setPowerState_reply(self, data):
         self.log("< setPowerState")
         chexdump(data, print_fn=self.log)
 
-    @epic_service_cmd(0, 13)
+    @epic_service_cmd(0, 11)
     def connectTo(self, data):
         unk1, target = struct.unpack("<II24x", data)
         target = DCPDPTXRemotePortTarget(target)
         self.log(f"> connectTo(target={target}, unk1=0x{unk1:x})")
         chexdump(data, print_fn=self.log)
-    @epic_service_reply(0, 13)
+    @epic_service_reply(0, 11)
     def connectTo_reply(self, data):
         if len(data) < 32:
             self.log(f"< connectTo() short data len={len(data)}")
@@ -1125,24 +1125,24 @@ class DCPDPTXPortEpicTracer(EPICServiceTracer):
         self.log(f"< connectTo(target={target}, unk1=0x{unk1:x})")
         chexdump(data, print_fn=self.log)
 
-    @epic_service_cmd(0, 14)
+    @epic_service_cmd(0, 12)
     def validateConnection(self, data):
         unk1, target = struct.unpack("<II40x", data)
         target = DCPDPTXRemotePortTarget(target)
         self.log(f"> validateConnection(target={target}, unk1=0x{unk1:x})")
-    @epic_service_reply(0, 14)
+    @epic_service_reply(0, 12)
     def validateConnection_reply(self, data):
         unk1, target = struct.unpack("<II40x", data)
         target = DCPDPTXRemotePortTarget(target)
         self.log(f"< validateConnection(target={target}, unk1=0x{unk1:x})")
 
-    @epic_service_cmd(8, 10)
+    @epic_service_cmd(8, 8)
     def hotPlugDetectChangeOccurred(self, data):
         self.log(f"> hotPlugDetectChangeOccurred()")
         chexdump(data, print_fn=self.log)
         unk = struct.unpack("<16x?15x", data)[0]
         self.log(f"> hotPlugDetectChangeOccurred(unk={unk})")
-    @epic_service_reply(8, 10)
+    @epic_service_reply(8, 8)
     def hotPlugDetectChangeOccurred_reply(self, data):
         if len(data) < 32:
             self.log(f"< hotPlugDetectChangeOccurred()")
