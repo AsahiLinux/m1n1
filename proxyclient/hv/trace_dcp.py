@@ -15,18 +15,30 @@ from m1n1.fw.afk.epic import *
 
 Ver.set_version(hv.u)
 
-if True:
-    dcp_adt_path = "/arm-io/dcp"
-    dcp_dart_adt_path = "/arm-io/dart-dcp"
-    dcp_dart_mapper_adt_path = "/arm-io/dart-dcp/mapper-dcp"
-    disp0_dart_adt_path = "/arm-io/dart-disp0"
-else:
-    dcp_adt_path = "/arm-io/dcpext"
-    dcp_dart_adt_path = "/arm-io/dart-dcpext"
-    dcp_dart_mapper_adt_path = "/arm-io/dart-dcpext/mapper-dcpext"
-    disp0_dart_adt_path = "/arm-io/dart-dispext0"
+class DCPDevType(IntEnum):
+    DCP = 0
+    DART_DCP = 1
+    DART_DISP = 2
 
-trace_device(dcp_adt_path, True, ranges=[1])
+def get_alias(node):
+    if "aliases" in u.adt and hasattr(u.adt["aliases"], node):
+        return u.adt["aliases"].getprop(node).rsplit('/', 1)[1]
+    return node
+
+def get_dcp_device(dev_type, dcp):
+    if dev_type is DCPDevType.DCP:
+        return "/arm-io/" + get_alias(dcp)
+    elif dev_type is DCPDevType.DART_DCP:
+        return "/arm-io/dart-" + get_alias(dcp)
+    elif dev_type is DCPDevType.DART_DISP:
+        return "/arm-io/dart-" + dcp.replace("dcp", "disp")
+    else:
+        raise KeyError(dev_type)
+
+dcp_name = "dcp0"
+#dcp_name = "dcpext0"
+
+trace_device(get_dcp_device(DCPDevType.DCP, dcp_name), True, ranges=[1])
 
 DARTTracer = DARTTracer._reloadcls()
 ASCTracer = ASCTracer._reloadcls()
@@ -1403,13 +1415,13 @@ class DCPTracer(ASCTracer):
         super().handle_msg(direction, r0, r1)
         #iomon.poll()
 
+# get get the SID used by DCP from the only child of "dart-dcp*"
+dcp_sid = u.adt[get_dcp_device(DCPDevType.DART_DCP, dcp_name)][0].reg
 
-dcp_sid = u.adt[dcp_dart_mapper_adt_path].reg
-
-dart_dcp_tracer = DARTTracer(hv, dcp_dart_adt_path)
+dart_dcp_tracer = DARTTracer(hv, get_dcp_device(DCPDevType.DART_DCP, dcp_name))
 dart_dcp_tracer.start()
 
-dart_disp0_tracer = DARTTracer(hv, disp0_dart_adt_path)
+dart_disp0_tracer = DARTTracer(hv, get_dcp_device(DCPDevType.DART_DISP, dcp_name))
 dart_disp0_tracer.start()
 
 def readmem_iova(addr, size, readfn):
@@ -1421,7 +1433,7 @@ def readmem_iova(addr, size, readfn):
 
 iomon.readmem = readmem_iova
 
-dcp_tracer = DCPTracer(hv, dcp_adt_path, verbose=1)
+dcp_tracer = DCPTracer(hv, get_dcp_device(DCPDevType.DCP, dcp_name), verbose=1)
 dcp_tracer.start(dart_dcp_tracer.dart, stream=dcp_sid)
 
-#dcp_tracer.ep.dcpep.state.dumpfile = open("dcp.log", "a")
+#dcp_tracer.ep.dcpep.state.dumpfile = open(dcp_name + ".log", "a")
