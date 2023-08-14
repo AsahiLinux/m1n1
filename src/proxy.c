@@ -586,7 +586,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->retval = dapf_init_all();
             break;
         case P_DAPF_INIT:
-            reply->retval = dapf_init((const char *)request->args[0]);
+            reply->retval = dapf_init((const char *)request->args[0], 1);
             break;
 
         case P_CPUFREQ_INIT:
