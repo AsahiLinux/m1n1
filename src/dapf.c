@@ -5,6 +5,7 @@
 #include "assert.h"
 #include "malloc.h"
 #include "memory.h"
+#include "pmgr.h"
 #include "string.h"
 #include "utils.h"
 
@@ -83,7 +84,7 @@ static int dapf_init_t8110(const char *path, u64 base, int node)
     return 0;
 }
 
-int dapf_init(const char *path)
+int dapf_init(const char *path, int index)
 {
     int ret;
     int dart_path[8];
@@ -93,8 +94,14 @@ int dapf_init(const char *path)
         return -1;
     }
 
+    u32 pwr;
+    if (!adt_getprop(adt, node, "clock-gates", &pwr))
+        pwr = 0;
+    if (pwr && (pmgr_adt_power_enable(path) < 0))
+        return -1;
+
     u64 base;
-    if (adt_get_reg(adt, dart_path, "reg", 1, &base, NULL) < 0) {
+    if (adt_get_reg(adt, dart_path, "reg", index, &base, NULL) < 0) {
         printf("dapf: Error getting DAPF %s base address.\n", path);
         return -1;
     }
@@ -110,28 +117,44 @@ int dapf_init(const char *path)
         return -1;
     }
 
+    if (pwr)
+        pmgr_adt_power_disable(path);
+
     if (!ret)
         printf("dapf: Initialized %s\n", path);
 
     return ret;
 }
 
-const char *dapf_paths[] = {"/arm-io/dart-aop", "/arm-io/dart-mtp", "/arm-io/dart-pmp", NULL};
+struct entry {
+    const char *path;
+    int index;
+};
+
+struct entry dapf_entries[] = {
+    {"/arm-io/dart-aop", 1},
+    {"/arm-io/dart-mtp", 1},
+    {"/arm-io/dart-pmp", 1},
+    {"/arm-io/dart-isp", 5},
+    {NULL, -1},
+};
 
 int dapf_init_all(void)
 {
     int ret = 0;
     int count = 0;
 
-    for (const char **path = dapf_paths; *path; path++) {
-        if (adt_path_offset(adt, *path) < 0)
+    struct entry *entry = dapf_entries;
+    while (entry->path != NULL) {
+        if (adt_path_offset(adt, entry->path) < 0) {
+            entry++;
             continue;
-
-        if (dapf_init(*path) < 0) {
+        }
+        if (dapf_init(entry->path, entry->index) < 0) {
             ret = -1;
         }
+        entry++;
         count += 1;
     }
-
     return ret ? ret : count;
 }
