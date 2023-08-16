@@ -38,14 +38,19 @@ else:
 if args.quiet:
     p.iodev_set_usage(IODEV.FB, 0)
 
-if args.no_sepfw:
-    sepfw_start, sepfw_length = 0, 0
-else:
+sepfw_start, sepfw_length = 0, 0
+preoslog_start, preoslog_size = 0, 0
+
+if not args.no_sepfw:
     sepfw_start, sepfw_length = u.adt["chosen"]["memory-map"].SEPFW
+    if hasattr(u.adt["chosen"]["memory-map"], "preoslog"):
+        preoslog_start, preoslog_size = u.adt["chosen"]["memory-map"].preoslog
 
 image_size = align(len(image))
 sepfw_off = image_size
 image_size += align(sepfw_length)
+preoslog_off = image_size
+image_size += align(preoslog_size)
 bootargs_off = image_size
 bootargs_size = 0x4000
 image_size += bootargs_size
@@ -62,17 +67,30 @@ if not args.no_sepfw:
     p.memcpy8(image_addr + sepfw_off, sepfw_start, sepfw_length)
     print(f"Adjusting addresses in ADT...")
     u.adt["chosen"]["memory-map"].SEPFW = (new_base + sepfw_off, sepfw_length)
-    u.adt["chosen"]["memory-map"].BootArgs = (image_addr + bootargs_off, bootargs_size)
+    u.adt["chosen"]["memory-map"].BootArgs = (new_base + bootargs_off, bootargs_size)
+    if hasattr(u.adt["chosen"]["memory-map"], "preoslog"):
+        p.memcpy8(image_addr + preoslog_off, preoslog_start, preoslog_size)
+        u.adt["chosen"]["memory-map"].preoslog = (new_base + preoslog_off, preoslog_size)
 
-    u.push_adt()
+for name in ("mtp", "aop"):
+    if name in u.adt["/arm-io"]:
+        iop = u.adt[f"/arm-io/{name}"]
+        nub = u.adt[f"/arm-io/{name}/iop-{name}-nub"]
+        if iop.segment_names.endswith(";__OS_LOG"):
+            iop.segment_names = iop.segment_names[:-9]
+            nub.segment_names = nub.segment_names[:-9]
+            iop.segment_ranges = iop.segment_ranges[:-32]
+            nub.segment_ranges = nub.segment_ranges[:-32]
 
-    print("Setting secondary CPU RVBARs...")
+print("Setting secondary CPU RVBARs...")
 
-    rvbar = entry & ~0xfff
-    for cpu in u.adt["cpus"][1:]:
-        addr, size = cpu.cpu_impl_reg
-        print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
-        p.write64(addr, rvbar)
+rvbar = entry & ~0xfff
+for cpu in u.adt["cpus"][1:]:
+    addr, size = cpu.cpu_impl_reg
+    print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
+    p.write64(addr, rvbar)
+
+u.push_adt()
 
 print("Setting up bootargs...")
 tba = u.ba.copy()
