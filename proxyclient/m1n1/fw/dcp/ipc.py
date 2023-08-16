@@ -535,7 +535,7 @@ CompressionInfo = Struct(
     "pad2" / Padding(1),
 )
 
-assert PlaneInfo.sizeof() == 0x34
+assert CompressionInfo.sizeof() == 0x34
 
 IOSurface = Struct(
     "is_tiled" / bool_,
