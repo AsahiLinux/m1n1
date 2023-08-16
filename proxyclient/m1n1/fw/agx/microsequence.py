@@ -267,8 +267,9 @@ class Start3DStruct2(ConstructClass):
         "unk_108" / Array(6, Int64ul),
         "pipeline_base" / Int64ul,
         "unk_140" / Int64ul,
-        "unk_148" / Int64ul,
-        "unk_150" / Int64ul,
+        "helper_program" / Int32ul, # bit 0: enable
+        "unk_14c" / Int32ul, # 0
+        "helper_arg" / Int64ul, # stack layout
         "unk_158" / Int64ul,
         "unk_160" / Int64ul,
         Ver("G < G14", "unk_168_padding" / HexDump(Bytes(0x1d8))),
@@ -515,7 +516,10 @@ class StartTACmdStruct2(ConstructClass):
         Ver("G < G14", "tvb_cluster_meta4" / Int64ul),
         Ver("G < G14", "unk_f0" / Int64ul),
         "unk_f8" / Int64ul,
-        "unk_100" / Array(3, Hex(Int64ul)),
+        "helper_program" / Int32ul, # bit 0: enable
+        "unk_104" / Int32ul, # 0
+        "helper_arg" / Int64ul, # stack layout
+        "unk_110" / Hex(Int64ul),
         "unk_118" / Int32ul,
         Ver("G >= G14", ZPadding(8 * 9)),
     )
@@ -698,7 +702,7 @@ class ComputeInfo(ConstructClass):
         "unk_38" / Int64ul, # always 0x8c60
         "helper_program" / Int32ul, # 0x98000; bit 0: enable
         "unk_44" / Int32ul, # 0
-        "compute_layout_addr" / Int64ul, # work layout
+        "helper_arg" / Int64ul, # work layout
         "unk_50" / Int32ul, # 0x40 - Size? only if work layout is provided
         "unk_54" / Int32ul, # 0
         "unk_58" / Int32ul, # 1
