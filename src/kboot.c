@@ -1752,7 +1752,9 @@ static int dt_set_display(void)
                                                ARRAY_SIZE(dcpext_reserved_regions_t600x[n]));
         }
     } else if (!fdt_node_check_compatible(dt, 0, "apple,t6020") ||
-               !fdt_node_check_compatible(dt, 0, "apple,t6021")) {
+               !fdt_node_check_compatible(dt, 0, "apple,t6021") ||
+               !fdt_node_check_compatible(dt, 0, "apple,t6022")) {
+        /* this is expected to return early on t6022 due to the missing dcp alias */
         ret = dt_carveout_reserved_regions("dcp", "disp0", "disp0_piodma",
                                            disp_reserved_regions_t602x,
                                            ARRAY_SIZE(disp_reserved_regions_t602x));
