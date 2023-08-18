@@ -1847,6 +1847,67 @@ static int dt_set_sio_fwdata(void)
     return 0;
 }
 
+struct isp_segment_ranges {
+    u64 phys;
+    u64 iova;
+    u64 remap;
+    u32 size;
+    u32 unk;
+} PACKED;
+
+static int dt_set_isp_fwdata(void)
+{
+    const char *path = "isp";
+
+    int adt_node = adt_path_offset(adt, "/arm-io/isp");
+    if (adt_node < 0)
+        adt_node = adt_path_offset(adt, "/arm-io/isp0");
+    if (adt_node < 0)
+        return 0;
+
+    u32 segments_len;
+    struct isp_segment_ranges *segments;
+    segments =
+        (struct isp_segment_ranges *)adt_getprop(adt, adt_node, "segment-ranges", &segments_len);
+    if (!segments || !segments_len)
+        bail("ADT: invalid ISP segment-ranges\n");
+
+    int count = segments_len / sizeof(*segments);
+    for (int i = 0; i < count; i++)
+        segments[i].remap = segments[i].iova; // match sio segment-ranges
+
+    u64 ctrr_size;
+    switch (os_firmware.version) {
+        case V12_1: // haven't checked, probably right
+        case V12_2: // "
+        case V12_3:
+        case V12_3_1:
+        case V12_4:
+        case V12_5:
+            ctrr_size = 0x1800000;
+            break;
+        case V13_5:
+            ctrr_size = 0x1000000;
+            break;
+        default:
+            bail("FDT: couldn't get ISP CTRR size (%d)\n", os_firmware.version);
+    }
+
+    u64 heap_base = segments[count - 1].iova + segments[count - 1].size;
+    u64 heap_size = ctrr_size - heap_base;
+
+    int fdt_node = fdt_path_offset(dt, path);
+    if (fdt_node < 0)
+        bail("FDT: '%s' node not found\n", path);
+
+    if (fdt_appendprop_u64(dt, fdt_node, "apple,isp-heap-base", heap_base))
+        bail("FDT: couldn't set apple,isp-heap-base\n");
+    if (fdt_appendprop_u64(dt, fdt_node, "apple,isp-heap-size", heap_size))
+        bail("FDT: couldn't set apple,isp-heap-size\n");
+
+    return 0;
+}
+
 static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix, int max_devs)
 {
     int ret = -1;
@@ -2158,6 +2219,10 @@ int kboot_prepare_dt(void *fdt)
     if (dt_reserve_asc_firmware("/arm-io/sio", "sio"))
         return -1;
     if (dt_set_sio_fwdata())
+        return -1;
+    if (dt_set_isp_fwdata())
+        return -1;
+    if (dt_reserve_asc_firmware("/arm-io/isp", "isp"))
         return -1;
 #ifndef RELEASE
     if (dt_transfer_virtios())
