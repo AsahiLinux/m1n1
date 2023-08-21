@@ -55,10 +55,10 @@ class DCPDPTXRemotePortService(EPICStandardService):
     SHORT = "port"
 
     def displayRequest(self):
-        self.call(8, 8, bytes(16))
+        self.call(0, 6, bytes(16))
 
     def displayRelease(self):
-        self.call(8, 9, bytes(16))
+        self.call(0, 7, bytes(16))
 
     def connectTo(self, connected, unit, port, unk=0):
         target = 0
@@ -66,7 +66,7 @@ class DCPDPTXRemotePortService(EPICStandardService):
             target |= (1 << 8)
         target |= unit
         target |= port << 4
-        self.call(8, 13, struct.pack("<16xII8x", unk, target))
+        self.call(0, 11, struct.pack("<II8x16x", unk, target))
 
 class DCPDPTXPortEndpoint(EPICEndpoint):
     SHORT = "dpport"
