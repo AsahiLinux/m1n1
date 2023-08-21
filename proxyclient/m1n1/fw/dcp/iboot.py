@@ -149,6 +149,15 @@ class DCPIBootService(EPICService):
         rcmd, rlen = struct.unpack("<II", resp[:8])
         return resp[8:rlen]
 
+    # 0: setResource
+
+    def setSurface(self, info):
+        data = IBootLayerInfo.build(info)
+        print("layer")
+        chexdump(data)
+        return self.send_cmd(1, data, replen=128)
+    # 1: setSurface
+
     def setPower(self, power):
         self.send_cmd(2, b"\x01" if power else b"\x00")
 
@@ -166,6 +175,11 @@ class DCPIBootService(EPICService):
     def setMode(self, timing_mode, color_mode):
         data = TimingMode.build(timing_mode) + ColorMode.build(color_mode)
         self.send_cmd(6, data)
+
+    # 7: setBrightness
+    # 8: rwBCONRegs
+    # 9: setParameter
+    # 14: getBlock
 
     def swapBegin(self):
         return SwapInfo.parse(self.send_cmd(15, replen=128))
@@ -189,11 +203,31 @@ class DCPIBootService(EPICService):
         #buf = struct.pack("<IIII", 1, swap_id, 0, swap_id)
         #return self.send_cmd(19, buf, replen=128)
 
+    # 20: setBrightnessCfg
+    # 21: setNamedProperty
+    # 22: getNamedProperty
+    # 23: getBufBlock
+    # 24: new?
+
+class DCPExpertService(EPICService):
+    NAME = "dcpexpert-service"
+    SHORT = "dcpexpert"
+
+    def set_stage(self, stage):
+        return super().send_cmd(0xc0, struct.pack("<I", stage), 0)
+
 class DCPIBootEndpoint(EPICEndpoint):
     SHORT = "iboot"
     
     SERVICES = [
         DCPIBootService,
+    ]
+
+class DCPExpertEndpoint(EPICEndpoint):
+    SHORT = "dcpexpert"
+
+    SERVICES = [
+        DCPExpertService,
     ]
 
 
@@ -202,6 +236,7 @@ class DCPIBootClient(StandardASC):
 
     ENDPOINTS = {
         0x20: AFKSystemEndpoint,
+        0x22: DCPExpertEndpoint,
         0x23: DCPIBootEndpoint,
         0x24: DCPDPTXEndpoint,
         0x2a: DCPDPTXPortEndpoint,
