@@ -65,6 +65,9 @@ static void *add_fwdata(size_t size, u32 param_id)
     u64 iova;
     void *p = alloc_mapped_data(size, &iova);
 
+    if (!p)
+        return NULL;
+
     struct sio_fwparam *param = &sio_fwparams[sio_num_fwparams];
     param->key = param_id;
     param->value = iova >> 12;
@@ -201,6 +204,9 @@ int sio_setup_fwdata(void)
 
         int nkeys = find_key_index(rule->keys, 0);
         u8 *sio_blob = add_fwdata(nkeys * rule->blobsize, rule->fw_param);
+        if (!sio_blob)
+            goto err_nomem;
+
         if (len % (rule->blobsize + 4) != 0) {
             printf("%s: bad length %d of ADT property '%s', expected multiple of %d + 4\n",
                    __func__, len, rule->prop, rule->blobsize);
