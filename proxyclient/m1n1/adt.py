@@ -191,6 +191,20 @@ SpeakerThieleSmall = Struct(
     "checksum" / Hex(Int16ul),
 )
 
+TunableGlobal = Struct(
+    "reg_idx" / Hex(Int32ul),
+    "offset" / Hex(Int32ul),
+    "mask" / Hex(Int32ul),
+    "value" / Hex(Int32ul),
+)
+
+TunableLocal = Struct(
+    "offset" / Hex(Int32ul),
+    "size" / Hex(Int32ul),
+    "mask" / Hex(Int64ul),
+    "value" / Hex(Int64ul),
+)
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -283,6 +297,11 @@ DEV_PROPERTIES = {
             "speaker-thiele-small": SpeakerThieleSmall,
         },
     },
+    "apcie*": {
+        "*": {
+            "apcie-*-tunables": GreedyRange(TunableLocal),
+        }
+    }
 }
 
 def parse_prop(node, path, node_name, name, v, is_template=False):
