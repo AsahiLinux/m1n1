@@ -68,6 +68,42 @@ class DCPDPTXRemotePortService(EPICStandardService):
         target |= port << 4
         self.call(0, 11, struct.pack("<II8x16x", unk, target))
 
+    def handle_notify(self, category, type, seq, fd):
+        retcode = struct.unpack("<I", fd.read(4))[0]
+        self.log(f"Notify {category}/{type} #{seq} ({retcode})")
+        data = fd.read()
+        chexdump(data)
+        print("Send ACK")
+
+        group, code, length = struct.unpack("<III", data[:12])
+
+        arg = None
+        if len(data) >= 0x54:
+            arg = struct.unpack("<I", data[0x50:0x54])[0]
+
+        if code == 0x12:
+            pass
+        elif code == 0x0a:
+            data = data[:0x50] + b"\x04\x00\x00\x00" + data[0x54:]
+        elif code == 0x00:
+            self.init_phy(0x00, arg)
+        elif code == 0x07:
+            data = data[:0x50] + b"\x1e\x00\x00\x00" + data[0x54:]
+        elif code == 0x0c:
+            self.init_phy(0x0c, arg)
+        elif code == 0x09:
+            self.init_phy(0x09, arg)
+        elif code == 0x02:
+            data = data[:0x50] + b"\x03\x00\x00\x00\x03\x00\x00\x00" + data[0x58:]
+        elif code == 0x03:
+            # clear err code
+            data = data[:0x40] + b"\x00\x00\x00\x00" + data[0x44:]
+
+        pkt = struct.pack("<I", 0) + data
+
+        chexdump(pkt)
+        self.ep.send_epic(self.chan, EPICType.NOTIFY_ACK, EPICCategory.REPLY, type, seq, pkt, len(data))
+
 class DCPDPTXPortEndpoint(EPICEndpoint):
     SHORT = "dpport"
 
