@@ -110,6 +110,7 @@ OBJECTS := \
 	i2c.o \
 	iodev.o \
 	iova.o \
+	isp.o \
 	kboot.o \
 	main.o \
 	mcc.o \
