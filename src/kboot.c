@@ -10,6 +10,7 @@
 #include "devicetree.h"
 #include "exception.h"
 #include "firmware.h"
+#include "isp.h"
 #include "malloc.h"
 #include "memory.h"
 #include "pcie.h"
@@ -2196,6 +2197,7 @@ int kboot_boot(void *kernel)
     usb_init();
     pcie_init();
     dapf_init_all();
+    isp_init();
 
     printf("Setting SMP mode to WFE...\n");
     smp_set_wfe_mode(true);
