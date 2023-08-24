@@ -99,9 +99,9 @@ static int dt_set_rng_seed_sep(int node)
     uint8_t rng_seed[128]; // same size used by Linux for kexec
 
     if (sep_get_random(&kaslr_seed, sizeof(kaslr_seed)) != sizeof(kaslr_seed))
-        bail("SEP: couldn't get enough random bytes for KASLR seed");
+        bail("SEP: couldn't get enough random bytes for KASLR seed\n");
     if (sep_get_random(rng_seed, sizeof(rng_seed)) != sizeof(rng_seed))
-        bail("SEP: couldn't get enough random bytes for RNG seed");
+        bail("SEP: couldn't get enough random bytes for RNG seed\n");
 
     if (fdt_setprop_u64(dt, node, "kaslr-seed", kaslr_seed))
         bail("FDT: couldn't set kaslr-seed\n");
@@ -267,22 +267,22 @@ static int dt_set_chosen(void)
 
     if (fdt_setprop(dt, node, "asahi,iboot1-version", system_firmware.iboot,
                     strlen(system_firmware.iboot) + 1))
-        bail("FDT: couldn't set asahi,iboot1-version");
+        bail("FDT: couldn't set asahi,iboot1-version\n");
 
     if (fdt_setprop(dt, node, "asahi,system-fw-version", system_firmware.string,
                     strlen(system_firmware.string) + 1))
-        bail("FDT: couldn't set asahi,system-fw-version");
+        bail("FDT: couldn't set asahi,system-fw-version\n");
 
     if (fdt_setprop(dt, node, "asahi,iboot2-version", os_firmware.iboot,
                     strlen(os_firmware.iboot) + 1))
-        bail("FDT: couldn't set asahi,iboot2-version");
+        bail("FDT: couldn't set asahi,iboot2-version\n");
 
     if (fdt_setprop(dt, node, "asahi,os-fw-version", os_firmware.string,
                     strlen(os_firmware.string) + 1))
-        bail("FDT: couldn't set asahi,os-fw-version");
+        bail("FDT: couldn't set asahi,os-fw-version\n");
 
     if (fdt_setprop(dt, node, "asahi,m1n1-stage2-version", m1n1_version, strlen(m1n1_version) + 1))
-        bail("FDT: couldn't set asahi,m1n1-stage2-version");
+        bail("FDT: couldn't set asahi,m1n1-stage2-version\n");
 
     if (dt_set_rng_seed_sep(node))
         return dt_set_rng_seed_adt(node);
@@ -612,7 +612,7 @@ static int dt_set_bluetooth_cal(int anode, int node, const char *adt_name, const
     const u8 *cal_blob = adt_getprop(adt, anode, adt_name, &len);
 
     if (!cal_blob || !len)
-        bail("ADT: Failed to get %s", adt_name);
+        bail("ADT: Failed to get %s\n", adt_name);
 
     fdt_setprop(dt, node, fdt_name, cal_blob, len);
     return 0;
@@ -654,7 +654,7 @@ static int dt_set_multitouch(void)
 
     int node = fdt_path_offset(dt, path);
     if (node < 0)
-        bail("FDT: alias points at nonexistent node");
+        bail("FDT: alias points at nonexistent node\n");
 
     const char *adt_touchbar;
     if (fdt_node_check_compatible(dt, 0, "apple,j293") == 0)
@@ -671,7 +671,7 @@ static int dt_set_multitouch(void)
     u32 len;
     const u8 *cal_blob = adt_getprop(adt, anode, "multi-touch-calibration", &len);
     if (!cal_blob || !len)
-        bail("ADT: Failed to get multi-touch-calibration");
+        bail("ADT: Failed to get multi-touch-calibration\n");
 
     fdt_setprop(dt, node, "apple,z2-cal-blob", cal_blob, len);
     return 0;
@@ -703,7 +703,7 @@ static int dt_set_ipd(void)
     u8 code = kblang[1];
 
     if (fdt_setprop_u32(dt, chosen, "asahi,kblang-code", code))
-        bail("FDT: couldn't set asahi,kblang-code");
+        bail("FDT: couldn't set asahi,kblang-code\n");
 
     const char *path = fdt_get_alias(dt, "keyboard");
     if (path == NULL)
@@ -711,15 +711,15 @@ static int dt_set_ipd(void)
 
     int node = fdt_path_offset(dt, path);
     if (node < 0)
-        bail("FDT: keyboard alias points at nonexistent node");
+        bail("FDT: keyboard alias points at nonexistent node\n");
 
     if (fdt_setprop_u32(dt, node, "apple,keyboard-layout-id", code))
-        bail("FDT: couldn't set apple,keyboard-layout-id");
+        bail("FDT: couldn't set apple,keyboard-layout-id\n");
 
     if (code >= ARRAY_SIZE(keyboard_types))
         printf("ADT: kblang code out of range, not setting country code\n");
     else if (fdt_setprop_u32(dt, node, "hid-country-code", keyboard_types[code]))
-        bail("FDT: couldn't set hid-country-code");
+        bail("FDT: couldn't set hid-country-code\n");
 
     return 0;
 }
@@ -733,7 +733,7 @@ static int dt_set_wifi(void)
 
     uint8_t info[16];
     if (ADT_GETPROP_ARRAY(adt, anode, "wifi-antenna-sku-info", info) < 0)
-        bail("ADT: Failed to get wifi-antenna-sku-info");
+        bail("ADT: Failed to get wifi-antenna-sku-info\n");
 
     const char *path = fdt_get_alias(dt, "wifi0");
     if (path == NULL)
@@ -751,7 +751,7 @@ static int dt_set_wifi(void)
     const u8 *cal_blob = adt_getprop(adt, anode, "wifi-calibration-msf", &len);
 
     if (!cal_blob || !len)
-        bail("ADT: Failed to get wifi-calibration-msf");
+        bail("ADT: Failed to get wifi-calibration-msf\n");
 
     fdt_setprop(dt, node, "brcm,cal-blob", cal_blob, len);
 
@@ -1076,13 +1076,13 @@ static int dt_copy_acio_tunables(const char *adt_path, const char *dt_alias)
     u32 drom_len;
     const u8 *drom_blob = adt_getprop(adt, adt_node, "thunderbolt-drom", &drom_len);
     if (!drom_blob || !drom_len)
-        bail("ADT: Failed to get thunderbolt-drom");
+        bail("ADT: Failed to get thunderbolt-drom\n");
 
     fdt_setprop(dt, fdt_node, "apple,thunderbolt-drom", drom_blob, drom_len);
     for (size_t i = 0; i < sizeof(acio_tunables) / sizeof(*acio_tunables); ++i) {
         ret = dt_append_acio_tunable(adt_node, fdt_node, &acio_tunables[i]);
         if (ret)
-            bail_cleanup("ADT: unable to convert '%s' tunable", acio_tunables[i].adt_name);
+            bail_cleanup("ADT: unable to convert '%s' tunable\n", acio_tunables[i].adt_name);
     }
 
     return 0;
