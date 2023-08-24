@@ -8,27 +8,17 @@
 
 # [tool.ruff]
 select = [
-  # "A",      # flake8-builtins
   "AIR",    # Airflow
-  # "ANN",    # flake8-annotations
-  # "ARG",    # flake8-unused-arguments
   "ASYNC",  # flake8-async
-  # "B",      # flake8-bugbear
   "BLE",    # flake8-blind-except
-  # "C4",     # flake8-comprehensions
   "C90",    # McCabe cyclomatic complexity
   "CPY",    # flake8-copyright
-  # "D",      # pydocstyle
-  "DJ",   # flake8-django
+  "DJ",     # flake8-django
   "DTZ",    # flake8-datetimez
   "E",      # pycodestyle
-  # "EM",     # flake8-errmsg
-  # "ERA",  # eradicate
   "EXE",    # flake8-executable
   "F",      # Pyflakes
   "FA",     # flake8-future-annotations
-  # "FBT",    # flake8-boolean-trap
-  # "FIX",    # flake8-fixme
   "FLY",    # flynt
   "G",      # flake8-logging-format
   "I",      # isort
@@ -36,35 +26,44 @@ select = [
   "INP",    # flake8-no-pep420
   "INT",    # flake8-gettext
   "ISC",    # flake8-implicit-str-concat
-  # "N",      # pep8-naming
-  "NPY",  # NumPy-specific rules
-  "PD",   # pandas-vet
-  # "PERF",   # Perflint
+  "NPY",    # NumPy-specific rules
+  "PD",     # pandas-vet
   "PGH",    # pygrep-hooks
   "PIE",    # flake8-pie
   "PL",     # Pylint
   "PT",     # flake8-pytest-style
-  # "PTH",    # flake8-use-pathlib
   "PYI",    # flake8-pyi
-  # "RET",    # flake8-return
   "RSE",    # flake8-raise
-  # "RUF",    # Ruff-specific rules
-  # "S",      # flake8-bandit
-  # "SIM",    # flake8-simplify
-  # "SLF",    # flake8-self
   "SLOT",   # flake8-slots
   "T10",    # flake8-debugger
-  # "T20",  # flake8-print
   "TCH",    # flake8-type-checking
-  # "TD",     # flake8-todos
   "TID",    # flake8-tidy-imports
-  # "TRY",    # tryceratops
-  # "UP",     # pyupgrade
   "W",      # pycodestyle
   "YTT",    # flake8-2020
+  # "A",    # flake8-builtins
+  # "ANN",  # flake8-annotations
+  # "ARG",  # flake8-unused-arguments
+  # "B",    # flake8-bugbear
+  # "C4",   # flake8-comprehensions
   # "COM",  # flake8-commas
-  # "PLR091",  # Pylint Refactor just for max-args, max-branches, etc.
+  # "D",    # pydocstyle
+  # "EM",   # flake8-errmsg
+  # "ERA",  # eradicate
+  # "FBT",  # flake8-boolean-trap
+  # "FIX",  # flake8-fixme
+  # "N",    # pep8-naming
+  # "PERF", # Perflint
+  # "PTH",  # flake8-use-pathlib
   # "Q",    # flake8-quotes
+  # "RET",  # flake8-return
+  # "RUF",  # Ruff-specific rules
+  # "S",    # flake8-bandit
+  # "SIM",  # flake8-simplify
+  # "SLF",  # flake8-self
+  # "T20",  # flake8-print
+  # "TD",   # flake8-todos
+  # "TRY",  # tryceratops
+  # "UP",   # pyupgrade
 ]
 ignore = [
   "BLE001",
