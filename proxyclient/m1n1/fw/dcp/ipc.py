@@ -646,6 +646,7 @@ class UnifiedPipeline2(IPCObject):
     cb_setDCPAVPropStart = Callback(bool_, "setDCPAVPropStart", length=uint)
     cb_setDCPAVPropChunk = Callback(bool_, "setDCPAVPropChunk", data=HexDump(SizedBytes(0x1000, "length")), offset=uint, length=uint)
     cb_setDCPAVPropEnd = Callback(bool_, "setDCPAVPropEnd", key=string(0x40))
+    cb_allocate_bandwidth = Callback(bool_, "allocate_badwidth", InOutPtr(ulong), InOutPtr(ulong), ulong)
 
     if Ver.check("V < V13_5"):
         D103 = cb_set_boolean_property
@@ -683,6 +684,7 @@ class UnifiedPipeline2(IPCObject):
         D126 = cb_setDCPAVPropStart
         D127 = cb_setDCPAVPropChunk
         D128 = cb_setDCPAVPropEnd
+        D129 = cb_allocate_bandwidth
 
 class UPPipe2(IPCObject):
     A102 = Call(uint64_t, "test_control", cmd=uint64_t, arg=uint)
