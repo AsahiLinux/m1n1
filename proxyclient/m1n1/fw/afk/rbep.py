@@ -72,7 +72,7 @@ class AFKRingBuf(Reloadable):
 
     def write_buf(self, off, data):
         return self.ep.iface.writemem(self.base + off, data)
-    
+
     def get_rptr(self):
         return self.ep.asc.p.read32(self.base + self.BLOCK_SIZE)
 
@@ -110,7 +110,7 @@ class AFKRingBuf(Reloadable):
     def write(self, data):
         hdr2, data = data[:8], data[8:]
         self.rptr = self.get_rptr()
-        
+
         if self.wptr < self.rptr and self.wptr + 0x10 >= self.rptr:
             raise AFKError("Ring buffer is full")
 
@@ -219,7 +219,7 @@ class AFKRingBufEndpoint(ASCBaseEndpoint):
 
     def handle_ipc(self, data):
         pass
-    
+
     def send_ipc(self, data):
         wptr = self.txq.write(data)
         self.send(AFKEP_Send(WPTR = wptr))

@@ -38,7 +38,7 @@ elif chip_id in (0x8121, 0x6020, 0x6021, 0x6022):
 
 code = u.malloc(0x1000)
 
-util = asm.ARMAsm(f"""
+util = asm.ARMAsm("""
 bench:
     mrs x1, CNTPCT_EL0
 1:
@@ -80,7 +80,7 @@ timelog:
     cbnz x4, 2b
     sub x1, x1, #1
     cbnz x1, 1b
-    
+
     ret
 """, code)
 iface.writemem(code, util.data)
@@ -113,17 +113,17 @@ def bench_latency(cluster, cpu, from_pstate, to_pstate, verbose=False):
     psreg = (p.read64(CREG[cluster] + CLUSTER_PSTATE) & ~0x1f01f) | (1<<25) | to_pstate
     tval = p.call(util.signal_and_write, CREG[cluster] + CLUSTER_PSTATE, psreg)
     p.smp_wait(cpu)
-    
+
     logdata = iface.readmem(logbuf, LOG_ITERS * 16)
     lts, lcyc = None, None
-    
+
     log = []
     for i in range(LOG_ITERS):
         ts, cyc = struct.unpack("<QQ", logdata  [i*16:i*16+16])
         log.append((ts, cyc))
 
     off = 256
-    
+
     ts_0, cyc_0 = log[off]
     ts_e, cyc_e = log[-1]
     f_init = None
@@ -151,7 +151,7 @@ def bench_latency(cluster, cpu, from_pstate, to_pstate, verbose=False):
         if f_end is None and ts > (tval + ts_e) / 2:
             f_end = (cyc_e - cyc) / (ts_e - ts) * tfreq / 1000000
             cnt = dts_sum = 0
-    
+
         #if lts is not None:
             #print(f"{i}: {ts}: {cyc} ({ts-lts}: {cyc-lcyc})")
         #else:
@@ -210,29 +210,29 @@ for cluster, creg in enumerate(CREG):
         print(f"{pstate}:{freq}MHz", end=" ")
     print()
     print()
-    
+
     print(" To-> |", end="")
     for to_pstate in range(1, MAX_PSTATE[cluster] + 1):
         print(f" {freqs[to_pstate]:7d} |", end="")
     print()
     print(" From |", end="")
     for to_pstate in range(1, MAX_PSTATE[cluster] + 1):
-        print(f"---------+", end="")
+        print("---------+", end="")
     print()
-    
+
     maxblip = 0
-    
+
     for from_pstate in range(1, MAX_PSTATE[cluster] + 1):
         print(f" {freqs[from_pstate]:4d} |", end="")
         for to_pstate in range(1, MAX_PSTATE[cluster] + 1):
             if from_pstate == to_pstate:
-                print(f" ******* |", end="")
+                print(" ******* |", end="")
                 continue
             lat, blip = bench_latency(cluster, cpu, from_pstate, to_pstate)
             print(f" {lat:7.0f} |", end="")
             maxblip = max(maxblip, blip)
         print()
-    
+
     print()
     print(f"Maximum execution latency spike: {maxblip:.0f} ns")
     print()

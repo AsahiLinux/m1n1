@@ -399,7 +399,7 @@ class ADMAC(Reloadable):
         self.dart.iowrite(self.dart_stream, base, data)
 
     def fill_canary(self):
-        ranges = self.dart.iotranslate(self.dart_stream, 
+        ranges = self.dart.iotranslate(self.dart_stream,
                                 self.resmem_iova, self.resmem_size)
         assert len(ranges) == 1
         start, size = ranges[0]

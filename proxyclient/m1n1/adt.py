@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MIT
-import itertools, fnmatch, sys
-from construct import *
+import fnmatch
+import itertools
 import sys
+from construct import *
 
 from .utils import AddrLookup, FourCC, SafeGreedyRange
 
@@ -304,7 +305,7 @@ DEV_PROPERTIES = {
     }
 }
 
-def parse_prop(node, path, node_name, name, v, is_template=False):
+def parse_prop(node, path, node_name, name, v, is_template=False):  # noqa: PLR0912
     t = None
 
     if is_template:
@@ -600,7 +601,7 @@ class ADTNode:
             if isinstance(v, str):
                 return f"{v}()"
             elif v is None:
-                return f"None"
+                return "None"
             else:
                 args = []
                 for arg in v.args:
@@ -739,7 +740,8 @@ def load_adt(data):
     return ADTNode(ADTNodeStruct.parse(data))
 
 if __name__ == "__main__":
-    import sys, argparse, pathlib
+    import argparse
+    import pathlib
 
     parser = argparse.ArgumentParser(description='ADT test for m1n1')
     parser.add_argument('input', type=pathlib.Path)

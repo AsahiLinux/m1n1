@@ -127,14 +127,12 @@ class XhciRegs(RegMap):
     IMAN2 = 0x4A0 + 0x00, R_XHCI_IMAN
     IMOD2 = 0x4A0 + 0x04, Register32
     ERSTSZ2 = 0x4A0 + 0x08, Register32
-    RSVD0 = 0x4A0 + 0x0C, Register32
     ERSTBA2 = 0x4A0 + 0x10, Register64
     ERDP2 = 0x4A0 + 0x18, Register64
 
     IMAN3 = 0x4C0 + 0x00, R_XHCI_IMAN
     IMOD3 = 0x4C0 + 0x04, Register32
     ERSTSZ3 = 0x4C0 + 0x08, Register32
-    RSVD0 = 0x4C0 + 0x0C, Register32
     ERSTBA3 = 0x4C0 + 0x10, Register64
     ERDP3 = 0x4C0 + 0x18, Register64
 

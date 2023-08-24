@@ -1,5 +1,9 @@
 # SPDX-License-Identifier: MIT
-import serial, os, struct, sys, time, json, os.path, gzip, functools
+import functools
+import gzip
+import os
+import os.path
+import struct
 from contextlib import contextmanager
 from construct import *
 
@@ -190,7 +194,7 @@ class ProxyUtils(Reloadable):
 
         if op in self.inst_cache:
             func = self.inst_cache[op]
-        elif isinstance(op, tuple) or isinstance(op, list):
+        elif isinstance(op, (list, tuple)):
             func = struct.pack(f"<{len(op)}II", *op, 0xd65f03c0) # ret
         elif isinstance(op, int):
             func = struct.pack("<II", op, 0xd65f03c0) # ret

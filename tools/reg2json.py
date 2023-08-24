@@ -24,7 +24,7 @@ def parse_one(regs, xml):
         name = reg.find('reg_short_name').text
         fullname = reg.find('reg_long_name').text
 
-        if name.startswith("S3_") or name.startswith("SYS S1_"):
+        if name.startswith(("S3_", "SYS S1_")):
             continue
 
         array = reg.find('reg_array')

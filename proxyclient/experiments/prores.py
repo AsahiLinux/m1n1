@@ -26,13 +26,13 @@ assert len(im_data) == (im_W*im_H) * 3
 image_data_luma = im_data[:im_W*im_H]
 image_data_chroma = im_data[im_W*im_H:]
 
-p.pmgr_adt_clocks_enable(f'/arm-io/dart-apr0')
-p.pmgr_adt_clocks_enable(f'/arm-io/apr0')
+p.pmgr_adt_clocks_enable('/arm-io/dart-apr0')
+p.pmgr_adt_clocks_enable('/arm-io/apr0')
 
-dart = DART8110.from_adt(u, f'/arm-io/dart-apr0')
+dart = DART8110.from_adt(u, '/arm-io/dart-apr0')
 dart.initialize()
 
-apr_base, _ = u.adt[f'/arm-io/apr0'].get_reg(0)
+apr_base, _ = u.adt['/arm-io/apr0'].get_reg(0)
 apr = ProResRegs(u, apr_base)
 
 print(f"Register 0 (ID?) {apr.REG_0x0}")

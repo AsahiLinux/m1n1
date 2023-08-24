@@ -160,7 +160,7 @@ class Z2Tracer(SPITracer):
                 ptr = 24 + 30 * i
                 finger = data[ptr]
                 state = data[ptr + 1]
-                x = data[ptr + 4] | (data[ptr + 5] << 8) 
+                x = data[ptr + 4] | (data[ptr + 5] << 8)
                 y = data[ptr + 6] | (data[ptr + 7] << 8)
                 wj = data[ptr + 12] | (data[ptr + 13] << 8)
                 wn = data[ptr + 14] | (data[ptr + 15] << 8)

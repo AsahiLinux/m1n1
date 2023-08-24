@@ -233,7 +233,7 @@ class NVMETracer(ASCTracer):
                 f"  apple_tunnel_cmd: set_time: {repr(AppleTunnelSetTime.parse(data[0x18:0x30]))}"
             )
         elif apple_cmd_opcode == 0x38:
-            self.log(f"  apple_tunnel_cmd: get_nand_id")
+            self.log("  apple_tunnel_cmd: get_nand_id")
             if done:
                 self.log(f"    manufacturer id: {hexdump(data1[:8])}")
         else:
@@ -254,7 +254,7 @@ class NVMETracer(ASCTracer):
 
         if is_admin:
             if cmd.opcode == 0xD8:
-                self.log(f"  done apple_tunnel_cmd")
+                self.log("  done apple_tunnel_cmd")
                 self.parse_apple_tunnel_cmd(cmd, True)
             else:
                 cmdname = NVME_ADMIN_COMMANDS.get(cmd.opcode, "unknown")

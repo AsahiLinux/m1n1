@@ -112,4 +112,4 @@ try:
             doshell = False
 finally:
     smc.stop()
-    
+

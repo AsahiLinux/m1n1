@@ -30,14 +30,14 @@ class I2CTracer(ADTDevTracer):
             self.state.txn += [None] * d
         else:
             self.state.txn.append(d)
-        
+
         if mtxfifo.STOP:
             self.state.txn.append("P")
             self.flush_txn()
 
     def r_MRXFIFO(self, mrxfifo):
         if mrxfifo.EMPTY:
-            self.log(f"Read while FIFO empty")
+            self.log("Read while FIFO empty")
             return
 
         if not self.state.txn:

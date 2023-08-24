@@ -103,7 +103,7 @@ for i in range(2):
     regs.IF_FIFO.val = 0xffffffff
 
     mon.poll()
-    
+
     while regs.FIFOSTAT.reg.LEVEL_RX:
         print("RX", hex(regs.RXDATA.val))
 

@@ -676,7 +676,12 @@ class AGXHWDataA(ConstructClass):
         "unk_3d34" / HexDump(Bytes(0x38)),
     )
 
-    def __init__(self, sgx, chip_info):
+    def __init__(self, sgx, chip_info):  # noqa: PLR0915
+        """
+        This function has too many statements (304).  Please consider adding
+        significant tests and then refactor to reduce complexity and improve
+        maintainability.
+        """
         super().__init__()
 
         base_clock_khz = 24000

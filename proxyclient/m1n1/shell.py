@@ -182,7 +182,7 @@ def run_shell(locals, msg=None, exitmsg=None, poll_func=None):
                         cmd_list[a[0]] = 1
                     else:
                         cmd_list[a[0]] += 1
-                    clist = subcmd_list[a[0]] 
+                    clist = subcmd_list[a[0]]
                 else:
                     clist = None
                 if locals[obj_name].__doc__:

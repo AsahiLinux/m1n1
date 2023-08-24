@@ -100,7 +100,6 @@ def test_guest_timers():
     print("    V:")
     run_test(CNTV_CTL_EL02, CNTV_TVAL_EL02)
 
-    return
 
 freq = u.mrs(CNTFRQ_EL0)
 print("Timer freq: %d" % freq)

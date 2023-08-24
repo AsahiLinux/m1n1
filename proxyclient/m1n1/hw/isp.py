@@ -36,15 +36,15 @@ class ISPCommand:
             self.tracer.log(f"==> [{self.channel.name}]({self.message.index}): {message}")
 
 class ISPTerminalCommand(ISPCommand):
-    """ Represents a command in TERMINAL channel 
+    """ Represents a command in TERMINAL channel
 
-    A command arguments include a pointer to a buffer that contains log line 
+    A command arguments include a pointer to a buffer that contains log line
     and the length of the buffer. Buffers are 0x80 bytes wide.
     """
     # ISP sends buffer address at beginning
     BUFFER_ADDRESS = None
     # It seems messages are capped to 100 bytes
-    MAX_BUFFER_SIZE = 0x80 
+    MAX_BUFFER_SIZE = 0x80
 
     @staticmethod
     def set_address(address):
@@ -64,7 +64,7 @@ class ISPTerminalCommand(ISPCommand):
         ## Set buffer address
         ISPTerminalCommand.set_address(self.value)
 
-        ## Read contents 
+        ## Read contents
         self.buffer_message = self.read_iova(ISPTerminalCommand.BUFFER_ADDRESS, self.arg0)
 
         ## Move cursor
@@ -74,13 +74,13 @@ class ISPTerminalCommand(ISPCommand):
         self.log(f"ISPCPU: {self.buffer_message}]")
 
     def log(self, message):
-        self.tracer.log(f"[{self.channel.name}]({str(self.message.index).ljust(3)}): {message}") 
+        self.tracer.log(f"[{self.channel.name}]({str(self.message.index).ljust(3)}): {message}")
 
 class ISPIOCommand(ISPCommand):
-    """ Represents a command in IO channel 
+    """ Represents a command in IO channel
 
     An IO command is used to request ISP to perform some operations. The command
-    contains a pointer to a command struct which contains a OPCODE. The OPCODE 
+    contains a pointer to a command struct which contains a OPCODE. The OPCODE
     is used to differentate commands.
     """
 
@@ -141,12 +141,12 @@ class ISPT2HIOCommand(ISPCommand):
 class ISPSharedMallocCommand(ISPCommand):
     """ Represents a command in SHAREDMALLOC channel
 
-    A command of this type can either request memory allocation or memory free 
-    depending the arguments. When ISP needs to allocate memory, it puts a 
+    A command of this type can either request memory allocation or memory free
+    depending the arguments. When ISP needs to allocate memory, it puts a
     message in the SHAREDMALLOC channel, message arguments are length of buffer
-    and type of allocation. 
+    and type of allocation.
 
-    CPU detects the new message, perform memory allocation and mutate the 
+    CPU detects the new message, perform memory allocation and mutate the
     original message to indicate the address of the allocated memory block.
     """
 
@@ -158,13 +158,13 @@ class ISPSharedMallocCommand(ISPCommand):
 
     def dump(self):
         if self.direction == ISPCommandDirection.RX:
-            if self.address is 0:
+            if self.address == 0:
                 self.log(f"[FW Malloc, Length: {hex(self.size)}, Type: {hex(self.type)}]")
             else:
                 self.log(f"[FW Free, Address: {hex(self.value)}, Length: {hex(self.size)}, Type: {hex(self.type)})]")
         else:
-            if self.address is 0:
-                self.log(f"[FW Free]")
+            if self.address == 0:
+                self.log("[FW Free]")
             else:
                 self.log(f"[FW Malloc, Address: {hex(self.value)}, Type: {hex(self.type)})]")
 
@@ -172,7 +172,7 @@ class ISPChannelTable:
     """ A class used to present IPC table.
 
     The Channel Table describes the IPC channels available to communicate with
-    the ISP. 
+    the ISP.
 
     In the M1 processor (tonga), the list of channels exposed by ISP are:
         [CH - TERMINAL] (src = 0, type = 2, entries = 768, iova = 0x1804700)
@@ -206,7 +206,7 @@ class ISPChannelTable:
             _name, _type, _source, _entries, _address = struct.unpack('<32s32x2I2q168x', _entry)
             _channel = ISPChannel(self, _name, _type, _source, _entries, _address)
             # We want to process terminal logs as fast as possible before they are processed by CPU
-            # So we use a special implementation for TERMINAL channel that fetches all logs 
+            # So we use a special implementation for TERMINAL channel that fetches all logs
             if _channel.name == "TERMINAL":
                 _channel = ISPTerminalChannel(self, _name, _type, _source, _entries, _address)
             self.channels.append(_channel)
@@ -226,7 +226,7 @@ class ISPChannelTable:
             self.log(f"CHs: [{(','.join(names))}]")
             for cmd in channel_cmds:
                 cmd.dump()
-                
+
     def get_last_read_command(self, pending_irq):
         """ Gets last read message given a IRQ value """
         cmds = []
@@ -238,8 +238,8 @@ class ISPChannelTable:
                     scanned_channels.append(channel.name)
                     for cmd in channel.get_commands(ISPCommandDirection.RX):
                         cmds.append(cmd)
-                cidx = cidx + 1 
-        
+                cidx = cidx + 1
+
         if len(scanned_channels) > 0:
             self.log(f"CHs: [{(','.join(scanned_channels))}]")
             for cmd in cmds:
@@ -256,7 +256,7 @@ class ISPChannelTable:
 
     def log(self, message):
         self.tracer.log(message)
-    
+
     def __str__(self):
         s = "======== CHANNEL TABLE ========\n"
         for channel in self.channels:
@@ -268,15 +268,15 @@ class ISPChannel:
 
     ISP channels are ring buffers used by communication between CPU and ISP.
     channel length is measured in number of entries, each entry is 64 bytes,
-    so channel size is '(entries * 64)' bytes. 
+    so channel size is '(entries * 64)' bytes.
 
     Channel Source is used to filter out channels when processing interrupts
     and doorbell. Each time CPU wants to notify ISP about a new message it
     writes doorbell register. In the other hand, when ISP wants to notify CPU
-    about a new message it triggers a hardware interrupt. 
+    about a new message it triggers a hardware interrupt.
 
     Channel Type is a mistery, but it seems to have a connection with cmd bit
-    mask. 
+    mask.
     """
 
     ENTRY_LENGTH = 64
@@ -294,7 +294,7 @@ class ISPChannel:
         self.doorbell = 1 << source
         self.last_message_sent = None
         self.last_message_received = None
-    
+
     def get_commands(self, direction):
         """ Gets a command from the channel"""
         commands = []
@@ -304,7 +304,7 @@ class ISPChannel:
             if command:
                 commands.append(command)
         return commands
-    
+
     def get_message(self, direction):
         """ Gets a message from the channel and increase the associated index """
         last_message = self.last_message_sent if direction is ISPCommandDirection.TX else self.last_message_received
@@ -328,12 +328,12 @@ class ISPChannel:
             _, message = self.__read_message__(index)
             s = s + "\t" + str(message) + "\n"
         self.table.log(s)
-        
+
     def __convert2command__(self, message, direction):
         """ Converts a channel message into a command """
         if self.name == "TERMINAL":
             return ISPTerminalCommand(self, message, direction)
-        elif self.name == "IO" or self.name == "DEBUG":
+        elif self.name in {"DEBUG", "IO"}:
             return ISPIOCommand(self, message, direction)
         elif self.name == "SHAREDMALLOC":
             return ISPSharedMallocCommand(self, message, direction)
@@ -358,15 +358,15 @@ class ISPChannel:
 
     def __read_by_index__(self, index):
         return self.table.ioread(self.address + (self.entry_size * index), self.entry_size)
-    
+
     def __str__(self):
         return f"[CH - {str(self.name)}] (src = {self.source!s}, type = {self.type!s}, size = {self.number_of_entries!s}, iova = {hex(self.address)!s})"
 
 class ISPTerminalChannel(ISPChannel):
-    """ Special channel implementation for TERMINAL channel 
+    """ Special channel implementation for TERMINAL channel
     Addresses of log buffers are removed from memory after MacOS processes them,
     hence we want to be a little bit ahead of MacOS and fetch all entries if
-    possible.  
+    possible.
     """
 
     def __init__(self, table, name, _type, source, number_of_entries, address):
@@ -400,28 +400,28 @@ class ISPChannelMessage:
         self.data = data
         idx = 0
         for arg in struct.unpack('<8q', self.data):
-            setattr(self, f"arg{idx}", arg) 
+            setattr(self, f"arg{idx}", arg)
             idx += 1
-    
+
     def valid(self):
         """ Checks if a message seems to be valid
 
         So far I have observed that invalid messages or empty slots
         are usually marked as 0x1 (or 0x3 in case of TERMINAL msgs)
         """
-        return (self.arg0 is not 0x1) and (self.arg0 is not 0x3)
+        return self.arg0 not in {0x1, 0x3}
 
     def __str__(self):
         s = "ISP Message: {"
         idx = 0
         for arg in struct.unpack('<8q', self.data):
-            s = s + f"Arg{idx}: {hex(arg)}, " 
+            s = s + f"Arg{idx}: {hex(arg)}, "
             idx = idx + 1
         s = s + "}"
-        return s  
-    
+        return s
+
     def __eq__(self, other):
-        return self.data == other.data  
+        return self.data == other.data
 
 class ISP_REVISION(Register32):
     REVISION = 15, 0

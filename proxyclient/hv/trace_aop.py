@@ -84,7 +84,7 @@ class AFKEp(EP):
             if True:
                 self.log(f"===TX DATA=== epid={self.epid} rptr={self.txbuf.state.rptr:#x}")
                 chexdump(data)
-                self.log(f"===END DATA===")
+                self.log("===END DATA===")
                 self.log("Backtrace on TX data:")
                 self.hv.bt()
             self.handle_ipc(data, dir=">")
@@ -99,7 +99,7 @@ class AFKEp(EP):
             if True:
                 self.log(f"===RX DATA=== epid={self.epid} rptr={self.rxbuf.state.rptr:#x}")
                 chexdump(data)
-                self.log(f"===END DATA===")
+                self.log("===END DATA===")
             self.handle_ipc(data, dir="<")
         return True
 
@@ -326,7 +326,7 @@ class AOPTracer(ASCTracer, AOPBase):
             data, annot = readdump(l, hdr, f)
             epid = int(annot["epid"])
             epmap[epid].handle_ipc(data, dir)
-                        
+
 
 if __name__ == "__main__":
     # We can replay traces by saving the textual output of live tracing

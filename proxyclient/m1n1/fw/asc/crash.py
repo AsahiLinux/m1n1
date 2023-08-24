@@ -122,7 +122,7 @@ class CrashLogParser:
         print()
 
     def CasC(self, entry):
-        print(f"Async error info:")
+        print("Async error info:")
         print(entry.payload)
         print()
 
@@ -131,7 +131,7 @@ class CrashLogParser:
         print()
 
     def Crg8(self, entry):
-        print(f"Exception info:")
+        print("Exception info:")
 
         ctx = entry.payload
 
@@ -233,7 +233,7 @@ class ASCCrashLogEndpoint(ASCBaseEndpoint):
     def handle_crashed(self, msg):
         size = 0x1000 * msg.SIZE
 
-        self.log(f"Crashed!")
+        self.log("Crashed!")
         crashdata = self.asc.ioread(msg.DVA, size)
         open("crash.bin", "wb").write(crashdata)
         clog = CrashLogParser(crashdata, self.asc)

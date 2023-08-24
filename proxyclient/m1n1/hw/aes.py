@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: MIT
-from ..utils import *
 from enum import IntEnum
 from .dart import DART, DARTRegs
-import struct
-from enum import IntEnum
+from ..utils import *
 
 
 class AES_OPCODE(IntEnum):
@@ -90,7 +88,7 @@ class AESControlReg(Register32):
     START = 0, 0
     STOP = 1, 1
     CLEAR_FIFO = 2, 2
-    # TOOD: not convinced about RESET anymore, I remember this un-broke the engine once but I can't reproduce that anymore
+    # TODO: not convinced about RESET anymore, I remember this un-broke the engine once but I can't reproduce that anymore
     RESET = 3, 3
 
 

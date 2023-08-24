@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 
-import sys, pathlib, time
+import atexit
+import pathlib
+import sys
+import time
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
-
-import atexit, sys
 
 from m1n1.setup import *
 from m1n1.constructutils import Ver
@@ -114,7 +115,7 @@ regs.update({
     "unk_14": t(agx.initdata.regionB.hwdata_a.addrof("unk_14")),
     "actual_pstate": t(agx.initdata.regionB.hwdata_a.addrof("actual_pstate")),
     "tgt_pstate": t(agx.initdata.regionB.hwdata_a.addrof("tgt_pstate")),
-    "unk_40": t(agx.initdata.regionB.hwdata_a.addrof("unk_40")),
+    "unk_40": t(agx.initdata.regionB.hwdata_a.addrof("unk_40")),  # defined twice? 1 of 2
     "unk_44": t(agx.initdata.regionB.hwdata_a.addrof("unk_44")),
     "unk_48": t(agx.initdata.regionB.hwdata_a.addrof("unk_48")),
     "freq_mhz": t(agx.initdata.regionB.hwdata_a.addrof("freq_mhz")),
@@ -142,7 +143,7 @@ regs.update({
     "halt_count":  t(agx.initdata.fw_status.addrof("halt_count")),
     "halted":  t(agx.initdata.fw_status.addrof("halted")),
     "resume":  t(agx.initdata.fw_status.addrof("resume")),
-    "unk_40":  t(agx.initdata.fw_status.addrof("unk_40")),
+    "unk_40":  t(agx.initdata.fw_status.addrof("unk_40")),  # noqa: F601 2 of 2
     "unk_ctr":  t(agx.initdata.fw_status.addrof("unk_ctr")),
     "unk_60":  t(agx.initdata.fw_status.addrof("unk_60")),
     "unk_70":  t(agx.initdata.fw_status.addrof("unk_70")),

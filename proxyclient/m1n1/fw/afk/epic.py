@@ -80,17 +80,17 @@ class EPICService:
         self.ready = False
         self.chan = None
         self.seq = 0
-    
+
     def log(self, msg):
         print(f"[{self.ep.name}.{self.SHORT}] {msg}")
-    
+
     def init(self, props):
         self.log(f"Init: {props}")
         self.props = props
         self.rxbuf, self.rxbuf_dva = self.ep.asc.ioalloc(self.RX_BUFSIZE)
         self.txbuf, self.txbuf_dva = self.ep.asc.ioalloc(self.TX_BUFSIZE)
         self.ready = True
-    
+
     def wait(self):
         while not self.ready:
             self.ep.asc.work()
@@ -267,7 +267,7 @@ class EPICEndpoint(AFKRingBufEndpoint):
 
     def handle_cmd(self, hdr, sub, fd):
         self.chan_map[hdr.channel].handle_cmd(sub.category, sub.type, sub.seq, fd)
-    
+
     def send_epic(self, chan, ptype, category, type, seq, data, inline_len=0):
         hdr = Container()
         hdr.channel = chan

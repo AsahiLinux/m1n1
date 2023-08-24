@@ -226,7 +226,7 @@ class AGX:
         self.log(r'')
         self.log(f' Stamp index: {int(msg.stamp_index)}')
         self.show_pending_stamps()
-        self.log(f' Fault info:')
+        self.log(' Fault info:')
         self.log(self.initdata.regionC.fault_info)
 
         self.show_irqs()
@@ -248,7 +248,7 @@ class AGX:
         self.log(r' Fault nya~!!!!!')
         self.log(r'')
         self.show_pending_stamps()
-        self.log(f' Fault info:')
+        self.log(' Fault info:')
         self.log(self.initdata.regionC.fault_info)
 
         self.show_irqs()
@@ -261,7 +261,7 @@ class AGX:
         else:
             info_bits = 3
         self.initdata.regionC.pull()
-        self.log(f' Pending stamps:')
+        self.log(' Pending stamps:')
         for (off, i) in enumerate(self.initdata.regionC.pending_stamps):
             if i.info or i.wait_value:
                 self.log(f"  - [{off}] #{i.info >> info_bits:3d}: {i.info & ((1 << info_bits) - 1)}/{i.wait_value:#x}")
@@ -304,7 +304,7 @@ class AGX:
         halted = bool(status.halted.val)
         self.log(f" Halted: {halted}")
         if halted:
-            self.log(f" Attempting recovery...")
+            self.log(" Attempting recovery...")
             status.halted.val = 0
             status.resume.val = 1
         else:

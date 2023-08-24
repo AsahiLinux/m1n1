@@ -81,7 +81,7 @@ bootenv_start = uboot.find(b"bootcmd=run distro_bootcmd")
 bootenv_len = uboot[bootenv_start:].find(b"\x00\x00")
 bootenv_old = uboot[bootenv_start:bootenv_start+bootenv_len]
 bootenv = str(bootenv_old, "ascii").split("\x00")
-bootenv = list(filter(lambda x: not (x.startswith("baudrate") or (x.startswith("boot_") and not x.startswith("boot_efi_")) or x.startswith("distro_bootcmd")), bootenv))
+bootenv = list(filter(lambda x: not (x.startswith(('baudrate', 'distro_bootcmd')) or x.startswith('boot_') and not x.startswith('boot_efi_')), bootenv))
 
 if loader is not None:
     # dtb_addr not used here, the prepared fdt's at a different location.  If

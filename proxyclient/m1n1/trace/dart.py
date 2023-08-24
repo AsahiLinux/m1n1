@@ -32,7 +32,7 @@ class DARTTracer(ADTDevTracer):
         elif compat in ["dart,t8110"]:
             self.REGMAPS = [DART8110Regs]
 
-        return super().__init__(hv, devpath, **kwargs)
+        return super().__init__(hv, devpath, **kwargs)  # noqa: PLE0101
 
     def start(self):
         super().start()
@@ -60,7 +60,7 @@ class DARTTracer(ADTDevTracer):
 
     def w_TLB_OP(self, tlb_op):
         if tlb_op.OP == 0:
-            self.log(f"Invalidate all")
+            self.log("Invalidate all")
             self.dart.invalidate_cache()
         elif tlb_op.OP == 1:
             self.log(f"Invalidate Stream: {tlb_op.STREAM}")

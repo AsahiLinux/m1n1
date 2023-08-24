@@ -40,7 +40,7 @@ def sysreg_name(enc):
     return f"s{enc[0]}_{enc[1]}_c{enc[2]}_c{enc[3]}_{enc[4]}"
 
 def sysreg_parse(s):
-    if isinstance(s, tuple) or isinstance(s, list):
+    if isinstance(s, (list, tuple)):
         return tuple(s)
     s = s.strip()
     for r in (r"s(\d+)_(\d+)_c(\d+)_c(\d+)_(\d+)", r"(\d+), *(\d+), *(\d+), *(\d+), *(\d+)"):

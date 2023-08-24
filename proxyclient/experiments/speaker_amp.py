@@ -31,7 +31,7 @@ argparser.add_argument("-b", "--bufsize", type=int, default=1024*32,
 args = argparser.parse_args()
 
 inputf = open(args.file, "rb") if args.file is not None \
-            else sys.stdin.buffer 
+            else sys.stdin.buffer
 
 p.pmgr_adt_clocks_enable("/arm-io/i2c1")
 p.pmgr_adt_clocks_enable("/arm-io/admac-sio")

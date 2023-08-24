@@ -191,7 +191,7 @@ class DCPIBootService(EPICService):
 
 class DCPIBootEndpoint(EPICEndpoint):
     SHORT = "iboot"
-    
+
     SERVICES = [
         DCPIBootService,
     ]

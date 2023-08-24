@@ -83,7 +83,7 @@ class DCPManager(DCPBaseManager):
     def find_swap_function_gated(self):
         pass
 
-    def create_provider_service(self):
+    def create_provider_service(self):  # Defined twice in this file!!!
         return True
 
     def create_product_service(self):
@@ -166,7 +166,7 @@ class DCPManager(DCPBaseManager):
     def set_number_property(self, key, value):
         pass
 
-    def create_provider_service(self):
+    def create_provider_service(self):  # noqa: F811 Defined twice in this file!!!
         return True
 
     def is_dark_boot(self):
@@ -244,7 +244,7 @@ class DCPManager(DCPBaseManager):
     def get_calendar_time_ms(self):
         return time.time_ns() // 1000_000
 
-    def update_backlight_factor_prop(self, value):
+    def update_backlight_factor_prop(self, value):  # Defined twice in this file!!!
         pass
 
     def map_buf(self, buf, vaddr, dva, unk):
@@ -255,7 +255,7 @@ class DCPManager(DCPBaseManager):
         print(f"mapped to dva {dva}")
         return 0
 
-    def update_backlight_factor_prop(self, unk):
+    def update_backlight_factor_prop(self, unk):  # noqa: F811 Defined twice in a file!
         print(f"update_backlight_factor_prop {unk}")
 
     ## ServiceRelay methods

@@ -261,7 +261,6 @@ class CommandQueueTracer(Reloadable):
 
     def json_default(self, val):
         print(repr(val))
-        return None
 
     def get_workitems(self, workmsg):
         self.tracer.uat.invalidate_cache()
@@ -475,11 +474,11 @@ class AGXTracer(ASCTracer):
         return cmdqueue
 
     def clear_ttbr_tracers(self):
-        self.hv.clear_tracers(f"UATTTBRTracer")
+        self.hv.clear_tracers("UATTTBRTracer")
 
     def add_ttbr_tracers(self):
         self.hv.add_tracer(irange(self.gpu_region, UAT.NUM_CONTEXTS * 16),
-                        f"UATTTBRTracer",
+                        "UATTTBRTracer",
                         mode=TraceMode.WSYNC,
                         write=self.uat_write,
                         iova=0,
@@ -736,7 +735,7 @@ class AGXTracer(ASCTracer):
 
     def handle_ringmsg(self, msg):
         if msg.__class__.__name__ == "FlagMsg":
-            self.log(f"== Event flag notification ==")
+            self.log("== Event flag notification ==")
             self.handle_event(msg)
             return
         elif msg.__class__.__name__ == "RunCmdQueueMsg":
@@ -884,7 +883,7 @@ class AGXTracer(ASCTracer):
             for i in wi0.microsequence.value:
                 i = i.cmd
                 if i.__class__.__name__ == "StartTACmd":
-                    self.log(f"  # StartTACmd")
+                    self.log("  # StartTACmd")
 
 
                     # self.log(f"    unkptr_24 @ {i.unkptr_24:#x}:")
@@ -893,7 +892,7 @@ class AGXTracer(ASCTracer):
                     # chexdump(read(i.unkptr_5c, 0x100), print_fn=self.log)
 
                 elif i.__class__.__name__ == "FinalizeTACmd":
-                    self.log(f"  # FinalizeTACmd")
+                    self.log("  # FinalizeTACmd")
 
 
             self.log(f"    buf_thing @ {wi0.buf_thing_addr:#x}: {wi0.buf_thing!s}")
@@ -969,7 +968,7 @@ class AGXTracer(ASCTracer):
             self.log(f" context_id = {context:#x}")
             cmd3d = wi1.microsequence.value[0].cmd
 
-            self.log(f" 3D:")
+            self.log(" 3D:")
             #self.log(f"  struct1 @ {cmd3d.struct1_addr:#x}: {cmd3d.struct1!s}")
             #self.log(f"  struct2 @ {cmd3d.struct2_addr:#x}: {cmd3d.struct2!s}")
             #self.log(f"    tvb_start_addr @ {cmd3d.struct2.tvb_start_addr:#x}:")
@@ -1001,7 +1000,7 @@ class AGXTracer(ASCTracer):
                 i = i.cmd
                 if i.__class__.__name__ != "Finalize3DCmd":
                     continue
-                self.log(f" Finalize:")
+                self.log(" Finalize:")
                 cmdfin = i
                 #self.log(f"  completion:")
                 #chexdump(kread(cmdfin.completion, 0x4), print_fn=self.log)
@@ -1061,14 +1060,14 @@ class AGXTracer(ASCTracer):
                 ci = wi3.compute_info
                 self.log(f" encoder = {ci.encoder:#x}")
                 chexdump(read(ci.encoder, 0x4000), print_fn=self.log)
-                self.log(f" deflake:")
+                self.log(" deflake:")
                 chexdump(read(ci.iogpu_deflake_1, 0x8000), print_fn=self.log)
 
 
 
             if False:#ci.compute_layout_addr != 0:
                 layout = ComputeLayout.parse_stream(self.get_stream(context, ci.compute_layout_addr))
-                self.log(f" Layout:")
+                self.log(" Layout:")
                 self.log(f"   unk_0: {layout.unk_0:#x}")
                 self.log(f"   unk_4: {layout.unk_4}")
                 self.log(f"   blocks_per_core: {layout.blocks_per_core}")
@@ -1175,7 +1174,7 @@ class AGXTracer(ASCTracer):
             pstart, psize = range
             if pstart:
                 self.log(f"trace {name} {start:#x}/{iova:#x} [{pstart:#x}:{psize:#x}] +{off:#x}")
-                self.hv.add_tracer(irange(pstart, psize), f"GPUVM",
+                self.hv.add_tracer(irange(pstart, psize), "GPUVM",
                            mode=TraceMode.ASYNC,
                            read=self.event_gpuvm,
                            write=self.event_gpuvm,
@@ -1190,7 +1189,7 @@ class AGXTracer(ASCTracer):
         for range in ranges:
             start, size = range
             if start:
-                self.hv.del_tracer(irange(start, size), f"GPUVM")
+                self.hv.del_tracer(irange(start, size), "GPUVM")
 
     def dump_va(self, ctx):
         data = b''

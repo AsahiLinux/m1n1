@@ -157,7 +157,6 @@ class SIOEp(EP):
     def m_SetupIO(self, msg):
         if msg.EP == 0x18 or 0x19:
             iomon.poll()
-        return
 
     @msg(0x68, DIR.RX, SIOCompleteIO)
     def m_CompleteIO(self, msg):

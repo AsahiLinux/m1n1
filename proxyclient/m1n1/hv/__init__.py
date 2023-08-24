@@ -466,7 +466,7 @@ class HV(Reloadable):
                     self.shellwrap(lambda: read(evt, **kwargs),
                                    f"Tracer {ident}:read ({mode.name})", update=do_update)
 
-    def handle_vm_hook_mapped(self, ctx, data):
+    def handle_vm_hook_mapped(self, ctx, data):  # noqa: PLR0912
         maps = sorted(self.mmio_maps[data.addr].values(), reverse=True)
 
         if not maps:
@@ -759,7 +759,7 @@ class HV(Reloadable):
             sp_el1 = self.u.mrs(SP_EL1)
             sp_el0 = self.u.mrs(SP_EL0)
             far = None
-            if esr.EC == ESR_EC.DABORT or esr.EC == ESR_EC.IABORT:
+            if esr.EC in {ESR_EC.DABORT, ESR_EC.IABORT}:
                 far = self.u.mrs(FAR_EL12)
                 if self.sym(elr)[1] != "com.apple.kernel:_panic_trap_to_debugger":
                     self.log("Page fault")
@@ -973,7 +973,7 @@ class HV(Reloadable):
                     handled = True
                     user_interrupt = True
         except Exception as e:
-            self.log(f"Python exception while handling guest exception:")
+            self.log("Python exception while handling guest exception:")
             traceback.print_exc()
 
         if handled:
@@ -1071,7 +1071,7 @@ class HV(Reloadable):
         try:
             handled = self.virtio_devs[info.devbase].handle_exc(info)
         except:
-            self.log(f"Python exception from within virtio handler")
+            self.log("Python exception from within virtio handler")
             traceback.print_exc()
             handled = False
 
@@ -1149,7 +1149,7 @@ class HV(Reloadable):
         # Wait for next proxy entry
         self.iface.wait_and_handle_boot()
         if self.switching_context:
-            raise Exception(f"Failed to switch context")
+            raise Exception("Failed to switch context")
 
         # Fetch new context
         self._load_context()
@@ -1645,7 +1645,7 @@ class HV(Reloadable):
         self.tba.cmdline = boot_args
 
     def unmap_carveouts(self):
-        print(f"Unmapping TZ carveouts...")
+        print("Unmapping TZ carveouts...")
         carveout_p = self.p.mcc_get_carveouts()
         while True:
             base = self.p.read64(carveout_p)
@@ -1697,10 +1697,10 @@ class HV(Reloadable):
 
         print(f"Physical memory: 0x{phys_base:x} .. 0x{mem_top:x}")
         print(f"Guest region start: 0x{guest_base:x}")
-        
+
         self.entry = guest_base + entryoffset
 
-        print(f"Mapping guest physical memory...")
+        print("Mapping guest physical memory...")
         self.add_tracer(irange(self.ram_base, self.u.ba.phys_base - self.ram_base), "RAM-LOW", TraceMode.OFF)
         self.add_tracer(irange(phys_base, self.u.ba.mem_size_actual - phys_base + self.ram_base), "RAM-HIGH", TraceMode.OFF)
         self.unmap_carveouts()
@@ -1720,7 +1720,7 @@ class HV(Reloadable):
             print(f"Copying preoslog (0x{preoslog_size:x} bytes)...")
             self.p.memcpy8(guest_base + preoslog_off, preoslog_start, preoslog_size)
 
-        print(f"Adjusting addresses in ADT...")
+        print("Adjusting addresses in ADT...")
         self.adt["chosen"]["memory-map"].SEPFW = (guest_base + sepfw_off, sepfw_length)
         self.adt["chosen"]["memory-map"].TrustCache = (tc_base, tc_size)
         self.adt["chosen"]["memory-map"].DeviceTree = (self.adt_base, align(self.u.ba.devtree_size))

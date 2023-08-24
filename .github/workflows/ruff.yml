@@ -1,0 +1,15 @@
+# https://beta.ruff.rs
+name: ruff
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: pip install --user codespell[toml] ruff
+    - run: codespell --ignore-words-list="afe,ane,ans,blong,clen,crate,inout,opps,ot,sart,ser,te"  || true
+    - run: ruff --format=github .

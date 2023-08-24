@@ -100,7 +100,13 @@ class GDBServer:
                     self.__hv.interrupt()
                     break
 
-    def __eval(self, data):
+    def __eval(self, data):  # noqa: C901,PLR0911,PLR0912,PLR0915
+        """
+        This function has high cyclomatic complexity (65), too many branches (66), too
+        many return statements (45), and too many statements (147).  Please consider
+        adding significant tests and then refactor to reduce complexity and improve
+        maintainability.
+        """
         if self.log:
             self.log(f"eval: {data}")
 

@@ -289,7 +289,7 @@ class EPICEp(AFKEp):
             chexdump(fd.read(), print_fn=self.log)
 
     def handle_notify(self, hdr, sub, fd):
-        self.log(f"Notify:")
+        self.log("Notify:")
         chexdump(fd.read(), print_fn=self.log)
 
     def handle_reply(self, hdr, sub, fd):

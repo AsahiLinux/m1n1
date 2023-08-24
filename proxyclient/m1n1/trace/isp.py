@@ -2,10 +2,10 @@ from . import ADTDevTracer
 from .dart import DARTTracer
 from ..hv import TraceMode
 from ..hw.dart import DART, DARTRegs
-from ..hw.isp import * 
+from ..hw.isp import *
 
 class ISPTracer(ADTDevTracer):
-    
+
     DEFAULT_MODE = TraceMode.SYNC
 
     REGMAPS = [ISPRegs, PSReg, SPMIReg, SPMIReg, SPMIReg]
@@ -25,27 +25,27 @@ class ISPTracer(ADTDevTracer):
         self.ignored_ranges = [
             # -----------------------------------------------------------------
             # ## System clock counter (24 mhz)
-            (0x23b734004, 4), 
-            (0x23b734008, 4), 
+            (0x23b734004, 4),
+            (0x23b734008, 4),
             # ## Noisy memory addresses that are always zero
-            (0x23b734868, 4), 
-            (0x23b73486c, 4), 
-            (0x23b734b38, 4), 
-            (0x23b734b3c, 4), 
-            (0x23b734b58, 4), 
-            (0x23b734b5c, 4), 
+            (0x23b734868, 4),
+            (0x23b73486c, 4),
+            (0x23b734b38, 4),
+            (0x23b734b3c, 4),
+            (0x23b734b58, 4),
+            (0x23b734b5c, 4),
             (0x23b734bd8, 4),
             (0x23b734bdc, 4),
             (0x23b734c18, 4),
             (0x23b734c1c, 4),
-            (0x23b778128, 4), 
+            (0x23b778128, 4),
             (0x23b77812c, 4),
             (0x23b77c128, 4),
             (0x23b77c12c, 4),
             # # Noisy memory addresses that change value
-            (0x23b700248, 4), 
-            (0x23b700258, 4), 
-            (0x23b7003f8, 4), 
+            (0x23b700248, 4),
+            (0x23b700258, 4),
+            (0x23b7003f8, 4),
             (0x23b700470, 4),
             # # ECPU/PCPU state report
             (0x23b738004, 4), # ecpu state report
@@ -57,8 +57,8 @@ class ISPTracer(ADTDevTracer):
         # I have no idea how many channels may be available in other platforms
         # but, at least for M1 I know they are seven (7), so using 64 as safe value here
         if val.value == 0x8042006:
-            self.log(f"ISP_GPR0 = ACK")
-        elif val.value < 64: 
+            self.log("ISP_GPR0 = ACK")
+        elif val.value < 64:
             self.log(f"ISP_IPC_CHANNELS = {val!s}")
             self.number_of_channels = val.value
         elif val.value > 0:
@@ -68,17 +68,17 @@ class ISPTracer(ADTDevTracer):
 
     def r_ISP_IRQ_INTERRUPT(self, val):
         pending_irq = int(val.value)
-        self.log(f"======== BEGIN IRQ ========")
+        self.log("======== BEGIN IRQ ========")
         #self.channel_table.dump()
         self.channel_table.get_last_read_command(pending_irq)
-        self.log(f"========  END IRQ  ========")
+        self.log("========  END IRQ  ========")
 
     def w_ISP_DOORBELL_RING0(self, val):
         doorbell_value = int(val.value)
-        self.log(f"======== BEGIN DOORBELL ========")
+        self.log("======== BEGIN DOORBELL ========")
         #self.channel_table.dump()
         self.channel_table.get_last_write_command(doorbell_value)
-        self.log(f"========  END DOORBELL  ========")
+        self.log("========  END DOORBELL  ========")
 
     def w_ISP_GPR0(self, val):
         self.log(f"ISP_GPR0 = ({val!s})")
@@ -89,7 +89,7 @@ class ISPTracer(ADTDevTracer):
     def w_ISP_IRQ_INTERRUPT(self, val):
         self.log(f"IRQ_INTERRUPT = ({val!s}).")
         if val.value == 0xf:
-            self.log(f"ISP Interrupts enabled")
+            self.log("ISP Interrupts enabled")
 
     def ioread(self, dva, size):
         if self.dart:
@@ -112,7 +112,7 @@ class ISPTracer(ADTDevTracer):
             if not callable(arg) or not getattr(arg, "is_message", False):
                 continue
             self.msgmap[arg.direction, arg.endpoint, arg.message] = getattr(self, name), name, arg.regtype
-        
-        # Disable trace of memory regions 
+
+        # Disable trace of memory regions
         for addr, size in self.ignored_ranges:
             self.trace(addr, size, TraceMode.OFF)

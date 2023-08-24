@@ -33,7 +33,7 @@ VirtioExcInfo = Struct(
     "devbase" / Int64ul,
     "qu" / Int16ul,
     "idx" / Int16ul,
-    "pad" / Int32ul, 
+    "pad" / Int32ul,
     "descbase" / Int64ul,
 )
 

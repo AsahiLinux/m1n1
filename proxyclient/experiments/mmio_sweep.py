@@ -105,7 +105,7 @@ for dev in pmgr.devices:
 	addr = pmgr.get_reg(ps.reg)[0] + ps.offset + dev.psidx * 8
 
 	if lp.is_t6000() and dev.name.startswith("AOP_"):
-		addr = 0x292284000 + (dev.id - 403) * 8		
+		addr = 0x292284000 + (dev.id - 403) * 8
 
 	ps_addrs[dev.name] = addr
 	ps_deps[dev.name] = [

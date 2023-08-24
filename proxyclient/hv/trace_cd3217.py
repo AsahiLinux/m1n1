@@ -46,7 +46,7 @@ class HpmTracer(I2CDevTracer):
         elif self.state == CD3217Tracer.State.WRITE:
             msg += f"w [{self.reg:02x}]"
         elif self.state == CD3217Tracer.State.READ:
-            msg += f"r [xx]"
+            msg += "r [xx]"
         else:
             self.log(f"unexpected state in stop(): state:{self.state} reg:{self.reg} data:{self.data}")
             self.reset()

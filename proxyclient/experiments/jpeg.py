@@ -124,7 +124,7 @@ if args.decode:
                 (jpeg_bpp, jpeg_H, jpeg_W, jpeg_components_cnt) = sof0
                 # it is not yet verified what the requirements are for inputs
                 assert jpeg_bpp == 8
-                assert jpeg_components_cnt == 1 or jpeg_components_cnt == 3
+                assert jpeg_components_cnt in {1, 3}
                 if jpeg_components_cnt == 1:
                     jpeg_MODE = '400'
                 else:
@@ -156,7 +156,7 @@ if args.decode:
     assert found_sof0
     print(f"JPEG is {jpeg_W}x{jpeg_H} with subsampling {jpeg_MODE}")
 
-    if jpeg_MODE == '444' or jpeg_MODE == '400':
+    if jpeg_MODE in {'400', '444'}:
         macroblock_W, macroblock_H = 8, 8
     elif jpeg_MODE == '422':
         macroblock_W, macroblock_H = 16, 8
@@ -210,7 +210,7 @@ if args.decode:
     print(f"Using size {output_mem_sz:08X} for output image")
 else:
     assert args.encode_subsampling in ['444', '422', '420', '400']
-    if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+    if args.encode_subsampling in {'400', '444'}:
         macroblock_W, macroblock_H = 8, 8
     elif args.encode_subsampling == '422':
         macroblock_W, macroblock_H = 16, 8
@@ -519,11 +519,11 @@ if args.decode:
         jpeg.CODEC.set(CODEC=E_CODEC._411)
     else:
         assert False
-    if pixfmt == 'RGBA' or pixfmt == 'BGRA':
+    if pixfmt in {'RGBA', 'BGRA'}:
         jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.RGBA8888)
     elif pixfmt == 'RGB565':
         jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.RGB565)
-    elif pixfmt == 'YUV422-CbYCrY' or pixfmt == 'YUV422-YCbYCr':
+    elif pixfmt in {'YUV422-CbYCrY', 'YUV422-YCbYCr'}:
         jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.YUV422_linear)
     elif pixfmt == 'YUV422-planar':
         jpeg.DECODE_PIXEL_FORMAT.set(FORMAT=E_DECODE_PIXEL_FORMAT.YUV422_planar)
@@ -566,8 +566,8 @@ if args.decode:
         jpeg.PX_TILES_W = divroundup(jpeg_W // decode_scale, macroblock_W)
     else:
         jpeg.PX_TILES_W = divroundup(jpeg_W // decode_scale, max(macroblock_W, 16))
-    if pixfmt == 'RGBA' or pixfmt == 'BGRA':
-        if jpeg_MODE == '444' or jpeg_MODE == '400':
+    if pixfmt in {'RGBA', 'BGRA'}:
+        if jpeg_MODE in {'400', '444'}:
             jpeg.PX_PLANE0_TILING_H = 4
             jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
             jpeg.PX_PLANE1_TILING_H = 1
@@ -590,7 +590,7 @@ if args.decode:
         else:
             assert False
     elif pixfmt == 'RGB565':
-        if jpeg_MODE == '444' or jpeg_MODE == '400':
+        if jpeg_MODE in {'400', '444'}:
             jpeg.PX_PLANE0_TILING_H = 2
             jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
             jpeg.PX_PLANE1_TILING_H = 1
@@ -612,8 +612,8 @@ if args.decode:
             jpeg.PX_PLANE1_TILING_V = 0
         else:
             assert False
-    elif pixfmt == 'YUV422-CbYCrY' or pixfmt == 'YUV422-YCbYCr':
-        if jpeg_MODE == '444' or jpeg_MODE == '400':
+    elif pixfmt in {'YUV422-CbYCrY', 'YUV422-YCbYCr'}:
+        if jpeg_MODE in {'400', '444'}:
             jpeg.PX_PLANE0_TILING_H = 4
             jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
             jpeg.PX_PLANE1_TILING_H = 1
@@ -636,7 +636,7 @@ if args.decode:
         else:
             assert False
     elif pixfmt == 'YUV422-planar':
-        if jpeg_MODE == '444' or jpeg_MODE == '400':
+        if jpeg_MODE in {'400', '444'}:
             jpeg.PX_PLANE0_TILING_H = 2
             jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
             jpeg.PX_PLANE1_TILING_H = 2
@@ -659,7 +659,7 @@ if args.decode:
         else:
             assert False
     elif pixfmt == 'YUV420-planar':
-        if jpeg_MODE == '444' or jpeg_MODE == '400':
+        if jpeg_MODE in {'400', '444'}:
             jpeg.PX_PLANE0_TILING_H = 2
             jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
             jpeg.PX_PLANE1_TILING_H = 2
@@ -682,7 +682,7 @@ if args.decode:
         else:
             assert False
     elif pixfmt == 'YUV444-planar':
-        if jpeg_MODE == '444' or jpeg_MODE == '400':
+        if jpeg_MODE in {'400', '444'}:
             jpeg.PX_PLANE0_TILING_H = 1
             jpeg.PX_PLANE0_TILING_V = 8 // decode_scale
             jpeg.PX_PLANE1_TILING_H = 2
@@ -917,7 +917,7 @@ if args.encode:
     jpeg.PX_TILES_W = divroundup(im_W, macroblock_W)
     jpeg.PX_TILES_H = divroundup(im_H, macroblock_H)
     if pixfmt in ['RGB888', 'RGB101010', 'YUV10']:
-        if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+        if args.encode_subsampling in {'400', '444'}:
             jpeg.PX_PLANE0_TILING_H = 4
             jpeg.PX_PLANE0_TILING_V = 8
             jpeg.PX_PLANE1_TILING_H = 1
@@ -935,7 +935,7 @@ if args.encode:
         else:
             assert False
     elif pixfmt == 'RGB565':
-        if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+        if args.encode_subsampling in {'400', '444'}:
             jpeg.PX_PLANE0_TILING_H = 2
             jpeg.PX_PLANE0_TILING_V = 8
             jpeg.PX_PLANE1_TILING_H = 1
@@ -953,7 +953,7 @@ if args.encode:
         else:
             assert False
     elif pixfmt == 'YUV-linear':
-        if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+        if args.encode_subsampling in {'400', '444'}:
             jpeg.PX_PLANE0_TILING_H = 2
             jpeg.PX_PLANE0_TILING_V = 8
             jpeg.PX_PLANE1_TILING_H = 1
@@ -971,7 +971,7 @@ if args.encode:
         else:
             assert False
     elif pixfmt == 'YUV444-planar':
-        if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+        if args.encode_subsampling in {'400', '444'}:
             jpeg.PX_PLANE0_TILING_H = 1
             jpeg.PX_PLANE0_TILING_V = 8
             jpeg.PX_PLANE1_TILING_H = 2
@@ -989,7 +989,7 @@ if args.encode:
         else:
             assert False
     elif pixfmt == 'YUV422-planar':
-        if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+        if args.encode_subsampling in {'400', '444'}:
             jpeg.PX_PLANE0_TILING_H = 1
             jpeg.PX_PLANE0_TILING_V = 8
             jpeg.PX_PLANE1_TILING_H = 1
@@ -1007,7 +1007,7 @@ if args.encode:
         else:
             assert False
     elif pixfmt == 'YUV420-planar':
-        if args.encode_subsampling == '444' or args.encode_subsampling == '400':
+        if args.encode_subsampling in {'400', '444'}:
             jpeg.PX_PLANE0_TILING_H = 1
             jpeg.PX_PLANE0_TILING_V = 8
             jpeg.PX_PLANE1_TILING_H = 1

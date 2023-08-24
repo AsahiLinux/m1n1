@@ -847,7 +847,7 @@ class Ver(Subconstruct):
             loc = dict(base_loc)
             for k, v in ver.items():
                 loc[k] = cls.MATRIX[k].index(v)
-            return eval(expr, None, loc)
+            return eval(expr, None, loc)  # noqa: PGH001
 
         return check_ver
 

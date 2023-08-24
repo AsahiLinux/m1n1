@@ -177,7 +177,7 @@ class MTPInterface:
         msg.msg = idx
         self.send(msg.build())
 
-    def packet(self, pkt):
+    def packet(self, pkt):  # Defined twice in this file!!!
         self.log(f"RX: {pkt.hex()}")
 
     def log(self, s):
@@ -195,7 +195,7 @@ class MTPInterface:
     def unk(self, msg):
         self.log(f"unk: {msg.hex()}")
 
-    def packet(self, pkt):
+    def packet(self, pkt):  # noqa: F811 Defined twice in this file!!!
         msg = RXMessage.parse(pkt)
         mtype = msg.hdr.flags
         #self.log(f"FL:{msg.hdr.flag    s:04x} unk:{msg.hdr.unk:08x}")
@@ -204,7 +204,7 @@ class MTPInterface:
         elif mtype == 0x80:
             self.ack(msg.hdr.retcode, msg.msg)
         elif mtype == 0x81:
-            self.log(f"REPORT")
+            self.log("REPORT")
             chexdump(msg.msg, print_fn=self.log)
         elif mtype == 0x40:
             self.unk(msg.msg)

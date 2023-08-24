@@ -653,7 +653,7 @@ class AddrLookup(RangeMap):
         for zone, values in self.items():
             b.append(f"{zone.start:#11x} - {zone.stop - 1:#11x}")
             if len(values) == 0:
-                b.append(f" (empty range)")
+                b.append(" (empty range)")
             elif len(values) == 1:
                 b.append(f" : {values[0][0]}\n")
             if len(values) > 1:

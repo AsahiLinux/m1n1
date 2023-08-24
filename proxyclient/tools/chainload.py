@@ -65,7 +65,7 @@ p.dc_cvau(image_addr, len(image))
 if not args.no_sepfw:
     print(f"Copying SEPFW (0x{sepfw_length:x} bytes)...")
     p.memcpy8(image_addr + sepfw_off, sepfw_start, sepfw_length)
-    print(f"Adjusting addresses in ADT...")
+    print("Adjusting addresses in ADT...")
     u.adt["chosen"]["memory-map"].SEPFW = (new_base + sepfw_off, sepfw_length)
     u.adt["chosen"]["memory-map"].BootArgs = (new_base + bootargs_off, bootargs_size)
     if hasattr(u.adt["chosen"]["memory-map"], "preoslog"):
@@ -113,7 +113,7 @@ if args.xnu:
 
 iface.writemem(image_addr + bootargs_off, BootArgs.build(tba))
 
-print(f"Copying stub...")
+print("Copying stub...")
 
 stub = asm.ARMAsm(f"""
 1:
@@ -140,7 +140,7 @@ if args.xnu and p.display_is_external():
         p.display_shutdown(0)
 
 if args.call:
-    print(f"Shutting down MMU...")
+    print("Shutting down MMU...")
     try:
         p.mmu_shutdown()
     except ProxyCommandError:

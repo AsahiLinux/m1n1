@@ -57,7 +57,7 @@ for i, dev in enumerate(pmgr.devices):
         val = p.read32(addr)
         s += f" @ {addr:#x} = {val:#010x}"
     else:
-        s += f" @                         "
+        s += " @                         "
     if dev.pd:
         pd = pd_by_id[dev.pd]
         s += f" pd: {pd.name:20s}"
@@ -114,7 +114,7 @@ for i, (freq, reg, nclk) in enumerate(zip(arm_io.clock_frequencies,
     v = ""
     clk_type = reg >> 56
     reg = reg & 0xFFFFFFFFFFFFFF
-    
+
     if clk_type == 0x9c:
         v = f"fixed: {reg}"
     elif clk_type in (0xa0, 0xa1, 0xa4, 0xa5):
@@ -131,8 +131,8 @@ for i, (freq, reg, nclk) in enumerate(zip(arm_io.clock_frequencies,
         v = f"nco: (calculated rate: {nco_freq:d}) "
         for val in regvals:
             v += f"{val:#x} "
-        
-    
+
+
     print(f"#{i:3}: {freq:10d} {nclk} {clk_type:#x}/{reg:#x}: {v}")
     for j in clock_users.get(i + 256, []):
         print(f"  User: {j}")

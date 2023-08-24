@@ -58,7 +58,7 @@ print(f"P-Core pstate: {p_pstate:x}")
 
 #for cluster in range(2):
     #print(f"Initializing cluster {cluster} (early)")
-    
+
     #p.write64(CREG[cluster] + 0x20660, 0x1000000015)
     #p.write64(CREG[cluster] + 0x48000, 0)
     #p.write64(CREG[cluster] + 0x48080, 0xa000000000000000)
@@ -88,17 +88,17 @@ for cluster in range(2):
     if (val & ena) != ena:
         print(f"DVMR: {val:#x} -> {val|ena:#x}")
         p.set64(CREG[cluster] + CLUSTER_DVMR, ena) # CLUSTER_DVMR
-    
+
     #p.set64(CREG[cluster] + CLUSTER_LIMIT1, 1<<63)
     #p.clear64(CREG[cluster] + CLUSTER_LIMIT2, 1<<63)
     #p.set64(CREG[cluster] + CLUSTER_LIMIT3, 1<<63)
-    
+
     #p.set64(CREG[cluster] + CLUSTER_PSTATE, 0)
-    
+
     #p.set32(PMGR + PMGR_CPUGATING + 8 * cluster, 1<<31)
 
     #p.write64(CREG[cluster] + CLUSTER_CTRL, 1)
-    
+
     #p.set64(CREG[cluster] + CLUSTER_PSCTRL, 1<<40)
 
     #pstate = p.read64(CREG[cluster] + CLUSTER_PSTATE) & 0xf
@@ -109,10 +109,10 @@ print("== Initial CPU frequencies ==")
 
 for cpu in range(8):
     print(f"CPU {cpu}: {bench_cpu(cpu):.2f} MHz")
-    
+
 def set_pstate(cluster, pstate):
     # This really seems to be all that's needed
-    
+
     p.mask64(CREG[cluster] + CLUSTER_PSTATE, 0xf00f, (1<<25) | pstate | (pstate << 12))
 
     # Optionally, adjust MCC performance in higher p-core pstates

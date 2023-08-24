@@ -39,7 +39,7 @@ class PMP_Init2_Ack(PMPMessage):
     TYPE = 56, 44, Constant(0x203)
     UNK1 = 43, 16
     UNK2 = 15, 0
-    
+
 class PMP_Unk(PMPMessage):
     TYPE = 56, 44, Constant(0x100)
     UNK1 = 43, 16
@@ -82,7 +82,7 @@ class PMPEndpoint(ASCBaseEndpoint):
         self.log("Starting up")
 
         self.shmem, self.shmem_dva = self.asc.ioalloc(0x10000)
-        
+
         self.send_init_config()
         return True
 
@@ -90,9 +90,9 @@ class PMPEndpoint(ASCBaseEndpoint):
         self.asc.p.memset32(self.shmem, 0, 0x10000)
         dram_config = self.asc.u.adt["arm-io/pmp/iop-pmp-nub"].energy_model_dram_configs
         self.asc.iface.writemem(self.shmem + 0x2000, dram_config)
-        
+
         node = self.asc.u.adt["arm-io/pmp"]
-        
+
         maps = []
         dva = 0xc0000000
         for i in range(3, len(node.reg)):

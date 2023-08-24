@@ -64,7 +64,7 @@ class GPIOLogicAnalyzer(Reloadable):
             isb
         """
         if self.div > 1:
-            text += f"""
+            text += """
                 cmp x5, x4
                 b.lo 2b
             """
@@ -76,22 +76,22 @@ class GPIOLogicAnalyzer(Reloadable):
             """
 
         if self.on_pin_change:
-            text += f"""
+            text += """
                 cmp x7, x6
                 b.eq 3f
                 mov x6, x7
             """
         if self.on_reg_change:
-            text += f"""
+            text += """
                 mov x11, x2
             """
 
-        text += f"""
+        text += """
             str w5, [x2], #4
             str w7, [x2], #4
         """
         if self.on_reg_change:
-            text += f"""
+            text += """
                 mov x13, #0
                 add x14, x12, #8
             """
@@ -105,7 +105,7 @@ class GPIOLogicAnalyzer(Reloadable):
                 str w9, [x2], #4
             """
             if self.on_reg_change:
-                text += f"""
+                text += """
                     eor w15, w9, #1
                     cmp x14, #0
                     b.eq 4f
@@ -116,7 +116,7 @@ class GPIOLogicAnalyzer(Reloadable):
                 """
 
         if self.on_reg_change:
-            text += f"""
+            text += """
                 cmp x13, #0
                 b.ne 4f
                 mov x2, x11
@@ -124,7 +124,7 @@ class GPIOLogicAnalyzer(Reloadable):
                 b 3f
             4:
             """
-        text += f"""
+        text += """
             mov x12, x11
             cmp x2, x3
             b.hs done
@@ -135,7 +135,7 @@ class GPIOLogicAnalyzer(Reloadable):
             sub x0, x2, x10
             ret
         """
-        
+
         code = asm.ARMAsm(text, self.cbuf)
         self.iface.writemem(self.cbuf, code.data)
         self.p.dc_cvau(self.cbuf, len(code.data))
@@ -144,7 +144,7 @@ class GPIOLogicAnalyzer(Reloadable):
         self.p.write32(self.dbuf, 0)
 
         self.p.smp_call(self.cpu, code.trace | REGION_RX_EL1, ticks, self.div, self.dbuf, bufsize - (8 + 4 * len(self.regs)))
-    
+
     def complete(self):
         self.p.write32(self.dbuf, 1)
         wrote = self.p.smp_wait(self.cpu)
@@ -152,11 +152,11 @@ class GPIOLogicAnalyzer(Reloadable):
         data = self.iface.readmem(self.dbuf + 4, wrote)
         self.u.free(self.dbuf)
         self.dbuf = None
-        
+
         stride = 2 + len(self.regs)
-        
+
         #chexdump(data)
-        
+
         self.data = [struct.unpack("<" + "I" * stride,
                                    data[i:i + 4 * stride])
                      for i in range(0, len(data), 4 * stride)]
@@ -167,9 +167,9 @@ class GPIOLogicAnalyzer(Reloadable):
             off2 = max(0, ((self.data[1][0] - off) & 0xffffffff) - 5000)
         else:
             off2 = 0
-        
+
         #print(off, off2)
-        
+
         vcd = []
         vcd.append("""
 $timescale 1ns $end
@@ -178,7 +178,7 @@ $scope module gpio $end
         sym = 0
         keys = []
         rkeys = []
-                                           
+
         for name in self.pins:
             keys.append(f"s{sym}")
             vcd.append(f"$var wire 1 s{sym} {name} $end\n")
@@ -222,17 +222,17 @@ $dumpvars
                     for field, (width, key) in subkeys.items():
                         v = getattr(rval, field)
                         vcd.append(f"b{v:0{width}b} {key}\n")
-                    
+
 
         ns += ns//10
         vcd.append(f"#{ns}\n" + "\n".join(f"{(val>>i) & 1}{k}" for i, k in enumerate(keys)) + "\n")
- 
+
         return "".join(vcd)
-    
+
     def show(self):
         with open("/tmp/dump.vcd", "w") as fd:
             fd.write(self.vcd())
-        
+
         gtkw = ("""
 [dumpfile] "/tmp/dump.vcd"
 [timestart] 0
@@ -245,7 +245,7 @@ $dumpvars
 [sst_vpaned_height] 421
 @23
 """ +
-        "\n".join("gpio." + k for k in self.pins) + "\n" + 
+        "\n".join("gpio." + k for k in self.pins) + "\n" +
         "\n".join("gpio." + k + "[31:0]" for k in self.regs) + "\n")
 
         with open("/tmp/dump.gtkw", "w") as fd:

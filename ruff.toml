@@ -1,0 +1,107 @@
+# NOTE: You have to use single-quoted strings in TOML for regular expressions.
+# It's the equivalent of r-strings in Python.  Multiline strings are treated as
+# verbose regular expressions by Black.  Use [ ] to denote a significant space
+# character.
+
+# When switching from ruff.toml to pyproject.toml, use the section names that
+# start with [tool.ruff
+
+# [tool.ruff]
+select = [
+  # "A",      # flake8-builtins
+  "AIR",    # Airflow
+  # "ANN",    # flake8-annotations
+  # "ARG",    # flake8-unused-arguments
+  "ASYNC",  # flake8-async
+  # "B",      # flake8-bugbear
+  "BLE",    # flake8-blind-except
+  # "C4",     # flake8-comprehensions
+  "C90",    # McCabe cyclomatic complexity
+  "CPY",    # flake8-copyright
+  # "D",      # pydocstyle
+  "DJ",   # flake8-django
+  "DTZ",    # flake8-datetimez
+  "E",      # pycodestyle
+  # "EM",     # flake8-errmsg
+  # "ERA",  # eradicate
+  "EXE",    # flake8-executable
+  "F",      # Pyflakes
+  "FA",     # flake8-future-annotations
+  # "FBT",    # flake8-boolean-trap
+  # "FIX",    # flake8-fixme
+  "FLY",    # flynt
+  "G",      # flake8-logging-format
+  "I",      # isort
+  "ICN",    # flake8-import-conventions
+  "INP",    # flake8-no-pep420
+  "INT",    # flake8-gettext
+  "ISC",    # flake8-implicit-str-concat
+  # "N",      # pep8-naming
+  "NPY",  # NumPy-specific rules
+  "PD",   # pandas-vet
+  # "PERF",   # Perflint
+  "PGH",    # pygrep-hooks
+  "PIE",    # flake8-pie
+  "PL",     # Pylint
+  "PT",     # flake8-pytest-style
+  # "PTH",    # flake8-use-pathlib
+  "PYI",    # flake8-pyi
+  # "RET",    # flake8-return
+  "RSE",    # flake8-raise
+  # "RUF",    # Ruff-specific rules
+  # "S",      # flake8-bandit
+  # "SIM",    # flake8-simplify
+  # "SLF",    # flake8-self
+  "SLOT",   # flake8-slots
+  "T10",    # flake8-debugger
+  # "T20",  # flake8-print
+  "TCH",    # flake8-type-checking
+  # "TD",     # flake8-todos
+  "TID",    # flake8-tidy-imports
+  # "TRY",    # tryceratops
+  # "UP",     # pyupgrade
+  "W",      # pycodestyle
+  "YTT",    # flake8-2020
+  # "COM",  # flake8-commas
+  # "PLR091",  # Pylint Refactor just for max-args, max-branches, etc.
+  # "Q",    # flake8-quotes
+]
+ignore = [
+  "BLE001",
+  "DTZ005",
+  "E101",  # FIXME Tab indentation
+  "E401",
+  "E402",
+  "E7",
+  "EXE001",
+  "F40",  # FIXME
+  "F821",  # FIXME Undefined name!!!
+  "F841",
+  "I001",
+  "INP001",
+  "ISC002",
+  "ISC003",
+  "PLR5501",
+  "PLW0603",
+  "PLW2901",
+  "PT015",
+  "PYI024",
+  "PYI056",
+  "RSE102",
+  "TID252",
+  "W191",  # FIXME Tab indentation
+]
+line-length = 234
+target-version = "py38"
+
+#[tool.ruff.mccabe]
+[mccabe]
+max-complexity = 35
+
+#[tool.ruff.pylint]
+[pylint]
+allow-magic-value-types = ["bytes", "int", "str"]
+max-args = 9  # Default is 5
+max-branches = 27  # Default is 12
+max-returns = 8  # Default is 6
+max-statements = 128  # Default is 50

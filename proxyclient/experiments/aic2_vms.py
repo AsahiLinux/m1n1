@@ -113,7 +113,7 @@ def init():
 
     p.set32(AIC_RST, 1)
     p.set32(AIC_CFG, 1 | AIC_CFG_PREFER_PCORES)
-    
+
     cpoll()
 
 def test_irq_routing():

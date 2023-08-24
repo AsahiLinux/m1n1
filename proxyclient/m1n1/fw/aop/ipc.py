@@ -340,7 +340,7 @@ class IndirectCall(EPICCall):
         # dump the command data for offline replays of traces
         ep.log(f"===COMMAND TX DATA=== addr={cmd.txbuf:#x}")
         chexdump(self.txbuf)
-        ep.log(f"===END DATA===")
+        ep.log("===END DATA===")
 
     def read_rxbuf(self, ep):
         cmd = self.rets
@@ -349,7 +349,7 @@ class IndirectCall(EPICCall):
 
         ep.log(f"===COMMAND RX DATA=== addr={cmd.rxbuf:#x}")
         chexdump(self.rxbuf)
-        ep.log(f"===END DATA===")
+        ep.log("===END DATA===")
 
     def unwrap(self):
         fd = BytesIO()

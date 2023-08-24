@@ -33,4 +33,4 @@ class PMU:
                     primary = (getattr(pmu, "is-primary") == 1) if hasattr(pmu, "is-primary")  else False
                     if compat == "pmu,spmi" and primary:
                         return pmu._path.removeprefix('/device-tree')
-        raise KeyError(f"primary 'pmu,spmi' node not found")
+        raise KeyError("primary 'pmu,spmi' node not found")

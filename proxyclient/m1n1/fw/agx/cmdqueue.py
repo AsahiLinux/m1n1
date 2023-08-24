@@ -177,7 +177,7 @@ class WorkCommandCP(ConstructClass):
         "pad_2d9" / Default(HexDump(Bytes(0x7)), bytes(0x7)),
     )
 
-class WorkCommand0_UnkBuf(ConstructValueClass):
+class WorkCommand0_UnkBuf(ConstructValueClass):  # Defined twice in this file!!!
     subcon = HexDump(Bytes(0x18))
 
     def __init__(self):
@@ -277,7 +277,7 @@ class WorkCommand3D(ConstructClass):
         Ver("V == V13_3", "unk_pad2" / Default(HexDump(Bytes(0x3c)), bytes(0x3c))),
     )
 
-class WorkCommand0_UnkBuf(ConstructValueClass):
+class WorkCommand0_UnkBuf(ConstructValueClass):  # noqa: F811 Defined twice in a file
     subcon = HexDump(Bytes(0x18))
 
     def __init__(self):

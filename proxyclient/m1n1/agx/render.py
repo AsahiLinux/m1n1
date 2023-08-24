@@ -222,7 +222,12 @@ class GPURenderer:
         self.mshook_ta = None
         self.mshook_3d = None
 
-    def submit(self, cmdbuf, wait_for=None):
+    def submit(self, cmdbuf, wait_for=None):  # noqa: C901,PLR0912,PLR0915
+        """
+        This function has high cyclomatic complexity (38), too many branches (44) and
+        too many statements (732).  Please consider adding significant tests and then
+        refactor to reduce complexity and improve maintainability.
+        """
         nclusters = 8
 
         work = GPUWork(self)

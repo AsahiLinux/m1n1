@@ -85,7 +85,7 @@ if args.u_boot:
     bootenv_len = uboot[bootenv_start:].find(b"\x00\x00")
     bootenv_old = uboot[bootenv_start:bootenv_start+bootenv_len]
     bootenv = str(bootenv_old, "ascii").split("\x00")
-    bootenv = list(filter(lambda x: not (x.startswith("baudrate") or x.startswith("boot_") or x.startswith("distro_bootcmd")), bootenv))
+    bootenv = list(filter(lambda x: not (x.startswith(('baudrate', 'boot_', 'distro_bootcmd'))), bootenv))
 
     if initramfs is not None:
         bootcmd = "distro_bootcmd=booti 0x%x 0x%x:0x%x $fdtcontroladdr" % (kernel_base, initramfs_base, initramfs_size)
