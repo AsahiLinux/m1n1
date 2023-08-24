@@ -275,7 +275,7 @@ class ISPChannel:
     writes doorbell register. In the other hand, when ISP wants to notify CPU
     about a new message it triggers a hardware interrupt. 
 
-    Channel Type is a mistery, but it seems to have a connection with cmd bit
+    Channel Type is a mystery, but it seems to have a connection with cmd bit
     mask. 
     """
 

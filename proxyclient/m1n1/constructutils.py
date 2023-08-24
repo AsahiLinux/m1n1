@@ -140,7 +140,7 @@ class ConstructClassException(Exception):
     pass
 
 
-# We need to inherrit Construct as a metaclass so things like If and Select will work
+# We need to inherit Construct as a metaclass so things like If and Select will work
 class ReloadableConstructMeta(ReloadableMeta, Construct):
 
     def __new__(cls, name, bases, attrs):
@@ -187,9 +187,9 @@ class ReloadableConstructMeta(ReloadableMeta, Construct):
         return cls
 
 class ConstructClassBase(Reloadable, metaclass=ReloadableConstructMeta):
-    """ Offers two benifits over regular construct
+    """ Offers two benefits over regular construct
 
-        1. It's reloadable, and can recusrivly reload other refrenced ConstructClasses
+        1. It's reloadable, and can recusrivly reload other referenced ConstructClasses
         2. It's a class, so you can define methods
 
         Currently only supports parsing, but could be extended to support building
@@ -386,9 +386,9 @@ class ROPointer(Pointer):
         return Pointer._parse(self, stream, context, path)
 
 class ConstructClass(ConstructClassBase, Container):
-    """ Offers two benifits over regular construct
+    """ Offers two benefits over regular construct
 
-        1. It's reloadable, and can recusrivly reload other refrenced ConstructClasses
+        1. It's reloadable, and can recusrivly reload other referenced ConstructClasses
         2. It's a class, so you can define methods
 
         Currently only supports parsing, but could be extended to support building

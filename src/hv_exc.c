@@ -232,7 +232,7 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         SYSREG_MAP(SYS_ACTLR_EL1, SYS_IMP_APL_ACTLR_EL12)
         SYSREG_PASS(SYS_IMP_APL_HID4)
         SYSREG_PASS(SYS_IMP_APL_EHID4)
-        /* We don't normally trap hese, but if we do, they're noisy */
+        /* We don't normally trap these, but if we do, they're noisy */
         SYSREG_PASS(SYS_IMP_APL_GXF_STATUS_EL1)
         SYSREG_PASS(SYS_IMP_APL_CNTVCT_ALIAS_EL0)
         SYSREG_PASS(SYS_IMP_APL_TPIDR_GL1)
@@ -405,7 +405,7 @@ static void hv_exc_exit(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('x');
     hv_update_fiq();
-    /* reenable PMU counters */
+    /* re-enable PMU counters */
     reg_set(SYS_IMP_APL_PMCR0, PERCPU(exc_entry_pmcr0_cnt));
     msr(CNTVOFF_EL2, stolen_time);
     spin_unlock(&bhl);

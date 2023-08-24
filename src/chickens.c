@@ -50,7 +50,7 @@ const char *init_cpu(void)
     else
         reg_set(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA | HID4_DISABLE_DC_SW_L2_OPS);
 
-    /* Enable NEX powergating, the reset cycles might be overriden by chickens */
+    /* Enable NEX powergating, the reset cycles might be overridden by chickens */
     if (!is_ecore()) {
         reg_mask(SYS_IMP_APL_HID13, HID13_RESET_CYCLES_MASK, HID13_RESET_CYCLES(12));
         reg_set(SYS_IMP_APL_HID14, HID14_ENABLE_NEX_POWER_GATING);

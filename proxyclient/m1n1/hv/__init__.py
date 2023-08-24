@@ -1363,7 +1363,7 @@ class HV(Reloadable):
         self.device_addr_tbl = self.adt.build_addr_lookup()
         self.print_tracer = trace.PrintTracer(self, self.device_addr_tbl)
 
-        # disable unused USB iodev early so interrupts can be reenabled in hv_init()
+        # disable unused USB iodev early so interrupts can be re-enabled in hv_init()
         for iodev in IODEV:
             if iodev >= IODEV.USB0 and iodev != self.iodev:
                 print(f"Disable iodev {iodev!s}")

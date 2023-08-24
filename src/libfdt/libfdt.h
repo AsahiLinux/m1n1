@@ -711,7 +711,7 @@ static inline struct fdt_property *fdt_get_property_w(void *fdt, int nodeoffset,
  * to within the device blob itself, not a copy of the value).  If
  * lenp is non-NULL, the length of the property value is also
  * returned, in the integer pointed to by lenp.  If namep is non-NULL,
- * the property's namne will also be returned in the char * pointed to
+ * the property's name will also be returned in the char * pointed to
  * by namep (this will be a pointer to within the device tree's string
  * block, not a new copy of the name).
  *
@@ -719,7 +719,7 @@ static inline struct fdt_property *fdt_get_property_w(void *fdt, int nodeoffset,
  *	pointer to the property's value
  *		if lenp is non-NULL, *lenp contains the length of the property
  *		value (>=0)
- *		if namep is non-NULL *namep contiains a pointer to the property
+ *		if namep is non-NULL *namep contains a pointer to the property
  *		name.
  *	NULL, on error
  *		if lenp is non-NULL, *lenp contains an error code (<0):
@@ -2050,7 +2050,7 @@ int fdt_del_node(void *fdt, int nodeoffset);
  * returns:
  *	0, on success
  *	-FDT_ERR_NOSPACE, there's not enough space in the base device tree
- *	-FDT_ERR_NOTFOUND, the overlay points to some inexistant nodes or
+ *	-FDT_ERR_NOTFOUND, the overlay points to some inexistent nodes or
  *		properties in the base DT
  *	-FDT_ERR_BADPHANDLE,
  *	-FDT_ERR_BADOVERLAY,
