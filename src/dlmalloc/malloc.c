@@ -85,7 +85,7 @@
        executions, so externally crafted fake chunks cannot be
        freed. This improves security by rejecting frees/reallocs that
        could corrupt heap memory, in addition to the checks preventing
-       writes to statistics that are always on.  This may further improve
+       writes to statics that are always on.  This may further improve
        security at the expense of time and space overhead.  (Note that
        FOOTERS may also be worth using with MSPACES.)
 
