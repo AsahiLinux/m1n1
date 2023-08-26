@@ -34,6 +34,336 @@ class Phy:
     def set_active_lane_count(self, lanes):
         pass
 
+class dptx_phy(Phy):
+    def activate(self):
+        print(f"dptx phy activate")
+
+        # MMIO: R.4   0x23c500010 (dptx-phy[1], offset 0x10) = 0x0
+        p.read32(self.phy_regs[1] + 0x10);
+        p.write32(self.phy_regs[1] + 0x10, 0x0);
+        # MMIO: R.4   0x23c500048 (dptx-phy[1], offset 0x48) = 0x444
+        p.read32(self.phy_regs[1] + 0x48);
+        p.write32(self.phy_regs[1] + 0x48, 0x454);
+        # MMIO: R.4   0x23c500048 (dptx-phy[1], offset 0x48) = 0x454
+        p.read32(self.phy_regs[1] + 0x48);
+        p.write32(self.phy_regs[1] + 0x48, 0x474);
+        # MMIO: R.4   0x23c500048 (dptx-phy[1], offset 0x48) = 0x474
+        p.read32(self.phy_regs[1] + 0x48);
+        p.write32(self.phy_regs[1] + 0x48, 0x434);
+        # MMIO: R.4   0x23c500048 (dptx-phy[1], offset 0x48) = 0x434
+        p.read32(self.phy_regs[1] + 0x48);
+        p.write32(self.phy_regs[1] + 0x48, 0x534);
+        # MMIO: R.4   0x23c500048 (dptx-phy[1], offset 0x48) = 0x534
+        p.read32(self.phy_regs[1] + 0x48);
+        p.write32(self.phy_regs[1] + 0x48, 0x734);
+        # MMIO: R.4   0x23c500048 (dptx-phy[1], offset 0x48) = 0x734
+        p.read32(self.phy_regs[1] + 0x48);
+        p.write32(self.phy_regs[1] + 0x48, 0x334);
+        # MMIO: R.4   0x23c500048 (dptx-phy[1], offset 0x48) = 0x334
+        p.read32(self.phy_regs[1] + 0x48);
+        p.write32(self.phy_regs[1] + 0x48, 0x335);
+        # MMIO: R.4   0x23c500048 (dptx-phy[1], offset 0x48) = 0x335
+        p.read32(self.phy_regs[1] + 0x48);
+        p.write32(self.phy_regs[1] + 0x48, 0x337);
+        # MMIO: R.4   0x23c500048 (dptx-phy[1], offset 0x48) = 0x337
+        p.read32(self.phy_regs[1] + 0x48);
+        p.write32(self.phy_regs[1] + 0x48, 0x333);
+        # MMIO: R.4   0x23c542014 (dptx-phy[0], offset 0x2014) = 0x80a0c
+        p.read32(self.phy_regs[0] + 0x2014);
+        p.write32(self.phy_regs[0] + 0x2014, 0x300a0c);
+        # MMIO: R.4   0x23c5420b8 (dptx-phy[0], offset 0x20b8) = 0x644800
+        p.read32(self.phy_regs[0] + 0x20b8);
+        p.write32(self.phy_regs[0] + 0x20b8, 0x654800);
+        # MMIO: R.4   0x23c542220 (dptx-phy[0], offset 0x2220) = 0x11090a2
+        p.read32(self.phy_regs[0] + 0x2220);
+        p.write32(self.phy_regs[0] + 0x2220, 0x11090a0);
+        # MMIO: R.4   0x23c54222c (dptx-phy[0], offset 0x222c) = 0x103003
+        p.read32(self.phy_regs[0] + 0x222c);
+        p.write32(self.phy_regs[0] + 0x222c, 0x103803);
+        # MMIO: R.4   0x23c54222c (dptx-phy[0], offset 0x222c) = 0x103803
+        p.read32(self.phy_regs[0] + 0x222c);
+        p.write32(self.phy_regs[0] + 0x222c, 0x103903);
+        # MMIO: R.4   0x23c542230 (dptx-phy[0], offset 0x2230) = 0x2308804
+        p.read32(self.phy_regs[0] + 0x2230);
+        p.write32(self.phy_regs[0] + 0x2230, 0x2208804);
+        # MMIO: R.4   0x23c542278 (dptx-phy[0], offset 0x2278) = 0x18300811
+        p.read32(self.phy_regs[0] + 0x2278);
+        p.write32(self.phy_regs[0] + 0x2278, 0x10300811);
+        # MMIO: R.4   0x23c5422a4 (dptx-phy[0], offset 0x22a4) = 0x1044200
+        p.read32(self.phy_regs[0] + 0x22a4);
+        p.write32(self.phy_regs[0] + 0x22a4, 0x1044201);
+        # MMIO: R.4   0x23c544008 (dptx-phy[0], offset 0x4008) = 0x18030
+        p.read32(self.phy_regs[0] + 0x4008);
+        p.write32(self.phy_regs[0] + 0x4008, 0x30030);
+        # MMIO: R.4   0x23c544008 (dptx-phy[0], offset 0x4008) = 0x30030
+        p.read32(self.phy_regs[0] + 0x4008);
+        p.write32(self.phy_regs[0] + 0x4008, 0x30010);
+        # MMIO: R.4   0x23c54420c (dptx-phy[0], offset 0x420c) = 0x88e3
+        p.read32(self.phy_regs[0] + 0x420c);
+        p.write32(self.phy_regs[0] + 0x420c, 0x88c3);
+        # MMIO: R.4   0x23c544600 (dptx-phy[0], offset 0x4600) = 0x0
+        p.read32(self.phy_regs[0] + 0x4600);
+        p.write32(self.phy_regs[0] + 0x4600, 0x8000000);
+        # MMIO: R.4   0x23c545040 (dptx-phy[0], offset 0x5040) = 0x21780
+        p.read32(self.phy_regs[0] + 0x5040);
+        p.write32(self.phy_regs[0] + 0x5040, 0x221780);
+        # MMIO: R.4   0x23c546040 (dptx-phy[0], offset 0x6040) = 0x21780
+        p.read32(self.phy_regs[0] + 0x6040);
+        p.write32(self.phy_regs[0] + 0x6040, 0x221780);
+        # MMIO: R.4   0x23c547040 (dptx-phy[0], offset 0x7040) = 0x21780
+        p.read32(self.phy_regs[0] + 0x7040);
+        p.write32(self.phy_regs[0] + 0x7040, 0x221780);
+        # MMIO: R.4   0x23c548040 (dptx-phy[0], offset 0x8040) = 0x21780
+        p.read32(self.phy_regs[0] + 0x8040);
+        p.write32(self.phy_regs[0] + 0x8040, 0x221780);
+        # MMIO: R.4   0x23c545040 (dptx-phy[0], offset 0x5040) = 0x221780
+        p.read32(self.phy_regs[0] + 0x5040);
+        p.write32(self.phy_regs[0] + 0x5040, 0x2a1780);
+        # MMIO: R.4   0x23c546040 (dptx-phy[0], offset 0x6040) = 0x221780
+        p.read32(self.phy_regs[0] + 0x6040);
+        p.write32(self.phy_regs[0] + 0x6040, 0x2a1780);
+        # MMIO: R.4   0x23c547040 (dptx-phy[0], offset 0x7040) = 0x221780
+        p.read32(self.phy_regs[0] + 0x7040);
+        p.write32(self.phy_regs[0] + 0x7040, 0x2a1780);
+        # MMIO: R.4   0x23c548040 (dptx-phy[0], offset 0x8040) = 0x221780
+        p.read32(self.phy_regs[0] + 0x8040);
+        p.write32(self.phy_regs[0] + 0x8040, 0x2a1780);
+        # MMIO: R.4   0x23c545244 (dptx-phy[0], offset 0x5244) = 0x18
+        p.read32(self.phy_regs[0] + 0x5244);
+        p.write32(self.phy_regs[0] + 0x5244, 0x8);
+        # MMIO: R.4   0x23c546244 (dptx-phy[0], offset 0x6244) = 0x18
+        p.read32(self.phy_regs[0] + 0x6244);
+        p.write32(self.phy_regs[0] + 0x6244, 0x8);
+        # MMIO: R.4   0x23c547244 (dptx-phy[0], offset 0x7244) = 0x18
+        p.read32(self.phy_regs[0] + 0x7244);
+        p.write32(self.phy_regs[0] + 0x7244, 0x8);
+        # MMIO: R.4   0x23c548244 (dptx-phy[0], offset 0x8244) = 0x18
+        p.read32(self.phy_regs[0] + 0x8244);
+        p.write32(self.phy_regs[0] + 0x8244, 0x8);
+        # MMIO: R.4   0x23c542214 (dptx-phy[0], offset 0x2214) = 0x1e0
+        p.read32(self.phy_regs[0] + 0x2214);
+        p.write32(self.phy_regs[0] + 0x2214, 0x1e1);
+        # MMIO: R.4   0x23c542224 (dptx-phy[0], offset 0x2224) = 0x20086001
+        p.read32(self.phy_regs[0] + 0x2224);
+        p.write32(self.phy_regs[0] + 0x2224, 0x20086000);
+        # MMIO: R.4   0x23c542200 (dptx-phy[0], offset 0x2200) = 0x2000
+        p.read32(self.phy_regs[0] + 0x2200);
+        p.write32(self.phy_regs[0] + 0x2200, 0x2002);
+        # MMIO: R.4   0x23c541000 (dptx-phy[0], offset 0x1000) = 0xe0000003
+        p.read32(self.phy_regs[0] + 0x1000);
+        p.write32(self.phy_regs[0] + 0x1000, 0xe0000001);
+        # MMIO: R.4   0x23c544004 (dptx-phy[0], offset 0x4004) = 0x41
+        p.read32(self.phy_regs[0] + 0x4004);
+        p.write32(self.phy_regs[0] + 0x4004, 0x49);
+        # MMIO: R.4   0x23c544404 (dptx-phy[0], offset 0x4404) = 0x555d444
+        p.read32(self.phy_regs[0] + 0x4404);
+        p.write32(self.phy_regs[0] + 0x4404, 0x555d444);
+        # MMIO: R.4   0x23c544404 (dptx-phy[0], offset 0x4404) = 0x555d444
+        p.read32(self.phy_regs[0] + 0x4404);
+        p.write32(self.phy_regs[0] + 0x4404, 0x555d444);
+
+        self.set_active_lane_count(0)
+
+        # MMIO: R.4   0x23c544200 (dptx-phy[0], offset 0x4200) = 0x4002430
+        p.read32(self.phy_regs[0] + 0x4200);
+        p.write32(self.phy_regs[0] + 0x4200, 0x4002420);
+        # MMIO: R.4   0x23c544600 (dptx-phy[0], offset 0x4600) = 0x8000000
+        p.read32(self.phy_regs[0] + 0x4600);
+        p.write32(self.phy_regs[0] + 0x4600, 0x8000000);
+        # MMIO: R.4   0x23c544600 (dptx-phy[0], offset 0x4600) = 0x8000000
+        p.read32(self.phy_regs[0] + 0x4600);
+        p.write32(self.phy_regs[0] + 0x4600, 0x8000001);
+        # MMIO: R.4   0x23c544600 (dptx-phy[0], offset 0x4600) = 0x8000001
+        p.read32(self.phy_regs[0] + 0x4600);
+        p.write32(self.phy_regs[0] + 0x4600, 0x8000003);
+        # MMIO: R.4   0x23c544600 (dptx-phy[0], offset 0x4600) = 0x8000043
+        p.read32(self.phy_regs[0] + 0x4600);
+        # MMIO: R.4   0x23c544600 (dptx-phy[0], offset 0x4600) = 0x8000043
+        p.read32(self.phy_regs[0] + 0x4600);
+        p.write32(self.phy_regs[0] + 0x4600, 0x8000041);
+        # MMIO: R.4   0x23c544408 (dptx-phy[0], offset 0x4408) = 0x482
+        p.read32(self.phy_regs[0] + 0x4408);
+        p.write32(self.phy_regs[0] + 0x4408, 0x482);
+        # MMIO: R.4   0x23c544408 (dptx-phy[0], offset 0x4408) = 0x482
+        p.read32(self.phy_regs[0] + 0x4408);
+        p.write32(self.phy_regs[0] + 0x4408, 0x483);
+
+    def set_link_rate(self):
+        print(f"dptx phy set_link_rate")
+
+        # MMIO: R.4   0x23c544004 (dptx-phy[0], offset 0x4004) = 0x49
+        p.read32(self.phy_regs[0] + 0x4004);
+        p.write32(self.phy_regs[0] + 0x4004, 0x49);
+        # MMIO: R.4   0x23c544000 (dptx-phy[0], offset 0x4000) = 0x41021ac
+        p.read32(self.phy_regs[0] + 0x4000);
+        p.write32(self.phy_regs[0] + 0x4000, 0x41021ac);
+        # MMIO: R.4   0x23c544004 (dptx-phy[0], offset 0x4004) = 0x49
+        p.read32(self.phy_regs[0] + 0x4004);
+        p.write32(self.phy_regs[0] + 0x4004, 0x41);
+        # MMIO: R.4   0x23c544000 (dptx-phy[0], offset 0x4000) = 0x41021ac
+        p.read32(self.phy_regs[0] + 0x4000);
+        p.write32(self.phy_regs[0] + 0x4000, 0x41021ac);
+        # MMIO: R.4   0x23c544000 (dptx-phy[0], offset 0x4000) = 0x41021ac
+        p.read32(self.phy_regs[0] + 0x4000);
+        p.write32(self.phy_regs[0] + 0x4000, 0x41021ac);
+        # MMIO: R.4   0x23c542200 (dptx-phy[0], offset 0x2200) = 0x2002
+        p.read32(self.phy_regs[0] + 0x2200);
+        # MMIO: R.4   0x23c542200 (dptx-phy[0], offset 0x2200) = 0x2002
+        p.read32(self.phy_regs[0] + 0x2200);
+        p.write32(self.phy_regs[0] + 0x2200, 0x2000);
+        # MMIO: R.4   0x23c54100c (dptx-phy[0], offset 0x100c) = 0xf000
+        p.read32(self.phy_regs[0] + 0x100c);
+        p.write32(self.phy_regs[0] + 0x100c, 0xf000);
+        # MMIO: R.4   0x23c54100c (dptx-phy[0], offset 0x100c) = 0xf000
+        p.read32(self.phy_regs[0] + 0x100c);
+        p.write32(self.phy_regs[0] + 0x100c, 0xf008);
+        # MMIO: R.4   0x23c541014 (dptx-phy[0], offset 0x1014) = 0x1
+        p.read32(self.phy_regs[0] + 0x1014);
+        # MMIO: R.4   0x23c54100c (dptx-phy[0], offset 0x100c) = 0xf008
+        p.read32(self.phy_regs[0] + 0x100c);
+        p.write32(self.phy_regs[0] + 0x100c, 0xf000);
+        # MMIO: R.4   0x23c541008 (dptx-phy[0], offset 0x1008) = 0x1
+        p.read32(self.phy_regs[0] + 0x1008);
+        # MMIO: R.4   0x23c542220 (dptx-phy[0], offset 0x2220) = 0x11090a0
+        p.read32(self.phy_regs[0] + 0x2220);
+        p.write32(self.phy_regs[0] + 0x2220, 0x1109020);
+        # MMIO: R.4   0x23c5420b0 (dptx-phy[0], offset 0x20b0) = 0x1e0e01c2
+        p.read32(self.phy_regs[0] + 0x20b0);
+        p.write32(self.phy_regs[0] + 0x20b0, 0x1e0e01c2);
+        # MMIO: R.4   0x23c5420b4 (dptx-phy[0], offset 0x20b4) = 0x7fffffe
+        p.read32(self.phy_regs[0] + 0x20b4);
+        p.write32(self.phy_regs[0] + 0x20b4, 0x7fffffe);
+        # MMIO: R.4   0x23c5420b4 (dptx-phy[0], offset 0x20b4) = 0x7fffffe
+        p.read32(self.phy_regs[0] + 0x20b4);
+        p.write32(self.phy_regs[0] + 0x20b4, 0x7fffffe);
+        # MMIO: R.4   0x23c5420b8 (dptx-phy[0], offset 0x20b8) = 0x654800
+        p.read32(self.phy_regs[0] + 0x20b8);
+        p.write32(self.phy_regs[0] + 0x20b8, 0x654800);
+        # MMIO: R.4   0x23c5420b8 (dptx-phy[0], offset 0x20b8) = 0x654800
+        p.read32(self.phy_regs[0] + 0x20b8);
+        p.write32(self.phy_regs[0] + 0x20b8, 0x654800);
+        # MMIO: R.4   0x23c5420b8 (dptx-phy[0], offset 0x20b8) = 0x654800
+        p.read32(self.phy_regs[0] + 0x20b8);
+        p.write32(self.phy_regs[0] + 0x20b8, 0x654800);
+        # MMIO: R.4   0x23c5420b8 (dptx-phy[0], offset 0x20b8) = 0x654800
+        p.read32(self.phy_regs[0] + 0x20b8);
+        p.write32(self.phy_regs[0] + 0x20b8, 0x454800);
+        # MMIO: R.4   0x23c5420b8 (dptx-phy[0], offset 0x20b8) = 0x454800
+        p.read32(self.phy_regs[0] + 0x20b8);
+        p.write32(self.phy_regs[0] + 0x20b8, 0x454800);
+        # MMIO: R.4   0x23c5000a0 (dptx-phy[1], offset 0xa0) = 0x0
+        p.read32(self.phy_regs[1] + 0xa0);
+        p.write32(self.phy_regs[1] + 0xa0, 0x8);
+        # MMIO: R.4   0x23c5000a0 (dptx-phy[1], offset 0xa0) = 0x8
+        p.read32(self.phy_regs[1] + 0xa0);
+        p.write32(self.phy_regs[1] + 0xa0, 0xc);
+        # MMIO: R.4   0x23c5000a0 (dptx-phy[1], offset 0xa0) = 0xc
+        p.read32(self.phy_regs[1] + 0xa0);
+        p.write32(self.phy_regs[1] + 0xa0, 0x4000c);
+        # MMIO: R.4   0x23c5000a0 (dptx-phy[1], offset 0xa0) = 0x4000c
+        p.read32(self.phy_regs[1] + 0xa0);
+        p.write32(self.phy_regs[1] + 0xa0, 0xc);
+        # MMIO: R.4   0x23c5000a0 (dptx-phy[1], offset 0xa0) = 0xc
+        p.read32(self.phy_regs[1] + 0xa0);
+        p.write32(self.phy_regs[1] + 0xa0, 0x8000c);
+        # MMIO: R.4   0x23c5000a0 (dptx-phy[1], offset 0xa0) = 0x8000c
+        p.read32(self.phy_regs[1] + 0xa0);
+        p.write32(self.phy_regs[1] + 0xa0, 0xc);
+        # MMIO: R.4   0x23c5000a0 (dptx-phy[1], offset 0xa0) = 0xc
+        p.read32(self.phy_regs[1] + 0xa0);
+        p.write32(self.phy_regs[1] + 0xa0, 0x8);
+        # MMIO: R.4   0x23c5000a0 (dptx-phy[1], offset 0xa0) = 0x8
+        p.read32(self.phy_regs[1] + 0xa0);
+        p.write32(self.phy_regs[1] + 0xa0, 0x0);
+        # MMIO: R.4   0x23c542000 (dptx-phy[0], offset 0x2000) = 0x2
+        p.read32(self.phy_regs[0] + 0x2000);
+        p.write32(self.phy_regs[0] + 0x2000, 0x2);
+        # MMIO: R.4   0x23c542018 (dptx-phy[0], offset 0x2018) = 0x0
+        p.read32(self.phy_regs[0] + 0x2018);
+        p.write32(self.phy_regs[0] + 0x2018, 0x0);
+        # MMIO: R.4   0x23c54100c (dptx-phy[0], offset 0x100c) = 0xf000
+        p.read32(self.phy_regs[0] + 0x100c);
+        p.write32(self.phy_regs[0] + 0x100c, 0xf007);
+        # MMIO: R.4   0x23c54100c (dptx-phy[0], offset 0x100c) = 0xf007
+        p.read32(self.phy_regs[0] + 0x100c);
+        p.write32(self.phy_regs[0] + 0x100c, 0xf00f);
+        # MMIO: R.4   0x23c541014 (dptx-phy[0], offset 0x1014) = 0x38f
+        p.read32(self.phy_regs[0] + 0x1014);
+        # MMIO: R.4   0x23c54100c (dptx-phy[0], offset 0x100c) = 0xf00f
+        p.read32(self.phy_regs[0] + 0x100c);
+        p.write32(self.phy_regs[0] + 0x100c, 0xf007);
+        # MMIO: R.4   0x23c541008 (dptx-phy[0], offset 0x1008) = 0x9
+        p.read32(self.phy_regs[0] + 0x1008);
+        # MMIO: R.4   0x23c542200 (dptx-phy[0], offset 0x2200) = 0x2000
+        p.read32(self.phy_regs[0] + 0x2200);
+        p.write32(self.phy_regs[0] + 0x2200, 0x2002);
+        # MMIO: R.4   0x23c545010 (dptx-phy[0], offset 0x5010) = 0x18003000
+        p.read32(self.phy_regs[0] + 0x5010);
+        p.write32(self.phy_regs[0] + 0x5010, 0x18003000);
+        # MMIO: R.4   0x23c546010 (dptx-phy[0], offset 0x6010) = 0x18003000
+        p.read32(self.phy_regs[0] + 0x6010);
+        p.write32(self.phy_regs[0] + 0x6010, 0x18003000);
+        # MMIO: R.4   0x23c547010 (dptx-phy[0], offset 0x7010) = 0x18003000
+        p.read32(self.phy_regs[0] + 0x7010);
+        p.write32(self.phy_regs[0] + 0x7010, 0x18003000);
+        # MMIO: R.4   0x23c548010 (dptx-phy[0], offset 0x8010) = 0x18003000
+        p.read32(self.phy_regs[0] + 0x8010);
+        p.write32(self.phy_regs[0] + 0x8010, 0x18003000);
+        # MMIO: R.4   0x23c544000 (dptx-phy[0], offset 0x4000) = 0x41021ac
+        p.read32(self.phy_regs[0] + 0x4000);
+        p.write32(self.phy_regs[0] + 0x4000, 0x51021ac);
+        # MMIO: R.4   0x23c544000 (dptx-phy[0], offset 0x4000) = 0x51021ac
+        p.read32(self.phy_regs[0] + 0x4000);
+        p.write32(self.phy_regs[0] + 0x4000, 0x71021ac);
+        # MMIO: R.4   0x23c544004 (dptx-phy[0], offset 0x4004) = 0x41
+        p.read32(self.phy_regs[0] + 0x4004);
+        p.write32(self.phy_regs[0] + 0x4004, 0x49);
+        # MMIO: R.4   0x23c544000 (dptx-phy[0], offset 0x4000) = 0x71021ac
+        p.read32(self.phy_regs[0] + 0x4000);
+        p.write32(self.phy_regs[0] + 0x4000, 0x71021ec);
+        # MMIO: R.4   0x23c544004 (dptx-phy[0], offset 0x4004) = 0x49
+        p.read32(self.phy_regs[0] + 0x4004);
+        p.write32(self.phy_regs[0] + 0x4004, 0x48);
+
+    def set_active_lane_count(self, lanes):
+        print(f"dptx phy set_active_lane_count({lanes})")
+        if lanes == 0:
+            val1 = val2 = 0x300
+        else:
+            val1 = 0x100
+            val2 = 0
+
+        # MMIO: R.4   0x23c544000 (dptx-phy[0], offset 0x4000) = 0x41021ac
+        program =  p.read32(self.phy_regs[0] + 0x4000);
+        p.write32(self.phy_regs[0] + 0x4000, program);
+        # MMIO: R.4   0x23c545000 (dptx-phy[0], offset 0x5000) = 0x300
+        p.read32(self.phy_regs[0] + 0x5000);
+        p.write32(self.phy_regs[0] + 0x5000, val1);
+        # MMIO: R.4   0x23c546000 (dptx-phy[0], offset 0x6000) = 0x300
+        p.read32(self.phy_regs[0] + 0x6000);
+        p.write32(self.phy_regs[0] + 0x6000, val1);
+        # MMIO: R.4   0x23c547000 (dptx-phy[0], offset 0x7000) = 0x300
+        p.read32(self.phy_regs[0] + 0x7000);
+        p.write32(self.phy_regs[0] + 0x7000, val1);
+        # MMIO: R.4   0x23c548000 (dptx-phy[0], offset 0x8000) = 0x300
+        p.read32(self.phy_regs[0] + 0x8000);
+        p.write32(self.phy_regs[0] + 0x8000, val1);
+        # MMIO: R.4   0x23c545000 (dptx-phy[0], offset 0x5000) = 0x300
+        p.read32(self.phy_regs[0] + 0x5000);
+        p.write32(self.phy_regs[0] + 0x5000, val2);
+        # MMIO: R.4   0x23c546000 (dptx-phy[0], offset 0x6000) = 0x300
+        p.read32(self.phy_regs[0] + 0x6000);
+        p.write32(self.phy_regs[0] + 0x6000, val2);
+        # MMIO: R.4   0x23c547000 (dptx-phy[0], offset 0x7000) = 0x300
+        p.read32(self.phy_regs[0] + 0x7000);
+        p.write32(self.phy_regs[0] + 0x7000, val2);
+        # MMIO: R.4   0x23c548000 (dptx-phy[0], offset 0x8000) = 0x300
+        p.read32(self.phy_regs[0] + 0x8000);
+        p.write32(self.phy_regs[0] + 0x8000, val2);
+
+        if lanes > 0:
+            p.clear32(self.phy_regs[0] + 0x4000, 0x4000000)
+
 class lpdptx_phy(Phy):
 
     def activate(self):
@@ -501,20 +831,47 @@ print(f"Framebuffer at {u.ba.video.base:#x}")
 
 p.display_shutdown(DCP_SHUTDOWN_MODE.QUIESCED)
 
-dart = DART.from_adt(u, "arm-io/dart-dcp0")
-disp_dart = DART.from_adt(u, "arm-io/dart-disp0")
-#disp_dart.dump_all()
+target_type = u.adt.getprop('target-type')
+if target_type in ["J474s", "J475c"]: # t6020/t6021
+    dart = DART.from_adt(u, "arm-io/dart-dcp0")
+    disp_dart = DART.from_adt(u, "arm-io/dart-disp0")
+    #disp_dart.dump_all()
 
-dart.dump_all()
+    dart.dump_all()
 
-dcp_addr = u.adt["arm-io/dcp0"].get_reg(0)[0]
-dcp = DCPIBootClient(u, dcp_addr, dart, disp_dart)
-dcp.dva_offset = getattr(u.adt["/arm-io/dcp0"][0], "asc_dram_mask", 0)
-if not dcp.dva_offset:
-    dcp.dva_offset = getattr(u.adt["/arm-io/dart-dcp0"], "vm-base", 0)
-dcp.stream = u.adt["/arm-io/dart-dcp0/mapper-dcp0"].reg
+    dcp_addr = u.adt["arm-io/dcp0"].get_reg(0)[0]
+    dcp = DCPIBootClient(u, dcp_addr, dart, disp_dart)
+    dcp.dva_offset = getattr(u.adt["/arm-io/dcp0"][0], "asc_dram_mask", 0)
+    if not dcp.dva_offset:
+        dcp.dva_offset = getattr(u.adt["/arm-io/dart-dcp0"], "vm-base", 0)
+    dcp.stream = u.adt["/arm-io/dart-dcp0/mapper-dcp0"].reg
 
+    phy_node = u.adt["/arm-io/lpdptx-phy0"]
+    dp2hdmi_node = u.adt["/arm-io/dp2hdmi-gpio0"]
+    phy_regs = [phy_node.get_reg(0)[0], phy_node.get_reg(1)[0]]
+    phy = lpdptx_phy(phy_regs)
 
+elif target_type in ["J473"]: # t8112
+    dart = DART.from_adt(u, "arm-io/dart-dcp")
+    disp_dart = DART.from_adt(u, "arm-io/dart-disp0")
+    #disp_dart.dump_all()
+
+    dart.dump_all()
+
+    dcp_addr = u.adt["arm-io/dcp"].get_reg(0)[0]
+    dcp = DCPIBootClient(u, dcp_addr, dart, disp_dart)
+    dcp.dva_offset = getattr(u.adt["/arm-io/dcp"][0], "asc_dram_mask", 0)
+    if not dcp.dva_offset:
+        dcp.dva_offset = getattr(u.adt["/arm-io/dart-dcp"], "vm-base", 0)
+    dcp.stream = u.adt["/arm-io/dart-dcp/mapper-dcp"].reg
+    dcp.dva_offset = 0;
+
+    phy_node = u.adt["/arm-io/dptx-phy"]
+    dp2hdmi_node = u.adt["/arm-io/dp2hdmi-gpio"]
+    phy_regs = [phy_node.get_reg(0)[0], phy_node.get_reg(1)[0]]
+    phy = dptx_phy(phy_regs)
+else:
+    raise ValueError(target_type)
 
 print(f"DVA offset: {dcp.dva_offset:#x}")
 
@@ -534,14 +891,17 @@ dcp.dptx.wait_for("dcpav0")
 dcp.dptx.wait_for("dcpdp0")
 dcp.dpport.wait_for("port0")
 
-smcep.write32("gP17", 0x800001)
-smcep.write32("gP19", 0x800001)
+hdmi_pwr_en_gpio = dp2hdmi_node.getprop('function-hdmi_pwr_en').args[0].to_bytes(4, byteorder='big').decode()
+dp2hdmi_pwr_en_gpio = dp2hdmi_node.getprop('function-dp2hdmi_pwr_en').args[0].to_bytes(4, byteorder='big').decode()
 
-phy_node = u.adt["/arm-io/lpdptx-phy0"]
-phy_regs = [phy_node.get_reg(0)[0], phy_node.get_reg(1)[0]]
-dcp.dpport.port0.phy = lpdptx_phy(phy_regs)
-print("connect")
-dcp.dpport.port0.connectTo(port=0x804, connected=0, unit=0)
+print(f"dp2hdmi_pwr_enable:{dp2hdmi_pwr_en_gpio} hdmi_pwr_enable:{hdmi_pwr_en_gpio}")
+smcep.write32(hdmi_pwr_en_gpio, 0x800001)
+smcep.write32(dp2hdmi_pwr_en_gpio, 0x800001)
+
+dcp.dpport.port0.phy = phy
+dfp_endpoint = phy_node.getprop('dp-switch-dfp-endpoint')
+print(f"connect dfp-endpoint: {dfp_endpoint}")
+dcp.dpport.port0.connectTo(port=0x800 + dfp_endpoint, connected=0, unit=0)
 print("request")
 dcp.dpport.port0.displayRequest()
 
