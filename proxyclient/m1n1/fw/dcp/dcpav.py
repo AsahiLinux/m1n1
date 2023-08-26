@@ -82,20 +82,28 @@ class DCPDPTXRemotePortService(EPICStandardService):
             arg = struct.unpack("<I", data[0x50:0x54])[0]
 
         if code == 0x12:
+            # DPTX_APCALL_GET_SUPPORTS_HPD
             pass
         elif code == 0x0a:
+            # DPTX_APCALL_GET_MAX_LANE_COUNT
             data = data[:0x50] + b"\x04\x00\x00\x00" + data[0x54:]
         elif code == 0x00:
-            self.init_phy(0x00, arg)
+            # DPTX_APCALL_ACTIVATE
+            self.phy.activate()
         elif code == 0x07:
+            # DPTX_APCALL_GET_MAX_LINK_RATE
             data = data[:0x50] + b"\x1e\x00\x00\x00" + data[0x54:]
         elif code == 0x0c:
-            self.init_phy(0x0c, arg)
+            # DPTX_APCALL_SET_ACTIVE_LANE_COUNT
+            self.phy.set_active_lane_count(arg)
         elif code == 0x09:
-            self.init_phy(0x09, arg)
+            # DPTX_APCALL_SET_LINK_RATE
+            self.phy.set_link_rate()
         elif code == 0x02:
+            # DPTX_APCALL_GET_MAX_DRIVE_SETTINGS
             data = data[:0x50] + b"\x03\x00\x00\x00\x03\x00\x00\x00" + data[0x58:]
         elif code == 0x03:
+            # DPTX_APCALL_SET_DRIVE_SETTINGS
             # clear err code
             data = data[:0x40] + b"\x00\x00\x00\x00" + data[0x44:]
 
