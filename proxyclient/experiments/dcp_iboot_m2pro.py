@@ -24,10 +24,20 @@ smc.verbose = 0
 
 smcep = smc.epmap[0x20]
 
-def init_phy(stage, arg):
-    print(f"init_phy({stage}, {arg})")
-    phy_regs = [0x3_9c04_0000, 0x3_9c00_0000]
-    if stage == 0x00:
+class Phy:
+    def __init__(self, phy_regs):
+        self.phy_regs = phy_regs
+    def activate(self):
+        pass
+    def set_link_rate(self):
+        pass
+    def set_active_lane_count(self, lanes):
+        pass
+
+class lpdptx_phy(Phy):
+
+    def activate(self):
+        print(f"dptx phy activate")
         # [cpu0] [0xfffffe0014c965b0] MMIO: R.4   0x39c000010 (lpdptx-phy0[1], offset 0x10) = 0x0
         p.read32(self.phy_regs[1] + 0x10)
         # [cpu0] [0xfffffe0014c9678c] MMIO: W.4   0x39c000010 (lpdptx-phy0[1], offset 0x10) = 0x0
@@ -258,7 +268,9 @@ def init_phy(stage, arg):
         p.read32(self.phy_regs[0] + 0x4408)
         # [cpu2] [0xfffffe0014c9678c] MMIO: W.4   0x39c044408 (lpdptx-phy0[0], offset 0x4408) = 0x483
         p.write32(self.phy_regs[0] + 0x4408, 0x483)
-    elif stage == 0x09:
+
+    def set_link_rate(self):
+        print(f"dptx phy set_link_rate")
         # [cpu1] [0xfffffe0014c9678c] MMIO: W.4   0x39c044004 (lpdptx-phy0[0], offset 0x4004) = 0x49
         p.write32(self.phy_regs[0] + 0x4004, 0x49)
         # [cpu1] [0xfffffe0014c965b0] MMIO: R.4   0x39c044000 (lpdptx-phy0[0], offset 0x4000) = 0x41021ac
@@ -431,8 +443,11 @@ def init_phy(stage, arg):
         p.read32(self.phy_regs[0] + 0x4004)
         # [cpu1] [0xfffffe0014c9678c] MMIO: W.4   0x39c044004 (lpdptx-phy0[0], offset 0x4004) = 0x48
         p.write32(self.phy_regs[0] + 0x4004, 0x48)
-    elif stage == 0x0c:
-        if arg == 0:
+
+
+    def set_active_lane_count(self, lanes):
+        print(f"dptx phy set_active_lane_count({lanes})")
+        if lanes == 0:
             val1 = val2 = 0x300
         else:
             val1 = 0x100
@@ -478,7 +493,7 @@ def init_phy(stage, arg):
         # [cpu0] [0xfffffe0014c3678c] MMIO: W.4   0x39c048000 (lpdptx-phy0[0], offset 0x8000) = 0x300
         p.write32(self.phy_regs[0] + 0x8000, val2)
 
-        if arg != 0:
+        if lanes != 0:
             p.clear32(self.phy_regs[0] + 0x4000, 0x4000000)
 
 
@@ -522,7 +537,9 @@ dcp.dpport.wait_for("port0")
 smcep.write32("gP17", 0x800001)
 smcep.write32("gP19", 0x800001)
 
-dcp.dpport.port0.init_phy = init_phy
+phy_node = u.adt["/arm-io/lpdptx-phy0"]
+phy_regs = [phy_node.get_reg(0)[0], phy_node.get_reg(1)[0]]
+dcp.dpport.port0.phy = lpdptx_phy(phy_regs)
 print("connect")
 dcp.dpport.port0.connectTo(port=0x804, connected=0, unit=0)
 print("request")
