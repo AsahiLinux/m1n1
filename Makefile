@@ -77,7 +77,8 @@ DCP_OBJECTS := $(patsubst %,dcp/%, \
 	dpav_ep.o \
 	dptx_phy.o \
 	dptx_port_ep.o \
-	parser.o)
+	parser.o \
+	system_ep.o)
 
 OBJECTS := \
 	adt.o \
