@@ -380,6 +380,13 @@ class EPICEp(AFKEp):
             self.log("Inline payload:")
             chexdump(payload, print_fn=self.log)
         else:
+            off = fd.tell()
+            data = fd.read()
+            if len(data) == 4:
+                retcode = struct.unpack("<I", data)[0]
+                self.log(f"EPIC: retcode only reply retcode={retcode:#x}")
+                return
+            fd.seek(off)
             cmd = EPICCmd.parse_stream(fd)
             if not cmd.rxbuf:
                 self.log(f"Response {sub.type:#x}: {cmd.retcode:#x}")
