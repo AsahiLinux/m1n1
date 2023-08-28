@@ -250,11 +250,6 @@ int display_parse_mode(const char *config, dcp_timing_mode_t *mode, struct displ
 static int display_swap(u64 iova, u32 stride, u32 width, u32 height)
 {
     int ret;
-    int swap_id = ret = dcp_ib_swap_begin(iboot);
-    if (swap_id < 0) {
-        printf("display: failed to start swap\n");
-        return -1;
-    }
 
     dcp_layer_t layer = {
         .planes = {{
@@ -271,19 +266,12 @@ static int display_swap(u64 iova, u32 stride, u32 width, u32 height)
         .transform = XFRM_NONE,
     };
 
-    dcp_rect_t rect = {width, height, 0, 0};
-
-    if ((ret = dcp_ib_swap_set_layer(iboot, 0, &layer, &rect, &rect)) < 0) {
-        printf("display: failed to set layer\n");
+    if ((ret = dcp_ib_set_surface(iboot, &layer)) < 0) {
+        printf("display: failed to set surface\n");
         return -1;
     }
 
-    if ((ret = dcp_ib_swap_end(iboot)) < 0) {
-        printf("display: failed to complete swap\n");
-        return -1;
-    }
-
-    return swap_id;
+    return 0;
 }
 
 int display_configure(const char *config)
