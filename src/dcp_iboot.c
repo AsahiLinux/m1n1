@@ -44,6 +44,7 @@ struct dcp_iboot_if {
 };
 
 enum IBootCmd {
+    IBOOT_SET_SURFACE = 1,
     IBOOT_SET_POWER = 2,
     IBOOT_GET_HPD = 3,
     IBOOT_GET_TIMING_MODES = 4,
@@ -144,6 +145,14 @@ static int dcp_ib_cmd(dcp_iboot_if_t *iboot, int op, size_t in_size)
 
     return afk_epic_command(iboot->epic, iboot->channel, 0xc0, iboot->txbuf,
                             sizeof(struct txcmd) + in_size, iboot->rxbuf, &rxsize);
+}
+
+int dcp_ib_set_surface(dcp_iboot_if_t *iboot, dcp_layer_t *layer)
+{
+    dcp_layer_t *cmd = (void *)iboot->txcmd.payload;
+    *cmd = *layer;
+
+    return dcp_ib_cmd(iboot, IBOOT_SET_SURFACE, sizeof(*layer));
 }
 
 int dcp_ib_set_power(dcp_iboot_if_t *iboot, bool power)

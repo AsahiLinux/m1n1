@@ -98,6 +98,7 @@ typedef struct {
 dcp_iboot_if_t *dcp_ib_init(dcp_dev_t *dcp);
 int dcp_ib_shutdown(dcp_iboot_if_t *iboot);
 
+int dcp_ib_set_surface(dcp_iboot_if_t *iboot, dcp_layer_t *layer);
 int dcp_ib_set_power(dcp_iboot_if_t *iboot, bool power);
 int dcp_ib_get_hpd(dcp_iboot_if_t *iboot, int *timing_cnt, int *color_cnt);
 int dcp_ib_get_timing_modes(dcp_iboot_if_t *iboot, dcp_timing_mode_t **modes);
