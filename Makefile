@@ -75,6 +75,7 @@ LIBFDT_OBJECTS := $(patsubst %,libfdt/%, \
 
 DCP_OBJECTS := $(patsubst %,dcp/%, \
 	dptx_phy.o \
+	dptx_port_ep.o \
 	parser.o)
 
 OBJECTS := \

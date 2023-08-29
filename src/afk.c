@@ -39,11 +39,6 @@ enum EPICCategory {
     CAT_COMMAND = 0x30,
 };
 
-enum EPICMessage {
-    SUBTYPE_ANNOUNCE = 0x30,
-    SUBTYPE_STD_SERVICE = 0xc0,
-};
-
 struct afk_qe {
     u32 magic;
     u32 size;
