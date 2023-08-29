@@ -105,7 +105,7 @@ dcp_iboot_if_t *dcp_ib_init(dcp_dev_t *dcp)
         return NULL;
 
     iboot->dcp = dcp;
-    iboot->epic = afk_epic_init(dcp->rtkit, DCP_IBOOT_ENDPOINT);
+    iboot->epic = afk_epic_start_ep(dcp->afk, DCP_IBOOT_ENDPOINT, false);
     if (!iboot->epic) {
         printf("dcp-iboot: failed to initialize EPIC\n");
         goto err_free;
@@ -121,7 +121,7 @@ dcp_iboot_if_t *dcp_ib_init(dcp_dev_t *dcp)
     return iboot;
 
 err_shutdown:
-    afk_epic_shutdown(iboot->epic);
+    afk_epic_shutdown_ep(iboot->epic);
 err_free:
     free(iboot);
     return NULL;
@@ -129,7 +129,7 @@ err_free:
 
 int dcp_ib_shutdown(dcp_iboot_if_t *iboot)
 {
-    afk_epic_shutdown(iboot->epic);
+    afk_epic_shutdown_ep(iboot->epic);
 
     free(iboot);
     return 0;
