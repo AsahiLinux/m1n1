@@ -56,7 +56,7 @@
 #define ESR_EC_UNKNOWN      0b000000
 #define ESR_EC_WFI          0b000001
 #define ESR_EC_FP_TRAP      0b000111
-#define ESR_EC_PAUTH_TRAP   0b001000
+#define ESR_EC_PAUTH_TRAP   0b001001
 #define ESR_EC_LS64         0b001010
 #define ESR_EC_BTI          0b001101
 #define ESR_EC_ILLEGAL      0b001110

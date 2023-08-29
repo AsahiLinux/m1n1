@@ -74,7 +74,7 @@ class ESR_EC(IntEnum):
     UNKNOWN        = 0b000000
     WFI            = 0b000001
     FP_TRAP        = 0b000111
-    PAUTH_TRAP     = 0b001000
+    PAUTH_TRAP     = 0b001001
     LS64           = 0b001010
     BTI            = 0b001101
     ILLEGAL        = 0b001110
