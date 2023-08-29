@@ -1,19 +1,129 @@
 /* SPDX-License-Identifier: MIT */
 
-#include "dcp.h"
+#include "../config.h"
+
 #include "adt.h"
+#include "afk.h"
+#include "dcp.h"
+#include "firmware.h"
 #include "malloc.h"
 #include "pmgr.h"
 #include "rtkit.h"
+#include "smc.h"
+#include "string.h"
 #include "utils.h"
 
-dcp_dev_t *dcp_init(const char *dcp_path, const char *dcp_dart_path, const char *disp_dart_path)
+#include "dcp/dptx_phy.h"
+
+struct adt_function_smc_gpio {
+    u32 phandle;
+    char four_cc[4];
+    u32 gpio;
+    u32 unk;
+};
+
+static char dcp_pmgr_dev[16] = "DISP0_CPU0";
+static u32 dcp_die;
+
+static int dcp_hdmi_dptx_init(dcp_dev_t *dcp, const display_config_t *cfg)
+{
+    int node = adt_path_offset(adt, cfg->dp2hdmi_gpio);
+    if (node < 0) {
+        printf("dcp: failed to find dp2hdmi-gpio node '%s'\n", cfg->dp2hdmi_gpio);
+        return -1;
+    }
+    struct adt_function_smc_gpio dp2hdmi_pwr, hdmi_pwr;
+
+    int err =
+        adt_getprop_copy(adt, node, "function-dp2hdmi_pwr_en", &dp2hdmi_pwr, sizeof(dp2hdmi_pwr));
+    if (err < 0)
+        printf("dcp: failed to get dp2hdmi_pwr_en gpio\n");
+    else
+        dcp->dp2hdmi_pwr_gpio = dp2hdmi_pwr.gpio;
+    err = adt_getprop_copy(adt, node, "function-hdmi_pwr_en", &hdmi_pwr, sizeof(hdmi_pwr));
+    if (err < 0)
+        printf("dcp: failed to get hdmi_pwr_en gpio\n");
+    else
+        dcp->hdmi_pwr_gpio = hdmi_pwr.gpio;
+
+    if (dcp->dp2hdmi_pwr_gpio && dcp->hdmi_pwr_gpio) {
+        smc_dev_t *smc = smc_init();
+        if (smc) {
+            smc_write_u32(smc, dcp->dp2hdmi_pwr_gpio, 0x800001);
+            smc_write_u32(smc, dcp->hdmi_pwr_gpio, 0x800001);
+            smc_shutdown(smc);
+        }
+    }
+
+    dcp->phy = dptx_phy_init(cfg->dptx_phy, cfg->dcp_index);
+    if (!dcp->phy) {
+        printf("dcp: failed to init (lp)dptx-phy '%s'\n", cfg->dptx_phy);
+        return -1;
+    }
+
+    dcp->dpav_ep = dcp_dpav_init(dcp);
+    if (!dcp->dpav_ep) {
+        printf("dcp: failed to initialize dpav endpoint\n");
+        dcp_system_shutdown(dcp->system_ep);
+        return -1;
+    }
+
+    dcp->dptx_ep = dcp_dptx_init(dcp);
+    if (!dcp->dptx_ep) {
+        printf("dcp: failed to initialize dptx-port endpoint\n");
+        dcp_dpav_shutdown(dcp->dpav_ep);
+        dcp_system_shutdown(dcp->system_ep);
+        return -1;
+    }
+
+#ifdef RTKIT_SYSLOG
+    // start system endpoint when extended logging is requested
+    dcp->system_ep = dcp_system_init(dcp);
+    if (!dcp->system_ep) {
+        printf("dcp: failed to initialize system endpoint\n");
+        return -1;
+    }
+
+    dcp_system_set_property_u64(dcp->system_ep, "gAFKConfigLogMask", 0xffff);
+#endif
+
+    return 0;
+}
+
+int dcp_connect_dptx(dcp_dev_t *dcp)
+{
+    if (dcp->dptx_ep && dcp->phy) {
+        return dcp_dptx_connect(dcp->dptx_ep, dcp->phy, 0);
+    }
+
+    return 0;
+}
+
+int dcp_work(dcp_dev_t *dcp)
+{
+    return afk_epic_work(dcp->afk, -1);
+}
+
+dcp_dev_t *dcp_init(const display_config_t *cfg)
 {
     u32 sid;
 
-    int node = adt_path_offset(adt, "/arm-io/dart-dcp/mapper-dcp");
+    if (cfg && cfg->dptx_phy[0]) {
+        if (os_firmware.version != V13_5) {
+            printf("dcp: dtpx-port is only supported with V13_5 OS firmware.\n");
+            return NULL;
+        }
+
+        strncpy(dcp_pmgr_dev, cfg->pmgr_dev, sizeof(dcp_pmgr_dev));
+        dcp_die = cfg->die;
+        pmgr_adt_power_enable(cfg->dcp);
+        pmgr_adt_power_enable(cfg->dptx_phy);
+    }
+
+    int dart_node = adt_path_offset(adt, cfg->dcp_dart);
+    int node = adt_first_child_offset(adt, dart_node);
     if (node < 0) {
-        printf("dcp: mapper-dcp not found!\n");
+        printf("dcp: mapper-dcp* not found!\n");
         return NULL;
     }
     if (ADT_GETPROP(adt, node, "reg", &sid) < 0) {
@@ -21,29 +131,29 @@ dcp_dev_t *dcp_init(const char *dcp_path, const char *dcp_dart_path, const char 
         return NULL;
     }
 
-    dcp_dev_t *dcp = malloc(sizeof(dcp_dev_t));
+    dcp_dev_t *dcp = calloc(1, sizeof(dcp_dev_t));
     if (!dcp)
         return NULL;
 
-    dcp->dart_dcp = dart_init_adt(dcp_dart_path, 0, sid, true);
+    dcp->dart_dcp = dart_init_adt(cfg->dcp_dart, 0, sid, true);
     if (!dcp->dart_dcp) {
         printf("dcp: failed to initialize DCP DART\n");
         goto out_free;
     }
     u64 vm_base = dart_vm_base(dcp->dart_dcp);
-    dart_setup_pt_region(dcp->dart_dcp, dcp_dart_path, sid, vm_base);
+    dart_setup_pt_region(dcp->dart_dcp, cfg->dcp_dart, sid, vm_base);
 
-    dcp->dart_disp = dart_init_adt(disp_dart_path, 0, 0, true);
+    dcp->dart_disp = dart_init_adt(cfg->disp_dart, 0, 0, true);
     if (!dcp->dart_disp) {
         printf("dcp: failed to initialize DISP DART\n");
         goto out_dart_dcp;
     }
     // set disp0's page tables at dart-dcp's vm-base
-    dart_setup_pt_region(dcp->dart_disp, disp_dart_path, 0, vm_base);
+    dart_setup_pt_region(dcp->dart_disp, cfg->disp_dart, 0, vm_base);
 
     dcp->iovad_dcp = iovad_init(vm_base + 0x10000000, vm_base + 0x20000000);
 
-    dcp->asc = asc_init(dcp_path);
+    dcp->asc = asc_init(cfg->dcp);
     if (!dcp->asc) {
         printf("dcp: failed to initialize ASC\n");
         goto out_iovad;
@@ -66,8 +176,18 @@ dcp_dev_t *dcp_init(const char *dcp_path, const char *dcp_dart_path, const char 
         goto out_rtkit;
     }
 
+    if (cfg && cfg->dptx_phy[0]) {
+        int ret = dcp_hdmi_dptx_init(dcp, cfg);
+        if (ret < 0)
+            goto out_afk;
+    }
+
     return dcp;
 
+out_afk:
+    afk_epic_shutdown(dcp->afk);
+    rtkit_sleep(dcp->rtkit);
+    pmgr_reset(dcp_die, dcp_pmgr_dev);
 out_rtkit:
     rtkit_quiesce(dcp->rtkit);
     rtkit_free(dcp->rtkit);
@@ -83,10 +203,20 @@ out_free:
 
 int dcp_shutdown(dcp_dev_t *dcp, bool sleep)
 {
+    if (dcp->dptx_ep) {
+        if (sleep) {
+            printf("DCP: dcp_shutdown(sleep=true) is broken with dptx-port, quiesce instead\n");
+            sleep = false;
+        }
+    }
+    dcp_dptx_shutdown(dcp->dptx_ep);
+    dcp_dpav_shutdown(dcp->dpav_ep);
+    dcp_system_shutdown(dcp->system_ep);
+    free(dcp->phy);
     afk_epic_shutdown(dcp->afk);
     if (sleep) {
         rtkit_sleep(dcp->rtkit);
-        pmgr_reset(0, "DISP0_CPU0");
+        pmgr_reset(dcp_die, dcp_pmgr_dev);
     } else {
         rtkit_quiesce(dcp->rtkit);
     }
