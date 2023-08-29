@@ -12,8 +12,8 @@
 #include "utils.h"
 #include "xnuboot.h"
 
-#define DISPLAY_STATUS_DELAY   100
-#define DISPLAY_STATUS_RETRIES 20
+#define DISPLAY_STATUS_DELAY         100
+#define DISPLAY_STATUS_RETRIES(dptx) ((dptx) ? 100 : 20)
 
 #define COMPARE(a, b)                                                                              \
     if ((a) > (b)) {                                                                               \
@@ -28,6 +28,45 @@ static dcp_iboot_if_t *iboot;
 static u64 fb_dva;
 static u64 fb_size;
 bool display_is_external;
+bool display_is_dptx;
+
+static const display_config_t display_config_m1 = {
+    .dcp = "/arm-io/dcp",
+    .dcp_dart = "/arm-io/dart-dcp",
+    .disp_dart = "/arm-io/dart-disp0",
+    .pmgr_dev = "DISP0_CPU0",
+};
+
+static const display_config_t display_config_m2 = {
+    .dcp = "/arm-io/dcp",
+    .dcp_dart = "/arm-io/dart-dcp",
+    .disp_dart = "/arm-io/dart-disp0",
+    .dp2hdmi_gpio = "/arm-io/dp2hdmi-gpio",
+    .dptx_phy = "/arm-io/dptx-phy",
+    .pmgr_dev = "DISP0_CPU0",
+    .dcp_index = 0,
+};
+
+static const display_config_t display_config_m2_pro_max = {
+    .dcp = "/arm-io/dcp0",
+    .dcp_dart = "/arm-io/dart-dcp0",
+    .disp_dart = "/arm-io/dart-disp0",
+    .dp2hdmi_gpio = "/arm-io/dp2hdmi-gpio0",
+    .dptx_phy = "/arm-io/lpdptx-phy0",
+    .pmgr_dev = "DISP0_CPU0",
+    .dcp_index = 0,
+};
+
+static const display_config_t display_config_m2_ultra = {
+    .dcp = "/arm-io/dcpext4",
+    .dcp_dart = "/arm-io/dart-dcpext4",
+    .disp_dart = "/arm-io/dart-dispext4",
+    .dp2hdmi_gpio = "/arm-io/dp2hdmi-gpio1",
+    .dptx_phy = "/arm-io/lpdptx-phy1",
+    .pmgr_dev = "DISPEXT4_CPU0",
+    .dcp_index = 1,
+    .die = 1,
+};
 
 #define abs(x) ((x) >= 0 ? (x) : -(x))
 
@@ -165,7 +204,18 @@ int display_start_dcp(void)
     if (iboot)
         return 0;
 
-    dcp = dcp_init("/arm-io/dcp", "/arm-io/dart-dcp", "/arm-io/dart-disp0");
+    const display_config_t *disp_cfg = &display_config_m1;
+
+    if (adt_is_compatible(adt, 0, "J473AP"))
+        disp_cfg = &display_config_m2;
+    else if (adt_is_compatible(adt, 0, "J474sAP") || adt_is_compatible(adt, 0, "J475cAP"))
+        disp_cfg = &display_config_m2_pro_max;
+    else if (adt_is_compatible(adt, 0, "J180dAP") || adt_is_compatible(adt, 0, "J475dAP"))
+        disp_cfg = &display_config_m2_ultra;
+
+    display_is_dptx = !!disp_cfg->dptx_phy[0];
+
+    dcp = dcp_init(disp_cfg);
     if (!dcp) {
         printf("display: failed to initialize DCP\n");
         return -1;
@@ -287,10 +337,11 @@ int display_configure(const char *config)
     if (ret < 0)
         return ret;
 
-    // Power on
-    if ((ret = dcp_ib_set_power(iboot, true)) < 0) {
-        printf("display: failed to set power\n");
-        return ret;
+    // connect dptx if necessary
+    if (display_is_dptx) {
+        ret = dcp_connect_dptx(dcp);
+        if (ret < 0)
+            return ret;
     }
 
     // Detect if display is connected
@@ -300,13 +351,14 @@ int display_configure(const char *config)
     /* After boot DCP does not immediately report a connected display. Retry getting display
      * information for 2 seconds.
      */
-    while (retries++ < DISPLAY_STATUS_RETRIES) {
+    while (retries++ < (DISPLAY_STATUS_RETRIES(display_is_dptx))) {
+        dcp_work(dcp);
         hpd = dcp_ib_get_hpd(iboot, &timing_cnt, &color_cnt);
         if (hpd < 0)
             ret = hpd;
         else if (hpd && timing_cnt && color_cnt)
             break;
-        if (retries < DISPLAY_STATUS_RETRIES)
+        if (retries < DISPLAY_STATUS_RETRIES(display_is_dptx))
             mdelay(DISPLAY_STATUS_DELAY);
     }
     printf("display: waited %d ms for display status\n", (retries - 1) * DISPLAY_STATUS_DELAY);
@@ -319,6 +371,12 @@ int display_configure(const char *config)
 
     if (!hpd || !timing_cnt || !color_cnt)
         return 0;
+
+    // Power on
+    if ((ret = dcp_ib_set_power(iboot, true)) < 0) {
+        printf("display: failed to set power\n");
+        return ret;
+    }
 
     // Find best modes
     dcp_timing_mode_t *tmodes, tbest;
@@ -446,10 +504,15 @@ int display_configure(const char *config)
 
 int display_init(void)
 {
-    int node = adt_path_offset(adt, "/arm-io/disp0");
+    const char *disp_path;
+    if (adt_is_compatible(adt, 0, "J180dAP") || adt_is_compatible(adt, 0, "J475dAP"))
+        disp_path = "/arm-io/dispext4";
+    else
+        disp_path = "/arm-io/disp0";
 
+    int node = adt_path_offset(adt, disp_path);
     if (node < 0) {
-        printf("DISP0 node not found!\n");
+        printf("%s node not found!\n", disp_path);
         return -1;
     }
 
@@ -458,17 +521,6 @@ int display_init(void)
         printf("display: Display is external\n");
     else
         printf("display: Display is internal\n");
-
-    // HACK: disable non-working display config on j473/j474s/etc
-    if (display_is_external) {
-        switch (chip_id) {
-            case T8112:
-            case T6020 ... T6022:
-                printf("display: skipping init on non-supported M2+ platform\n");
-                return 0;
-                break;
-        }
-    }
 
     if (cur_boot_args.video.width == 640 && cur_boot_args.video.height == 1136) {
         printf("display: Dummy framebuffer found, initializing display\n");
