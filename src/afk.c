@@ -84,9 +84,15 @@ struct epic_cmd {
     u8 txcookie;
 } PACKED;
 
+struct afk_epic {
+    rtkit_dev_t *rtk;
+
+    afk_epic_ep_t *endpoint[0x10];
+};
+
 struct afk_epic_ep {
     int ep;
-    rtkit_dev_t *rtk;
+    afk_epic_t *afk;
 
     struct rtkit_buffer buf;
     u16 tag;
@@ -98,6 +104,8 @@ struct afk_epic_ep {
     struct rtkit_buffer rxbuf;
 
     bool started;
+
+    void (*recv_handler)(afk_epic_ep_t *epic);
 };
 
 enum RBEP_MSG {
@@ -130,6 +138,8 @@ enum RBEP_MSG {
 
 #define SEND_WPTR GENMASK(31, 0)
 
+#define EPIC_DATA_READY 13
+
 bool afk_rb_init(afk_epic_ep_t *epic, struct afk_rb *rb, u64 base, u64 size)
 {
     rb->hdr = epic->buf.bfr + base;
@@ -146,21 +156,32 @@ bool afk_rb_init(afk_epic_ep_t *epic, struct afk_rb *rb, u64 base, u64 size)
     return true;
 }
 
-static int afk_epic_poll(afk_epic_ep_t *epic)
+static int afk_epic_poll(afk_epic_t *afk, int endpoint, bool block)
 {
     int ret;
     struct rtkit_message msg;
 
-    while ((ret = rtkit_recv(epic->rtk, &msg)) == 0)
-        ;
+    while ((ret = rtkit_recv(afk->rtk, &msg)) == 0)
+        if (!block)
+            break;
 
     if (ret < 0) {
         printf("EPIC: rtkit_recv failed!\n");
         return ret;
     }
 
-    if (msg.ep != epic->ep) {
-        printf("EPIC: received message for unexpected endpoint %d\n", msg.ep);
+    if (ret == 0) {
+        return 0;
+    }
+
+    if (msg.ep < 0x20 || msg.ep >= 0x30 || !afk->endpoint[msg.ep - 0x20]) {
+        printf("EPIC: received message for unexpected endpoint 0x%02x\n", msg.ep);
+        return 0;
+    }
+
+    afk_epic_ep_t *epic = afk->endpoint[msg.ep - 0x20];
+    if (!epic) {
+        printf("EPIC: received message for idle endpoint 0x%02x\n", msg.ep);
         return 0;
     }
 
@@ -173,13 +194,13 @@ static int afk_epic_poll(afk_epic_ep_t *epic)
         case RBEP_GETBUF:
             size = FIELD_GET(GETBUF_SIZE, msg.msg) << BLOCK_SHIFT;
             epic->tag = FIELD_GET(GETBUF_TAG, msg.msg);
-            if (!rtkit_alloc_buffer(epic->rtk, &epic->buf, size)) {
+            if (!rtkit_alloc_buffer(epic->afk->rtk, &epic->buf, size)) {
                 printf("EPIC: failed to allocate buffer\n");
                 return -1;
             }
             msg.msg = (FIELD_PREP(RBEP_TYPE, RBEP_GETBUF_ACK) |
                        FIELD_PREP(GETBUF_ACK_DVA, epic->buf.dva));
-            if (!rtkit_send(epic->rtk, &msg)) {
+            if (!rtkit_send(epic->afk->rtk, &msg)) {
                 printf("EPIC: failed to send buffer address\n");
                 return -1;
             }
@@ -206,16 +227,24 @@ static int afk_epic_poll(afk_epic_ep_t *epic)
 
             if (epic->rx.ready && epic->tx.ready) {
                 msg.msg = FIELD_PREP(RBEP_TYPE, RBEP_START);
-                if (!rtkit_send(epic->rtk, &msg)) {
+                if (!rtkit_send(epic->afk->rtk, &msg)) {
                     printf("EPIC: failed to send start\n");
                     return -1;
                 }
             }
             break;
 
-        case RBEP_RECV:
-            return 1;
-
+        case RBEP_RECV: {
+            dma_rmb();
+            struct afk_rb *rb = &epic->rx;
+            if (rb->hdr->rptr != rb->hdr->wptr) {
+                if (endpoint == epic->ep)
+                    return EPIC_DATA_READY;
+                else if (epic->recv_handler)
+                    epic->recv_handler(epic);
+            }
+            break;
+        }
         case RBEP_START_ACK:
             epic->started = true;
             break;
@@ -235,20 +264,8 @@ static int afk_epic_poll(afk_epic_ep_t *epic)
 
 static int afk_epic_rx(afk_epic_ep_t *epic, struct afk_qe **qe)
 {
-    int ret;
     struct afk_rb *rb = &epic->rx;
-
     u32 rptr = rb->hdr->rptr;
-
-    while (rptr == rb->hdr->wptr) {
-        do {
-            ret = afk_epic_poll(epic);
-            if (ret < 0)
-                return ret;
-        } while (ret == 0);
-        dma_rmb();
-    }
-
     struct afk_qe *hdr = rb->buf + rptr;
 
     if (hdr->magic != QE_MAGIC) {
@@ -319,7 +336,7 @@ static int afk_epic_tx(afk_epic_ep_t *epic, u32 channel, u32 type, void *data, s
         FIELD_PREP(RBEP_TYPE, RBEP_SEND) | FIELD_PREP(SEND_WPTR, wptr),
     };
 
-    if (!rtkit_send(epic->rtk, &msg)) {
+    if (!rtkit_send(epic->afk->rtk, &msg)) {
         printf("EPIC: failed to send TX WPTR message\n");
         return -1;
     }
@@ -348,6 +365,44 @@ static void afk_epic_rx_ack(afk_epic_ep_t *epic)
     if (rptr == rb->bufsz)
         rptr = 0;
     rb->hdr->rptr = rptr;
+}
+
+int afk_epic_work(afk_epic_t *afk, int endpoint)
+{
+    int i = 0;
+
+    while (i < 0x10) {
+        afk_epic_ep_t *cur = afk->endpoint[i++];
+        if (cur) {
+            struct afk_rb *rb = &cur->rx;
+            if (rb->hdr->rptr != rb->hdr->wptr) {
+                if (cur->ep == endpoint) {
+                    return EPIC_DATA_READY;
+                }
+                if (cur->recv_handler)
+                    cur->recv_handler(cur);
+                else {
+                    struct afk_qe *rmsg;
+                    // will net block
+                    int ret = afk_epic_rx(cur, &rmsg);
+                    if (ret < 0) {
+                        return ret;
+                    }
+                    printf("EPIC[0x%02x]: ignoring message type %d\n", cur->ep, rmsg->type);
+                    afk_epic_rx_ack(cur);
+                }
+            }
+        }
+        if (rtkit_can_recv(afk->rtk)) {
+            int ret = afk_epic_poll(afk, endpoint, false);
+            if (ret < 0 || ret == EPIC_DATA_READY)
+                return ret;
+            i = 0;
+            continue;
+        }
+    }
+
+    return 0;
 }
 
 int afk_epic_command(afk_epic_ep_t *epic, int channel, u16 sub_type, void *txbuf, size_t txsize,
@@ -388,6 +443,12 @@ int afk_epic_command(afk_epic_ep_t *epic, int channel, u16 sub_type, void *txbuf
     struct epic_cmd *rcmd;
 
     while (true) {
+        ret = afk_epic_work(epic->afk, epic->ep);
+        if (ret < 0)
+            return ret;
+        else if (ret != EPIC_DATA_READY)
+            continue;
+        // will not block
         ret = afk_epic_rx(epic, &rmsg);
         if (ret < 0)
             return ret;
@@ -429,7 +490,31 @@ int afk_epic_command(afk_epic_ep_t *epic, int channel, u16 sub_type, void *txbuf
     return 0;
 }
 
-afk_epic_ep_t *afk_epic_init(rtkit_dev_t *rtk, int endpoint)
+static void afk_epic_notify_handler(afk_epic_ep_t *epic)
+{
+    struct afk_qe *rmsg;
+    // will not block
+    int ret = afk_epic_rx(epic, &rmsg);
+    if (ret < 0)
+        return;
+
+    if (rmsg->type != TYPE_NOTIFY) {
+        printf("EPIC[0x%02x]: got unexpected message type %d in %s\n", epic->ep, rmsg->type,
+               __func__);
+        afk_epic_rx_ack(epic);
+        return;
+    }
+
+    struct epic_hdr *hdr = (void *)(rmsg + 1);
+    struct epic_sub_hdr *sub = (void *)(hdr + 1);
+
+    printf("EPIC[0x%02x]: %s: rx: Ch %u, Type:0x%02x sub cat:%x type:%x \n", epic->ep, __func__,
+           rmsg->channel, rmsg->type, sub->category, sub->type);
+
+    afk_epic_rx_ack(epic);
+}
+
+afk_epic_ep_t *afk_epic_start_ep(afk_epic_t *afk, int endpoint, bool notify)
 {
     afk_epic_ep_t *epic = malloc(sizeof(afk_epic_ep_t));
     if (!epic)
@@ -437,21 +522,25 @@ afk_epic_ep_t *afk_epic_init(rtkit_dev_t *rtk, int endpoint)
 
     memset(epic, 0, sizeof(*epic));
     epic->ep = endpoint;
-    epic->rtk = rtk;
+    epic->afk = afk;
+    afk->endpoint[endpoint - 0x20] = epic;
 
-    if (!rtkit_start_ep(rtk, endpoint)) {
+    if (notify)
+        epic->recv_handler = afk_epic_notify_handler;
+
+    if (!rtkit_start_ep(epic->afk->rtk, endpoint)) {
         printf("EPIC: failed to start endpoint %d\n", endpoint);
         goto err;
     }
 
     struct rtkit_message msg = {endpoint, FIELD_PREP(RBEP_TYPE, RBEP_INIT)};
-    if (!rtkit_send(rtk, &msg)) {
+    if (!rtkit_send(epic->afk->rtk, &msg)) {
         printf("EPIC: failed to send init message\n");
         goto err;
     }
 
     while (!epic->started) {
-        int ret = afk_epic_poll(epic);
+        int ret = afk_epic_poll(epic->afk, endpoint, true);
         if (ret < 0)
             break;
         else if (ret > 0)
@@ -461,27 +550,30 @@ afk_epic_ep_t *afk_epic_init(rtkit_dev_t *rtk, int endpoint)
     return epic;
 
 err:
+    afk->endpoint[endpoint - 0x20] = NULL;
     free(epic);
     return NULL;
 }
 
-int afk_epic_shutdown(afk_epic_ep_t *epic)
+int afk_epic_shutdown_ep(afk_epic_ep_t *epic)
 {
     struct rtkit_message msg = {epic->ep, FIELD_PREP(RBEP_TYPE, RBEP_SHUTDOWN)};
-    if (!rtkit_send(epic->rtk, &msg)) {
+    if (!rtkit_send(epic->afk->rtk, &msg)) {
         printf("EPIC: failed to send shutdown message\n");
         return -1;
     }
 
     while (epic->started) {
-        int ret = afk_epic_poll(epic);
+        int ret = afk_epic_poll(epic->afk, epic->ep, true);
         if (ret < 0)
             break;
     }
 
-    rtkit_free_buffer(epic->rtk, &epic->buf);
-    rtkit_free_buffer(epic->rtk, &epic->rxbuf);
-    rtkit_free_buffer(epic->rtk, &epic->txbuf);
+    rtkit_free_buffer(epic->afk->rtk, &epic->buf);
+    rtkit_free_buffer(epic->afk->rtk, &epic->rxbuf);
+    rtkit_free_buffer(epic->afk->rtk, &epic->txbuf);
+
+    epic->afk->endpoint[epic->ep - 0x20] = NULL;
 
     free(epic);
     return 0;
@@ -532,19 +624,41 @@ int afk_epic_start_interface(afk_epic_ep_t *epic, char *name, size_t txsize, siz
         return -1;
     }
 
-    if (!rtkit_alloc_buffer(epic->rtk, &epic->rxbuf, rxsize)) {
+    if (!rtkit_alloc_buffer(epic->afk->rtk, &epic->rxbuf, rxsize)) {
         printf("EPIC: failed to allocate rx buffer\n");
         return -1;
     }
 
-    if (!rtkit_alloc_buffer(epic->rtk, &epic->txbuf, txsize)) {
+    if (!rtkit_alloc_buffer(epic->afk->rtk, &epic->txbuf, txsize)) {
         printf("EPIC: failed to allocate tx buffer\n");
         return -1;
     }
 
     printf("EPIC: started interface %d (%s)\n", msg->channel, announce->name);
 
-    afk_epic_rx_ack(epic);
-
     return channel;
+}
+
+afk_epic_t *afk_epic_init(rtkit_dev_t *rtkit)
+{
+    afk_epic_t *afk = calloc(sizeof(*afk), 1);
+
+    if (!afk)
+        return NULL;
+
+    afk->rtk = rtkit;
+
+    return afk;
+}
+
+int afk_epic_shutdown(afk_epic_t *afk)
+{
+
+    for (int i = 0; i < 0x10; i++)
+        if (afk->endpoint[i])
+            afk_epic_shutdown_ep(afk->endpoint[i]);
+
+    free(afk);
+
+    return 0;
 }

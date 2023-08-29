@@ -60,8 +60,15 @@ dcp_dev_t *dcp_init(const char *dcp_path, const char *dcp_dart_path, const char 
         goto out_iovad;
     }
 
+    dcp->afk = afk_epic_init(dcp->rtkit);
+    if (!dcp->afk) {
+        printf("dcp: failed to initialize AFK\n");
+        goto out_rtkit;
+    }
+
     return dcp;
 
+out_rtkit:
     rtkit_quiesce(dcp->rtkit);
     rtkit_free(dcp->rtkit);
 out_iovad:
@@ -76,6 +83,7 @@ out_free:
 
 int dcp_shutdown(dcp_dev_t *dcp, bool sleep)
 {
+    afk_epic_shutdown(dcp->afk);
     if (sleep) {
         rtkit_sleep(dcp->rtkit);
         pmgr_reset(0, "DISP0_CPU0");
