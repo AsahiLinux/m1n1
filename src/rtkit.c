@@ -345,6 +345,14 @@ static void rtkit_crashed(rtkit_dev_t *rtk)
     }
 }
 
+bool rtkit_can_recv(rtkit_dev_t *rtk)
+{
+    if (rtk->crashed)
+        return false;
+
+    return asc_can_recv(rtk->asc);
+}
+
 int rtkit_recv(rtkit_dev_t *rtk, struct rtkit_message *msg)
 {
     struct asc_message asc_msg;
