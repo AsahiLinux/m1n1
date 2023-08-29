@@ -6,6 +6,11 @@
 #include "rtkit.h"
 #include "types.h"
 
+enum EPICMessage {
+    SUBTYPE_ANNOUNCE = 0x30,
+    SUBTYPE_STD_SERVICE = 0xc0,
+};
+
 typedef struct afk_epic afk_epic_t;
 typedef struct afk_epic_ep afk_epic_ep_t;
 
