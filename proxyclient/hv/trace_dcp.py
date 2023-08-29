@@ -251,7 +251,7 @@ class EPICEp(AFKEp):
 
         if sub.category == EPICCategory.REPORT:
             self.handle_report(hdr, sub, fd)
-        if sub.category == EPICCategory.NOTIFY:
+        elif sub.category == EPICCategory.NOTIFY:
             self.handle_notify(hdr, sub, fd)
         elif sub.category == EPICCategory.REPLY:
             self.handle_reply(hdr, sub, fd)
