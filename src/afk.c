@@ -479,11 +479,13 @@ int afk_epic_command(afk_epic_ep_t *epic, int channel, u16 sub_type, void *txbuf
         return rcmd->retcode; // should be negative already
     }
 
-    assert(*rxsize >= rcmd->rxlen);
-    *rxsize = rcmd->rxlen;
+    if (rxsize) {
+        assert(*rxsize >= rcmd->rxlen);
+        *rxsize = rcmd->rxlen;
 
-    if (rxsize && *rxsize && rcmd->rxbuf)
-        memcpy(rxbuf, epic->rxbuf.bfr, *rxsize);
+        if (*rxsize && rcmd->rxbuf)
+            memcpy(rxbuf, epic->rxbuf.bfr, *rxsize);
+    }
 
     afk_epic_rx_ack(epic);
 
