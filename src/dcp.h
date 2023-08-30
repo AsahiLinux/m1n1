@@ -8,7 +8,7 @@
 #include "dart.h"
 #include "rtkit.h"
 
-typedef struct {
+typedef struct dcp_dev {
     dart_dev_t *dart_dcp;
     dart_dev_t *dart_disp;
     iova_domain_t *iovad_dcp;
