@@ -6,6 +6,8 @@
 #include "string.h"
 #include "utils.h"
 
+#include "dcp/parser.h"
+
 struct afk_rb_hdr {
     u32 bufsz;
     u32 unk;
@@ -90,6 +92,8 @@ struct afk_epic {
     afk_epic_ep_t *endpoint[0x10];
 };
 
+#define AFK_MAX_CHANNEL 32
+
 struct afk_epic_ep {
     int ep;
     afk_epic_t *afk;
@@ -104,6 +108,9 @@ struct afk_epic_ep {
     struct rtkit_buffer rxbuf;
 
     bool started;
+
+    const afk_epic_service_ops_t *ops;
+    afk_epic_service_t services[AFK_MAX_CHANNEL];
 
     void (*recv_handler)(afk_epic_ep_t *epic);
 };
@@ -516,7 +523,8 @@ static void afk_epic_notify_handler(afk_epic_ep_t *epic)
     afk_epic_rx_ack(epic);
 }
 
-afk_epic_ep_t *afk_epic_start_ep(afk_epic_t *afk, int endpoint, bool notify)
+afk_epic_ep_t *afk_epic_start_ep(afk_epic_t *afk, int endpoint, const afk_epic_service_ops_t *ops,
+                                 bool notify)
 {
     afk_epic_ep_t *epic = malloc(sizeof(afk_epic_ep_t));
     if (!epic)
@@ -525,6 +533,7 @@ afk_epic_ep_t *afk_epic_start_ep(afk_epic_t *afk, int endpoint, bool notify)
     memset(epic, 0, sizeof(*epic));
     epic->ep = endpoint;
     epic->afk = afk;
+    epic->ops = ops;
     afk->endpoint[endpoint - 0x20] = epic;
 
     if (notify)
@@ -581,20 +590,60 @@ int afk_epic_shutdown_ep(afk_epic_ep_t *epic)
     return 0;
 }
 
-int afk_epic_start_interface(afk_epic_ep_t *epic, char *name, size_t txsize, size_t rxsize)
+static const afk_epic_service_ops_t *afk_match_service(afk_epic_ep_t *ep, const char *name)
 {
-    int channel = -1;
+    const afk_epic_service_ops_t *ops;
+
+    if (!name[0])
+        return NULL;
+    if (!ep->ops)
+        return NULL;
+
+    for (ops = ep->ops; ops->name[0]; ops++) {
+        if (strcmp(ops->name, name))
+            continue;
+
+        return ops;
+    }
+
+    return NULL;
+}
+
+int afk_epic_start_interface(afk_epic_ep_t *epic, void *intf, size_t txsize, size_t rxsize)
+{
+    int channels = 0;
     struct afk_qe *msg;
     struct epic_announce *announce;
 
-    for (int tries = 0; tries < 20; tries += 1) {
+    /* consume messages for other endpoints, syslog or ioreport might be noisy
+     * at startup */
+    while (1) {
+        int ret = afk_epic_work(epic->afk, epic->ep);
+        if (ret < 0)
+            return ret;
+        if (ret == EPIC_DATA_READY)
+            break;
+    }
 
-        int ret = afk_epic_rx(epic, &msg);
+    for (int tries = 0; tries < 20; tries += 1) {
+        s64 epic_unit = -1;
+        char *epic_name = NULL;
+        char *epic_class = NULL;
+        const char *service_name = NULL;
+
+        int ret = afk_epic_work(epic->afk, epic->ep);
+        if (ret < 0)
+            return ret;
+        else if (ret != EPIC_DATA_READY)
+            continue;
+
+        ret = afk_epic_rx(epic, &msg);
         if (ret < 0)
             return ret;
 
         if (msg->type != TYPE_NOTIFY && msg->type != TYPE_REPLY) {
-            printf("EPIC: got unexpected message type %d during iface start\n", msg->type);
+            printf("AFK[ep:%02x]: got unexpected message type %d during iface start\n", epic->ep,
+                   msg->type);
             afk_epic_rx_ack(epic);
             continue;
         }
@@ -603,42 +652,83 @@ int afk_epic_start_interface(afk_epic_ep_t *epic, char *name, size_t txsize, siz
         struct epic_sub_hdr *sub = (void *)(hdr + 1);
 
         if (sub->category != CAT_REPORT || sub->type != SUBTYPE_ANNOUNCE) {
-            printf("EPIC: got unexpected message %02x:%04x during iface start\n", sub->category,
-                   sub->type);
+            printf("AFK[ep:%02x]: got unexpected message %02x:%04x during iface start\n", epic->ep,
+                   sub->category, sub->type);
             afk_epic_rx_ack(epic);
             continue;
         }
 
         announce = (void *)(sub + 1);
 
-        if (strncmp(name, announce->name, sizeof(announce->name))) {
-            printf("EPIC: ignoring channel %d: %s\n", msg->channel, announce->name);
+        size_t props_size = sub->length - offsetof(struct epic_announce, props);
+
+        if (props_size > 36) {
+            struct dcp_parse_ctx ctx;
+
+            int ret = parse(announce->props, props_size, &ctx);
+            if (ret) {
+                printf("AFK[ep:%02x]: Failed to parse service init props (len=%zu) for %s\n",
+                       epic->ep, props_size, announce->name);
+                afk_epic_rx_ack(epic);
+                continue;
+            }
+            ret = parse_epic_service_init(&ctx, &epic_name, &epic_class, &epic_unit);
+            if (ret) {
+                printf("AFK[ep:%02x]: failed to extract init props (len=%zu): %d\n", epic->ep,
+                       props_size, ret);
+                hexdump(announce->props, props_size);
+                afk_epic_rx_ack(epic);
+                continue;
+            }
+            service_name = epic_class;
+        } else {
+            service_name = announce->name;
+        }
+
+        const afk_epic_service_ops_t *ops = afk_match_service(epic, service_name);
+        if (!ops) {
+            printf("AFK[ep:%02x]: unable to match service %s on channel %d\n", epic->ep,
+                   service_name, msg->channel);
             afk_epic_rx_ack(epic);
             continue;
         }
 
-        channel = msg->channel;
-        break;
+        afk_epic_service_t *service = &epic->services[msg->channel];
+        service->enabled = true;
+        service->ops = ops;
+        service->intf = intf;
+        service->epic = epic;
+        service->channel = msg->channel;
+        service->seq = 0;
+
+        ops->init(service, epic_name, service_name, epic_unit);
+        printf("AFK[ep:%02x]: new service %s on channel %d\n", epic->ep, service_name,
+               msg->channel);
+        free(epic_name);
+        free(epic_class);
+
+        channels++;
+        afk_epic_rx_ack(epic);
     }
 
-    if (channel == -1) {
-        printf("EPIC: too many unexpected messages, giving up\n");
+    if (!channels) {
+        printf("AFK[ep:%02x]: too many unexpected messages, giving up\n", epic->ep);
         return -1;
     }
 
     if (!rtkit_alloc_buffer(epic->afk->rtk, &epic->rxbuf, rxsize)) {
-        printf("EPIC: failed to allocate rx buffer\n");
+        printf("AFK[ep:%02x]: failed to allocate rx buffer\n", epic->ep);
         return -1;
     }
 
     if (!rtkit_alloc_buffer(epic->afk->rtk, &epic->txbuf, txsize)) {
-        printf("EPIC: failed to allocate tx buffer\n");
+        printf("AFK[ep:%02x]: failed to allocate tx buffer\n", epic->ep);
         return -1;
     }
 
-    printf("EPIC: started interface %d (%s)\n", msg->channel, announce->name);
+    printf("AFK[ep:%02x]: started interface with %d services\n", epic->ep, channels);
 
-    return channel;
+    return 0;
 }
 
 afk_epic_t *afk_epic_init(rtkit_dev_t *rtkit)

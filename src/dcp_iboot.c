@@ -31,6 +31,7 @@ struct dcp_iboot_if {
     dcp_dev_t *dcp;
     afk_epic_ep_t *epic;
     int channel;
+    bool enabled;
 
     union {
         u8 txbuf[TXBUF_LEN];
@@ -98,6 +99,31 @@ struct swap_set_layer_cmd_v13_3 {
     u32 unk2;
 } PACKED;
 
+void dcp_ib_service_init(afk_epic_service_t *service, const char *name, const char *eclass,
+                         s64 unit)
+{
+    dcp_iboot_if_t *iboot = service->intf;
+    if (strncmp("disp0-service", eclass, 32) == 0) {
+        if (iboot->enabled) {
+            printf("dcp-iboot: service init for enabled 'disp0-service' on channel: %d\n",
+                   iboot->channel);
+            return;
+        }
+        iboot->enabled = true;
+        iboot->channel = service->channel;
+    }
+    UNUSED(name);
+    UNUSED(unit);
+}
+
+static const afk_epic_service_ops_t iboot_service_ops[] = {
+    {
+        .name = "disp0-service",
+        .init = dcp_ib_service_init,
+    },
+    {},
+};
+
 dcp_iboot_if_t *dcp_ib_init(dcp_dev_t *dcp)
 {
     dcp_iboot_if_t *iboot = malloc(sizeof(dcp_iboot_if_t));
@@ -105,15 +131,15 @@ dcp_iboot_if_t *dcp_ib_init(dcp_dev_t *dcp)
         return NULL;
 
     iboot->dcp = dcp;
-    iboot->epic = afk_epic_start_ep(dcp->afk, DCP_IBOOT_ENDPOINT, false);
+    iboot->epic = afk_epic_start_ep(dcp->afk, DCP_IBOOT_ENDPOINT, iboot_service_ops, false);
     if (!iboot->epic) {
         printf("dcp-iboot: failed to initialize EPIC\n");
         goto err_free;
     }
 
-    iboot->channel = afk_epic_start_interface(iboot->epic, "disp0-service", TXBUF_LEN, RXBUF_LEN);
+    int err = afk_epic_start_interface(iboot->epic, iboot, TXBUF_LEN, RXBUF_LEN);
 
-    if (iboot->channel < 0) {
+    if (err < 0 || !iboot->enabled) {
         printf("dcp-iboot: failed to initialize disp0 service\n");
         goto err_shutdown;
     }
