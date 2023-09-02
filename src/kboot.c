@@ -1804,13 +1804,12 @@ struct isp_segment_ranges {
 static int dt_set_isp_fwdata(void)
 {
     const char *path = "isp";
-    const char *adt_path = "/arm-io/isp";
 
-    int adt_node = adt_path_offset(adt, adt_path);
-    if (adt_node < 0) {
-        printf("ADT: '%s' node not found\n", adt_path);
+    int adt_node = adt_path_offset(adt, "/arm-io/isp");
+    if (adt_node < 0)
+        adt_node = adt_path_offset(adt, "/arm-io/isp0");
+    if (adt_node < 0)
         return 0;
-    }
 
     u32 segments_len;
     struct isp_segment_ranges *segments;
