@@ -43,7 +43,7 @@ static void isp_ctrr_init_t8020(u64 base, const struct dart_tunables *config, u3
     write32(base + 0x13c, 0x20000);
 }
 
-static void isp_ctrr_init_t6000(u64 base, const struct dart_tunables *config, u32 length)
+static void isp_ctrr_init_t6000(u64 base, const struct dart_tunables *config, u32 length, int index)
 {
     write32(base + DART_T8020_ENABLED_STREAMS, 0x1);
     write32(base + 0x2f0, 0x0);
@@ -59,7 +59,10 @@ static void isp_ctrr_init_t6000(u64 base, const struct dart_tunables *config, u3
     }
 
     write32(base + DART_T8020_TCR_OFF, DART_T8020_TCR_TRANSLATE_ENABLE);
-    write32(base + 0x13c, 0x20000);
+    u32 val = 0x20000;
+    if (!index)
+        val |= 0x100;
+    write32(base + 0x13c, val);
 }
 
 int isp_init(void)
@@ -124,7 +127,7 @@ int isp_init(void)
                 isp_ctrr_init_t8020(base, config, length);
                 break;
             case DART_T6000:
-                isp_ctrr_init_t6000(base, config, length);
+                isp_ctrr_init_t6000(base, config, length, index);
                 break;
             case DART_T8110:
                 printf("isp: warning: dart type %s not tested yet!\n", type_s);
