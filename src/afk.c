@@ -108,6 +108,7 @@ struct afk_epic_ep {
     struct rtkit_buffer rxbuf;
 
     bool started;
+    u16 seq;
 
     const afk_epic_service_ops_t *ops;
     afk_epic_service_t services[AFK_MAX_CHANNEL];
@@ -427,7 +428,7 @@ int afk_epic_command(afk_epic_ep_t *epic, int channel, u16 sub_type, void *txbuf
     memset(&msg, 0, sizeof(msg));
 
     msg.hdr.version = 2;
-    msg.hdr.seq = 0;
+    msg.hdr.seq = epic->seq++;
     msg.sub.length = sizeof(msg.cmd);
     msg.sub.version = 4;
     msg.sub.category = CAT_COMMAND;
