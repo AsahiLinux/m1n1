@@ -47,7 +47,8 @@ static void isp_ctrr_init_t6000(u64 base, const struct dart_tunables *config, u3
 {
     write32(base + DART_T8020_ENABLED_STREAMS, 0x1);
     write32(base + 0x2f0, 0x0);
-    write32(base + DART_T8020_STREAM_SELECT, 0xffff); // diff from t8020
+    mask32(base + DART_T8020_STREAM_SELECT, read32(base + DART_T8020_STREAM_SELECT), 0xffff);
+    // write32(base + DART_T8020_STREAM_SELECT, 0xffff); // diff from t8020
     write32(base + DART_T8020_STREAM_COMMAND, 0x0);
 
     int count = length / sizeof(*config);
