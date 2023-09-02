@@ -324,6 +324,8 @@ dart_dev_t *dart_init_adt(const char *path, int instance, int device, bool keep_
     }
     if (ADT_GETPROP(adt, node, "vm-base", &dart->vm_base) < 0)
         dart->vm_base = 0;
+    else
+        dart->vm_base &= (1LLU << 36) - 1;
 
     return dart;
 }
