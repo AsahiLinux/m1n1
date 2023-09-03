@@ -124,6 +124,7 @@ OBJECTS := \
 	sart.o \
 	sep.o \
 	sio.o \
+	smc.o \
 	smp.o \
 	start.o \
 	startup.o \
