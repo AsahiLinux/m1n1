@@ -70,6 +70,8 @@ struct tz_regs t602x_tz_regs = {
     (FIELD_PREP(T8103_CACHE_STATUS_DATA_COUNT, T8103_CACHE_WAYS) |                                 \
      FIELD_PREP(T8103_CACHE_STATUS_TAG_COUNT, T8103_CACHE_WAYS))
 
+#define T8112_CACHE_DISABLE 0x424
+
 #define CACHE_ENABLE_TIMEOUT 10000
 
 #define T8103_DCC_DRAMCFG0         0xdc4
@@ -101,6 +103,7 @@ struct mcc_regs {
     int cache_ways;
     u32 cache_status_mask;
     u32 cache_status_val;
+    u32 cache_disable;
 
     struct tz_regs *tz;
 };
@@ -133,6 +136,8 @@ static void mcc_enable_cache(void)
                              mcc_regs[mcc].cache_status_val, CACHE_ENABLE_TIMEOUT))
                 printf("MCC: timeout while enabling cache for MCC %d plane %d: 0x%x\n", mcc, plane,
                        plane_read32(mcc, plane, PLANE_CACHE_STATUS));
+            else if (mcc_regs[mcc].cache_disable)
+                plane_write32(mcc, plane, mcc_regs[mcc].cache_disable, 0);
         }
     }
 }
@@ -176,7 +181,7 @@ int mcc_unmap_carveouts(void)
     return 0;
 }
 
-int mcc_init_t8103(int node, int *path)
+int mcc_init_t8103(int node, int *path, bool t8112)
 {
     printf("MCC: Initializing T8103 MCC...\n");
 
@@ -211,6 +216,7 @@ int mcc_init_t8103(int node, int *path)
     mcc_regs[0].cache_ways = T8103_CACHE_WAYS;
     mcc_regs[0].cache_status_mask = T8103_CACHE_STATUS_MASK;
     mcc_regs[0].cache_status_val = T8103_CACHE_STATUS_VAL;
+    mcc_regs[0].cache_disable = t8112 ? T8112_CACHE_DISABLE : 0;
     mcc_regs[0].tz = &t8103_tz_regs;
 
     mcc_enable_cache();
@@ -287,9 +293,9 @@ int mcc_init(void)
     }
 
     if (adt_is_compatible(adt, node, "mcc,t8103")) {
-        return mcc_init_t8103(node, path);
+        return mcc_init_t8103(node, path, false);
     } else if (adt_is_compatible(adt, node, "mcc,t8112")) {
-        return mcc_init_t8103(node, path);
+        return mcc_init_t8103(node, path, true);
     } else if (adt_is_compatible(adt, node, "mcc,t6000")) {
         return mcc_init_t6000(node, path, false);
     } else if (adt_is_compatible(adt, node, "mcc,t6020")) {
