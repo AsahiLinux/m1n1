@@ -49,7 +49,7 @@ dcp_dev_t *dcp_init(const char *dcp_path, const char *dcp_dart_path, const char 
         goto out_iovad;
     }
 
-    dcp->rtkit = rtkit_init("dcp", dcp->asc, dcp->dart_dcp, dcp->iovad_dcp, NULL);
+    dcp->rtkit = rtkit_init("dcp", dcp->asc, dcp->dart_dcp, dcp->iovad_dcp, NULL, false);
     if (!dcp->rtkit) {
         printf("dcp: failed to initialize RTKit\n");
         goto out_iovad;
