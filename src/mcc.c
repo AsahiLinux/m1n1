@@ -23,10 +23,31 @@ static bool mcc_initialized = false;
 #define T6000_DCS_STRIDE    0x100000
 #define T6000_DCS_COUNT     4
 
-#define PLANE_TZ_START(i)  (0x6a0 + i * 0x10)
-#define PLANE_TZ_END(i)    (0x6a4 + i * 0x10)
-#define PLANE_TZ_ENABLE(i) (0x6a8 + i * 0x10)
-#define PLANE_TZ_REGS      4
+#define PLANE_TZ_MAX_REGS 4
+
+struct tz_regs {
+    u32 count;
+    u32 stride;
+    u32 start;
+    u32 end;
+    u32 enable;
+};
+
+struct tz_regs t8103_tz_regs = {
+    .count = 4,
+    .stride = 0x10,
+    .start = 0x6a0,
+    .end = 0x6a4,
+    .enable = 0x6a8,
+};
+
+struct tz_regs t602x_tz_regs = {
+    .count = 4,
+    .stride = 0x14,
+    .start = 0x6bc,
+    .end = 0x6c0,
+    .enable = 0x6c8,
+};
 
 #define PLANE_CACHE_ENABLE 0x1c00
 #define PLANE_CACHE_STATUS 0x1c04
@@ -63,7 +84,7 @@ static bool mcc_initialized = false;
 #define T6000_DCC_DRAMCFG_FAST    0xffff0000
 
 size_t mcc_carveout_count;
-struct mcc_carveout mcc_carveouts[PLANE_TZ_REGS + 1];
+struct mcc_carveout mcc_carveouts[PLANE_TZ_MAX_REGS + 1];
 
 struct mcc_regs {
     u64 plane_base;
@@ -76,9 +97,12 @@ struct mcc_regs {
     u64 dcs_stride;
     int dcs_count;
 
+    u32 cache_enable_val;
     int cache_ways;
     u32 cache_status_mask;
     u32 cache_status_val;
+
+    struct tz_regs *tz;
 };
 
 static int mcc_count;
@@ -104,7 +128,7 @@ static void mcc_enable_cache(void)
 {
     for (int mcc = 0; mcc < mcc_count; mcc++) {
         for (int plane = 0; plane < mcc_regs[mcc].plane_count; plane++) {
-            plane_write32(mcc, plane, PLANE_CACHE_ENABLE, mcc_regs[mcc].cache_ways);
+            plane_write32(mcc, plane, PLANE_CACHE_ENABLE, mcc_regs[mcc].cache_enable_val);
             if (plane_poll32(mcc, plane, PLANE_CACHE_STATUS, mcc_regs[mcc].cache_status_mask,
                              mcc_regs[mcc].cache_status_val, CACHE_ENABLE_TIMEOUT))
                 printf("MCC: timeout while enabling cache for MCC %d plane %d: 0x%x\n", mcc, plane,
@@ -121,10 +145,11 @@ int mcc_unmap_carveouts(void)
     mcc_carveout_count = 0;
     memset(mcc_carveouts, 0, sizeof mcc_carveouts);
     // All MCCs and planes should have identical configs
-    for (int i = 0; i < PLANE_TZ_REGS; i++) {
-        uint64_t start = plane_read32(0, 0, PLANE_TZ_START(i));
-        uint64_t end = plane_read32(0, 0, PLANE_TZ_END(i));
-        bool enabled = plane_read32(0, 0, PLANE_TZ_ENABLE(i));
+    for (u32 i = 0; i < mcc_regs[0].tz->count; i++) {
+        uint64_t off = mcc_regs[0].tz->stride * i;
+        uint64_t start = plane_read32(0, 0, mcc_regs[0].tz->start + off);
+        uint64_t end = plane_read32(0, 0, mcc_regs[0].tz->end + off);
+        bool enabled = plane_read32(0, 0, mcc_regs[0].tz->enable + off);
 
         if (enabled) {
             if (!start || start == end) {
@@ -182,9 +207,11 @@ int mcc_init_t8103(int node, int *path)
     }
 
     mcc_regs[0].dcs_count = val;
+    mcc_regs[0].cache_enable_val = T8103_CACHE_WAYS;
     mcc_regs[0].cache_ways = T8103_CACHE_WAYS;
     mcc_regs[0].cache_status_mask = T8103_CACHE_STATUS_MASK;
     mcc_regs[0].cache_status_val = T8103_CACHE_STATUS_VAL;
+    mcc_regs[0].tz = &t8103_tz_regs;
 
     mcc_enable_cache();
 
@@ -195,18 +222,19 @@ int mcc_init_t8103(int node, int *path)
     return 0;
 }
 
-int mcc_init_t6000(int node, int *path)
+int mcc_init_t6000(int node, int *path, bool t602x)
 {
     u32 reg_len;
+    u32 reg_offset = t602x ? 2 : 0;
 
     if (!adt_getprop(adt, node, "reg", &reg_len)) {
         printf("MCC: Failed to get reg property!\n");
         return -1;
     }
 
-    mcc_count = reg_len / 16;
+    mcc_count = reg_len / 16 - reg_offset;
 
-    printf("MCC: Initializing T6000 MCCs (%d instances)...\n", mcc_count);
+    printf("MCC: Initializing T%x MCCs (%d instances)...\n", t602x ? 0x6020 : 0x6000, mcc_count);
 
     if (mcc_count > MAX_MCC_INSTANCES) {
         printf("MCC: Too many instances, increase MAX_MCC_INSTANCES!\n");
@@ -215,8 +243,8 @@ int mcc_init_t6000(int node, int *path)
 
     for (int i = 0; i < mcc_count; i++) {
         u64 base;
-        if (adt_get_reg(adt, path, "reg", 0, &base, NULL)) {
-            printf("MCC: Failed to get reg index %d!\n", i);
+        if (adt_get_reg(adt, path, "reg", i + reg_offset, &base, NULL)) {
+            printf("MCC: Failed to get reg index %d!\n", i + reg_offset);
             return -1;
         }
 
@@ -230,15 +258,18 @@ int mcc_init_t6000(int node, int *path)
         mcc_regs[i].dcs_stride = T6000_DCS_STRIDE;
         mcc_regs[i].dcs_count = T6000_DCS_COUNT;
 
+        mcc_regs[i].cache_enable_val = t602x ? 1 : T6000_CACHE_WAYS;
         mcc_regs[i].cache_ways = T6000_CACHE_WAYS;
         mcc_regs[i].cache_status_mask = T6000_CACHE_STATUS_MASK;
         mcc_regs[i].cache_status_val = T6000_CACHE_STATUS_VAL;
+
+        mcc_regs[i].tz = t602x ? &t602x_tz_regs : &t8103_tz_regs;
     }
 
     mcc_enable_cache();
 
-    printf("MCC: Initialized T6000 MCCs (%d instances, %d planes, %d channels)\n", mcc_count,
-           mcc_regs[0].plane_count, mcc_regs[0].dcs_count);
+    printf("MCC: Initialized T%x MCCs (%d instances, %d planes, %d channels)\n",
+           t602x ? 0x6020 : 0x6000, mcc_count, mcc_regs[0].plane_count, mcc_regs[0].dcs_count);
 
     mcc_initialized = true;
 
@@ -260,9 +291,9 @@ int mcc_init(void)
     } else if (adt_is_compatible(adt, node, "mcc,t8112")) {
         return mcc_init_t8103(node, path);
     } else if (adt_is_compatible(adt, node, "mcc,t6000")) {
-        return mcc_init_t6000(node, path);
+        return mcc_init_t6000(node, path, false);
     } else if (adt_is_compatible(adt, node, "mcc,t6020")) {
-        return mcc_init_t6000(node, path);
+        return mcc_init_t6000(node, path, true);
     } else {
         printf("MCC: Unsupported version\n");
         return -1;
