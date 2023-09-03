@@ -3,29 +3,21 @@
 name: build
 
 # Controls when the action will run.
-on:
-  # Triggers the workflow on push or pull request events but only for the main branch
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+on: [ push, pull_request, workflow_dispatch ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
       - name: Install aarch64-linux-gnu- toolchain
         run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y gcc-aarch64-linux-gnu
+          sudo apt update
+          sudo apt install --no-install-recommends -y gcc-aarch64-linux-gnu
 
       - name: Install nightly rust
         run: |
@@ -35,7 +27,7 @@ jobs:
       - name: Build
         run: make -k -j2 ARCH=aarch64-linux-gnu- CHAINLOADING=1
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: m1n1
           path: |
