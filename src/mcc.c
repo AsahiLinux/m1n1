@@ -268,6 +268,7 @@ int mcc_init_t6000(int node, int *path, bool t602x)
         mcc_regs[i].cache_ways = T6000_CACHE_WAYS;
         mcc_regs[i].cache_status_mask = T6000_CACHE_STATUS_MASK;
         mcc_regs[i].cache_status_val = T6000_CACHE_STATUS_VAL;
+        mcc_regs[i].cache_disable = 0;
 
         mcc_regs[i].tz = t602x ? &t602x_tz_regs : &t8103_tz_regs;
     }
