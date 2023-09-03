@@ -102,9 +102,6 @@ static int plane_poll32(int mcc, int plane, u64 offset, u32 mask, u32 target, u3
 
 static void mcc_enable_cache(void)
 {
-    if (!mcc_initialized)
-        return;
-
     for (int mcc = 0; mcc < mcc_count; mcc++) {
         for (int plane = 0; plane < mcc_regs[mcc].plane_count; plane++) {
             plane_write32(mcc, plane, PLANE_CACHE_ENABLE, mcc_regs[mcc].cache_ways);
