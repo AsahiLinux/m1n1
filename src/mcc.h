@@ -15,5 +15,6 @@ extern struct mcc_carveout mcc_carveouts[];
 
 int mcc_init(void);
 int mcc_unmap_carveouts(void);
+int mcc_enable_cache(void);
 
 #endif

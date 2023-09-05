@@ -127,19 +127,31 @@ static int plane_poll32(int mcc, int plane, u64 offset, u32 mask, u32 target, u3
                   target, timeout);
 }
 
-static void mcc_enable_cache(void)
+int mcc_enable_cache(void)
 {
+    int ret = 0;
+
+    if (!mcc_initialized)
+        return -1;
+
     for (int mcc = 0; mcc < mcc_count; mcc++) {
         for (int plane = 0; plane < mcc_regs[mcc].plane_count; plane++) {
             plane_write32(mcc, plane, PLANE_CACHE_ENABLE, mcc_regs[mcc].cache_enable_val);
             if (plane_poll32(mcc, plane, PLANE_CACHE_STATUS, mcc_regs[mcc].cache_status_mask,
-                             mcc_regs[mcc].cache_status_val, CACHE_ENABLE_TIMEOUT))
+                             mcc_regs[mcc].cache_status_val, CACHE_ENABLE_TIMEOUT)) {
                 printf("MCC: timeout while enabling cache for MCC %d plane %d: 0x%x\n", mcc, plane,
                        plane_read32(mcc, plane, PLANE_CACHE_STATUS));
-            else if (mcc_regs[mcc].cache_disable)
+                ret = -1;
+            } else if (mcc_regs[mcc].cache_disable) {
                 plane_write32(mcc, plane, mcc_regs[mcc].cache_disable, 0);
+            }
         }
     }
+
+    if (!ret)
+        printf("MCC: System level cache enabled\n");
+
+    return ret;
 }
 
 int mcc_unmap_carveouts(void)
@@ -219,8 +231,6 @@ int mcc_init_t8103(int node, int *path, bool t8112)
     mcc_regs[0].cache_disable = t8112 ? T8112_CACHE_DISABLE : 0;
     mcc_regs[0].tz = &t8103_tz_regs;
 
-    mcc_enable_cache();
-
     printf("MCC: Initialized T8103 MCC (%d channels)\n", val);
 
     mcc_initialized = true;
@@ -272,8 +282,6 @@ int mcc_init_t6000(int node, int *path, bool t602x)
 
         mcc_regs[i].tz = t602x ? &t602x_tz_regs : &t8103_tz_regs;
     }
-
-    mcc_enable_cache();
 
     printf("MCC: Initialized T%x MCCs (%d instances, %d planes, %d channels)\n",
            t602x ? 0x6020 : 0x6000, mcc_count, mcc_regs[0].plane_count, mcc_regs[0].dcs_count);

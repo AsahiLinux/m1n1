@@ -11,6 +11,7 @@
 #include "exception.h"
 #include "firmware.h"
 #include "malloc.h"
+#include "mcc.h"
 #include "memory.h"
 #include "pcie.h"
 #include "pmgr.h"
@@ -2124,6 +2125,7 @@ int kboot_prepare_dt(void *fdt)
 
 int kboot_boot(void *kernel)
 {
+    mcc_enable_cache();
     tunables_apply_static();
     clk_init();
 
