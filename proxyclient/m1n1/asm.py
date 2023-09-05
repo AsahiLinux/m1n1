@@ -13,6 +13,10 @@ if uname.sysname == "Darwin":
     else:
         TOOLCHAIN = "/usr/local/opt/llvm/bin/"
     USE_CLANG = "1"
+elif uname.sysname == "OpenBSD":
+    DEFAULT_ARCH = "aarch64-none-elf-"
+    TOOLCHAIN = "/usr/local/bin/"
+    USE_CLANG = "1"
 else:
     if uname.machine == "aarch64":
         DEFAULT_ARCH = ""
