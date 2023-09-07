@@ -1264,21 +1264,20 @@ static int dt_get_or_add_reserved_mem(const char *node_name, const char *compat,
         bail("FDT: '/reserved-memory' not found\n");
 
     int node = fdt_subnode_offset(dt, resv_node, node_name);
-    if (node >= 0)
-        return node;
+    if (node < 0) {
+        node = fdt_add_subnode(dt, resv_node, node_name);
+        if (node < 0)
+            bail("FDT: failed to add node '%s' to  '/reserved-memory'\n", node_name);
 
-    node = fdt_add_subnode(dt, resv_node, node_name);
-    if (node < 0)
-        bail("FDT: failed to add node '%s' to  '/reserved-memory'\n", node_name);
+        uint32_t phandle;
+        ret = fdt_generate_phandle(dt, &phandle);
+        if (ret)
+            bail("FDT: failed to generate phandle: %d\n", ret);
 
-    uint32_t phandle;
-    ret = fdt_generate_phandle(dt, &phandle);
-    if (ret)
-        bail("FDT: failed to generate phandle: %d\n", ret);
-
-    ret = fdt_setprop_u32(dt, node, "phandle", phandle);
-    if (ret != 0)
-        bail("FDT: couldn't set '%s.phandle' property: %d\n", node_name, ret);
+        ret = fdt_setprop_u32(dt, node, "phandle", phandle);
+        if (ret != 0)
+            bail("FDT: couldn't set '%s.phandle' property: %d\n", node_name, ret);
+    }
 
     u64 reg[2] = {cpu_to_fdt64(paddr), cpu_to_fdt64(size)};
     ret = fdt_setprop(dt, node, "reg", reg, sizeof(reg));
