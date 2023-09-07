@@ -1596,33 +1596,32 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *fdt_path)
             bail("FDT: couldn't set '%s.phandle' property: %d\n", fdt_path, ret);
     }
 
-    const uint64_t *segments;
+    const struct adt_segment_ranges *seg;
     u32 segments_len;
 
-    segments = adt_getprop(adt, node, "segment-ranges", &segments_len);
-    unsigned int num_maps = segments_len / 32;
+    seg = adt_getprop(adt, node, "segment-ranges", &segments_len);
+    unsigned int num_maps = segments_len / sizeof(*seg);
 
     for (unsigned i = 0; i < num_maps; i++) {
-        u64 paddr = segments[0];
-        u64 iova = segments[2];
-        u32 size = segments[3];
-        segments += 4;
+        u64 iova = seg->iova;
 
         char node_name[64];
-        snprintf(node_name, sizeof(node_name), "asc-firmware@%lx", paddr);
+        snprintf(node_name, sizeof(node_name), "asc-firmware@%lx", seg->phys);
 
-        int mem_node = dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", paddr, size);
+        int mem_node = dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", seg->phys, seg->size);
         if (mem_node < 0)
             return ret;
         uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
 
-        ret = dt_device_set_reserved_mem(mem_node, node_name, dev_phandle, iova, size);
+        ret = dt_device_set_reserved_mem(mem_node, node_name, dev_phandle, iova, seg->size);
         if (ret < 0)
             return ret;
 
         ret = dt_device_add_mem_region(fdt_path, mem_phandle, NULL);
         if (ret < 0)
             return ret;
+
+        seg++;
     }
 
     return 0;
