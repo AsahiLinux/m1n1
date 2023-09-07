@@ -1857,7 +1857,28 @@ struct isp_segment_ranges {
 
 static int dt_set_isp_fwdata(void)
 {
-    const char *path = "isp";
+    const char *fdt_path = "isp";
+    int ret = 0;
+
+    u64 phys, iova, size;
+
+    int fdt_node = fdt_path_offset(dt, fdt_path);
+    if (fdt_node < 0) {
+        printf("FDT: '%s' not found\n", fdt_path);
+        return 0;
+    }
+
+    if (isp_get_heap(&phys, &iova, &size)) {
+        const char *status = fdt_getprop(dt, fdt_node, "status", NULL);
+
+        if (!status || strcmp(status, "disabled")) {
+            printf("FDT: ISP enabled but not initialized, disabling\n");
+            if (fdt_setprop_string(dt, fdt_node, "status", "disabled") < 0)
+                bail("FDT: failed to set status property of ISP\n");
+        }
+
+        return 0;
+    }
 
     int adt_node = adt_path_offset(adt, "/arm-io/isp");
     if (adt_node < 0)
@@ -1865,45 +1886,22 @@ static int dt_set_isp_fwdata(void)
     if (adt_node < 0)
         return 0;
 
-    u32 segments_len;
-    struct isp_segment_ranges *segments;
-    segments =
-        (struct isp_segment_ranges *)adt_getprop(adt, adt_node, "segment-ranges", &segments_len);
-    if (!segments || !segments_len)
-        bail("ADT: invalid ISP segment-ranges\n");
-
-    int count = segments_len / sizeof(*segments);
-    for (int i = 0; i < count; i++)
-        segments[i].remap = segments[i].iova; // match sio segment-ranges
-
-    u64 ctrr_size;
-    switch (os_firmware.version) {
-        case V12_1: // haven't checked, probably right
-        case V12_2: // "
-        case V12_3:
-        case V12_3_1:
-        case V12_4:
-        case V12_5:
-            ctrr_size = 0x1800000;
-            break;
-        case V13_5:
-            ctrr_size = 0x1000000;
-            break;
-        default:
-            bail("FDT: couldn't get ISP CTRR size (%d)\n", os_firmware.version);
+    uint32_t dev_phandle = fdt_get_phandle(dt, fdt_node);
+    if (!dev_phandle) {
+        ret = fdt_generate_phandle(dt, &dev_phandle);
+        if (!ret)
+            ret = fdt_setprop_u32(dt, fdt_node, "phandle", dev_phandle);
+        if (ret != 0)
+            bail("FDT: couldn't set '%s.phandle' property: %d\n", fdt_path, ret);
     }
 
-    u64 heap_base = segments[count - 1].iova + segments[count - 1].size;
-    u64 heap_size = ctrr_size - heap_base;
+    int mem_node = dt_get_or_add_reserved_mem("isp-heap", "apple,asc-mem", phys, size);
+    if (mem_node < 0)
+        return ret;
 
-    int fdt_node = fdt_path_offset(dt, path);
-    if (fdt_node < 0)
-        bail("FDT: '%s' node not found\n", path);
-
-    if (fdt_appendprop_u64(dt, fdt_node, "apple,isp-heap-base", heap_base))
-        bail("FDT: couldn't set apple,isp-heap-base\n");
-    if (fdt_appendprop_u64(dt, fdt_node, "apple,isp-heap-size", heap_size))
-        bail("FDT: couldn't set apple,isp-heap-size\n");
+    ret = dt_device_set_reserved_mem(mem_node, "isp-heap", dev_phandle, iova, size);
+    if (ret < 0)
+        return ret;
 
     return 0;
 }
@@ -2169,6 +2167,9 @@ int kboot_prepare_dt(void *fdt)
         dt = NULL;
     }
 
+    /* Need to init ISP early to carve out heap */
+    isp_init();
+
     dt_bufsize = fdt_totalsize(fdt);
     assert(dt_bufsize);
 
@@ -2254,7 +2255,6 @@ int kboot_boot(void *kernel)
     usb_init();
     pcie_init();
     dapf_init_all();
-    isp_init();
 
     printf("Setting SMP mode to WFE...\n");
     smp_set_wfe_mode(true);
