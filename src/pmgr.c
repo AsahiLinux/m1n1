@@ -16,10 +16,6 @@
 #define PMGR_PS_ACTUAL    GENMASK(7, 4)
 #define PMGR_PS_TARGET    GENMASK(3, 0)
 
-#define PMGR_PS_ACTIVE  0xf
-#define PMGR_PS_CLKGATE 0x4
-#define PMGR_PS_PWRGATE 0x0
-
 #define PMGR_POLL_TIMEOUT 10000
 
 #define PMGR_FLAG_VIRTUAL 0x10
@@ -67,7 +63,7 @@ static uintptr_t pmgr_get_psreg(u8 idx)
     return pmgr_reg + reg_offset;
 }
 
-static int pmgr_set_mode(uintptr_t addr, u8 target_mode)
+int pmgr_set_mode(uintptr_t addr, u8 target_mode)
 {
     mask32(addr, PMGR_PS_TARGET, FIELD_PREP(PMGR_PS_TARGET, target_mode));
     if (poll32(addr, PMGR_PS_ACTUAL, FIELD_PREP(PMGR_PS_ACTUAL, target_mode), PMGR_POLL_TIMEOUT) <
