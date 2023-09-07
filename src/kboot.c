@@ -1573,7 +1573,7 @@ static int dt_vram_reserved_region(const char *dcp_alias, const char *disp_alias
                                    disp_reserved_regions_vram, &region, 1);
 }
 
-static int dt_reserve_asc_firmware(const char *adt_path, const char *fdt_path)
+static int dt_reserve_asc_firmware(const char *adt_path, const char *fdt_path, bool remap)
 {
     int ret = 0;
 
@@ -1603,7 +1603,7 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *fdt_path)
     unsigned int num_maps = segments_len / sizeof(*seg);
 
     for (unsigned i = 0; i < num_maps; i++) {
-        u64 iova = seg->iova;
+        u64 iova = remap ? seg->remap : seg->iova;
 
         char node_name[64];
         snprintf(node_name, sizeof(node_name), "asc-firmware@%lx", seg->phys);
@@ -2216,13 +2216,13 @@ int kboot_prepare_dt(void *fdt)
         return -1;
     if (dt_disable_missing_devs("i2c", "i2c@", 8))
         return -1;
-    if (dt_reserve_asc_firmware("/arm-io/sio", "sio"))
+    if (dt_reserve_asc_firmware("/arm-io/sio", "sio", true))
         return -1;
     if (dt_set_sio_fwdata())
         return -1;
-    if (dt_set_isp_fwdata())
+    if (dt_reserve_asc_firmware("/arm-io/isp", "isp", false))
         return -1;
-    if (dt_reserve_asc_firmware("/arm-io/isp", "isp"))
+    if (dt_set_isp_fwdata())
         return -1;
 #ifndef RELEASE
     if (dt_transfer_virtios())
