@@ -93,7 +93,7 @@ struct afk_epic {
     afk_epic_ep_t *endpoint[0x10];
 };
 
-#define AFK_MAX_CHANNEL 32
+#define AFK_MAX_CHANNEL 8
 
 struct afk_epic_ep {
     int ep;
@@ -110,6 +110,8 @@ struct afk_epic_ep {
 
     bool started;
     u16 seq;
+
+    u32 num_channels;
 
     const afk_epic_service_ops_t *ops;
     afk_epic_service_t services[AFK_MAX_CHANNEL];
@@ -414,6 +416,15 @@ int afk_epic_work(afk_epic_t *afk, int endpoint)
     return 0;
 }
 
+static afk_epic_service_t *afk_epic_find_service(afk_epic_ep_t *epic, u32 channel)
+{
+    for (u32 i = 0; i < epic->num_channels; i++)
+        if (epic->services[i].enabled && epic->services[i].channel == channel)
+            return &epic->services[i];
+
+    return NULL;
+}
+
 struct epic_std_service_ap_call {
     u32 unk0;
     u32 unk1;
@@ -426,9 +437,9 @@ struct epic_std_service_ap_call {
 static int afk_epic_handle_std_service(afk_epic_ep_t *epic, int channel, u8 category, u16 sub_seq,
                                        void *payload, size_t payload_size)
 {
-    afk_epic_service_t *service = &epic->services[channel];
+    afk_epic_service_t *service = afk_epic_find_service(epic, channel);
 
-    if (service->ops->call && category == CAT_NOTIFY) {
+    if (service && service->ops->call && category == CAT_NOTIFY) {
         struct epic_std_service_ap_call *call = payload;
         size_t call_size;
         void *reply;
@@ -748,6 +759,13 @@ int afk_epic_start_interface(afk_epic_ep_t *epic, void *intf, size_t txsize, siz
             continue;
         }
 
+        if (epic->num_channels >= AFK_MAX_CHANNEL) {
+            printf("AFK[ep:%02x]: Out of free service for service on channel %d\n", epic->ep,
+                   msg->channel);
+            afk_epic_rx_ack(epic);
+            continue;
+        }
+
         announce = (void *)(sub + 1);
 
         size_t props_size = sub->length - offsetof(struct epic_announce, props);
@@ -783,7 +801,7 @@ int afk_epic_start_interface(afk_epic_ep_t *epic, void *intf, size_t txsize, siz
             continue;
         }
 
-        afk_epic_service_t *service = &epic->services[msg->channel];
+        afk_epic_service_t *service = &epic->services[epic->num_channels++];
         service->enabled = true;
         service->ops = ops;
         service->intf = intf;
