@@ -1841,10 +1841,15 @@ static int dt_set_isp_fwdata(void)
     int mem_node = dt_get_or_add_reserved_mem("isp-heap", "apple,asc-mem", phys, size);
     if (mem_node < 0)
         return ret;
+    uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
 
     ret = dt_device_set_reserved_mem(mem_node, "isp-heap", dev_phandle, iova, size);
     if (ret < 0)
-        return ret;
+        bail("FDT: couldn't set 'isp-heap' reserved mem: %d\n", ret);
+
+    ret = dt_device_add_mem_region(fdt_path, mem_phandle, NULL);
+    if (ret < 0)
+        bail("FDT: couldn't add 'isp-heap' reserved mem: %d\n", ret);
 
     return 0;
 }
