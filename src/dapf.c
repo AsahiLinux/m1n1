@@ -136,6 +136,7 @@ struct entry dapf_entries[] = {
     {"/arm-io/dart-mtp", 1},
     {"/arm-io/dart-pmp", 1},
     {"/arm-io/dart-isp", 5},
+    {"/arm-io/dart-isp0", 5},
     {NULL, -1},
 };
 
