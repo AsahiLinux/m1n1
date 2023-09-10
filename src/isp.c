@@ -83,7 +83,7 @@ static void isp_ctrr_init_t6000(u64 base, const struct dart_tunables *config, u3
 static bool isp_initialized = false;
 static u64 heap_phys, heap_iova, heap_size, heap_top;
 
-int isp_get_heap(u64 *phys, u64 *iova, u64 *size)
+int isp_get_heap(u64 *phys, u64 *iova, u64 *size, u64 *top)
 {
     if (!isp_initialized)
         return -1;
@@ -91,6 +91,7 @@ int isp_get_heap(u64 *phys, u64 *iova, u64 *size)
     *phys = heap_phys;
     *iova = heap_iova;
     *size = heap_size;
+    *top = heap_top;
     return 0;
 }
 

@@ -1795,7 +1795,7 @@ static int dt_set_isp_fwdata(void)
     const char *fdt_path = "isp";
     int ret = 0;
 
-    u64 phys, iova, size;
+    u64 phys, iova, size, top;
 
     int fdt_node = fdt_path_offset(dt, fdt_path);
     if (fdt_node < 0) {
@@ -1803,7 +1803,7 @@ static int dt_set_isp_fwdata(void)
         return 0;
     }
 
-    if (isp_get_heap(&phys, &iova, &size)) {
+    if (isp_get_heap(&phys, &iova, &size, &top)) {
         const char *status = fdt_getprop(dt, fdt_node, "status", NULL);
 
         if (!status || strcmp(status, "disabled")) {
@@ -1842,6 +1842,12 @@ static int dt_set_isp_fwdata(void)
     ret = dt_device_add_mem_region(fdt_path, mem_phandle, NULL);
     if (ret < 0)
         bail("FDT: couldn't add 'isp-heap' reserved mem: %d\n", ret);
+
+    fdt_node = fdt_path_offset(dt, fdt_path);
+    if (fdt_node < 0)
+        return fdt_node;
+    if (fdt_appendprop_u64(dt, fdt_node, "apple,isp-ctrr-size", top))
+        bail("FDT: couldn't append to 'apple,isp-ctrr-size'\n");
 
     return 0;
 }
