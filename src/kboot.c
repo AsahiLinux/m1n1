@@ -1572,7 +1572,8 @@ static int dt_vram_reserved_region(const char *dcp_alias, const char *disp_alias
                                    disp_reserved_regions_vram, &region, 1);
 }
 
-static int dt_reserve_asc_firmware(const char *adt_path, const char *fdt_path, bool remap)
+static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_alt,
+                                   const char *fdt_path, bool remap)
 {
     int ret = 0;
 
@@ -1583,6 +1584,8 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *fdt_path, b
     }
 
     int node = adt_path_offset(adt, adt_path);
+    if (node < 0 && adt_path_alt)
+        node = adt_path_offset(adt, adt_path_alt);
     if (node < 0)
         bail("ADT: '%s' not found\n", adt_path);
 
@@ -2216,11 +2219,11 @@ int kboot_prepare_dt(void *fdt)
         return -1;
     if (dt_disable_missing_devs("i2c", "i2c@", 8))
         return -1;
-    if (dt_reserve_asc_firmware("/arm-io/sio", "sio", true))
+    if (dt_reserve_asc_firmware("/arm-io/sio", NULL, "sio", true))
         return -1;
     if (dt_set_sio_fwdata())
         return -1;
-    if (dt_reserve_asc_firmware("/arm-io/isp", "isp", false))
+    if (dt_reserve_asc_firmware("/arm-io/isp", "/arm-io/isp0", "isp", false))
         return -1;
     if (dt_set_isp_fwdata())
         return -1;
