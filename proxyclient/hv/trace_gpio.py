@@ -4,7 +4,7 @@ from m1n1.trace.gpio import GPIOTracer
 
 #trace_device("/arm-io/gpio", True)
 
-# trace gpio interrups, useful to follow the cascaded interrupts
+# trace gpio interrupts, useful to follow the cascaded interrupts
 aic_phandle = getattr(hv.adt["/arm-io/aic"], "AAPL,phandle")
 try:
     node = hv.adt["/arm-io/gpio0"]

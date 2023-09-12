@@ -38,7 +38,7 @@ static void init_m1_firestorm(void)
     init_common_firestorm();
 
     // "Cross-beat Crypto(AES/PMUL) ICache fusion is not disabled for branch
-    // uncondtional "recoded instruction."
+    // unconditional "recoded instruction."
     reg_set(SYS_IMP_APL_HID0, HID0_FETCH_WIDTH_DISABLE | HID0_CACHE_FUSION_DISABLE);
 
     reg_set(SYS_IMP_APL_HID7, HID7_FORCE_NONSPEC_IF_STEPPING |

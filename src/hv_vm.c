@@ -130,7 +130,7 @@ void hv_pt_init(void)
 
     msr(VTCR_EL2, FIELD_PREP(VTCR_PS, pa_range) |              // Full PA size
                       FIELD_PREP(VTCR_TG0, 2) |                // 16KB page size
-                      FIELD_PREP(VTCR_SH0, 3) |                // PTWs Inner Sharable
+                      FIELD_PREP(VTCR_SH0, 3) |                // PTWs Inner Shareable
                       FIELD_PREP(VTCR_ORGN0, 1) |              // PTWs Cacheable
                       FIELD_PREP(VTCR_IRGN0, 1) |              // PTWs Cacheable
                       FIELD_PREP(VTCR_SL0, sl0) |              // Start level

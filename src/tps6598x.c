@@ -112,7 +112,7 @@ int tps6598x_disable_irqs(tps6598x_dev_t *dev, tps6598x_irq_state_t *state)
     u8 tmp[CD3218B12_IRQ_WIDTH] = {0x00};
     read = i2c_smbus_read(dev->i2c, dev->addr, TPS_REG_INT_MASK1, tmp, CD3218B12_IRQ_WIDTH);
     if (read != CD3218B12_IRQ_WIDTH)
-        printf("tps6598x: failed verifcation, can't read TPS_REG_INT_MASK1\n");
+        printf("tps6598x: failed verification, can't read TPS_REG_INT_MASK1\n");
     else {
         printf("tps6598x: verify: TPS_REG_INT_MASK1 vs. saved IntMask1\n");
         hexdump(tmp, sizeof(tmp));
@@ -138,7 +138,7 @@ int tps6598x_restore_irqs(tps6598x_dev_t *dev, tps6598x_irq_state_t *state)
     u8 tmp[CD3218B12_IRQ_WIDTH];
     read = i2c_smbus_read(dev->i2c, dev->addr, TPS_REG_INT_MASK1, tmp, sizeof(tmp));
     if (read != sizeof(tmp))
-        printf("tps6598x: failed verifcation, can't read TPS_REG_INT_MASK1\n");
+        printf("tps6598x: failed verification, can't read TPS_REG_INT_MASK1\n");
     else {
         printf("tps6598x: verify saved IntMask1 vs. TPS_REG_INT_MASK1:\n");
         hexdump(state->int_mask1, sizeof(state->int_mask1));

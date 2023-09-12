@@ -81,13 +81,13 @@ typedef enum _LZMA_SEQUENCE_STATE
     //
     LzmaLitLitLitState,
     //
-    // States where we last saw two literals preceeded by a non-literal
+    // States where we last saw two literals preceded by a non-literal
     //
     LzmaMatchLitLitState,
     LzmaRepLitLitState,
     LzmaLitShortrepLitLitState,
     //
-    // States where we last saw one literal preceeded by a non-literal
+    // States where we last saw one literal preceded by a non-literal
     //
     LzmaMatchLitState,
     LzmaRepLitState,
@@ -97,7 +97,7 @@ typedef enum _LZMA_SEQUENCE_STATE
     //
     LzmaMaxLitState,
     //
-    // States where we last saw a non-literal preceeded by a literal
+    // States where we last saw a non-literal preceded by a literal
     //
     LzmaLitMatchState = 7,
     LzmaLitRepState,
