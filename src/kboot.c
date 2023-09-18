@@ -671,8 +671,12 @@ static int dt_set_multitouch(void)
 
     u32 len;
     const u8 *cal_blob = adt_getprop(adt, anode, "multi-touch-calibration", &len);
-    if (!cal_blob || !len)
-        bail("ADT: Failed to get multi-touch-calibration\n");
+    if (!cal_blob || !len) {
+        printf("ADT: Failed to get multi-touch-calibration from %s, disable %s\n", adt_touchbar,
+               fdt_get_name(dt, node, NULL));
+        fdt_setprop_string(dt, node, "status", "disabled");
+        return 0;
+    }
 
     fdt_setprop(dt, node, "apple,z2-cal-blob", cal_blob, len);
     return 0;
