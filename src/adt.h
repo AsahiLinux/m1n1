@@ -106,4 +106,13 @@ bool adt_is_compatible(const void *adt, int nodeoffset, const char *compat);
         for (const struct adt_property *prop = ADT_PROP(adt, _poff); _prop_count--;                \
              prop = ADT_PROP(adt, _poff = adt_next_property_offset(adt, _poff)))
 
+/* Common ADT properties */
+struct adt_segment_ranges {
+    u64 phys;
+    u64 iova;
+    u64 remap;
+    u32 size;
+    u32 unk;
+} PACKED;
+
 #endif

@@ -10,6 +10,7 @@
 #include "devicetree.h"
 #include "exception.h"
 #include "firmware.h"
+#include "isp.h"
 #include "malloc.h"
 #include "mcc.h"
 #include "memory.h"
@@ -1212,21 +1213,20 @@ static int dt_get_or_add_reserved_mem(const char *node_name, const char *compat,
         bail("FDT: '/reserved-memory' not found\n");
 
     int node = fdt_subnode_offset(dt, resv_node, node_name);
-    if (node >= 0)
-        return node;
+    if (node < 0) {
+        node = fdt_add_subnode(dt, resv_node, node_name);
+        if (node < 0)
+            bail("FDT: failed to add node '%s' to  '/reserved-memory'\n", node_name);
 
-    node = fdt_add_subnode(dt, resv_node, node_name);
-    if (node < 0)
-        bail("FDT: failed to add node '%s' to  '/reserved-memory'\n", node_name);
+        uint32_t phandle;
+        ret = fdt_generate_phandle(dt, &phandle);
+        if (ret)
+            bail("FDT: failed to generate phandle: %d\n", ret);
 
-    uint32_t phandle;
-    ret = fdt_generate_phandle(dt, &phandle);
-    if (ret)
-        bail("FDT: failed to generate phandle: %d\n", ret);
-
-    ret = fdt_setprop_u32(dt, node, "phandle", phandle);
-    if (ret != 0)
-        bail("FDT: couldn't set '%s.phandle' property: %d\n", node_name, ret);
+        ret = fdt_setprop_u32(dt, node, "phandle", phandle);
+        if (ret != 0)
+            bail("FDT: couldn't set '%s.phandle' property: %d\n", node_name, ret);
+    }
 
     u64 reg[2] = {cpu_to_fdt64(paddr), cpu_to_fdt64(size)};
     ret = fdt_setprop(dt, node, "reg", reg, sizeof(reg));
@@ -1521,7 +1521,7 @@ static int dt_vram_reserved_region(const char *dcp_alias, const char *disp_alias
                                    disp_reserved_regions_vram, &region, 1);
 }
 
-static int dt_reserve_asc_firmware(const char *adt_path, const char *fdt_path)
+static int dt_reserve_asc_firmware(const char *adt_path, const char *fdt_path, bool remap)
 {
     int ret = 0;
 
@@ -1544,33 +1544,32 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *fdt_path)
             bail("FDT: couldn't set '%s.phandle' property: %d\n", fdt_path, ret);
     }
 
-    const uint64_t *segments;
+    const struct adt_segment_ranges *seg;
     u32 segments_len;
 
-    segments = adt_getprop(adt, node, "segment-ranges", &segments_len);
-    unsigned int num_maps = segments_len / 32;
+    seg = adt_getprop(adt, node, "segment-ranges", &segments_len);
+    unsigned int num_maps = segments_len / sizeof(*seg);
 
     for (unsigned i = 0; i < num_maps; i++) {
-        u64 paddr = segments[0];
-        u64 iova = segments[2];
-        u32 size = segments[3];
-        segments += 4;
+        u64 iova = remap ? seg->remap : seg->iova;
 
         char node_name[64];
-        snprintf(node_name, sizeof(node_name), "asc-firmware@%lx", paddr);
+        snprintf(node_name, sizeof(node_name), "asc-firmware@%lx", seg->phys);
 
-        int mem_node = dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", paddr, size);
+        int mem_node = dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", seg->phys, seg->size);
         if (mem_node < 0)
             return ret;
         uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
 
-        ret = dt_device_set_reserved_mem(mem_node, node_name, dev_phandle, iova, size);
+        ret = dt_device_set_reserved_mem(mem_node, node_name, dev_phandle, iova, seg->size);
         if (ret < 0)
             return ret;
 
         ret = dt_device_add_mem_region(fdt_path, mem_phandle, NULL);
         if (ret < 0)
             return ret;
+
+        seg++;
     }
 
     return 0;
@@ -1792,6 +1791,68 @@ static int dt_set_sio_fwdata(void)
         if (fdt_appendprop_u32(dt, node, "apple,sio-firmware-params", param->value))
             bail("FDT: couldn't append to SIO parameters\n");
     }
+
+    return 0;
+}
+
+static int dt_set_isp_fwdata(void)
+{
+    const char *fdt_path = "isp";
+    int ret = 0;
+
+    u64 phys, iova, size, top;
+
+    int fdt_node = fdt_path_offset(dt, fdt_path);
+    if (fdt_node < 0) {
+        printf("FDT: '%s' not found\n", fdt_path);
+        return 0;
+    }
+
+    if (isp_get_heap(&phys, &iova, &size, &top)) {
+        const char *status = fdt_getprop(dt, fdt_node, "status", NULL);
+
+        if (!status || strcmp(status, "disabled")) {
+            printf("FDT: ISP enabled but not initialized, disabling\n");
+            if (fdt_setprop_string(dt, fdt_node, "status", "disabled") < 0)
+                bail("FDT: failed to set status property of ISP\n");
+        }
+
+        return 0;
+    }
+
+    int adt_node = adt_path_offset(adt, "/arm-io/isp");
+    if (adt_node < 0)
+        adt_node = adt_path_offset(adt, "/arm-io/isp0");
+    if (adt_node < 0)
+        return 0;
+
+    uint32_t dev_phandle = fdt_get_phandle(dt, fdt_node);
+    if (!dev_phandle) {
+        ret = fdt_generate_phandle(dt, &dev_phandle);
+        if (!ret)
+            ret = fdt_setprop_u32(dt, fdt_node, "phandle", dev_phandle);
+        if (ret != 0)
+            bail("FDT: couldn't set '%s.phandle' property: %d\n", fdt_path, ret);
+    }
+
+    int mem_node = dt_get_or_add_reserved_mem("isp-heap", "apple,asc-mem", phys, size);
+    if (mem_node < 0)
+        return ret;
+    uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
+
+    ret = dt_device_set_reserved_mem(mem_node, "isp-heap", dev_phandle, iova, size);
+    if (ret < 0)
+        bail("FDT: couldn't set 'isp-heap' reserved mem: %d\n", ret);
+
+    ret = dt_device_add_mem_region(fdt_path, mem_phandle, NULL);
+    if (ret < 0)
+        bail("FDT: couldn't add 'isp-heap' reserved mem: %d\n", ret);
+
+    fdt_node = fdt_path_offset(dt, fdt_path);
+    if (fdt_node < 0)
+        return fdt_node;
+    if (fdt_appendprop_u64(dt, fdt_node, "apple,isp-ctrr-size", top))
+        bail("FDT: couldn't append to 'apple,isp-ctrr-size'\n");
 
     return 0;
 }
@@ -2057,6 +2118,9 @@ int kboot_prepare_dt(void *fdt)
         dt = NULL;
     }
 
+    /* Need to init ISP early to carve out heap */
+    isp_init();
+
     dt_bufsize = fdt_totalsize(fdt);
     assert(dt_bufsize);
 
@@ -2102,9 +2166,13 @@ int kboot_prepare_dt(void *fdt)
         return -1;
     if (dt_disable_missing_devs("i2c", "i2c@", 8))
         return -1;
-    if (dt_reserve_asc_firmware("/arm-io/sio", "sio"))
+    if (dt_reserve_asc_firmware("/arm-io/sio", "sio", true))
         return -1;
     if (dt_set_sio_fwdata())
+        return -1;
+    if (dt_reserve_asc_firmware("/arm-io/isp", "isp", false))
+        return -1;
+    if (dt_set_isp_fwdata())
         return -1;
 #ifndef RELEASE
     if (dt_transfer_virtios())
