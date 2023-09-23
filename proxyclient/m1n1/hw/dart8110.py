@@ -244,6 +244,7 @@ class DART8110(Reloadable):
     PAGE_BITS = 14
     PAGE_SIZE = 1 << PAGE_BITS
 
+    L0_OFF = 36
     L1_OFF = 25
     L2_OFF = 14
 
@@ -308,7 +309,24 @@ class DART8110(Reloadable):
                 ttbr.ADDR = l1addr >> self.PAGE_BITS
                 self.regs.TTBR[stream].reg = ttbr
 
-            cached, l1 = self.get_pt(ttbr.ADDR << self.PAGE_BITS)
+            if tcr.FOUR_LEVELS:
+                cached, l0 = self.get_pt(ttbr.ADDR << self.PAGE_BITS)
+                l0idx = (page >> self.L0_OFF) & self.IDX_MASK
+                l0pte = PTE(l0[l0idx])
+                if not l0pte.VALID:
+                    l1addr = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
+                    self.pt_cache[l1addr] = [0] * self.Lx_SIZE
+                    l0pte = PTE(
+                        OFFSET=l1addr >> self.PAGE_BITS, VALID=1)
+                    l0[l0idx] = l0pte.value
+                    dirty.add(ttbr.ADDR << self.PAGE_BITS)
+                else:
+                    l2addr = l1pte.OFFSET << self.PAGE_BITS
+                l1page = l0pte.OFFSET
+            else:
+                l1page = ttbr.ADDR
+
+            cached, l1 = self.get_pt(l1page << self.PAGE_BITS)
             l1idx = (page >> self.L1_OFF) & self.IDX_MASK
             l1pte = PTE(l1[l1idx])
             if not l1pte.VALID:
@@ -317,7 +335,7 @@ class DART8110(Reloadable):
                 l1pte = PTE(
                     OFFSET=l2addr >> self.PAGE_BITS, VALID=1)
                 l1[l1idx] = l1pte.value
-                dirty.add(ttbr.ADDR << self.PAGE_BITS)
+                dirty.add(l1page << self.PAGE_BITS)
             else:
                 l2addr = l1pte.OFFSET << self.PAGE_BITS
 
@@ -344,7 +362,10 @@ class DART8110(Reloadable):
         if tcr.BYPASS_DART or not tcr.TRANSLATE_ENABLE:
             raise Exception(f"Unknown DART mode {tcr}")
 
-        start = start & 0xfffffffff
+        if tcr.FOUR_LEVELS:
+            start = start & 0xfff_ffff_ffff
+        else:
+            start = start & 0xfffffffff
 
         start_page = align_down(start, self.PAGE_SIZE)
         start_off = start - start_page
@@ -360,10 +381,23 @@ class DART8110(Reloadable):
                 pages.append(None)
                 continue
 
-            cached, l1 = self.get_pt(ttbr.ADDR << self.PAGE_BITS)
+            if tcr.FOUR_LEVELS:
+                cached, l0 = self.get_pt(ttbr.ADDR << self.PAGE_BITS)
+                l0pte = PTE(l0[(page >> self.L0_OFF) & self.IDX_MASK])
+                if not l0pte.VALID and cached:
+                    cached, l0 = self.get_pt(ttbr.ADDR << self.PAGE_BITS, uncached=True)
+                    l0pte = PTE(l0[(page >> self.L0_OFF) & self.IDX_MASK])
+                if not l0pte.VALID:
+                    pages.append(None)
+                    continue
+                l1page = l0pte.OFFSET
+            else:
+                l1page = ttbr.ADDR
+
+            cached, l1 = self.get_pt(l1page << self.PAGE_BITS)
             l1pte = PTE(l1[(page >> self.L1_OFF) & self.IDX_MASK])
             if not l1pte.VALID and cached:
-                cached, l1 = self.get_pt(ttbr.ADDR << self.PAGE_BITS, uncached=True)
+                cached, l1 = self.get_pt(l1page << self.PAGE_BITS, uncached=True)
                 l1pte = PTE(l1[(page >> self.L1_OFF) & self.IDX_MASK])
             if not l1pte.VALID:
                 pages.append(None)
@@ -445,17 +479,17 @@ class DART8110(Reloadable):
     def invalidate_cache(self):
         self.pt_cache = {}
 
-    def dump_table2(self, base, l1_addr):
+    def dump_table2(self, base, l1_addr, indent=""):
 
         def print_block(base, pte, start, last):
             pgcount = last - start
             pte.OFFSET -= pgcount
-            print("    page (%4d): %09x ... %09x -> %016x [%d%d%d%d]" % (
+            print(indent + "    page (%4d): %09x ... %09x -> %016x [%d%d%d%d]" % (
                     start, base + start*0x4000, base + (start+1)*0x4000,
                     pte.OFFSET << self.PAGE_BITS,
                     pte.RDPROT, pte.WRPROT, pte.UNCACHABLE, pte.VALID))
             if start < last:
-                print("     ==> (%4d):           ... %09x -> %016x size: %08x" % (
+                print(indent + "     ==> (%4d):           ... %09x -> %016x size: %08x" % (
                     last, base + (last+1)*0x4000,
                     (pte.OFFSET + pgcount - 1) << self.PAGE_BITS, pgcount << self.PAGE_BITS))
 
@@ -471,7 +505,7 @@ class DART8110(Reloadable):
                 if not unmapped:
                     if next_pte.VALID:
                         print_block(base, next_pte, start, i)
-                    print("  ...")
+                    print(indent + "  ...")
                     unmapped = True
                     next_pte = pte
                 continue
@@ -489,7 +523,7 @@ class DART8110(Reloadable):
         if next_pte.VALID:
             print_block(base, next_pte, start, 2048)
 
-    def dump_table(self, base, l1_addr):
+    def dump_table(self, base, l1_addr, indent="", four_levels=False):
         cached, tbl = self.get_pt(l1_addr)
 
         unmapped = False
@@ -503,20 +537,28 @@ class DART8110(Reloadable):
 
             unmapped = False
 
-            print("  table (%d): %09x ... %09x -> %016x [%d%d%d%d]" % (
-                i, base + i*0x2000000, base + (i+1)*0x2000000,
+            if four_levels:
+                off = self.L0_OFF
+            else:
+                off = self.L1_OFF
+            print(indent + "  table (%d): %09x ... %09x -> %016x [%d%d%d%d]" % (
+                i, base + (i << off), base + ((i+1) << off),
                 pte.OFFSET << self.PAGE_BITS,
                 pte.RDPROT, pte.WRPROT, pte.UNCACHABLE, pte.VALID))
-            self.dump_table2(base + i*0x2000000, pte.OFFSET << self.PAGE_BITS)
+            if four_levels:
+                self.dump_table(base + (i << off), pte.OFFSET << self.PAGE_BITS,
+                                indent=indent+"  ")
+            else:
+                self.dump_table2(base + (i << off), pte.OFFSET << self.PAGE_BITS)
 
-    def dump_ttbr(self, ttbr):
+    def dump_ttbr(self, ttbr, four_levels=False):
         if not ttbr.VALID:
             return
 
         l1_addr = (ttbr.ADDR) << self.PAGE_BITS
         print("  TTBR: %011x" % (l1_addr))
 
-        self.dump_table(0, l1_addr)
+        self.dump_table(0, l1_addr, four_levels=four_levels)
 
     def dump_device(self, idx):
         tcr = self.regs.TCR[idx].reg
@@ -528,7 +570,7 @@ class DART8110(Reloadable):
         elif tcr.TRANSLATE_ENABLE:
             print("  mode: TRANSLATE")
 
-            self.dump_ttbr(ttbr.reg)
+            self.dump_ttbr(ttbr.reg, four_levels=tcr.FOUR_LEVELS)
         elif tcr.BYPASS_DART:
             print("  mode: BYPASS")
         else:
