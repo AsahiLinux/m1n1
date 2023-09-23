@@ -94,6 +94,8 @@ int isp_init(void)
 
     pmgr_set_mode(pmgr_base + pmgr_off, PMGR_PS_PWRGATE);
 
+    bool remap = false;
+
     /* TODO: confirm versions */
     switch (ver_rev) {
         case ISP_VER_T8103:
@@ -124,9 +126,11 @@ int isp_init(void)
             }
             break;
         case ISP_VER_T6020:
+            remap = true;
+
             switch (os_firmware.version) {
                 case V13_5:
-                    heap_top = 0xf00000;
+                    heap_top = 0x10000f00000;
                     break;
                 default:
                     printf("isp: unsupported firmware\n");
@@ -144,7 +148,10 @@ int isp_init(void)
     seg = adt_getprop(adt, isp_node, "segment-ranges", &segments_len);
     unsigned int count = segments_len / sizeof(*seg);
 
-    heap_iova = seg[count - 1].iova + seg[count - 1].size;
+    if (remap)
+        heap_iova = seg[count - 1].remap + seg[count - 1].size;
+    else
+        heap_iova = seg[count - 1].iova + seg[count - 1].size;
     heap_size = heap_top - heap_iova;
     heap_phys = top_of_memory_alloc(heap_size);
 
