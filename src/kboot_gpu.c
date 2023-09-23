@@ -395,6 +395,9 @@ static int dt_set_region(void *dt, int sgx, const char *name, const char *path)
     if (fdt_setprop_inplace(dt, node, "reg", reg, sizeof(reg)))
         bail("FDT: GPU: failed to set reg prop for %s\n", path);
 
+    if (fdt_setprop_empty(dt, node, "no-map"))
+        bail("FDT: GPU: failed to set no-map prop for %s\n", path);
+
     return 0;
 }
 
@@ -642,6 +645,13 @@ int dt_set_gpu(void *dt)
         return -1;
     if (dt_set_region(dt, sgx, "gpu-region", "/reserved-memory/uat-ttbs"))
         return -1;
+
+    // refresh gpu dt node offset after modifying the dt in dt_set_region()
+    gpu = fdt_path_offset(dt, "gpu");
+    if (gpu < 0) {
+        printf("FDT: GPU: gpu alias not found in device tree\n");
+        return 0;
+    }
 
     if (firmware_set_fdt(dt, gpu, "apple,firmware-version", &os_firmware))
         return -1;
