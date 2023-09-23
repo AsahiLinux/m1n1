@@ -88,14 +88,15 @@ class ISPIOCommand(ISPCommand):
         super().__init__(channel, message, direction)
         self.iova = self.value
         if self.iova != 0:
-            contents = self.read_iova(self.iova, 0x8)
-            self.contents = int.from_bytes(contents, byteorder="little")
+            contents = self.read_iova(self.iova, self.arg0)
+            self.contents = contents
         else:
             self.contents = None
 
     def dump(self):
         if self.iova != 0:
-            self.log(f"[IO Addr: {hex(self.iova)}, Size: {hex(self.arg0)}, U1: {hex(self.arg1)} -> Opcode: {hex(self.contents >> 32)}]")
+            self.log(f"[IO Addr: {hex(self.iova)}, Size: {hex(self.arg0)}, U1: {hex(self.arg1)}]")
+            chexdump(self.contents, print_fn=self.log)
 
 class ISPT2HBufferCommand(ISPCommand):
     """ Represents a command in BUF_T2H channel """
@@ -108,7 +109,7 @@ class ISPT2HBufferCommand(ISPCommand):
     def dump(self):
         super().dump()
         if self.iova != 0:
-            chexdump(self.contents)
+            chexdump(self.contents, print_fn=self.log)
 
 class ISPH2TBufferCommand(ISPCommand):
     """ Represents a command in BUF_H2T channel """
@@ -122,7 +123,7 @@ class ISPH2TBufferCommand(ISPCommand):
     def dump(self):
         super().dump()
         if self.iova != 0:
-            chexdump(self.contents)
+            chexdump(self.contents, print_fn=self.log)
 
 class ISPT2HIOCommand(ISPCommand):
     """ Represents a command in IO_T2H channel """
@@ -136,7 +137,7 @@ class ISPT2HIOCommand(ISPCommand):
     def dump(self):
         super().dump()
         if self.iova != 0:
-            chexdump(self.contents)
+            chexdump(self.contents, print_fn=self.log)
 
 class ISPSharedMallocCommand(ISPCommand):
     """ Represents a command in SHAREDMALLOC channel
