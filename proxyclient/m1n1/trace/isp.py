@@ -48,7 +48,7 @@ class ISPTerminalCommand(ISPCommand):
 class ISPIOCommand(ISPCommand):
     def __init__(self, chan, msg, direction):
         super().__init__(chan, msg, direction)
-        self.contents = self.read_iova(self.iova, self.arg1)
+        self.contents = self.read_iova(self.iova, max(self.arg1, 8))
 
     def dump(self):
         if self.iova:
@@ -56,9 +56,9 @@ class ISPIOCommand(ISPCommand):
             self.log(f"[IO iova: {hex(self.iova)}, insize: {hex(self.arg1)}, outsize: {hex(self.arg2)} -> opcode: {hex(opcode)} {opcode2name(opcode)}]")
             self.log("IO struct: ")
             try:
-                chexdump32(self.contents)
+                chexdump32(self.contents, print_fn=self.log)
             except struct.error:
-                print(chexdump(self.contents))
+                chexdump(self.contents, print_fn=self.log)
 
 class ISPT2HBufferCommand(ISPCommand):
     def __init__(self, chan, msg, direction):
@@ -70,7 +70,7 @@ class ISPT2HBufferCommand(ISPCommand):
         super().dump()
         if self.contents:
             self.log("BUF_T2H struct:")
-            chexdump32(self.contents)
+            chexdump32(self.contents, print_fn=self.log)
 
 class ISPH2TBufferCommand(ISPCommand):
     def __init__(self, chan, msg, direction):
@@ -82,7 +82,7 @@ class ISPH2TBufferCommand(ISPCommand):
         super().dump()
         if self.contents:
             self.log("BUF_H2T struct:")
-            chexdump32(self.contents)
+            chexdump32(self.contents, print_fn=self.log)
 
 class ISPT2HIOCommand(ISPCommand):
     def __init__(self, chan, msg, direction):
@@ -225,7 +225,7 @@ class ISPTracer(ADTDevTracer):
         if (val.value >= 0xe00000) and (val.value <= 0x1100000): # dunno
             self.log("ISP bootargs at 0x%x:" % val.value)
             bootargs = self.dart.ioread(0, val.value, 0x200) # justt in case
-            chexdump32(bootargs)
+            chexdump32(bootargs, print_fn=self.log)
             x = ISPIPCBootArgs.parse(bootargs[:ISPIPCBootArgs.sizeof()])
             self.log(x)
 

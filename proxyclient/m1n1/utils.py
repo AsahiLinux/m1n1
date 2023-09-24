@@ -189,17 +189,17 @@ def ehexdump(s, st=0, abbreviate=True, indent="", print_fn=print):
             last = val
             skip = False
 
-def chexdump32(s, st=0, abbreviate=True):
+def chexdump32(s, st=0, abbreviate=True, print_fn=print):
     last = None
     skip = False
     for i in range(0,len(s),32):
         val = s[i:i+32]
         if val == last and abbreviate:
             if not skip:
-                print("%08x  *" % (i + st))
+                print_fn("%08x  *" % (i + st))
                 skip = True
         else:
-            print("%08x  %s" % (
+            print_fn("%08x  %s" % (
                 i + st,
                 hexdump32(val, ' ')))
             last = val
