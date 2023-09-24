@@ -106,7 +106,7 @@ class ISPChannelMessage:
         return s
 
     def valid(self):  # rough check used for dumps
-        return (self.arg0 != 0x1) and (self.arg0 != 0x3) and (not (all(arg == 0x0 for arg in self.args)))
+        return not (self.arg0 & 0x1)
 
 class ISPChannel:
     """
