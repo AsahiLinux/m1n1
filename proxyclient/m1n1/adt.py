@@ -559,6 +559,8 @@ class ADTNode:
         if attr[0] == "_":
             del self.__dict__[attr]
             return
+        attr = attr.replace("_", "-")
+        attr = attr.replace("--", "_")
         del self._properties[attr]
 
     def getprop(self, name, default=None):
