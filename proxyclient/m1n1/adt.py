@@ -205,6 +205,21 @@ TunableLocal = Struct(
     "value" / Hex(Int64ul),
 )
 
+DAPFT8110 = Struct(
+    "start" / Hex(Int64ul),
+    "end" / Hex(Int64ul),
+    "r20" / Hex(Int32ul),
+    "unk1" / Hex(Int32ul),
+    "r4" / Hex(Int32ul),
+    "unk2" / Array(5, Hex(Int32ul)),
+    "unk3" / Hex(Int8ul),
+    "r0h" / Hex(Int8ul),
+    "r0l" / Hex(Int8ul),
+    "unk4" / Hex(Int8ul),
+    # ???
+    "pad" / If(this.r20 == 0x20, Hex(Int32ul)),
+)
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -301,7 +316,12 @@ DEV_PROPERTIES = {
         "*": {
             "apcie-*-tunables": GreedyRange(TunableLocal),
         }
-    }
+    },
+    "dart*": {
+        "*": {
+            "dapf-instance-*": GreedyRange(DAPFT8110),
+        }
+    },
 }
 
 def parse_prop(node, path, node_name, name, v, is_template=False):
