@@ -729,6 +729,57 @@ static int dt_set_ipd(void)
     return 0;
 }
 
+#define NVRAM_START    0x700000
+#define NVRAM_MAX_SIZE SZ_1M
+
+static int dt_set_nvram(void)
+{
+    int adt_path[8];
+    u64 start, size;
+
+    int anode = adt_path_offset_trace(adt, "/arm-io/spi1/spinor/anvram", adt_path);
+    if (anode < 0) {
+        printf("ADT: nvram partition not found\n");
+        return 0;
+    }
+
+    int pp = 0;
+    while (adt_path[pp])
+        pp++;
+    adt_path[pp + 1] = 0;
+
+    int ret = adt_get_reg(adt, adt_path, "reg", 0, &start, &size);
+    if (ret < 0) {
+        printf("ADT: could not read nvram partition start/size\n");
+        return 0;
+    }
+
+    if (start != NVRAM_START || size > NVRAM_MAX_SIZE) {
+
+        printf("ADT: unexpected nvram partition start (0x%lx) size (0x%lx)\n", start, size);
+        return 0;
+    }
+
+    int node = fdt_path_offset(dt, "nvram");
+    if (node < 0) {
+        printf("DT: nvram alias/partition not found\n");
+        return 0;
+    }
+
+    fdt32_t reg[2];
+    fdt32_st(reg + 0, start);
+    fdt32_st(reg + 1, size);
+    if (fdt_setprop(dt, node, "reg", reg, sizeof(reg))) {
+        printf("FDT: couldn't set nvram.reg\n");
+        return 0;
+    }
+
+    if (fdt_setprop_string(dt, node, "status", "okay") < 0)
+        printf("FDT: failed to enable nvram partition node\n");
+
+    return 0;
+}
+
 static int dt_set_wifi(void)
 {
     int anode = adt_path_offset(adt, "/arm-io/wlan");
@@ -2095,6 +2146,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_gpu(dt))
         return -1;
     if (dt_set_multitouch())
+        return -1;
+    if (dt_set_nvram())
         return -1;
     if (dt_set_ipd())
         return -1;
