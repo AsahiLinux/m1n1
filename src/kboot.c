@@ -1870,6 +1870,12 @@ static int dt_set_isp_fwdata(void)
         return 0;
     }
 
+    if (firmware_set_fdt(dt, fdt_node, "apple,firmware-version", &os_firmware) < 0)
+        bail("FDT: Could not set apple,firmware-version for %s\n", fdt_path);
+
+    if (firmware_set_fdt(dt, fdt_node, "apple,firmware-compat", &os_firmware) < 0)
+        bail("FDT: Could not set apple,firmware-compat for %s\n", fdt_path);
+
     if (isp_get_heap(&phys, &iova, &size)) {
         const char *status = fdt_getprop(dt, fdt_node, "status", NULL);
 
