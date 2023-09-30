@@ -317,13 +317,12 @@ int adt_get_reg(const void *adt, int *path, const char *prop, int idx, u64 *padd
         if (!ranges)
             break;
 
-        u32 pa_cells = 2, ps_cells = 1;
+        u32 pa_cells = 2;
         ADT_GETPROP(adt, parent, "#address-cells", &pa_cells);
-        ADT_GETPROP(adt, parent, "#size-cells", &ps_cells);
 
         dprintf(" translate range to address-cells=%d size-cells=%d\n", pa_cells, ps_cells);
 
-        if (pa_cells < 1 || pa_cells > 2 || ps_cells > 2)
+        if (pa_cells < 1 || pa_cells > 2 || s_cells > 2)
             return ADT_ERR_BADNCELLS;
 
         int range_cnt = ranges_len / (4 * (pa_cells + a_cells + s_cells));
@@ -344,8 +343,9 @@ int adt_get_reg(const void *adt, int *path, const char *prop, int idx, u64 *padd
             }
         }
 
+        ADT_GETPROP(adt, parent, "#size-cells", &s_cells);
+
         a_cells = pa_cells;
-        s_cells = ps_cells;
     }
 
     if (paddr)
