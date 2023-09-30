@@ -34,6 +34,16 @@ int isp_get_heap(u64 *phys, u64 *iova, u64 *size)
     return 0;
 }
 
+bool isp_uses_remap(void)
+{
+    switch (chip_id) {
+        case 0x6020 ... 0x6fff:
+            return true;
+        default:
+            return false;
+    }
+}
+
 int isp_init(void)
 {
     int err = 0;
