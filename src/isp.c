@@ -29,18 +29,18 @@ int isp_get_heap(u64 *phys, u64 *iova, u64 *size)
         return -1;
 
     *phys = heap_phys;
-    *iova = heap_iova;
+    *iova = heap_iova | isp_iova_base();
     *size = heap_size;
     return 0;
 }
 
-bool isp_uses_remap(void)
+u64 isp_iova_base(void)
 {
     switch (chip_id) {
         case 0x6020 ... 0x6fff:
-            return true;
+            return 0x10000000000;
         default:
-            return false;
+            return 0;
     }
 }
 
@@ -104,8 +104,6 @@ int isp_init(void)
 
     pmgr_set_mode(pmgr_base + pmgr_off, PMGR_PS_PWRGATE);
 
-    bool remap = false;
-
     /* TODO: confirm versions */
     switch (ver_rev) {
         case ISP_VER_T8103:
@@ -136,11 +134,9 @@ int isp_init(void)
             }
             break;
         case ISP_VER_T6020:
-            remap = true;
-
             switch (os_firmware.version) {
                 case V13_5:
-                    heap_top = 0x10000f00000;
+                    heap_top = 0xf00000;
                     break;
                 default:
                     printf("isp: unsupported firmware\n");
@@ -158,13 +154,14 @@ int isp_init(void)
     seg = adt_getprop(adt, isp_node, "segment-ranges", &segments_len);
     unsigned int count = segments_len / sizeof(*seg);
 
-    if (remap)
-        heap_iova = seg[count - 1].remap + seg[count - 1].size;
-    else
-        heap_iova = seg[count - 1].iova + seg[count - 1].size;
+    heap_iova = seg[count - 1].iova + seg[count - 1].size;
     heap_size = heap_top - heap_iova;
     heap_phys = top_of_memory_alloc(heap_size);
 
+    printf("isp: Code: 0x%lx..0x%lx (0x%x @ 0x%lx)\n", seg[0].iova, seg[0].iova + seg[0].size,
+           seg[0].size, seg[0].phys);
+    printf("isp: Data: 0x%lx..0x%lx (0x%x @ 0x%lx)\n", seg[1].iova, seg[1].iova + seg[1].size,
+           seg[1].size, seg[1].phys);
     printf("isp: Heap: 0x%lx..0x%lx (0x%lx @ 0x%lx)\n", heap_iova, heap_top, heap_size, heap_phys);
 
     isp_initialized = true;
