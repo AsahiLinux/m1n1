@@ -13,9 +13,12 @@ class PCICfgSpace(RegMap):
     PRODUCT_ID  = 0x02, Register16
     COMMAND     = 0x04, Register16
     STATUS      = 0x06, Register16
+    REV_CLASS   = 0x08, Register32
+    HDR_TYPE    = 0x0e, Register8
 
     BAR         = irange(0x10, 6, 4), R_BAR
     ROMADDR     = 0x30, Register32
+    CAP_PTR     = 0x34, Register32
 
 class PCIeDevTracer(Tracer):
     CFGMAP = PCICfgSpace
@@ -57,8 +60,8 @@ class PCIeDevTracer(Tracer):
     def update_tracers(self, val = None, index = None):
         self.hv.clear_tracers(self.ident)
         ecam = self.apcie.get_reg(0)[0]
-        self.trace_regmap(ecam + self.ecam_off, 0x1000, self.CFGMAP, prefix="cfg",
-                          mode=TraceMode.WSYNC)
+        self.trace_regmap(ecam + self.ecam_off, 0x1000, self.CFGMAP,
+                          name="cfg", prefix="cfg", mode=TraceMode.WSYNC)
         i = 0
         while i < 6:
             idx = i
