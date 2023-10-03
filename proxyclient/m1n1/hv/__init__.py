@@ -1769,13 +1769,14 @@ class HV(Reloadable):
         if isinstance(data, str):
             data = open(data, "rb")
 
+        self.xnu_mode = True
+
         self.macho = macho = MachO(data)
         if symfile is not None:
             if isinstance(symfile, str):
                 symfile = open(symfile, "rb")
             syms = MachO(symfile)
             macho.add_symbols("com.apple.kernel", syms)
-            self.xnu_mode = True
 
         self._load_macho_symbols()
 
@@ -1808,8 +1809,7 @@ class HV(Reloadable):
 
         #image = macho.prepare_image(load_hook)
         image = macho.prepare_image()
-        self.load_raw(image, entryoffset=(macho.entry - macho.vmin), use_xnu_symbols=self.xnu_mode, vmin=macho.vmin)
-
+        self.load_raw(image, entryoffset=(macho.entry - macho.vmin), use_xnu_symbols=self.xnu_mode and symfile is not None, vmin=macho.vmin)
 
     def update_pac_mask(self):
         tcr = TCR(self.u.mrs(TCR_EL12))
