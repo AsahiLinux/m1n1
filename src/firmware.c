@@ -12,6 +12,12 @@
 struct fw_version_info os_firmware;
 struct fw_version_info system_firmware;
 
+#define bail(...)                                                                                  \
+    do {                                                                                           \
+        printf(__VA_ARGS__);                                                                       \
+        return -1;                                                                                 \
+    } while (0)
+
 const struct fw_version_info fw_versions[NUM_FW_VERSIONS] = {
     [V_UNKNOWN] = {V_UNKNOWN, "unknown", {0}, 1, "unknown"},
     [V12_1] = {V12_1, "12.1", {12, 1, 0}, 3, "iBoot-7429.61.2"},
@@ -39,7 +45,9 @@ int firmware_set_fdt(void *fdt, int node, const char *prop, const struct fw_vers
         data[i] = cpu_to_fdt32(ver->num[i]);
     }
 
-    return fdt_setprop(fdt, node, prop, data, ver->num_length * sizeof(u32));
+    if (fdt_setprop(fdt, node, prop, data, ver->num_length * sizeof(u32)))
+        bail("FDT: couldn't set %s property to firmware info", prop);
+    return 0;
 }
 
 static void detect_firmware(struct fw_version_info *info, const char *ver)
