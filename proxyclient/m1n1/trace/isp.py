@@ -63,8 +63,7 @@ class ISPIOCommand(ISPCommand):
 class ISPT2HBufferCommand(ISPCommand):
     def __init__(self, chan, msg, direction):
         super().__init__(chan, msg, direction)
-        #self.contents = self.read_iova(0x1013140, 0x4000)
-        self.contents = None
+        self.contents = self.read_iova(self.iova, 0x280)
 
     def dump(self):
         super().dump()
@@ -75,8 +74,8 @@ class ISPT2HBufferCommand(ISPCommand):
 class ISPH2TBufferCommand(ISPCommand):
     def __init__(self, chan, msg, direction):
         super().__init__(chan, msg, direction)
-        #self.contents = self.read_iova(0x1013140, 0x4000)
-        self.contents = None
+        self.contents = self.read_iova(self.iova, 0x4000)
+        #self.contents = None
 
     def dump(self):
         super().dump()
@@ -182,11 +181,21 @@ class ISPTracer(ADTDevTracer):
         self.dart_tracer = DARTTracer(hv, dart_dev_path, verbose=0)
         self.dart_tracer.start()
         self.dart = self.dart_tracer.dart
+        self.iova_base = 0
+        chip_id = hv.adt["/chosen"].chip_id
+        if 0x6020 <= chip_id <= 0x6fff:
+            self.iova_base = 0x100_0000_0000
 
         self.ignored_ranges = [
             (0x22c0e8000, 0x4000), # dart 1
             (0x22c0f4000, 0x4000), # dart 2
             (0x22c0fc000, 0x4000), # dart 3
+            (0x3860e8000, 0x4000), # dart 1
+            (0x3860f4000, 0x4000), # dart 2
+            (0x3860fc000, 0x4000), # dart 3
+            (0x22c4a8000, 0x4000), # dart 1
+            (0x22c4b4000, 0x4000), # dart 2
+            (0x22c4bc000, 0x4000), # dart 3
         ]
 
         self.table = None
@@ -196,43 +205,52 @@ class ISPTracer(ADTDevTracer):
         self.log("ISP_GPIO_0 r32: 0x%x" % (val.value))
         if val.value == 0x8042006:
             self.log(f"ISP_GPIO0 = ACK")
-        elif val.value < 64: 
+        elif val.value == 0xf7fbdff9:
+            self.log(f"ISP_GPIO0 = NACK?")
+        elif val.value < 64:
             self.log(f"ISP_IPC_CHANNELS = {val!s}")
             self.num_chans = val.value
         elif val.value > 0:
             self.log(f"IPC BASE IOVA: {val!s}")
             self.ipc_iova = val.value
+            # self.dart_tracer.trace_range(0, irange(val.value | self.iova_base, 0x40000))
             self.table = ISPChannelTable(self, self.num_chans, val.value)
             self.log("======== CHANNEL TABLE ========")
             for chan in self.table.chans:
                 self.log(f"ISPIPC: {str(chan)}")
             self.log("======== END OF CHANNEL TABLE ========")
+    r_ISP_GPIO_0_T8112 = r_ISP_GPIO_0
 
     def r_ISP_IRQ_INTERRUPT(self, val):
         #self.log("ISP_IRQ_INTERRUPT r32: 0x%x" % (val.value))
         #self.log(f"======== BEGIN IRQ ========")
         self.table.get_last_rx_commands(int(val.value))
         #self.log(f"========  END IRQ  ========")
+    r_ISP_IRQ_INTERRUPT_T8112 = r_ISP_IRQ_INTERRUPT
 
     def w_ISP_IRQ_DOORBELL(self, val):
         #self.log("ISP_IRQ_DOORBELL w32: 0x%x" % (val.value))
         #self.log(f"======== BEGIN DOORBELL ========")
         self.table.get_last_tx_commands(int(val.value))
         #self.log(f"========  END DOORBELL  ========")
+    w_ISP_IRQ_DOORBELL_T8112 = w_ISP_IRQ_DOORBELL
 
     def w_ISP_GPIO_0(self, val):
         self.log("ISP_GPIO_0 w32: 0x%x" % (val.value))
         if (val.value >= 0xe00000) and (val.value <= 0x1100000): # dunno
             self.log("ISP bootargs at 0x%x:" % val.value)
-            bootargs = self.dart.ioread(0, val.value, 0x200) # justt in case
+            bootargs = self.dart.ioread(0, val.value | self.iova_base, 0x200) # justt in case
             chexdump32(bootargs, print_fn=self.log)
             x = ISPIPCBootArgs.parse(bootargs[:ISPIPCBootArgs.sizeof()])
             self.log(x)
+    w_ISP_GPIO_0_T8112 = w_ISP_GPIO_0
 
     def ioread(self, iova, size):
+        iova |= self.iova_base
         return self.dart.ioread(0, iova, size)
 
     def iowrite(self, iova, data):
+        iova |= self.iova_base
         return self.dart.iowrite(0, iova, data)
 
     def start(self):
