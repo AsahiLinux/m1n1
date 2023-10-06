@@ -32,6 +32,7 @@ class DARTTracer(ADTDevTracer):
         elif compat in ["dart,t8110"]:
             self.REGMAPS = [DART8110Regs]
 
+        self.page_map = ScalarRangeMap()
         return super().__init__(hv, devpath, **kwargs)
 
     def start(self):
@@ -67,3 +68,30 @@ class DARTTracer(ADTDevTracer):
             self.dart.invalidate_cache()
         else:
             self.log(f"Unknown TLB op {tlb_op}")
+
+        self.page_map = ScalarRangeMap()
+
+    def trace_range(self, stream, zone, read=True, write=True, mode=TraceMode.ASYNC):
+        ranges = self.dart.iotranslate(stream, zone.start, zone.stop - zone.start)
+        va = zone.start
+        for pa, size in ranges:
+            if pa is not None:
+                pzone = irange(pa, size)
+                self.page_map[pzone] = (pa, va)
+                self.hv.add_tracer(pzone, "DARTVATracer", mode,
+                                   self.event_va if read else None,
+                                   self.event_va if write else None,
+                                   stream = stream)
+            va += size
+
+    def event_va(self, evt, stream=None):
+        pabase, vabase = self.page_map.get(evt.addr, (None, None))
+        if pabase is None:
+            addr = "UNKNOWN"
+        else:
+            addr = f"{evt.addr - pabase + vabase:#x}"
+        t = "W" if evt.flags.WRITE else "R"
+        m = "+" if evt.flags.MULTI else " "
+        logline = (f"[cpu{evt.flags.CPU}] [0x{evt.pc:016x}] IOVA/{stream}: {t}.{1<<evt.flags.WIDTH:<2}{m} " +
+                   f"{addr} (0x{evt.addr:x}) = 0x{evt.data:x}")
+        self.hv.log(logline, show_cpu=False)
