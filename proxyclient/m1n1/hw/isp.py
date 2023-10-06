@@ -37,6 +37,15 @@ class ISPRegs(RegMap):
     ISP_GPIO_6 = 0x2104188, Register32
     ISP_GPIO_7 = 0x210418c, Register32
 
+    ISP_GPIO_0_T8112 = 0x24c41b0, Register32
+    ISP_GPIO_1_T8112 = 0x24c41b4, Register32
+    ISP_GPIO_2_T8112 = 0x24c41b8, Register32
+    ISP_GPIO_3_T8112 = 0x24c41bc, Register32
+    ISP_GPIO_4_T8112 = 0x24c41c0, Register32
+    ISP_GPIO_5_T8112 = 0x24c41c4, Register32
+    ISP_GPIO_6_T8112 = 0x24c41c8, Register32
+    ISP_GPIO_7_T8112 = 0x24c41cc, Register32
+
     ISP_SENSOR_CLOCK_0_EN = 0x2104190, Register32
     ISP_SENSOR_CLOCK_1_EN = 0x2104194, Register32
     ISP_SENSOR_CLOCK_2_EN = 0x2104198, Register32
@@ -45,11 +54,15 @@ class ISPRegs(RegMap):
     ISP_IRQ_ENABLE      = 0x2104004, Register32
     ISP_IRQ_DOORBELL    = 0x21043f0, Register32
     ISP_IRQ_ACK         = 0x21043fc, Register32
+    ISP_IRQ_INTERRUPT_T8112 = 0x24c4000, Register32
+    ISP_IRQ_DOORBELL_T8112 = 0x24c4430, Register32
+    ISP_IRQ_ACK_T8112   = 0x24c443c, Register32
 
     ISP_IRQ_INTERRUPT_1 = 0x2104008, Register32
     ISP_IRQ_INTERRUPT_2 = 0x2104010, Register32
     ISP_IRQ_INTERRUPT_3 = 0x2104018, Register32
     ISP_IRQ_INTERRUPT_4 = 0x21043f8, Register32
+    ISP_IRQ_INTERRUPT_4_T8112 = 0x24c4438, Register32
 
     ISP_DPE_UNK_0 = 0x2504000, Register32
     ISP_DPE_UNK_1 = 0x2508000, Register32
