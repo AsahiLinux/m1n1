@@ -459,7 +459,7 @@ static int dptxport_call(afk_epic_service_t *service, u32 idx, const void *data,
             return 0;
         default:
             /* just try to ACK and hope for the best... */
-            printf("DPTXPort: unhandled call %d\n", idx);
+            dprintf("DPTXPort: unhandled call %d\n", idx);
             // fallthrough
         /* we can silently ignore and just ACK these calls */
         case DPTX_APCALL_DEACTIVATE:
