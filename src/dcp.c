@@ -118,6 +118,7 @@ dcp_dev_t *dcp_init(const display_config_t *cfg)
         dcp_die = cfg->die;
         pmgr_adt_power_enable(cfg->dcp);
         pmgr_adt_power_enable(cfg->dptx_phy);
+        mdelay(25);
     }
 
     int dart_node = adt_path_offset(adt, cfg->dcp_dart);
