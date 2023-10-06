@@ -29,7 +29,7 @@ static void dpav_init(afk_epic_service_t *service, const char *name, const char 
     UNUSED(name);
     UNUSED(eclass);
     UNUSED(unit);
-    // printf("DPAV: init(name='%s', class='%s' unit=%ld:\n", name, eclass, unit);
+    dprintf("DPAV: init(name='%s', class='%s' unit=%ld:\n", name, eclass, unit);
 }
 
 static const afk_epic_service_ops_t dcp_dpav_ops[] = {

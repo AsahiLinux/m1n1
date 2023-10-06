@@ -209,8 +209,8 @@ int dptx_phy_set_active_lane_count(dptx_phy_t *phy, u32 num_lanes)
 {
     u32 l;
 
-    printf("DPTX-PHY: set_active_lane_count(%u) phy_regs = {0x%lx, 0x%lx}\n", num_lanes,
-           phy->regs[0], phy->regs[1]);
+    dprintf("DPTX-PHY: set_active_lane_count(%u) phy_regs = {0x%lx, 0x%lx}\n", num_lanes,
+            phy->regs[0], phy->regs[1]);
 
     if (num_lanes == 3 || num_lanes > DPTX_MAX_LANES)
         return -1;

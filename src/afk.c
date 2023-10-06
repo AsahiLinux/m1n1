@@ -394,7 +394,7 @@ int afk_epic_work(afk_epic_t *afk, int endpoint)
                     if (ret < 0) {
                         return ret;
                     }
-                    printf("EPIC[0x%02x]: ignoring message type %d\n", cur->ep, rmsg->type);
+                    dprintf("EPIC[0x%02x]: ignoring message type %d\n", cur->ep, rmsg->type);
                     afk_epic_rx_ack(cur);
                 }
             }
@@ -488,7 +488,7 @@ static int afk_epic_handle_std_service(afk_epic_ep_t *epic, int channel, u8 cate
         return 0;
     }
 
-    printf("AFK: channel %d received unhandled standard service message: %x\n", channel, category);
+    dprintf("AFK: channel %d received unhandled standard service message: %x\n", channel, category);
 
     return -1;
 }
@@ -597,8 +597,8 @@ static void afk_epic_notify_handler(afk_epic_ep_t *epic)
         return;
 
     if (rmsg->type != TYPE_NOTIFY) {
-        printf("EPIC[0x%02x]: got unexpected message type %d in %s\n", epic->ep, rmsg->type,
-               __func__);
+        dprintf("EPIC[0x%02x]: got unexpected message type %d in %s\n", epic->ep, rmsg->type,
+                __func__);
         afk_epic_rx_ack(epic);
         return;
     }
@@ -612,8 +612,8 @@ static void afk_epic_notify_handler(afk_epic_ep_t *epic)
         afk_epic_handle_std_service(epic, rmsg->channel, sub->category, sub->seq, payload,
                                     payload_size);
     } else {
-        printf("EPIC[0x%02x]: %s: rx: Ch %u, Type:0x%02x sub cat:%x type:%x \n", epic->ep, __func__,
-               rmsg->channel, rmsg->type, sub->category, sub->type);
+        dprintf("EPIC[0x%02x]: %s: rx: Ch %u, Type:0x%02x sub cat:%x type:%x \n", epic->ep,
+                __func__, rmsg->channel, rmsg->type, sub->category, sub->type);
     }
 
     afk_epic_rx_ack(epic);
@@ -738,8 +738,8 @@ int afk_epic_start_interface(afk_epic_ep_t *epic, void *intf, size_t txsize, siz
             return ret;
 
         if (msg->type != TYPE_NOTIFY && msg->type != TYPE_REPLY) {
-            printf("AFK[ep:%02x]: got unexpected message type %d during iface start\n", epic->ep,
-                   msg->type);
+            dprintf("AFK[ep:%02x]: got unexpected message type %d during iface start\n", epic->ep,
+                    msg->type);
             afk_epic_rx_ack(epic);
             continue;
         }
@@ -748,8 +748,8 @@ int afk_epic_start_interface(afk_epic_ep_t *epic, void *intf, size_t txsize, siz
         struct epic_sub_hdr *sub = (void *)(hdr + 1);
 
         if (sub->category != CAT_REPORT || sub->type != SUBTYPE_ANNOUNCE) {
-            printf("AFK[ep:%02x]: got unexpected message %02x:%04x during iface start\n", epic->ep,
-                   sub->category, sub->type);
+            dprintf("AFK[ep:%02x]: got unexpected message %02x:%04x during iface start\n", epic->ep,
+                    sub->category, sub->type);
             afk_epic_rx_ack(epic);
             continue;
         }
@@ -805,8 +805,8 @@ int afk_epic_start_interface(afk_epic_ep_t *epic, void *intf, size_t txsize, siz
         service->seq = 0;
 
         ops->init(service, epic_name, service_name, epic_unit);
-        printf("AFK[ep:%02x]: new service %s on channel %d\n", epic->ep, service_name,
-               msg->channel);
+        dprintf("AFK[ep:%02x]: new service %s on channel %d\n", epic->ep, service_name,
+                msg->channel);
         free(epic_name);
         free(epic_class);
 
@@ -829,7 +829,7 @@ int afk_epic_start_interface(afk_epic_ep_t *epic, void *intf, size_t txsize, siz
         return -1;
     }
 
-    printf("AFK[ep:%02x]: started interface with %d services\n", epic->ep, channels);
+    dprintf("AFK[ep:%02x]: started interface with %d services\n", epic->ep, channels);
 
     return 0;
 }
