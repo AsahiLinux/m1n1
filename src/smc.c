@@ -120,7 +120,7 @@ void smc_shutdown(smc_dev_t *smc)
     free(smc);
 }
 
-smc_dev_t *smc_init()
+smc_dev_t *smc_init(void)
 {
     smc_dev_t *smc = calloc(1, sizeof(smc_dev_t));
     if (!smc)
