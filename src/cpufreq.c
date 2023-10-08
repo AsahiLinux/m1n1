@@ -184,6 +184,16 @@ static const struct cluster_t t6020_clusters[] = {
     {},
 };
 
+static const struct cluster_t t6022_clusters[] = {
+    {"ECPU0", 0x0210e00000, false, 1, 5},
+    {"PCPU0", 0x0211e00000, true, 1, 6},
+    {"PCPU1", 0x0212e00000, true, 1, 6},
+    {"ECPU1", 0x2210e00000, false, 1, 5},
+    {"PCPU2", 0x2211e00000, true, 1, 6},
+    {"PCPU3", 0x2212e00000, true, 1, 6},
+    {},
+};
+
 const struct cluster_t *cpufreq_get_clusters(void)
 {
     switch (chip_id) {
@@ -198,8 +208,9 @@ const struct cluster_t *cpufreq_get_clusters(void)
             return t8112_clusters;
         case T6020:
         case T6021:
-        case T6022:
             return t6020_clusters;
+        case T6022:
+            return t6022_clusters;
         default:
             printf("cpufreq: Chip 0x%x is unsupported\n", chip_id);
             return NULL;
