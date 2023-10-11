@@ -48,7 +48,7 @@ fi
 
 if [ -n "$initramfs" ]; then
     initramfs_size=$(stat --printf='%s' "$initramfs")
-    python - << EOF >>"$TMPDIR/m1n1-linux.bin"
+    python3 - << EOF >>"$TMPDIR/m1n1-linux.bin"
 import os, sys
 
 magic = b'm1n1_initramfs'
@@ -59,8 +59,8 @@ EOF
 fi
 
 echo "Chainloading to updated m1n1..."
-python "$base"/chainload.py -r "$base"/../../build/m1n1.bin
+python3 "$base"/chainload.py -r "$base"/../../build/m1n1.bin
 echo "Starting guest..."
-exec python "$base"/run_guest.py \
+exec python3 "$base"/run_guest.py \
     -c "load_system_map('$kernel_base/System.map')" "$@" \
     -r "$TMPDIR/m1n1-linux.bin"
