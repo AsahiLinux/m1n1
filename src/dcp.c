@@ -64,7 +64,6 @@ static int dcp_hdmi_dptx_init(dcp_dev_t *dcp, const display_config_t *cfg)
     dcp->dpav_ep = dcp_dpav_init(dcp);
     if (!dcp->dpav_ep) {
         printf("dcp: failed to initialize dpav endpoint\n");
-        dcp_system_shutdown(dcp->system_ep);
         return -1;
     }
 
@@ -72,7 +71,6 @@ static int dcp_hdmi_dptx_init(dcp_dev_t *dcp, const display_config_t *cfg)
     if (!dcp->dptx_ep) {
         printf("dcp: failed to initialize dptx-port endpoint\n");
         dcp_dpav_shutdown(dcp->dpav_ep);
-        dcp_system_shutdown(dcp->system_ep);
         return -1;
     }
 
@@ -81,6 +79,8 @@ static int dcp_hdmi_dptx_init(dcp_dev_t *dcp, const display_config_t *cfg)
     dcp->system_ep = dcp_system_init(dcp);
     if (!dcp->system_ep) {
         printf("dcp: failed to initialize system endpoint\n");
+        dcp_dptx_shutdown(dcp->dptx_ep);
+        dcp_dpav_shutdown(dcp->dpav_ep);
         return -1;
     }
 
@@ -187,8 +187,6 @@ dcp_dev_t *dcp_init(const display_config_t *cfg)
 
 out_afk:
     afk_epic_shutdown(dcp->afk);
-    rtkit_sleep(dcp->rtkit);
-    pmgr_reset(dcp_die, dcp_pmgr_dev);
 out_rtkit:
     rtkit_quiesce(dcp->rtkit);
     rtkit_free(dcp->rtkit);
@@ -210,9 +208,9 @@ int dcp_shutdown(dcp_dev_t *dcp, bool sleep)
             sleep = false;
         }
     }
+    dcp_system_shutdown(dcp->system_ep);
     dcp_dptx_shutdown(dcp->dptx_ep);
     dcp_dpav_shutdown(dcp->dpav_ep);
-    dcp_system_shutdown(dcp->system_ep);
     free(dcp->phy);
     afk_epic_shutdown(dcp->afk);
     if (sleep) {
