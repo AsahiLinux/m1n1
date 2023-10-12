@@ -14,9 +14,11 @@
 #include "../types.h"
 #include "../utils.h"
 
-#define DCP_DPAV_ENDPOINT 0x24
-#define TXBUF_LEN         0x4000
-#define RXBUF_LEN         0x4000
+#define DCP_DPAV_ENDPOINT     0x24
+#define DCP_DPAV_NUM_SERVICES 4
+
+#define TXBUF_LEN 0x4000
+#define RXBUF_LEN 0x4000
 
 typedef struct dcp_dpav_if {
     afk_epic_ep_t *epic;
@@ -53,7 +55,8 @@ dcp_dpav_if_t *dcp_dpav_init(dcp_dev_t *dcp)
         goto err_free;
     }
 
-    int err = afk_epic_start_interface(dpav->epic, dpav, TXBUF_LEN, RXBUF_LEN);
+    int err =
+        afk_epic_start_interface(dpav->epic, dpav, DCP_DPAV_NUM_SERVICES, TXBUF_LEN, RXBUF_LEN);
     if (err < 0) {
         printf("dpav: failed to initialize DPAV interface\n");
         goto err_shutdown;

@@ -8,7 +8,8 @@
 #include "string.h"
 #include "utils.h"
 
-#define DCP_IBOOT_ENDPOINT 0x23
+#define DCP_IBOOT_ENDPOINT     0x23
+#define DCP_IBOOT_NUM_SERVICES 1
 
 #define TXBUF_LEN 0x4000
 #define RXBUF_LEN 0x4000
@@ -137,7 +138,8 @@ dcp_iboot_if_t *dcp_ib_init(dcp_dev_t *dcp)
         goto err_free;
     }
 
-    int err = afk_epic_start_interface(iboot->epic, iboot, TXBUF_LEN, RXBUF_LEN);
+    int err =
+        afk_epic_start_interface(iboot->epic, iboot, DCP_IBOOT_NUM_SERVICES, TXBUF_LEN, RXBUF_LEN);
 
     if (err < 0 || !iboot->enabled) {
         printf("dcp-iboot: failed to initialize disp0 service\n");
