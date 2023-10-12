@@ -14,9 +14,11 @@
 #include "../types.h"
 #include "../utils.h"
 
-#define DCP_SYSTEM_ENDPOINT 0x20
-#define TXBUF_LEN           0x4000
-#define RXBUF_LEN           0x4000
+#define DCP_SYSTEM_ENDPOINT     0x20
+#define DCP_SYSTEM_NUM_SERVICES 2
+
+#define TXBUF_LEN 0x4000
+#define RXBUF_LEN 0x4000
 
 typedef struct dcp_system_if {
     afk_epic_ep_t *epic;
@@ -121,7 +123,8 @@ dcp_system_if_t *dcp_system_init(dcp_dev_t *dcp)
         goto err_free;
     }
 
-    int err = afk_epic_start_interface(system->epic, system, TXBUF_LEN, RXBUF_LEN);
+    int err = afk_epic_start_interface(system->epic, system, DCP_SYSTEM_NUM_SERVICES, TXBUF_LEN,
+                                       RXBUF_LEN);
 
     if (err < 0 || !system->sys_service) {
         printf("dcp-system: failed to initialize system-service\n");

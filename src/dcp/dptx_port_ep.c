@@ -13,9 +13,11 @@
 #include "../types.h"
 #include "../utils.h"
 
-#define DCP_DPTX_PORT_ENDPOINT 0x2a
-#define TXBUF_LEN              0x4000
-#define RXBUF_LEN              0x4000
+#define DCP_DPTX_PORT_ENDPOINT     0x2a
+#define DCP_DPTX_PORT_NUM_SERVICES 2
+
+#define TXBUF_LEN 0x4000
+#define RXBUF_LEN 0x4000
 
 struct dcpdptx_connection_cmd {
     u32 unk;
@@ -557,7 +559,8 @@ dcp_dptx_if_t *dcp_dptx_init(dcp_dev_t *dcp)
         goto err_free;
     }
 
-    int err = afk_epic_start_interface(dptx->epic, dptx, TXBUF_LEN, RXBUF_LEN);
+    int err = afk_epic_start_interface(dptx->epic, dptx, DCP_DPTX_PORT_NUM_SERVICES, TXBUF_LEN,
+                                       RXBUF_LEN);
     if (err < 0) {
         printf("dcp-dptx: failed to initialize DPTXRemotePort interface\n");
         goto err_shutdown;
