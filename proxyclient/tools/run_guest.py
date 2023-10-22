@@ -36,11 +36,14 @@ from m1n1.shell import run_shell
 from m1n1.hv import HV
 from m1n1.hv.virtio import Virtio9PTransport
 from m1n1.hw.pmu import PMU
+from plugins import PluginManager
 
 iface = UartInterface()
 p = M1N1Proxy(iface, debug=False)
 bootstrap_port(iface, p)
 u = ProxyUtils(p, heap_size = 128 * 1024 * 1024)
+pm:PluginManager = PluginManager.get_instance(u)
+pm.load_plugins()
 
 hv = HV(iface, p, u)
 
