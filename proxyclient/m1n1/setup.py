@@ -8,6 +8,7 @@ from .sysreg import *
 from .tgtypes import *
 from .utils import *
 from .hw.pmu import PMU
+from plugins import PluginManager
 
 # Create serial connection
 iface = UartInterface()
@@ -20,6 +21,11 @@ bootstrap_port(iface, p)
 # Initialise the Proxy interface from values fetched from
 # the remote end
 u = ProxyUtils(p)
+
+# load plugins if any
+pm = PluginManager.get_instance(u)
+pm.load_plugins()
+
 # Build a Register Monitoring object on Proxy Interface
 mon = RegMonitor(u)
 hv = HV(iface, p, u)
