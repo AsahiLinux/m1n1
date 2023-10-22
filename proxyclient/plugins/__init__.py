@@ -8,6 +8,11 @@ import importlib
 import inspect
 
 
+class PluginManager:
+    def get_instance():
+        ...
+
+
 class Plugin(ABC):
     @abstractmethod
     def name(self) -> str:
@@ -17,17 +22,13 @@ class Plugin(ABC):
     def command(self) -> str:
         ...
 
-    @abstractmethod
     def install(self):
-        ...
+        pm = PluginManager.get_instance()
+        pm.add(self)
 
     @abstractmethod
     def fn(self) -> Callable:
         ...
-
-
-class PluginManager:
-    ...
 
 
 class PluginManager(Reloadable):
@@ -66,7 +67,7 @@ class PluginManager(Reloadable):
 
         print(f"{len(self._plugins)} new plugins installed")
         for name, plugin in self._plugins.items():
-            print(f"\t{name}: command {plugin.command()} {plugin.fn().__doc__}")
+            print(f"  -{name}: command {plugin.command()} -- {plugin.fn().__doc__}")
 
     def add(self, plugin: Plugin):
         self._plugins[plugin.name()] = plugin
