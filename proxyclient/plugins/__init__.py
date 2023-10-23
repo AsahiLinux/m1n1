@@ -102,6 +102,17 @@ class PluginManager(Reloadable):
 _INSTANCE: Optional[PluginManager] = None
 
 
+def check_register(
+    register_part: int, register_part_name: str, max_value: int, min_value: int = 0
+):
+    if min_value <= register_part <= max_value:
+        return
+    else:
+        raise ValueError(
+            f"Register {register_part_name} must be between {min_value} and {max_value}, got {register_part}"
+        )
+    
+
 if "__main__" == __name__:
     try:
         pm = PluginManager()
