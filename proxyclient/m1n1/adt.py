@@ -232,6 +232,20 @@ DAPFT8110B = Struct(
     "pad" / Hex(Int32ul),
 )
 
+DAPFT8110C = Struct(
+    "start" / Hex(Int64ul),
+    "end" / Hex(Int64ul),
+    "r20" / Hex(Int32ul),
+    "unk1" / Hex(Int32ul),
+    "r4" / Hex(Int32ul),
+    "unk2" / Array(5, Hex(Int32ul)),
+    "unk3" / Hex(Int8ul),
+    "r0h" / Hex(Int8ul),
+    "r0l" / Hex(Int8ul),
+    "unk4" / Hex(Int8ul),
+    "pad" / Array(3, Hex(Int8ul)),
+)
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -412,7 +426,11 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
         except AttributeError:
             return None, v
         if flags & 0x40:
-            t = GreedyRange(DAPFT8110B)
+            if len(v) % DAPFT8110B.sizeof() == 0:
+                if len(v) % DAPFT8110C.sizeof() != 0:
+                    t = GreedyRange(DAPFT8110B)
+            else:
+                t = GreedyRange(DAPFT8110C)
         else:
             t = GreedyRange(DAPFT8110)
 
