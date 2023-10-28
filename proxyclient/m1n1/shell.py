@@ -30,7 +30,10 @@ class HistoryConsole(code.InteractiveConsole):
 
     def save_history(self):
         readline.set_history_length(10000)
-        readline.write_history_file(self.histfile)
+        try:
+            readline.write_history_file(self.histfile)
+        except OSError as e:
+            print(f"Failed writing history to {self.histfile}: {e}", file=sys.stderr)
 
     def showtraceback(self):
         type, value, tb = sys.exc_info()
