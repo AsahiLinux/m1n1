@@ -378,6 +378,9 @@ int display_configure(const char *config)
         return ret;
     }
 
+    // Sonoma bug workaround
+    mdelay(100);
+
     // Find best modes
     dcp_timing_mode_t *tmodes, tbest;
     if ((ret = dcp_ib_get_timing_modes(iboot, &tmodes)) < 0) {
@@ -475,6 +478,7 @@ int display_configure(const char *config)
 
     printf("display: swapped! (swap_id=%d)\n", ret);
 
+    bool reinit = false;
     if (fb_pa != cur_boot_args.video.base || cur_boot_args.video.stride != stride ||
         cur_boot_args.video.width != tbest.width || cur_boot_args.video.height != tbest.height ||
         cur_boot_args.video.depth != 30) {
@@ -483,8 +487,16 @@ int display_configure(const char *config)
         cur_boot_args.video.width = tbest.width;
         cur_boot_args.video.height = tbest.height;
         cur_boot_args.video.depth = 30 | (opts.retina ? FB_DEPTH_FLAG_RETINA : 0);
-        fb_reinit();
+        reinit = true;
     }
+
+    if (!display_is_external && !(cur_boot_args.video.depth & FB_DEPTH_FLAG_RETINA)) {
+        cur_boot_args.video.depth |= FB_DEPTH_FLAG_RETINA;
+        reinit = true;
+    }
+
+    if (reinit)
+        fb_reinit();
 
     /* Update for python / subsequent stages */
     memcpy((void *)boot_args_addr, &cur_boot_args, sizeof(cur_boot_args));
@@ -527,6 +539,10 @@ int display_init(void)
         return display_configure(NULL);
     } else if (display_is_external) {
         printf("display: External display found, reconfiguring\n");
+        return display_configure(NULL);
+    } else if (!(cur_boot_args.video.depth & FB_DEPTH_FLAG_RETINA)) {
+        printf("display: Internal display with non-retina flag, assuming Sonoma bug and "
+               "reconfiguring\n");
         return display_configure(NULL);
     } else {
         printf("display: Display is already initialized (%ldx%ld)\n", cur_boot_args.video.width,
