@@ -344,6 +344,12 @@ int display_configure(const char *config)
             return ret;
     }
 
+    if (!display_is_external) {
+        // Sonoma bug workaround: Power on internal panel early
+        if ((ret = dcp_ib_set_power(iboot, true)) < 0)
+            printf("display: failed to set power on (continuing anyway)\n");
+    }
+
     // Detect if display is connected
     int timing_cnt, color_cnt;
     int hpd = 0, retries = 0;
@@ -481,6 +487,10 @@ int display_configure(const char *config)
         return ret;
 
     printf("display: swapped! (swap_id=%d)\n", ret);
+
+    // Wait until the swap completes before powering down DCP
+    // 50ms is too low, 100 works, 150 for good measure
+    mdelay(150);
 
     bool reinit = false;
     if (fb_pa != cur_boot_args.video.base || cur_boot_args.video.stride != stride ||
