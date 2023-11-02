@@ -400,8 +400,12 @@ int display_configure(const char *config)
 
     // Set mode
     if ((ret = dcp_ib_set_mode(iboot, &tbest, &cbest)) < 0) {
-        printf("display: failed to set mode\n");
-        return -1;
+        printf("display: failed to set mode. trying again...\n");
+        mdelay(500);
+        if ((ret = dcp_ib_set_mode(iboot, &tbest, &cbest)) < 0) {
+            printf("display: failed to set mode twice.\n");
+            return ret;
+        }
     }
 
     u64 fb_pa = cur_boot_args.video.base;
