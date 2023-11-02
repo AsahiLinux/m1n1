@@ -547,6 +547,7 @@ int display_init(void)
     } else if (!(cur_boot_args.video.depth & FB_DEPTH_FLAG_RETINA)) {
         printf("display: Internal display with non-retina flag, assuming Sonoma bug and "
                "reconfiguring\n");
+        fb_clear_direct(); // Old m1n1 stage1 ends up with an ugly logo situation, clear it.
         return display_configure(NULL);
     } else {
         printf("display: Display is already initialized (%ldx%ld)\n", cur_boot_args.video.width,

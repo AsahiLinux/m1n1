@@ -325,6 +325,16 @@ static void fb_clear_console(void)
     fb_update();
 }
 
+void fb_clear_direct(void)
+{
+    size_t fb_size = cur_boot_args.video.stride * cur_boot_args.video.height;
+
+    mmu_add_mapping(cur_boot_args.video.base, cur_boot_args.video.base, ALIGN_UP(fb_size, 0x4000),
+                    MAIR_IDX_NORMAL_NC, PERM_RW);
+
+    memset64((void *)cur_boot_args.video.base, 0, fb_size);
+}
+
 void fb_init(bool clear)
 {
     fb.hwptr = (void *)cur_boot_args.video.base;
