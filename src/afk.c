@@ -722,7 +722,9 @@ int afk_epic_start_interface(afk_epic_ep_t *epic, void *intf, int expected, size
             break;
     }
 
-    for (int tries = 0; tries < 500; tries += 1) {
+    u64 timeout = timeout_calculate(500000);
+
+    while (!timeout_expired(timeout)) {
         s64 epic_unit = -1;
         char *epic_name = NULL;
         char *epic_class = NULL;
