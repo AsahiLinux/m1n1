@@ -48,7 +48,7 @@ i2c_dev_t *i2c_init(const char *adt_node)
         return NULL;
     }
 
-    i2c_dev_t *dev = malloc(sizeof(*dev));
+    i2c_dev_t *dev = calloc(1, sizeof(*dev));
     if (!dev)
         return NULL;
 

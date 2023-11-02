@@ -127,7 +127,7 @@ static char *parse_string(struct dcp_parse_ctx *handle)
     if (!in)
         return NULL;
 
-    out = malloc(tag->size + 1);
+    out = calloc(tag->size + 1, 1);
 
     memcpy(out, in, tag->size);
     out[tag->size] = '\0';

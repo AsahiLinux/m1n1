@@ -144,13 +144,12 @@ rtkit_dev_t *rtkit_init(const char *name, asc_dev_t *asc, dart_dev_t *dart,
         return NULL;
     }
 
-    rtkit_dev_t *rtk = malloc(sizeof(*rtk));
+    rtkit_dev_t *rtk = calloc(1, sizeof(*rtk));
     if (!rtk)
         return NULL;
-    memset(rtk, 0, sizeof(*rtk));
 
     size_t name_len = strlen(name);
-    rtk->name = malloc(name_len + 1);
+    rtk->name = calloc(name_len + 1, 1);
     if (!rtk->name)
         goto out_free_rtk;
     strcpy(rtk->name, name);
