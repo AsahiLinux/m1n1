@@ -1610,12 +1610,18 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_al
         char node_name[64];
         snprintf(node_name, sizeof(node_name), "asc-firmware@%lx", seg->phys);
 
-        int mem_node = dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", seg->phys, seg->size);
+        size_t seg_size = seg->size;
+        if (seg->size & (SZ_16K - 1)) {
+            printf("ADT: segment %s uses non 16k aligned size: 0x%06zx\n", node_name, seg_size);
+            seg_size = ALIGN_UP(seg_size, SZ_16K);
+        }
+
+        int mem_node = dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", seg->phys, seg_size);
         if (mem_node < 0)
             return ret;
         uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
 
-        ret = dt_device_set_reserved_mem(mem_node, node_name, dev_phandle, iova, seg->size);
+        ret = dt_device_set_reserved_mem(mem_node, node_name, dev_phandle, iova, seg_size);
         if (ret < 0)
             return ret;
 
