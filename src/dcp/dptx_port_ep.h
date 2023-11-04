@@ -52,7 +52,7 @@ enum dptx_link_rate {
     LINK_RATE_HBR3 = 0x1e,
 };
 
-dcp_dptx_if_t *dcp_dptx_init(dcp_dev_t *dcp);
+dcp_dptx_if_t *dcp_dptx_init(dcp_dev_t *dcp, u32 num_dptxports);
 int dcp_dptx_shutdown(dcp_dptx_if_t *dptx);
 
 int dcp_dptx_connect(dcp_dptx_if_t *dptx, dptx_phy_t *phy, u32 port);

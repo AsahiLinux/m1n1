@@ -45,6 +45,7 @@ static const display_config_t display_config_m2 = {
     .dptx_phy = "/arm-io/dptx-phy",
     .pmgr_dev = "DISP0_CPU0",
     .dcp_index = 0,
+    .num_dptxports = 2,
 };
 
 static const display_config_t display_config_m2_pro_max = {
@@ -55,6 +56,7 @@ static const display_config_t display_config_m2_pro_max = {
     .dptx_phy = "/arm-io/lpdptx-phy0",
     .pmgr_dev = "DISP0_CPU0",
     .dcp_index = 0,
+    .num_dptxports = 1,
 };
 
 static const display_config_t display_config_m2_ultra = {
@@ -65,6 +67,7 @@ static const display_config_t display_config_m2_ultra = {
     .dptx_phy = "/arm-io/lpdptx-phy1",
     .pmgr_dev = "DISPEXT4_CPU0",
     .dcp_index = 1,
+    .num_dptxports = 2,
     .die = 1,
 };
 
