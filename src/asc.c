@@ -44,7 +44,7 @@ asc_dev_t *asc_init(const char *path)
         return NULL;
     }
 
-    asc_dev_t *asc = malloc(sizeof(*asc));
+    asc_dev_t *asc = calloc(1, sizeof(*asc));
     if (!asc)
         return NULL;
 

@@ -622,11 +622,10 @@ static void afk_epic_notify_handler(afk_epic_ep_t *epic)
 afk_epic_ep_t *afk_epic_start_ep(afk_epic_t *afk, int endpoint, const afk_epic_service_ops_t *ops,
                                  bool notify)
 {
-    afk_epic_ep_t *epic = malloc(sizeof(afk_epic_ep_t));
+    afk_epic_ep_t *epic = calloc(1, sizeof(afk_epic_ep_t));
     if (!epic)
         return NULL;
 
-    memset(epic, 0, sizeof(*epic));
     epic->ep = endpoint;
     epic->afk = afk;
     epic->ops = ops;
@@ -722,7 +721,9 @@ int afk_epic_start_interface(afk_epic_ep_t *epic, void *intf, int expected, size
             break;
     }
 
-    for (int tries = 0; tries < 500; tries += 1) {
+    u64 timeout = timeout_calculate(500000);
+
+    while (!timeout_expired(timeout)) {
         s64 epic_unit = -1;
         char *epic_name = NULL;
         char *epic_class = NULL;

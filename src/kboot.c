@@ -356,7 +356,7 @@ static int dt_set_cpus(void)
     if (cpus < 0)
         bail("FDT: /cpus node not found in devtree\n");
 
-    uint32_t *pruned_phandles = malloc(MAX_CPUS * sizeof(uint32_t));
+    uint32_t *pruned_phandles = calloc(MAX_CPUS, sizeof(uint32_t));
     size_t pruned = 0;
     if (!pruned_phandles)
         bail("FDT: out of memory\n");
@@ -431,7 +431,7 @@ static int dt_set_cpus(void)
             if (!phs)
                 bail_cleanup("FDT: Failed to find cpus property under AIC affinity\n");
 
-            fdt32_t *new_phs = malloc(len);
+            fdt32_t *new_phs = calloc(len, 1);
             size_t index = 0;
             size_t count = len / sizeof(fdt32_t);
 
@@ -827,7 +827,7 @@ static void dt_set_uboot_dm_preloc(int node)
     if (!pds)
         return;
 
-    fdt32_t *phandles = malloc(pds_size);
+    fdt32_t *phandles = calloc(pds_size, 1);
     if (!phandles) {
         printf("FDT: out of memory\n");
         return;
@@ -1921,8 +1921,8 @@ static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix
     int dt_prefix_len = strlen(dt_prefix);
 
     int acnt = 0, phcnt = 0;
-    u64 *addrs = malloc(max_devs * sizeof(u64));
-    u32 *phandles = malloc(max_devs * sizeof(u32) * 4); // Allow up to 4 extra nodes per device
+    u64 *addrs = calloc(max_devs, sizeof(u64));
+    u32 *phandles = calloc(max_devs * 4, sizeof(u32)); // Allow up to 4 extra nodes per device
     if (!addrs || !phandles)
         bail_cleanup("FDT: out of memory\n");
 
@@ -2145,7 +2145,7 @@ int kboot_set_chosen(const char *name, const char *value)
 
     for (i = 0; i < MAX_CHOSEN_PARAMS; i++) {
         if (!chosen_params[i][0]) {
-            chosen_params[i][0] = malloc(strlen(name) + 1);
+            chosen_params[i][0] = calloc(strlen(name) + 1, 1);
             strcpy(chosen_params[i][0], name);
             break;
         }
@@ -2161,7 +2161,7 @@ int kboot_set_chosen(const char *name, const char *value)
         return -1;
 
     if (value) {
-        chosen_params[i][1] = malloc(strlen(value) + 1);
+        chosen_params[i][1] = calloc(strlen(value) + 1, 1);
         strcpy(chosen_params[i][1], value);
     }
 

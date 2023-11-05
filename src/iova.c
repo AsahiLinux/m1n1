@@ -24,13 +24,11 @@ iova_domain_t *iovad_init(u64 base, u64 limit)
         return NULL;
     }
 
-    iova_domain_t *iovad = malloc(sizeof(*iovad));
+    iova_domain_t *iovad = calloc(1, sizeof(*iovad));
     if (!iovad)
         return NULL;
 
-    memset(iovad, 0, sizeof(*iovad));
-
-    struct iova_block *blk = malloc(sizeof(*blk));
+    struct iova_block *blk = calloc(1, sizeof(*blk));
     if (!blk) {
         free(iovad);
         return NULL;
@@ -114,7 +112,7 @@ bool iova_reserve(iova_domain_t *iovad, u64 iova, size_t sz)
                 return true;
             } else {
                 /* the to-be-reserved range is in the middle and we'll have to split this block */
-                struct iova_block *blk_new = malloc(sizeof(*blk_new));
+                struct iova_block *blk_new = calloc(1, sizeof(*blk_new));
                 if (!blk_new) {
                     printf("iova_reserve: out of memory.\n");
                     return false;
@@ -179,7 +177,7 @@ void iova_free(iova_domain_t *iovad, u64 iova, size_t sz)
 
     /* create a new free list if it's empty */
     if (!blk) {
-        blk = malloc(sizeof(*blk));
+        blk = calloc(1, sizeof(*blk));
         if (!blk)
             panic("out of memory in iovad_free");
         blk->iova = iova;
@@ -209,7 +207,7 @@ void iova_free(iova_domain_t *iovad, u64 iova, size_t sz)
             return;
         } else if ((iova + sz) < blk->iova) {
             /* create a new block */
-            struct iova_block *blk_new = malloc(sizeof(*blk_new));
+            struct iova_block *blk_new = calloc(1, sizeof(*blk_new));
             if (!blk_new)
                 panic("iova_free: out of memory\n");
 

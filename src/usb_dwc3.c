@@ -542,7 +542,7 @@ static void usb_build_serial(void)
     size_t len = strlen(serial);
     size_t size = sizeof(struct usb_string_descriptor) + 2 * len;
 
-    struct usb_string_descriptor *desc = malloc(size);
+    struct usb_string_descriptor *desc = calloc(1, size);
     memset(desc, 0, size);
     desc->bLength = size;
     desc->bDescriptorType = USB_STRING_DESCRIPTOR;
@@ -1100,7 +1100,7 @@ dwc3_dev_t *usb_dwc3_init(uintptr_t regs, dart_dev_t *dart)
         return NULL;
     }
 
-    dwc3_dev_t *dev = malloc(sizeof(*dev));
+    dwc3_dev_t *dev = calloc(1, sizeof(*dev));
     if (!dev)
         return NULL;
 

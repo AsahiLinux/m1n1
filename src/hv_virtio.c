@@ -282,7 +282,7 @@ void hv_map_virtio(u64 base, struct virtio_conf *conf)
     struct virtio_dev *dev;
     int i;
 
-    dev = malloc(sizeof(*dev) + sizeof(struct virtio_q) * conf->num_qus);
+    dev = calloc(1, sizeof(*dev) + sizeof(struct virtio_q) * conf->num_qus);
     dev->num_qus = conf->num_qus;
     dev->base = base;
     dev->irq = conf->irq;

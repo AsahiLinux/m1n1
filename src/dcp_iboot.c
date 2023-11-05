@@ -127,7 +127,7 @@ static const afk_epic_service_ops_t iboot_service_ops[] = {
 
 dcp_iboot_if_t *dcp_ib_init(dcp_dev_t *dcp)
 {
-    dcp_iboot_if_t *iboot = malloc(sizeof(dcp_iboot_if_t));
+    dcp_iboot_if_t *iboot = calloc(1, sizeof(dcp_iboot_if_t));
     if (!iboot)
         return NULL;
 
