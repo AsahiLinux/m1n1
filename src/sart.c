@@ -123,11 +123,10 @@ sart_dev_t *sart_init(const char *adt_path)
         return NULL;
     }
 
-    sart_dev_t *sart = malloc(sizeof(*sart));
+    sart_dev_t *sart = calloc(1, sizeof(*sart));
     if (!sart)
         return NULL;
 
-    memset(sart, 0, sizeof(*sart));
     sart->base = base;
 
     switch (*sart_version) {

@@ -44,7 +44,7 @@ static const afk_epic_service_ops_t dcp_dpav_ops[] = {
 
 dcp_dpav_if_t *dcp_dpav_init(dcp_dev_t *dcp)
 {
-    dcp_dpav_if_t *dpav = malloc(sizeof(dcp_dpav_if_t));
+    dcp_dpav_if_t *dpav = calloc(1, sizeof(dcp_dpav_if_t));
     if (!dpav)
         return NULL;
 

@@ -4,11 +4,11 @@
 
 ringbuffer_t *ringbuffer_alloc(size_t len)
 {
-    ringbuffer_t *bfr = malloc(sizeof(*bfr));
+    ringbuffer_t *bfr = calloc(1, sizeof(*bfr));
     if (!bfr)
         return NULL;
 
-    bfr->buffer = malloc(len);
+    bfr->buffer = calloc(len, 1);
     if (!bfr->buffer) {
         free(bfr);
         return NULL;

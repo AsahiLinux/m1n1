@@ -36,7 +36,7 @@ tps6598x_dev_t *tps6598x_init(const char *adt_node, i2c_dev_t *i2c)
         return NULL;
     }
 
-    tps6598x_dev_t *dev = malloc(sizeof(*dev));
+    tps6598x_dev_t *dev = calloc(1, sizeof(*dev));
     if (!dev)
         return NULL;
 
