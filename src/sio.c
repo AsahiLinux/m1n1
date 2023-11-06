@@ -64,6 +64,8 @@ static void *add_fwdata(size_t size, u32 param_id)
 
     u64 iova;
     void *p = alloc_mapped_data(size, &iova);
+    if (!p)
+        return NULL;
 
     if (!p)
         return NULL;

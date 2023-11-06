@@ -1201,7 +1201,7 @@ static dart_dev_t *dt_init_dart_by_node(int node, u32 num)
     u32 iommu_phandle = fdt32_ld(&iommus[num * 2]);
     u32 iommu_stream = fdt32_ld(&iommus[num * 2 + 1]);
 
-    printf("FDT: iommu phande:%u stream:%u\n", iommu_phandle, iommu_stream);
+    printf("FDT: iommu phandle:%u stream:%u\n", iommu_phandle, iommu_stream);
 
     return dart_init_fdt(dt, iommu_phandle, iommu_stream, true);
 }
@@ -1715,6 +1715,49 @@ static struct disp_mapping disp_reserved_regions_t602x[] = {
     {"region-id-157", "region157", true, true, false},
 };
 
+static struct disp_mapping dcpext_reserved_regions_t602x[MAX_DCPEXT][3] = {
+    {
+        {"region-id-49", "dcp_txt", true, false, false},
+        {"region-id-73", "dcpext_data", true, false, false},
+        {"region-id-74", "region74", true, false, false},
+    },
+    {
+        {"region-id-49", "dcp_txt", true, false, false},
+        {"region-id-88", "dcpext1_data", true, false, false},
+        {"region-id-89", "region89", true, false, false},
+    },
+    {
+        {"region-id-49", "dcp_txt", true, false, false},
+        {"region-id-111", "dcpext2_data", true, false, false},
+        {"region-id-112", "region112", true, false, false},
+    },
+    {
+        {"region-id-49", "dcp_txt", true, false, false},
+        {"region-id-119", "dcpext3_data", true, false, false},
+        {"region-id-120", "region120", true, false, false},
+    },
+    {
+        {"region-id-49", "dcp_txt", true, false, false},
+        {"region-id-127", "dcpext4_data", true, false, false},
+        {"region-id-128", "region128", true, false, false},
+    },
+    {
+        {"region-id-49", "dcp_txt", true, false, false},
+        {"region-id-135", "dcpext5_data", true, false, false},
+        {"region-id-136", "region136", true, false, false},
+    },
+    {
+        {"region-id-49", "dcp_txt", true, false, false},
+        {"region-id-143", "dcpext6_data", true, false, false},
+        {"region-id-144", "region144", true, false, false},
+    },
+    {
+        {"region-id-49", "dcp_txt", true, false, false},
+        {"region-id-151", "dcpext7_data", true, false, false},
+        {"region-id-152", "region152", true, false, false},
+    },
+};
+
 #define ARRAY_SIZE(s) (sizeof(s) / sizeof((s)[0]))
 
 static int dt_set_display(void)
@@ -1767,12 +1810,23 @@ static int dt_set_display(void)
                                                ARRAY_SIZE(dcpext_reserved_regions_t600x[n]));
         }
     } else if (!fdt_node_check_compatible(dt, 0, "apple,t6020") ||
-               !fdt_node_check_compatible(dt, 0, "apple,t6021")) {
+               !fdt_node_check_compatible(dt, 0, "apple,t6021") ||
+               !fdt_node_check_compatible(dt, 0, "apple,t6022")) {
+        /* this is expected to return early on t6022 due to the missing dcp alias */
         ret = dt_carveout_reserved_regions("dcp", "disp0", "disp0_piodma",
                                            disp_reserved_regions_t602x,
                                            ARRAY_SIZE(disp_reserved_regions_t602x));
         if (ret)
             return ret;
+
+        for (int n = 0; n < MAX_DCPEXT && ret == 0; n++) {
+            char dcpext_alias[16];
+
+            snprintf(dcpext_alias, sizeof(dcpext_alias), "dcpext%d", n);
+            ret = dt_carveout_reserved_regions(dcpext_alias, NULL, NULL,
+                                               dcpext_reserved_regions_t602x[n],
+                                               ARRAY_SIZE(dcpext_reserved_regions_t602x[n]));
+        }
     } else {
         printf("FDT: unknown compatible, skip display reserved-memory setup\n");
         return 0;
