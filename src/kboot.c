@@ -1794,13 +1794,15 @@ static int dt_set_display(void)
         if (ret)
             return ret;
 
-        for (int n = 0; n < MAX_DCPEXT && ret == 0; n++) {
-            char dcpext_alias[16];
+        if (os_firmware.version >= V13_5) {
+            for (int n = 0; n < MAX_DCPEXT && ret == 0; n++) {
+                char dcpext_alias[16];
 
-            snprintf(dcpext_alias, sizeof(dcpext_alias), "dcpext%d", n);
-            ret = dt_carveout_reserved_regions(dcpext_alias, NULL, NULL,
-                                               dcpext_reserved_regions_t600x[n],
-                                               ARRAY_SIZE(dcpext_reserved_regions_t600x[n]));
+                snprintf(dcpext_alias, sizeof(dcpext_alias), "dcpext%d", n);
+                ret = dt_carveout_reserved_regions(dcpext_alias, NULL, NULL,
+                                                   dcpext_reserved_regions_t600x[n],
+                                                   ARRAY_SIZE(dcpext_reserved_regions_t600x[n]));
+            }
         }
     } else if (!fdt_node_check_compatible(dt, 0, "apple,t6020") ||
                !fdt_node_check_compatible(dt, 0, "apple,t6021")) {
