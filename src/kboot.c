@@ -1483,6 +1483,11 @@ static int dt_add_reserved_regions(const char *dcp_alias, const char *disp_alias
         if (fdt_setprop_string(dt, dart_disp0, "status", "okay") < 0)
             bail_cleanup("FDT: failed to enable 'dart-disp0'\n");
     }
+    /* enable dcp* */
+    int dcp_node = fdt_path_offset(dt, dcp_alias);
+    if (dcp_node < 0 || fdt_setprop_string(dt, dcp_node, "status", "okay") < 0)
+        bail_cleanup("FDT: failed to enable '%s'\n", dcp_alias);
+
 err:
     if (dart_dcp)
         dart_shutdown(dart_dcp);
