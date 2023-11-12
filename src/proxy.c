@@ -134,6 +134,10 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             write8(request->args[0], request->args[1]);
             break;
 
+        case P_SEARCH64:
+            exc_guard = GUARD_MARK | GUARD_SILENT;
+            reply->retval = search64(request->args[0], request->args[1], request->args[2]);
+            break;
         case P_READ64:
             exc_guard = GUARD_MARK;
             reply->retval = read64(request->args[0]);

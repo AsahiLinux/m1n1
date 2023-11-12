@@ -519,6 +519,7 @@ class M1N1Proxy(Reloadable):
     P_WRITEREAD32 = 0x115
     P_WRITEREAD16 = 0x116
     P_WRITEREAD8 = 0x117
+    P_SEARCH64 = 0x118
 
     P_MEMCPY64 = 0x200
     P_MEMCPY32 = 0x201
@@ -778,6 +779,13 @@ class M1N1Proxy(Reloadable):
         '''write 1 byte value to given address'''
         self.request(self.P_WRITE8, addr, data)
 
+    def search64(self, value, addr_start, addr_end):
+        '''search for an 8-byte value in a given address range'''
+        if addr_start & 7:
+            raise AlignmentError()
+        if addr_end & 7:
+            raise AlignmentError()
+        return self.request(self.P_SEARCH64, value, addr_start, addr_end)
     def read64(self, addr):
         '''return 8 byte value from given address'''
         if addr & 7:

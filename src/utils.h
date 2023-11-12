@@ -32,6 +32,18 @@ static inline u64 read64(u64 addr)
     return data;
 }
 
+static inline u64 search64(u64 value, u64 addr_start, u64 addr_end)
+{
+    for (u64 addr = addr_start; addr < addr_end; addr += sizeof(u64))
+    {
+        if (read64(addr) == value)
+        {
+            return addr;
+        }
+    }
+    return 0ULL;
+}
+
 static inline void write64(u64 addr, u64 data)
 {
     __asm__ volatile("str\t%0, [%1]" : : "r"(data), "r"(addr) : "memory");

@@ -49,6 +49,7 @@ typedef enum {
     P_WRITEREAD32,
     P_WRITEREAD16,
     P_WRITEREAD8,
+    P_SEARCH64,
 
     P_MEMCPY64 = 0x200, // Memory block transfer functions
     P_MEMCPY32,

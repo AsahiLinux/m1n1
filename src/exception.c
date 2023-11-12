@@ -382,6 +382,10 @@ void exc_serr(u64 *regs)
 
     if (!(exc_guard & GUARD_SILENT))
         print_regs(regs, 0);
+    else {
+        u64 sts = mrs(SYS_IMP_APL_L2C_ERR_STS);
+        msr(SYS_IMP_APL_L2C_ERR_STS, sts);
+    }
 
     if ((exc_guard & GUARD_TYPE_MASK) == GUARD_OFF) {
         printf("Unhandled exception, rebooting...\n");
