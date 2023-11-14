@@ -663,6 +663,7 @@ int dt_set_gpu(void *dt)
             compat = &fw_versions[V12_3];
             break;
         case V13_5B4:
+        case V13_6_2:
             compat = &fw_versions[V13_5];
             break;
         default:
