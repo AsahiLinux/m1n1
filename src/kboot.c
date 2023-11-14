@@ -1343,6 +1343,7 @@ static int dt_set_dcp_firmware(const char *alias)
             break;
         case V13_5B4:
         case V13_5:
+        case V13_6_2:
             compat = &fw_versions[V13_5];
             break;
         default:
