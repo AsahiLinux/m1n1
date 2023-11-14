@@ -1930,7 +1930,18 @@ static int dt_set_isp_fwdata(void)
     if (firmware_set_fdt(dt, fdt_node, "apple,firmware-version", &os_firmware) < 0)
         bail("FDT: Could not set apple,firmware-version for %s\n", fdt_path);
 
-    if (firmware_set_fdt(dt, fdt_node, "apple,firmware-compat", &os_firmware) < 0)
+    const struct fw_version_info *compat;
+
+    switch (os_firmware.version) {
+        case V13_6_2:
+            compat = &fw_versions[V13_5];
+            break;
+        default:
+            compat = &os_firmware;
+            break;
+    }
+
+    if (firmware_set_fdt(dt, fdt_node, "apple,firmware-compat", compat) < 0)
         bail("FDT: Could not set apple,firmware-compat for %s\n", fdt_path);
 
     if (isp_get_heap(&phys, &iova, &size)) {

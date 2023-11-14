@@ -126,6 +126,7 @@ int isp_init(void)
                     heap_top = 0xe00000;
                     break;
                 case V13_5:
+                case V13_6_2:
                     heap_top = 0xf00000;
                     break;
                 default:
@@ -136,6 +137,7 @@ int isp_init(void)
         case ISP_VER_T6020:
             switch (os_firmware.version) {
                 case V13_5:
+                case V13_6_2:
                     heap_top = 0xf00000;
                     break;
                 default:
