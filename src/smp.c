@@ -13,6 +13,7 @@
 #define CPU_START_OFF_T8103 0x54000
 #define CPU_START_OFF_T8112 0x34000
 #define CPU_START_OFF_T6020 0x28000
+#define CPU_START_OFF_T6031 0x88000
 
 #define CPU_REG_CORE    GENMASK(7, 0)
 #define CPU_REG_CLUSTER GENMASK(10, 8)
@@ -206,12 +207,17 @@ void smp_start_secondaries(void)
             cpu_start_off = CPU_START_OFF_T8103;
             break;
         case T8112:
+        case T8122:
             cpu_start_off = CPU_START_OFF_T8112;
             break;
         case T6020:
         case T6021:
         case T6022:
             cpu_start_off = CPU_START_OFF_T6020;
+            break;
+        case T6031:
+        case T6034:
+            cpu_start_off = CPU_START_OFF_T6031;
             break;
         default:
             printf("CPU start offset is unknown for this SoC!\n");

@@ -67,7 +67,7 @@ static int dcp_hdmi_dptx_init(dcp_dev_t *dcp, const display_config_t *cfg)
         return -1;
     }
 
-    dcp->dptx_ep = dcp_dptx_init(dcp);
+    dcp->dptx_ep = dcp_dptx_init(dcp, cfg->num_dptxports);
     if (!dcp->dptx_ep) {
         printf("dcp: failed to initialize dptx-port endpoint\n");
         dcp_dpav_shutdown(dcp->dpav_ep);

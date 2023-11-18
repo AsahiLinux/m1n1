@@ -45,16 +45,36 @@ static const display_config_t display_config_m2 = {
     .dptx_phy = "/arm-io/dptx-phy",
     .pmgr_dev = "DISP0_CPU0",
     .dcp_index = 0,
+    .num_dptxports = 2,
 };
 
+#define T6020_T6021_USE_DCPEXT 255
+
 static const display_config_t display_config_m2_pro_max = {
+#if T6020_T6021_USE_DCPEXT == 0
+    .dcp = "/arm-io/dcpext0",
+    .dcp_dart = "/arm-io/dart-dcpext0",
+    .disp_dart = "/arm-io/dart-dispext0",
+    .pmgr_dev = "DISPEXT0_CPU0",
+    .dcp_index = 1,
+    .num_dptxports = 2,
+#elif T6020_T6021_USE_DCPEXT == 1
+    .dcp = "/arm-io/dcpext1",
+    .dcp_dart = "/arm-io/dart-dcpext1",
+    .disp_dart = "/arm-io/dart-dispext1",
+    .pmgr_dev = "DISPEXT1_CPU0",
+    .dcp_index = 2,
+    .num_dptxports = 2,
+#else
     .dcp = "/arm-io/dcp0",
     .dcp_dart = "/arm-io/dart-dcp0",
     .disp_dart = "/arm-io/dart-disp0",
-    .dp2hdmi_gpio = "/arm-io/dp2hdmi-gpio0",
-    .dptx_phy = "/arm-io/lpdptx-phy0",
     .pmgr_dev = "DISP0_CPU0",
     .dcp_index = 0,
+    .num_dptxports = 1,
+#endif
+    .dp2hdmi_gpio = "/arm-io/dp2hdmi-gpio0",
+    .dptx_phy = "/arm-io/lpdptx-phy0",
 };
 
 static const display_config_t display_config_m2_ultra = {
@@ -65,6 +85,7 @@ static const display_config_t display_config_m2_ultra = {
     .dptx_phy = "/arm-io/lpdptx-phy1",
     .pmgr_dev = "DISPEXT4_CPU0",
     .dcp_index = 1,
+    .num_dptxports = 2,
     .die = 1,
 };
 

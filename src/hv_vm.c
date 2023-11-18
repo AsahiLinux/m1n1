@@ -445,7 +445,7 @@ u64 hv_pt_walk(u64 addr)
 
         u64 l1d = hv_Ltop[idx];
 
-        dprintf("  l1d = 0x%lx\n", l2d);
+        dprintf("  l1d = 0x%lx\n", l1d);
 
         if (!L1_IS_TABLE(l1d)) {
             dprintf("  result: 0x%lx\n", l1d);
@@ -871,7 +871,7 @@ bool hv_pa_write(struct exc_info *ctx, u64 addr, u64 *val, int width)
                 write64(addr + 8 * i, val[i]);
             break;
         default:
-            dprintf("HV: unsupported write width %ld\n", width);
+            dprintf("HV: unsupported write width %d\n", width);
             exc_guard = GUARD_OFF;
             return false;
     }
@@ -918,7 +918,7 @@ bool hv_pa_read(struct exc_info *ctx, u64 addr, u64 *val, int width)
             val[3] = read64(addr + 24);
             break;
         default:
-            dprintf("HV: unsupported read width %ld\n", width);
+            dprintf("HV: unsupported read width %d\n", width);
             exc_guard = GUARD_OFF;
             return false;
     }
@@ -982,8 +982,8 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
                 hv_hook_t *hook = (hv_hook_t *)target;
                 if (!hook(ctx, ipa, val, true, width))
                     return false;
-                dprintf("HV: SPTE_HOOK[W] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr, far, ipa,
-                        1 << width, hook, wval);
+                dprintf("HV: SPTE_HOOK[W] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr, ipa,
+                        paddr, 1 << width, hook, val);
                 break;
             }
             case SPTE_PROXY_HOOK_RW:
@@ -1021,8 +1021,8 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
                 hv_hook_t *hook = (hv_hook_t *)target;
                 if (!hook(ctx, ipa, val, false, width))
                     return false;
-                dprintf("HV: SPTE_HOOK[R] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr, far, ipa,
-                        1 << width, hook, val);
+                dprintf("HV: SPTE_HOOK[R] @0x%lx 0x%lx -> 0x%lx (w=%d) @%p: 0x%lx\n", elr, ipa,
+                        paddr, 1 << width, hook, val);
                 break;
             }
             case SPTE_PROXY_HOOK_RW:

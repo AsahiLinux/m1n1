@@ -7,12 +7,15 @@
 
 #define T8103 0x8103
 #define T8112 0x8112
+#define T8122 0x8122
 #define T6000 0x6000
 #define T6001 0x6001
 #define T6002 0x6002
 #define T6020 0x6020
 #define T6021 0x6021
 #define T6022 0x6022
+#define T6031 0x6031
+#define T6034 0x6034
 
 #ifdef TARGET
 

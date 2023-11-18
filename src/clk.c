@@ -113,7 +113,7 @@ void clk_set_pdm_gates(void)
     int alc_node = adt_path_offset(adt, "/arm-io/alc0");
 
     if (alc_node < 0) {
-        printf("CLK: Model has no internal microphones, skipping PDM clock init");
+        printf("CLK: Model has no internal microphones, skipping PDM clock init\n");
         return;
     }
 
