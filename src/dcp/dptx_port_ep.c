@@ -13,8 +13,7 @@
 #include "../types.h"
 #include "../utils.h"
 
-#define DCP_DPTX_PORT_ENDPOINT     0x2a
-#define DCP_DPTX_PORT_NUM_SERVICES 2
+#define DCP_DPTX_PORT_ENDPOINT 0x2a
 
 #define TXBUF_LEN 0x4000
 #define RXBUF_LEN 0x4000
@@ -546,7 +545,7 @@ int dcp_dptx_disconnect(dcp_dptx_if_t *dptx, u32 port)
     return 0;
 }
 
-dcp_dptx_if_t *dcp_dptx_init(dcp_dev_t *dcp)
+dcp_dptx_if_t *dcp_dptx_init(dcp_dev_t *dcp, u32 num_dptxports)
 {
     dcp_dptx_if_t *dptx = calloc(1, sizeof(dcp_dptx_if_t));
     if (!dptx)
@@ -559,8 +558,7 @@ dcp_dptx_if_t *dcp_dptx_init(dcp_dev_t *dcp)
         goto err_free;
     }
 
-    int err = afk_epic_start_interface(dptx->epic, dptx, DCP_DPTX_PORT_NUM_SERVICES, TXBUF_LEN,
-                                       RXBUF_LEN);
+    int err = afk_epic_start_interface(dptx->epic, dptx, num_dptxports, TXBUF_LEN, RXBUF_LEN);
     if (err < 0) {
         printf("dcp-dptx: failed to initialize DPTXRemotePort interface\n");
         goto err_shutdown;

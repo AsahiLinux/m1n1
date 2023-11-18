@@ -1343,7 +1343,8 @@ static int dt_set_dcp_firmware(const char *alias)
             break;
         case V13_5B4:
         case V13_5:
-            compat = &fw_versions[V13_3];
+        case V13_6_2:
+            compat = &fw_versions[V13_5];
             break;
         default:
             compat = &os_firmware;
@@ -1483,6 +1484,11 @@ static int dt_add_reserved_regions(const char *dcp_alias, const char *disp_alias
         if (fdt_setprop_string(dt, dart_disp0, "status", "okay") < 0)
             bail_cleanup("FDT: failed to enable 'dart-disp0'\n");
     }
+    /* enable dcp* */
+    int dcp_node = fdt_path_offset(dt, dcp_alias);
+    if (dcp_node < 0 || fdt_setprop_string(dt, dcp_node, "status", "okay") < 0)
+        bail_cleanup("FDT: failed to enable '%s'\n", dcp_alias);
+
 err:
     if (dart_dcp)
         dart_shutdown(dart_dcp);
@@ -1610,12 +1616,18 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_al
         char node_name[64];
         snprintf(node_name, sizeof(node_name), "asc-firmware@%lx", seg->phys);
 
-        int mem_node = dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", seg->phys, seg->size);
+        size_t seg_size = seg->size;
+        if (seg->size & (SZ_16K - 1)) {
+            printf("ADT: segment %s uses non 16k aligned size: 0x%06zx\n", node_name, seg_size);
+            seg_size = ALIGN_UP(seg_size, SZ_16K);
+        }
+
+        int mem_node = dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", seg->phys, seg_size);
         if (mem_node < 0)
             return ret;
         uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
 
-        ret = dt_device_set_reserved_mem(mem_node, node_name, dev_phandle, iova, seg->size);
+        ret = dt_device_set_reserved_mem(mem_node, node_name, dev_phandle, iova, seg_size);
         if (ret < 0)
             return ret;
 
@@ -1624,6 +1636,46 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_al
             return ret;
 
         seg++;
+    }
+
+    return 0;
+}
+
+static const char dcpext_aliases[][8] = {
+    "dcpext",  "dcpext0", "dcpext1", "dcpext2", "dcpext3",
+    "dcpext4", "dcpext5", "dcpext6", "dcpext7",
+};
+
+static int dt_reserve_dcpext_firmware(void)
+{
+    /* reserve asc for all  */
+    for (size_t n = 0; n < ARRAY_SIZE(dcpext_aliases); n++) {
+        const char *dcpext_alias = dcpext_aliases[n];
+        char adt_path[48];
+
+        snprintf(adt_path, sizeof(adt_path) - 1, "/arm-io/%s/iop-%s-nub", dcpext_alias,
+                 dcpext_alias);
+        adt_path[sizeof(adt_path) - 1] = '\0';
+
+        if (adt_path_offset(adt, adt_path) < 0)
+            continue;
+
+        int dcpext_node = fdt_path_offset(dt, dcpext_alias);
+        if (dcpext_node < 0)
+            continue;
+
+        int ret = dt_reserve_asc_firmware(adt_path, NULL, dcpext_alias, true, 0);
+        if (ret < 0)
+            bail("FDT: reserving ASC firmware for %s failed!\n", dcpext_alias);
+
+        ret = dt_set_dcp_firmware(dcpext_alias);
+        if (ret)
+            continue;
+
+        // refresh dcpext_node
+        dcpext_node = fdt_path_offset(dt, dcpext_alias);
+        if ((dcpext_node < 0) || (fdt_setprop_string(dt, dcpext_node, "status", "okay") < 0))
+            printf("FDT: failed to enable '%s'\n", dcpext_alias);
     }
 
     return 0;
@@ -1643,18 +1695,12 @@ static struct disp_mapping dcpext_reserved_regions_t8103[] = {
 };
 
 static struct disp_mapping disp_reserved_regions_t8112[] = {
-    {"region-id-49", "dcp_txt", true, false, false},
+    {"region-id-49", "asc-firmware", true, false, false},
     {"region-id-50", "dcp_data", true, false, false},
     {"region-id-57", "region57", true, false, false},
     // The 2 following regions are mapped in dart-dcp sid 5 and dart-disp0 sid 0 and 4
     {"region-id-94", "region94", true, true, false},
     {"region-id-95", "region95", true, false, true},
-};
-
-static struct disp_mapping dcpext_reserved_regions_t8112[] = {
-    {"region-id-49", "dcp_txt", true, false, false},
-    {"region-id-73", "dcpext_data", true, false, false},
-    {"region-id-74", "region74", true, false, false},
 };
 
 static struct disp_mapping disp_reserved_regions_t600x[] = {
@@ -1705,7 +1751,7 @@ static struct disp_mapping dcpext_reserved_regions_t600x[MAX_DCPEXT][2] = {
 };
 
 static struct disp_mapping disp_reserved_regions_t602x[] = {
-    {"region-id-49", "dcp_txt", true, false, false},
+    {"region-id-49", "asc-firmware", true, false, false},
     {"region-id-50", "dcp_data", true, false, false},
     {"region-id-57", "region57", true, false, false},
     // The 2 following regions are mapped in dart-dcp sid 0 and dart-disp0 sid 0 and 4
@@ -1714,8 +1760,6 @@ static struct disp_mapping disp_reserved_regions_t602x[] = {
     // used on M1 Pro/Max/Ultra, mapped to dcp and disp0
     {"region-id-157", "region157", true, true, false},
 };
-
-#define ARRAY_SIZE(s) (sizeof(s) / sizeof((s)[0]))
 
 static int dt_set_display(void)
 {
@@ -1730,6 +1774,7 @@ static int dt_set_display(void)
      * they are missing. */
 
     int ret = 0;
+    char dcp_alias[8] = "dcp";
 
     if (!fdt_node_check_compatible(dt, 0, "apple,t8103")) {
         ret = dt_carveout_reserved_regions("dcp", "disp0", "disp0_piodma",
@@ -1746,9 +1791,6 @@ static int dt_set_display(void)
                                            ARRAY_SIZE(disp_reserved_regions_t8112));
         if (ret)
             return ret;
-
-        ret = dt_carveout_reserved_regions("dcpext", NULL, NULL, dcpext_reserved_regions_t8112,
-                                           ARRAY_SIZE(dcpext_reserved_regions_t8112));
     } else if (!fdt_node_check_compatible(dt, 0, "apple,t6000") ||
                !fdt_node_check_compatible(dt, 0, "apple,t6001") ||
                !fdt_node_check_compatible(dt, 0, "apple,t6002")) {
@@ -1758,13 +1800,15 @@ static int dt_set_display(void)
         if (ret)
             return ret;
 
-        for (int n = 0; n < MAX_DCPEXT && ret == 0; n++) {
-            char dcpext_alias[16];
+        if (os_firmware.version >= V13_5) {
+            for (int n = 0; n < MAX_DCPEXT && ret == 0; n++) {
+                char dcpext_alias[16];
 
-            snprintf(dcpext_alias, sizeof(dcpext_alias), "dcpext%d", n);
-            ret = dt_carveout_reserved_regions(dcpext_alias, NULL, NULL,
-                                               dcpext_reserved_regions_t600x[n],
-                                               ARRAY_SIZE(dcpext_reserved_regions_t600x[n]));
+                snprintf(dcpext_alias, sizeof(dcpext_alias), "dcpext%d", n);
+                ret = dt_carveout_reserved_regions(dcpext_alias, NULL, NULL,
+                                                   dcpext_reserved_regions_t600x[n],
+                                                   ARRAY_SIZE(dcpext_reserved_regions_t600x[n]));
+            }
         }
     } else if (!fdt_node_check_compatible(dt, 0, "apple,t6020") ||
                !fdt_node_check_compatible(dt, 0, "apple,t6021")) {
@@ -1773,6 +1817,10 @@ static int dt_set_display(void)
                                            ARRAY_SIZE(disp_reserved_regions_t602x));
         if (ret)
             return ret;
+    } else if (!fdt_node_check_compatible(dt, 0, "apple,t6022")) {
+        // Set dcp_alias to "dcpext4" on  M2 Ultra, cmp. display.c
+        strncpy(dcp_alias, "dcpext4", sizeof(dcp_alias));
+        dcp_alias[sizeof(dcp_alias) - 1] = '\0';
     } else {
         printf("FDT: unknown compatible, skip display reserved-memory setup\n");
         return 0;
@@ -1780,7 +1828,17 @@ static int dt_set_display(void)
     if (ret)
         return ret;
 
-    return dt_vram_reserved_region("dcp", "disp0");
+    /*
+     * Ignore errors for dcpext firmware reservation, nodes should be disabled
+     * if the reservation fails allowing basic operation with just dcp.
+     */
+    if (!fdt_node_check_compatible(dt, 0, "apple,t8112") ||
+        !fdt_node_check_compatible(dt, 0, "apple,t6020") ||
+        !fdt_node_check_compatible(dt, 0, "apple,t6021") ||
+        !fdt_node_check_compatible(dt, 0, "apple,t6022"))
+        dt_reserve_dcpext_firmware();
+
+    return dt_vram_reserved_region(dcp_alias, "disp0");
 }
 
 static int dt_set_sio_fwdata(void)
@@ -1873,7 +1931,18 @@ static int dt_set_isp_fwdata(void)
     if (firmware_set_fdt(dt, fdt_node, "apple,firmware-version", &os_firmware) < 0)
         bail("FDT: Could not set apple,firmware-version for %s\n", fdt_path);
 
-    if (firmware_set_fdt(dt, fdt_node, "apple,firmware-compat", &os_firmware) < 0)
+    const struct fw_version_info *compat;
+
+    switch (os_firmware.version) {
+        case V13_6_2:
+            compat = &fw_versions[V13_5];
+            break;
+        default:
+            compat = &os_firmware;
+            break;
+    }
+
+    if (firmware_set_fdt(dt, fdt_node, "apple,firmware-compat", compat) < 0)
         bail("FDT: Could not set apple,firmware-compat for %s\n", fdt_path);
 
     if (isp_get_heap(&phys, &iova, &size)) {
