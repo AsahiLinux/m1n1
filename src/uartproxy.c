@@ -9,7 +9,7 @@
 #include "types.h"
 #include "utils.h"
 
-#define REQ_SIZE 64
+#define REQ_SIZE ((NUM_ARGS+2)*8)
 
 typedef struct {
     u32 _pad;
@@ -184,7 +184,21 @@ int uartproxy_run(struct uartproxy_msg_start *start)
         if (bytes != REQ_SIZE - 4)
             continue;
 
-        if (checksum(&(request.type), REQ_SIZE - 4) != request.checksum) {
+        u32 c_side_chk = checksum(&(request.type), REQ_SIZE - 4);
+
+#ifdef DEBUG
+        printf("c_side_chk: %x vs. python: %x (%d bytes)\n", c_side_chk, request.checksum, REQ_SIZE-4);
+
+        printf("Dump request : \n");
+        u8* p = (u8*)&(request.type);
+        for (int i=0; i<REQ_SIZE; ++i) {
+            printf("%02x ", *p);
+            p++;
+        }
+        printf("\n");
+#endif
+
+        if (c_side_chk != request.checksum) {
             memset(&reply, 0, sizeof(reply));
             reply.type = request.type;
             reply.status = ST_CSUMERR;

@@ -176,9 +176,11 @@ typedef enum {
 #define S_OK     0
 #define S_BADCMD -1
 
+#define NUM_ARGS 8
+
 typedef struct {
     u64 opcode;
-    u64 args[6];
+    u64 args[NUM_ARGS];
 } ProxyRequest;
 
 typedef struct {

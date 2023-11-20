@@ -110,6 +110,8 @@ ExcInfo = Struct(
 #  If the status is ST_OK returns the data field to caller
 #     Otherwise reports a remote Error
 
+EXPECTED_ARGS = 8
+
 class UartInterface(Reloadable):
     REQ_NOP = 0x00AA55FF
     REQ_PROXY = 0x01AA55FF
@@ -127,7 +129,7 @@ class UartInterface(Reloadable):
     ST_XFERERR = -3
     ST_CSUMERR = -4
 
-    CMD_LEN = 56
+    CMD_LEN = (EXPECTED_ARGS + 1) * 8
     REPLY_LEN = 36
     EVENT_HDR_LEN = 8
 
@@ -195,7 +197,10 @@ class UartInterface(Reloadable):
 
         payload = payload.ljust(self.CMD_LEN, b"\x00")
         command = struct.pack("<I", cmd) + payload
-        command += struct.pack("<I", self.checksum(command))
+        chk_sum = self.checksum(command)
+        if self.debug:
+            print("<<< checksum", hex(chk_sum))
+        command += struct.pack("<I", chk_sum)
         if self.debug:
             print("<<", hexdump(command))
         self.dev.write(command)
@@ -646,13 +651,16 @@ class M1N1Proxy(Reloadable):
         self.iface = iface
         self.heap = None
 
-    def _request(self, opcode, *args, reboot=False, signed=False, no_reply=False, pre_reply=None):
-        if len(args) > 6:
-            raise ValueError("Too many arguments")
-        args = list(args) + [0] * (6 - len(args))
-        req = struct.pack("<7Q", opcode, *args)
+    def _request(self, opcode, *args, reboot=False, signed=False, no_reply=False, pre_reply=None, silent=False):
+        if len(args) > EXPECTED_ARGS:
+            raise ValueError(f"Too many arguments: got {len(args)}, expected {EXPECTED_ARGS}")
+        args = list(args) + [0] * (EXPECTED_ARGS - len(args))
+        req = struct.pack(f"<{EXPECTED_ARGS + 1}Q", opcode, *args)
         if self.debug:
-            print("<<<< %08x: %08x %08x %08x %08x %08x %08x"%tuple([opcode] + args))
+            debug_buffer = "<<<< %08x:"%opcode
+            for arg in args:
+                debug_buffer += " %08x"%arg
+            print(debug_buffer)
         reply = self.iface.proxyreq(req, reboot=reboot, no_reply=no_reply, pre_reply=None)
         if no_reply or reboot and reply is None:
             return
