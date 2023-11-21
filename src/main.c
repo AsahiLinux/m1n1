@@ -113,7 +113,6 @@ void run_actions(void)
         printf("Valid payload found\n");
         return;
     }
-
     fb_set_active(true);
 
     printf("No valid payload found\n");

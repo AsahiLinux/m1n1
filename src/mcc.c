@@ -23,6 +23,12 @@ static bool mcc_initialized = false;
 #define T6000_DCS_STRIDE    0x100000
 #define T6000_DCS_COUNT     4
 
+#define T6031_PLANE_OFFSET  0
+#define T6031_PLANE_STRIDE  0x40000
+#define T6031_GLOBAL_OFFSET 0x100000
+#define T6031_DCS_OFFSET    0x400000
+#define T6031_DCS_STRIDE    0x200000
+
 #define PLANE_TZ_MAX_REGS 4
 
 struct tz_regs {
@@ -49,6 +55,14 @@ struct tz_regs t602x_tz_regs = {
     .enable = 0x6c8,
 };
 
+struct tz_regs t603x_tz_regs = {
+    .count = 4,
+    .stride = 0x14,
+    .start = 0x6d8,
+    .end = 0x6dc,
+    .enable = 0x6e4,
+};
+
 #define PLANE_CACHE_ENABLE 0x1c00
 #define PLANE_CACHE_STATUS 0x1c04
 
@@ -63,6 +77,12 @@ struct tz_regs t602x_tz_regs = {
 #define T6000_CACHE_STATUS_VAL                                                                     \
     (FIELD_PREP(T6000_CACHE_STATUS_DATA_COUNT, T6000_CACHE_WAYS) |                                 \
      FIELD_PREP(T6000_CACHE_STATUS_TAG_COUNT, T6000_CACHE_WAYS))
+
+#define T6031_CACHE_WAYS        12
+#define T6031_CACHE_STATUS_MASK (T6000_CACHE_STATUS_DATA_COUNT | T6000_CACHE_STATUS_TAG_COUNT)
+#define T6031_CACHE_STATUS_VAL                                                                     \
+    (FIELD_PREP(T6000_CACHE_STATUS_DATA_COUNT, T6031_CACHE_WAYS) |                                 \
+     FIELD_PREP(T6000_CACHE_STATUS_TAG_COUNT, T6031_CACHE_WAYS))
 
 #define T8103_CACHE_WAYS        16
 #define T8103_CACHE_STATUS_MASK (T8103_CACHE_STATUS_DATA_COUNT | T8103_CACHE_STATUS_TAG_COUNT)
@@ -134,6 +154,8 @@ int mcc_enable_cache(void)
     if (!mcc_initialized)
         return -1;
 
+    /* The 6030 memory controller supports setting a waymask, but the desktop chips do not appear to
+       use it */
     for (int mcc = 0; mcc < mcc_count; mcc++) {
         for (int plane = 0; plane < mcc_regs[mcc].plane_count; plane++) {
             plane_write32(mcc, plane, PLANE_CACHE_ENABLE, mcc_regs[mcc].cache_enable_val);
@@ -161,7 +183,12 @@ int mcc_unmap_carveouts(void)
 
     mcc_carveout_count = 0;
     memset(mcc_carveouts, 0, sizeof mcc_carveouts);
+
     // All MCCs and planes should have identical configs
+    // Note: For unhandled machines, the TZ regions can be found (on m1, m2, m3) by looking at
+    // region-id-2 and region-id-4 on a booted macos, in the /chosen/carveout-memory-map DT node.
+    // This can be used along with dumping the mcc reg space to find the correct start/end/enable
+    // above.
     for (u32 i = 0; i < mcc_regs[0].tz->count; i++) {
         uint64_t off = mcc_regs[0].tz->stride * i;
         uint64_t start = plane_read32(0, 0, mcc_regs[0].tz->start + off);
@@ -291,6 +318,72 @@ int mcc_init_t6000(int node, int *path, bool t602x)
     return 0;
 }
 
+int mcc_init_t6031(int node, int *path)
+{
+    u32 reg_len;
+    u32 reg_offset = 3;
+
+    if (!adt_getprop(adt, node, "reg", &reg_len)) {
+        printf("MCC: Failed to get reg property!\n");
+        return -1;
+    }
+
+    mcc_count = reg_len / 16 - reg_offset;
+
+    printf("MCC: Initializing T6031 MCCs (%d instances)...\n", mcc_count);
+
+    if (mcc_count > MAX_MCC_INSTANCES) {
+        printf("MCC: Too many instances, increase MAX_MCC_INSTANCES!\n");
+        mcc_count = MAX_MCC_INSTANCES;
+    }
+
+    u32 plane_count = 0;
+    u32 dcs_count = 0;
+
+    if (!ADT_GETPROP(adt, node, "dcs-count-per-amcc", &dcs_count)) {
+        printf("MCC: Failed to get dcs count!\n");
+        return -1;
+    }
+
+    if (!ADT_GETPROP(adt, node, "plane-count-per-amcc", &plane_count)) {
+        printf("MCC: Failed to get plane count!\n");
+        return -1;
+    }
+
+    for (int i = 0; i < mcc_count; i++) {
+        u64 base;
+        if (adt_get_reg(adt, path, "reg", i + reg_offset, &base, NULL)) {
+            printf("MCC: Failed to get reg index %d!\n", i + reg_offset);
+            return -1;
+        }
+
+        mcc_regs[i].plane_base = base + T6031_PLANE_OFFSET;
+        mcc_regs[i].plane_stride = T6031_PLANE_STRIDE;
+        mcc_regs[i].plane_count = plane_count;
+
+        mcc_regs[i].global_base = base + T6031_GLOBAL_OFFSET;
+
+        mcc_regs[i].dcs_base = base + T6031_DCS_OFFSET;
+        mcc_regs[i].dcs_stride = T6031_DCS_STRIDE;
+        mcc_regs[i].dcs_count = dcs_count;
+
+        mcc_regs[i].cache_enable_val = 1;
+        mcc_regs[i].cache_ways = T6031_CACHE_WAYS;
+        mcc_regs[i].cache_status_mask = T6031_CACHE_STATUS_MASK;
+        mcc_regs[i].cache_status_val = T6031_CACHE_STATUS_VAL;
+        mcc_regs[i].cache_disable = 0;
+
+        mcc_regs[i].tz = &t603x_tz_regs;
+    }
+
+    printf("MCC: Initialized T6031 MCCs (%d instances, %d planes, %d channels)\n", mcc_count,
+           mcc_regs[0].plane_count, mcc_regs[0].dcs_count);
+
+    mcc_initialized = true;
+
+    return 0;
+}
+
 int mcc_init(void)
 {
     int path[8];
@@ -309,8 +402,10 @@ int mcc_init(void)
         return mcc_init_t6000(node, path, false);
     } else if (adt_is_compatible(adt, node, "mcc,t6020")) {
         return mcc_init_t6000(node, path, true);
+    } else if (adt_is_compatible(adt, node, "mcc,t6031")) {
+        return mcc_init_t6031(node, path);
     } else {
-        printf("MCC: Unsupported version\n");
+        printf("MCC: Unsupported version:%s\n", adt_get_property(adt, node, "compatible")->value);
         return -1;
     }
 }

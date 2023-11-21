@@ -72,7 +72,7 @@ void init_t8103_firestorm(int rev)
         reg_set(SYS_IMP_APL_HID1, HID1_ENABLE_MDSB_STALL_PIPELINE_ECO | HID1_ENABLE_BR_KILL_LIMIT);
 
     if (rev >= 0x11)
-        reg_set(SYS_IMP_APL_HID18, HID18_SPAREBIT17);
+        reg_set(SYS_IMP_APL_HID18, HID18_PREF_REPLAY_DISABLE);
 }
 
 void init_t6000_firestorm(int rev)
@@ -88,7 +88,7 @@ void init_t6000_firestorm(int rev)
         reg_set(SYS_IMP_APL_HID4,
                 HID4_ENABLE_LFSR_STALL_LOAD_PIPE2_ISSUE | HID4_ENABLE_LFSR_STALL_STQ_REPLAY);
 
-        reg_set(SYS_IMP_APL_HID18, HID18_SPAREBIT17);
+        reg_set(SYS_IMP_APL_HID18, HID18_PREF_REPLAY_DISABLE);
     }
 }
 
@@ -108,6 +108,6 @@ void init_t6001_firestorm(int rev)
     if (rev >= 0x10) {
         reg_set(SYS_IMP_APL_HID1, HID1_ENABLE_BR_KILL_LIMIT);
 
-        reg_set(SYS_IMP_APL_HID18, HID18_SPAREBIT17);
+        reg_set(SYS_IMP_APL_HID18, HID18_PREF_REPLAY_DISABLE);
     }
 }
