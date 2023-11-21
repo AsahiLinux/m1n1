@@ -91,8 +91,10 @@ OBJECTS := \
 	chickens.o \
 	chickens_avalanche.o \
 	chickens_blizzard.o \
+	chickens_everest.o \
 	chickens_firestorm.o \
 	chickens_icestorm.o \
+	chickens_sawtooth.o \
 	clk.o \
 	cpufreq.o \
 	dapf.o \

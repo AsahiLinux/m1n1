@@ -29,6 +29,8 @@
     {"index": 0, "name": "EHID18_EL1",                  "fullname": "Hardware Implementation-Dependent Register 18 (E-core)",       "enc": [3, 0, 15, 11, 3 ], "width": 64},
     {"index": 0, "name": "EHID20_EL1",                  "fullname": "Hardware Implementation-Dependent Register 20 (E-core)",       "enc": [3, 0, 15, 1, 2  ], "width": 64},
     {"index": 0, "name": "HID21_EL1",                   "fullname": "Hardware Implementation-Dependent Register 21",                "enc": [3, 0, 15, 1, 3  ], "width": 64},
+    {"index": 0, "name": "HID26_EL1",                   "fullname": "Hardware Implementation-Dependent Register 26",                "enc": [3, 0, 15, 0, 3  ], "width": 64},
+    {"index": 0, "name": "HID27_EL1",                   "fullname": "Hardware Implementation-Dependent Register 27",                "enc": [3, 0, 15, 0, 4  ], "width": 64},
     {"index": 0, "name": "PMCR0_EL1",                   "fullname": "Performance Monitor Control Register 0",                       "enc": [3, 1, 15, 0, 0  ], "width": 64,
         "fieldsets": [{"fields": [
             {"name": "PMC0_EN",                         "msb": 0, "lsb": 0},

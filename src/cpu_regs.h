@@ -299,6 +299,8 @@
 #define HID11_ENABLE_FIX_UC_55719865 BIT(15)
 #define HID11_DISABLE_LD_NT_WIDGET   BIT(59)
 
+#define SYS_IMP_APL_HID12 sys_reg(3, 0, 15, 12, 0)
+
 #define SYS_IMP_APL_HID13           sys_reg(3, 0, 15, 14, 0)
 #define HID13_POST_OFF_CYCLES(x)    ((ULONG(x)))
 #define HID13_POST_OFF_CYCLES_MASK  GENMASK(6, 0)
@@ -333,12 +335,12 @@
 #define HID16_ENABLE_MPX_PICK_45  BIT(61)
 #define HID16_ENABLE_MP_CYCLONE_7 BIT(62)
 
-#define SYS_IMP_APL_HID18             sys_reg(3, 0, 15, 11, 2)
-#define HID18_HVC_SPECULATION_DISABLE BIT(14)
-#define HID18_AVL_UNK27               BIT(27)
-#define HID18_AVL_UNK29               BIT(29)
-#define HID18_SPAREBIT7               BIT(39)
-#define HID18_SPAREBIT17              BIT(49)
+#define SYS_IMP_APL_HID18                  sys_reg(3, 0, 15, 11, 2)
+#define HID18_HVC_SPECULATION_DISABLE      BIT(14)
+#define HID18_GEXIT_EL_SPECULATION_DISABLE BIT(27)
+#define HID18_GENTER_SPECULATION_DISABLE   BIT(29)
+#define HID18_BTP_BRN_DISABLE              BIT(39)
+#define HID18_PREF_REPLAY_DISABLE          BIT(49)
 
 #define SYS_IMP_APL_EHID18 sys_reg(3, 0, 15, 11, 3)
 #define EHID18_BLZ_UNK34   BIT(34)
@@ -401,11 +403,12 @@
 #define EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL(x)                    ((ULONG(x)) << 21)
 #define EHID20_FORCE_NONSPEC_TARGETED_TIMER_SEL_MASK                  (3UL << 21)
 
-#define SYS_IMP_APL_HID21                            sys_reg(3, 0, 15, 1, 3)
+#define SYS_IMP_APL_HID21 sys_reg(3, 0, 15, 1, 3)
+// In 6031's, this is marked as "wfi_full_quis"
 #define HID21_ENABLE_LDREX_FILL_REPLY                BIT(19)
-#define HID21_LDQ_RTR_WAIT_FOR_OLD_ST_REL_COMPLETION BIT(33)
-#define HID21_DISABLE_CDP_REPLY_PURGED_TRANSACTION   BIT(34)
-#define HID21_AVL_UNK52                              BIT(52)
+#define HID21_LDQ_RTR_WAIT_FOR_OLD_ST_REL_COMPLETION BIT(34)
+#define HID21_DISABLE_CDP_REPLY_PURGED_TRANSACTION   BIT(35)
+#define HID21_PURGE_MMU_ON_ANY_SPR_SYNC              BIT(52)
 
 #define SYS_IMP_APL_HID26        sys_reg(3, 0, 15, 0, 3)
 #define HID26_GROUP1_OFFSET(x)   ((ULONG(x)) << 0)
@@ -617,3 +620,7 @@
 #define IPI_SR_PENDING         BIT(0)
 
 #define SYS_IMP_APL_IPI_CR_EL1 sys_reg(3, 5, 15, 3, 1)
+
+/* Lockdown registers */
+#define SYS_IMP_APL_SPR_LOCKDOWN_EL2 sys_reg(3, 4, 15, 0, 5)
+#define SYS_IMP_APL_SPR_LOCKDOWN_EL1 sys_reg(3, 4, 15, 0, 6)
