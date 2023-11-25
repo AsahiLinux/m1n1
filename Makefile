@@ -30,7 +30,7 @@ AS := $(TOOLCHAIN)$(ARCH)gcc
 LD := $(TOOLCHAIN)$(ARCH)ld
 OBJCOPY := $(TOOLCHAIN)$(ARCH)objcopy
 CLANG_FORMAT := clang-format
-EXTRA_CFLAGS ?= -Wstack-usage=1024
+EXTRA_CFLAGS ?= -Wstack-usage=2048
 endif
 
 BASE_CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
