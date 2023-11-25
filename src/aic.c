@@ -7,7 +7,7 @@
 #include "utils.h"
 
 #define MASK_REG(x) (4 * ((x) >> 5))
-#define MASK_BIT(x) BIT((x)&GENMASK(4, 0))
+#define MASK_BIT(x) BIT((x) & GENMASK(4, 0))
 
 static struct aic aic1 = {
     .version = 1,
