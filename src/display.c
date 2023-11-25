@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "../build/build_cfg.h"
+
 #include "display.h"
 #include "adt.h"
 #include "assert.h"
@@ -225,6 +227,11 @@ int display_start_dcp(void)
     if (iboot)
         return 0;
 
+#ifdef NO_DISPLAY
+    printf("display: NO_DISPLAY!\n");
+    return 0;
+#endif
+
     const display_config_t *disp_cfg = &display_config_m1;
 
     if (adt_is_compatible(adt, 0, "J473AP"))
@@ -349,6 +356,11 @@ int display_configure(const char *config)
 {
     dcp_timing_mode_t want;
     struct display_options opts = {0};
+
+#ifdef NO_DISPLAY
+    printf("display: skip configuration (NO_DISPLAY)\n");
+    return 0;
+#endif
 
     display_parse_mode(config, &want, &opts);
 
