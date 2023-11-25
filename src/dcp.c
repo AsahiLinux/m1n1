@@ -55,6 +55,8 @@ static int dcp_hdmi_dptx_init(dcp_dev_t *dcp, const display_config_t *cfg)
         }
     }
 
+    dcp->die = cfg->die;
+
     dcp->phy = dptx_phy_init(cfg->dptx_phy, cfg->dcp_index);
     if (!dcp->phy) {
         printf("dcp: failed to init (lp)dptx-phy '%s'\n", cfg->dptx_phy);
@@ -93,7 +95,7 @@ static int dcp_hdmi_dptx_init(dcp_dev_t *dcp, const display_config_t *cfg)
 int dcp_connect_dptx(dcp_dev_t *dcp)
 {
     if (dcp->dptx_ep && dcp->phy) {
-        return dcp_dptx_connect(dcp->dptx_ep, dcp->phy, 0);
+        return dcp_dptx_connect(dcp->dptx_ep, dcp->phy, dcp->die, 0);
     }
 
     return 0;

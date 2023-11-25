@@ -35,6 +35,7 @@ typedef struct dcp_dev {
     dcp_dpav_if_t *dpav_ep;
     dcp_dptx_if_t *dptx_ep;
     dptx_phy_t *phy;
+    u32 die;
     u32 dp2hdmi_pwr_gpio;
     u32 hdmi_pwr_gpio;
 } dcp_dev_t;
