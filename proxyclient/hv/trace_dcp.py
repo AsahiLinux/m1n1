@@ -868,16 +868,18 @@ class DCPEp(EP):
         self.state.ch = {}
         self.state.dumpfile = None
 
-        self.ch_cb = DCPCallChannel(self, "CB", 0x60000, 0x8000)
-        self.ch_cmd = DCPCallChannel(self, "CMD", 0, 0x8000)
-        self.ch_async = DCPCallChannel(self, "ASYNC", 0x40000, 0x20000)
-        self.ch_oobcb = DCPCallChannel(self, "OOBCB", 0x68000, 0x8000)
-        self.ch_oobcmd = DCPCallChannel(self, "OOBCMD", 0x8000, 0x8000)
+        self.ch_cmd      = DCPCallChannel(self, "CMD",      0x00000, 0x8000)
+        self.ch_oobcmd   = DCPCallChannel(self, "OOBCMD",   0x08000, 0x8000)
+        self.ch_async    = DCPCallChannel(self, "ASYNC",    0x40000, 0x8000)
+        self.ch_oobasync = DCPCallChannel(self, "OOBASYNC", 0x48000, 0x8000)
+        self.ch_cb       = DCPCallChannel(self, "CB",       0x60000, 0x8000)
+        self.ch_oobcb    = DCPCallChannel(self, "OOBCB",    0x68000, 0x8000)
 
         self.cmd_ch = {
             CallContext.CB: self.ch_cmd,
             CallContext.CMD: self.ch_cmd,
             CallContext.ASYNC: None, # unknown
+            CallContext.OOBASYNC: None, # unknown
             CallContext.OOBCB: self.ch_oobcmd,
             CallContext.OOBCMD: self.ch_oobcmd,
         }
@@ -886,6 +888,7 @@ class DCPEp(EP):
             CallContext.CB: self.ch_cb,
             CallContext.CMD: None,
             CallContext.ASYNC: self.ch_async,
+            CallContext.OOBASYNC: self.ch_oobasync,
             CallContext.OOBCB: self.ch_oobcb,
             CallContext.OOBCMD: None,
         }
