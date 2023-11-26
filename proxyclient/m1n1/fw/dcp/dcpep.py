@@ -25,6 +25,7 @@ class CallContext(IntEnum):
     ASYNC       = 3
     OOBCB       = 4
     OOBCMD      = 6
+    OOBASYNC    = 7
 
 class DCPEp_Msg(DCPMessage):
     LEN         = 63, 32
@@ -124,7 +125,8 @@ class DCPEndpoint(ASCBaseEndpoint):
 
         self.ch_cb = DCPCallbackChannel(self, "CB", 0x60000, 0x8000)
         self.ch_cmd = DCPCallChannel(self, "CMD", 0, 0x8000)
-        self.ch_async = DCPCallbackChannel(self, "ASYNC", 0x40000, 0x20000)
+        self.ch_async = DCPCallbackChannel(self, "ASYNC", 0x40000, 0x8000)
+        self.ch_oobasync = DCPCallbackChannel(self, "OOBASYNC", 0x48000, 0x8000)
         self.ch_oobcb = DCPCallbackChannel(self, "OOBCB", 0x68000, 0x8000)
         self.ch_oobcmd = DCPCallChannel(self, "OOBCMD", 0x8000, 0x8000)
 
@@ -144,6 +146,8 @@ class DCPEndpoint(ASCBaseEndpoint):
                 self.ch_oobcb.cb(msg)
             elif msg.CTX == CallContext.ASYNC:
                 self.ch_async.cb(msg)
+            elif msg.CTX == CallContext.OOBASYNC:
+                self.ch_oobasync.cb(msg)
             else:
                 raise Exception(f"Unknown RX callback channel {msg.CTX}")
         return True
