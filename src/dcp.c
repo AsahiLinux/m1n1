@@ -204,12 +204,7 @@ out_free:
 
 int dcp_shutdown(dcp_dev_t *dcp, bool sleep)
 {
-    if (dcp->dptx_ep) {
-        if (sleep) {
-            printf("DCP: dcp_shutdown(sleep=true) is broken with dptx-port, quiesce instead\n");
-            sleep = false;
-        }
-    }
+    /* dcp/dcp0 on desktop M2 and M2 Pro/Max devices do not wake from sleep */
     dcp_system_shutdown(dcp->system_ep);
     dcp_dptx_shutdown(dcp->dptx_ep);
     dcp_dpav_shutdown(dcp->dpav_ep);

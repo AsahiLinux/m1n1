@@ -8,6 +8,7 @@
 #include "clk.h"
 #include "dapf.h"
 #include "devicetree.h"
+#include "display.h"
 #include "exception.h"
 #include "firmware.h"
 #include "isp.h"
@@ -1774,7 +1775,6 @@ static int dt_set_display(void)
      * they are missing. */
 
     int ret = 0;
-    char dcp_alias[8] = "dcp";
 
     if (!fdt_node_check_compatible(dt, 0, "apple,t8103")) {
         ret = dt_carveout_reserved_regions("dcp", "disp0", "disp0_piodma",
@@ -1818,9 +1818,7 @@ static int dt_set_display(void)
         if (ret)
             return ret;
     } else if (!fdt_node_check_compatible(dt, 0, "apple,t6022")) {
-        // Set dcp_alias to "dcpext4" on  M2 Ultra, cmp. display.c
-        strncpy(dcp_alias, "dcpext4", sizeof(dcp_alias));
-        dcp_alias[sizeof(dcp_alias) - 1] = '\0';
+        /* noop */
     } else {
         printf("FDT: unknown compatible, skip display reserved-memory setup\n");
         return 0;
@@ -1838,7 +1836,9 @@ static int dt_set_display(void)
         !fdt_node_check_compatible(dt, 0, "apple,t6022"))
         dt_reserve_dcpext_firmware();
 
-    return dt_vram_reserved_region(dcp_alias, "disp0");
+    const display_config_t *disp_cfg = display_get_config();
+
+    return dt_vram_reserved_region(disp_cfg->dcp_alias, "disp0");
 }
 
 static int dt_set_sio_fwdata(void)
