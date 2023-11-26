@@ -656,7 +656,7 @@ class UnifiedPipeline2(IPCObject):
         D109 = cb_create_PMU_service
         D110 = cb_create_iomfb_service
         D111 = cb_create_backlight_service
-        D112 = set_idle_caching_state_ap
+        D112 = cb_set_idle_caching_state_ap
         D116 = cb_start_hardware_boot
         D117 = cb_is_dark_boot
         D118 = cb_is_waking_from_hibernate
@@ -860,6 +860,7 @@ class IOMobileFramebufferAP(IPCObject):
     D589 = Callback(void, "swap_complete_ap_gated", swap_id=uint, unkBool=bool_, swap_data=InPtr(SwapCompleteData), swap_info=SwapInfoBlob, unkUint=uint)
 
     D591 = Callback(void, "swap_complete_intent_gated", swap_id=uint, unkB=bool_, unkInt=uint32_t, width=uint, height=uint)
+    D592 = Callback(void, "abort_swap_ap_gated", swap_id=uint)
     D593 = Callback(void, "enable_backlight_message_ap_gated", bool_)
     D594 = Callback(void, "setSystemConsoleMode", bool_)
 
