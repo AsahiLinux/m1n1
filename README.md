@@ -16,6 +16,8 @@ The output will be in build/m1n1.macho.
 
 To build on a native arm64 machine, use `make ARCH=`.
 
+To build verbosely, use `make V=1`.
+
 Building on ARM64 macOS is supported with clang and LLVM; you need to use Homebrew to
 install the required dependencies:
 

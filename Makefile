@@ -33,6 +33,16 @@ CLANG_FORMAT := clang-format
 EXTRA_CFLAGS ?= -Wstack-usage=2048
 endif
 
+ifeq ($(V),)
+QUIET := @
+else
+ifeq ($(V),0)
+QUIET := @
+else
+QUIET :=
+endif
+endif
+
 BASE_CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-Werror=implicit-function-declaration -Werror=implicit-int \
 	-Wsign-compare -Wunused-parameter -Wno-multichar \
@@ -173,79 +183,79 @@ rustfmt-check:
 	cd rust && cargo fmt --check
 
 build/$(RUST_LIB): rust/src/* rust/*
-	@echo "  RS    $@"
-	@mkdir -p $(DEPDIR)
-	@mkdir -p "$(dir $@)"
-	@cargo build --target $(RUSTARCH) --lib --release --manifest-path rust/Cargo.toml --target-dir build
-	@cp "build/$(RUSTARCH)/release/${RUST_LIB}" "$@"
+	$(QUIET)echo "  RS    $@"
+	$(QUIET)mkdir -p $(DEPDIR)
+	$(QUIET)mkdir -p "$(dir $@)"
+	$(QUIET)cargo build --target $(RUSTARCH) --lib --release --manifest-path rust/Cargo.toml --target-dir build
+	$(QUIET)cp "build/$(RUSTARCH)/release/${RUST_LIB}" "$@"
 
 build/%.o: src/%.S
-	@echo "  AS    $@"
-	@mkdir -p $(DEPDIR)
-	@mkdir -p "$(dir $@)"
-	@$(AS) -c $(CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
+	$(QUIET)echo "  AS    $@"
+	$(QUIET)mkdir -p $(DEPDIR)
+	$(QUIET)mkdir -p "$(dir $@)"
+	$(QUIET)$(AS) -c $(CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
 
 $(BUILD_FP_OBJS): build/%.o: src/%.c
-	@echo "  CC FP $@"
-	@mkdir -p $(DEPDIR)
-	@mkdir -p "$(dir $@)"
-	@$(CC) -c $(BASE_CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
+	$(QUIET)echo "  CC FP $@"
+	$(QUIET)mkdir -p $(DEPDIR)
+	$(QUIET)mkdir -p "$(dir $@)"
+	$(QUIET)$(CC) -c $(BASE_CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
 
 build/%.o: src/%.c
-	@echo "  CC    $@"
-	@mkdir -p $(DEPDIR)
-	@mkdir -p "$(dir $@)"
-	@$(CC) -c $(CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
+	$(QUIET)echo "  CC    $@"
+	$(QUIET)mkdir -p $(DEPDIR)
+	$(QUIET)mkdir -p "$(dir $@)"
+	$(QUIET)$(CC) -c $(CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
 
 # special target for usage by m1n1.loadobjs
 invoke_cc:
-	@$(CC) -c $(CFLAGS) -Isrc -o $(OBJFILE) $(CFILE)
+	$(QUIET)$(CC) -c $(CFLAGS) -Isrc -o $(OBJFILE) $(CFILE)
 
 build/$(NAME).elf: $(BUILD_ALL_OBJS) m1n1.ld
-	@echo "  LD    $@"
-	@$(LD) -T m1n1.ld $(LDFLAGS) -o $@ $(BUILD_ALL_OBJS)
+	$(QUIET)echo "  LD    $@"
+	$(QUIET)$(LD) -T m1n1.ld $(LDFLAGS) -o $@ $(BUILD_ALL_OBJS)
 
 build/$(NAME)-raw.elf: $(BUILD_ALL_OBJS) m1n1-raw.ld
-	@echo "  LDRAW $@"
-	@$(LD) -T m1n1-raw.ld $(LDFLAGS) -o $@ $(BUILD_ALL_OBJS)
+	$(QUIET)echo "  LDRAW $@"
+	$(QUIET)$(LD) -T m1n1-raw.ld $(LDFLAGS) -o $@ $(BUILD_ALL_OBJS)
 
 build/$(NAME).macho: build/$(NAME).elf
-	@echo "  MACHO $@"
-	@$(OBJCOPY) -O binary --strip-debug $< $@
+	$(QUIET)echo "  MACHO $@"
+	$(QUIET)$(OBJCOPY) -O binary --strip-debug $< $@
 
 build/$(NAME).bin: build/$(NAME)-raw.elf
-	@echo "  RAW   $@"
-	@$(OBJCOPY) -O binary --strip-debug $< $@
+	$(QUIET)echo "  RAW   $@"
+	$(QUIET)$(OBJCOPY) -O binary --strip-debug $< $@
 
 update_tag:
-	@mkdir -p build
-	@./version.sh > build/build_tag.tmp
-	@cmp -s build/build_tag.h build/build_tag.tmp 2>/dev/null || \
+	$(QUIET)mkdir -p build
+	$(QUIET)./version.sh > build/build_tag.tmp
+	$(QUIET)cmp -s build/build_tag.h build/build_tag.tmp 2>/dev/null || \
 	( mv -f build/build_tag.tmp build/build_tag.h && echo "  TAG   build/build_tag.h" )
 
 update_cfg:
-	@mkdir -p build
-	@for i in $(CFG); do echo "#define $$i"; done > build/build_cfg.tmp
-	@cmp -s build/build_cfg.h build/build_cfg.tmp 2>/dev/null || \
+	$(QUIET)mkdir -p build
+	$(QUIET)for i in $(CFG); do echo "#define $$i"; done > build/build_cfg.tmp
+	$(QUIET)cmp -s build/build_cfg.h build/build_cfg.tmp 2>/dev/null || \
 	( mv -f build/build_cfg.tmp build/build_cfg.h && echo "  CFG   build/build_cfg.h" )
 
 build/build_tag.h: update_tag
 build/build_cfg.h: update_cfg
 
 build/%.bin: data/%.bin
-	@echo "  IMG   $@"
-	@mkdir -p "$(dir $@)"
-	@cp $< $@
+	$(QUIET)echo "  IMG   $@"
+	$(QUIET)mkdir -p "$(dir $@)"
+	$(QUIET)cp $< $@
 
 build/%.o: build/%.bin
-	@echo "  BIN   $@"
-	@mkdir -p "$(dir $@)"
-	@$(OBJCOPY) -I binary -B aarch64 -O elf64-littleaarch64 $< $@
+	$(QUIET)echo "  BIN   $@"
+	$(QUIET)mkdir -p "$(dir $@)"
+	$(QUIET)$(OBJCOPY) -I binary -B aarch64 -O elf64-littleaarch64 $< $@
 
 build/%.bin: font/%.bin
-	@echo "  CP    $@"
-	@mkdir -p "$(dir $@)"
-	@cp $< $@
+	$(QUIET)echo "  CP    $@"
+	$(QUIET)mkdir -p "$(dir $@)"
+	$(QUIET)cp $< $@
 
 build/main.o: build/build_tag.h build/build_cfg.h src/main.c
 build/usb_dwc3.o: build/build_tag.h src/usb_dwc3.c
