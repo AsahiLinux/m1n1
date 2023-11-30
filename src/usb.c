@@ -7,6 +7,7 @@
 #include "iodev.h"
 #include "malloc.h"
 #include "pmgr.h"
+#include "string.h"
 #include "tps6598x.h"
 #include "types.h"
 #include "usb_dwc3.h"
@@ -228,12 +229,29 @@ static tps6598x_dev_t *hpm_init(i2c_dev_t *i2c, const char *hpm_path)
     return tps;
 }
 
+void usb_spmi_init(void)
+{
+    for (int idx = 0; idx < USB_IODEV_COUNT; ++idx)
+        usb_phy_bringup(idx); /* Fails on missing devices, just continue */
+
+    usb_is_initialized = true;
+}
+
 void usb_init(void)
 {
     char hpm_path[sizeof(FMT_HPM_PATH)];
 
     if (usb_is_initialized)
         return;
+
+    /*
+     * M3 models do not use i2c, but instead SPMI with a new controller.
+     * We can get USB going for now by just bringing up the phys.
+     */
+    if (adt_path_offset(adt, "/arm-io/nub-spmi-a0/hpm0") != 0) {
+        usb_spmi_init();
+        return;
+    }
 
     i2c_dev_t *i2c = i2c_init("/arm-io/i2c0");
     if (!i2c) {
