@@ -134,7 +134,7 @@ void exception_initialize(void)
     reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
     msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
 
-    if (is_primary_core())
+    if (is_boot_cpu())
         msr(DAIF, 0 << 6); // Enable SError, IRQ and FIQ
     else
         msr(DAIF, 3 << 6); // Disable IRQ and FIQ

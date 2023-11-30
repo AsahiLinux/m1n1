@@ -334,9 +334,11 @@ static inline int in_el2(void)
     return (mrs(CurrentEL) >> 2) == 2;
 }
 
-static inline int is_primary_core(void)
+extern int boot_cpu_idx;
+extern u64 boot_cpu_mpidr;
+static inline int is_boot_cpu(void)
 {
-    return mrs(MPIDR_EL1) == 0x80000000;
+    return boot_cpu_idx == -1 || boot_cpu_mpidr == mrs(MPIDR_EL1);
 }
 
 extern char _base[];

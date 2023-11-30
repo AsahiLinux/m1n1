@@ -106,7 +106,7 @@ void _start_c(void *boot_args, void *base)
 /* Secondary SMP core boot */
 void _cpu_reset_c(void *stack)
 {
-    if (mrs(MPIDR_EL1) & 0xffffff)
+    if (!is_boot_cpu())
         uart_puts("RVBAR entry on secondary CPU");
     else
         uart_puts("RVBAR entry on primary CPU");
@@ -118,7 +118,7 @@ void _cpu_reset_c(void *stack)
 
     exception_initialize();
 
-    if (mrs(MPIDR_EL1) & 0xffffff)
+    if (!is_boot_cpu())
         smp_secondary_entry();
     else
         m1n1_main();

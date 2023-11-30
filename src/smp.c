@@ -43,6 +43,8 @@ static u64 pmgr_reg;
 static u64 cpu_start_off;
 
 extern u8 _vectors_start[0];
+int boot_cpu_idx = -1;
+u64 boot_cpu_mpidr = 0;
 
 void smp_secondary_entry(void)
 {
@@ -238,17 +240,46 @@ void smp_start_secondaries(void)
         cpu_nodes[cpu_id] = node;
     }
 
-    for (int i = 1; i < MAX_CPUS; i++) {
-        int node = cpu_nodes[i];
+    /* The boot cpu id never changes once set */
+    if (boot_cpu_idx == -1) {
+        /* Figure out which CPU we are on by seeing which CPU is running */
 
-        if (!node)
+        /* This seems silly but it's what XNU does */
+        for (int i = 0; i < MAX_CPUS; i++) {
+            int cpu_node = cpu_nodes[i];
+            if (!cpu_node)
+                continue;
+            const char *state = adt_getprop(adt, cpu_node, "state", NULL);
+            if (!state)
+                continue;
+            if (strcmp(state, "running") == 0) {
+                boot_cpu_idx = i;
+                boot_cpu_mpidr = mrs(MPIDR_EL1);
+                break;
+            }
+        }
+    }
+
+    if (boot_cpu_idx == -1) {
+        printf(
+            "Could not find currently running CPU in cpu table, can't start other processors!\n");
+        return;
+    }
+
+    for (int i = 0; i < MAX_CPUS; i++) {
+
+        if (i == boot_cpu_idx)
+            continue;
+        int cpu_node = cpu_nodes[i];
+
+        if (!cpu_node)
             continue;
 
         u32 reg;
         u64 cpu_impl_reg[2];
-        if (ADT_GETPROP(adt, node, "reg", &reg) < 0)
+        if (ADT_GETPROP(adt, cpu_node, "reg", &reg) < 0)
             continue;
-        if (ADT_GETPROP_ARRAY(adt, node, "cpu-impl-reg", cpu_impl_reg) < 0)
+        if (ADT_GETPROP_ARRAY(adt, cpu_node, "cpu-impl-reg", cpu_impl_reg) < 0)
             continue;
 
         u8 core = FIELD_GET(CPU_REG_CORE, reg);
@@ -258,7 +289,7 @@ void smp_start_secondaries(void)
         smp_start_cpu(i, die, cluster, core, cpu_impl_reg[0], pmgr_reg + cpu_start_off);
     }
 
-    spin_table[0].mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
+    spin_table[boot_cpu_idx].mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
 }
 
 void smp_stop_secondaries(bool deep_sleep)
@@ -266,7 +297,7 @@ void smp_stop_secondaries(bool deep_sleep)
     printf("Stopping secondary CPUs...\n");
     smp_set_wfe_mode(true);
 
-    for (int i = 1; i < MAX_CPUS; i++) {
+    for (int i = 0; i < MAX_CPUS; i++) {
         int node = cpu_nodes[i];
 
         if (!node)
@@ -342,8 +373,8 @@ void smp_set_wfe_mode(bool new_mode)
     wfe_mode = new_mode;
     sysop("dsb sy");
 
-    for (int cpu = 1; cpu < MAX_CPUS; cpu++)
-        if (smp_is_alive(cpu))
+    for (int cpu = 0; cpu < MAX_CPUS; cpu++)
+        if (cpu != boot_cpu_idx && smp_is_alive(cpu))
             smp_send_ipi(cpu);
 
     sysop("sev");

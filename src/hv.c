@@ -111,9 +111,15 @@ static void hv_set_gxf_vbar(void)
 
 void hv_start(void *entry, u64 regs[4])
 {
+    if (boot_cpu_idx == -1) {
+        printf("Boot CPU has not been found, can't start hypervisor\n");
+        return;
+    }
+
     memset(hv_should_exit, 0, sizeof(hv_should_exit));
     memset(hv_started_cpus, 0, sizeof(hv_started_cpus));
-    hv_started_cpus[0] = 1;
+
+    hv_started_cpus[boot_cpu_idx] = true;
 
     msr(VBAR_EL1, _hv_vectors_start);
 
@@ -155,9 +161,12 @@ void hv_start(void *entry, u64 regs[4])
     udelay(200000);
     spin_lock(&bhl);
 
-    hv_started_cpus[0] = false;
+    hv_started_cpus[boot_cpu_idx] = false;
 
-    for (int i = 1; i < MAX_CPUS; i++) {
+    for (int i = 0; i < MAX_CPUS; i++) {
+        if (i == boot_cpu_idx) {
+            continue;
+        }
         hv_should_exit[i] = true;
         if (hv_started_cpus[i]) {
             printf("HV: Waiting for CPU %d to exit\n", i);
