@@ -39,4 +39,5 @@ static inline int smp_id(void)
         return mrs(TPIDR_EL1);
 }
 
+extern int boot_cpu_idx;
 #endif

@@ -129,9 +129,12 @@ void hv_wdt_breadcrumb(char c)
 
 void hv_wdt_init(void)
 {
-    int node = adt_path_offset(adt, "/cpus/cpu0");
+    char boot_cpu_name[32];
+
+    snprintf(boot_cpu_name, sizeof(boot_cpu_name), "/cpus/cpu%d", boot_cpu_idx);
+    int node = adt_path_offset(adt, boot_cpu_name);
     if (node < 0) {
-        printf("Error getting /cpus/cpu0 node\n");
+        printf("Error getting %s node\n", boot_cpu_name);
         return;
     }
 

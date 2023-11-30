@@ -150,7 +150,7 @@ void iodev_console_write(const void *buf, size_t length)
 {
     bool do_lock = mmu_active();
 
-    if (!do_lock && !is_primary_core()) {
+    if (!do_lock && !is_boot_cpu()) {
         if (length && iodevs[IODEV_UART]->usage & USAGE_CONSOLE) {
             iodevs[IODEV_UART]->ops->write(iodevs[IODEV_UART]->opaque, "*", 1);
             iodevs[IODEV_UART]->ops->write(iodevs[IODEV_UART]->opaque, buf, length);

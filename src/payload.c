@@ -290,7 +290,9 @@ int payload_run(void)
         if (enable_tso) {
 
             do_enable_tso();
-            for (int i = 1; i < MAX_CPUS; i++) {
+            for (int i = 0; i < MAX_CPUS; i++) {
+                if (i == boot_cpu_idx)
+                    continue;
                 if (smp_is_alive(i)) {
                     smp_call0(i, do_enable_tso);
                     smp_wait(i);
