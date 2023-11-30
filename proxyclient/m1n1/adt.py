@@ -112,11 +112,11 @@ PMGRClocks = SafeGreedyRange(Struct(
 ))
 
 PMGRPowerDomains = SafeGreedyRange(Struct(
-    "unk" / Const(0, Int8ul),
+    "unk" / Int8ul,
     "perf_idx" / Int8ul,
     "perf_block" / Int8ul,
     "id" / Int8ul,
-    Const(0, Int32ul),
+    "flags" / Int32ul,
     "name" / PaddedString(16, "ascii"),
 ))
 
