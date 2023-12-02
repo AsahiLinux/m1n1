@@ -1558,10 +1558,12 @@ class HV(Reloadable):
             chip_id = self.u.adt["/chosen"].chip_id
             if chip_id in (0x8103, 0x6000, 0x6001, 0x6002):
                 cpu_start = 0x54000 + die * 0x20_0000_0000
-            elif chip_id in (0x8112,):
+            elif chip_id in (0x8112, 0x8122):
                 cpu_start = 0x34000 + die * 0x20_0000_0000
             elif chip_id in (0x6020, 0x6021, 0x6022):
                 cpu_start = 0x28000 + die * 0x20_0000_0000
+            elif chip_id in (0x6031,):
+                cpu_start = 0x88000 + die * 0x20_0000_0000
             else:
                 self.log("CPUSTART unknown for this SoC!")
                 break
@@ -1628,8 +1630,9 @@ class HV(Reloadable):
                 pass
 
         if not self.smp:
+            boot_cpu_name = "cpu" + str(self.p.get_boot_cpu_idx())
             for cpu in list(self.adt["cpus"]):
-                if cpu.name != "cpu0":
+                if cpu.name != boot_cpu_name:
                     print(f"Removing ADT node {cpu._path}")
                     try:
                         del self.adt["cpus"][cpu.name]
@@ -1755,7 +1758,10 @@ class HV(Reloadable):
 
         print("Setting secondary CPU RVBARs...")
         rvbar = self.entry & ~0xfff
-        for cpu in self.adt["cpus"][1:]:
+        boot_cpu_name = "cpu" + str(self.p.get_boot_cpu_idx())
+        for cpu in self.adt["cpus"]:
+            if cpu.name == boot_cpu_name:
+                continue
             addr, size = cpu.cpu_impl_reg
             print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
             self.p.write64(addr, rvbar)
@@ -1906,7 +1912,10 @@ class HV(Reloadable):
         # Does not return
 
         self.started = True
-        self.started_cpus[0] = (0, 0, 0)
+        boot_cpu_name = "cpu" + str(self.p.get_boot_cpu_idx())
+        boot_cpu_adt = self.u.adt["/cpus/" + boot_cpu_name]
+        boot_cpu_mpidr = self.p.get_boot_cpu_mpidr()
+        self.started_cpus[0] = (boot_cpu_adt.die_id, boot_cpu_adt.cluster_id, boot_cpu_mpidr & 0xf)
         self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)
 
 from .. import trace

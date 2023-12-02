@@ -54,6 +54,12 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_GET_BOOTARGS:
             reply->retval = boot_args_addr;
             break;
+        case P_GET_BOOT_CPU_IDX:
+            reply->retval = boot_cpu_idx;
+            break;
+        case P_GET_BOOT_CPU_MPIDR:
+            reply->retval = boot_cpu_mpidr;
+            break;
         case P_GET_BASE:
             reply->retval = (u64)_base;
             break;
