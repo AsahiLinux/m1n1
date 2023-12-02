@@ -1562,10 +1562,12 @@ class HV(Reloadable):
             chip_id = self.u.adt["/chosen"].chip_id
             if chip_id in (0x8103, 0x6000, 0x6001, 0x6002):
                 cpu_start = 0x54000 + die * 0x20_0000_0000
-            elif chip_id in (0x8112,):
+            elif chip_id in (0x8112, 0x8122):
                 cpu_start = 0x34000 + die * 0x20_0000_0000
             elif chip_id in (0x6020, 0x6021, 0x6022):
                 cpu_start = 0x28000 + die * 0x20_0000_0000
+            elif chip_id in (0x6031,):
+                cpu_start = 0x88000 + die * 0x20_0000_0000
             else:
                 self.log("CPUSTART unknown for this SoC!")
                 break
