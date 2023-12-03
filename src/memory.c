@@ -401,6 +401,13 @@ static void mmu_add_default_mappings(void)
     uint64_t ram_size = cur_boot_args.mem_size + cur_boot_args.phys_base - ram_base;
     ram_size = ALIGN_DOWN(ram_size, 0x4000);
 
+    /* Mem size actual is 0 on some machines, generate a usable value in this case */
+    if (!cur_boot_args.mem_size_actual) {
+        cur_boot_args.mem_size_actual = ALIGN_UP(ram_size, BIT(32));
+        /* Update for python / subsequent stages */
+        memcpy((void *)boot_args_addr, &cur_boot_args, sizeof(cur_boot_args));
+    }
+
     printf("MMU: RAM base: 0x%lx\n", ram_base);
     printf("MMU: Top of normal RAM: 0x%lx\n", ram_base + ram_size);
 
