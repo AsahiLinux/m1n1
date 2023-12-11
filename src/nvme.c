@@ -302,18 +302,18 @@ bool nvme_init(void)
         return NULL;
     }
 
-    u32 cg;
-    if (ADT_GETPROP(adt, node, "clock-gates", &cg) < 0) {
-        printf("nvme: clock-gates not set\n");
-        cg = 0;
-    }
-    nvme_die = FIELD_GET(PMGR_DIE_ID, cg);
-    printf("nvme: ANS is on die %d\n", nvme_die);
-
     if (adt_get_reg(adt, adt_path, "reg", 3, &nvme_base, NULL) < 0) {
         printf("nvme: Error getting NVMe base address.\n");
         return NULL;
     }
+    u32 cg;
+    if (ADT_GETPROP(adt, node, "clock-gates", &cg) < 0) {
+        printf("nvme: clock-gates not set\n");
+        nvme_die = (nvme_base >> 37) & 3;
+    } else {
+        nvme_die = FIELD_GET(PMGR_DIE_ID, cg);
+    }
+    printf("nvme: ANS is on die %d\n", nvme_die);
 
     if (!alloc_queue(&adminq)) {
         printf("nvme: Error allocating admin queue\n");
