@@ -9,6 +9,7 @@
 
 #define SYS_IMP_APL_ACTLR_EL12 sys_reg(3, 6, 15, 14, 6)
 
+#define SYS_IMP_APL_AMX_CTX_EL1  sys_reg(3, 4, 15, 5, 0)
 #define SYS_IMP_APL_AMX_CTL_EL1  sys_reg(3, 4, 15, 1, 4)
 #define SYS_IMP_APL_AMX_CTL_EL2  sys_reg(3, 4, 15, 4, 7)
 #define SYS_IMP_APL_AMX_CTL_EL12 sys_reg(3, 4, 15, 4, 6)

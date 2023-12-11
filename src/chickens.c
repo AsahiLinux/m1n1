@@ -149,8 +149,7 @@ const char *init_cpu(void)
 
     int core = mrs(MPIDR_EL1) & 0xff;
 
-    // Unknown, related to SMP?
-    msr(s3_4_c15_c5_0, core);
+    msr(SYS_IMP_APL_AMX_CTX_EL1, core);
     msr(SYS_IMP_APL_AMX_CTL_EL1, 0x100);
 
     // Enable IRQs (at least necessary on t600x)
