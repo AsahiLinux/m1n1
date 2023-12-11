@@ -10,6 +10,7 @@
 #define SYS_IMP_APL_ACTLR_EL12 sys_reg(3, 6, 15, 14, 6)
 
 #define SYS_IMP_APL_AMX_CTX_EL1  sys_reg(3, 4, 15, 5, 0)
+#define SYS_IMP_APL_AMX_STATE_T  sys_reg(3, 4, 15, 1, 3)
 #define SYS_IMP_APL_AMX_CTL_EL1  sys_reg(3, 4, 15, 1, 4)
 #define SYS_IMP_APL_AMX_CTL_EL2  sys_reg(3, 4, 15, 4, 7)
 #define SYS_IMP_APL_AMX_CTL_EL12 sys_reg(3, 4, 15, 4, 6)
@@ -554,6 +555,9 @@
 #define UPMCR0_IMODE_HALT  (3 << 16)
 #define UPMCR0_IMODE_FIQ   (4 << 16)
 #define UPMCR0_IMODE_MASK  (7 << 16)
+
+#define SYS_IMP_APL_CORE_NRG_ACC_DAT     sys_reg(3, 7, 15, 1, 1)
+#define SYS_IMP_APL_CORE_SRM_NRG_ACC_DAT sys_reg(3, 7, 15, 3, 1)
 
 #define SYS_IMP_APL_UPMSR sys_reg(3, 7, 15, 6, 4)
 #define UPMSR_IACT        (BIT(0))

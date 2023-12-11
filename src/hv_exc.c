@@ -209,9 +209,8 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
     regs[31] = 0;
 
     switch (reg) {
-        /* Some kind of timer */
-        SYSREG_PASS(sys_reg(3, 7, 15, 1, 1));
-        SYSREG_PASS(sys_reg(3, 7, 15, 3, 1));
+        SYSREG_PASS(SYS_IMP_APL_CORE_NRG_ACC_DAT);
+        SYSREG_PASS(SYS_IMP_APL_CORE_SRM_NRG_ACC_DAT);
         /* Architectural timer, for ECV */
         SYSREG_MAP(SYS_CNTV_CTL_EL0, SYS_CNTV_CTL_EL02)
         SYSREG_MAP(SYS_CNTV_CVAL_EL0, SYS_CNTV_CVAL_EL02)
@@ -220,6 +219,7 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         SYSREG_MAP(SYS_CNTP_CVAL_EL0, SYS_CNTP_CVAL_EL02)
         SYSREG_MAP(SYS_CNTP_TVAL_EL0, SYS_CNTP_TVAL_EL02)
         /* Spammy stuff seen on t600x p-cores */
+        /* These are PMU/PMC registers */
         SYSREG_PASS(sys_reg(3, 2, 15, 12, 0));
         SYSREG_PASS(sys_reg(3, 2, 15, 13, 0));
         SYSREG_PASS(sys_reg(3, 2, 15, 14, 0));
@@ -231,7 +231,7 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         /* Noisy traps */
         SYSREG_PASS(SYS_IMP_APL_HID4)
         SYSREG_PASS(SYS_IMP_APL_EHID4)
-        /* We don't normally trap hese, but if we do, they're noisy */
+        /* We don't normally trap these, but if we do, they're noisy */
         SYSREG_PASS(SYS_IMP_APL_GXF_STATUS_EL1)
         SYSREG_PASS(SYS_IMP_APL_CNTVCT_ALIAS_EL0)
         SYSREG_PASS(SYS_IMP_APL_TPIDR_GL1)
@@ -243,7 +243,7 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         SYSREG_MAP(SYS_IMP_APL_APCTL_EL1, SYS_IMP_APL_APCTL_EL12)
         SYSREG_MAP(SYS_IMP_APL_AMX_CTL_EL1, SYS_IMP_APL_AMX_CTL_EL12)
         /* FIXME:Might be wrong */
-        SYSREG_PASS(sys_reg(3, 4, 15, 1, 3))
+        SYSREG_PASS(SYS_IMP_APL_AMX_STATE_T)
         /* pass through PMU handling */
         SYSREG_PASS(SYS_IMP_APL_PMCR1)
         SYSREG_PASS(SYS_IMP_APL_PMCR2)
