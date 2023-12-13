@@ -1,336 +1,6006 @@
 [
-    {"index": 0, "name": "HID0_EL1",                    "fullname": "Hardware Implementation-Dependent Register 0",                 "enc": [3, 0, 15, 0, 0  ], "width": 64},
-    {"index": 0, "name": "EHID0_EL1",                   "fullname": "Hardware Implementation-Dependent Register 0 (E-core)",        "enc": [3, 0, 15, 0, 1  ], "width": 64},
-    {"index": 0, "name": "HID1_EL1",                    "fullname": "Hardware Implementation-Dependent Register 1",                 "enc": [3, 0, 15, 1, 0  ], "width": 64},
-    {"index": 0, "name": "EHID1_EL1",                   "fullname": "Hardware Implementation-Dependent Register 1 (E-core)",        "enc": [3, 0, 15, 1, 1  ], "width": 64},
-    {"index": 0, "name": "HID2_EL1",                    "fullname": "Hardware Implementation-Dependent Register 2",                 "enc": [3, 0, 15, 2, 0  ], "width": 64},
-    {"index": 0, "name": "EHID2_EL1",                   "fullname": "Hardware Implementation-Dependent Register 2 (E-core)",        "enc": [3, 0, 15, 2, 1  ], "width": 64},
-    {"index": 0, "name": "HID3_EL1",                    "fullname": "Hardware Implementation-Dependent Register 3",                 "enc": [3, 0, 15, 3, 0  ], "width": 64},
-    {"index": 0, "name": "EHID3_EL1",                   "fullname": "Hardware Implementation-Dependent Register 3 (E-core)",        "enc": [3, 0, 15, 3, 1  ], "width": 64},
-    {"index": 0, "name": "HID4_EL1",                    "fullname": "Hardware Implementation-Dependent Register 4",                 "enc": [3, 0, 15, 4, 0  ], "width": 64},
-    {"index": 0, "name": "EHID4_EL1",                   "fullname": "Hardware Implementation-Dependent Register 4 (E-core)",        "enc": [3, 0, 15, 4, 1  ], "width": 64},
-    {"index": 0, "name": "HID5_EL1",                    "fullname": "Hardware Implementation-Dependent Register 5",                 "enc": [3, 0, 15, 5, 0  ], "width": 64},
-    {"index": 0, "name": "EHID5_EL1",                   "fullname": "Hardware Implementation-Dependent Register 5 (E-core)",        "enc": [3, 0, 15, 5, 1  ], "width": 64},
-    {"index": 0, "name": "HID6_EL1",                    "fullname": "Hardware Implementation-Dependent Register 6",                 "enc": [3, 0, 15, 6, 0  ], "width": 64},
-    {"index": 0, "name": "HID7_EL1",                    "fullname": "Hardware Implementation-Dependent Register 7",                 "enc": [3, 0, 15, 7, 0  ], "width": 64},
-    {"index": 0, "name": "EHID7_EL1",                   "fullname": "Hardware Implementation-Dependent Register 7 (E-core)",        "enc": [3, 0, 15, 7, 1  ], "width": 64},
-    {"index": 0, "name": "HID8_EL1",                    "fullname": "Hardware Implementation-Dependent Register 8",                 "enc": [3, 0, 15, 8, 0  ], "width": 64},
-    {"index": 0, "name": "HID9_EL1",                    "fullname": "Hardware Implementation-Dependent Register 9",                 "enc": [3, 0, 15, 9, 0  ], "width": 64},
-    {"index": 0, "name": "EHID9_EL1",                   "fullname": "Hardware Implementation-Dependent Register 9 (E-core)",        "enc": [3, 0, 15, 9, 1  ], "width": 64},
-    {"index": 0, "name": "HID10_EL1",                   "fullname": "Hardware Implementation-Dependent Register 10",                "enc": [3, 0, 15, 10, 0 ], "width": 64},
-    {"index": 0, "name": "EHID10_EL1",                  "fullname": "Hardware Implementation-Dependent Register 10 (E-core)",       "enc": [3, 0, 15, 10, 1 ], "width": 64},
-    {"index": 0, "name": "HID11_EL1",                   "fullname": "Hardware Implementation-Dependent Register 11",                "enc": [3, 0, 15, 11, 0 ], "width": 64},
-    {"index": 0, "name": "EHID11_EL1",                  "fullname": "Hardware Implementation-Dependent Register 11 (E-core)",       "enc": [3, 0, 15, 11, 1 ], "width": 64},
-    {"index": 0, "name": "HID13_EL1",                   "fullname": "Hardware Implementation-Dependent Register 13",                "enc": [3, 0, 15, 14, 0 ], "width": 64},
-    {"index": 0, "name": "HID14_EL1",                   "fullname": "Hardware Implementation-Dependent Register 14",                "enc": [3, 0, 15, 15, 0 ], "width": 64},
-    {"index": 0, "name": "HID16_EL1",                   "fullname": "Hardware Implementation-Dependent Register 16",                "enc": [3, 0, 15, 15, 2 ], "width": 64},
-    {"index": 0, "name": "HID17_EL1",                   "fullname": "Hardware Implementation-Dependent Register 17",                "enc": [3, 0, 15, 15, 5 ], "width": 64},
-    {"index": 0, "name": "HID18_EL1",                   "fullname": "Hardware Implementation-Dependent Register 18",                "enc": [3, 0, 15, 11, 2 ], "width": 64},
-    {"index": 0, "name": "EHID18_EL1",                  "fullname": "Hardware Implementation-Dependent Register 18 (E-core)",       "enc": [3, 0, 15, 11, 3 ], "width": 64},
-    {"index": 0, "name": "EHID20_EL1",                  "fullname": "Hardware Implementation-Dependent Register 20 (E-core)",       "enc": [3, 0, 15, 1, 2  ], "width": 64},
-    {"index": 0, "name": "HID21_EL1",                   "fullname": "Hardware Implementation-Dependent Register 21",                "enc": [3, 0, 15, 1, 3  ], "width": 64},
-    {"index": 0, "name": "HID26_EL1",                   "fullname": "Hardware Implementation-Dependent Register 26",                "enc": [3, 0, 15, 0, 3  ], "width": 64},
-    {"index": 0, "name": "HID27_EL1",                   "fullname": "Hardware Implementation-Dependent Register 27",                "enc": [3, 0, 15, 0, 4  ], "width": 64},
-    {"index": 0, "name": "PMCR0_EL1",                   "fullname": "Performance Monitor Control Register 0",                       "enc": [3, 1, 15, 0, 0  ], "width": 64,
-        "fieldsets": [{"fields": [
-            {"name": "PMC0_EN",                         "msb": 0, "lsb": 0},
-            {"name": "PMC1_EN",                         "msb": 1, "lsb": 1},
-            {"name": "PMC2_EN",                         "msb": 2, "lsb": 2},
-            {"name": "PMC3_EN",                         "msb": 3, "lsb": 3},
-            {"name": "PMC4_EN",                         "msb": 4, "lsb": 4},
-            {"name": "PMC5_EN",                         "msb": 5, "lsb": 5},
-            {"name": "PMC6_EN",                         "msb": 6, "lsb": 6},
-            {"name": "PMC7_EN",                         "msb": 7, "lsb": 7},
-            {"name": "IRQ_MODE",                        "msb": 10, "lsb": 8},
-            {"name": "IRQ_ACTIVE",                      "msb": 11, "lsb": 11},
-            {"name": "PMC0_IRQ_EN",                     "msb": 12, "lsb": 12},
-            {"name": "PMC1_IRQ_EN",                     "msb": 13, "lsb": 13},
-            {"name": "PMC2_IRQ_EN",                     "msb": 14, "lsb": 14},
-            {"name": "PMC3_IRQ_EN",                     "msb": 15, "lsb": 15},
-            {"name": "PMC4_IRQ_EN",                     "msb": 16, "lsb": 16},
-            {"name": "PMC5_IRQ_EN",                     "msb": 17, "lsb": 17},
-            {"name": "PMC6_IRQ_EN",                     "msb": 18, "lsb": 18},
-            {"name": "PMC7_IRQ_EN",                     "msb": 19, "lsb": 19},
-            {"name": "DIS_CNT_PMI",                     "msb": 20, "lsb": 20},
-            {"name": "WAIT_ERET",                       "msb": 22, "lsb": 22},
-            {"name": "CNT_GLOBAL_L2C",                  "msb": 23, "lsb": 23},
-            {"name": "USER_EN",                         "msb": 30, "lsb": 30},
-            {"name": "PMC8_EN",                         "msb": 32, "lsb": 32},
-            {"name": "PMC9_EN",                         "msb": 33, "lsb": 33},
-            {"name": "PMC8_IRQ_EN",                     "msb": 44, "lsb": 44},
-            {"name": "PMC9_IRQ_EN",                     "msb": 45, "lsb": 45}
-        ]}]},
-    {"index": 0, "name": "PMCR1_EL1",                   "fullname": "Performance Monitor Control Register 1",                       "enc": [3, 1, 15, 1, 0  ], "width": 64,
-        "fieldsets": [{"fields": [
-            {"name": "EL0_A32_PMC_0_7",                 "msb": 7, "lsb": 0},
-            {"name": "EL0_A64_PMC_0_7",                 "msb": 15, "lsb": 8},
-            {"name": "EL1_A64_PMC_0_7",                 "msb": 23, "lsb": 16},
-            {"name": "EL3_A64_PMC_0_7",                 "msb": 31, "lsb": 24},
-            {"name": "EL0_A32_PMC_8_9",                 "msb": 33, "lsb": 32},
-            {"name": "EL0_A64_PMC_8_9",                 "msb": 41, "lsb": 40},
-            {"name": "EL1_A64_PMC_8_9",                 "msb": 49, "lsb": 48},
-            {"name": "EL3_A64_PMC_8_9",                 "msb": 57, "lsb": 56}
-        ]}]},
-    {"index": 0, "name": "PMCR2_EL1",                   "fullname": "Performance Monitor Control Register 2",                       "enc": [3, 1, 15, 2, 0  ], "width": 64},
-    {"index": 0, "name": "PMCR3_EL1",                   "fullname": "Performance Monitor Control Register 3",                       "enc": [3, 1, 15, 3, 0  ], "width": 64},
-    {"index": 0, "name": "PMCR4_EL1",                   "fullname": "Performance Monitor Control Register 4",                       "enc": [3, 1, 15, 4, 0  ], "width": 64},
-    {"index": 0, "name": "PMESR0_EL1",                  "fullname": "Performance Monitor Event Selection Register 0",               "enc": [3, 1, 15, 5, 0  ], "width": 64,
-        "fieldsets": [{"fields": [
-            {"name": "PMC2_EVENT_SEL",                  "msb": 7, "lsb": 0},
-            {"name": "PMC3_EVENT_SEL",                  "msb": 15, "lsb": 8},
-            {"name": "PMC4_EVENT_SEL",                  "msb": 23, "lsb": 16},
-            {"name": "PMC5_EVENT_SEL",                  "msb": 31, "lsb": 24}
-        ]}]},
-    {"index": 0, "name": "PMESR1_EL1",                  "fullname": "Performance Monitor Event Selection Register 1",               "enc": [3, 1, 15, 6, 0  ], "width": 64,
-        "fieldsets": [{"fields": [
-            {"name": "PMC6_EVENT_SEL",                  "msb": 7, "lsb": 0},
-            {"name": "PMC7_EVENT_SEL",                  "msb": 15, "lsb": 8},
-            {"name": "PMC8_EVENT_SEL",                  "msb": 23, "lsb": 16},
-            {"name": "PMC9_EVENT_SEL",                  "msb": 31, "lsb": 24}
-        ]}]},
-    {"index": 0, "name": "PMCR1_GL1",                   "fullname": "Performance Monitor Control Register 1 (GL1)",                 "enc": [3, 1, 15, 8, 2  ], "width": 64},
-    {"index": 0, "name": "PMSR_EL1",                    "fullname": "Performance Monitor Status Register",                          "enc": [3, 1, 15, 13, 0 ], "width": 64,
-        "fieldsets": [{"fields": [
-            {"name": "PMC0_OVERFLOW",                   "msb": 0, "lsb": 0},
-            {"name": "PMC1_OVERFLOW",                   "msb": 1, "lsb": 1},
-            {"name": "PMC2_OVERFLOW",                   "msb": 2, "lsb": 2},
-            {"name": "PMC3_OVERFLOW",                   "msb": 3, "lsb": 3},
-            {"name": "PMC4_OVERFLOW",                   "msb": 4, "lsb": 4},
-            {"name": "PMC5_OVERFLOW",                   "msb": 5, "lsb": 5},
-            {"name": "PMC6_OVERFLOW",                   "msb": 6, "lsb": 6},
-            {"name": "PMC7_OVERFLOW",                   "msb": 7, "lsb": 7},
-            {"name": "PMC8_OVERFLOW",                   "msb": 8, "lsb": 8},
-            {"name": "PMC9_OVERFLOW",                   "msb": 9, "lsb": 9}
-        ]}]},
-    {"index": 0, "name": "PMC0_EL1",                    "fullname": "Performance Monitor Counter 0",                                "enc": [3, 2, 15, 0, 0  ], "width": 64},
-    {"index": 0, "name": "PMC1_EL1",                    "fullname": "Performance Monitor Counter 1",                                "enc": [3, 2, 15, 1, 0  ], "width": 64},
-    {"index": 0, "name": "PMC2_EL1",                    "fullname": "Performance Monitor Counter 2",                                "enc": [3, 2, 15, 2, 0  ], "width": 64},
-    {"index": 0, "name": "PMC3_EL1",                    "fullname": "Performance Monitor Counter 3",                                "enc": [3, 2, 15, 3, 0  ], "width": 64},
-    {"index": 0, "name": "PMC4_EL1",                    "fullname": "Performance Monitor Counter 4",                                "enc": [3, 2, 15, 4, 0  ], "width": 64},
-    {"index": 0, "name": "PMC5_EL1",                    "fullname": "Performance Monitor Counter 5",                                "enc": [3, 2, 15, 5, 0  ], "width": 64},
-    {"index": 0, "name": "PMC6_EL1",                    "fullname": "Performance Monitor Counter 6",                                "enc": [3, 2, 15, 6, 0  ], "width": 64},
-    {"index": 0, "name": "PMC7_EL1",                    "fullname": "Performance Monitor Counter 7",                                "enc": [3, 2, 15, 7, 0  ], "width": 64},
-    {"index": 0, "name": "PMC8_EL1",                    "fullname": "Performance Monitor Counter 8",                                "enc": [3, 2, 15, 9, 0  ], "width": 64},
-    {"index": 0, "name": "PMC9_EL1",                    "fullname": "Performance Monitor Counter 9",                                "enc": [3, 2, 15, 10, 0 ], "width": 64},
-    {"index": 0, "name": "LSU_ERR_STS_EL1",             "fullname": "Load-Store Unit Error Status",                                 "enc": [3, 3, 15, 0, 0  ], "width": 64},
-    {"index": 0, "name": "E_LSU_ERR_STS_EL1",           "fullname": "Load-Store Unit Error Status (E-core)",                        "enc": [3, 3, 15, 2, 0  ], "width": 64},
-    {"index": 0, "name": "LSU_ERR_CTL_EL1",             "fullname": "Load-Store Unit Error Control",                                "enc": [3, 3, 15, 1, 0  ], "width": 64},
-    {"index": 0, "name": "L2C_ERR_STS_EL1",             "fullname": "L2 Cache Error Status",                                        "enc": [3, 3, 15, 8, 0  ], "width": 64},
-    {"index": 0, "name": "L2C_ERR_ADR_EL1",             "fullname": "L2 Cache Address",                                             "enc": [3, 3, 15, 9, 0  ], "width": 64},
-    {"index": 0, "name": "L2C_ERR_INF_EL1",             "fullname": "L2 Cache Error Information",                                   "enc": [3, 3, 15, 10, 0 ], "width": 64},
-    {"index": 0, "name": "FED_ERR_STS_EL1",             "fullname": "FED Error Status",                                             "enc": [3, 4, 15, 0, 0  ], "width": 64},
-    {"index": 0, "name": "E_FED_ERR_STS_EL1",           "fullname": "FED Error Status (E-Core)",                                    "enc": [3, 4, 15, 0, 2  ], "width": 64},
-    {"index": 0, "name": "APCTL_EL1",                   "fullname": "Pointer Authentication Control",                               "enc": [3, 4, 15, 0, 4  ], "width": 64},
-    {"index": 0, "name": "SPR_LOCKDOWN_EL1",            "fullname": "SPR Lockdown",                                                 "enc": [3, 4, 15, 0, 5  ], "width": 64},
-    {"index": 0, "name": "KERNKEYLO_EL1",               "fullname": "Pointer Authentication Kernel Key Low",                        "enc": [3, 4, 15, 1, 0  ], "width": 64},
-    {"index": 0, "name": "KERNKEYHI_EL1",               "fullname": "Pointer Authentication Kernel Key High",                       "enc": [3, 4, 15, 1, 1  ], "width": 64},
-    {"index": 0, "name": "VMSA_LOCK_EL1",               "fullname": "Virtual Memory System Architecture Lock",                      "enc": [3, 4, 15, 1, 2  ], "width": 64},
-    {"index": 0, "name": "AMX_STATE_EL12",              "fullname": "AMX State (EL1)",                                              "enc": [3, 4, 15, 1, 3  ], "width": 64},
-    {"index": 0, "name": "AMX_CONFIG_EL1",              "fullname": "AMX Config (EL1)",                                             "enc": [3, 4, 15, 1, 4  ], "width": 64,
-        "fieldsets": [{"fields": [
-            {"name": "EN",                              "msb": 63, "lsb": 63}
-        ]}]},
-    {"index": 0, "name": "APRR_EL0",                    "fullname": "APRR EL0",                                                     "enc": [3, 4, 15, 2, 0  ], "width": 64},
-    {"index": 0, "name": "APRR_EL1",                    "fullname": "APRR EL1",                                                     "enc": [3, 4, 15, 2, 1  ], "width": 64},
-    {"index": 0, "name": "CTRR_LOCK_EL1",               "fullname": "CTRR Lock",                                                    "enc": [3, 4, 15, 2, 2  ], "width": 64},
-    {"index": 0, "name": "CTRR_A_LWR_EL1",              "fullname": "CTRR A Lower Address (EL1)",                                   "enc": [3, 4, 15, 2, 3  ], "width": 64},
-    {"index": 0, "name": "CTRR_A_UPR_EL1",              "fullname": "CTRR A Upper Address (EL1)",                                   "enc": [3, 4, 15, 2, 4  ], "width": 64},
-    {"index": 0, "name": "CTRR_CTL_EL1",                "fullname": "CTRR Control (EL1)",                                           "enc": [3, 4, 15, 2, 5  ], "width": 64},
-    {"index": 0, "name": "VMSA_LOCK_EL12",              "fullname": "Virtual Memory System Architecture Lock (EL12)",               "enc": [3, 4, 15, 2, 6  ], "width": 64},
-    {"index": 0, "name": "APRR_JIT_MASK_EL2",           "fullname": "APRR JIT Mask",                                                "enc": [3, 4, 15, 2, 7  ], "width": 64},
-    {"index": 0, "name": "AMX_CONFIG_EL12",             "fullname": "AMX Config (EL12)",                                            "enc": [3, 4, 15, 4, 6  ], "width": 64},
-    {"index": 0, "name": "AMX_CTL_EL2",                 "fullname": "AMX Control (EL2)",                                            "enc": [3, 4, 15, 4, 7  ], "width": 64,
-        "fieldsets": [{"fields": [
-            {"name": "EN",                              "msb": 63, "lsb": 63},
-            {"name": "EN_EL1",                          "msb": 62, "lsb": 62}
-        ]}]},
-    {"index": 0, "name": "CORE_INDEX",                  "fullname": "Core index in cluster",                                        "enc": [3, 4, 15, 5, 0  ], "width": 64},
-    {"index": 0, "name": "SPRR_PPERM_EL20_SILLY_THING", "fullname": "SPRR Permission Configuration Register (EL20, useless)",       "enc": [3, 4, 15, 5, 1  ], "width": 64},
-    {"index": 0, "name": "SPRR_UPERM_EL02",             "fullname": "SPRR User Permission Configuration Register (EL02)",           "enc": [3, 4, 15, 5, 2  ], "width": 64},
-    {"index": 0, "name": "SPRR_UMPRR_EL2",              "fullname": "SPRR User MPRR (EL2)",                                         "enc": [3, 4, 15, 7, 0  ], "width": 32},
-    {"index": 0, "name": "SPRR_UPERM_SH1_EL2",          "fullname": "SPRR User Permission SH1 (EL2)",                               "enc": [3, 4, 15, 7, 1  ], "width": 32},
-    {"index": 0, "name": "SPRR_UPERM_SH2_EL2",          "fullname": "SPRR User Permission SH2 (EL2)",                               "enc": [3, 4, 15, 7, 2  ], "width": 32},
-    {"index": 0, "name": "SPRR_UPERM_SH3_EL2",          "fullname": "SPRR User Permission SH3 (EL2)",                               "enc": [3, 4, 15, 7, 3  ], "width": 32},
-    {"index": 0, "name": "SPRR_UMPRR_EL12",             "fullname": "SPRR User MPRR (EL12)",                                        "enc": [3, 4, 15, 8, 0  ], "width": 32},
-    {"index": 0, "name": "SPRR_UPERM_SH1_EL12",         "fullname": "SPRR User Permission SH1 (EL12)",                              "enc": [3, 4, 15, 8, 1  ], "width": 32},
-    {"index": 0, "name": "SPRR_UPERM_SH2_EL12",         "fullname": "SPRR User Permission SH2 (EL12)",                              "enc": [3, 4, 15, 8, 2  ], "width": 32},
-    {"index": 0, "name": "SPRR_UPERM_SH3_EL12",         "fullname": "SPRR User Permission SH3 (EL12)",                              "enc": [3, 4, 15, 8, 3  ], "width": 32},
-    {"index": 0, "name": "CTRR_A_LWR_EL12",             "fullname": "CTRR A Lower Address (EL12)",                                  "enc": [3, 4, 15, 9, 0  ], "width": 64},
-    {"index": 0, "name": "CTRR_A_UPR_EL12",             "fullname": "CTRR A Upper Address (EL12)",                                  "enc": [3, 4, 15, 9, 1  ], "width": 64},
-    {"index": 0, "name": "CTRR_B_LWR_EL12",             "fullname": "CTRR B Lower Address (EL12)",                                  "enc": [3, 4, 15, 9, 2  ], "width": 64},
-    {"index": 0, "name": "CTRR_B_UPR_EL12",             "fullname": "CTRR B Upper Address (EL12)",                                  "enc": [3, 4, 15, 9, 3  ], "width": 64},
-    {"index": 0, "name": "CTRR_CTL_EL12",               "fullname": "CTRR Control (EL12)",                                          "enc": [3, 4, 15, 9, 4  ], "width": 64},
-    {"index": 0, "name": "CTRR_LOCK_EL12",              "fullname": "CTRR Lock (EL12)",                                             "enc": [3, 4, 15, 9, 5  ], "width": 64},
-    {"index": 0, "name": "SIQ_CFG_EL1",                 "fullname": "System Interrupt Configuration (EL1)",                         "enc": [3, 4, 15, 10, 4 ], "width": 64},
-    {"index": 0, "name": "ACNTPCT_EL0",                 "fullname": "Physical timer counter register (pre-spec CNTPCTSS_EL0)",      "enc": [3, 4, 15, 10, 5 ], "width": 64},
-    {"index": 0, "name": "ACNTVCT_EL0",                 "fullname": "Virtual timer counter register (pre-spec CNTVCTSS_EL0)",       "enc": [3, 4, 15, 10, 6 ], "width": 64},
-    {"index": 0, "name": "CTRR_A_LWR_EL2",              "fullname": "CTRR A Lower Address (EL2)",                                   "enc": [3, 4, 15, 11, 0 ], "width": 64},
-    {"index": 0, "name": "CTRR_A_UPR_EL2",              "fullname": "CTRR A Upper Address (EL2)",                                   "enc": [3, 4, 15, 11, 1 ], "width": 64},
-    {"index": 0, "name": "CTRR_CTL_EL2",                "fullname": "CTRR Control (EL2)",                                           "enc": [3, 4, 15, 11, 4 ], "width": 64},
-    {"index": 0, "name": "CTRR_LOCK_EL2",               "fullname": "CTRR Lock",                                                    "enc": [3, 4, 15, 11, 5 ], "width": 64},
-    {"index": 0, "name": "JCTL_EL0",                    "fullname": "JITBox Control (EL0)",                                         "enc": [3, 4, 15, 15, 6 ], "width": 64},
-    {"index": 0, "name": "IPI_RR_LOCAL_EL1",            "fullname": "IPI Request Register (Local)",                                 "enc": [3, 5, 15, 0, 0  ], "width": 64},
-    {"index": 0, "name": "IPI_RR_GLOBAL_EL1",           "fullname": "IPI Request Register (Global)",                                "enc": [3, 5, 15, 0, 1  ], "width": 64},
-    {"index": 0, "name": "DPC_ERR_STS_EL1",             "fullname": "DPC Error Status",                                             "enc": [3, 5, 15, 0, 5  ], "width": 64},
-    {"index": 0, "name": "IPI_SR_EL1",                  "fullname": "IPI Status Register",                                          "enc": [3, 5, 15, 1, 1  ], "width": 64,
-        "fieldsets": [{"fields": [
-            {"name": "PENDING",                         "msb": 0, "lsb": 0}
-        ]}]},
-    {"index": 0, "name": "VM_TMR_LR_EL2",               "fullname": "VM Timer Link Register",                                       "enc": [3, 5, 15, 1, 2  ], "width": 64},
-    {"index": 0, "name": "VM_TMR_FIQ_ENA_EL2",          "fullname": "VM Timer FIQ Enable",                                          "enc": [3, 5, 15, 1, 3  ], "width": 64,
-        "fieldsets": [{"fields": [
-            {"name": "ENA_V",                           "msb": 0, "lsb": 0},
-            {"name": "ENA_P",                           "msb": 1, "lsb": 1}
-        ]}]},
-    {"index": 0, "name": "AWL_SCRATCH_EL1",             "fullname": "AWL Scratch Register",                                         "enc": [3, 5, 15, 2, 6  ], "width": 64},
-    {"index": 0, "name": "IPI_CR_EL1",                  "fullname": "IPI Control Register",                                         "enc": [3, 5, 15, 3, 1  ], "width": 64},
-    {"index": 0, "name": "ACC_CFG_EL1",                 "fullname": "Apple Core Cluster Configuration",                             "enc": [3, 5, 15, 4, 0  ], "width": 64},
-    {"index": 0, "name": "CYC_OVRD_EL1",                "fullname": "Cyclone Override",                                             "enc": [3, 5, 15, 5, 0  ], "width": 64},
-    {"index": 0, "name": "ACC_OVRD_EL1",                "fullname": "Apple Core Cluster Override",                                  "enc": [3, 5, 15, 6, 0  ], "width": 64},
-    {"index": 0, "name": "ACC_EBLK_OVRD_EL1",           "fullname": "Apple Core Cluster E-Block Override",                          "enc": [3, 5, 15, 6, 1  ], "width": 64},
-    {"index": 0, "name": "MMU_ERR_STS_EL1",             "fullname": "MMU Error Status",                                             "enc": [3, 6, 15, 0, 0  ], "width": 64},
-    {"index": 0, "name": "AFSR1_GL1",                   "fullname": "Auxiliary Fault Status Register 1 (GL1)",                      "enc": [3, 6, 15, 0, 1  ], "width": 64},
-    {"index": 0, "name": "AFSR1_GL2",                   "fullname": "Auxiliary Fault Status Register 1 (GL2)",                      "enc": [3, 6, 15, 0, 2  ], "width": 64},
-    {"index": 0, "name": "AFSR1_GL12",                  "fullname": "Auxiliary Fault Status Register 1 (GL12)",                     "enc": [3, 6, 15, 0, 3  ], "width": 64},
-    {"index": 0, "name": "SPRR_CONFIG_EL1",             "fullname": "SPRR Configuration Register (EL1)",                            "enc": [3, 6, 15, 1, 0  ], "width": 64,
-        "fieldsets": [{"fields": [
-            {"name": "EN",                              "msb": 0, "lsb": 0},
-            {"name": "LOCK_CONFIG",                     "msb": 1, "lsb": 1},
-            {"name": "LOCK_PERM",                       "msb": 4, "lsb": 4},
-            {"name": "LOCK_KERNEL_PERM",                "msb": 5, "lsb": 5}
-        ]}]},
-    {"index": 0, "name": "GXF_CONFIG_EL1",              "fullname": "GXF Configuration Register (EL1)",                             "enc": [3, 6, 15, 1, 2  ], "width": 64,
-        "fieldsets": [{"fields": [
-            {"name": "EN",                              "msb": 0, "lsb": 0}
-        ]}]},
-    {"index": 0, "name": "SPRR_AMRANGE_EL1",            "fullname": "SPRR AM Range (EL1)",                                          "enc": [3, 6, 15, 1, 3  ], "width": 64},
-    {"index": 0, "name": "GXF_CONFIG_EL2",              "fullname": "GXF Configuration Register (EL2)",                             "enc": [3, 6, 15, 1, 4  ], "width": 64},
-    {"index": 0, "name": "SPRR_UPERM_EL0",              "fullname": "SPRR User Permission Configuration Register (EL0)",            "enc": [3, 6, 15, 1, 5  ], "width": 64},
-    {"index": 0, "name": "SPRR_PPERM_EL1",              "fullname": "SPRR Kernel Permission Configuration Register (EL1)",          "enc": [3, 6, 15, 1, 6  ], "width": 64},
-    {"index": 0, "name": "SPRR_PPERM_EL2",              "fullname": "SPRR Kernel Permission Configuration Register (EL2)",          "enc": [3, 6, 15, 1, 7  ], "width": 64},
-    {"index": 0, "name": "E_MMU_ERR_STS_EL1",           "fullname": "MMU Error Status (E-Core)",                                    "enc": [3, 6, 15, 2, 0  ], "width": 64},
-    {"index": 0, "name": "APGAKeyLo_EL12",              "fullname": "Pointer Authentication Key A for Code Low (EL12)",             "enc": [3, 6, 15, 2, 1  ], "width": 64},
-    {"index": 0, "name": "APGAKeyHi_EL12",              "fullname": "Pointer Authentication Key A for Code High (EL12)",            "enc": [3, 6, 15, 2, 2  ], "width": 64},
-    {"index": 0, "name": "KERNKEYLO_EL12",              "fullname": "Pointer Authentication Kernel Key Low (EL12)",                 "enc": [3, 6, 15, 2, 3  ], "width": 64},
-    {"index": 0, "name": "KERNKEYHI_EL12",              "fullname": "Pointer Authentication Kernel Key High (EL12)",                "enc": [3, 6, 15, 2, 4  ], "width": 64},
-    {"index": 0, "name": "AFPCR_EL0",                   "fullname": "Apple Floating-Point Control Register",                        "enc": [3, 6, 15, 2, 5  ], "width": 64},
-    {"index": 0, "name": "AIDR2_EL1",                   "fullname": "Apple ID Register 2",                                          "enc": [3, 6, 15, 2, 7  ], "width": 64},
-    {"index": 0, "name": "SPRR_UMPRR_EL1",              "fullname": "SPRR User MPRR (EL1)",                                         "enc": [3, 6, 15, 3, 0  ], "width": 32},
-    {"index": 0, "name": "SPRR_PMPRR_EL1",              "fullname": "SPRR Kernel MPRR (EL1)",                                       "enc": [3, 6, 15, 3, 1  ], "width": 32},
-    {"index": 0, "name": "SPRR_PMPRR_EL2",              "fullname": "SPRR Kernel MPRR (EL2)",                                       "enc": [3, 6, 15, 3, 2  ], "width": 32},
-    {"index": 0, "name": "SPRR_UPERM_SH1_EL1",          "fullname": "SPRR User Permission SH1 (EL1)",                               "enc": [3, 6, 15, 3, 3  ], "width": 32},
-    {"index": 0, "name": "SPRR_UPERM_SH2_EL1",          "fullname": "SPRR User Permission SH2 (EL1)",                               "enc": [3, 6, 15, 3, 4  ], "width": 32},
-    {"index": 0, "name": "SPRR_UPERM_SH3_EL1",          "fullname": "SPRR User Permission SH3 (EL1)",                               "enc": [3, 6, 15, 3, 5  ], "width": 32},
-    {"index": 0, "name": "SPRR_PPERM_SH1_EL1",          "fullname": "SPRR Kernel Permission SH1 (EL1)",                             "enc": [3, 6, 15, 4, 2  ], "width": 32},
-    {"index": 0, "name": "SPRR_PPERM_SH2_EL1",          "fullname": "SPRR Kernel Permission SH2 (EL1)",                             "enc": [3, 6, 15, 4, 3  ], "width": 32},
-    {"index": 0, "name": "SPRR_PPERM_SH3_EL1",          "fullname": "SPRR Kernel Permission SH3 (EL1)",                             "enc": [3, 6, 15, 4, 4  ], "width": 32},
-    {"index": 0, "name": "SPRR_PPERM_SH1_EL2",          "fullname": "SPRR Kernel Permission SH1 (EL2)",                             "enc": [3, 6, 15, 5, 1  ], "width": 32},
-    {"index": 0, "name": "SPRR_PPERM_SH2_EL2",          "fullname": "SPRR Kernel Permission SH2 (EL2)",                             "enc": [3, 6, 15, 5, 2  ], "width": 32},
-    {"index": 0, "name": "SPRR_PPERM_SH3_EL2",          "fullname": "SPRR Kernel Permission SH3 (EL2)",                             "enc": [3, 6, 15, 5, 3  ], "width": 32},
-    {"index": 0, "name": "SPRR_PMPRR_EL12",             "fullname": "SPRR Kernel MPRR (EL12)",                                      "enc": [3, 6, 15, 6, 0  ], "width": 32},
-    {"index": 0, "name": "SPRR_PPERM_SH1_EL12",         "fullname": "SPRR Kernel Permission SH1 (EL12)",                            "enc": [3, 6, 15, 6, 1  ], "width": 32},
-    {"index": 0, "name": "SPRR_PPERM_SH2_EL12",         "fullname": "SPRR Kernel Permission SH2 (EL12)",                            "enc": [3, 6, 15, 6, 2  ], "width": 32},
-    {"index": 0, "name": "SPRR_PPERM_SH3_EL12",         "fullname": "SPRR Kernel Permission SH3 (EL12)",                            "enc": [3, 6, 15, 6, 3  ], "width": 32},
-    {"index": 0, "name": "APIAKeyLo_EL12",              "fullname": "Pointer Authentication Key A for Instruction Low (EL12)",      "enc": [3, 6, 15, 7, 0  ], "width": 64},
-    {"index": 0, "name": "APIAKeyHi_EL12",              "fullname": "Pointer Authentication Key A for Instruction High (EL12)",     "enc": [3, 6, 15, 7, 1  ], "width": 64},
-    {"index": 0, "name": "APIBKeyLo_EL12",              "fullname": "Pointer Authentication Key A for Instruction Low (EL12)",      "enc": [3, 6, 15, 7, 2  ], "width": 64},
-    {"index": 0, "name": "APIBKeyHi_EL12",              "fullname": "Pointer Authentication Key A for Instruction High (EL12)",     "enc": [3, 6, 15, 7, 3  ], "width": 64},
-    {"index": 0, "name": "APDAKeyLo_EL12",              "fullname": "Pointer Authentication Key A for Data Low (EL12)",             "enc": [3, 6, 15, 7, 4  ], "width": 64},
-    {"index": 0, "name": "APDAKeyHi_EL12",              "fullname": "Pointer Authentication Key A for Data High (EL12)",            "enc": [3, 6, 15, 7, 5  ], "width": 64},
-    {"index": 0, "name": "APDBKeyLo_EL12",              "fullname": "Pointer Authentication Key A for Data Low (EL12)",             "enc": [3, 6, 15, 7, 6  ], "width": 64},
-    {"index": 0, "name": "APDBKeyHi_EL12",              "fullname": "Pointer Authentication Key A for Data High (EL12)",            "enc": [3, 6, 15, 7, 7  ], "width": 64},
-    {"index": 0, "name": "GXF_STATUS_EL1",              "fullname": "GXF Status Register (CurrentG)",                               "enc": [3, 6, 15, 8, 0  ], "width": 64,
-        "fieldsets": [{"fields": [
-            {"name": "GUARDED",                         "msb": 0, "lsb": 0}
-        ]}]},
-    {"index": 0, "name": "GXF_ENTRY_EL1",               "fullname": "GXF genter Entry Vector Register (EL1)",                       "enc": [3, 6, 15, 8, 1  ], "width": 64},
-    {"index": 0, "name": "GXF_PABENTRY_EL1",            "fullname": "GXF Abort Vector Register (EL1)",                              "enc": [3, 6, 15, 8, 2  ], "width": 64},
-    {"index": 0, "name": "ASPSR_EL1",                   "fullname": "ASPSR (EL1)",                                                  "enc": [3, 6, 15, 8, 3  ], "width": 64},
-    {"index": 0, "name": "VBAR_GL12",                   "fullname": "Vector Base Address Register (GL12)",                          "enc": [3, 6, 15, 9, 2  ], "width": 64},
-    {"index": 0, "name": "SPSR_GL12",                   "fullname": "Saved Program Status Register (GL12)",                         "enc": [3, 6, 15, 9, 3  ], "width": 64},
-    {"index": 0, "name": "ASPSR_GL12",                  "fullname": "ASPSR (GL12)",                                                 "enc": [3, 6, 15, 9, 4  ], "width": 64},
-    {"index": 0, "name": "ESR_GL12",                    "fullname": "Exception Syndrome Register (GL12)",                           "enc": [3, 6, 15, 9, 5  ], "width": 64},
-    {"index": 0, "name": "ELR_GL12",                    "fullname": "Exception Link Register (GL12)",                               "enc": [3, 6, 15, 9, 6  ], "width": 64},
-    {"index": 0, "name": "FAR_GL12",                    "fullname": "Fault Address Register (GL12)",                                "enc": [3, 6, 15, 9, 7  ], "width": 64},
-    {"index": 0, "name": "SP_GL12",                     "fullname": "Stack Pointer Register (GL12)",                                "enc": [3, 6, 15, 10, 0 ], "width": 64},
-    {"index": 0, "name": "TPIDR_GL1",                   "fullname": "Software Thread ID Register (GL1)",                            "enc": [3, 6, 15, 10, 1 ], "width": 64},
-    {"index": 0, "name": "VBAR_GL1",                    "fullname": "Vector Base Address Register (GL1)",                           "enc": [3, 6, 15, 10, 2 ], "width": 64},
-    {"index": 0, "name": "SPSR_GL1",                    "fullname": "Saved Program Status Register (GL1)",                          "enc": [3, 6, 15, 10, 3 ], "width": 64},
-    {"index": 0, "name": "ASPSR_GL1",                   "fullname": "ASPSR (GL1)",                                                  "enc": [3, 6, 15, 10, 4 ], "width": 64},
-    {"index": 0, "name": "ESR_GL1",                     "fullname": "Exception Syndrome Register (GL1)",                            "enc": [3, 6, 15, 10, 5 ], "width": 64},
-    {"index": 0, "name": "ELR_GL1",                     "fullname": "Exception Link Register (GL1)",                                "enc": [3, 6, 15, 10, 6 ], "width": 64},
-    {"index": 0, "name": "FAR_GL1",                     "fullname": "Fault Address Register (GL1)",                                 "enc": [3, 6, 15, 10, 7 ], "width": 64},
-    {"index": 0, "name": "TPIDR_GL2",                   "fullname": "Software Thread ID Register (GL2)",                            "enc": [3, 6, 15, 11, 1 ], "width": 64},
-    {"index": 0, "name": "VBAR_GL2",                    "fullname": "Vector Base Address Register (GL2)",                           "enc": [3, 6, 15, 11, 2 ], "width": 64},
-    {"index": 0, "name": "SPSR_GL2",                    "fullname": "Saved Program Status Register (GL2)",                          "enc": [3, 6, 15, 11, 3 ], "width": 64},
-    {"index": 0, "name": "ASPSR_GL2",                   "fullname": "ASPSR (GL2)",                                                  "enc": [3, 6, 15, 11, 4 ], "width": 64},
-    {"index": 0, "name": "ESR_GL2",                     "fullname": "Exception Syndrome Register (GL2)",                            "enc": [3, 6, 15, 11, 5 ], "width": 64},
-    {"index": 0, "name": "ELR_GL2",                     "fullname": "Exception Link Register (GL2)",                                "enc": [3, 6, 15, 11, 6 ], "width": 64},
-    {"index": 0, "name": "FAR_GL2",                     "fullname": "Fault Address Register (GL2)",                                 "enc": [3, 6, 15, 11, 7 ], "width": 64},
-    {"index": 0, "name": "GXF_ENTRY_EL2",               "fullname": "GXF genter Entry Vector Register (EL2)",                       "enc": [3, 6, 15, 12, 0 ], "width": 64},
-    {"index": 0, "name": "GXF_PABENTRY_EL2",            "fullname": "GXF Abort Vector Register (EL2)",                              "enc": [3, 6, 15, 12, 1 ], "width": 64},
-    {"index": 0, "name": "APCTL_EL2",                   "fullname": "Pointer Authentication Control (EL2)",                         "enc": [3, 6, 15, 12, 2 ], "width": 64},
-    {"index": 0, "name": "APSTS_EL2_MAYBE",             "fullname": "Pointer Authentication Status (EL2, maybe)",                   "enc": [3, 6, 15, 12, 3 ], "width": 64},
-    {"index": 0, "name": "APSTS_EL1",                   "fullname": "Pointer Authentication Status",                                "enc": [3, 6, 15, 12, 4 ], "width": 64},
-    {"index": 0, "name": "SPRR_CONFIG_EL2",             "fullname": "SPRR Configuration Register (EL2)",                            "enc": [3, 6, 15, 14, 2 ], "width": 64},
-    {"index": 0, "name": "SPRR_AMRANGE_EL2",            "fullname": "SPRR AM Range (EL2)",                                          "enc": [3, 6, 15, 14, 3 ], "width": 64},
-    {"index": 0, "name": "VMKEYLO_EL2",                 "fullname": "Pointer Authentication VM Machine Key Low",                    "enc": [3, 6, 15, 14, 4 ], "width": 64},
-    {"index": 0, "name": "VMKEYHI_EL2",                 "fullname": "Pointer Authentication VM Machine Key High",                   "enc": [3, 6, 15, 14, 5 ], "width": 64},
-    {"index": 0, "name": "ACTLR_EL12",                  "fullname": "Auxiliary Control Register (EL12)",                            "enc": [3, 6, 15, 14, 6 ], "width": 64},
-    {"index": 0, "name": "APSTS_EL12",                  "fullname": "Pointer Authentication Status (EL12)",                         "enc": [3, 6, 15, 14, 7 ], "width": 64},
-    {"index": 0, "name": "APCTL_EL12",                  "fullname": "Pointer Authentication Control (EL12)",                        "enc": [3, 6, 15, 15, 0 ], "width": 64},
-    {"index": 0, "name": "GXF_CONFIG_EL12",             "fullname": "GXF Configuration Register (EL12)",                            "enc": [3, 6, 15, 15, 1 ], "width": 64},
-    {"index": 0, "name": "GXF_ENTRY_EL12",              "fullname": "GXF genter Entry Vector Register (EL12)",                      "enc": [3, 6, 15, 15, 2 ], "width": 64},
-    {"index": 0, "name": "GXF_PABENTRY_EL12",           "fullname": "GXF Abort Vector Register (EL12)",                             "enc": [3, 6, 15, 15, 3 ], "width": 64},
-    {"index": 0, "name": "SPRR_CONFIG_EL12",            "fullname": "SPRR Configuration Register (EL12)",                           "enc": [3, 6, 15, 15, 4 ], "width": 64},
-    {"index": 0, "name": "SPRR_AMRANGE_EL12",           "fullname": "SPRR AM Range (EL12)",                                         "enc": [3, 6, 15, 15, 5 ], "width": 64},
-    {"index": 0, "name": "SPRR_PPERM_EL12",             "fullname": "SPRR Permission Configuration Register (EL12)",                "enc": [3, 6, 15, 15, 7 ], "width": 64},
-    {"index": 0, "name": "UPMCR0_EL1",                  "fullname": "Uncore Performance Monitor Control Register 0",                "enc": [3, 7, 15, 0, 4  ], "width": 64},
-    {"index": 0, "name": "UPMESR0_EL1",                 "fullname": "Uncore Performance Monitor Event Selection Register 0",        "enc": [3, 7, 15, 1, 4  ], "width": 64},
-    {"index": 0, "name": "UPMECM0_EL1",                 "fullname": "Uncore Performance Monitor Event Core Mask 0",                 "enc": [3, 7, 15, 3, 4  ], "width": 64},
-    {"index": 0, "name": "UPMECM1_EL1",                 "fullname": "Uncore Performance Monitor Event Core Mask 1",                 "enc": [3, 7, 15, 4, 4  ], "width": 64},
-    {"index": 0, "name": "UPMPCM_EL1",                  "fullname": "Uncore Performance Monitor PMI Core Mask",                     "enc": [3, 7, 15, 5, 4  ], "width": 64},
-    {"index": 0, "name": "UPMSR_EL1",                   "fullname": "Uncore Performance Monitor Status Register",                   "enc": [3, 7, 15, 6, 4  ], "width": 64},
-    {"index": 0, "name": "UPMECM2_EL1",                 "fullname": "Uncore Performance Monitor Event Core Mask 2",                 "enc": [3, 7, 15, 8, 5  ], "width": 64},
-    {"index": 0, "name": "UPMECM3_EL1",                 "fullname": "Uncore Performance Monitor Event Core Mask 3",                 "enc": [3, 7, 15, 9, 5  ], "width": 64},
-    {"index": 0, "name": "UPMESR1_EL1",                 "fullname": "Uncore Performance Monitor Event Selection Register 1",        "enc": [3, 7, 15, 11, 5 ], "width": 64},
-    {"index": 0, "name": "UPMC0_EL1",                   "fullname": "Uncore Performance Monitor Counter 0",                         "enc": [3, 7, 15, 7, 4  ], "width": 64},
-    {"index": 0, "name": "UPMC1_EL1",                   "fullname": "Uncore Performance Monitor Counter 1",                         "enc": [3, 7, 15, 8, 4  ], "width": 64},
-    {"index": 0, "name": "UPMC2_EL1",                   "fullname": "Uncore Performance Monitor Counter 2",                         "enc": [3, 7, 15, 9, 4  ], "width": 64},
-    {"index": 0, "name": "UPMC3_EL1",                   "fullname": "Uncore Performance Monitor Counter 3",                         "enc": [3, 7, 15, 10, 4 ], "width": 64},
-    {"index": 0, "name": "UPMC4_EL1",                   "fullname": "Uncore Performance Monitor Counter 4",                         "enc": [3, 7, 15, 11, 4 ], "width": 64},
-    {"index": 0, "name": "UPMC5_EL1",                   "fullname": "Uncore Performance Monitor Counter 5",                         "enc": [3, 7, 15, 12, 4 ], "width": 64},
-    {"index": 0, "name": "UPMC6_EL1",                   "fullname": "Uncore Performance Monitor Counter 6",                         "enc": [3, 7, 15, 13, 4 ], "width": 64},
-    {"index": 0, "name": "UPMC7_EL1",                   "fullname": "Uncore Performance Monitor Counter 7",                         "enc": [3, 7, 15, 14, 4 ], "width": 64},
-    {"index": 0, "name": "UPMC8_EL1",                   "fullname": "Uncore Performance Monitor Counter 8",                         "enc": [3, 7, 15, 0, 5  ], "width": 64},
-    {"index": 0, "name": "UPMC9_EL1",                   "fullname": "Uncore Performance Monitor Counter 9",                         "enc": [3, 7, 15, 1, 5  ], "width": 64},
-    {"index": 0, "name": "UPMC10_EL1",                  "fullname": "Uncore Performance Monitor Counter 10",                        "enc": [3, 7, 15, 2, 5  ], "width": 64},
-    {"index": 0, "name": "UPMC11_EL1",                  "fullname": "Uncore Performance Monitor Counter 11",                        "enc": [3, 7, 15, 3, 5  ], "width": 64},
-    {"index": 0, "name": "UPMC12_EL1",                  "fullname": "Uncore Performance Monitor Counter 12",                        "enc": [3, 7, 15, 4, 5  ], "width": 64},
-    {"index": 0, "name": "UPMC13_EL1",                  "fullname": "Uncore Performance Monitor Counter 13",                        "enc": [3, 7, 15, 5, 5  ], "width": 64},
-    {"index": 0, "name": "UPMC14_EL1",                  "fullname": "Uncore Performance Monitor Counter 14",                        "enc": [3, 7, 15, 6, 5  ], "width": 64},
-    {"index": 0, "name": "UPMC15_EL1",                  "fullname": "Uncore Performance Monitor Counter 15",                        "enc": [3, 7, 15, 7, 5  ], "width": 64},
-    {"index": 0, "name": "HACR_EL2",                    "fullname": "Hypervisor Auxiliary Control Register",                        "enc": [3, 4, 1, 1, 7   ], "width": 64,
-        "fieldsets": [{"fields": [
-            {"name": "TRAP_CPU_EXT",                    "msb": 0, "lsb": 0},
-            {"name": "TRAP_AIDR",                       "msb": 4, "lsb": 4},
-            {"name": "TRAP_AMX",                        "msb": 10, "lsb": 10},
-            {"name": "TRAP_SPRR",                       "msb": 11, "lsb": 11},
-            {"name": "TRAP_GXF",                        "msb": 13, "lsb": 13},
-            {"name": "TRAP_CTRR",                       "msb": 14, "lsb": 14},
-            {"name": "TRAP_IPI",                        "msb": 16, "lsb": 16},
-            {"name": "TRAP_s3_4_c15_c5z6_x",            "msb": 18, "lsb": 18},
-            {"name": "TRAP_s3_4_c15_c0z12_5",           "msb": 19, "lsb": 19},
-            {"name": "GIC_CNTV",                        "msb": 20, "lsb": 20},
-            {"name": "TRAP_s3_4_c15_c10_4",             "msb": 25, "lsb": 25},
-            {"name": "TRAP_SERROR_INFO",                "msb": 48, "lsb": 48},
-            {"name": "TRAP_EHID",                       "msb": 49, "lsb": 49},
-            {"name": "TRAP_HID",                        "msb": 50, "lsb": 50},
-            {"name": "TRAP_s3_0_c15_c12_1z2",           "msb": 51, "lsb": 51},
-            {"name": "TRAP_ACC",                        "msb": 52, "lsb": 52},
-            {"name": "TRAP_PMUV3",                      "msb": 56, "lsb": 56},
-            {"name": "TRAP_PM",                         "msb": 57, "lsb": 57},
-            {"name": "TRAP_UPM",                        "msb": 58, "lsb": 58},
-            {"name": "TRAP_s3_1z7_c15_cx_3",            "msb": 59, "lsb": 59}
-        ]}]}
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MIDR_EL1",
+    "enc": [3, 0, 0, 0, 0],
+    "fullname": "MIDR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MPIDR_EL1",
+    "enc": [3, 0, 0, 0, 5],
+    "fullname": "MPIDR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REVIDR_EL1",
+    "enc": [3, 0, 0, 0, 6],
+    "fullname": "REVIDR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_PFR0_EL1",
+    "enc": [3, 0, 0, 1, 0],
+    "fullname": "ID PFR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_PFR1_EL1",
+    "enc": [3, 0, 0, 1, 1],
+    "fullname": "ID PFR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_DFR0_EL1",
+    "enc": [3, 0, 0, 1, 2],
+    "fullname": "ID DFR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AFR0_EL1",
+    "enc": [3, 0, 0, 1, 3],
+    "fullname": "ID AFR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_MMFR0_EL1",
+    "enc": [3, 0, 0, 1, 4],
+    "fullname": "ID MMFR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_MMFR1_EL1",
+    "enc": [3, 0, 0, 1, 5],
+    "fullname": "ID MMFR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_MMFR2_EL1",
+    "enc": [3, 0, 0, 1, 6],
+    "fullname": "ID MMFR2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_MMFR3_EL1",
+    "enc": [3, 0, 0, 1, 7],
+    "fullname": "ID MMFR3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_ISAR0_EL1",
+    "enc": [3, 0, 0, 2, 0],
+    "fullname": "ID ISAR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_ISAR1_EL1",
+    "enc": [3, 0, 0, 2, 1],
+    "fullname": "ID ISAR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_ISAR2_EL1",
+    "enc": [3, 0, 0, 2, 2],
+    "fullname": "ID ISAR2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_ISAR3_EL1",
+    "enc": [3, 0, 0, 2, 3],
+    "fullname": "ID ISAR3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_ISAR4_EL1",
+    "enc": [3, 0, 0, 2, 4],
+    "fullname": "ID ISAR4 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_ISAR5_EL1",
+    "enc": [3, 0, 0, 2, 5],
+    "fullname": "ID ISAR5 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_MMFR4_EL1",
+    "enc": [3, 0, 0, 2, 6],
+    "fullname": "ID MMFR4 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_ISAR6_EL1",
+    "enc": [3, 0, 0, 2, 7],
+    "fullname": "ID ISAR6 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MVFR0_EL1",
+    "enc": [3, 0, 0, 3, 0],
+    "fullname": "MVFR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MVFR1_EL1",
+    "enc": [3, 0, 0, 3, 1],
+    "fullname": "MVFR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MVFR2_EL1",
+    "enc": [3, 0, 0, 3, 2],
+    "fullname": "MVFR2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA32RES3_EL1",
+    "enc": [3, 0, 0, 3, 3],
+    "fullname": "ID AA32RES3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_PFR2_EL1",
+    "enc": [3, 0, 0, 3, 4],
+    "fullname": "ID PFR2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA32RES5_EL1",
+    "enc": [3, 0, 0, 3, 5],
+    "fullname": "ID AA32RES5 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA32RES6_EL1",
+    "enc": [3, 0, 0, 3, 6],
+    "fullname": "ID AA32RES6 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA32RES7_EL1",
+    "enc": [3, 0, 0, 3, 7],
+    "fullname": "ID AA32RES7 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64PFR0_EL1",
+    "enc": [3, 0, 0, 4, 0],
+    "fullname": "ID AA64PFR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64PFR1_EL1",
+    "enc": [3, 0, 0, 4, 1],
+    "fullname": "ID AA64PFR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64PFR2_EL1",
+    "enc": [3, 0, 0, 4, 2],
+    "fullname": "ID AA64PFR2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64PFR3_EL1",
+    "enc": [3, 0, 0, 4, 3],
+    "fullname": "ID AA64PFR3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64ZFR0_EL1",
+    "enc": [3, 0, 0, 4, 4],
+    "fullname": "ID AA64ZFR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64ZFR1_EL1",
+    "enc": [3, 0, 0, 4, 5],
+    "fullname": "ID AA64ZFR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64ZFR2_EL1",
+    "enc": [3, 0, 0, 4, 6],
+    "fullname": "ID AA64ZFR2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64ZFR3_EL1",
+    "enc": [3, 0, 0, 4, 7],
+    "fullname": "ID AA64ZFR3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64DFR0_EL1",
+    "enc": [3, 0, 0, 5, 0],
+    "fullname": "ID AA64DFR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64DFR1_EL1",
+    "enc": [3, 0, 0, 5, 1],
+    "fullname": "ID AA64DFR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64DFR2_EL1",
+    "enc": [3, 0, 0, 5, 2],
+    "fullname": "ID AA64DFR2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64DFR3_EL1",
+    "enc": [3, 0, 0, 5, 3],
+    "fullname": "ID AA64DFR3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64AFR0_EL1",
+    "enc": [3, 0, 0, 5, 4],
+    "fullname": "ID AA64AFR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64AFR1_EL1",
+    "enc": [3, 0, 0, 5, 5],
+    "fullname": "ID AA64AFR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64AFR2_EL1",
+    "enc": [3, 0, 0, 5, 6],
+    "fullname": "ID AA64AFR2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64AFR3_EL1",
+    "enc": [3, 0, 0, 5, 7],
+    "fullname": "ID AA64AFR3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64ISAR0_EL1",
+    "enc": [3, 0, 0, 6, 0],
+    "fullname": "ID AA64ISAR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64ISAR1_EL1",
+    "enc": [3, 0, 0, 6, 1],
+    "fullname": "ID AA64ISAR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64ISAR3_EL1",
+    "enc": [3, 0, 0, 6, 3],
+    "fullname": "ID AA64ISAR3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64ISAR4_EL1",
+    "enc": [3, 0, 0, 6, 4],
+    "fullname": "ID AA64ISAR4 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64ISAR5_EL1",
+    "enc": [3, 0, 0, 6, 5],
+    "fullname": "ID AA64ISAR5 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64ISAR6_EL1",
+    "enc": [3, 0, 0, 6, 6],
+    "fullname": "ID AA64ISAR6 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64ISAR7_EL1",
+    "enc": [3, 0, 0, 6, 7],
+    "fullname": "ID AA64ISAR7 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64MMFR0_EL1",
+    "enc": [3, 0, 0, 7, 0],
+    "fullname": "ID AA64MMFR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64MMFR1_EL1",
+    "enc": [3, 0, 0, 7, 1],
+    "fullname": "ID AA64MMFR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64MMFR2_EL1",
+    "enc": [3, 0, 0, 7, 2],
+    "fullname": "ID AA64MMFR2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64MMFR3_EL1",
+    "enc": [3, 0, 0, 7, 3],
+    "fullname": "ID AA64MMFR3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64MMFR4_EL1",
+    "enc": [3, 0, 0, 7, 4],
+    "fullname": "ID AA64MMFR4 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64MMFR5_EL1",
+    "enc": [3, 0, 0, 7, 5],
+    "fullname": "ID AA64MMFR5 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64MMFR6_EL1",
+    "enc": [3, 0, 0, 7, 6],
+    "fullname": "ID AA64MMFR6 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ID_AA64MMFR7_EL1",
+    "enc": [3, 0, 0, 7, 7],
+    "fullname": "ID AA64MMFR7 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SCTLR_EL21",
+    "enc": [3, 0, 1, 0, 0],
+    "fullname": "SCTLR EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACTLR_EL21",
+    "enc": [3, 0, 1, 0, 1],
+    "fullname": "ACTLR EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPTR_EL21",
+    "enc": [3, 0, 1, 0, 2],
+    "fullname": "CPTR EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TTBR0_EL21",
+    "enc": [3, 0, 2, 0, 0],
+    "fullname": "TTBR0 EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TTBR1_EL21",
+    "enc": [3, 0, 2, 0, 1],
+    "fullname": "TTBR1 EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TCR_EL21",
+    "enc": [3, 0, 2, 0, 2],
+    "fullname": "TCR EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APIAKeyLo_EL21",
+    "enc": [3, 0, 2, 1, 0],
+    "fullname": "APIAKeyLo EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APIAKeyHi_EL21",
+    "enc": [3, 0, 2, 1, 1],
+    "fullname": "APIAKeyHi EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APIBKeyLo_EL21",
+    "enc": [3, 0, 2, 1, 2],
+    "fullname": "APIBKeyLo EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APIBKeyHi_EL21",
+    "enc": [3, 0, 2, 1, 3],
+    "fullname": "APIBKeyHi EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APDAKeyLo_EL21",
+    "enc": [3, 0, 2, 2, 0],
+    "fullname": "APDAKeyLo EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APDAKeyHi_EL21",
+    "enc": [3, 0, 2, 2, 1],
+    "fullname": "APDAKeyHi EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APDBKeyLo_EL21",
+    "enc": [3, 0, 2, 2, 2],
+    "fullname": "APDBKeyLo EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APDBKeyHi_EL21",
+    "enc": [3, 0, 2, 2, 3],
+    "fullname": "APDBKeyHi EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APGAKeyLo_EL21",
+    "enc": [3, 0, 2, 3, 0],
+    "fullname": "APGAKeyLo EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APGAKeyHi_EL21",
+    "enc": [3, 0, 2, 3, 1],
+    "fullname": "APGAKeyHi EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPSR_EL21",
+    "enc": [3, 0, 4, 0, 0],
+    "fullname": "SPSR EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ELR_EL21",
+    "enc": [3, 0, 4, 0, 1],
+    "fullname": "ELR EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SP_EL0",
+    "enc": [3, 0, 4, 1, 0],
+    "fullname": "SP EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPSEL",
+    "enc": [3, 0, 4, 2, 0],
+    "fullname": "SPSEL"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "NestedCurrentEL",
+    "enc": [3, 0, 4, 2, 2],
+    "fullname": "NestedCurrentEL"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PAN",
+    "enc": [3, 0, 4, 2, 3],
+    "fullname": "PAN"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "UAO",
+    "enc": [3, 0, 4, 2, 4],
+    "fullname": "UAO"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_PMR_EL1",
+    "enc": [3, 0, 4, 6, 0],
+    "fullname": "ICV PMR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFSR0_EL21",
+    "enc": [3, 0, 5, 1, 0],
+    "fullname": "AFSR0 EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFSR1_EL21",
+    "enc": [3, 0, 5, 1, 1],
+    "fullname": "AFSR1 EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ESR_EL21",
+    "enc": [3, 0, 5, 2, 0],
+    "fullname": "ESR EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ERRIDR_EL1",
+    "enc": [3, 0, 5, 3, 0],
+    "fullname": "ERRIDR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "FAR_EL21",
+    "enc": [3, 0, 6, 0, 0],
+    "fullname": "FAR EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PAR_EL1",
+    "enc": [3, 0, 7, 4, 0],
+    "fullname": "PAR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MAIR_EL21",
+    "enc": [3, 0, 10, 2, 0],
+    "fullname": "MAIR EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMAIR_EL21",
+    "enc": [3, 0, 10, 3, 0],
+    "fullname": "AMAIR EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LORSA_EL1",
+    "enc": [3, 0, 10, 4, 0],
+    "fullname": "LORSA EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LOREA_EL1",
+    "enc": [3, 0, 10, 4, 1],
+    "fullname": "LOREA EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LORN_EL1",
+    "enc": [3, 0, 10, 4, 2],
+    "fullname": "LORN EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LORC_EL1",
+    "enc": [3, 0, 10, 4, 3],
+    "fullname": "LORC EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LORID_EL1",
+    "enc": [3, 0, 10, 4, 7],
+    "fullname": "LORID EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VBAR_EL21",
+    "enc": [3, 0, 12, 0, 0],
+    "fullname": "VBAR EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "RVBAR_EL1",
+    "enc": [3, 0, 12, 0, 1],
+    "fullname": "RVBAR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "RMR_EL1",
+    "enc": [3, 0, 12, 0, 2],
+    "fullname": "RMR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ISR_EL1",
+    "enc": [3, 0, 12, 1, 0],
+    "fullname": "ISR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "DISR_EL1",
+    "enc": [3, 0, 12, 1, 1],
+    "fullname": "DISR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_IAR0_EL1",
+    "enc": [3, 0, 12, 8, 0],
+    "fullname": "ICV IAR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_EOIR0_EL1",
+    "enc": [3, 0, 12, 8, 1],
+    "fullname": "ICV EOIR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_HPPIR0_EL1",
+    "enc": [3, 0, 12, 8, 2],
+    "fullname": "ICV HPPIR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_BPR0_EL1",
+    "enc": [3, 0, 12, 8, 3],
+    "fullname": "ICV BPR0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICC_AP0R0_EL1",
+    "enc": [3, 0, 12, 8, 4],
+    "fullname": "ICC AP0R0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICC_AP1R0_EL1",
+    "enc": [3, 0, 12, 9, 0],
+    "fullname": "ICC AP1R0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_DIR_EL1",
+    "enc": [3, 0, 12, 11, 1],
+    "fullname": "ICV DIR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_RPR_EL1",
+    "enc": [3, 0, 12, 11, 3],
+    "fullname": "ICV RPR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICC_SGI1R_EL1",
+    "enc": [3, 0, 12, 11, 5],
+    "fullname": "ICC SGI1R EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICC_ASGI1R_EL1",
+    "enc": [3, 0, 12, 11, 6],
+    "fullname": "ICC ASGI1R EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICC_SGI0R_EL1",
+    "enc": [3, 0, 12, 11, 7],
+    "fullname": "ICC SGI0R EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_IAR1_EL1",
+    "enc": [3, 0, 12, 12, 0],
+    "fullname": "ICV IAR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_EOIR1_EL1",
+    "enc": [3, 0, 12, 12, 1],
+    "fullname": "ICV EOIR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_HPPIR1_EL1",
+    "enc": [3, 0, 12, 12, 2],
+    "fullname": "ICV HPPIR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_BPR1_EL1",
+    "enc": [3, 0, 12, 12, 3],
+    "fullname": "ICV BPR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_CTLR_EL1",
+    "enc": [3, 0, 12, 12, 4],
+    "fullname": "ICV ControlR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICC_SRE_EL1",
+    "enc": [3, 0, 12, 12, 5],
+    "fullname": "ICC SRE EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_IGRPEN0_EL1",
+    "enc": [3, 0, 12, 12, 6],
+    "fullname": "ICV IGRPEN0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICV_IGRPEN1_EL1",
+    "enc": [3, 0, 12, 12, 7],
+    "fullname": "ICV IGRPEN1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CONTEXTIDR_EL21",
+    "enc": [3, 0, 13, 0, 1],
+    "fullname": "CONTEXTIDR EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TPIDR_EL1",
+    "enc": [3, 0, 13, 0, 4],
+    "fullname": "TPIDR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTKCTL_EL1",
+    "enc": [3, 0, 14, 1, 0],
+    "fullname": "REDIR CounterKCTL EL1"
+  },
+  {
+    "index": 0,
+    "name": "HID0_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 0",
+    "enc": [3, 0, 15, 0, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "EHID0_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 0 (E-core)",
+    "enc": [3, 0, 15, 0, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HID25",
+    "enc": [3, 0, 15, 0, 2],
+    "fullname": "HID25"
+  },
+  {
+    "index": 0,
+    "name": "HID26_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 26",
+    "enc": [3, 0, 15, 0, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "HID27_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 27",
+    "enc": [3, 0, 15, 0, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HID28",
+    "enc": [3, 0, 15, 0, 5],
+    "fullname": "HID28"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HID29",
+    "enc": [3, 0, 15, 0, 6],
+    "fullname": "HID29"
+  },
+  {
+    "index": 0,
+    "name": "HID1_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 1",
+    "enc": [3, 0, 15, 1, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "EHID1_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 1 (E-core)",
+    "enc": [3, 0, 15, 1, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "EHID20_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 20 (E-core)",
+    "enc": [3, 0, 15, 1, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "HID21_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 21",
+    "enc": [3, 0, 15, 1, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HID22",
+    "enc": [3, 0, 15, 1, 4],
+    "fullname": "HID22"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HID23",
+    "enc": [3, 0, 15, 1, 5],
+    "fullname": "HID23"
+  },
+  {
+    "index": 0,
+    "name": "HID2_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 2",
+    "enc": [3, 0, 15, 2, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "EHID2_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 2 (E-core)",
+    "enc": [3, 0, 15, 2, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "HID3_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 3",
+    "enc": [3, 0, 15, 3, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "EHID3_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 3 (E-core)",
+    "enc": [3, 0, 15, 3, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "HID4_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 4",
+    "enc": [3, 0, 15, 4, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "EHID4_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 4 (E-core)",
+    "enc": [3, 0, 15, 4, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "HID5_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 5",
+    "enc": [3, 0, 15, 5, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "EHID5_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 5 (E-core)",
+    "enc": [3, 0, 15, 5, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "HID6_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 6",
+    "enc": [3, 0, 15, 6, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "HID7_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 7",
+    "enc": [3, 0, 15, 7, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "EHID7_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 7 (E-core)",
+    "enc": [3, 0, 15, 7, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "HID8_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 8",
+    "enc": [3, 0, 15, 8, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "HID9_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 9",
+    "enc": [3, 0, 15, 9, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "EHID9_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 9 (E-core)",
+    "enc": [3, 0, 15, 9, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "HID10_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 10",
+    "enc": [3, 0, 15, 10, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "EHID10_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 10 (E-core)",
+    "enc": [3, 0, 15, 10, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "BLOCK_CMAINT_CFG",
+    "enc": [3, 0, 15, 10, 2],
+    "fullname": "BLOCK CMAINT Config"
+  },
+  {
+    "index": 0,
+    "name": "HID11_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 11",
+    "enc": [3, 0, 15, 11, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "EHID11_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 11 (E-core)",
+    "enc": [3, 0, 15, 11, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "HID18_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 18",
+    "enc": [3, 0, 15, 11, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "EHID18_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 18 (E-core)",
+    "enc": [3, 0, 15, 11, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HID12",
+    "enc": [3, 0, 15, 12, 0],
+    "fullname": "HID12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HID15",
+    "enc": [3, 0, 15, 12, 1],
+    "fullname": "HID15"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HID19",
+    "enc": [3, 0, 15, 12, 2],
+    "fullname": "HID19"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "BIU_TLIMIT",
+    "enc": [3, 0, 15, 13, 0],
+    "fullname": "BIU TLIMIT"
+  },
+  {
+    "index": 0,
+    "name": "HID13_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 13",
+    "enc": [3, 0, 15, 14, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "HID14_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 14",
+    "enc": [3, 0, 15, 15, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "HID16_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 16",
+    "enc": [3, 0, 15, 15, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_WRR2",
+    "enc": [3, 0, 15, 15, 3],
+    "fullname": "LLC WRR2"
+  },
+  {
+    "index": 0,
+    "name": "HID17_EL1",
+    "fullname": "Hardware Implementation-Dependent Register 17",
+    "enc": [3, 0, 15, 15, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HID24",
+    "enc": [3, 0, 15, 15, 6],
+    "fullname": "HID24"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CCSIDR_EL1",
+    "enc": [3, 1, 0, 0, 0],
+    "fullname": "CCSIDR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CLIDR_EL1",
+    "enc": [3, 1, 0, 0, 1],
+    "fullname": "CLIDR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AIDR_EL1",
+    "enc": [3, 1, 0, 0, 7],
+    "fullname": "AIDR EL1"
+  },
+  {
+    "index": 0,
+    "name": "PMCR0_EL1",
+    "fullname": "Performance Monitor Control Register 0",
+    "enc": [3, 1, 15, 0, 0],
+    "width": 64,
+    "fieldsets": [
+      {
+        "fields": [
+          { "name": "PMC0_EN", "msb": 0, "lsb": 0 },
+          { "name": "PMC1_EN", "msb": 1, "lsb": 1 },
+          { "name": "PMC2_EN", "msb": 2, "lsb": 2 },
+          { "name": "PMC3_EN", "msb": 3, "lsb": 3 },
+          { "name": "PMC4_EN", "msb": 4, "lsb": 4 },
+          { "name": "PMC5_EN", "msb": 5, "lsb": 5 },
+          { "name": "PMC6_EN", "msb": 6, "lsb": 6 },
+          { "name": "PMC7_EN", "msb": 7, "lsb": 7 },
+          { "name": "IRQ_MODE", "msb": 10, "lsb": 8 },
+          { "name": "IRQ_ACTIVE", "msb": 11, "lsb": 11 },
+          { "name": "PMC0_IRQ_EN", "msb": 12, "lsb": 12 },
+          { "name": "PMC1_IRQ_EN", "msb": 13, "lsb": 13 },
+          { "name": "PMC2_IRQ_EN", "msb": 14, "lsb": 14 },
+          { "name": "PMC3_IRQ_EN", "msb": 15, "lsb": 15 },
+          { "name": "PMC4_IRQ_EN", "msb": 16, "lsb": 16 },
+          { "name": "PMC5_IRQ_EN", "msb": 17, "lsb": 17 },
+          { "name": "PMC6_IRQ_EN", "msb": 18, "lsb": 18 },
+          { "name": "PMC7_IRQ_EN", "msb": 19, "lsb": 19 },
+          { "name": "DIS_CNT_PMI", "msb": 20, "lsb": 20 },
+          { "name": "WAIT_ERET", "msb": 22, "lsb": 22 },
+          { "name": "CNT_GLOBAL_L2C", "msb": 23, "lsb": 23 },
+          { "name": "USER_EN", "msb": 30, "lsb": 30 },
+          { "name": "PMC8_EN", "msb": 32, "lsb": 32 },
+          { "name": "PMC9_EN", "msb": 33, "lsb": 33 },
+          { "name": "PMC8_IRQ_EN", "msb": 44, "lsb": 44 },
+          { "name": "PMC9_IRQ_EN", "msb": 45, "lsb": 45 }
+        ]
+      }
+    ]
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APPL_CONTEXTPTR",
+    "enc": [3, 1, 15, 0, 1],
+    "fullname": "APPL CONTEXTPTR"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LD_LATPROF_CTL_EL21",
+    "enc": [3, 1, 15, 0, 2],
+    "fullname": "LD LATPROF Control EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MSTALL_CTL01_EL1",
+    "enc": [3, 1, 15, 0, 3],
+    "fullname": "AON CPU MSTALL Control 01 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PM_MEMFLT_CTL23_EL1",
+    "enc": [3, 1, 15, 0, 4],
+    "fullname": "PM MEMFLT Control 23 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTV_CTL_EL0",
+    "enc": [3, 1, 15, 0, 5],
+    "fullname": "REDIR ACNTV Control EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LCL_ACNTVCTSS_NOREDIR_EL0",
+    "enc": [3, 1, 15, 0, 6],
+    "fullname": "LCL ACNTVCTSS NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "name": "PMCR1_EL1",
+    "fullname": "Performance Monitor Control Register 1",
+    "enc": [3, 1, 15, 1, 0],
+    "width": 64,
+    "fieldsets": [
+      {
+        "fields": [
+          { "name": "EL0_A32_PMC_0_7", "msb": 7, "lsb": 0 },
+          { "name": "EL0_A64_PMC_0_7", "msb": 15, "lsb": 8 },
+          { "name": "EL1_A64_PMC_0_7", "msb": 23, "lsb": 16 },
+          { "name": "EL3_A64_PMC_0_7", "msb": 31, "lsb": 24 },
+          { "name": "EL0_A32_PMC_8_9", "msb": 33, "lsb": 32 },
+          { "name": "EL0_A64_PMC_8_9", "msb": 41, "lsb": 40 },
+          { "name": "EL1_A64_PMC_8_9", "msb": 49, "lsb": 48 },
+          { "name": "EL3_A64_PMC_8_9", "msb": 57, "lsb": 56 }
+        ]
+      }
+    ]
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LD_LATPROF_CTR_EL1",
+    "enc": [3, 1, 15, 1, 2],
+    "fullname": "LD LATPROF Counter EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MSTALL_CTL23_EL1",
+    "enc": [3, 1, 15, 1, 3],
+    "fullname": "AON CPU MSTALL Control 23 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PM_MEMFLT_CTL45_EL1",
+    "enc": [3, 1, 15, 1, 4],
+    "fullname": "PM MEMFLT Control 45 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTRDIR_EL21",
+    "enc": [3, 1, 15, 1, 5],
+    "fullname": "ACNTRDIR EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTKCTL_NOREDIR_EL1",
+    "enc": [3, 1, 15, 1, 6],
+    "fullname": "ACNTKCTL NOREDIR EL1"
+  },
+  {
+    "index": 0,
+    "name": "PMCR2_EL1",
+    "fullname": "Performance Monitor Control Register 2",
+    "enc": [3, 1, 15, 2, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LD_LATPROF_STS_EL1",
+    "enc": [3, 1, 15, 2, 2],
+    "fullname": "LD LATPROF STS EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MSTALL_CTL45_EL1",
+    "enc": [3, 1, 15, 2, 3],
+    "fullname": "AON CPU MSTALL Control 45 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTHP_CVAL_EL2",
+    "enc": [3, 1, 15, 2, 4],
+    "fullname": "REDIR ACNTHP CVAL EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LCL_CNTVCT_NOREDIR_EL0",
+    "enc": [3, 1, 15, 2, 5],
+    "fullname": "LCL CounterVCT NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTP_CVAL_NOREDIR_EL0",
+    "enc": [3, 1, 15, 2, 6],
+    "fullname": "ACNTP CVAL NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "name": "PMCR3_EL1",
+    "fullname": "Performance Monitor Control Register 3",
+    "enc": [3, 1, 15, 3, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LD_LATPROF_INF_EL1",
+    "enc": [3, 1, 15, 3, 2],
+    "fullname": "LD LATPROF INF EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MSTALL_CTL67_EL1",
+    "enc": [3, 1, 15, 3, 3],
+    "fullname": "AON CPU MSTALL Control 67 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTHP_TVAL_EL2",
+    "enc": [3, 1, 15, 3, 4],
+    "fullname": "REDIR ACNTHP TVAL EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LCL_CNTPCTSS_NOREDIR_EL0",
+    "enc": [3, 1, 15, 3, 5],
+    "fullname": "LCL CounterPCTSS NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTP_TVAL_NOREDIR_EL0",
+    "enc": [3, 1, 15, 3, 6],
+    "fullname": "ACNTP TVAL NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "name": "PMCR4_EL1",
+    "fullname": "Performance Monitor Control Register 4",
+    "enc": [3, 1, 15, 4, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LD_LATPROF_CTL_EL2",
+    "enc": [3, 1, 15, 4, 2],
+    "fullname": "LD LATPROF Control EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MEMFLT_CTL01_EL1",
+    "enc": [3, 1, 15, 4, 3],
+    "fullname": "AON CPU MEMFLT Control 01 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTHP_CTL_EL2",
+    "enc": [3, 1, 15, 4, 4],
+    "fullname": "REDIR ACNTHP Control EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LCL_CNTVCTSS_NOREDIR_EL0",
+    "enc": [3, 1, 15, 4, 5],
+    "fullname": "LCL CounterVCTSS NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTP_CTL_NOREDIR_EL0",
+    "enc": [3, 1, 15, 4, 6],
+    "fullname": "ACNTP Control NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "name": "PMESR0_EL1",
+    "fullname": "Performance Monitor Event Selection Register 0",
+    "enc": [3, 1, 15, 5, 0],
+    "width": 64,
+    "fieldsets": [
+      {
+        "fields": [
+          { "name": "PMC2_EVENT_SEL", "msb": 7, "lsb": 0 },
+          { "name": "PMC3_EVENT_SEL", "msb": 15, "lsb": 8 },
+          { "name": "PMC4_EVENT_SEL", "msb": 23, "lsb": 16 },
+          { "name": "PMC5_EVENT_SEL", "msb": 31, "lsb": 24 }
+        ]
+      }
+    ]
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LD_LATPROF_CMD_EL1",
+    "enc": [3, 1, 15, 5, 2],
+    "fullname": "LD LATPROF CMD EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MEMFLT_CTL23_EL1",
+    "enc": [3, 1, 15, 5, 3],
+    "fullname": "AON CPU MEMFLT Control 23 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTHV_CVAL_EL2",
+    "enc": [3, 1, 15, 5, 4],
+    "fullname": "REDIR ACNTHV CVAL EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTV_CVAL_NOREDIR_EL0",
+    "enc": [3, 1, 15, 5, 6],
+    "fullname": "ACNTV CVAL NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "name": "PMESR1_EL1",
+    "fullname": "Performance Monitor Event Selection Register 1",
+    "enc": [3, 1, 15, 6, 0],
+    "width": 64,
+    "fieldsets": [
+      {
+        "fields": [
+          { "name": "PMC6_EVENT_SEL", "msb": 7, "lsb": 0 },
+          { "name": "PMC7_EVENT_SEL", "msb": 15, "lsb": 8 },
+          { "name": "PMC8_EVENT_SEL", "msb": 23, "lsb": 16 },
+          { "name": "PMC9_EVENT_SEL", "msb": 31, "lsb": 24 }
+        ]
+      }
+    ]
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMCR1_EL2",
+    "enc": [3, 1, 15, 6, 2],
+    "fullname": "PMCR1 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MEMFLT_CTL45_EL1",
+    "enc": [3, 1, 15, 6, 3],
+    "fullname": "AON CPU MEMFLT Control 45 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTHV_TVAL_EL2",
+    "enc": [3, 1, 15, 6, 4],
+    "fullname": "REDIR ACNTHV TVAL EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTKCTL_NOREDIR_EL1",
+    "enc": [3, 1, 15, 6, 5],
+    "fullname": "CNTKCTL NOREDIR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTV_TVAL_NOREDIR_EL0",
+    "enc": [3, 1, 15, 6, 6],
+    "fullname": "ACNTV TVAL NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "OPMAT0_EL1",
+    "enc": [3, 1, 15, 7, 0],
+    "fullname": "OPMAT0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMCR1_EL12",
+    "enc": [3, 1, 15, 7, 2],
+    "fullname": "PMCR1 EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MEMFLT_CTL67_EL1",
+    "enc": [3, 1, 15, 7, 3],
+    "fullname": "AON CPU MEMFLT Control 67 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTHV_CTL_EL2",
+    "enc": [3, 1, 15, 7, 4],
+    "fullname": "REDIR ACNTHV Control EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTP_CVAL_NOREDIR_EL0",
+    "enc": [3, 1, 15, 7, 5],
+    "fullname": "CNTP CVAL NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTV_CTL_NOREDIR_EL0",
+    "enc": [3, 1, 15, 7, 6],
+    "fullname": "ACNTV Control NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "OPMAT1_EL1",
+    "enc": [3, 1, 15, 8, 0],
+    "fullname": "OPMAT1 EL1"
+  },
+  {
+    "index": 0,
+    "name": "PMCR1_GL1",
+    "fullname": "Performance Monitor Control Register 1 (GL1)",
+    "enc": [3, 1, 15, 8, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MSTALL_CTR0_EL1",
+    "enc": [3, 1, 15, 8, 3],
+    "fullname": "AON CPU MSTALL Counter 0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTFRQ_EL0",
+    "enc": [3, 1, 15, 8, 4],
+    "fullname": "REDIR ACNTFRQ EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTP_TVAL_NOREDIR_EL0",
+    "enc": [3, 1, 15, 8, 5],
+    "fullname": "CNTP TVAL NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LCL_CNTPCT_NOREDIR_EL0",
+    "enc": [3, 1, 15, 8, 6],
+    "fullname": "LCL CounterPCT NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "OPMSK0_EL1",
+    "enc": [3, 1, 15, 9, 0],
+    "fullname": "OPMSK0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LD_LATPROF_CTL_EL12",
+    "enc": [3, 1, 15, 9, 2],
+    "fullname": "LD LATPROF Control EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MSTALL_CTR1_EL1",
+    "enc": [3, 1, 15, 9, 3],
+    "fullname": "AON CPU MSTALL Counter 1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTVOFF_EL2",
+    "enc": [3, 1, 15, 9, 4],
+    "fullname": "ACNTVOFF EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTP_CTL_NOREDIR_EL0",
+    "enc": [3, 1, 15, 9, 5],
+    "fullname": "CNTP Control NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTV_CTL_NOREDIR_EL0",
+    "enc": [3, 1, 15, 9, 6],
+    "fullname": "CNTV Control NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "OPMSK1_EL1",
+    "enc": [3, 1, 15, 10, 0],
+    "fullname": "OPMSK1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LD_LATPROF_INF_EL2",
+    "enc": [3, 1, 15, 10, 2],
+    "fullname": "LD LATPROF INF EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MSTALL_CTR2_EL1",
+    "enc": [3, 1, 15, 10, 3],
+    "fullname": "AON CPU MSTALL Counter 2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTP_CVAL_EL0",
+    "enc": [3, 1, 15, 10, 4],
+    "fullname": "REDIR ACNTP CVAL EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTV_CVAL_NOREDIR_EL0",
+    "enc": [3, 1, 15, 10, 5],
+    "fullname": "CNTV CVAL NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LCL_ACNTPCT_NOREDIR_EL0",
+    "enc": [3, 1, 15, 10, 6],
+    "fullname": "LCL ACNTPCT NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMCR_AFFINITY_EL1",
+    "enc": [3, 1, 15, 11, 0],
+    "fullname": "PMCR AFFINITY EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MSTALL_CTR3_EL1",
+    "enc": [3, 1, 15, 11, 3],
+    "fullname": "AON CPU MSTALL Counter 3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTP_TVAL_EL0",
+    "enc": [3, 1, 15, 11, 4],
+    "fullname": "REDIR ACNTP TVAL EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTV_TVAL_NOREDIR_EL0",
+    "enc": [3, 1, 15, 11, 5],
+    "fullname": "CNTV TVAL NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VMSA_HV_LOCK_EL2",
+    "enc": [3, 1, 15, 11, 6],
+    "fullname": "VMSA HV LOCK EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMSWCTRL_EL1",
+    "enc": [3, 1, 15, 12, 0],
+    "fullname": "PMSWCTRL EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMCR5_EL0",
+    "enc": [3, 1, 15, 12, 1],
+    "fullname": "PMCR5 EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MSTALL_CTR4_EL1",
+    "enc": [3, 1, 15, 12, 3],
+    "fullname": "AON CPU MSTALL Counter 4 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMCompare0_EL1",
+    "enc": [3, 1, 15, 12, 4],
+    "fullname": "PMCompare0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMCompare1_EL1",
+    "enc": [3, 1, 15, 12, 5],
+    "fullname": "PMCompare1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VMSA_NV_LOCK_EL2",
+    "enc": [3, 1, 15, 12, 6],
+    "fullname": "VMSA NV LOCK EL2"
+  },
+  {
+    "index": 0,
+    "name": "PMSR_EL1",
+    "fullname": "Performance Monitor Status Register",
+    "enc": [3, 1, 15, 13, 0],
+    "width": 64,
+    "fieldsets": [
+      {
+        "fields": [
+          { "name": "PMC0_OVERFLOW", "msb": 0, "lsb": 0 },
+          { "name": "PMC1_OVERFLOW", "msb": 1, "lsb": 1 },
+          { "name": "PMC2_OVERFLOW", "msb": 2, "lsb": 2 },
+          { "name": "PMC3_OVERFLOW", "msb": 3, "lsb": 3 },
+          { "name": "PMC4_OVERFLOW", "msb": 4, "lsb": 4 },
+          { "name": "PMC5_OVERFLOW", "msb": 5, "lsb": 5 },
+          { "name": "PMC6_OVERFLOW", "msb": 6, "lsb": 6 },
+          { "name": "PMC7_OVERFLOW", "msb": 7, "lsb": 7 },
+          { "name": "PMC8_OVERFLOW", "msb": 8, "lsb": 8 },
+          { "name": "PMC9_OVERFLOW", "msb": 9, "lsb": 9 }
+        ]
+      }
+    ]
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MSTALL_CTR5_EL1",
+    "enc": [3, 1, 15, 13, 3],
+    "fullname": "AON CPU MSTALL Counter 5 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTP_CTL_EL0",
+    "enc": [3, 1, 15, 13, 4],
+    "fullname": "REDIR ACNTP Control EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMCompare5_EL1",
+    "enc": [3, 1, 15, 13, 5],
+    "fullname": "PMCompare5 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMCompare6_EL1",
+    "enc": [3, 1, 15, 13, 6],
+    "fullname": "PMCompare6 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMCompare7_EL1",
+    "enc": [3, 1, 15, 13, 7],
+    "fullname": "PMCompare7 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMCR_BVRNG4_EL1",
+    "enc": [3, 1, 15, 14, 0],
+    "fullname": "PMCR BVRNG4 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PM_PMI_PC",
+    "enc": [3, 1, 15, 14, 1],
+    "fullname": "PM PMI PC"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MSTALL_CTR6_EL1",
+    "enc": [3, 1, 15, 14, 3],
+    "fullname": "AON CPU MSTALL Counter 6 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTV_CVAL_EL0",
+    "enc": [3, 1, 15, 14, 4],
+    "fullname": "REDIR ACNTV CVAL EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LCL_ACNTVCT_NOREDIR_EL0",
+    "enc": [3, 1, 15, 14, 5],
+    "fullname": "LCL ACNTVCT NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMCR_BVRNG5_EL1",
+    "enc": [3, 1, 15, 15, 0],
+    "fullname": "PMCR BVRNG5 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CPU_MSTALL_CTR7_EL1",
+    "enc": [3, 1, 15, 15, 3],
+    "fullname": "AON CPU MSTALL Counter 7 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTV_TVAL_EL0",
+    "enc": [3, 1, 15, 15, 4],
+    "fullname": "REDIR ACNTV TVAL EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LCL_ACNTPCTSS_NOREDIR_EL0",
+    "enc": [3, 1, 15, 15, 5],
+    "fullname": "LCL ACNTPCTSS NOREDIR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CSSELR_EL1",
+    "enc": [3, 2, 0, 0, 0],
+    "fullname": "CSSELR EL1"
+  },
+  {
+    "index": 0,
+    "name": "PMC0_EL1",
+    "fullname": "Performance Monitor Counter 0",
+    "enc": [3, 2, 15, 0, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "UPMCFILTER0",
+    "enc": [3, 2, 15, 0, 1],
+    "fullname": "UPMCFILTER0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "UPMCFILTER1",
+    "enc": [3, 2, 15, 0, 2],
+    "fullname": "UPMCFILTER1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "UPMCFILTER2",
+    "enc": [3, 2, 15, 0, 3],
+    "fullname": "UPMCFILTER2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "UPMCFILTER3",
+    "enc": [3, 2, 15, 0, 4],
+    "fullname": "UPMCFILTER3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "UPMCFILTER4",
+    "enc": [3, 2, 15, 0, 5],
+    "fullname": "UPMCFILTER4"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "UPMCFILTER5",
+    "enc": [3, 2, 15, 0, 6],
+    "fullname": "UPMCFILTER5"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "UPMCFILTER6",
+    "enc": [3, 2, 15, 0, 7],
+    "fullname": "UPMCFILTER6"
+  },
+  {
+    "index": 0,
+    "name": "PMC1_EL1",
+    "fullname": "Performance Monitor Counter 1",
+    "enc": [3, 2, 15, 1, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "UPMCFILTER7",
+    "enc": [3, 2, 15, 1, 1],
+    "fullname": "UPMCFILTER7"
+  },
+  {
+    "index": 0,
+    "name": "PMC2_EL1",
+    "fullname": "Performance Monitor Counter 2",
+    "enc": [3, 2, 15, 2, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "PMC3_EL1",
+    "fullname": "Performance Monitor Counter 3",
+    "enc": [3, 2, 15, 3, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "PMC4_EL1",
+    "fullname": "Performance Monitor Counter 4",
+    "enc": [3, 2, 15, 4, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "PMC5_EL1",
+    "fullname": "Performance Monitor Counter 5",
+    "enc": [3, 2, 15, 5, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "PMC6_EL1",
+    "fullname": "Performance Monitor Counter 6",
+    "enc": [3, 2, 15, 6, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "PMC7_EL1",
+    "fullname": "Performance Monitor Counter 7",
+    "enc": [3, 2, 15, 7, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "PMC8_EL1",
+    "fullname": "Performance Monitor Counter 8",
+    "enc": [3, 2, 15, 9, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "PMC9_EL1",
+    "fullname": "Performance Monitor Counter 9",
+    "enc": [3, 2, 15, 10, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMTRHLD6_EL1",
+    "enc": [3, 2, 15, 12, 0],
+    "fullname": "PMTRHLD6 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMTRHLD4_EL1",
+    "enc": [3, 2, 15, 13, 0],
+    "fullname": "PMTRHLD4 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMTRHLD2_EL1",
+    "enc": [3, 2, 15, 14, 0],
+    "fullname": "PMTRHLD2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMMMAP_EL1",
+    "enc": [3, 2, 15, 15, 0],
+    "fullname": "PMMMAP EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CTR_EL0",
+    "enc": [3, 3, 0, 0, 1],
+    "fullname": "CTR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "DCZID_EL0",
+    "enc": [3, 3, 0, 0, 7],
+    "fullname": "DCZID EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "NZCV",
+    "enc": [3, 3, 4, 2, 0],
+    "fullname": "NZCV"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "DAIF",
+    "enc": [3, 3, 4, 2, 1],
+    "fullname": "DAIF"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "DIT",
+    "enc": [3, 3, 4, 2, 5],
+    "fullname": "DIT"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SSBS",
+    "enc": [3, 3, 4, 2, 6],
+    "fullname": "SSBS"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "FPCR",
+    "enc": [3, 3, 4, 4, 0],
+    "fullname": "FPCR"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "FPSR",
+    "enc": [3, 3, 4, 4, 1],
+    "fullname": "FPSR"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "DSPSR_EL0",
+    "enc": [3, 3, 4, 5, 0],
+    "fullname": "DSPSR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "DLR_EL0",
+    "enc": [3, 3, 4, 5, 1],
+    "fullname": "DLR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TPIDR_EL0",
+    "enc": [3, 3, 13, 0, 2],
+    "fullname": "TPIDR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TPIDRRO_EL0",
+    "enc": [3, 3, 13, 0, 3],
+    "fullname": "TPIDRRO EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTFRQ_EL0",
+    "enc": [3, 3, 14, 0, 0],
+    "fullname": "REDIR CounterFRQ EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_LCL_CNTPCT_EL0",
+    "enc": [3, 3, 14, 0, 1],
+    "fullname": "REDIR LCL CounterPCT EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_LCL_CNTVCT_EL0",
+    "enc": [3, 3, 14, 0, 2],
+    "fullname": "REDIR LCL CounterVCT EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_LCL_CNTPCTSS_EL0",
+    "enc": [3, 3, 14, 0, 5],
+    "fullname": "REDIR LCL CounterPCTSS EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_LCL_CNTVCTSS_EL0",
+    "enc": [3, 3, 14, 0, 6],
+    "fullname": "REDIR LCL CounterVCTSS EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTP_TVAL_EL0",
+    "enc": [3, 3, 14, 2, 0],
+    "fullname": "REDIR CounterP TVAL EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTP_CTL_EL0",
+    "enc": [3, 3, 14, 2, 1],
+    "fullname": "REDIR CounterP Control EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTP_CVAL_EL0",
+    "enc": [3, 3, 14, 2, 2],
+    "fullname": "REDIR CounterP CVAL EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTV_TVAL_EL0",
+    "enc": [3, 3, 14, 3, 0],
+    "fullname": "REDIR CounterV TVAL EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTV_CTL_EL0",
+    "enc": [3, 3, 14, 3, 1],
+    "fullname": "REDIR CounterV Control EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTV_CVAL_EL0",
+    "enc": [3, 3, 14, 3, 2],
+    "fullname": "REDIR CounterV CVAL EL0"
+  },
+  {
+    "index": 0,
+    "name": "LSU_ERR_STS_EL1",
+    "fullname": "Load-Store Unit Error Status",
+    "enc": [3, 3, 15, 0, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATCTL1_EL1",
+    "enc": [3, 3, 15, 0, 4],
+    "fullname": "AFLATCTL1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATVALBIN0_EL1",
+    "enc": [3, 3, 15, 0, 5],
+    "fullname": "AFLATVALBIN0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATINFLO_EL1",
+    "enc": [3, 3, 15, 0, 6],
+    "fullname": "AFLATINFLO EL1"
+  },
+  {
+    "index": 0,
+    "name": "LSU_ERR_CTL_EL1",
+    "fullname": "Load-Store Unit Error Control",
+    "enc": [3, 3, 15, 1, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATCTL2_EL1",
+    "enc": [3, 3, 15, 1, 4],
+    "fullname": "AFLATCTL2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATVALBIN1_EL1",
+    "enc": [3, 3, 15, 1, 5],
+    "fullname": "AFLATVALBIN1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATINFHI_EL1",
+    "enc": [3, 3, 15, 1, 6],
+    "fullname": "AFLATINFHI EL1"
+  },
+  {
+    "index": 0,
+    "name": "E_LSU_ERR_STS_EL1",
+    "fullname": "Load-Store Unit Error Status (E-core)",
+    "enc": [3, 3, 15, 2, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATCTL3_EL1",
+    "enc": [3, 3, 15, 2, 4],
+    "fullname": "AFLATCTL3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATVALBIN2_EL1",
+    "enc": [3, 3, 15, 2, 5],
+    "fullname": "AFLATVALBIN2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATCTL4_EL1",
+    "enc": [3, 3, 15, 3, 4],
+    "fullname": "AFLATCTL4 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATVALBIN3_EL1",
+    "enc": [3, 3, 15, 3, 5],
+    "fullname": "AFLATVALBIN3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_FILL_CTL",
+    "enc": [3, 3, 15, 4, 0],
+    "fullname": "LLC FILL Control"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATCTL5_LO_EL1",
+    "enc": [3, 3, 15, 4, 4],
+    "fullname": "AFLATCTL5 LO EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATVALBIN4_EL1",
+    "enc": [3, 3, 15, 4, 5],
+    "fullname": "AFLATVALBIN4 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATCTL5_HI_EL1",
+    "enc": [3, 3, 15, 4, 6],
+    "fullname": "AFLATCTL5 HI EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_FILL_DAT",
+    "enc": [3, 3, 15, 5, 0],
+    "fullname": "LLC FILL DAT"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATVALBIN5_EL1",
+    "enc": [3, 3, 15, 5, 5],
+    "fullname": "AFLATVALBIN5 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATVALBIN6_EL1",
+    "enc": [3, 3, 15, 6, 5],
+    "fullname": "AFLATVALBIN6 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_RAM_CONFIG",
+    "enc": [3, 3, 15, 7, 0],
+    "fullname": "LLC RAM CONFIG"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFLATVALBIN7_EL1",
+    "enc": [3, 3, 15, 7, 5],
+    "fullname": "AFLATVALBIN7 EL1"
+  },
+  {
+    "index": 0,
+    "name": "L2C_ERR_STS_EL1",
+    "fullname": "L2 Cache Error Status",
+    "enc": [3, 3, 15, 8, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CMAINT_BCAST_LIST_0",
+    "enc": [3, 3, 15, 8, 1],
+    "fullname": "CMAINT BCAST LIST 0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CMAINT_BCAST_LIST_1",
+    "enc": [3, 3, 15, 8, 2],
+    "fullname": "CMAINT BCAST LIST 1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CMAINT_BCAST_CTL",
+    "enc": [3, 3, 15, 8, 3],
+    "fullname": "CMAINT BCAST Control"
+  },
+  {
+    "index": 0,
+    "name": "L2C_ERR_ADR_EL1",
+    "fullname": "L2 Cache Address",
+    "enc": [3, 3, 15, 9, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_ERR_CTL",
+    "enc": [3, 3, 15, 9, 1],
+    "fullname": "LLC ERR Control"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_ERR_INJ",
+    "enc": [3, 3, 15, 9, 2],
+    "fullname": "LLC ERR INJ"
+  },
+  {
+    "index": 0,
+    "name": "L2C_ERR_INF_EL1",
+    "fullname": "L2 Cache Error Information",
+    "enc": [3, 3, 15, 10, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "USERTAGSEL_EL1",
+    "enc": [3, 3, 15, 10, 1],
+    "fullname": "USERTAGSEL EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "UUSERTAG_EL0",
+    "enc": [3, 3, 15, 10, 2],
+    "fullname": "UUSERTAG EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "KUSERTAG_EL1",
+    "enc": [3, 3, 15, 10, 3],
+    "fullname": "KUSERTAG EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HUSERTAG_EL2",
+    "enc": [3, 3, 15, 10, 4],
+    "fullname": "HUSERTAG EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_TRACE_CTL0",
+    "enc": [3, 3, 15, 11, 0],
+    "fullname": "LLC TRACE Control 0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_TRACE_CTL1",
+    "enc": [3, 3, 15, 12, 0],
+    "fullname": "LLC TRACE Control 1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_UP_REQ_VC",
+    "enc": [3, 3, 15, 13, 0],
+    "fullname": "LLC UP REQ VC"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_UP_REQ_VC_THRESH",
+    "enc": [3, 3, 15, 13, 1],
+    "fullname": "LLC UP REQ VC THRESH"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_UP_REQ_VC_2",
+    "enc": [3, 3, 15, 13, 2],
+    "fullname": "LLC UP REQ VC 2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_UP_REQ_VC_THRESH_2",
+    "enc": [3, 3, 15, 13, 3],
+    "fullname": "LLC UP REQ VC THRESH 2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_DRAM_HASH0",
+    "enc": [3, 3, 15, 13, 4],
+    "fullname": "LLC DRAM HASH0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_DRAM_HASH1",
+    "enc": [3, 3, 15, 13, 5],
+    "fullname": "LLC DRAM HASH1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_DRAM_HASH2",
+    "enc": [3, 3, 15, 13, 6],
+    "fullname": "LLC DRAM HASH2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_DRAM_HASH3",
+    "enc": [3, 3, 15, 13, 7],
+    "fullname": "LLC DRAM HASH3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_TRACE_CTL2",
+    "enc": [3, 3, 15, 14, 0],
+    "fullname": "LLC TRACE Control 2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_HASH0",
+    "enc": [3, 3, 15, 15, 0],
+    "fullname": "LLC HASH0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_HASH1",
+    "enc": [3, 3, 15, 15, 1],
+    "fullname": "LLC HASH1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_HASH2",
+    "enc": [3, 3, 15, 15, 2],
+    "fullname": "LLC HASH2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_HASH3",
+    "enc": [3, 3, 15, 15, 3],
+    "fullname": "LLC HASH3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_WRR",
+    "enc": [3, 3, 15, 15, 4],
+    "fullname": "LLC WRR"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VPIDR_EL2",
+    "enc": [3, 4, 0, 0, 0],
+    "fullname": "VPIDR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VMPIDR_EL2",
+    "enc": [3, 4, 0, 0, 5],
+    "fullname": "VMPIDR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SCTLR_EL2",
+    "enc": [3, 4, 1, 0, 0],
+    "fullname": "SCTLR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACTLR_EL2",
+    "enc": [3, 4, 1, 0, 1],
+    "fullname": "ACTLR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HCR_EL2",
+    "enc": [3, 4, 1, 1, 0],
+    "fullname": "HCR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MDCR_EL2",
+    "enc": [3, 4, 1, 1, 1],
+    "fullname": "MDCR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPTR_EL2",
+    "enc": [3, 4, 1, 1, 2],
+    "fullname": "CPTR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HSTR_EL2",
+    "enc": [3, 4, 1, 1, 3],
+    "fullname": "HSTR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HFGRTR_EL2",
+    "enc": [3, 4, 1, 1, 4],
+    "fullname": "HFGRTR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HFGWTR_EL2",
+    "enc": [3, 4, 1, 1, 5],
+    "fullname": "HFGWTR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HFGITR_EL2",
+    "enc": [3, 4, 1, 1, 6],
+    "fullname": "HFGITR EL2"
+  },
+  {
+    "index": 0,
+    "name": "HACR_EL2",
+    "fullname": "Hypervisor Auxiliary Control Register",
+    "enc": [3, 4, 1, 1, 7],
+    "width": 64,
+    "fieldsets": [
+      {
+        "fields": [
+          { "name": "TRAP_CPU_EXT", "msb": 0, "lsb": 0 },
+          { "name": "TRAP_AIDR", "msb": 4, "lsb": 4 },
+          { "name": "TRAP_AMX", "msb": 10, "lsb": 10 },
+          { "name": "TRAP_SPRR", "msb": 11, "lsb": 11 },
+          { "name": "TRAP_GXF", "msb": 13, "lsb": 13 },
+          { "name": "TRAP_CTRR", "msb": 14, "lsb": 14 },
+          { "name": "TRAP_IPI", "msb": 16, "lsb": 16 },
+          { "name": "TRAP_s3_4_c15_c5z6_x", "msb": 18, "lsb": 18 },
+          { "name": "TRAP_s3_4_c15_c0z12_5", "msb": 19, "lsb": 19 },
+          { "name": "GIC_CNTV", "msb": 20, "lsb": 20 },
+          { "name": "TRAP_s3_4_c15_c10_4", "msb": 25, "lsb": 25 },
+          { "name": "TRAP_SERROR_INFO", "msb": 48, "lsb": 48 },
+          { "name": "TRAP_EHID", "msb": 49, "lsb": 49 },
+          { "name": "TRAP_HID", "msb": 50, "lsb": 50 },
+          { "name": "TRAP_s3_0_c15_c12_1z2", "msb": 51, "lsb": 51 },
+          { "name": "TRAP_ACC", "msb": 52, "lsb": 52 },
+          { "name": "TRAP_PMUV3", "msb": 56, "lsb": 56 },
+          { "name": "TRAP_PM", "msb": 57, "lsb": 57 },
+          { "name": "TRAP_UPM", "msb": 58, "lsb": 58 },
+          { "name": "TRAP_s3_1z7_c15_cx_3", "msb": 59, "lsb": 59 }
+        ]
+      }
+    ]
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HCRX_EL2",
+    "enc": [3, 4, 1, 2, 2],
+    "fullname": "HCRX EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TTBR0_EL2",
+    "enc": [3, 4, 2, 0, 0],
+    "fullname": "TTBR0 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TTBR1_EL2",
+    "enc": [3, 4, 2, 0, 1],
+    "fullname": "TTBR1 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TCR_EL2",
+    "enc": [3, 4, 2, 0, 2],
+    "fullname": "TCR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VTTBR_EL2",
+    "enc": [3, 4, 2, 1, 0],
+    "fullname": "VTTBR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VTCR_EL2",
+    "enc": [3, 4, 2, 1, 2],
+    "fullname": "VTCR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VNCR_EL2",
+    "enc": [3, 4, 2, 2, 0],
+    "fullname": "VNCR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "DACR32_EL2",
+    "enc": [3, 4, 3, 0, 0],
+    "fullname": "DACR32 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HDFGRTR_EL2",
+    "enc": [3, 4, 3, 1, 4],
+    "fullname": "HDFGRTR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HDFGWTR_EL2",
+    "enc": [3, 4, 3, 1, 5],
+    "fullname": "HDFGWTR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPSR_EL2",
+    "enc": [3, 4, 4, 0, 0],
+    "fullname": "SPSR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ELR_EL2",
+    "enc": [3, 4, 4, 0, 1],
+    "fullname": "ELR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SP_EL1",
+    "enc": [3, 4, 4, 1, 0],
+    "fullname": "SP EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPSR_irq",
+    "enc": [3, 4, 4, 3, 0],
+    "fullname": "SPSR irq"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPSR_abt",
+    "enc": [3, 4, 4, 3, 1],
+    "fullname": "SPSR abt"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPSR_und",
+    "enc": [3, 4, 4, 3, 2],
+    "fullname": "SPSR und"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPSR_fiq",
+    "enc": [3, 4, 4, 3, 3],
+    "fullname": "SPSR fiq"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "IFSR32_EL2",
+    "enc": [3, 4, 5, 0, 1],
+    "fullname": "IFSR32 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFSR0_EL2",
+    "enc": [3, 4, 5, 1, 0],
+    "fullname": "AFSR0 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFSR1_EL2",
+    "enc": [3, 4, 5, 1, 1],
+    "fullname": "AFSR1 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ESR_EL2",
+    "enc": [3, 4, 5, 2, 0],
+    "fullname": "ESR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VSESR_EL2",
+    "enc": [3, 4, 5, 2, 3],
+    "fullname": "VSESR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "FPEXC32_EL2",
+    "enc": [3, 4, 5, 3, 0],
+    "fullname": "FPEXC32 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "FAR_EL2",
+    "enc": [3, 4, 6, 0, 0],
+    "fullname": "FAR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HPFAR_EL2",
+    "enc": [3, 4, 6, 0, 4],
+    "fullname": "HPFAR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MAIR_EL2",
+    "enc": [3, 4, 10, 2, 0],
+    "fullname": "MAIR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMAIR_EL2",
+    "enc": [3, 4, 10, 3, 0],
+    "fullname": "AMAIR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VBAR_EL2",
+    "enc": [3, 4, 12, 0, 0],
+    "fullname": "VBAR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "RVBAR_EL2",
+    "enc": [3, 4, 12, 0, 1],
+    "fullname": "RVBAR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "RMR_EL2",
+    "enc": [3, 4, 12, 0, 2],
+    "fullname": "RMR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VDISR_EL2",
+    "enc": [3, 4, 12, 1, 1],
+    "fullname": "VDISR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_AP0R0_EL2",
+    "enc": [3, 4, 12, 8, 0],
+    "fullname": "ICH AP0R0 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_AP1R0_EL2",
+    "enc": [3, 4, 12, 9, 0],
+    "fullname": "ICH AP1R0 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICC_SRE_EL2",
+    "enc": [3, 4, 12, 9, 5],
+    "fullname": "ICC SRE EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_HCR_EL2",
+    "enc": [3, 4, 12, 11, 0],
+    "fullname": "ICH HCR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_VTR_EL2",
+    "enc": [3, 4, 12, 11, 1],
+    "fullname": "ICH VTR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_MISR_EL2",
+    "enc": [3, 4, 12, 11, 2],
+    "fullname": "ICH MISR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_EISR_EL2",
+    "enc": [3, 4, 12, 11, 3],
+    "fullname": "ICH EISR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_ELRSR_EL2",
+    "enc": [3, 4, 12, 11, 5],
+    "fullname": "ICH ELRSR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_VMCR_EL2",
+    "enc": [3, 4, 12, 11, 7],
+    "fullname": "ICH VMCR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_LR0_EL2",
+    "enc": [3, 4, 12, 12, 0],
+    "fullname": "ICH LR0 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_LR1_EL2",
+    "enc": [3, 4, 12, 12, 1],
+    "fullname": "ICH LR1 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_LR2_EL2",
+    "enc": [3, 4, 12, 12, 2],
+    "fullname": "ICH LR2 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_LR3_EL2",
+    "enc": [3, 4, 12, 12, 3],
+    "fullname": "ICH LR3 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_LR4_EL2",
+    "enc": [3, 4, 12, 12, 4],
+    "fullname": "ICH LR4 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_LR5_EL2",
+    "enc": [3, 4, 12, 12, 5],
+    "fullname": "ICH LR5 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_LR6_EL2",
+    "enc": [3, 4, 12, 12, 6],
+    "fullname": "ICH LR6 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ICH_LR7_EL2",
+    "enc": [3, 4, 12, 12, 7],
+    "fullname": "ICH LR7 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CONTEXTIDR_EL2",
+    "enc": [3, 4, 13, 0, 1],
+    "fullname": "CONTEXTIDR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TPIDR_EL2",
+    "enc": [3, 4, 13, 0, 2],
+    "fullname": "TPIDR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTVOFF_EL2",
+    "enc": [3, 4, 14, 0, 3],
+    "fullname": "CNTVOFF EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTHCTL_EL2",
+    "enc": [3, 4, 14, 1, 0],
+    "fullname": "REDIR CounterHCTL EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTHP_TVAL_EL2",
+    "enc": [3, 4, 14, 2, 0],
+    "fullname": "REDIR CounterHP TVAL EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTHP_CTL_EL2",
+    "enc": [3, 4, 14, 2, 1],
+    "fullname": "REDIR CounterHP Control EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTHP_CVAL_EL2",
+    "enc": [3, 4, 14, 2, 2],
+    "fullname": "REDIR CounterHP CVAL EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTHV_TVAL_EL2",
+    "enc": [3, 4, 14, 3, 0],
+    "fullname": "REDIR CounterHV TVAL EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTHV_CTL_EL2",
+    "enc": [3, 4, 14, 3, 1],
+    "fullname": "REDIR CounterHV Control EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_CNTHV_CVAL_EL2",
+    "enc": [3, 4, 14, 3, 2],
+    "fullname": "REDIR CounterHV CVAL EL2"
+  },
+  {
+    "index": 0,
+    "name": "FED_ERR_STS_EL1",
+    "fullname": "FED Error Status",
+    "enc": [3, 4, 15, 0, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "FED_ERR_CTL",
+    "enc": [3, 4, 15, 0, 1],
+    "fullname": "FED ERR Control"
+  },
+  {
+    "index": 0,
+    "name": "E_FED_ERR_STS_EL1",
+    "fullname": "FED Error Status (E-Core)",
+    "enc": [3, 4, 15, 0, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APCTL_EL1",
+    "fullname": "Pointer Authentication Control",
+    "enc": [3, 4, 15, 0, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPR_LOCKDOWN_EL1",
+    "fullname": "SPR Lockdown",
+    "enc": [3, 4, 15, 0, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "IMPL_MSR_RO_CTRL0_EL2",
+    "enc": [3, 4, 15, 0, 7],
+    "fullname": "IMPL MSR RO CounterL0 EL2"
+  },
+  {
+    "index": 0,
+    "name": "KERNKEYLO_EL1",
+    "fullname": "Pointer Authentication Kernel Key Low",
+    "enc": [3, 4, 15, 1, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "KERNKEYHI_EL1",
+    "fullname": "Pointer Authentication Kernel Key High",
+    "enc": [3, 4, 15, 1, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "VMSA_LOCK_EL1",
+    "fullname": "Virtual Memory System Architecture Lock",
+    "enc": [3, 4, 15, 1, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "AMX_STATE_EL12",
+    "fullname": "AMX State (EL1)",
+    "enc": [3, 4, 15, 1, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "AMX_CONFIG_EL1",
+    "fullname": "AMX Config (EL1)",
+    "enc": [3, 4, 15, 1, 4],
+    "width": 64,
+    "fieldsets": [{ "fields": [{ "name": "EN", "msb": 63, "lsb": 63 }] }]
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VMSA_LOCK_EL2",
+    "enc": [3, 4, 15, 1, 5],
+    "fullname": "VMSA LOCK EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CTRR_B_UPR_EL21",
+    "enc": [3, 4, 15, 1, 6],
+    "fullname": "CTRR B Upper EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CTRR_B_LWR_EL21",
+    "enc": [3, 4, 15, 1, 7],
+    "fullname": "CTRR B Lower EL21"
+  },
+  {
+    "index": 0,
+    "name": "APRR_EL0",
+    "fullname": "APRR EL0",
+    "enc": [3, 4, 15, 2, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APRR_EL1",
+    "fullname": "APRR EL1",
+    "enc": [3, 4, 15, 2, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "CTRR_LOCK_EL1",
+    "fullname": "CTRR Lock",
+    "enc": [3, 4, 15, 2, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "CTRR_A_LWR_EL1",
+    "fullname": "CTRR A Lower Address (EL1)",
+    "enc": [3, 4, 15, 2, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "CTRR_A_UPR_EL1",
+    "fullname": "CTRR A Upper Address (EL1)",
+    "enc": [3, 4, 15, 2, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "CTRR_CTL_EL1",
+    "fullname": "CTRR Control (EL1)",
+    "enc": [3, 4, 15, 2, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "VMSA_LOCK_EL12",
+    "fullname": "Virtual Memory System Architecture Lock (EL12)",
+    "enc": [3, 4, 15, 2, 6],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APRR_JIT_MASK_EL2",
+    "fullname": "APRR JIT Mask",
+    "enc": [3, 4, 15, 2, 7],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMX_STATE_C0_EL1",
+    "enc": [3, 4, 15, 3, 0],
+    "fullname": "AMX STATE C0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMX_STATE_C1_EL1",
+    "enc": [3, 4, 15, 3, 1],
+    "fullname": "AMX STATE C1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMX_STATE_C2_EL1",
+    "enc": [3, 4, 15, 3, 2],
+    "fullname": "AMX STATE C2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMX_STATE_C3_EL1",
+    "enc": [3, 4, 15, 3, 3],
+    "fullname": "AMX STATE C3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMX_STATUS_C0_EL1",
+    "enc": [3, 4, 15, 3, 4],
+    "fullname": "AMX STATUS C0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMX_STATUS_C1_EL1",
+    "enc": [3, 4, 15, 3, 5],
+    "fullname": "AMX STATUS C1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMX_STATUS_C2_EL1",
+    "enc": [3, 4, 15, 3, 6],
+    "fullname": "AMX STATUS C2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMX_STATUS_C3_EL1",
+    "enc": [3, 4, 15, 3, 7],
+    "fullname": "AMX STATUS C3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMX_NUMCTXT_EL1",
+    "enc": [3, 4, 15, 4, 0],
+    "fullname": "AMX NUMCTXT EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTP_CVAL_EL02",
+    "enc": [3, 4, 15, 4, 1],
+    "fullname": "ACNTP CVAL EL02"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTP_TVAL_EL02",
+    "enc": [3, 4, 15, 4, 2],
+    "fullname": "REDIR ACNTP TVAL EL02"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTP_CTL_EL02",
+    "enc": [3, 4, 15, 4, 3],
+    "fullname": "ACNTP Control EL02"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTV_CVAL_EL02",
+    "enc": [3, 4, 15, 4, 4],
+    "fullname": "ACNTV CVAL EL02"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTV_TVAL_EL02",
+    "enc": [3, 4, 15, 4, 5],
+    "fullname": "ACNTV TVAL EL02"
+  },
+  {
+    "index": 0,
+    "name": "AMX_CONFIG_EL12",
+    "fullname": "AMX Config (EL12)",
+    "enc": [3, 4, 15, 4, 6],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "AMX_CTL_EL2",
+    "fullname": "AMX Control (EL2)",
+    "enc": [3, 4, 15, 4, 7],
+    "width": 64,
+    "fieldsets": [
+      {
+        "fields": [
+          { "name": "EN", "msb": 63, "lsb": 63 },
+          { "name": "EN_EL1", "msb": 62, "lsb": 62 }
+        ]
+      }
+    ]
+  },
+  {
+    "index": 0,
+    "name": "CORE_INDEX",
+    "fullname": "Core index in cluster",
+    "enc": [3, 4, 15, 5, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PPERM_EL20_SILLY_THING",
+    "fullname": "SPRR Permission Configuration Register (EL20, useless)",
+    "enc": [3, 4, 15, 5, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UPERM_EL02",
+    "fullname": "SPRR User Permission Configuration Register (EL02)",
+    "enc": [3, 4, 15, 5, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMX_PRIORITY_C0_EL1",
+    "enc": [3, 4, 15, 5, 6],
+    "fullname": "AMX PRIORITY C0 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMX_PRIORITY_C1_EL1",
+    "enc": [3, 4, 15, 5, 7],
+    "fullname": "AMX PRIORITY C1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMX_PRIORITY_C2_EL1",
+    "enc": [3, 4, 15, 6, 0],
+    "fullname": "AMX PRIORITY C2 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMX_PRIORITY_C3_EL1",
+    "enc": [3, 4, 15, 6, 1],
+    "fullname": "AMX PRIORITY C3 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CTRR_CTL_EL2",
+    "enc": [3, 4, 15, 6, 2],
+    "fullname": "CTRR Control EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CTRR_LOCK_EL2",
+    "enc": [3, 4, 15, 6, 3],
+    "fullname": "CTRR LOCK EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CTRR_A_LWR_EL2",
+    "enc": [3, 4, 15, 6, 4],
+    "fullname": "CTRR A Lower EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CTRR_A_UPR_EL2",
+    "enc": [3, 4, 15, 6, 5],
+    "fullname": "CTRR A Upper EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CTRR_B_LWR_EL2",
+    "enc": [3, 4, 15, 6, 6],
+    "fullname": "CTRR B Lower EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CTRR_B_UPR_EL2",
+    "enc": [3, 4, 15, 6, 7],
+    "fullname": "CTRR B Upper EL2"
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UMPRR_EL2",
+    "fullname": "SPRR User MPRR (EL2)",
+    "enc": [3, 4, 15, 7, 0],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UPERM_SH1_EL2",
+    "fullname": "SPRR User Permission SH1 (EL2)",
+    "enc": [3, 4, 15, 7, 1],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UPERM_SH2_EL2",
+    "fullname": "SPRR User Permission SH2 (EL2)",
+    "enc": [3, 4, 15, 7, 2],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UPERM_SH3_EL2",
+    "fullname": "SPRR User Permission SH3 (EL2)",
+    "enc": [3, 4, 15, 7, 3],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_HUPERM_SH04_EL2",
+    "enc": [3, 4, 15, 7, 4],
+    "fullname": "SPRR HUPERM SH04 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_HUPERM_SH05_EL2",
+    "enc": [3, 4, 15, 7, 5],
+    "fullname": "SPRR HUPERM SH05 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_HUPERM_SH06_EL2",
+    "enc": [3, 4, 15, 7, 6],
+    "fullname": "SPRR HUPERM SH06 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_HUPERM_SH07_EL2",
+    "enc": [3, 4, 15, 7, 7],
+    "fullname": "SPRR HUPERM SH07 EL2"
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UMPRR_EL12",
+    "fullname": "SPRR User MPRR (EL12)",
+    "enc": [3, 4, 15, 8, 0],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UPERM_SH1_EL12",
+    "fullname": "SPRR User Permission SH1 (EL12)",
+    "enc": [3, 4, 15, 8, 1],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UPERM_SH2_EL12",
+    "fullname": "SPRR User Permission SH2 (EL12)",
+    "enc": [3, 4, 15, 8, 2],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UPERM_SH3_EL12",
+    "fullname": "SPRR User Permission SH3 (EL12)",
+    "enc": [3, 4, 15, 8, 3],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_VUPERM_SH04_EL1",
+    "enc": [3, 4, 15, 8, 4],
+    "fullname": "SPRR VUPERM SH04 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_VUPERM_SH05_EL1",
+    "enc": [3, 4, 15, 8, 5],
+    "fullname": "SPRR VUPERM SH05 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_VUPERM_SH06_EL1",
+    "enc": [3, 4, 15, 8, 6],
+    "fullname": "SPRR VUPERM SH06 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_VUPERM_SH07_EL1",
+    "enc": [3, 4, 15, 8, 7],
+    "fullname": "SPRR VUPERM SH07 EL1"
+  },
+  {
+    "index": 0,
+    "name": "CTRR_A_LWR_EL12",
+    "fullname": "CTRR A Lower Address (EL12)",
+    "enc": [3, 4, 15, 9, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "CTRR_A_UPR_EL12",
+    "fullname": "CTRR A Upper Address (EL12)",
+    "enc": [3, 4, 15, 9, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "CTRR_B_LWR_EL12",
+    "fullname": "CTRR B Lower Address (EL12)",
+    "enc": [3, 4, 15, 9, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "CTRR_B_UPR_EL12",
+    "fullname": "CTRR B Upper Address (EL12)",
+    "enc": [3, 4, 15, 9, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "CTRR_CTL_EL12",
+    "fullname": "CTRR Control (EL12)",
+    "enc": [3, 4, 15, 9, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "CTRR_LOCK_EL12",
+    "fullname": "CTRR Lock (EL12)",
+    "enc": [3, 4, 15, 9, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTKCTL_EL1",
+    "enc": [3, 4, 15, 9, 6],
+    "fullname": "REDIR ACNTKCTL EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTKCTL_EL12",
+    "enc": [3, 4, 15, 9, 7],
+    "fullname": "ACNTKCTL EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PREDAKEYLo_EL1",
+    "enc": [3, 4, 15, 10, 0],
+    "fullname": "PREDAKEYLo EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PREDAKEYHi_EL1",
+    "enc": [3, 4, 15, 10, 1],
+    "fullname": "PREDAKEYHi EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PREDBKEYLo_EL1",
+    "enc": [3, 4, 15, 10, 2],
+    "fullname": "PREDBKEYLo EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PREDBKEYHi_EL1",
+    "enc": [3, 4, 15, 10, 3],
+    "fullname": "PREDBKEYHi EL1"
+  },
+  {
+    "index": 0,
+    "name": "SIQ_CFG_EL1",
+    "fullname": "System Interrupt Configuration (EL1)",
+    "enc": [3, 4, 15, 10, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ACNTPCT_EL0",
+    "fullname": "Physical timer counter register (pre-spec CNTPCTSS_EL0)",
+    "enc": [3, 4, 15, 10, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ACNTVCT_EL0",
+    "fullname": "Virtual timer counter register (pre-spec CNTVCTSS_EL0)",
+    "enc": [3, 4, 15, 10, 6],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AVNCR_EL2",
+    "enc": [3, 4, 15, 10, 7],
+    "fullname": "AVNCR EL2"
+  },
+  {
+    "index": 0,
+    "name": "CTRR_A_LWR_EL2",
+    "fullname": "CTRR A Lower Address (EL2)",
+    "enc": [3, 4, 15, 11, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "CTRR_A_UPR_EL2",
+    "fullname": "CTRR A Upper Address (EL2)",
+    "enc": [3, 4, 15, 11, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACC_CTRR_B_LWR_EL2",
+    "enc": [3, 4, 15, 11, 2],
+    "fullname": "ACC CounterR B Lower EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACC_CTRR_B_UPR_EL2",
+    "enc": [3, 4, 15, 11, 3],
+    "fullname": "ACC CounterR B Upper EL2"
+  },
+  {
+    "index": 0,
+    "name": "CTRR_CTL_EL2",
+    "fullname": "CTRR Control (EL2)",
+    "enc": [3, 4, 15, 11, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "CTRR_LOCK_EL2",
+    "fullname": "CTRR Lock",
+    "enc": [3, 4, 15, 11, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_LCL_ACNTPCT_EL0",
+    "enc": [3, 4, 15, 11, 6],
+    "fullname": "REDIR LCL ACNTPCT EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_LCL_ACNTVCT_EL0",
+    "enc": [3, 4, 15, 11, 7],
+    "fullname": "REDIR LCL ACNTVCT EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACFG_EL1",
+    "enc": [3, 4, 15, 12, 0],
+    "fullname": "ACFG EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AHCR_EL2",
+    "enc": [3, 4, 15, 12, 1],
+    "fullname": "AHCR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APL_INTSTATUS_EL21",
+    "enc": [3, 4, 15, 12, 2],
+    "fullname": "APL INTSTATUS EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APL_INTSTATUS_EL2",
+    "enc": [3, 4, 15, 12, 3],
+    "fullname": "APL INTSTATUS EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "IMPL_MSR_LOCK_EL21",
+    "enc": [3, 4, 15, 12, 5],
+    "fullname": "IMPL MSR LOCK EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "REDIR_ACNTHCTL_EL2",
+    "enc": [3, 4, 15, 12, 6],
+    "fullname": "REDIR ACNTHCTL EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "IMPL_MSR_LOCK_EL2",
+    "enc": [3, 4, 15, 12, 7],
+    "fullname": "IMPL MSR LOCK EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JAPIAKeyLo_EL2",
+    "enc": [3, 4, 15, 13, 0],
+    "fullname": "JAPIAKeyLo EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JAPIAKeyHi_EL2",
+    "enc": [3, 4, 15, 13, 1],
+    "fullname": "JAPIAKeyHi EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JAPIBKeyLo_EL2",
+    "enc": [3, 4, 15, 13, 2],
+    "fullname": "JAPIBKeyLo EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JAPIBKeyHi_EL2",
+    "enc": [3, 4, 15, 13, 3],
+    "fullname": "JAPIBKeyHi EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JAPIAKeyLo_EL21",
+    "enc": [3, 4, 15, 13, 4],
+    "fullname": "JAPIAKeyLo EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JAPIAKeyHi_EL21",
+    "enc": [3, 4, 15, 13, 5],
+    "fullname": "JAPIAKeyHi EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JAPIBKeyLo_EL21",
+    "enc": [3, 4, 15, 13, 6],
+    "fullname": "JAPIBKeyLo EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JAPIBKeyHi_EL21",
+    "enc": [3, 4, 15, 13, 7],
+    "fullname": "JAPIBKeyHi EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JAPIAKeyLo_EL12",
+    "enc": [3, 4, 15, 14, 0],
+    "fullname": "JAPIAKeyLo EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JAPIAKeyHi_EL12",
+    "enc": [3, 4, 15, 14, 1],
+    "fullname": "JAPIAKeyHi EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JAPIBKeyLo_EL12",
+    "enc": [3, 4, 15, 14, 2],
+    "fullname": "JAPIBKeyLo EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JAPIBKeyHi_EL12",
+    "enc": [3, 4, 15, 14, 3],
+    "fullname": "JAPIBKeyHi EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTRDIR_EL2",
+    "enc": [3, 4, 15, 14, 5],
+    "fullname": "ACNTRDIR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACNTRDIR_EL12",
+    "enc": [3, 4, 15, 14, 6],
+    "fullname": "ACNTRDIR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JRANGE_EL2",
+    "enc": [3, 4, 15, 15, 0],
+    "fullname": "JRANGE EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JRANGE_EL21",
+    "enc": [3, 4, 15, 15, 1],
+    "fullname": "JRANGE EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JRANGE_EL12",
+    "enc": [3, 4, 15, 15, 2],
+    "fullname": "JRANGE EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JCTL_EL2",
+    "enc": [3, 4, 15, 15, 3],
+    "fullname": "JCTL EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JCTL_EL21",
+    "enc": [3, 4, 15, 15, 4],
+    "fullname": "JCTL EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "JCTL_EL12",
+    "enc": [3, 4, 15, 15, 5],
+    "fullname": "JCTL EL12"
+  },
+  {
+    "index": 0,
+    "name": "JCTL_EL0",
+    "fullname": "JITBox Control (EL0)",
+    "enc": [3, 4, 15, 15, 6],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMDSCR_EL1",
+    "enc": [3, 4, 15, 15, 7],
+    "fullname": "AMDSCR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SCTLR_EL12",
+    "enc": [3, 5, 1, 0, 0],
+    "fullname": "SCTLR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACTLR_EL12",
+    "enc": [3, 5, 1, 0, 1],
+    "fullname": "ACTLR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPACR_EL12",
+    "enc": [3, 5, 1, 0, 2],
+    "fullname": "CPACR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TTBR0_EL12",
+    "enc": [3, 5, 2, 0, 0],
+    "fullname": "TTBR0 EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TTBR1_EL12",
+    "enc": [3, 5, 2, 0, 1],
+    "fullname": "TTBR1 EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TCR_EL12",
+    "enc": [3, 5, 2, 0, 2],
+    "fullname": "TCR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPSR_EL12",
+    "enc": [3, 5, 4, 0, 0],
+    "fullname": "SPSR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ELR_EL12",
+    "enc": [3, 5, 4, 0, 1],
+    "fullname": "ELR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFSR0_EL12",
+    "enc": [3, 5, 5, 1, 0],
+    "fullname": "AFSR0 EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFSR1_EL12",
+    "enc": [3, 5, 5, 1, 1],
+    "fullname": "AFSR1 EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ESR_EL12",
+    "enc": [3, 5, 5, 2, 0],
+    "fullname": "ESR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "FAR_EL12",
+    "enc": [3, 5, 6, 0, 0],
+    "fullname": "FAR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MAIR_EL12",
+    "enc": [3, 5, 10, 2, 0],
+    "fullname": "MAIR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMAIR_EL12",
+    "enc": [3, 5, 10, 3, 0],
+    "fullname": "AMAIR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VBAR_EL12",
+    "enc": [3, 5, 12, 0, 0],
+    "fullname": "VBAR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CONTEXTIDR_EL12",
+    "enc": [3, 5, 13, 0, 1],
+    "fullname": "CONTEXTIDR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTKCTL_EL12",
+    "enc": [3, 5, 14, 1, 0],
+    "fullname": "CNTKCTL EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTP_TVAL_EL02",
+    "enc": [3, 5, 14, 2, 0],
+    "fullname": "CNTP TVAL EL02"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTP_CTL_EL02",
+    "enc": [3, 5, 14, 2, 1],
+    "fullname": "CNTP Control EL02"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTP_CVAL_EL02",
+    "enc": [3, 5, 14, 2, 2],
+    "fullname": "CNTP CVAL EL02"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTV_TVAL_EL02",
+    "enc": [3, 5, 14, 3, 0],
+    "fullname": "CNTV TVAL EL02"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTV_CTL_EL02",
+    "enc": [3, 5, 14, 3, 1],
+    "fullname": "CNTV Control EL02"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTV_CVAL_EL02",
+    "enc": [3, 5, 14, 3, 2],
+    "fullname": "CNTV CVAL EL02"
+  },
+  {
+    "index": 0,
+    "name": "IPI_RR_LOCAL_EL1",
+    "fullname": "IPI Request Register (Local)",
+    "enc": [3, 5, 15, 0, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "IPI_RR_GLOBAL_EL1",
+    "fullname": "IPI Request Register (Global)",
+    "enc": [3, 5, 15, 0, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AF_ERR_CFG0",
+    "enc": [3, 5, 15, 0, 2],
+    "fullname": "AF ERR Config 0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AP_ERR_CFG0",
+    "enc": [3, 5, 15, 0, 3],
+    "fullname": "AP ERR Config 0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AF_ERR_SRC_IDS",
+    "enc": [3, 5, 15, 0, 4],
+    "fullname": "AF ERR SRC IDS"
+  },
+  {
+    "index": 0,
+    "name": "DPC_ERR_STS_EL1",
+    "fullname": "DPC Error Status",
+    "enc": [3, 5, 15, 0, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "DPC_ERR_CTL",
+    "enc": [3, 5, 15, 0, 6],
+    "fullname": "DPC ERR Control"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TRACE_CORE_CFG",
+    "enc": [3, 5, 15, 1, 0],
+    "fullname": "TRACE CORE Config"
+  },
+  {
+    "index": 0,
+    "name": "IPI_SR_EL1",
+    "fullname": "IPI Status Register",
+    "enc": [3, 5, 15, 1, 1],
+    "width": 64,
+    "fieldsets": [{ "fields": [{ "name": "PENDING", "msb": 0, "lsb": 0 }] }]
+  },
+  {
+    "index": 0,
+    "name": "VM_TMR_LR_EL2",
+    "fullname": "VM Timer Link Register",
+    "enc": [3, 5, 15, 1, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "VM_TMR_FIQ_ENA_EL2",
+    "fullname": "VM Timer FIQ Enable",
+    "enc": [3, 5, 15, 1, 3],
+    "width": 64,
+    "fieldsets": [
+      {
+        "fields": [
+          { "name": "ENA_V", "msb": 0, "lsb": 0 },
+          { "name": "ENA_P", "msb": 1, "lsb": 1 }
+        ]
+      }
+    ]
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "KTRACE_MESSAGE",
+    "enc": [3, 5, 15, 1, 4],
+    "fullname": "KTRACE MESSAGE"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TRACE_CORE_CFG_EXT",
+    "enc": [3, 5, 15, 1, 5],
+    "fullname": "TRACE CORE Config EXT"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "WatchDogDiag0",
+    "enc": [3, 5, 15, 1, 6],
+    "fullname": "WatchDogDiag0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "WatchDogDiag1",
+    "enc": [3, 5, 15, 1, 7],
+    "fullname": "WatchDogDiag1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "DBG_WRAP_GLB",
+    "enc": [3, 5, 15, 2, 0],
+    "fullname": "DBG WRAP GLB"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TRACE_STREAM_BASE",
+    "enc": [3, 5, 15, 2, 1],
+    "fullname": "TRACE STREAM BASE"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TRACE_STREAM_FILL",
+    "enc": [3, 5, 15, 2, 2],
+    "fullname": "TRACE STREAM FILL"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TRACE_STREAM_BASE1",
+    "enc": [3, 5, 15, 2, 3],
+    "fullname": "TRACE STREAM BASE1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TRACE_STREAM_FILL1",
+    "enc": [3, 5, 15, 2, 4],
+    "fullname": "TRACE STREAM FILL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TRACE_STREAM_IRQ",
+    "enc": [3, 5, 15, 2, 5],
+    "fullname": "TRACE STREAM IRQ"
+  },
+  {
+    "index": 0,
+    "name": "AWL_SCRATCH_EL1",
+    "fullname": "AWL Scratch Register",
+    "enc": [3, 5, 15, 2, 6],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TRACE_AUX_CTL",
+    "enc": [3, 5, 15, 3, 0],
+    "fullname": "TRACE AUX Control"
+  },
+  {
+    "index": 0,
+    "name": "IPI_CR_EL1",
+    "fullname": "IPI Control Register",
+    "enc": [3, 5, 15, 3, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "UTRIG_EVENT",
+    "enc": [3, 5, 15, 3, 2],
+    "fullname": "UTRIG EVENT"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TRACE_CTL",
+    "enc": [3, 5, 15, 3, 4],
+    "fullname": "TRACE Control"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TRACE_DAT",
+    "enc": [3, 5, 15, 3, 5],
+    "fullname": "TRACE DAT"
+  },
+  {
+    "index": 0,
+    "name": "ACC_CFG_EL1",
+    "fullname": "Apple Core Cluster Configuration",
+    "enc": [3, 5, 15, 4, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PBLK_STS",
+    "enc": [3, 5, 15, 4, 1],
+    "fullname": "PBLK STS"
+  },
+  {
+    "index": 0,
+    "name": "CYC_OVRD_EL1",
+    "fullname": "Cyclone Override",
+    "enc": [3, 5, 15, 5, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PBLK_EXE_ST",
+    "enc": [3, 5, 15, 5, 2],
+    "fullname": "PBLK EXE ST"
+  },
+  {
+    "index": 0,
+    "name": "ACC_OVRD_EL1",
+    "fullname": "Apple Core Cluster Override",
+    "enc": [3, 5, 15, 6, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ACC_EBLK_OVRD_EL1",
+    "fullname": "Apple Core Cluster E-Block Override",
+    "enc": [3, 5, 15, 6, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPM_PWRDN_CTL",
+    "enc": [3, 5, 15, 6, 2],
+    "fullname": "CPM PWRDN Control"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PRE_LLCFLUSH_TMR",
+    "enc": [3, 5, 15, 7, 0],
+    "fullname": "PRE LLCFLUSH TMR"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PRE_TD_TMR",
+    "enc": [3, 5, 15, 8, 0],
+    "fullname": "PRE TD TMR"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACC_SLP_WAKE_UP_TMR",
+    "enc": [3, 5, 15, 8, 1],
+    "fullname": "ACC SLP WAKE UP TMR"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PBLK_PSW_DLY",
+    "enc": [3, 5, 15, 9, 0],
+    "fullname": "PBLK PSW DLY"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_STS",
+    "enc": [3, 5, 15, 10, 0],
+    "fullname": "CPU STS"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HIST_TRIG",
+    "enc": [3, 5, 15, 10, 1],
+    "fullname": "HIST TRIG"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ARRAY_INDEX",
+    "enc": [3, 5, 15, 11, 0],
+    "fullname": "ARRAY INDEX"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "IL1_DATA0",
+    "enc": [3, 5, 15, 12, 0],
+    "fullname": "IL1 DATA0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "IL1_DATA1",
+    "enc": [3, 5, 15, 12, 1],
+    "fullname": "IL1 DATA1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "DL1_DATA0",
+    "enc": [3, 5, 15, 12, 2],
+    "fullname": "DL1 DATA0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "DL1_DATA1",
+    "enc": [3, 5, 15, 12, 3],
+    "fullname": "DL1 DATA1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MMUDATA0",
+    "enc": [3, 5, 15, 12, 4],
+    "fullname": "MMUDATA0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MMUDATA1",
+    "enc": [3, 5, 15, 12, 5],
+    "fullname": "MMUDATA1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_DATA0",
+    "enc": [3, 5, 15, 13, 4],
+    "fullname": "LLC DATA0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "LLC_DATA1",
+    "enc": [3, 5, 15, 13, 5],
+    "fullname": "LLC DATA1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SCTLR_EL3",
+    "enc": [3, 6, 1, 0, 0],
+    "fullname": "SCTLR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACTLR_EL3",
+    "enc": [3, 6, 1, 0, 1],
+    "fullname": "ACTLR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SCR_EL3",
+    "enc": [3, 6, 1, 1, 0],
+    "fullname": "SCR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SDER32_EL3",
+    "enc": [3, 6, 1, 1, 1],
+    "fullname": "SDER32 EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPTR_EL3",
+    "enc": [3, 6, 1, 1, 2],
+    "fullname": "CPTR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MDCR_EL3",
+    "enc": [3, 6, 1, 3, 1],
+    "fullname": "MDCR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TTBR0_EL3",
+    "enc": [3, 6, 2, 0, 0],
+    "fullname": "TTBR0 EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TCR_EL3",
+    "enc": [3, 6, 2, 0, 2],
+    "fullname": "TCR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPSR_EL3",
+    "enc": [3, 6, 4, 0, 0],
+    "fullname": "SPSR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ELR_EL3",
+    "enc": [3, 6, 4, 0, 1],
+    "fullname": "ELR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SP_EL2",
+    "enc": [3, 6, 4, 1, 0],
+    "fullname": "SP EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFSR0_EL3",
+    "enc": [3, 6, 5, 1, 0],
+    "fullname": "AFSR0 EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AFSR1_EL3",
+    "enc": [3, 6, 5, 1, 1],
+    "fullname": "AFSR1 EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ESR_EL3",
+    "enc": [3, 6, 5, 2, 0],
+    "fullname": "ESR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "FAR_EL3",
+    "enc": [3, 6, 6, 0, 0],
+    "fullname": "FAR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MAIR_EL3",
+    "enc": [3, 6, 10, 2, 0],
+    "fullname": "MAIR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AMAIR_EL3",
+    "enc": [3, 6, 10, 3, 0],
+    "fullname": "AMAIR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "VBAR_EL3",
+    "enc": [3, 6, 12, 0, 0],
+    "fullname": "VBAR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "RVBAR_EL3",
+    "enc": [3, 6, 12, 0, 1],
+    "fullname": "RVBAR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "RMR_EL3",
+    "enc": [3, 6, 12, 0, 2],
+    "fullname": "RMR EL3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "TPIDR_EL3",
+    "enc": [3, 6, 13, 0, 2],
+    "fullname": "TPIDR EL3"
+  },
+  {
+    "index": 0,
+    "name": "MMU_ERR_STS_EL1",
+    "fullname": "MMU Error Status",
+    "enc": [3, 6, 15, 0, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "AFSR1_GL1",
+    "fullname": "Auxiliary Fault Status Register 1 (GL1)",
+    "enc": [3, 6, 15, 0, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "AFSR1_GL2",
+    "fullname": "Auxiliary Fault Status Register 1 (GL2)",
+    "enc": [3, 6, 15, 0, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "AFSR1_GL12",
+    "fullname": "Auxiliary Fault Status Register 1 (GL12)",
+    "enc": [3, 6, 15, 0, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "BP_OBJC_ADR_EL1",
+    "enc": [3, 6, 15, 0, 4],
+    "fullname": "BP OBJC ADR EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "BP_OBJC_CTL_EL1",
+    "enc": [3, 6, 15, 0, 5],
+    "fullname": "BP OBJC Control EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SP_GL11_GL21",
+    "enc": [3, 6, 15, 0, 6],
+    "fullname": "SP GL11 GL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MMU_SESR_EL2",
+    "enc": [3, 6, 15, 0, 7],
+    "fullname": "MMU SESR EL2"
+  },
+  {
+    "index": 0,
+    "name": "SPRR_CONFIG_EL1",
+    "fullname": "SPRR Configuration Register (EL1)",
+    "enc": [3, 6, 15, 1, 0],
+    "width": 64,
+    "fieldsets": [
+      {
+        "fields": [
+          { "name": "EN", "msb": 0, "lsb": 0 },
+          { "name": "LOCK_CONFIG", "msb": 1, "lsb": 1 },
+          { "name": "LOCK_PERM", "msb": 4, "lsb": 4 },
+          { "name": "LOCK_KERNEL_PERM", "msb": 5, "lsb": 5 }
+        ]
+      }
+    ]
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "HPFAR_GL2",
+    "enc": [3, 6, 15, 1, 1],
+    "fullname": "HPFAR GL2"
+  },
+  {
+    "index": 0,
+    "name": "GXF_CONFIG_EL1",
+    "fullname": "GXF Configuration Register (EL1)",
+    "enc": [3, 6, 15, 1, 2],
+    "width": 64,
+    "fieldsets": [{ "fields": [{ "name": "EN", "msb": 0, "lsb": 0 }] }]
+  },
+  {
+    "index": 0,
+    "name": "SPRR_AMRANGE_EL1",
+    "fullname": "SPRR AM Range (EL1)",
+    "enc": [3, 6, 15, 1, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_CONFIG_EL2",
+    "fullname": "GXF Configuration Register (EL2)",
+    "enc": [3, 6, 15, 1, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UPERM_EL0",
+    "fullname": "SPRR User Permission Configuration Register (EL0)",
+    "enc": [3, 6, 15, 1, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PPERM_EL1",
+    "fullname": "SPRR Kernel Permission Configuration Register (EL1)",
+    "enc": [3, 6, 15, 1, 6],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PPERM_EL2",
+    "fullname": "SPRR Kernel Permission Configuration Register (EL2)",
+    "enc": [3, 6, 15, 1, 7],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "E_MMU_ERR_STS_EL1",
+    "fullname": "MMU Error Status (E-Core)",
+    "enc": [3, 6, 15, 2, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APGAKeyLo_EL12",
+    "fullname": "Pointer Authentication Key A for Code Low (EL12)",
+    "enc": [3, 6, 15, 2, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APGAKeyHi_EL12",
+    "fullname": "Pointer Authentication Key A for Code High (EL12)",
+    "enc": [3, 6, 15, 2, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "KERNKEYLO_EL12",
+    "fullname": "Pointer Authentication Kernel Key Low (EL12)",
+    "enc": [3, 6, 15, 2, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "KERNKEYHI_EL12",
+    "fullname": "Pointer Authentication Kernel Key High (EL12)",
+    "enc": [3, 6, 15, 2, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "AFPCR_EL0",
+    "fullname": "Apple Floating-Point Control Register",
+    "enc": [3, 6, 15, 2, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SP_GL22",
+    "enc": [3, 6, 15, 2, 6],
+    "fullname": "SP GL22"
+  },
+  {
+    "index": 0,
+    "name": "AIDR2_EL1",
+    "fullname": "Apple ID Register 2",
+    "enc": [3, 6, 15, 2, 7],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UMPRR_EL1",
+    "fullname": "SPRR User MPRR (EL1)",
+    "enc": [3, 6, 15, 3, 0],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PMPRR_EL1",
+    "fullname": "SPRR Kernel MPRR (EL1)",
+    "enc": [3, 6, 15, 3, 1],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PMPRR_EL2",
+    "fullname": "SPRR Kernel MPRR (EL2)",
+    "enc": [3, 6, 15, 3, 2],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UPERM_SH1_EL1",
+    "fullname": "SPRR User Permission SH1 (EL1)",
+    "enc": [3, 6, 15, 3, 3],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UPERM_SH2_EL1",
+    "fullname": "SPRR User Permission SH2 (EL1)",
+    "enc": [3, 6, 15, 3, 4],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_UPERM_SH3_EL1",
+    "fullname": "SPRR User Permission SH3 (EL1)",
+    "enc": [3, 6, 15, 3, 5],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_UPERM_SH04_EL1",
+    "enc": [3, 6, 15, 3, 6],
+    "fullname": "SPRR UPERM SH04 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_UPERM_SH05_EL1",
+    "enc": [3, 6, 15, 3, 7],
+    "fullname": "SPRR UPERM SH05 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_UPERM_SH06_EL1",
+    "enc": [3, 6, 15, 4, 0],
+    "fullname": "SPRR UPERM SH06 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_UPERM_SH07_EL1",
+    "enc": [3, 6, 15, 4, 1],
+    "fullname": "SPRR UPERM SH07 EL1"
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PPERM_SH1_EL1",
+    "fullname": "SPRR Kernel Permission SH1 (EL1)",
+    "enc": [3, 6, 15, 4, 2],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PPERM_SH2_EL1",
+    "fullname": "SPRR Kernel Permission SH2 (EL1)",
+    "enc": [3, 6, 15, 4, 3],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PPERM_SH3_EL1",
+    "fullname": "SPRR Kernel Permission SH3 (EL1)",
+    "enc": [3, 6, 15, 4, 4],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_PPERM_SH04_EL21",
+    "enc": [3, 6, 15, 4, 5],
+    "fullname": "SPRR PPERM SH04 EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_PPERM_SH05_EL21",
+    "enc": [3, 6, 15, 4, 6],
+    "fullname": "SPRR PPERM SH05 EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_PPERM_SH06_EL21",
+    "enc": [3, 6, 15, 4, 7],
+    "fullname": "SPRR PPERM SH06 EL21"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_PPERM_SH07_EL21",
+    "enc": [3, 6, 15, 5, 0],
+    "fullname": "SPRR PPERM SH07 EL21"
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PPERM_SH1_EL2",
+    "fullname": "SPRR Kernel Permission SH1 (EL2)",
+    "enc": [3, 6, 15, 5, 1],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PPERM_SH2_EL2",
+    "fullname": "SPRR Kernel Permission SH2 (EL2)",
+    "enc": [3, 6, 15, 5, 2],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PPERM_SH3_EL2",
+    "fullname": "SPRR Kernel Permission SH3 (EL2)",
+    "enc": [3, 6, 15, 5, 3],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_PPERM_SH04_EL2",
+    "enc": [3, 6, 15, 5, 4],
+    "fullname": "SPRR PPERM SH04 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_PPERM_SH05_EL2",
+    "enc": [3, 6, 15, 5, 5],
+    "fullname": "SPRR PPERM SH05 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_PPERM_SH06_EL2",
+    "enc": [3, 6, 15, 5, 6],
+    "fullname": "SPRR PPERM SH06 EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_PPERM_SH07_EL2",
+    "enc": [3, 6, 15, 5, 7],
+    "fullname": "SPRR PPERM SH07 EL2"
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PMPRR_EL12",
+    "fullname": "SPRR Kernel MPRR (EL12)",
+    "enc": [3, 6, 15, 6, 0],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PPERM_SH1_EL12",
+    "fullname": "SPRR Kernel Permission SH1 (EL12)",
+    "enc": [3, 6, 15, 6, 1],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PPERM_SH2_EL12",
+    "fullname": "SPRR Kernel Permission SH2 (EL12)",
+    "enc": [3, 6, 15, 6, 2],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PPERM_SH3_EL12",
+    "fullname": "SPRR Kernel Permission SH3 (EL12)",
+    "enc": [3, 6, 15, 6, 3],
+    "width": 32
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_PPERM_SH04_EL12",
+    "enc": [3, 6, 15, 6, 4],
+    "fullname": "SPRR PPERM SH04 EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_PPERM_SH05_EL12",
+    "enc": [3, 6, 15, 6, 5],
+    "fullname": "SPRR PPERM SH05 EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_PPERM_SH06_EL12",
+    "enc": [3, 6, 15, 6, 6],
+    "fullname": "SPRR PPERM SH06 EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SPRR_PPERM_SH07_EL12",
+    "enc": [3, 6, 15, 6, 7],
+    "fullname": "SPRR PPERM SH07 EL12"
+  },
+  {
+    "index": 0,
+    "name": "APIAKeyLo_EL12",
+    "fullname": "Pointer Authentication Key A for Instruction Low (EL12)",
+    "enc": [3, 6, 15, 7, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APIAKeyHi_EL12",
+    "fullname": "Pointer Authentication Key A for Instruction High (EL12)",
+    "enc": [3, 6, 15, 7, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APIBKeyLo_EL12",
+    "fullname": "Pointer Authentication Key A for Instruction Low (EL12)",
+    "enc": [3, 6, 15, 7, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APIBKeyHi_EL12",
+    "fullname": "Pointer Authentication Key A for Instruction High (EL12)",
+    "enc": [3, 6, 15, 7, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APDAKeyLo_EL12",
+    "fullname": "Pointer Authentication Key A for Data Low (EL12)",
+    "enc": [3, 6, 15, 7, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APDAKeyHi_EL12",
+    "fullname": "Pointer Authentication Key A for Data High (EL12)",
+    "enc": [3, 6, 15, 7, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APDBKeyLo_EL12",
+    "fullname": "Pointer Authentication Key A for Data Low (EL12)",
+    "enc": [3, 6, 15, 7, 6],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APDBKeyHi_EL12",
+    "fullname": "Pointer Authentication Key A for Data High (EL12)",
+    "enc": [3, 6, 15, 7, 7],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_STATUS_EL1",
+    "fullname": "GXF Status Register (CurrentG)",
+    "enc": [3, 6, 15, 8, 0],
+    "width": 64,
+    "fieldsets": [{ "fields": [{ "name": "GUARDED", "msb": 0, "lsb": 0 }] }]
+  },
+  {
+    "index": 0,
+    "name": "GXF_ENTRY_EL1",
+    "fullname": "GXF genter Entry Vector Register (EL1)",
+    "enc": [3, 6, 15, 8, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_PABENTRY_EL1",
+    "fullname": "GXF Abort Vector Register (EL1)",
+    "enc": [3, 6, 15, 8, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ASPSR_EL1",
+    "fullname": "ASPSR (EL1)",
+    "enc": [3, 6, 15, 8, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ADSPSR_EL0",
+    "enc": [3, 6, 15, 8, 4],
+    "fullname": "ADSPSR EL0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMCR1_GL2",
+    "enc": [3, 6, 15, 8, 5],
+    "fullname": "PMCR1 GL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ASPSR_EL2",
+    "enc": [3, 6, 15, 8, 6],
+    "fullname": "ASPSR EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PMCR1_GL21",
+    "enc": [3, 6, 15, 8, 7],
+    "fullname": "PMCR1 GL21"
+  },
+  {
+    "index": 0,
+    "name": "VBAR_GL12",
+    "fullname": "Vector Base Address Register (GL12)",
+    "enc": [3, 6, 15, 9, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPSR_GL12",
+    "fullname": "Saved Program Status Register (GL12)",
+    "enc": [3, 6, 15, 9, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ASPSR_GL12",
+    "fullname": "ASPSR (GL12)",
+    "enc": [3, 6, 15, 9, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ESR_GL12",
+    "fullname": "Exception Syndrome Register (GL12)",
+    "enc": [3, 6, 15, 9, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ELR_GL12",
+    "fullname": "Exception Link Register (GL12)",
+    "enc": [3, 6, 15, 9, 6],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "FAR_GL12",
+    "fullname": "Fault Address Register (GL12)",
+    "enc": [3, 6, 15, 9, 7],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SP_GL12",
+    "fullname": "Stack Pointer Register (GL12)",
+    "enc": [3, 6, 15, 10, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "TPIDR_GL1",
+    "fullname": "Software Thread ID Register (GL1)",
+    "enc": [3, 6, 15, 10, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "VBAR_GL1",
+    "fullname": "Vector Base Address Register (GL1)",
+    "enc": [3, 6, 15, 10, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPSR_GL1",
+    "fullname": "Saved Program Status Register (GL1)",
+    "enc": [3, 6, 15, 10, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ASPSR_GL1",
+    "fullname": "ASPSR (GL1)",
+    "enc": [3, 6, 15, 10, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ESR_GL1",
+    "fullname": "Exception Syndrome Register (GL1)",
+    "enc": [3, 6, 15, 10, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ELR_GL1",
+    "fullname": "Exception Link Register (GL1)",
+    "enc": [3, 6, 15, 10, 6],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "FAR_GL1",
+    "fullname": "Fault Address Register (GL1)",
+    "enc": [3, 6, 15, 10, 7],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "SP_GL2",
+    "enc": [3, 6, 15, 11, 0],
+    "fullname": "SP GL2"
+  },
+  {
+    "index": 0,
+    "name": "TPIDR_GL2",
+    "fullname": "Software Thread ID Register (GL2)",
+    "enc": [3, 6, 15, 11, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "VBAR_GL2",
+    "fullname": "Vector Base Address Register (GL2)",
+    "enc": [3, 6, 15, 11, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPSR_GL2",
+    "fullname": "Saved Program Status Register (GL2)",
+    "enc": [3, 6, 15, 11, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ASPSR_GL2",
+    "fullname": "ASPSR (GL2)",
+    "enc": [3, 6, 15, 11, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ESR_GL2",
+    "fullname": "Exception Syndrome Register (GL2)",
+    "enc": [3, 6, 15, 11, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ELR_GL2",
+    "fullname": "Exception Link Register (GL2)",
+    "enc": [3, 6, 15, 11, 6],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "FAR_GL2",
+    "fullname": "Fault Address Register (GL2)",
+    "enc": [3, 6, 15, 11, 7],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_ENTRY_EL2",
+    "fullname": "GXF genter Entry Vector Register (EL2)",
+    "enc": [3, 6, 15, 12, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_PABENTRY_EL2",
+    "fullname": "GXF Abort Vector Register (EL2)",
+    "enc": [3, 6, 15, 12, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APCTL_EL2",
+    "fullname": "Pointer Authentication Control (EL2)",
+    "enc": [3, 6, 15, 12, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APSTS_EL2_MAYBE",
+    "fullname": "Pointer Authentication Status (EL2, maybe)",
+    "enc": [3, 6, 15, 12, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APSTS_EL1",
+    "fullname": "Pointer Authentication Status",
+    "enc": [3, 6, 15, 12, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "KERNKEYLo_EL2",
+    "enc": [3, 6, 15, 12, 5],
+    "fullname": "KERNKEYLo EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "KERNKEYHi_EL2",
+    "enc": [3, 6, 15, 12, 6],
+    "fullname": "KERNKEYHi EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ASPSR_EL12",
+    "enc": [3, 6, 15, 12, 7],
+    "fullname": "ASPSR EL12"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APIAKeyLo_EL2",
+    "enc": [3, 6, 15, 13, 0],
+    "fullname": "APIAKeyLo EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APIAKeyHi_EL2",
+    "enc": [3, 6, 15, 13, 1],
+    "fullname": "APIAKeyHi EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APIBKeyLo_EL2",
+    "enc": [3, 6, 15, 13, 2],
+    "fullname": "APIBKeyLo EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APIBKeyHi_EL2",
+    "enc": [3, 6, 15, 13, 3],
+    "fullname": "APIBKeyHi EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APDAKeyLo_EL2",
+    "enc": [3, 6, 15, 13, 4],
+    "fullname": "APDAKeyLo EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APDAKeyHi_EL2",
+    "enc": [3, 6, 15, 13, 5],
+    "fullname": "APDAKeyHi EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APDBKeyLo_EL2",
+    "enc": [3, 6, 15, 13, 6],
+    "fullname": "APDBKeyLo EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APDBKeyHi_EL2",
+    "enc": [3, 6, 15, 13, 7],
+    "fullname": "APDBKeyHi EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APGAKeyLo_EL2",
+    "enc": [3, 6, 15, 14, 0],
+    "fullname": "APGAKeyLo EL2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "APGAKeyHi_EL2",
+    "enc": [3, 6, 15, 14, 1],
+    "fullname": "APGAKeyHi EL2"
+  },
+  {
+    "index": 0,
+    "name": "SPRR_CONFIG_EL2",
+    "fullname": "SPRR Configuration Register (EL2)",
+    "enc": [3, 6, 15, 14, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPRR_AMRANGE_EL2",
+    "fullname": "SPRR AM Range (EL2)",
+    "enc": [3, 6, 15, 14, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "VMKEYLO_EL2",
+    "fullname": "Pointer Authentication VM Machine Key Low",
+    "enc": [3, 6, 15, 14, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "VMKEYHI_EL2",
+    "fullname": "Pointer Authentication VM Machine Key High",
+    "enc": [3, 6, 15, 14, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "ACTLR_EL12",
+    "fullname": "Auxiliary Control Register (EL12)",
+    "enc": [3, 6, 15, 14, 6],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APSTS_EL12",
+    "fullname": "Pointer Authentication Status (EL12)",
+    "enc": [3, 6, 15, 14, 7],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "APCTL_EL12",
+    "fullname": "Pointer Authentication Control (EL12)",
+    "enc": [3, 6, 15, 15, 0],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_CONFIG_EL12",
+    "fullname": "GXF Configuration Register (EL12)",
+    "enc": [3, 6, 15, 15, 1],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_ENTRY_EL12",
+    "fullname": "GXF genter Entry Vector Register (EL12)",
+    "enc": [3, 6, 15, 15, 2],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "GXF_PABENTRY_EL12",
+    "fullname": "GXF Abort Vector Register (EL12)",
+    "enc": [3, 6, 15, 15, 3],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPRR_CONFIG_EL12",
+    "fullname": "SPRR Configuration Register (EL12)",
+    "enc": [3, 6, 15, 15, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "SPRR_AMRANGE_EL12",
+    "fullname": "SPRR AM Range (EL12)",
+    "enc": [3, 6, 15, 15, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "MMU_SESR_CTL_EL2",
+    "enc": [3, 6, 15, 15, 6],
+    "fullname": "MMU SESR Control EL2"
+  },
+  {
+    "index": 0,
+    "name": "SPRR_PPERM_EL12",
+    "fullname": "SPRR Permission Configuration Register (EL12)",
+    "enc": [3, 6, 15, 15, 7],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTPS_TVAL_EL1",
+    "enc": [3, 7, 14, 2, 0],
+    "fullname": "CNTPS TVAL EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTPS_CTL_EL1",
+    "enc": [3, 7, 14, 2, 1],
+    "fullname": "CNTPS Control EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CNTPS_CVAL_EL1",
+    "enc": [3, 7, 14, 2, 2],
+    "fullname": "CNTPS CVAL EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PWRDNSAVE0",
+    "enc": [3, 7, 15, 0, 0],
+    "fullname": "PWRDNSAVE0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "NRG_ACC_CTL",
+    "enc": [3, 7, 15, 0, 1],
+    "fullname": "NRG ACC Control"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT0",
+    "enc": [3, 7, 15, 0, 2],
+    "fullname": "AON Counter 0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT0",
+    "enc": [3, 7, 15, 0, 3],
+    "fullname": "CPU Counter 0"
+  },
+  {
+    "index": 0,
+    "name": "UPMCR0_EL1",
+    "fullname": "Uncore Performance Monitor Control Register 0",
+    "enc": [3, 7, 15, 0, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "UPMC8_EL1",
+    "fullname": "Uncore Performance Monitor Counter 8",
+    "enc": [3, 7, 15, 0, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "PWRDNSAVE1",
+    "enc": [3, 7, 15, 1, 0],
+    "fullname": "PWRDNSAVE1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CORE_NRG_ACC_DAT",
+    "enc": [3, 7, 15, 1, 1],
+    "fullname": "CORE NRG ACC DAT"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT_CTL0",
+    "enc": [3, 7, 15, 1, 2],
+    "fullname": "AON Counter Control 0"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT_CTL0",
+    "enc": [3, 7, 15, 1, 3],
+    "fullname": "CPU Counter Control 0"
+  },
+  {
+    "index": 0,
+    "name": "UPMESR0_EL1",
+    "fullname": "Uncore Performance Monitor Event Selection Register 0",
+    "enc": [3, 7, 15, 1, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "UPMC9_EL1",
+    "fullname": "Uncore Performance Monitor Counter 9",
+    "enc": [3, 7, 15, 1, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "ACC_PWR_DN_SAVE",
+    "enc": [3, 7, 15, 2, 0],
+    "fullname": "ACC PWR DN SAVE"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPM_NRG_ACC_DAT",
+    "enc": [3, 7, 15, 2, 1],
+    "fullname": "CPM NRG ACC DAT"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT1",
+    "enc": [3, 7, 15, 2, 2],
+    "fullname": "AON Counter 1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT1",
+    "enc": [3, 7, 15, 2, 3],
+    "fullname": "CPU Counter 1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "UPMSWCTRL_EL1",
+    "enc": [3, 7, 15, 2, 4],
+    "fullname": "UPMSWCTRL EL1"
+  },
+  {
+    "index": 0,
+    "name": "UPMC10_EL1",
+    "fullname": "Uncore Performance Monitor Counter 10",
+    "enc": [3, 7, 15, 2, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CORE_SRM_NRG_ACC_DAT",
+    "enc": [3, 7, 15, 3, 1],
+    "fullname": "CORE SRM NRG ACC DAT"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT_CTL1",
+    "enc": [3, 7, 15, 3, 2],
+    "fullname": "AON Counter Control 1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT_CTL1",
+    "enc": [3, 7, 15, 3, 3],
+    "fullname": "CPU Counter Control 1"
+  },
+  {
+    "index": 0,
+    "name": "UPMECM0_EL1",
+    "fullname": "Uncore Performance Monitor Event Core Mask 0",
+    "enc": [3, 7, 15, 3, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "UPMC11_EL1",
+    "fullname": "Uncore Performance Monitor Counter 11",
+    "enc": [3, 7, 15, 3, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT_CTL",
+    "enc": [3, 7, 15, 4, 0],
+    "fullname": "AON Counter Control"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPM_SRM_NRG_ACC_DAT",
+    "enc": [3, 7, 15, 4, 1],
+    "fullname": "CPM SRM NRG ACC DAT"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT2",
+    "enc": [3, 7, 15, 4, 2],
+    "fullname": "AON Counter 2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT2",
+    "enc": [3, 7, 15, 4, 3],
+    "fullname": "CPU Counter 2"
+  },
+  {
+    "index": 0,
+    "name": "UPMECM1_EL1",
+    "fullname": "Uncore Performance Monitor Event Core Mask 1",
+    "enc": [3, 7, 15, 4, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "UPMC12_EL1",
+    "fullname": "Uncore Performance Monitor Counter 12",
+    "enc": [3, 7, 15, 4, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT_CTL",
+    "enc": [3, 7, 15, 5, 0],
+    "fullname": "CPU Counter Control"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT_CTL2",
+    "enc": [3, 7, 15, 5, 2],
+    "fullname": "AON Counter Control 2"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT_CTL2",
+    "enc": [3, 7, 15, 5, 3],
+    "fullname": "CPU Counter Control 2"
+  },
+  {
+    "index": 0,
+    "name": "UPMPCM_EL1",
+    "fullname": "Uncore Performance Monitor PMI Core Mask",
+    "enc": [3, 7, 15, 5, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "UPMC13_EL1",
+    "fullname": "Uncore Performance Monitor Counter 13",
+    "enc": [3, 7, 15, 5, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT3",
+    "enc": [3, 7, 15, 6, 2],
+    "fullname": "AON Counter 3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT3",
+    "enc": [3, 7, 15, 6, 3],
+    "fullname": "CPU Counter 3"
+  },
+  {
+    "index": 0,
+    "name": "UPMSR_EL1",
+    "fullname": "Uncore Performance Monitor Status Register",
+    "enc": [3, 7, 15, 6, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "UPMC14_EL1",
+    "fullname": "Uncore Performance Monitor Counter 14",
+    "enc": [3, 7, 15, 6, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT_CTL3",
+    "enc": [3, 7, 15, 7, 2],
+    "fullname": "AON Counter Control 3"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT_CTL3",
+    "enc": [3, 7, 15, 7, 3],
+    "fullname": "CPU Counter Control 3"
+  },
+  {
+    "index": 0,
+    "name": "UPMC0_EL1",
+    "fullname": "Uncore Performance Monitor Counter 0",
+    "enc": [3, 7, 15, 7, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "UPMC15_EL1",
+    "fullname": "Uncore Performance Monitor Counter 15",
+    "enc": [3, 7, 15, 7, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT4",
+    "enc": [3, 7, 15, 8, 2],
+    "fullname": "AON Counter 4"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT4",
+    "enc": [3, 7, 15, 8, 3],
+    "fullname": "CPU Counter 4"
+  },
+  {
+    "index": 0,
+    "name": "UPMC1_EL1",
+    "fullname": "Uncore Performance Monitor Counter 1",
+    "enc": [3, 7, 15, 8, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "UPMECM2_EL1",
+    "fullname": "Uncore Performance Monitor Event Core Mask 2",
+    "enc": [3, 7, 15, 8, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT_CTL4",
+    "enc": [3, 7, 15, 9, 2],
+    "fullname": "AON Counter Control 4"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT_CTL4",
+    "enc": [3, 7, 15, 9, 3],
+    "fullname": "CPU Counter Control 4"
+  },
+  {
+    "index": 0,
+    "name": "UPMC2_EL1",
+    "fullname": "Uncore Performance Monitor Counter 2",
+    "enc": [3, 7, 15, 9, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "UPMECM3_EL1",
+    "fullname": "Uncore Performance Monitor Event Core Mask 3",
+    "enc": [3, 7, 15, 9, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT5",
+    "enc": [3, 7, 15, 10, 2],
+    "fullname": "AON Counter 5"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT5",
+    "enc": [3, 7, 15, 10, 3],
+    "fullname": "CPU Counter 5"
+  },
+  {
+    "index": 0,
+    "name": "UPMC3_EL1",
+    "fullname": "Uncore Performance Monitor Counter 3",
+    "enc": [3, 7, 15, 10, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "UPMCR1_EL1",
+    "enc": [3, 7, 15, 10, 5],
+    "fullname": "UPMCR1 EL1"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT_CTL5",
+    "enc": [3, 7, 15, 11, 2],
+    "fullname": "AON Counter Control 5"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT_CTL5",
+    "enc": [3, 7, 15, 11, 3],
+    "fullname": "CPU Counter Control 5"
+  },
+  {
+    "index": 0,
+    "name": "UPMC4_EL1",
+    "fullname": "Uncore Performance Monitor Counter 4",
+    "enc": [3, 7, 15, 11, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "name": "UPMESR1_EL1",
+    "fullname": "Uncore Performance Monitor Event Selection Register 1",
+    "enc": [3, 7, 15, 11, 5],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT6",
+    "enc": [3, 7, 15, 12, 2],
+    "fullname": "AON Counter 6"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT6",
+    "enc": [3, 7, 15, 12, 3],
+    "fullname": "CPU Counter 6"
+  },
+  {
+    "index": 0,
+    "name": "UPMC5_EL1",
+    "fullname": "Uncore Performance Monitor Counter 5",
+    "enc": [3, 7, 15, 12, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT_CTL6",
+    "enc": [3, 7, 15, 13, 2],
+    "fullname": "AON Counter Control 6"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT_CTL6",
+    "enc": [3, 7, 15, 13, 3],
+    "fullname": "CPU Counter Control 6"
+  },
+  {
+    "index": 0,
+    "name": "UPMC6_EL1",
+    "fullname": "Uncore Performance Monitor Counter 6",
+    "enc": [3, 7, 15, 13, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT7",
+    "enc": [3, 7, 15, 14, 2],
+    "fullname": "AON Counter 7"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT7",
+    "enc": [3, 7, 15, 14, 3],
+    "fullname": "CPU Counter 7"
+  },
+  {
+    "index": 0,
+    "name": "UPMC7_EL1",
+    "fullname": "Uncore Performance Monitor Counter 7",
+    "enc": [3, 7, 15, 14, 4],
+    "width": 64
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "AON_CNT_CTL7",
+    "enc": [3, 7, 15, 15, 2],
+    "fullname": "AON Counter Control 7"
+  },
+  {
+    "index": 0,
+    "width": 64,
+    "name": "CPU_CNT_CTL7",
+    "enc": [3, 7, 15, 15, 3],
+    "fullname": "CPU Counter Control 7"
+  }
 ]
