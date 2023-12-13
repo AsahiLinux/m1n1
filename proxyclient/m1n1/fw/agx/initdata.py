@@ -1020,7 +1020,7 @@ class IOMapping(ConstructClass):
         "phys_addr" / Int64ul,
         "virt_addr" / Int64ul,
         "size" / Int32ul,
-        "range_size" / Int32ul, # Useally the same as size, but for MCC, this is the size of a single MMC register range.
+        "range_size" / Int32ul, # Usually the same as size, but for MCC, this is the size of a single MMC register range.
         "readwrite" / Int64ul
     )
 

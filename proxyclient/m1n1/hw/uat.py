@@ -23,7 +23,7 @@ class MemoryAttr(IntEnum):
     # 00 = Device nGnRnE
     Device = 1
     # f4 = Normal, Outer Writeback RW, Inner NC
-    Shared = 2 # Probally Outer-shareable. Shared with either the main cpu or AGX hardware
+    Shared = 2 # Probably Outer-shareable. Shared with either the main cpu or AGX hardware
     # 4f = Normal, Outer NC, Inner Writeback RW
     UNK3 = 3
     # 00 = Device nGnRnE

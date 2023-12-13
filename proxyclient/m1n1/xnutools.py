@@ -7,7 +7,7 @@ __all__ = []
 DebuggerState = Struct(
     "panic_options"             / Hex(Int64ul),
     "current_op"                / Hex(Int32ul),
-    "proceed_on_sync_failre"    / Int32ul,
+    "proceed_on_sync_failure"   / Int32ul,
     "message"                   / Hex(Int64ul),
     "panic_str"                 / Hex(Int64ul),
     "panic_args"                / Hex(Int64ul),

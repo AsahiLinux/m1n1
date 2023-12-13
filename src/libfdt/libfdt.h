@@ -719,7 +719,7 @@ static inline struct fdt_property *fdt_get_property_w(void *fdt, int nodeoffset,
  *	pointer to the property's value
  *		if lenp is non-NULL, *lenp contains the length of the property
  *		value (>=0)
- *		if namep is non-NULL *namep contiains a pointer to the property
+ *		if namep is non-NULL *namep contains a pointer to the property
  *		name.
  *	NULL, on error
  *		if lenp is non-NULL, *lenp contains an error code (<0):
@@ -1461,7 +1461,7 @@ static inline int fdt_property_cell(void *fdt, const char *name, uint32_t val)
  * @fdt: pointer to the device tree blob
  * @name: name of property to add
  * @len: length of property value in bytes
- * @valp: returns a pointer to where where the value should be placed
+ * @valp: returns a pointer to where the value should be placed
  *
  * returns:
  *	0, on success
@@ -1489,7 +1489,7 @@ int fdt_pack(void *fdt);
  * @address, @size: 64-bit values (native endian)
  *
  * Adds a reserve map entry to the given blob reserving a region at
- * address address of length size.
+ * address of length size.
  *
  * This function will insert data into the reserve map and will
  * therefore change the indexes of some entries in the table.
@@ -1596,7 +1596,7 @@ int fdt_setprop(void *fdt, int nodeoffset, const char *name,
  * @len: length of the property value
  * @prop_data: return pointer to property data
  *
- * fdt_setprop_placeholer() allocates the named property in the given node.
+ * fdt_setprop_placeholder() allocates the named property in the given node.
  * If the property exists it is resized. In either case a pointer to the
  * property data is returned.
  *
@@ -2050,7 +2050,7 @@ int fdt_del_node(void *fdt, int nodeoffset);
  * returns:
  *	0, on success
  *	-FDT_ERR_NOSPACE, there's not enough space in the base device tree
- *	-FDT_ERR_NOTFOUND, the overlay points to some inexistant nodes or
+ *	-FDT_ERR_NOTFOUND, the overlay points to some nonexistent nodes or
  *		properties in the base DT
  *	-FDT_ERR_BADPHANDLE,
  *	-FDT_ERR_BADOVERLAY,

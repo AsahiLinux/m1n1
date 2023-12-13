@@ -28,7 +28,7 @@ Environment:
 #include "lzmadec.h"
 
 //
-// Probability Bit Model for Lenghts in Rep and in Match sequences
+// Probability Bit Model for lengths in Rep and in Match sequences
 //
 typedef struct _LENGTH_DECODER_STATE
 {
@@ -291,7 +291,7 @@ LzDecodeLen (
     uint16_t limit;
 
     //
-    // Lenghts of 2 and higher are encoded in 3 possible types of arithmetic-
+    // Lengths of 2 and higher are encoded in 3 possible types of arithmetic-
     // coded bit trees, depending on the size of the length.
     //
     // Lengths 2-9 are encoded in trees called "Low" using 3 bits of data.
@@ -377,7 +377,7 @@ LzDecodeMatch (
         // called "direct bits". The formula below also tells us how many such
         // direct bits to use in this scenario. In other words, distBits can
         // either be the number of "context encoded bits" for slots 4-13, or it
-        // can be the the number of "direct bits" for slots 14-63. This gives
+        // can be the number of "direct bits" for slots 14-63. This gives
         // us a range of of 2 to 26 bits, which are then used as middle bits.
         // Finally, the last 4 bits are called the "align" bits. The smallest
         // possible number we can encode is now going to be 0b10[00][0000] and

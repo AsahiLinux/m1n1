@@ -19,7 +19,7 @@ class GDBServer:
         "fpsr" / Int32ul,
         "fpcr" / Int32ul,
     )
-    __seperator = re.compile("[,;:]")
+    __separator = re.compile("[,;:]")
 
     def __init__(self, hv, address, log):
         self.__hc = None
@@ -177,12 +177,12 @@ class GDBServer:
             self.__hv.reboot()
 
         if data[0] in b"m":
-            split = GDBServer.__seperator.split(data[1:].decode(), maxsplit=1)
+            split = GDBServer.__separator.split(data[1:].decode(), maxsplit=1)
             fields = [int(field, 16) for field in split]
             return bytes(self.__hv.readmem(fields[0], fields[1]).hex(), "utf-8")
 
         if data[0] in b"M":
-            split = GDBServer.__seperator.split(data[1:].decode(), maxsplit=2)
+            split = GDBServer.__separator.split(data[1:].decode(), maxsplit=2)
             mem = bytes.fromhex(split[2])[:int(split[1], 16)]
             if self.__hv.writemem(int(split[0], 16), mem) < len(mem):
                 return "E22"
@@ -237,7 +237,7 @@ class GDBServer:
             return b"OK"
 
         if data[0] in b"q":
-            split = GDBServer.__seperator.split(data[1:].decode(), maxsplit=1)
+            split = GDBServer.__separator.split(data[1:].decode(), maxsplit=1)
             if split[0] == "C":
                 cpu_id = self.__hg or self.__hv.ctx.cpu_id
                 return b"QC" + bytes(format(cpu_id, "x"), "utf-8")
@@ -266,7 +266,7 @@ class GDBServer:
                 return b""
 
             if split[0] == "Xfer":
-                xfer = GDBServer.__seperator.split(split[1], maxsplit=4)
+                xfer = GDBServer.__separator.split(split[1], maxsplit=4)
                 if xfer[0] == "features" and xfer[1] == "read":
                     resource = os.path.join("features", xfer[2])
                     annex = pkgutil.get_data(__name__, resource)
@@ -303,7 +303,7 @@ class GDBServer:
 
         if data[0] in b"X":
             partition = data[1:].partition(b":")
-            split = GDBServer.__seperator.split(partition[0].decode(), maxsplit=1)
+            split = GDBServer.__separator.split(partition[0].decode(), maxsplit=1)
             mem = partition[2][:int(split[1], 16)]
             if self.__hv.writemem(int(split[0], 16), mem) < len(mem):
                 return b"E22"
@@ -311,7 +311,7 @@ class GDBServer:
             return b"OK"
 
         if data[0] in b"z":
-            split = GDBServer.__seperator.split(data[1:].decode(), maxsplit=2)
+            split = GDBServer.__separator.split(data[1:].decode(), maxsplit=2)
             if split[0] == "1":
                 self.__hv.remove_hw_bp(int(split[1], 16))
                 return b"OK"
@@ -328,7 +328,7 @@ class GDBServer:
             return b""
 
         if data[0] in b"Z":
-            split = GDBServer.__seperator.split(data[1:].decode(), maxsplit=2)
+            split = GDBServer.__separator.split(data[1:].decode(), maxsplit=2)
             if split[0] == "1":
                 self.__hv.add_hw_bp(int(split[1], 16))
                 return b"OK"
