@@ -54,7 +54,7 @@ Environment:
 //
 // Distances can be encoded in different ways, based on the distance slot.
 // Lengths of 2, 3, 4 bytes are directly encoded with their own slot. Lengths
-// over 5 share a slot, which is then further subdivded into 3 different ways
+// over 5 share a slot, which is then further subdivided into 3 different ways
 // of encoding them, which are described in the source.
 //
 #define LZMA_DISTANCE_SLOTS                 64
@@ -81,13 +81,13 @@ typedef enum _LZMA_SEQUENCE_STATE
     //
     LzmaLitLitLitState,
     //
-    // States where we last saw two literals preceeded by a non-literal
+    // States where we last saw two literals preceded by a non-literal
     //
     LzmaMatchLitLitState,
     LzmaRepLitLitState,
     LzmaLitShortrepLitLitState,
     //
-    // States where we last saw one literal preceeded by a non-literal
+    // States where we last saw one literal preceded by a non-literal
     //
     LzmaMatchLitState,
     LzmaRepLitState,
@@ -97,7 +97,7 @@ typedef enum _LZMA_SEQUENCE_STATE
     //
     LzmaMaxLitState,
     //
-    // States where we last saw a non-literal preceeded by a literal
+    // States where we last saw a non-literal preceded by a literal
     //
     LzmaLitMatchState = 7,
     LzmaLitRepState,

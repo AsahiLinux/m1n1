@@ -9,7 +9,7 @@ __all__ = []
 class WorkCommandBarrier(ConstructClass):
     """
         sent before WorkCommand3D on the Submit3d queue.
-        Might be for initilzing the tile buckets?
+        Might be for initializing the tile buckets?
 
     Example:
     00000004 0c378018 ffffffa0 00000c00 00000006 00000900 08002c9a 00000000
@@ -29,7 +29,7 @@ class WorkCommandBarrier(ConstructClass):
 
 class WorkCommandInitBM(ConstructClass):
     """
-        occationally sent before WorkCommandTA on the SubmitTA queue.
+        occasionally sent before WorkCommandTA on the SubmitTA queue.
 
     Example:
     00000004 0c378018 ffffffa0 00000c00 00000006 00000900 08002c9a 00000000
@@ -494,7 +494,7 @@ class CommandQueueInfo(ConstructClass):
     """ Structure type shared by Submit3D, SubmitTA and SubmitCompute
         Applications have multiple of these, one of each submit type
         TODO: Can applications have more than one of each type? One per encoder?
-        Mostly managed by GPU, only intialize by CPU
+        Mostly managed by GPU, only initialize by CPU
 
     """
     subcon = Struct(

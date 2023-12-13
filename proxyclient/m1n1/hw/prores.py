@@ -26,7 +26,7 @@ EncodeNotRawDescriptor = namedtuple('EncodeNotRawDescriptor', [
         #   01 -> 16bpp?
         #   10 -> 16bpp?
         #   11 -> 16bpp?
-        #       the last three all produce slightly differnet outputs
+        #       the last three all produce slightly different outputs
         #       so might be 10/12/14/16?????
     'flags2',                               # +0x004
     'output_iova',                          # +0x008

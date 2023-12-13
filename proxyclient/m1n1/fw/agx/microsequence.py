@@ -772,7 +772,7 @@ class FinalizeComputeCmd(ConstructClass):
         "unk_54" / Int32ul,
         "unk_58" / Int32ul,
         Ver("G == G14 && V < V13_0B4", "unk_5c_g14" / Int64ul),
-        "restart_branch_offset" / Int32sl, # realative offset from start of Finalize to StartComputeCmd
+        "restart_branch_offset" / Int32sl, # relative offset from start of Finalize to StartComputeCmd
         "unk_60" / Int32ul,
         Ver("V >= V13_0B4", "unk_64" / HexDump(Bytes(0xd))),
         Ver("V >= V13_0B4", "unkptr_71" / Int64ul),

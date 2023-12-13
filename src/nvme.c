@@ -42,8 +42,8 @@
 #define NVME_LINEAR_SQ_CTRL    0x24908
 #define NVME_LINEAR_SQ_CTRL_EN BIT(0)
 
-#define NVME_UNKNONW_CTRL                0x24008
-#define NVME_UNKNONW_CTRL_PRP_NULL_CHECK BIT(11)
+#define NVME_UNKNOWN_CTRL                0x24008
+#define NVME_UNKNOWN_CTRL_PRP_NULL_CHECK BIT(11)
 
 #define NVME_MAX_PEND_CMDS_CTRL 0x1210
 #define NVME_DB_LINEAR_ASQ      0x2490c
@@ -349,7 +349,7 @@ bool nvme_init(void)
 
     /* setup controller and NVMMU for linear submission queue */
     set32(nvme_base + NVME_LINEAR_SQ_CTRL, NVME_LINEAR_SQ_CTRL_EN);
-    clear32(nvme_base + NVME_UNKNONW_CTRL, NVME_UNKNONW_CTRL_PRP_NULL_CHECK);
+    clear32(nvme_base + NVME_UNKNOWN_CTRL, NVME_UNKNOWN_CTRL_PRP_NULL_CHECK);
     write32(nvme_base + NVME_MAX_PEND_CMDS_CTRL,
             ((NVME_QUEUE_SIZE - 1) << 16) | (NVME_QUEUE_SIZE - 1));
     write32(nvme_base + NVMMU_NUM, NVME_QUEUE_SIZE - 1);
