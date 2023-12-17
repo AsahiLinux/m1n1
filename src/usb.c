@@ -248,7 +248,7 @@ void usb_init(void)
      * M3 models do not use i2c, but instead SPMI with a new controller.
      * We can get USB going for now by just bringing up the phys.
      */
-    if (adt_path_offset(adt, "/arm-io/nub-spmi-a0/hpm0") != 0) {
+    if (adt_path_offset(adt, "/arm-io/nub-spmi-a0/hpm0") > 0) {
         usb_spmi_init();
         return;
     }
