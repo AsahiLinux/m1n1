@@ -28,6 +28,7 @@ if __name__ == "__main__":
     parser.add_argument('-a', '--all', action='store_true', help="run all frames")
     parser.add_argument('-x', '--stfu', action='store_true')
     parser.add_argument('-p', '--poll', action='store_true', help="poll iommu space")
+    parser.add_argument('-d', '--display', action='store_true', help="display frames")
     parser.add_argument('--save-raw', type=str, default="", help="file name to save raw yuv")
     parser.add_argument('--save-images', type=str, default="", help="dirname to save images")
     args = parser.parse_args()
@@ -72,8 +73,8 @@ if __name__ == "__main__":
         if (i == 0):
             avd.ioalloc_at(0x0, dec.allocator_top(), stream=0, val=0)
             if (args.poll):
-                avd.iomon.add(0x0, dec.allocator_top())
-        frame = avd.decoder.decode(dec.ctx, unit, inst)
+                avd.iomon.add(0x0, 0x100000)
+        frame = avd.decoder.decode(dec.ctx, unit, inst, args.display)
         if (frame != None):
             if (args.save_raw):
                 rawvideo += frame.y_data + frame.uv_data

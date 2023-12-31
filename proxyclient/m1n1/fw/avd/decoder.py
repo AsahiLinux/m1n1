@@ -99,7 +99,7 @@ class AVDDec:
     def select_disp_frame(self, ctx, sl):
         return self.frames[0]
 
-    def decode(self, ctx, sl, inst_stream):
+    def decode(self, ctx, sl, inst_stream, display):
         if not inst_stream: return
         self.set_payload(ctx, sl)
         self.setup_dma(ctx, sl)
@@ -108,15 +108,17 @@ class AVDDec:
             self.set_insn(v)
         self.get_disp_frame(ctx, sl)
         assert(self.avd.avd_r32(0x1104060) == 0x2842108)
-        if (hasattr(ctx, "fmt")):
-            frame = self.get_nv12_disp_frame2(ctx, sl)
-        else:
-            frame = self.get_nv12_disp_frame(ctx, sl)
-        self.frames.append(frame)
-        frame = self.select_disp_frame(ctx, sl)
-        if (frame != None):
-            self.display(frame)
-        return frame
+        if (display):
+            if (hasattr(ctx, "fmt")):
+                frame = self.get_nv12_disp_frame2(ctx, sl)
+            else:
+                frame = self.get_nv12_disp_frame(ctx, sl)
+            self.frames.append(frame)
+            frame = self.select_disp_frame(ctx, sl)
+            if (frame != None):
+                self.display(frame)
+            return frame
+        return None
 
 class AVDH265Dec(AVDDec):
     def __init__(self, avd):
