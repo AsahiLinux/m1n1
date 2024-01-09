@@ -118,6 +118,30 @@ class WrappedCall(EPICCall):
             self.dump()
             raise ValueError(f"retcode {self.rets.retcode} in {str(type(self))} (call dumped, see above)")
 
+@reg_calltype
+class AudioProbeDevice(EPICCall):
+    TYPE = 0x20
+    SUBTYPE = 0xc3_00_00_01
+    ARGS = Struct(
+        "pad" / Const(0x0, Int32ul),
+        "unk1" / Hex(Const(0xffffffff, Int32ul)),
+        "subtype" / Hex(Const(0xc3000001, Int32ul)),
+        "pad2" / ZPadding(16),
+        "cookie" / Default(Hex(Int32ul), 0),
+        "len" / Hex(Const(0x28, Int64ul)),
+        "devno" / Int32ul,
+    )
+    RETS = Struct(
+        "retcode" / Const(0x0, Int32ul),
+        "devid" / FourCC,
+        "format" / FourCC,
+        "sample_rate" / Int32ul,
+        "channels" / Int32ul,
+        "bytes_per_sample" / Int32ul,
+        "unk_1f" / Default(Hex(Int32ul), 0),
+        "unk" / Array(51, Default(Hex(Int32ul), 0)),
+    )
+
 @WrappedCall.reg_subclass
 class AttachDevice(WrappedCall):
     CALLTYPE = 0xc3_00_00_02
@@ -245,6 +269,96 @@ DEVPROPS = {
         "unk4" / Int32ul,
     ),
 }
+
+class AudioPropertyKey(IntEnum):
+    STATE   = 200   # 0xc8
+    POWER   = 202   # 0xca
+    MAIN    = 203   # 0xcb
+    FORMAT  = 302   # 0x12e
+
+@reg_calltype
+class AudioProperty(EPICCall):
+    TYPE = 0x20
+    SUBTYPE = 0xc3000004
+    SUBCLASSES = {}
+
+    @classmethod
+    def subclass(cls, cls2):
+        cls.SUBCLASSES[int(cls2.SUBTYPE)] = cls2
+        return cls2
+
+@AudioProperty.subclass
+class AudioPropertyState(AudioProperty):
+    SUBSUBTYPE = AudioPropertyKey.STATE
+    ARGS = Struct(
+        "pad" / Const(0x0, Int32ul),
+        "unk1" / Hex(Const(0xffffffff, Int32ul)),
+        "calltype" / Hex(Const(0xc3000004, Int32ul)),
+        "blank2" / ZPadding(16),
+        "cookie" / Default(Hex(Int32ul), 0),
+        "len" / Hex(Const(0x30, Int64ul)),
+        "devid" / FourCC,
+        "modifier" / Const(AudioPropertyKey.STATE, Int32ul),
+        "data" / Const(0x1, Int32ul),
+    )
+    RETS = Struct(
+        "retcode" / Const(0x0, Int32ul),
+        "size" / Const(4, Int32ul),
+        "state" / FourCC,
+    )
+
+@AudioProperty.subclass
+class AudioPropertyFormat(AudioProperty):
+    SUBSUBTYPE = AudioPropertyKey.FORMAT
+    ARGS = Struct(
+        "pad" / Const(0x0, Int32ul),
+        "unk1" / Hex(Const(0xffffffff, Int32ul)),
+        "calltype" / Hex(Const(0xc3000004, Int32ul)),
+        "blank2" / ZPadding(16),
+        "cookie" / Default(Hex(Int32ul), 0),
+        "len" / Hex(Const(0x30, Int64ul)),
+        "devid" / FourCC,
+        "modifier" / Const(AudioPropertyKey.FORMAT, Int32ul),
+        "data" / Const(0x1, Int32ul),
+    )
+    RETS = Struct(
+        "retcode" / Const(0x0, Int32ul),
+        "format" / Int32ul, # 16 == float32?
+        "fourcc" / FourCC,  # PCML
+        "sample_rate" / Int32ul, # 16000
+        "channels" / Int32ul, # 3
+        "bytes_per_sample" / Int32ul, # 2
+    )
+
+AudioPowerSetting = Struct(
+    "devid" / FourCC,
+    "unk1" / Int32ul,
+    "cookie" / Default(Hex(Int32ul), 0),
+    "blank" / ZPadding(8),
+    "target_pstate" / FourCC,
+    "unk2" / Int32ul,
+    "blank2" / ZPadding(20),
+)
+
+@AudioProperty.subclass
+class AudioPropertyPower(AudioProperty):
+    SUBSUBTYPE = AudioPropertyKey.POWER
+    ARGS = Struct(
+        "pad" / Const(0x0, Int32ul),
+        "unk1" / Hex(Const(0xffffffff, Int32ul)),
+        "calltype" / Hex(Const(0xc3000005, Int32ul)),
+        "blank2" / ZPadding(16),
+        "cookie" / Default(Hex(Int32ul), 0),
+        "len" / Hex(Const(0x30 + 0x30, Int64ul)), # len(this.data) + 0x30
+        "devid" / FourCC,
+        "modifier" / Const(AudioPropertyKey.POWER, Int32ul),
+        "len2" / Hex(Const(0x30, Int32ul)), # len(this.data)
+        "data" / AudioPowerSetting,
+    )
+    RETS = Struct(
+        "retcode" / Const(0x0, Int32ul),
+        "value" / HexDump(GreedyBytes),
+    )
 
 @WrappedCall.reg_subclass
 class GetDeviceProp(WrappedCall):
