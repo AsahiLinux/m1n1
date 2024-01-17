@@ -36,6 +36,11 @@ def build_iomappings(agx, chip_id):
             IOMapping(), # Streaming codec registers
             IOMapping(), #
             IOMapping(), #
+            IOMapping(),
+            IOMapping(),
+            IOMapping(),
+            IOMapping(),
+            IOMapping(),
         ]
     elif chip_id == 0x8112:
         return [
@@ -143,6 +148,7 @@ CHIP_INFO = {
         shared2_unk_508 = 0xc00007,
         unk_3cf4 = [1000.0, 0, 0, 0, 0, 0, 0, 0],
         unk_3d14 = [45.0, 0, 0, 0, 0, 0, 0, 0],
+        unk_3d34_0 = [0, 0, 0, 0, 0, 0, 0, 0],
         unk_118ec = None,
         hwdb_4e0 = 0,
         hwdb_534 = 0,
@@ -153,6 +159,15 @@ CHIP_INFO = {
         hwdb_abc = 0x8,
         hwdb_b30 = 0,
         rel_max_powers = [0, 19, 26, 38, 60, 87, 100],
+        shared2_t1_coef = None,
+        shared3_tab = [0] * 16,
+        shared3_unk = 0,
+        sram_base = 0,
+        sram_size = 0,
+        rc_unk_54 = 0xffff,
+        unk_hws2_0 = 0,
+        unk_hws2_4 = [0] * 8,
+        unk_hws2_24 = 0,
     ),
     0x6001: Container(
         chip_id = 0x6001,
@@ -196,6 +211,15 @@ CHIP_INFO = {
         hwdb_abc = 0x80,
         hwdb_b30 = 0,
         rel_max_powers = [0, 15, 20, 27, 36, 52, 100],
+        shared2_t1_coef = None,
+        shared3_tab = [0] * 16,
+        shared3_unk = 0,
+        sram_base = 0,
+        sram_size = 0,
+        rc_unk_54 = 0xffff,
+        unk_hws2_0 = 0,
+        unk_hws2_4 = [0] * 8,
+        unk_hws2_24 = 0,
     ),
     0x6002: Container(
         chip_id = 0x6002,
@@ -242,6 +266,15 @@ CHIP_INFO = {
         hwdb_abc = 0x80,
         hwdb_b30 = 0,
         rel_max_powers = [0, 15, 19, 25, 34, 50, 100],
+        shared2_t1_coef = None,
+        shared3_tab = [0] * 16,
+        shared3_unk = 0,
+        sram_base = 0,
+        sram_size = 0,
+        rc_unk_54 = 0xffff,
+        unk_hws2_0 = 0,
+        unk_hws2_4 = [0] * 8,
+        unk_hws2_24 = 0,
     ),
     0x8112: Container(
         chip_id = 0x8112,
@@ -373,10 +406,8 @@ def build_initdata(agx):
 
     if Ver.check("V >= V13_3 && G == G14X"):
         initdata.ver_info = (0xb390, 0x70f8, 0x601, 0xb0)
-    elif Ver.check("V >= V13_3 && G == G14"):
+    elif Ver.check("V >= V13_3 && G != G14X"):
         initdata.ver_info = (0x6ba0, 0x1f28, 0x601, 0xb0)
-    else:
-        initdata.ver_info = (1, 1, 16, 1)
 
     initdata.regionA = agx.kshared.new_buf(0x4000, "InitData_RegionA").push()
 
