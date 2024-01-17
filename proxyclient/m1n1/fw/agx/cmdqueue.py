@@ -329,7 +329,7 @@ class WorkCommandTA(ConstructClass):
         Ver("G < G14X", "struct_2" / StartTACmdStruct2), # 0x11c bytes
         Ver("G < G14X", "unk_154" / Default(HexDump(Bytes(0x268)), bytes(0x268))), # unknown
         Ver("G < G14X", "tiling_params" / TilingParameters), # unknown
-        Ver("G < G14X", "unk_3e8" / HexDump(Bytes(0x64))), # unknown
+        Ver("G < G14X", "unk_3e8" / HexDump(Bytes(0x60))), # unknown
         "registers_addr" / Int64ul,
         "register_count" / Int16ul,
         "registers_length" / Int16ul,

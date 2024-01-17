@@ -227,7 +227,7 @@ class Start3DStruct1(ConstructClass):
         "unk_36" / Int16ul,
         "unk_38" / Int32ul,
         "unk_3c" / Int32ul,
-        "unk_40" / Int32ul,
+        "helper_cfg" / Int32ul,
         "unk_44_padding" / HexDump(Bytes(0x9c)),
     )
 
@@ -354,8 +354,9 @@ class Start3DStruct6(ConstructClass):
         "unk_10" / Int32ul,
         "encoder_id" / Int64ul,
         "unk_1c" / Int32ul,
-        "unknown_buffer" / Int64ul,
-        "unk_28" / Int64ul,
+        "sampler_array" / Int64ul,
+        "sampler_count" / Int32ul,
+        "sampler_max" / Int32ul,
         "unk_30" / Int32ul,
         "unk_34" / Int32ul,
         "unk_38" / Int32ul,
@@ -483,6 +484,7 @@ class TilingParameters(ConstructClass):
         "size3" / Int32ul,
         "unk_24" / Int32ul,
         "unk_28" / Int32ul,
+        "helper_cfg" / Int32ul,
     )
 
 class StartTACmdStruct2(ConstructClass):
@@ -545,8 +547,9 @@ class StartTACmdStruct3(ConstructClass):
         "encoder_id" / Int32ul,
         "unk_538" / Int32ul,
         "unk_53c" / Int32ul,
-        "unknown_buffer" / Int64ul,
-        "unk_548" / Int64ul,
+        "sampler_array" / Int64ul,
+        "sampler_count" / Int32ul,
+        "sampler_max" / Int32ul,
         "unk_550" / Array(6, Int32ul),
         "stamp1_addr" / WrappedPointer, # same contents as below
         "stamp1" / ROPointer(this.stamp1_addr.value, StampCounter),
@@ -667,14 +670,8 @@ class EncoderParams(ConstructClass):
         "unk_1c" / Int64ul,
     )
 
-class ComputeLayout(ConstructClass):
+class SubBufferList(ConstructClass):
     subcon = Struct(
-        "unk_0" / Int32ul,
-        "unk_4" / HexDump(Bytes(0x20)),
-        "blocks_per_core" / Int32ul,
-        "unk_28" / HexDump(Bytes(0x1c)),
-        "core_list" / Array(160, Int16ul),
-        "work_lists" / Array(8, Array(272, Array(4, Int32ul))),
         # Least significant byte encoding
         # 7654 3210
         # ==== ====
@@ -686,6 +683,15 @@ class ComputeLayout(ConstructClass):
         # 0001 1111 - Block size 0x40000
         # 0011 1111 - Block size 0x100000? (not seen)
         # 0111 1111 - Block size 0x400000
+        "buffers" / Array(256 + 12, Array(4, Int32ul))
+    )
+
+class HelperArg(ConstructClass):
+    subcon = Struct(
+        "core_stride" / Int32ul,
+        "alloc_size_map" / Array(16, Int16ul),
+        "max_subgroups" / Array(16, Int16ul),
+        "core_list" / Array(128, Int16ul),
     )
 
 class ComputeInfo(ConstructClass):
@@ -703,7 +709,7 @@ class ComputeInfo(ConstructClass):
         "helper_program" / Int32ul, # 0x98000; bit 0: enable
         "unk_44" / Int32ul, # 0
         "helper_arg" / Int64ul, # work layout
-        "unk_50" / Int32ul, # 0x40 - Size? only if work layout is provided
+        "helper_cfg" / Int32ul, # 0x40 - Size? only if work layout is provided
         "unk_54" / Int32ul, # 0
         "unk_58" / Int32ul, # 1
         "unk_5c" / Int32ul, # 0

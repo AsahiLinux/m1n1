@@ -584,8 +584,9 @@ class GPURenderer:
             wc_3d.struct_2.unk_108 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0]
             wc_3d.struct_2.pipeline_base = self.ctx.pipeline_base
             wc_3d.struct_2.unk_140 = 0x8c60
-            wc_3d.struct_2.unk_148 = 0x0
-            wc_3d.struct_2.unk_150 = 0x0
+            wc_3d.struct_2.helper_program = 0
+            wc_3d.struct_2.unk_14c = 0
+            wc_3d.struct_2.helper_arg = 0
             wc_3d.struct_2.unk_158 = 0x1c
             wc_3d.struct_2.unk_160 = 0
             wc_3d.struct_2.unk_168_padding = bytes(0x1d8)
@@ -754,8 +755,9 @@ class GPURenderer:
             wc_3d.struct_6.unk_10 = 0x0
             wc_3d.struct_6.encoder_id = cmdbuf.encoder_id
             wc_3d.struct_6.unk_1c = 0xffffffff
-            wc_3d.struct_6.unknown_buffer = unk_buf._addr
-            wc_3d.struct_6.unk_28 = 0x0
+            wc_3d.struct_6.sampler_array = unk_buf._addr
+            wc_3d.struct_6.sampler_count = 0x0
+            wc_3d.struct_6.sampler_max = 0x0
             wc_3d.struct_6.unk_30 = int(process_empty_tiles)
             wc_3d.struct_6.unk_34 = int(no_clear_pipeline_textures)
             wc_3d.struct_6.unk_38 = int(msaa_zs)
@@ -1010,7 +1012,10 @@ class GPURenderer:
             wc_ta.struct_2.tvb_cluster_meta4 = unk_tile_buf5._addr | 0x3000_0000_0000_0000
             wc_ta.struct_2.unk_f0 = 0x20 # fixed
             wc_ta.struct_2.unk_f8 = 0x8c60 # fixed
-            wc_ta.struct_2.unk_100 = [0x0, 0x0, 0x0] # fixed
+            wc_ta.struct_2.helper_program = 0
+            wc_ta.struct_2.unk_104 = 0
+            wc_ta.struct_2.helper_arg = 0
+            wc_ta.struct_2.unk_110 = 0
             wc_ta.struct_2.unk_118 = 0x1c # fixed
 
             wc_ta.registers_addr = 0
@@ -1120,8 +1125,9 @@ class GPURenderer:
             wc_ta.struct_3.encoder_id = cmdbuf.encoder_id
             wc_ta.struct_3.unk_538 = 0x0 # fixed
             wc_ta.struct_3.unk_53c = 0xffffffff
-            wc_ta.struct_3.unknown_buffer = wc_3d.struct_6.unknown_buffer
-            wc_ta.struct_3.unk_548 = 0x0 # fixed
+            wc_ta.struct_3.sampler_array = wc_3d.struct_6.sampler_array
+            wc_ta.struct_3.sampler_count = 0x0
+            wc_ta.struct_3.sampler_max = 0x0
             wc_ta.struct_3.unk_550 = [
                 0x0, 0x0, # fixed
                 0x0, # memoryless_rts_used
