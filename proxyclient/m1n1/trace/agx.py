@@ -1027,6 +1027,11 @@ class AGXTracer(ASCTracer):
                         self.log(f"      tilemap @ {reg.data:#x}:")
                         data = read(reg.data, 0x100000)
                         chexdump(data, print_fn=self.log)
+                    elif reg.number == 0x1c880:
+                        if self.agxdecode:
+                            self.log("Decode VDM")
+                            self.uat.invalidate_cache()
+                            self.agxdecode.libagxdecode_vdm(reg.data, b"VDM", True)
 
     def handle_3d(self, wi):
         self.log(f"Got 3D WI{wi.cmdid:d}")
