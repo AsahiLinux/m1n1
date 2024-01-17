@@ -429,7 +429,7 @@ class ConstructClass(ConstructClassBase, Container):
             if key in self._off:
                 offv, sizeof = self._off[key]
                 if offv == -1:
-                    print(key, offv, sizeof)
+                    # print(key, offv, sizeof)
                     continue
             if key in ignore or key.startswith('_'):
                 continue
