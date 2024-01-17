@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: MIT
 
-import textwrap, os.path, json, datetime, ctypes
+import textwrap, os.path, json, datetime, ctypes, plistlib
 from .asc import *
 from ..hw.uat import UAT, MemoryAttr, PTE, Page_PTE, TTBR
 from ..hw.agx import *
 
-from ..fw.agx.initdata import InitData
+from ..fw.agx.initdata import InitData, InitData_RegionC
 from ..fw.agx.channels import *
 from ..fw.agx.cmdqueue import *
 from ..fw.agx.microsequence import *
@@ -223,13 +223,24 @@ class CommandQueueTracer(Reloadable):
 
         if info_addr not in tracer.state.queues:
             self.state = CommandQueueState()
+            self.state.last_uuid = None
             self.state.rptr = None
             self.state.active = True
             tracer.state.queues[info_addr] = self.state
         else:
             self.state = tracer.state.queues[info_addr]
 
+        self.tracer.uat.invalidate_cache()
+        self.update_info()
+
         if new_queue:
+            if getattr(self.state, "last_uuid", None) is None:
+                self.state.last_uuid = None
+
+            if self.info.uuid == self.state.last_uuid:
+                return
+
+            self.state.last_uuid = self.info.uuid
             self.state.rptr = 0
 
             if tracer.cmd_dump_dir:
@@ -246,8 +257,6 @@ class CommandQueueTracer(Reloadable):
                 self.dumpfile.flush()
                 tracer.state.queue_seq += 1
 
-        self.tracer.uat.invalidate_cache()
-        self.update_info()
 
     def update_info(self):
         self.info = CommandQueueInfo.parse_stream(self.tracer.get_stream(0, self.info_addr))
@@ -260,7 +269,6 @@ class CommandQueueTracer(Reloadable):
         return self.info.pointers.rb_size
 
     def json_default(self, val):
-        print(repr(val))
         return None
 
     def get_workitems(self, workmsg):
@@ -423,6 +431,16 @@ class AGXTracer(ASCTracer):
         if libagxdecode:
             self.init_agxdecode(libagxdecode)
 
+        self.counters = {}
+        counters = os.getenv("COUNTERS", None)
+        if counters:
+            pl = plistlib.load(open(counters,"rb"))
+            for ctr in pl["DeviceCounters"]:
+                spec = pl[ctr]
+                spec["Name"] = ctr
+                self.counters[(spec['Partition'], spec['Select'])] = spec
+            self.log(f"Loaded {len(self.counters)} performance counters")
+
     def init_agxdecode(self, path):
         # Hack to make sure we reload the lib when it changes
         # tpath = os.getenv("XDG_RUNTIME_DIR", "/tmp") + "/" + str(time.time()) + ".so"
@@ -526,6 +544,7 @@ class AGXTracer(ASCTracer):
         self.uat.foreach_table(ctx, trace_pt)
 
     def clear_gpuvm_tracers(self, ctx=None):
+        self.uat.invalidate_cache()
         if ctx is None:
             for i in range(UAT.NUM_CONTEXTS):
                 self.clear_gpuvm_tracers(i)
@@ -575,6 +594,7 @@ class AGXTracer(ASCTracer):
             self.add_uatmap_tracers(ctx)
             self.add_gpuvm_tracers(ctx)
         else:
+            self.uat.invalidate_cache()
             is_kernel = iova >= 0xf8000000000
             iova += off << (level * 11 + 14)
             if level == 0:
@@ -735,6 +755,8 @@ class AGXTracer(ASCTracer):
         self.mon.add(va, size, name, readfn= lambda a, s: self.uat.ioread(ctx, a, s))
 
     def handle_ringmsg(self, msg):
+        self.uat.invalidate_cache()
+        self.mon.poll()
         if msg.__class__.__name__ == "FlagMsg":
             self.log(f"== Event flag notification ==")
             self.handle_event(msg)
@@ -785,7 +807,50 @@ class AGXTracer(ASCTracer):
             if addr:
                 info = BufferManagerInfo.parse_stream(self.get_stream(0, addr))
                 self.log(f"BM info: {info}")
+        elif msg.__class__.__name__ == "DC_ConfigurePerfCounters":
+            self.configure_perf_counters()
+            self.state.perf_enabled = True
+        elif msg.__class__.__name__ == "DC_DisablePerfCounters":
+            self.state.perf_enabled = False
         return True
+
+    def configure_perf_counters(self):
+        self.log("=== Performance counter config ==")
+        rc = self.state.initdata.regionC = InitData_RegionC.parse_stream(
+            self.get_stream(0, self.state.initdata.regionC._addr))
+        for i in range(rc.perfctr_count):
+            cfg = self.state.initdata.regionC.perfctrs[i]
+            tail = ""
+            partition = cfg.regs & 0x7f
+            if partition == 1:
+                select = (cfg.en_mask << 32) | cfg.dis_mask
+            else:
+                select = cfg.source_mask
+            spec = self.counters.get((partition, cfg.source_mask), None)
+            if spec:
+                tail = f" {spec['Name']} [+{spec['Increment']} {spec['Partition']}/{spec['Select']:x}/{spec.get('SourceMask', 0)}]: {spec['type']}:{spec.get('Description', None)}"
+            self.log(f"#{i:3d} R={cfg.regs:016x} M={cfg.dis_mask:8x}/{cfg.en_mask:8x} S={cfg.source_mask:#10x} B={cfg.base_reg:#x} T={cfg.unk_type} C={cfg.count} idx={cfg.index}{tail}")
+
+        self.dump_perf_counters()
+
+    def dump_perf_counters(self):
+        if not self.state.perf_enabled:
+            return
+
+        rc = self.state.initdata.regionC
+        self.log(f"unk_8890 = {rc.unk_8890:#x}")
+        self.log("=== Performance counter buffers ==")
+        if rc.unkptr_8894 != 0:
+            self.log(f"unkptr_8894 @ {rc.unkptr_8894:#x}")
+            chexdump(self.uat.ioread(0, rc.unkptr_8894, rc.size_889c), print_fn=self.log)
+        if rc.unkptr_88a0 != 0:
+            self.log(f"unkptr_88a0 @ {rc.unkptr_88a0:#x}")
+            chexdump(self.uat.ioread(0, rc.unkptr_88a0, rc.size_889c), print_fn=self.log)
+        if rc.unkptr_88a8 != 0:
+            self.log(f"unkptr_88a8 @ {rc.unkptr_88a8:#x}")
+            chexdump(self.uat.ioread(0, rc.unkptr_88a8, rc.unkptr_88b4 - rc.unkptr_88a8), print_fn=self.log)
+            self.log(f"unkptr_88b4 @ {rc.unkptr_88b4:#x}")
+            chexdump(self.uat.ioread(0, rc.unkptr_88b4, 0x1000), print_fn=self.log)
 
     def handle_event(self, msg):
         if self.last_ta and self.redump:
@@ -797,6 +862,9 @@ class AGXTracer(ASCTracer):
             self.queue_ta.update_info()
             self.log(f"Queue info: {self.queue_ta.info}")
             self.last_ta = None
+            self.dump_perf_counters()
+            if self.state.perf_enabled:
+                self.hv.run_shell()
         if self.last_3d and self.redump:
             self.log("Redumping 3D...")
             stream = self.get_stream(0, self.last_3d._addr)
@@ -806,6 +874,9 @@ class AGXTracer(ASCTracer):
             self.queue_3d.update_info()
             self.log(f"Queue info: {self.queue_3d.info}")
             self.last_3d = None
+            self.dump_perf_counters()
+            if self.state.perf_enabled:
+                self.hv.run_shell()
         if self.last_cp and self.redump:
             self.log("Redumping CP...")
             stream = self.get_stream(0, self.last_cp._addr)
@@ -815,6 +886,9 @@ class AGXTracer(ASCTracer):
             self.queue_cp.update_info()
             self.log(f"Queue info: {self.queue_cp.info}")
             self.last_cp = None
+            self.dump_perf_counters()
+            if self.state.perf_enabled:
+                self.hv.run_shell()
 
     def dump_buffer_manager(self, buffer_mgr, kread, read):
         return
@@ -1299,6 +1373,7 @@ class AGXTracer(ASCTracer):
         self.state.channels = {}
         self.state.queues = {}
         self.state.queue_seq = 0
+        self.state.perf_enabled = False
 
     def init_channels(self):
         if self.channels:
@@ -1335,6 +1410,7 @@ class AGXTracer(ASCTracer):
         self.untrace_uatrange(0, self.state.initdata.regionC_addr, 0x11d40)
 
     def resume(self):
+        self.uat.invalidate_cache()
         self.add_gpuvm_tracers()
         self.add_uatmap_tracers()
         self.add_ttbr_tracers()
@@ -1365,9 +1441,9 @@ class AGXTracer(ASCTracer):
             #self.mon_addva(0, initdata.regionB.unkptr_180, 0x140, "unkptr_180")
             self.mon_addva(0, initdata.regionB.unkptr_190, 0x80, "unkptr_190")
             self.mon_addva(0, initdata.regionB.unkptr_198, 0xc0, "unkptr_198")
-            self.mon_addva(0, initdata.regionB.buffer_mgr_ctl_addr, 0x4000, "Buffer manager ctl")
-            self.mon_addva(0, initdata.unkptr_20.unkptr_0, 0x40, "unkptr_20.unkptr_0")
-            self.mon_addva(0, initdata.unkptr_20.unkptr_8, 0x40, "unkptr_20.unkptr_8")
+            # self.mon_addva(0, initdata.regionB.buffer_mgr_ctl_addr, 0x4000, "Buffer manager ctl")
+            #self.mon_addva(0, initdata.unkptr_20.unkptr_0, 0x40, "unkptr_20.unkptr_0")
+            #self.mon_addva(0, initdata.unkptr_20.unkptr_8, 0x40, "unkptr_20.unkptr_8")
 
     def clear_gpuvm_range(self, ctx, iova, length):
         while length > 0:

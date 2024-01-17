@@ -46,6 +46,24 @@ class WorkCommandInitBM(ConstructClass):
         "stamp_value" / Hex(Int32ul),  # 0x100
     )
 
+class WorkCommandComputeUnk10(ConstructClass):
+    """
+        occassionally sent before WorkCommandCP on the SubmitCP queue.
+    """
+    subcon = Struct(
+        "magic" / Const(0xa, Hex(Int32ul)),
+        "unk" / Hex(Int32ul),
+    )
+
+class WorkCommandComputeUnk11(ConstructClass):
+    """
+        occassionally sent before WorkCommandCP on the SubmitCP queue.
+    """
+    subcon = Struct(
+        "magic" / Const(0xb, Hex(Int32ul)),
+        "unk" / Hex(Int32ul),
+    )
+
 class Flag(ConstructValueClass):
     subcon = Hex(Int32ul)
 
@@ -428,6 +446,8 @@ class CmdBufWork(ConstructClass):
             3: WorkCommandCP,
             4: WorkCommandBarrier,
             6: WorkCommandInitBM,
+            10: WorkCommandComputeUnk10,
+            11: WorkCommandComputeUnk11,
         })
     )
 
@@ -522,7 +542,7 @@ class CommandQueueInfo(ConstructClass):
         "busy" / Hex(Int32ul), # 1 = gpu busy
         "pad1" / ZPadding(0x1c),
         "unk_80" / Hex(Int32ul),
-        "blocked_on_barrier" / Hex(Int32ul),
+        "has_commands" / Hex(Int32ul),
         "unk_88" / Int32ul,
         "unk_8c" / Int32ul,
         "unk_90" / Int32ul,
@@ -548,8 +568,8 @@ class CommandQueueInfo(ConstructClass):
         self.unk_54 = -1
         self.unk_58 = 0x0
         self.busy = 0x0
-        self.blocked_on_barrier = 0x0
         self.unk_80 = 0
+        self.has_commands = 0
         self.unk_88 = 0
         self.unk_8c = 0
         self.unk_90 = 0

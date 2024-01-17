@@ -914,7 +914,7 @@ class TimestampCmd(ConstructClass):
         "unk_24" / Int64ul,
         Ver("V >= V13_0B4", "unk_ts_addr" / Int64ul),
         "uuid" / Int32ul,
-        "unk_30_padding" / Int32ul,
+        "unk_30" / Int32ul,
     )
 
 class WaitForInterruptCmd(ConstructClass):
@@ -1114,6 +1114,20 @@ class DoorbellCmd(ConstructClass):
         self.pad = 0
         self.arg = flags << 10
 
+class ProfileCaptureCmd(ConstructClass):
+    subcon = Struct(
+        "magic" / Const(0x1f, Int8ul),
+        "arg0" / Int8ul,
+        "arg1" / Int8ul,
+        "arg2" / Int8ul,
+        "encoder_id" / Int32ul,
+        "uuid" / Int32ul,
+        "workitem_ptr" / Int64ul,
+    )
+
+    def __init__(self, flags):
+        super().__init__()
+
 class MicroSequence(ConstructValueClass):
     subcon = RepeatUntil(lambda obj, lst, ctx: lst[-1].op & 0x3f in (0x18, 0x2b, 0x2c),
                          Struct(
@@ -1147,6 +1161,7 @@ class MicroSequence(ConstructValueClass):
                 0x17: Add16Cmd,
                 0x18: EndCmd,
                 0x19: TimestampCmd,
+                0x1f: ProfileCaptureCmd,
                 #0x1a: KTraceCmd,
                 0x22: StartTACmd,
                 0x23: FinalizeTACmd,

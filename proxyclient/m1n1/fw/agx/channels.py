@@ -101,6 +101,20 @@ class DC_09(ConstructClass):
         Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
     )
 
+class DC_ConfigurePerfCounters(ConstructClass):
+    subcon = Struct (
+        "msg_type" / Const(0xb, Int32ul),
+        "data" / HexDump(Default(Bytes(0x2c), bytes(0x2c))),
+        Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
+    )
+
+class DC_DisablePerfCounters(ConstructClass):
+    subcon = Struct (
+        "msg_type" / Const(0xc, Int32ul),
+        "data" / HexDump(Default(Bytes(0x2c), bytes(0x2c))),
+        Ver("G == G14 && V >= V13_2", ZPadding(0x10)),
+    )
+
 class DC_GrowTVBAck(ConstructClass):
     subcon =  Struct (
         "msg_type" / Const(0xd, Int32ul),
@@ -153,6 +167,8 @@ DeviceControlMsg = FixedSized(DeviceControlSize, Select(
     DC_UpdateIdleTS,
     DC_1e,
     DC_Write32,
+    DC_ConfigurePerfCounters,
+    DC_DisablePerfCounters,
     DC_GrowTVBAck,
     UnknownMsg,
 ))

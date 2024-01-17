@@ -1725,6 +1725,19 @@ class RCPowerZone(ConstructClass):
             self.target_off = self.target - off
             self.tc = tc
 
+class PerfCounterDesc(ConstructClass):
+    subcon = Struct(
+        "regs" / Int64ul,
+        "dis_mask" / Int32ul,
+        "en_mask" / Int32ul,
+        "source_mask" / Int32ul,
+        "base_reg" / Int32ul,
+        "unk_type" / Int8ul,
+        "count" / Int8ul,
+        "index" / Int8ul,
+        "pad0" / Int8ul,
+        "pad1" / Int32ul,
+    )
 
 class InitData_RegionC(ConstructClass):
     subcon = Struct(
@@ -1748,13 +1761,29 @@ class InitData_RegionC(ConstructClass):
         "unk_62" / Int32ul,
         Ver("V >= V13_0B4", "unk_66_0" / HexDump(Bytes(0xc))),
         "unk_66" / Int32ul,
-        "unk_6a" / HexDump(Bytes(0x16)),
-        "unk_80" / HexDump(Bytes(0xf80)),
-        "unk_1000" / HexDump(Bytes(0x7000)),
-        "unk_8000" / HexDump(Bytes(0x900)),
-        Ver("G >= G14X", "unk_8900_pad" / Default(HexDump(Bytes(0x484c)), bytes(0x484c))),
-        Ver("V >= V13_0B4 && V < V13_2", "unk_8900_0" / Int32ul),
-        Ver("V >= V13_3", "unk_8900_pad2" / Default(HexDump(Bytes(0x54)), bytes(0x54))),
+        "unk_6a" / HexDump(Bytes(0x12)),
+        "perfctrs" / Array(512, PerfCounterDesc),
+        "perfctr_count" / Int32ul,
+        "unk_4080" / HexDump(Bytes(0x3f80)),
+        Ver("G >= G14X", "unk_8000_pad" / Default(HexDump(Bytes(0x484c)), bytes(0x484c))),
+        Ver("V >= V13_0B4 && V < V13_2", "unk_8000_0" / Int32ul),
+        Ver("V >= V13_3", "unk_8000_pad2" / Default(HexDump(Bytes(0x54)), bytes(0x54))),
+        "unk_8000" / HexDump(Bytes(0x878)),
+        "unk_8878" / Int32ul,
+        "unk_887c" / Int32ul,
+        "unk_8880" / HexDump(Bytes(0x10)),
+        "unk_8890" / Int32ul,
+        "unkptr_8894" / Int64ul,
+        "size_889c" / Int32ul,
+        "unkptr_88a0" / Int64ul,
+        "perf_source_list" / Int64ul,
+        "perf_source_count" / Int32ul,
+        "unkptr_88b4" / Int64ul,
+        "unk_88bc" / Int32ul,
+        "unk_88c0" / Int16ul,
+        "unk_88c2" / Int8ul,
+        "unkpad_88c3" / Int8ul,
+        "unk_88c4" / HexDump(Bytes(0x3c)),
         "unk_8900" / Int32ul,
         "unk_atomic" / Int32ul,
         "max_power" / Int32ul,
