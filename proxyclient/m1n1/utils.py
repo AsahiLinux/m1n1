@@ -114,11 +114,11 @@ def chexundump(dump, base=0):
         dump = dump.read()
 
     decoded = bytearray()
-    for line in dump.splitlines():
+    for line in dump.strip().splitlines():
         if not line:
             continue
         try:
-            cropped = line.split("|", 2)[0]
+            cropped = line.strip().split("|", 2)[0]
             mark, data = cropped.split(" ", 1)
             if data.strip() == "*":
                 continue
