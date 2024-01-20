@@ -150,9 +150,28 @@ class AFKRingBufEndpoint(ASCBaseEndpoint):
     def start(self):
         self.send(AFKEP_Init())
 
+    def stop(self):
+        self.log("Shutting down")
+        self.send(AFKEP_Shutdown())
+        while self.alive:
+            self.asc.work()
+
     @msg_handler(0xa0, AFKEP_Init_Ack)
     def Init_Ack(self, msg):
         self.alive = True
+        return True
+
+    @msg_handler(0xc1, AFKEP_Shutdown_Ack)
+    def Shutdown_Ack(self, msg):
+        self.alive = False
+        self.log("Shutdown ACKed")
+        return True
+
+    @msg_handler(0x80, AFKEP_Init)
+    def Hello(self, msg):
+        self.rxbuf, self.rxbuf_dva = self.asc.ioalloc(0x10000)
+        self.txbuf, self.txbuf_dva = self.asc.ioalloc(0x10000)
+        self.send(AFKEP_Init_Ack())
         return True
 
     @msg_handler(0x89, AFKEP_GetBuf)
@@ -166,18 +185,6 @@ class AFKRingBufEndpoint(ASCBaseEndpoint):
         self.asc.p.write32(self.iobuffer, 0xdeadbeef)
         self.send(AFKEP_GetBuf_Ack(DVA=self.iobuffer_dva))
         self.log(f"Buffer: phys={self.iobuffer:#x} dva={self.iobuffer_dva:#x} size={size:#x}")
-        return True
-
-    def stop(self):
-        self.log("Shutting down")
-        self.send(AFKEP_Shutdown())
-        while self.alive:
-            self.asc.work()
-
-    @msg_handler(0xc1, AFKEP_Shutdown_Ack)
-    def Shutdown_Ack(self, msg):
-        self.alive = False
-        self.log("Shutdown ACKed")
         return True
 
     @msg_handler(0x8a, AFKEP_InitRB)
@@ -194,14 +201,17 @@ class AFKRingBufEndpoint(ASCBaseEndpoint):
             self.start_queues()
         return True
 
+    @msg_handler(0x8c, AFKEP_InitRB)
+    def InitUnk(self, msg):
+        return True  # no op
+
     def init_rb(self, msg):
         off = msg.OFFSET * AFKRingBuf.BLOCK_SIZE
         size = msg.SIZE * AFKRingBuf.BLOCK_SIZE
-
         return AFKRingBuf(self, self.iobuffer + off, size)
 
     def start_queues(self):
-         self.send(AFKEP_Start())
+        self.send(AFKEP_Start())
 
     @msg_handler(0x86, AFKEP_Start_Ack)
     def Start_Ack(self, msg):
@@ -219,7 +229,7 @@ class AFKRingBufEndpoint(ASCBaseEndpoint):
 
     def handle_ipc(self, data):
         pass
-    
+
     def send_ipc(self, data):
         wptr = self.txq.write(data)
         self.send(AFKEP_Send(WPTR = wptr))
