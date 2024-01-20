@@ -9,7 +9,7 @@ from construct import *
 from m1n1.setup import *
 from m1n1.shell import run_shell
 from m1n1 import asm
-from m1n1.hw.dart import DART, DARTRegs
+from m1n1.hw.dart import DART
 from m1n1.fw.dcp.client import DCPClient
 from m1n1.fw.dcp.manager import DCPManager
 from m1n1.fw.dcp.ipc import ByRef
@@ -101,9 +101,9 @@ dart = DART.from_adt(u, "arm-io/dart-dcp")
 disp_dart = DART.from_adt(u, "arm-io/dart-disp0")
 
 print("DCP DART:")
-dart.regs.dump_regs()
+dart.dart.regs.dump_regs()
 print("DISP DART:")
-disp_dart.regs.dump_regs()
+disp_dart.dart.regs.dump_regs()
 
 dcp_addr = u.adt["arm-io/dcp"].get_reg(0)[0]
 dcp = DCPClient(u, dcp_addr, dart, disp_dart)
