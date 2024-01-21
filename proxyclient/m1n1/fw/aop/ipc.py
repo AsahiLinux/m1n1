@@ -73,12 +73,120 @@ class GetProperty(EPICCall):
     TYPE = 0xa
     ARGS = Struct(
         "blank" / Const(0x0, Int32ul),
-        "key" / Enum(Int32ul, AOPAudioPropKey),
+        "key" / Enum(Int32ul, AOPPropKey),
     )
     RETS = Struct(
-        #"blank" / Const(0x0, Int32ul),
+        #"retcode" / Const(0x0, Int32ul),
         "value" / GreedyBytes,
     )
+
+class GetPropertyIsReady(EPICCall):
+    TYPE = 0xa
+    ARGS = Struct(
+        "blank" / Const(0x0, Int32ul),
+        "key" / Const(AOPPropKey.IS_READY, Int32ul),
+    )
+    RETS = Struct(
+        "retcode" / Const(0x0, Int32ul),
+        "state" / FourCC,
+    )
+
+class ALSPropertyKey(IntEnum):
+    INTERVAL      = 0x00
+    CALIBRATION   = 0x0b
+    MODE          = 0xd7
+    VERBOSITY     = 0xe1
+    UNKE4         = 0xe4
+
+@reg_calltype
+class ALSSetProperty(EPICCall):
+    TYPE = 0x4
+    SUBCLASSES = {}
+
+    @classmethod
+    def subclass(cls, cls2):
+        cls.SUBCLASSES[int(cls2.SUBTYPE)] = cls2
+        return cls2
+
+@ALSSetProperty.subclass
+class ALSSetPropertyVerbosity(ALSSetProperty):
+    SUBTYPE = ALSPropertyKey.VERBOSITY
+    ARGS = Struct(
+        "blank" / Const(0x0, Int32ul),
+        "key" / Default(Hex(Int32ul), ALSPropertyKey.VERBOSITY),
+        "level" / Hex(Int32ul),
+    )
+    RETS = Struct(
+        "retcode" / Const(0x0, Int32ul),
+        "value" / GreedyBytes,
+    )
+
+@ALSSetProperty.subclass
+class ALSSetPropertyMode(ALSSetProperty):
+    SUBTYPE = ALSPropertyKey.MODE
+    ARGS = Struct(
+        "blank" / Const(0x0, Int32ul),
+        "key" / Default(Hex(Int32ul), ALSPropertyKey.MODE),
+        "mode" / Int32ul,
+    )
+    RETS = Struct(
+        "retcode" / Const(0x0, Int32ul),
+        "value" / GreedyBytes,
+    )
+
+@ALSSetProperty.subclass
+class ALSSetPropertyCalibration(ALSSetProperty):
+    SUBTYPE = ALSPropertyKey.CALIBRATION
+    ARGS = Struct(
+        "blank" / Const(0x0, Int32ul),
+        "key" / Default(Hex(Int32ul), ALSPropertyKey.CALIBRATION),
+        "value" / GreedyBytes,
+    )
+    RETS = Struct(
+        "retcode" / Const(0xE00002BC, Hex(Int32ul)),
+    )
+
+@ALSSetProperty.subclass
+class ALSSetPropertyInterval(ALSSetProperty):
+    SUBTYPE = ALSPropertyKey.INTERVAL
+    ARGS = Struct(
+        "blank" / Const(0x0, Int32ul),
+        "key" / Default(Hex(Int32ul), ALSPropertyKey.INTERVAL),
+        "interval" / Int32ul,
+    )
+    RETS = Struct(
+        "retcode" / Const(0x0, Int32ul),
+    )
+
+@ALSSetProperty.subclass
+class ALSSetPropertyUnkE4(ALSSetProperty):
+    SUBTYPE = ALSPropertyKey.UNKE4
+    ARGS = Struct(
+        "blank" / Const(0x0, Int32ul),
+        "key" / Default(Hex(Int32ul), ALSPropertyKey.UNKE4),
+        "value" / Default(Hex(Int32ul), 0x1),
+    )
+    RETS = Struct(
+        "retcode" / Const(0x0, Int32ul),
+    )
+
+ALSLuxReport = Struct(
+    "unk0" / Const(0xec, Hex(Int8ul)),
+    "sequence" / Int32ul,
+    "timestamp" / Hex(Int64ul),
+    "red" / Int32ul,
+    "green" / Int32ul,
+    "blue" / Int32ul,
+    "clear" / Int32ul,
+    "lux" / Float32l,
+    "unk_zero" / Int32ul, # 0
+    "status" / Int32ul, # 3
+    "gain" / Int16ul,
+    "unk3" / Int8ul,
+    "unk4" / Int8ul,
+    "unk5" / Int16ul,
+    "integration_time" / Int32ul,
+)
 
 @reg_calltype
 class WrappedCall(EPICCall):
