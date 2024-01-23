@@ -23,6 +23,12 @@ EPICCategory = "EPICCategory" / Enum(Int8ul,
     COMMAND = 0x30,
 )
 
+EPICSubtype = "EPICSubtype" / Enum(Int16ul,
+    ANNOUNCE = 0x30,
+    TEARDOWN = 0x32,
+    STD_SERVICE = 0xc0,
+)
+
 EPICHeader = Struct(
     "channel" / Int32ul,
     "type" / EPICType,
@@ -37,16 +43,28 @@ EPICSubHeader = Struct(
     "length" / Int32ul,
     "version" / Default(Int8ul, 4),
     "category" / EPICCategory,
-    "type" / Hex(Int16ul),
+    "type" / EPICSubtype,
     "timestamp" / Default(Int64ul, 0),
     "seq" / Int16ul,
     "unk" / Default(Hex(Int16ul), 0),
     "inline_len" / Hex(Int32ul),
 )
 
+# dcp's announce
 EPICAnnounce = Struct(
     "name" / Padded(32, CString("utf8")),
     "props" / Optional(OSSerialize())
+)
+
+# aop's announce
+EPICServiceAnnounce = Struct(
+    "name" / Padded(20, CString("utf8")),
+    "unk1" / Hex(Int32ul),
+    "retcode" / Hex(Int32ul), # 0xE00002C2
+    "unk3" / Hex(Int32ul),
+    "channel" / Hex(Int32ul),
+    "unk5" / Hex(Int32ul),
+    "unk6" / Hex(Int32ul),
 )
 
 EPICSetProp = Struct(
@@ -80,17 +98,17 @@ class EPICService:
         self.ready = False
         self.chan = None
         self.seq = 0
-    
+
     def log(self, msg):
         print(f"[{self.ep.name}.{self.SHORT}] {msg}")
-    
+
     def init(self, props):
         self.log(f"Init: {props}")
         self.props = props
         self.rxbuf, self.rxbuf_dva = self.ep.asc.ioalloc(self.RX_BUFSIZE)
         self.txbuf, self.txbuf_dva = self.ep.asc.ioalloc(self.TX_BUFSIZE)
         self.ready = True
-    
+
     def wait(self):
         while not self.ready:
             self.ep.asc.work()
@@ -234,7 +252,7 @@ class EPICEndpoint(AFKRingBufEndpoint):
             self.asc.work()
 
     def handle_report(self, hdr, sub, fd):
-        if sub.type == 0x30:
+        if sub.type == EPICSubtype.ANNOUNCE: # dcp's announce
             init = EPICAnnounce.parse_stream(fd)
             if init.props is None:
                 init.props = {}
@@ -253,6 +271,22 @@ class EPICEndpoint(AFKRingBufEndpoint):
                 self.log(f"New service: {key} on channel {hdr.channel} (short name: {short})")
             else:
                 self.log(f"Unknown service {key} on channel {hdr.channel}")
+        elif sub.type == EPICSubtype.STD_SERVICE: # aop's announce
+            props = EPICServiceAnnounce.parse_stream(fd)
+            name = props.name
+            key = props.name
+            chan = props.channel # aop uses channel parsed from prop, not from header
+            if name in self.serv_names:
+                srv = self.serv_names[name](self)
+                short = srv.SHORT # aop has no EPICUnit stuff
+                #setattr(self, short, srv)
+                srv.init(props)
+                srv.chan = chan
+                self.chan_map[chan] = srv
+                self.serv_map[key] = srv
+                self.log(f"New service: {key} on channel {chan} (short name: {short})")
+            else:
+                self.log(f"Unknown service {key} on channel {chan}")
         else:
             if hdr.channel not in self.chan_map:
                 self.log(f"Ignoring report on channel {hdr.channel}")
@@ -267,7 +301,7 @@ class EPICEndpoint(AFKRingBufEndpoint):
 
     def handle_cmd(self, hdr, sub, fd):
         self.chan_map[hdr.channel].handle_cmd(sub.category, sub.type, sub.seq, fd)
-    
+
     def send_epic(self, chan, ptype, category, type, seq, data, inline_len=0):
         hdr = Container()
         hdr.channel = chan
