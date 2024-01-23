@@ -79,7 +79,7 @@ size by dividing by 3.
 """
 
 class AFKRingBuf(Reloadable):
-    BLOCK_SIZE = 0x40
+    BLOCK_STEP = 0x40
     BLOCK_COUNT = 3
 
     def __init__(self, ep, base, size):
@@ -87,12 +87,12 @@ class AFKRingBuf(Reloadable):
         self.base = base
 
         bs, unk = struct.unpack("<II", self.read_buf(0, 8))
-        # calculate stride
-        # bs + self.BLOCK_COUNT * stride) == size
+        # calculate block_size
+        # bs + self.BLOCK_COUNT * block_size) == size
         assert((size - bs) % self.BLOCK_COUNT == 0)
-        stride = (size - bs) // self.BLOCK_COUNT
-        assert(stride % self.BLOCK_SIZE == 0)
-        self.stride = stride
+        block_size = (size - bs) // self.BLOCK_COUNT
+        assert(block_size % self.BLOCK_STEP == 0)
+        self.block_size = block_size
         self.bufsize = bs
         self.rptr = 0
         self.wptr = 0
@@ -104,25 +104,25 @@ class AFKRingBuf(Reloadable):
         return self.ep.iface.writemem(self.base + off, data)
     
     def get_rptr(self):
-        return struct.unpack("<I", self.read_buf(self.stride * 1, 4))[0]
-        #return self.ep.asc.p.read32(self.base + self.BLOCK_SIZE)
+        return struct.unpack("<I", self.read_buf(self.block_size * 1, 4))[0]
+        #return self.ep.asc.p.read32(self.base + self.BLOCK_STEP)
 
     def get_wptr(self):
-        return struct.unpack("<I", self.read_buf(self.stride * 2, 4))[0]
-        #return self.ep.asc.p.read32(self.base + 2 * self.BLOCK_SIZE)
+        return struct.unpack("<I", self.read_buf(self.block_size * 2, 4))[0]
+        #return self.ep.asc.p.read32(self.base + 2 * self.BLOCK_STEP)
 
     def update_rptr(self, rptr):
-        self.write_buf(self.stride * 1, struct.pack("<I", rptr))
-        self.ep.asc.p.write32(self.base + self.BLOCK_SIZE, rptr)
+        self.write_buf(self.block_size * 1, struct.pack("<I", rptr))
+        self.ep.asc.p.write32(self.base + self.BLOCK_STEP, rptr)
 
     def update_wptr(self, wptr):
-        self.write_buf(self.stride * 2, struct.pack("<I", wptr))
-        self.ep.asc.p.write32(self.base + 2 * self.BLOCK_SIZE, wptr)
+        self.write_buf(self.block_size * 2, struct.pack("<I", wptr))
+        self.ep.asc.p.write32(self.base + 2 * self.BLOCK_STEP, wptr)
 
     def read(self):
         self.wptr = self.get_wptr()
 
-        base = self.stride * 3  # after header (size, rptr, wptr)
+        base = self.block_size * 3  # after header (size, rptr, wptr)
         while self.wptr != self.rptr:
             hdr = self.read_buf(base + self.rptr, 16)
             self.rptr += 16
@@ -135,7 +135,7 @@ class AFKRingBuf(Reloadable):
                 assert magic in [b"IOP ", b"AOP "]
 
             payload = self.read_buf(base + self.rptr, size)
-            self.rptr = (align_up(self.rptr + size, self.stride)) % self.bufsize
+            self.rptr = (align_up(self.rptr + size, self.block_size)) % self.bufsize
             self.update_rptr(self.rptr)
             yield hdr[8:] + payload
             self.wptr = self.get_wptr()
@@ -143,7 +143,7 @@ class AFKRingBuf(Reloadable):
         self.update_rptr(self.rptr)
 
     def write(self, data):
-        base = self.stride * 3  # after header (size, rptr, wptr)
+        base = self.block_size * 3  # after header (size, rptr, wptr)
         hdr2, data = data[:8], data[8:]
         self.rptr = self.get_rptr()
         
@@ -163,7 +163,7 @@ class AFKRingBuf(Reloadable):
             raise AFKError("Ring buffer is full")
 
         self.write_buf(base + self.wptr + 0x10, data)
-        self.wptr = align_up(self.wptr + 0x10 + len(data), self.stride) % self.bufsize
+        self.wptr = align_up(self.wptr + 0x10 + len(data), self.block_size) % self.bufsize
 
         self.update_wptr(self.wptr)
         return self.wptr
@@ -212,7 +212,7 @@ class AFKRingBufEndpoint(ASCBaseEndpoint):
 
     @msg_handler(0x89, AFKEP_GetBuf)
     def GetBuf(self, msg):
-        size = msg.SIZE * AFKRingBuf.BLOCK_SIZE
+        size = msg.SIZE * AFKRingBuf.BLOCK_STEP
 
         if self.iobuffer:
             print("WARNING: trying to reset iobuffer!")
@@ -242,8 +242,8 @@ class AFKRingBufEndpoint(ASCBaseEndpoint):
         return True  # no op
 
     def init_rb(self, msg):
-        off = msg.OFFSET * AFKRingBuf.BLOCK_SIZE
-        size = msg.SIZE * AFKRingBuf.BLOCK_SIZE
+        off = msg.OFFSET * AFKRingBuf.BLOCK_STEP
+        size = msg.SIZE * AFKRingBuf.BLOCK_STEP
         return AFKRingBuf(self, self.iobuffer + off, size)
 
     def start_queues(self):
