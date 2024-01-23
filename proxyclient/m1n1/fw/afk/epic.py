@@ -53,6 +53,17 @@ EPICSubHeader = Struct(
     "inline_len" / Hex(Int32ul),
 )
 
+EPICSubHeaderV2 = Struct(
+    "length" / Int32ul,
+    "version" / Default(Int8ul, 2),
+    "category" / EPICCategory,
+    "type" / EPICSubtype,
+    "seq" / Int16ul,
+    "unk" / Default(Hex(Int16ul), 0),
+    "pad" / Default(Hex(Int64ul), 0),
+    "inline_len" / Hex(Int32ul),
+)
+
 # dcp's announce
 EPICAnnounce = Struct(
     "name" / Padded(32, CString("utf8")),
@@ -377,7 +388,7 @@ class EPICEndpoint(AFKRingBufEndpoint):
     def send_notify(self, chan, call, **kwargs):
         return self.serv_map[chan].send_notify(call.TYPE, call.ARGS.build(call.args), **kwargs)
 
-    def send_epic(self, chan, ptype, category, type, seq, data, inline_len=0):
+    def send_epicv4(self, chan, ptype, category, type, seq, data, inline_len=0, **kwargs):
         hdr = Container()
         hdr.channel = chan
         hdr.type = ptype
@@ -392,6 +403,29 @@ class EPICEndpoint(AFKRingBufEndpoint):
         sub.inline_len = inline_len
         pkt = EPICHeader.build(hdr) + EPICSubHeader.build(sub) + data
         super().send_ipc(pkt)
+
+    def send_epicv2(self, chan, ptype, category, type, seq, data, inline_len=0, **kwargs):
+        hdr = Container()
+        hdr.channel = chan
+        hdr.type = ptype
+        hdr.seq = self.hseq
+        self.hseq += 1
+
+        sub = Container()
+        sub.length = len(data)
+        sub.category = category
+        sub.type = type
+        sub.seq = seq
+        sub.inline_len = inline_len
+        pkt = EPICHeader.build(hdr) + EPICSubHeaderV2.build(sub) + data
+        super().send_ipc(pkt)
+
+    def send_epic(self, chan, ptype, category, type, seq, data, inline_len=0, version=4, **kwargs):
+        if (version == 2):
+            return self.send_epicv2(chan, ptype, category, type, seq, data, inline_len, **kwargs)
+        if (version == 4):
+            return self.send_epicv4(chan, ptype, category, type, seq, data, inline_len, **kwargs)
+        raise EPICError(f"unknown epic sub version: {version}")
 
 class AFKSystemEndpoint(EPICEndpoint):
     SHORT = "system"
