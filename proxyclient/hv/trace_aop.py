@@ -108,15 +108,15 @@ class AFKEp(EP):
 
     @msg(0x8a, DIR.RX, AFKEP_InitRB)
     def InitTX(self, msg):
-        off = msg.OFFSET * AFKRingBuf.BLOCK_SIZE
-        size = msg.SIZE * AFKRingBuf.BLOCK_SIZE
+        off = msg.OFFSET * AFKRingBuf.BLOCK_STEP
+        size = msg.SIZE * AFKRingBuf.BLOCK_STEP
         self.state.txbuf_info = (off, size)
         self.create_bufs()
 
     @msg(0x8b, DIR.RX, AFKEP_InitRB)
     def InitRX(self, msg):
-        off = msg.OFFSET * AFKRingBuf.BLOCK_SIZE
-        size = msg.SIZE * AFKRingBuf.BLOCK_SIZE
+        off = msg.OFFSET * AFKRingBuf.BLOCK_STEP
+        size = msg.SIZE * AFKRingBuf.BLOCK_STEP
         self.state.rxbuf_info = (off, size)
         self.create_bufs()
 
