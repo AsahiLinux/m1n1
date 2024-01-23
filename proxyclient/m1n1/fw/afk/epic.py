@@ -195,6 +195,15 @@ class EPICService:
             self.ep.asc.work()
         return self.reply
 
+    def send_notify(self, type, data, **kwargs):
+        self.reply = None
+        self.iface.writemem(self.txbuf, data)
+        self.ep.send_epic(self.chan, EPICType.NOTIFY, EPICCategory.NOTIFY, type, self.seq, data, **kwargs)
+        self.seq += 1
+        while self.reply is None:
+            self.ep.asc.work()
+        return self.reply
+
 class EPICStandardService(EPICService):
     def call(self, group, cmd, data=b'', replen=None):
         msg = struct.pack("<2xHIII48x", group, cmd, len(data), 0x69706378) + data
@@ -324,6 +333,15 @@ class EPICEndpoint(AFKRingBufEndpoint):
 
     def handle_cmd(self, hdr, sub, fd):
         self.chan_map[hdr.channel].handle_cmd(sub.category, sub.type, sub.seq, fd)
+
+    def send_roundtrip(self, chan, call, **kwargs):
+        self.serv_map[chan].last_call = call
+        ret = self.serv_map[chan].send_notify(call.TYPE, call.ARGS.build(call.args), **kwargs)
+        self.serv_map[chan].last_call = None
+        return ret
+
+    def send_notify(self, chan, call, **kwargs):
+        return self.serv_map[chan].send_notify(call.TYPE, call.ARGS.build(call.args), **kwargs)
 
     def send_epic(self, chan, ptype, category, type, seq, data, inline_len=0):
         hdr = Container()
