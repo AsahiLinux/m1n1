@@ -26,7 +26,10 @@ EPICCategory = "EPICCategory" / Enum(Int8ul,
 EPICSubtype = "EPICSubtype" / Enum(Int16ul,
     ANNOUNCE = 0x30,
     TEARDOWN = 0x32,
+    RETCODE_WITH_PAYLOAD = 0xa0,
     STD_SERVICE = 0xc0,
+    RETCODE = 0x84,
+    STRING = 0x8a,
 )
 
 EPICHeader = Struct(
@@ -132,24 +135,44 @@ class EPICService:
     def handle_reply(self, category, type, seq, fd):
         off = fd.tell()
         data = fd.read()
-        if len(data) == 4:
-            retcode = struct.unpack("<I", data)[0]
-            if retcode:
-                raise EPICError(f"IOP returned errcode {retcode:#x}")
-            else:
-                self.reply = retcode
-                return
-        fd.seek(off)
-        cmd = EPICCmd.parse_stream(fd)
-        payload = fd.read()
-        self.log(f"Response {type:#x} #{seq}: {cmd.retcode:#x}")
-        if cmd.retcode != 0:
-            raise EPICError(f"IOP returned errcode {cmd.retcode:#x}")
-        if payload:
-            self.log("Inline payload:")
-            chexdump(payload)
-        assert cmd.rxbuf == self.rxbuf_dva
-        self.reply = self.iface.readmem(self.rxbuf, cmd.rxlen)
+
+        ret = data
+        if (hasattr(self, "last_call") and hasattr(self.last_call, "RETS")):
+            call = getattr(self, "last_call")
+            item = call.RETS.parse(data)
+            ret = item
+            self.reply = ret
+            return
+
+        if (type == EPICSubtype.RETCODE):
+            rc = struct.unpack("<I", data)[0]
+            self.log(f"Retcode #{seq}: {rc:#x}")
+            self.reply = ret
+            return
+        elif (type == EPICSubtype.STD_SERVICE):
+            fd.seek(off)
+            cmd = EPICCmd.parse_stream(fd)
+            payload = fd.read()
+            self.log(f"Response {int(type):#x} #{seq}: {cmd.retcode:#x}")
+            if cmd.retcode != 0:
+                raise EPICError(f"IOP returned errcode {cmd.retcode:#x}")
+            if payload:
+                self.log("Inline payload:")
+                chexdump(payload)
+            assert cmd.rxbuf == self.rxbuf_dva
+            self.reply = self.iface.readmem(self.rxbuf, cmd.rxlen)
+            return
+        elif (type == EPICSubtype.RETCODE_WITH_PAYLOAD):
+            rc = struct.unpack("<I", data[:4])[0]
+            self.log(f"Retcode #{seq}: {rc:#x}")
+            assert(rc == 0)
+            self.reply = ret
+            return
+        else:
+            self.log(f"#{seq}: Unknown reply type: {int(type):#x}")
+            chexdump(data)
+            self.reply = ret
+            return
 
     def handle_cmd(self, category, type, seq, fd):
         cmd = EPICCmd.parse_stream(fd)
