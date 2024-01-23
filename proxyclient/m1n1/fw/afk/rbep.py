@@ -54,15 +54,45 @@ class AFKEP_Shutdown_Ack(AFKEPMessage):
 class AFKError(Exception):
     pass
 
+"""
+The first three blocks of the ringbuffer is reserved for exchanging size,
+rptr, wptr:
+
+           bufsize      unk
+00000000  00007e80 00070006 00000000 00000000 00000000 00000000 00000000 00000000
+00000020  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+00000040  *   rptr
+00000080  00000600 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+000000a0  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+000000c0  *   wptr
+00000100  00000680 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+00000120  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
+00000140  *
+
+Note how each block is spread out by some block_size multiple of 0x40
+(step).  Here, the block_size is 0x80. The 0th block holds the bufsize,
+the 1st block holds the rptr, and the 2nd block holds the wptr. The
+actual contents of the ringbuffer starts after the first three blocks,
+which will be called the "header". Since we're *always* given the total
+block size at offset +0x0 or +block_size*0, we can calculate the block
+size by dividing by 3.
+"""
+
 class AFKRingBuf(Reloadable):
     BLOCK_SIZE = 0x40
+    BLOCK_COUNT = 3
 
     def __init__(self, ep, base, size):
         self.ep = ep
         self.base = base
 
         bs, unk = struct.unpack("<II", self.read_buf(0, 8))
-        assert (bs + 3 * self.BLOCK_SIZE) == size
+        # calculate stride
+        # bs + self.BLOCK_COUNT * stride) == size
+        assert((size - bs) % self.BLOCK_COUNT == 0)
+        stride = (size - bs) // self.BLOCK_COUNT
+        assert(stride % self.BLOCK_SIZE == 0)
+        self.stride = stride
         self.bufsize = bs
         self.rptr = 0
         self.wptr = 0
@@ -74,33 +104,38 @@ class AFKRingBuf(Reloadable):
         return self.ep.iface.writemem(self.base + off, data)
     
     def get_rptr(self):
-        return self.ep.asc.p.read32(self.base + self.BLOCK_SIZE)
+        return struct.unpack("<I", self.read_buf(self.stride * 1, 4))[0]
+        #return self.ep.asc.p.read32(self.base + self.BLOCK_SIZE)
 
     def get_wptr(self):
-        return self.ep.asc.p.read32(self.base + 2 * self.BLOCK_SIZE)
+        return struct.unpack("<I", self.read_buf(self.stride * 2, 4))[0]
+        #return self.ep.asc.p.read32(self.base + 2 * self.BLOCK_SIZE)
 
     def update_rptr(self, rptr):
-        self.ep.asc.p.write32(self.base + self.BLOCK_SIZE, self.rptr)
+        self.write_buf(self.stride * 1, struct.pack("<I", rptr))
+        self.ep.asc.p.write32(self.base + self.BLOCK_SIZE, rptr)
 
-    def update_wptr(self, rptr):
-        self.ep.asc.p.write32(self.base + 2 * self.BLOCK_SIZE, self.wptr)
+    def update_wptr(self, wptr):
+        self.write_buf(self.stride * 2, struct.pack("<I", wptr))
+        self.ep.asc.p.write32(self.base + 2 * self.BLOCK_SIZE, wptr)
 
     def read(self):
         self.wptr = self.get_wptr()
 
+        base = self.stride * 3  # after header (size, rptr, wptr)
         while self.wptr != self.rptr:
-            hdr = self.read_buf(3 * self.BLOCK_SIZE + self.rptr, 16)
+            hdr = self.read_buf(base + self.rptr, 16)
             self.rptr += 16
             magic, size = struct.unpack("<4sI", hdr[:8])
             assert magic in [b"IOP ", b"AOP "]
             if size > (self.bufsize - self.rptr):
-                hdr = self.read_buf(3 * self.BLOCK_SIZE, 16)
+                hdr = self.read_buf(base, 16)
                 self.rptr = 16
                 magic, size = struct.unpack("<4sI", hdr[:8])
                 assert magic in [b"IOP ", b"AOP "]
 
-            payload = self.read_buf(3 * self.BLOCK_SIZE + self.rptr, size)
-            self.rptr = (align_up(self.rptr + size, self.BLOCK_SIZE)) % self.bufsize
+            payload = self.read_buf(base + self.rptr, size)
+            self.rptr = (align_up(self.rptr + size, self.stride)) % self.bufsize
             self.update_rptr(self.rptr)
             yield hdr[8:] + payload
             self.wptr = self.get_wptr()
@@ -108,6 +143,7 @@ class AFKRingBuf(Reloadable):
         self.update_rptr(self.rptr)
 
     def write(self, data):
+        base = self.stride * 3  # after header (size, rptr, wptr)
         hdr2, data = data[:8], data[8:]
         self.rptr = self.get_rptr()
         
@@ -115,19 +151,19 @@ class AFKRingBuf(Reloadable):
             raise AFKError("Ring buffer is full")
 
         hdr = struct.pack("<4sI", b"IOP ", len(data)) + hdr2
-        self.write_buf(3 * self.BLOCK_SIZE + self.wptr, hdr)
+        self.write_buf(base + self.wptr, hdr)
 
         if len(data) > (self.bufsize - self.wptr - 16):
             if self.rptr < 0x10:
                 raise AFKError("Ring buffer is full")
-            self.write_buf(3 * self.BLOCK_SIZE, hdr)
+            self.write_buf(base, hdr)
             self.wptr = 0
 
         if self.wptr < self.rptr and self.wptr + 0x10 + len(data) >= self.rptr:
             raise AFKError("Ring buffer is full")
 
-        self.write_buf(3 * self.BLOCK_SIZE + self.wptr + 0x10, data)
-        self.wptr = align_up(self.wptr + 0x10 + len(data), self.BLOCK_SIZE) % self.bufsize
+        self.write_buf(base + self.wptr + 0x10, data)
+        self.wptr = align_up(self.wptr + 0x10 + len(data), self.stride) % self.bufsize
 
         self.update_wptr(self.wptr)
         return self.wptr
