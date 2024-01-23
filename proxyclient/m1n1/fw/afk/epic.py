@@ -86,10 +86,17 @@ EPICCmd = Struct(
     "txcookie" / Optional(Default(Bool(Int8ul), False)),
 )
 
+# Register RX report handlers with @report_handler(type, ConstructClass)
+def report_handler(subtype, repcls):
+    def f(x):
+        x.is_report = True
+        x.subtype = subtype
+        x.repcls = repcls
+        return x
+    return f
 
 class EPICError(Exception):
     pass
-
 
 class EPICService:
     RX_BUFSIZE = 0x4000
@@ -101,6 +108,17 @@ class EPICService:
         self.ready = False
         self.chan = None
         self.seq = 0
+
+        self.reporthandler = {}
+        self.reporttypes = {}
+        for name in dir(self):
+            i = getattr(self, name)
+            if not callable(i):
+                continue
+            if not getattr(i, "is_report", False):
+                continue
+            self.reporthandler[i.subtype] = i
+            self.reporttypes[i.subtype] = i.repcls
 
     def log(self, msg):
         print(f"[{self.ep.name}.{self.SHORT}] {msg}")
@@ -117,8 +135,24 @@ class EPICService:
             self.ep.asc.work()
 
     def handle_report(self, category, type, seq, fd):
-        self.log(f"Report {category}/{type} #{seq}")
-        chexdump(fd.read())
+        st = int(type)
+        self.log(f"Report {category}/{st:#x} #{seq}")
+        handler = self.reporthandler.get(st, None)
+        if handler is None:
+            self.log("unknown report: 0x%x" % (st))
+            chexdump(fd.read())
+            return False
+
+        payload = fd.read()
+        reptype = self.reporttypes.get(st, None)
+        try:
+            rep = reptype.parse(payload)
+        except Exception as e:
+            self.log(e)
+            rep = None
+            chexdump(payload)
+            raise EPICError(f"failed to parse report {st:#x}")
+        return handler(seq, fd, rep)
 
     def handle_notify(self, category, type, seq, fd):
         retcode = struct.unpack("<I", fd.read(4))[0]
