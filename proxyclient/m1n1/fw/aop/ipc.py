@@ -148,45 +148,41 @@ class AttachDevice(WrappedCall):
         "unk" / HexDump(GreedyBytes),
     )
 
-@WrappedCall.reg_subclass
-class ProbeDevice(WrappedCall):
-    CALLTYPE = 0xc3_00_00_01
+@reg_calltype
+class AudioAttachDevice(EPICCall):
+    TYPE = 0x20
+    SUBTYPE = 0xc3_00_00_02
     ARGS = Struct(
-        "blank" / Const(0x0, Int32ul),
+        "pad" / Const(0x0, Int32ul),
         "unk1" / Hex(Const(0xffffffff, Int32ul)),
-        "calltype" / Hex(Const(0xc3000001, Int32ul)),
-        "blank2" / ZPadding(16),
-        "pad" / Padding(4),
-        "len" / Hex(Const(0x28, Int64ul)),
-        "devno" / Int32ul,
+        "subtype" / Hex(Const(0xc3000002, Int32ul)),
+        "pad2" / ZPadding(16),
+        "cookie" / Default(Hex(Int32ul), 0),
+        "len" / Hex(Const(0x2c, Int64ul)),
+        "devid" / FourCC,
+        "dev2" / Default(Hex(Int32ul), 0),
     )
     RETS = Struct(
         "retcode" / Default(Hex(Int32ul), 0),
-        "devid" / FourCC,
-        "blank2" / Const(0x0, Int32ul),
-        "unk1" / Const(8, Int32ul),
-        "blank3" / Const(0x0, Int32ul),
-        "unk2" / Hex(Const(0x01_0d_1c_20, Int32ul)),
-        "blank4" / Const(0x0, Int32ul),
-        "remainder" / HexDump(GreedyBytes),
+        "unk" / HexDump(GreedyBytes),
     )
 
 PDMConfig = Struct(
-    "unk1" / Int32ul,
+    "bytesPerSample" / Int32ul,
     "clockSource" / FourCC,
     "pdmFrequency" / Int32ul,
-    "unk3_clk" / Int32ul,
-    "unk4_clk" / Int32ul,
-    "unk5_clk" / Int32ul,
-    "channelPolaritySelect" / Hex(Int32ul),
-    "unk7" / Hex(Int32ul),
+    "pdmcFrequency" / Int32ul,
+    "slowClockSpeed" / Int32ul,
+    "fastClockSpeed" / Int32ul,
+    "channelPolaritySelect" / Int32ul,
+    "channelPhaseSelect" / Int32ul,
     "unk8" / Hex(Int32ul),
     "unk9" / Hex(Int16ul),
     "ratios" / Struct(
         "r1" / Int8ul,
         "r2" / Int8ul,
         "r3" / Int8ul,
-        "pad" / Default(Int8ul, 0),
+        "pad" / Const(0, Int8ul),
     ),
     "filterLengths" / Hex(Int32ul),
     "coeff_bulk" / Int32ul,
@@ -240,7 +236,7 @@ DecimatorConfig = Struct(
 PowerSetting = Struct(
     "devid" / FourCC,
     "cookie" / Int32ul,
-    "pad" / Padding(4),
+    "unk" / Default(Hex(Int32ul), 0),
     "blank" / ZPadding(8),
     "target_pstate" / FourCC,
     "unk2" / Int32ul,
