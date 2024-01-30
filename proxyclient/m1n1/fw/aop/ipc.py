@@ -44,9 +44,7 @@ class EPICCall:
     def from_stream(cls, f):
         return cls(cls.ARGS.parse_stream(f))
 
-    def dump(self, logger=None):
-        if logger is None:
-            logger = print
+    def dump(self, logger=print):
         args_fmt = [f"{k}={v}" for (k, v) in self.args.items() if k != "_io"]
         rets_fmt = [f"{k}={v}" for (k, v) in self.rets.items() if k != "_io"]
         logger(f"{type(self).__name__}({', '.join(args_fmt)}) -> ({', '.join(rets_fmt)})")
