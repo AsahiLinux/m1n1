@@ -388,6 +388,9 @@ class EPICEndpoint(AFKRingBufEndpoint):
     def send_notify(self, chan, call, **kwargs):
         return self.serv_map[chan].send_notify(call.TYPE, call.ARGS.build(call.args), **kwargs)
 
+    def send_cmd(self, chan, type, data, retlen=None, **kwargs):
+        return self.serv_map[chan].send_cmd(type, data, retlen, **kwargs)
+
     def send_epicv4(self, chan, ptype, category, type, seq, data, inline_len=0, **kwargs):
         hdr = Container()
         hdr.channel = chan
