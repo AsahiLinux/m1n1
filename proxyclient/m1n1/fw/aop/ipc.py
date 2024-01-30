@@ -2,37 +2,27 @@ from enum import IntEnum
 from construct import *
 from io import BytesIO
 
+from ..afk.epic import *
 from m1n1.utils import FourCC, chexdump
-from m1n1.constructutils import ZPadding
-from m1n1.fw.afk.epic import EPICCmd, EPICCategory
+from m1n1.constructutils import *
 
-
-EPICSubHeaderVer2 = Struct(
-    "length" / Int32ul,
-    "version" / Default(Int8ul, 2),
-    "category" / EPICCategory,
-    "type" / Hex(Int16ul),
-    "timestamp" / Default(Int64ul, 0),
-    "unk1" / Default(Hex(Int32ul), 0),
-    "unk2" / Default(Hex(Int32ul), 0),
-)
-
-class AOPAudioPropKey(IntEnum):
-    IS_READY = 0x01
-
-    UNK_11 = 0x11
-    PLACEMENT = 0x1e
-    UNK_21 = 0x21
-    ORIENTATION = 0x2e
-    LOCATION_ID = 0x30
-    SERIAL_NO = 0x3e
-    VENDOR_ID = 0x5a
-    PRODUCT_ID = 0x5b
-
+class AOPPropKey(IntEnum):
+    IS_READY     = 0x01
+    MANUFACTURER = 0x0f  # wtf is a firefish2?
+    CHIP_ID      = 0x11
+    PLACEMENT    = 0x1e
+    UNK_21       = 0x21
+    ORIENTATION  = 0x2e
+    LOCATION_ID  = 0x30
+    PRODUCT_ID2  = 0x3f
+    SERIAL_NO    = 0x3e
+    CHANNEL_NAME = 0x45
+    VENDOR_ID    = 0x5a
+    PRODUCT_ID   = 0x5b
     SERVICE_CONTROLLER = 0x64
     DEVICE_COUNT = 0x65
-
-    VERSION = 0x67
+    VERSION      = 0x67
+    UNK_DUMP     = 0xd7
 
 class EPICCall:
     @classmethod
