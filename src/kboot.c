@@ -675,9 +675,7 @@ static int dt_set_multitouch(void)
     u32 len;
     const u8 *cal_blob = adt_getprop(adt, anode, "multi-touch-calibration", &len);
     if (!cal_blob || !len) {
-        printf("ADT: Failed to get multi-touch-calibration from %s, disable %s\n", adt_touchbar,
-               fdt_get_name(dt, node, NULL));
-        fdt_setprop_string(dt, node, "status", "disabled");
+        printf("ADT: Failed to get multi-touch-calibration from %s\n", adt_touchbar);
         return 0;
     }
 
