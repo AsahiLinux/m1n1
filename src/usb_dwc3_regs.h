@@ -156,7 +156,7 @@
 /* Global Configuration Register */
 #define DWC3_GCTL_PWRDNSCALE(n) ((n) << 19)
 #define DWC3_GCTL_U2RSTECN      (1 << 16)
-#define DWC3_GCTL_RAMCLKSEL(x)  (((x)&DWC3_GCTL_CLK_MASK) << 6)
+#define DWC3_GCTL_RAMCLKSEL(x)  (((x) & DWC3_GCTL_CLK_MASK) << 6)
 #define DWC3_GCTL_CLK_BUS       (0)
 #define DWC3_GCTL_CLK_PIPE      (1)
 #define DWC3_GCTL_CLK_PIPEHALF  (2)
@@ -184,8 +184,8 @@
 #define DWC3_GUSB3PIPECTL_SUSPHY     (1 << 17)
 
 /* Global TX Fifo Size Register */
-#define DWC3_GTXFIFOSIZ_TXFDEF(n)    ((n)&0xffff)
-#define DWC3_GTXFIFOSIZ_TXFSTADDR(n) ((n)&0xffff0000)
+#define DWC3_GTXFIFOSIZ_TXFDEF(n)    ((n) & 0xffff)
+#define DWC3_GTXFIFOSIZ_TXFSTADDR(n) ((n) & 0xffff0000)
 
 /* Global HWPARAMS1 Register */
 #define DWC3_GHWPARAMS1_EN_PWROPT(n)  (((n) & (3 << 24)) >> 24)
@@ -283,12 +283,12 @@
 #define DWC3_DSTS_DEVCTRLHLT (1 << 22)
 
 #define DWC3_DSTS_USBLNKST_MASK (0x0f << 18)
-#define DWC3_DSTS_USBLNKST(n)   (((n)&DWC3_DSTS_USBLNKST_MASK) >> 18)
+#define DWC3_DSTS_USBLNKST(n)   (((n) & DWC3_DSTS_USBLNKST_MASK) >> 18)
 
 #define DWC3_DSTS_RXFIFOEMPTY (1 << 17)
 
 #define DWC3_DSTS_SOFFN_MASK (0x3fff << 3)
-#define DWC3_DSTS_SOFFN(n)   (((n)&DWC3_DSTS_SOFFN_MASK) >> 3)
+#define DWC3_DSTS_SOFFN(n)   (((n) & DWC3_DSTS_SOFFN_MASK) >> 3)
 
 #define DWC3_DSTS_CONNECTSPD (7 << 0)
 
@@ -396,8 +396,8 @@ enum dwc3_link_state {
 
 /* TRB Length, PCM and Status */
 #define DWC3_TRB_SIZE_MASK      (0x00ffffff)
-#define DWC3_TRB_SIZE_LENGTH(n) ((n)&DWC3_TRB_SIZE_MASK)
-#define DWC3_TRB_SIZE_PCM1(n)   (((n)&0x03) << 24)
+#define DWC3_TRB_SIZE_LENGTH(n) ((n) & DWC3_TRB_SIZE_MASK)
+#define DWC3_TRB_SIZE_PCM1(n)   (((n) & 0x03) << 24)
 #define DWC3_TRB_SIZE_TRBSTS(n) (((n) & (0x0f << 28)) >> 28)
 
 #define DWC3_TRBSTS_OK            0
@@ -410,10 +410,10 @@ enum dwc3_link_state {
 #define DWC3_TRB_CTRL_LST         (1 << 1)
 #define DWC3_TRB_CTRL_CHN         (1 << 2)
 #define DWC3_TRB_CTRL_CSP         (1 << 3)
-#define DWC3_TRB_CTRL_TRBCTL(n)   (((n)&0x3f) << 4)
+#define DWC3_TRB_CTRL_TRBCTL(n)   (((n) & 0x3f) << 4)
 #define DWC3_TRB_CTRL_ISP_IMI     (1 << 10)
 #define DWC3_TRB_CTRL_IOC         (1 << 11)
-#define DWC3_TRB_CTRL_SID_SOFN(n) (((n)&0xffff) << 14)
+#define DWC3_TRB_CTRL_SID_SOFN(n) (((n) & 0xffff) << 14)
 
 #define DWC3_TRBCTL_NORMAL            DWC3_TRB_CTRL_TRBCTL(1)
 #define DWC3_TRBCTL_CONTROL_SETUP     DWC3_TRB_CTRL_TRBCTL(2)
@@ -439,14 +439,14 @@ struct dwc3_trb {
 } PACKED;
 
 /* HWPARAMS0 */
-#define DWC3_MODE(n) ((n)&0x7)
+#define DWC3_MODE(n) ((n) & 0x7)
 
 #define DWC3_MODE_DEVICE 0
 #define DWC3_MODE_HOST   1
 #define DWC3_MODE_DRD    2
 #define DWC3_MODE_HUB    3
 
-#define DWC3_MDWIDTH(n) (((n)&0xff00) >> 8)
+#define DWC3_MDWIDTH(n) (((n) & 0xff00) >> 8)
 
 /* HWPARAMS1 */
 #define DWC3_NUM_INT(n) (((n) & (0x3f << 15)) >> 15)
@@ -458,7 +458,7 @@ struct dwc3_trb {
 #define DWC3_NUM_IN_EPS(p)   (((p)->hwparams3 & (DWC3_NUM_IN_EPS_MASK)) >> 18)
 
 /* HWPARAMS7 */
-#define DWC3_RAM1_DEPTH(n) ((n)&0xffff)
+#define DWC3_RAM1_DEPTH(n) ((n) & 0xffff)
 
 #define DWC3_REVISION_173A 0x5533173a
 #define DWC3_REVISION_175A 0x5533175a
@@ -605,20 +605,20 @@ union dwc3_event {
     struct dwc3_event_gevt gevt;
 };
 
-#define DWC3_DEPCFG_EP_TYPE(n)         (((n)&0x3) << 1)
-#define DWC3_DEPCFG_EP_NUMBER(n)       (((n)&0x1f) << 25)
-#define DWC3_DEPCFG_FIFO_NUMBER(n)     (((n)&0xf) << 17)
-#define DWC3_DEPCFG_MAX_PACKET_SIZE(n) (((n)&0x7ff) << 3)
+#define DWC3_DEPCFG_EP_TYPE(n)         (((n) & 0x3) << 1)
+#define DWC3_DEPCFG_EP_NUMBER(n)       (((n) & 0x1f) << 25)
+#define DWC3_DEPCFG_FIFO_NUMBER(n)     (((n) & 0xf) << 17)
+#define DWC3_DEPCFG_MAX_PACKET_SIZE(n) (((n) & 0x7ff) << 3)
 
-#define DWC3_DEPCFG_INT_NUM(n)          (((n)&0x1f) << 0)
+#define DWC3_DEPCFG_INT_NUM(n)          (((n) & 0x1f) << 0)
 #define DWC3_DEPCFG_XFER_COMPLETE_EN    BIT(8)
 #define DWC3_DEPCFG_XFER_IN_PROGRESS_EN BIT(9)
 #define DWC3_DEPCFG_XFER_NOT_READY_EN   BIT(10)
 #define DWC3_DEPCFG_FIFO_ERROR_EN       BIT(11)
 #define DWC3_DEPCFG_STREAM_EVENT_EN     BIT(13)
-#define DWC3_DEPCFG_BINTERVAL_M1(n)     (((n)&0xff) << 16)
+#define DWC3_DEPCFG_BINTERVAL_M1(n)     (((n) & 0xff) << 16)
 #define DWC3_DEPCFG_STREAM_CAPABLE      BIT(24)
-#define DWC3_DEPCFG_EP_NUMBER(n)        (((n)&0x1f) << 25)
+#define DWC3_DEPCFG_EP_NUMBER(n)        (((n) & 0x1f) << 25)
 #define DWC3_DEPCFG_BULK_BASED          BIT(30)
 #define DWC3_DEPCFG_FIFO_BASED          BIT(31)
 

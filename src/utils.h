@@ -400,7 +400,7 @@ void spin_init(spinlock_t *lock);
 void spin_lock(spinlock_t *lock);
 void spin_unlock(spinlock_t *lock);
 
-#define mdelay(m) udelay((m)*1000)
+#define mdelay(m) udelay((m) * 1000)
 
 #define panic(fmt, ...)                                                                            \
     do {                                                                                           \

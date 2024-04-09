@@ -2,7 +2,7 @@
 
 name: format-check
 
-# Controls when the action will run. 
+# Controls when the action will run.
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
@@ -27,7 +27,14 @@ jobs:
           rm -f ~/.cargo/bin/cargo-fmt
           rustup toolchain install nightly --component rustfmt --component clippy --allow-downgrade
 
+      - name: install clang-format-17
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo add-apt-repository 'deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-17 main'
+          sudo apt update
+          sudo apt install clang-format-17
+
       - name: Run format-check
         run: |
-          make format-check
+          make format-check CLANG_FORMAT=clang-format-17
           make rustfmt-check
