@@ -88,6 +88,8 @@ typedef enum {
     P_SMP_STOP_SECONDARIES,
     P_SMP_CALL_EL1,
     P_SMP_CALL_EL1_SYNC,
+    P_SMP_CALL_EL0,
+    P_SMP_CALL_EL0_SYNC,
 
     P_HEAPBLOCK_ALLOC = 0x600, // Heap and memory management ops
     P_MALLOC,
