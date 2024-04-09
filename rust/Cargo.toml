@@ -13,7 +13,7 @@ crate-type = [ "staticlib" ]
 [dependencies]
 fatfs = { path = "vendor/rust-fatfs", default-features = false, features = ["lfn", "alloc"] }
 cstr_core = "0.2.5"
-uuid = { version = "1.0.0-alpha.1", default-features = false }
+uuid = { version = "1.7.0", default-features = false }
 cty = "0.2.2"
 
 [patch.crates-io]
