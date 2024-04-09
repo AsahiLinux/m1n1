@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 #![deny(unsafe_op_in_unsafe_fn)]
 
+use crate::c_size_t;
 use crate::gpt;
 use crate::nvme;
 use crate::println;
 use alloc::vec::Vec;
-use core::ffi::c_void;
-use cstr_core::CStr;
-use cty::*;
+use core::ffi::{c_char, c_int, c_void, CStr};
 use fatfs::{FileSystem, FsOptions, Read, Seek, SeekFrom};
 use uuid::Uuid;
 
@@ -81,7 +80,7 @@ fn load_image(spec: &str) -> Result<Vec<u8>, Error> {
 pub unsafe extern "C" fn rust_load_image(
     raw_spec: *const c_char,
     image: *mut *mut c_void,
-    size: *mut size_t,
+    size: *mut c_size_t,
 ) -> c_int {
     let spec = unsafe { CStr::from_ptr(raw_spec).to_str().unwrap() };
 

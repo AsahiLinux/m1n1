@@ -11,18 +11,6 @@ name = "cfg-if"
 version = "1.0.0"
 
 [[package]]
-name = "cstr_core"
-version = "0.2.5"
-dependencies = [
- "cty",
- "memchr",
-]
-
-[[package]]
-name = "cty"
-version = "0.2.2"
-
-[[package]]
 name = "fatfs"
 version = "0.4.0"
 dependencies = [
@@ -38,15 +26,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "memchr"
-version = "2.4.1"
-
-[[package]]
 name = "rust"
 version = "0.1.0"
 dependencies = [
- "cstr_core",
- "cty",
  "fatfs",
  "uuid",
 ]

@@ -15,6 +15,10 @@ pub mod print;
 
 use crate::dlmalloc::DLMalloc;
 
+// This is unstable in core::ffi, let's just declare it ourselves
+#[allow(non_camel_case_types)]
+type c_size_t = usize;
+
 #[global_allocator]
 static GLOBAL: DLMalloc = dlmalloc::DLMalloc;
 

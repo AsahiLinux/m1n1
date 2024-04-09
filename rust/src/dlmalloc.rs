@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 
+use crate::c_size_t;
 use core::alloc::{GlobalAlloc, Layout};
-use core::ffi::c_void;
+use core::ffi::{c_int, c_void};
 use core::ptr;
-use cty::*;
 
 extern "C" {
-    pub fn malloc(size: size_t) -> *mut c_void;
-    pub fn realloc_in_place(p: *mut c_void, size: size_t) -> *mut c_void;
+    pub fn malloc(size: c_size_t) -> *mut c_void;
+    pub fn realloc_in_place(p: *mut c_void, size: c_size_t) -> *mut c_void;
     pub fn free(p: *mut c_void);
-    pub fn posix_memalign(p: *mut *mut c_void, alignment: size_t, size: size_t) -> c_int;
+    pub fn posix_memalign(p: *mut *mut c_void, alignment: c_size_t, size: c_size_t) -> c_int;
 }
 
 pub struct DLMalloc;
