@@ -3,6 +3,8 @@
 #ifndef SIO_H
 #define SIO_H
 
+#include "types.h"
+
 struct sio_mapping {
     u64 phys;
     u64 iova;
@@ -14,11 +16,17 @@ struct sio_fwparam {
     u32 value;
 };
 
-extern int sio_num_fwdata;
-extern struct sio_mapping *sio_fwdata;
-extern int sio_num_fwparams;
-extern struct sio_fwparam *sio_fwparams;
+#define MAX_FWDATA   6
+#define MAX_FWPARAMS 16
 
-int sio_setup_fwdata(void);
+struct sio_data {
+    u64 iova_base;
+    struct sio_mapping fwdata[MAX_FWDATA];
+    struct sio_fwparam fwparams[MAX_FWPARAMS];
+    int num_fwdata;
+    int num_fwparams;
+};
+
+struct sio_data *sio_setup_fwdata(const char *adt_path);
 
 #endif
