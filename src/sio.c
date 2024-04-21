@@ -13,23 +13,16 @@
 #define SIO_KEY(s)  _SIO_KEY(#s)
 #define _SIO_KEY(s) (((s)[0] << 24) | ((s)[1] << 16) | ((s)[2] << 8) | (s)[3])
 
-#define MAX_FWDATA   6
-#define MAX_FWPARAMS 16
-
-int sio_num_fwdata;
-struct sio_mapping *sio_fwdata;
-int sio_num_fwparams;
-struct sio_fwparam *sio_fwparams;
-
-static void *alloc_mapped_data(size_t size, u64 *iova)
+static void *alloc_mapped_data(struct sio_data *siodata, size_t size, u64 *iova)
 {
-    if (sio_num_fwdata >= MAX_FWDATA)
+    if (siodata->num_fwdata >= MAX_FWDATA)
         return NULL;
 
-    struct sio_mapping *mapping = &sio_fwdata[sio_num_fwdata];
+    struct sio_mapping *mapping = &siodata->fwdata[siodata->num_fwdata];
 
 #ifdef MERGE_SIO_FWDATA
-    if (sio_num_fwdata && ALIGN_UP((mapping - 1)->size, SZ_16K) >= (mapping - 1)->size + size) {
+    if (siodata->num_fwdata &&
+        ALIGN_UP((mapping - 1)->size, SZ_16K) >= (mapping - 1)->size + size) {
         mapping--;
         *iova = mapping->iova + mapping->size;
         mapping->size = ALIGN_UP(mapping->size + size, SZ_4K);
@@ -37,8 +30,8 @@ static void *alloc_mapped_data(size_t size, u64 *iova)
     }
 #endif
 
-    if (!sio_num_fwdata++)
-        mapping->iova = *iova = 0x30000;
+    if (!siodata->num_fwdata++)
+        mapping->iova = *iova = siodata->iova_base;
     else
         mapping->iova = *iova = ALIGN_UP((mapping - 1)->iova + (mapping - 1)->size, SZ_16K);
     mapping->size = ALIGN_UP(size, SZ_4K);
@@ -49,32 +42,32 @@ done:
     return (void *)((*iova - mapping->iova) + mapping->phys);
 }
 
-static void mapping_fixup(void)
+static void mapping_fixup(struct sio_data *siodata)
 {
-    for (int i = 0; i < sio_num_fwdata; i++) {
-        struct sio_mapping *mapping = &sio_fwdata[i];
+    for (int i = 0; i < siodata->num_fwdata; i++) {
+        struct sio_mapping *mapping = &siodata->fwdata[i];
         mapping->size = ALIGN_UP(mapping->size, SZ_16K);
     }
 }
 
-static void *add_fwdata(size_t size, u32 param_id)
+static void *add_fwdata(struct sio_data *siodata, size_t size, u32 param_id)
 {
-    if (sio_num_fwparams + 1 >= MAX_FWPARAMS)
+    if (siodata->num_fwparams + 1 >= MAX_FWPARAMS)
         return NULL;
 
     u64 iova;
-    void *p = alloc_mapped_data(size, &iova);
+    void *p = alloc_mapped_data(siodata, size, &iova);
 
     if (!p)
         return NULL;
 
-    struct sio_fwparam *param = &sio_fwparams[sio_num_fwparams];
+    struct sio_fwparam *param = &siodata->fwparams[siodata->num_fwparams];
     param->key = param_id;
     param->value = iova >> 12;
     param++;
     param->key = param_id + 1;
     param->value = size;
-    sio_num_fwparams += 2;
+    siodata->num_fwparams += 2;
 
     return p;
 }
@@ -152,29 +145,19 @@ int find_key_index(const char *keylist[], u32 needle)
     return i;
 }
 
-int sio_setup_fwdata(void)
+struct sio_data *sio_setup_fwdata(const char *adt_path)
 {
-    int ret = -ENOMEM;
+    struct sio_data *siodata = calloc(1, sizeof(struct sio_data));
 
-    if (sio_fwdata)
-        return 0;
+    if (!siodata)
+        return NULL;
 
-    sio_fwdata = calloc(MAX_FWDATA, sizeof(*sio_fwdata));
-    if (!sio_fwdata)
-        return -ENOMEM;
-    sio_num_fwdata = 0;
+    siodata->iova_base = 0x30000;
 
-    sio_fwparams = calloc(MAX_FWPARAMS, sizeof(*sio_fwdata));
-    if (!sio_fwparams) {
-        free(sio_fwdata);
-        return -ENOMEM;
-    }
-    sio_num_fwparams = 0;
-
-    int node = adt_path_offset(adt, "/arm-io/sio");
+    int node = adt_path_offset(adt, adt_path);
     if (node < 0) {
-        printf("%s: missing node\n", __func__);
-        goto err_inval;
+        printf("%s: missing node %s\n", __func__, adt_path);
+        goto err;
     }
 
     for (int i = 0; i < (int)ARRAY_SIZE(copy_rules); i++) {
@@ -182,8 +165,8 @@ int sio_setup_fwdata(void)
         u32 len;
 
         if (!rule->prop) {
-            if (!add_fwdata(rule->blobsize, rule->fw_param))
-                goto err_nomem;
+            if (!add_fwdata(siodata, rule->blobsize, rule->fw_param))
+                goto err;
 
             continue;
         }
@@ -191,26 +174,26 @@ int sio_setup_fwdata(void)
         const u8 *adt_blob = adt_getprop(adt, node, rule->prop, &len);
         if (!adt_blob) {
             printf("%s: missing ADT property '%s'\n", __func__, rule->prop);
-            goto err_inval;
+            goto err;
         }
 
         if (!rule->keyed) {
-            u8 *sio_blob = add_fwdata(len, rule->fw_param);
+            u8 *sio_blob = add_fwdata(siodata, len, rule->fw_param);
             if (!sio_blob)
-                goto err_nomem;
+                goto err;
             memcpy8(sio_blob, (void *)adt_blob, len);
             continue;
         }
 
         int nkeys = find_key_index(rule->keys, 0);
-        u8 *sio_blob = add_fwdata(nkeys * rule->blobsize, rule->fw_param);
+        u8 *sio_blob = add_fwdata(siodata, nkeys * rule->blobsize, rule->fw_param);
         if (!sio_blob)
-            goto err_nomem;
+            goto err;
 
         if (len % (rule->blobsize + 4) != 0) {
             printf("%s: bad length %d of ADT property '%s', expected multiple of %d + 4\n",
                    __func__, len, rule->prop, rule->blobsize);
-            goto err_inval;
+            goto err;
         }
 
         for (u32 off = 0; off + rule->blobsize <= len; off += (rule->blobsize + 4)) {
@@ -221,36 +204,26 @@ int sio_setup_fwdata(void)
             if (key_idx >= nkeys) {
                 printf("%s: unknown key %x found in ADT property '%s'\n", __func__, key,
                        rule->prop);
-                goto err_inval;
+                goto err;
             }
 
             memcpy8(sio_blob + (key_idx * rule->blobsize), (void *)(p + 4), rule->blobsize);
         }
     }
 
-    mapping_fixup();
+    mapping_fixup(siodata);
 
-    return 0;
-
-err_inval:
-    ret = -EINVAL;
-    goto err;
-err_nomem:
-    ret = -ENOMEM;
-    goto err;
+    return siodata;
 
 err:
     for (int i = 0; i < MAX_FWDATA; i++) {
-        if (!sio_fwdata[i].size)
+        if (!siodata->fwdata[i].size)
             break;
         // No way to give back memory with the top of memory
         // allocator.
         // free((void *)sio_fwdata[i].phys);
     }
-    free(sio_fwdata);
-    free(sio_fwparams);
-    sio_fwdata = NULL;
-    sio_fwparams = NULL;
+    free(siodata);
 
-    return ret;
+    return NULL;
 }

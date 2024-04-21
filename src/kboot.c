@@ -1841,23 +1841,17 @@ static int dt_set_display(void)
     return dt_vram_reserved_region(disp_cfg->dcp_alias, "disp0");
 }
 
-static int dt_set_sio_fwdata(void)
+static int dt_set_sio_fwdata(const char *adt_path, const char *fdt_alias)
 {
-    const char *path = "sio";
-
-    int node = fdt_path_offset(dt, path);
+    int node = fdt_path_offset(dt, fdt_alias);
     if (node < 0) {
-        printf("FDT: '%s' node not found\n", path);
+        printf("FDT: '%s' node not found\n", fdt_alias);
         return 0;
     }
 
-    int ret = sio_setup_fwdata();
-    if (ret < 0)
-        bail("FDT: failed to set up SIO firmware data: %d\n", ret);
-
     int phandle = fdt_get_phandle(dt, node);
     uint32_t max_phandle;
-    ret = fdt_find_max_phandle(dt, &max_phandle);
+    int ret = fdt_find_max_phandle(dt, &max_phandle);
     if (ret)
         bail("FDT: failed to get max phandle: %d\n", ret);
 
@@ -1865,11 +1859,15 @@ static int dt_set_sio_fwdata(void)
         phandle = ++max_phandle;
         ret = fdt_setprop_u32(dt, node, "phandle", phandle);
         if (ret != 0)
-            bail("FDT: couldn't set '%s.phandle' property: %d\n", path, ret);
+            bail("FDT: couldn't set '%s.phandle' property: %d\n", fdt_alias, ret);
     }
 
-    for (int i = 0; i < sio_num_fwdata; i++) {
-        struct sio_mapping *mapping = &sio_fwdata[i];
+    struct sio_data *siodata = sio_setup_fwdata(adt_path);
+    if (!siodata)
+        bail("FDT: failed to set up SIO(%s) firmware data\n", adt_path);
+
+    for (int i = 0; i < siodata->num_fwdata; i++) {
+        struct sio_mapping *mapping = &siodata->fwdata[i];
 
         char node_name[64];
         snprintf(node_name, sizeof(node_name), "sio-firmware-data@%lx", mapping->phys);
@@ -1885,23 +1883,50 @@ static int dt_set_sio_fwdata(void)
         if (ret < 0)
             return ret;
 
-        ret = dt_device_add_mem_region(path, mem_phandle, NULL);
+        ret = dt_device_add_mem_region(fdt_alias, mem_phandle, NULL);
         if (ret < 0)
             return ret;
     }
 
-    node = fdt_path_offset(dt, path);
+    node = fdt_path_offset(dt, fdt_alias);
     if (node < 0)
-        bail("FDT: '%s' not found\n", path);
+        bail_cleanup("FDT: '%s' not found\n", fdt_alias);
 
-    for (int i = 0; i < sio_num_fwparams; i++) {
-        struct sio_fwparam *param = &sio_fwparams[i];
+    for (int i = 0; i < siodata->num_fwparams; i++) {
+        struct sio_fwparam *param = &siodata->fwparams[i];
 
         if (fdt_appendprop_u32(dt, node, "apple,sio-firmware-params", param->key))
-            bail("FDT: couldn't append to SIO parameters\n");
+            bail_cleanup("FDT: couldn't append to SIO parameters\n");
 
         if (fdt_appendprop_u32(dt, node, "apple,sio-firmware-params", param->value))
-            bail("FDT: couldn't append to SIO parameters\n");
+            bail_cleanup("FDT: couldn't append to SIO parameters\n");
+    }
+
+err:
+    free(siodata);
+    return 0;
+}
+
+static int dt_setup_sio(void)
+{
+    static const char *sio_names[2] = {"sio", "sio1"};
+
+    for (size_t i = 0; i < ARRAY_SIZE(sio_names); i++) {
+
+        int node = fdt_path_offset(dt, sio_names[i]);
+        if (node < 0)
+            continue;
+
+        char adt_path[16];
+        snprintf(adt_path, sizeof(adt_path), "/arm-io/%s", sio_names[i]);
+
+        if (dt_reserve_asc_firmware(adt_path, NULL, sio_names[i], true, 0))
+            continue;
+        if (dt_set_sio_fwdata(adt_path, sio_names[i]))
+            continue;
+
+        node = fdt_path_offset(dt, sio_names[i]);
+        fdt_setprop_string(dt, node, "status", "okay");
     }
 
     return 0;
@@ -2294,9 +2319,7 @@ int kboot_prepare_dt(void *fdt)
         return -1;
     if (dt_disable_missing_devs("i2c", "i2c@", 8))
         return -1;
-    if (dt_reserve_asc_firmware("/arm-io/sio", NULL, "sio", true, 0))
-        return -1;
-    if (dt_set_sio_fwdata())
+    if (dt_setup_sio())
         return -1;
     if (dt_reserve_asc_firmware("/arm-io/isp", "/arm-io/isp0", "isp", false, isp_iova_base()))
         return -1;
