@@ -417,32 +417,57 @@ int dart_setup_pt_region(dart_dev_t *dart, const char *path, int device, u64 vm_
                    tbl_count);
             return -1;
         }
-        /* first index is the l1 table, cap at 2 or else macOS hates it */
-        tbl_count = min(2, tbl_count - 1);
-        u64 l2_start = region[0] + SZ_16K;
+        /* first index may or may not be the l1 table? */
+        u64 l2_free = region[0] + SZ_16K;
+        u64 l2_free_end = region[1];
+
+        /* find the lowest unused L2 PT address */
         u64 vmstart = vm_base >> (14 + 11);
-        for (u64 index = 0; index < tbl_count; index++) {
-            int ttbr = (vmstart + index) >> 11;
-            int idx = (vmstart + index) & 0x7ff;
-            u64 l2tbl = l2_start + index * SZ_16K;
-
-            if (dart->l1[ttbr][idx] & DART_PTE_VALID) {
-                u64 off = FIELD_GET(dart->params->offset_mask, dart->l1[ttbr][idx])
-                          << DART_PTE_OFFSET_SHIFT;
-                if (off != l2tbl)
-                    printf("dart: unexpected L2 tbl at index:%lu. 0x%016lx != 0x%016lx\n", index,
-                           off, l2tbl);
+        int ttbr = (vmstart >> 11) & 3;
+        for (u64 index = 0; index < 2048; index++) {
+            if (!(dart->l1[ttbr][index] & DART_PTE_VALID))
                 continue;
-            } else {
-                printf("dart: allocating L2 tbl at %d, %d to 0x%lx\n", ttbr, idx, l2tbl);
-                memset((void *)l2tbl, 0, SZ_16K);
-            }
-
-            u64 offset = FIELD_PREP(dart->params->offset_mask, l2tbl >> DART_PTE_OFFSET_SHIFT);
-            dart->l1[ttbr][idx] = offset | DART_PTE_VALID;
+            u64 off = FIELD_GET(dart->params->offset_mask, dart->l1[ttbr][index])
+                      << DART_PTE_OFFSET_SHIFT;
+            if (off >= l2_free && off < l2_free_end)
+                l2_free = off + SZ_16K;
         }
 
-        u64 l2_tt[2] = {region[0], tbl_count};
+        /* ensure the first 2 L2 tables are initialized */
+        tbl_count = min(2, tbl_count - 1);
+        for (u64 index = 0; index < tbl_count; index++) {
+            int ttbr = ((vmstart + index) >> 11) & 3;
+            int idx = (vmstart + index) & 0x7ff;
+
+            if (dart->l1[ttbr][idx] & DART_PTE_VALID) {
+                /* m1n1 bug fixup: old versions used to clobber PTs */
+
+                for (int j = 0; j < 2048; j++) {
+                    if (j != idx && dart->l1[ttbr][j] == dart->l1[ttbr][idx]) {
+                        printf("dart: clearing clobbered L1 PTE at %d, %d\n", ttbr, idx);
+                        dart->l1[ttbr][idx] = 0;
+                        break;
+                    }
+                }
+
+                continue;
+            }
+
+            printf("dart: allocating L2 tbl at %d, %d to 0x%lx\n", ttbr, idx, l2_free);
+
+            if (l2_free >= l2_free_end) {
+                printf("dart: out of prealloc page tables\n");
+                return -1;
+            }
+
+            memset((void *)l2_free, 0, SZ_16K);
+
+            u64 offset = FIELD_PREP(dart->params->offset_mask, l2_free >> DART_PTE_OFFSET_SHIFT);
+            dart->l1[ttbr][idx] = offset | DART_PTE_VALID;
+            l2_free += SZ_16K;
+        }
+
+        u64 l2_tt[2] = {region[0], 2};
         int ret = adt_setprop(adt, node, l2_tt_str, &l2_tt, sizeof(l2_tt));
         if (ret < 0) {
             printf("dart: failed to update '%s/%s'\n", path, l2_tt_str);
