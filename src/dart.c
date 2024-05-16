@@ -628,9 +628,10 @@ static void *dart_translate_internal(dart_dev_t *dart, uintptr_t iova, int silen
         return NULL;
     }
 
-    if (!(dart->l1[ttbr][l1_index] & DART_PTE_VALID) && !silent) {
-        printf("dart[%lx %u]: l1 translation failure %x %lx\n", dart->regs, dart->device, l1_index,
-               iova);
+    if (!(dart->l1[ttbr][l1_index] & DART_PTE_VALID)) {
+        if (!silent)
+            printf("dart[%lx %u]: l1 translation failure %x %lx\n", dart->regs, dart->device,
+                   l1_index, iova);
         return NULL;
     }
 
@@ -638,9 +639,10 @@ static void *dart_translate_internal(dart_dev_t *dart, uintptr_t iova, int silen
     u64 *l2 = (u64 *)(FIELD_GET(dart->params->offset_mask, dart->l1[ttbr][l1_index])
                       << DART_PTE_OFFSET_SHIFT);
 
-    if (!(l2[l2_index] & DART_PTE_VALID) && !silent) {
-        printf("dart[%lx %u]: l2 translation failure %x:%x %lx\n", dart->regs, dart->device,
-               l1_index, l2_index, iova);
+    if (!(l2[l2_index] & DART_PTE_VALID)) {
+        if (!silent)
+            printf("dart[%lx %u]: l2 translation failure %x:%x %lx\n", dart->regs, dart->device,
+                   l1_index, l2_index, iova);
         return NULL;
     }
 
