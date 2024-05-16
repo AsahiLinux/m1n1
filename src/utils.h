@@ -17,8 +17,8 @@
 
 #define ARRAY_SIZE(s) (sizeof(s) / sizeof((s)[0]))
 
-#define ALIGN_UP(x, a)   (((x) + ((a)-1)) & ~((a)-1))
-#define ALIGN_DOWN(x, a) ((x) & ~((a)-1))
+#define ALIGN_UP(x, a)   (((x) + ((a) - 1)) & ~((a) - 1))
+#define ALIGN_DOWN(x, a) ((x) & ~((a) - 1))
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b))

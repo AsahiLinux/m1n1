@@ -36,8 +36,8 @@ typedef s64 ssize_t;
                     (((sizeof(type) * (cnt)) % (alignment)) > 0                                    \
                          ? ((alignment) - ((sizeof(type) * (cnt)) % (alignment)))                  \
                          : 0))];                                                                   \
-    type *name =                                                                                   \
-        (type *)(((u32)(_al__##name)) + ((alignment) - (((u32)(_al__##name)) & ((alignment)-1))))
+    type *name = (type *)(((u32)(_al__##name)) +                                                   \
+                          ((alignment) - (((u32)(_al__##name)) & ((alignment) - 1))))
 
 #define HAVE_PTRDIFF_T 1
 #define HAVE_UINTPTR_T 1
