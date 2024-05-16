@@ -503,7 +503,7 @@ static u64 *dart_get_l2(dart_dev_t *dart, u32 idx)
     return tbl;
 }
 
-static int dart_map_page(dart_dev_t *dart, uintptr_t iova, uintptr_t paddr)
+static int dart_map_page(dart_dev_t *dart, uintptr_t iova, uintptr_t paddr, u32 flags)
 {
     u32 l1_index = (iova >> 25) & 0x1fff;
     u32 l2_index = (iova >> 14) & 0x7ff;
@@ -521,12 +521,12 @@ static int dart_map_page(dart_dev_t *dart, uintptr_t iova, uintptr_t paddr)
 
     u64 offset = FIELD_PREP(dart->params->offset_mask, paddr >> DART_PTE_OFFSET_SHIFT);
 
-    l2[l2_index] = offset | dart->params->pte_flags;
+    l2[l2_index] = offset | dart->params->pte_flags | flags;
 
     return 0;
 }
 
-int dart_map(dart_dev_t *dart, uintptr_t iova, void *bfr, size_t len)
+int dart_map_flags(dart_dev_t *dart, uintptr_t iova, void *bfr, size_t len, u32 flags)
 {
     uintptr_t paddr = (uintptr_t)bfr;
     u64 offset = 0;
@@ -539,7 +539,7 @@ int dart_map(dart_dev_t *dart, uintptr_t iova, void *bfr, size_t len)
         return -1;
 
     while (offset < len) {
-        int ret = dart_map_page(dart, iova + offset, paddr + offset);
+        int ret = dart_map_page(dart, iova + offset, paddr + offset, flags);
 
         if (ret) {
             dart_unmap(dart, iova, offset);
@@ -551,6 +551,11 @@ int dart_map(dart_dev_t *dart, uintptr_t iova, void *bfr, size_t len)
 
     dart->params->tlb_invalidate(dart);
     return 0;
+}
+
+int dart_map(dart_dev_t *dart, uintptr_t iova, void *bfr, size_t len)
+{
+    return dart_map_flags(dart, iova, bfr, len, 0);
 }
 
 static void dart_unmap_page(dart_dev_t *dart, uintptr_t iova)
@@ -649,6 +654,11 @@ static void *dart_translate_internal(dart_dev_t *dart, uintptr_t iova, int silen
 void *dart_translate(dart_dev_t *dart, uintptr_t iova)
 {
     return dart_translate_internal(dart, iova, 0);
+}
+
+void *dart_translate_silent(dart_dev_t *dart, uintptr_t iova)
+{
+    return dart_translate_internal(dart, iova, 1);
 }
 
 u64 dart_search(dart_dev_t *dart, void *paddr)
