@@ -283,6 +283,9 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
             imax = 33.0;
             has_cs = true;
             break;
+
+        default:
+            bail("ADT: GPU: Unsupported chip\n");
     }
 
     if (get_core_counts(core_count, nclusters, ncores))
