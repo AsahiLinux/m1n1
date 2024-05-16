@@ -106,6 +106,39 @@ int dcp_work(dcp_dev_t *dcp)
     return afk_epic_work(dcp->afk, -1);
 }
 
+static int dcp_create_firmware_mappings(const display_config_t *cfg, dcp_dev_t *dcp)
+{
+    int created = 0;
+    int dcp_node = adt_path_offset(adt, cfg->dcp);
+    int node = adt_first_child_offset(adt, dcp_node);
+    if (node < 0) {
+        printf("dcp: iop-dcp*-nub not found!\n");
+        return -1;
+    }
+
+    const struct adt_segment_ranges *seg;
+    u32 segments_len;
+
+    seg = adt_getprop(adt, node, "segment-ranges", &segments_len);
+    unsigned int count = segments_len / sizeof(*seg);
+
+    for (unsigned int i = 0; i < count; i++) {
+        if (dart_translate_silent(dcp->dart_dcp, seg[i].remap))
+            continue;
+
+        size_t len = ALIGN_UP(seg[i].size, SZ_16K);
+        u32 flags = i == 0 ? 0b0100 : 0; // TEXT gets this bit set?
+        printf("dcp: Mapping segment #0 %lx -> %lx [%lx]\n", seg[i].remap, seg[i].phys, len);
+        if (dart_map_flags(dcp->dart_dcp, seg[i].remap, (void *)seg[i].phys, len, flags)) {
+            printf("dcp: Failed to map segment\n");
+            return -1;
+        }
+        created++;
+    }
+
+    return created;
+}
+
 dcp_dev_t *dcp_init(const display_config_t *cfg)
 {
     u32 sid;
@@ -155,6 +188,15 @@ dcp_dev_t *dcp_init(const display_config_t *cfg)
     dart_setup_pt_region(dcp->dart_disp, cfg->disp_dart, 0, vm_base);
 
     dcp->iovad_dcp = iovad_init(vm_base + 0x10000000, vm_base + 0x20000000);
+
+    int ret = dcp_create_firmware_mappings(cfg, dcp);
+    if (ret < 0) {
+        printf("dcp: failed to create firmware mappings\n");
+        goto out_iovad;
+    }
+    if (ret > 0) {
+        pmgr_reset(dcp_die, dcp_pmgr_dev);
+    }
 
     dcp->asc = asc_init(cfg->dcp);
     if (!dcp->asc) {
