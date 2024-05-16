@@ -390,7 +390,10 @@ typedef struct {
     int count;
 } spinlock_t ALIGNED(SPINLOCK_ALIGN);
 
+// 18.1.6 vs 18.1.1 diff
+// clang-format off
 #define SPINLOCK_INIT       {-1, 0}
+// clang-format on
 #define DECLARE_SPINLOCK(n) spinlock_t n = SPINLOCK_INIT;
 
 void spin_init(spinlock_t *lock);

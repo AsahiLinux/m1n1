@@ -200,9 +200,12 @@ struct usb_device_qualifier_descriptor {
  * to UTF16 and because we need to calculate the correct total size of the
  * string descriptor.
  */
+// 18.1.6 vs 18.1.1 diff
+// clang-format off
 #define make_usb_string_descriptor(str)                                                            \
     {.bLength = sizeof(struct usb_string_descriptor) + sizeof(u##str) - 2,                         \
      .bDescriptorType = USB_STRING_DESCRIPTOR,                                                     \
      .bString = u##str}
+// clang-format on
 
 #endif
