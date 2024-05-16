@@ -184,14 +184,15 @@ int display_get_vram(u64 *paddr, u64 *size)
     return 0;
 }
 
-static uintptr_t display_map_fb(uintptr_t iova, u64 paddr, u64 size)
+static uintptr_t display_map_fb(uintptr_t iova, u64 paddr, u64 size, u32 index)
 {
     if (iova == 0) {
         u64 iova_disp0 = 0;
-        u64 iova_dcp = 0;
+        // t6020-dcpext0 rejects SetSurfaceRequest with 0x0 as plane[0] addr
+        u64 iova_dcp = (index > 0) ? 0x4000 : 0;
 
         // start scanning for free iova space on vm-base
-        iova_dcp = dart_find_iova(dcp->dart_dcp, dart_vm_base(dcp->dart_dcp), size);
+        iova_dcp = dart_find_iova(dcp->dart_dcp, dart_vm_base(dcp->dart_dcp) + iova_dcp, size);
         if (DART_IS_ERR(iova_dcp)) {
             printf("display: failed to find IOVA for fb of %06zx bytes (dcp)\n", size);
             return iova_dcp;
@@ -277,7 +278,7 @@ int display_start_dcp(void)
     fb_dva = dart_search(dcp->dart_disp, (void *)cur_boot_args.video.base);
     // framebuffer is not mapped on the M1 Ultra Mac Studio
     if (DART_IS_ERR(fb_dva))
-        fb_dva = display_map_fb(0, pa, size);
+        fb_dva = display_map_fb(0, pa, size, disp_cfg->dcp_index);
     if (DART_IS_ERR(fb_dva)) {
         printf("display: failed to find display DVA\n");
         fb_dva = 0;
@@ -481,7 +482,7 @@ int display_configure(const char *config)
 
         tmp_dva = iova_alloc(dcp->iovad_dcp, size);
 
-        tmp_dva = display_map_fb(tmp_dva, fb_pa, size);
+        tmp_dva = display_map_fb(tmp_dva, fb_pa, size, display_is_dptx ? 1 : 0);
         if (DART_IS_ERR(tmp_dva)) {
             printf("display: failed to map new fb\n");
             return -1;
@@ -499,7 +500,7 @@ int display_configure(const char *config)
         dart_unmap(dcp->dart_disp, fb_dva, fb_size);
         dart_unmap(dcp->dart_dcp, fb_dva, fb_size);
 
-        fb_dva = display_map_fb(fb_dva, fb_pa, size);
+        fb_dva = display_map_fb(fb_dva, fb_pa, size, display_is_dptx ? 1 : 0);
         if (DART_IS_ERR(fb_dva)) {
             printf("display: failed to map new fb\n");
             fb_dva = 0;
