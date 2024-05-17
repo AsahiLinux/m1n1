@@ -116,6 +116,10 @@ static int dcp_create_firmware_mappings(const display_config_t *cfg, dcp_dev_t *
         return -1;
     }
 
+    u64 asc_dram_mask;
+    if (ADT_GETPROP(adt, node, "asc-dram-mask", &asc_dram_mask) < 0)
+        asc_dram_mask = 0;
+
     const struct adt_segment_ranges *seg;
     u32 segments_len;
 
@@ -123,13 +127,14 @@ static int dcp_create_firmware_mappings(const display_config_t *cfg, dcp_dev_t *
     unsigned int count = segments_len / sizeof(*seg);
 
     for (unsigned int i = 0; i < count; i++) {
-        if (dart_translate_silent(dcp->dart_dcp, seg[i].remap))
+        u64 iova = seg[i].remap & ~asc_dram_mask;
+        if (dart_translate_silent(dcp->dart_dcp, iova))
             continue;
 
         size_t len = ALIGN_UP(seg[i].size, SZ_16K);
         u32 flags = i == 0 ? 0b0100 : 0; // TEXT gets this bit set?
-        printf("dcp: Mapping segment #0 %lx -> %lx [%lx]\n", seg[i].remap, seg[i].phys, len);
-        if (dart_map_flags(dcp->dart_dcp, seg[i].remap, (void *)seg[i].phys, len, flags)) {
+        printf("dcp: Mapping segment #%u %lx -> %lx [%lx]\n", i, iova, seg[i].phys, len);
+        if (dart_map_flags(dcp->dart_dcp, iova, (void *)seg[i].phys, len, flags)) {
             printf("dcp: Failed to map segment\n");
             return -1;
         }
