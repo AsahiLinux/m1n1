@@ -191,7 +191,7 @@ static uintptr_t display_map_fb(uintptr_t iova, u64 paddr, u64 size)
         u64 iova_dcp = 0;
 
         // start scanning for free iova space on vm-base
-        iova_dcp = dart_find_iova(dcp->dart_dcp, dart_vm_base(dcp->dart_dcp), size);
+        iova_dcp = dart_find_iova(dcp->dart_dcp, dart_vm_base(dcp->dart_dcp) + SZ_16K, size);
         if (DART_IS_ERR(iova_dcp)) {
             printf("display: failed to find IOVA for fb of %06zx bytes (dcp)\n", size);
             return iova_dcp;
@@ -202,6 +202,15 @@ static uintptr_t display_map_fb(uintptr_t iova, u64 paddr, u64 size)
         if (DART_IS_ERR(iova_disp0)) {
             printf("display: failed to find IOVA for fb of %06zx bytes (disp0)\n", size);
             return iova_disp0;
+        }
+
+        // try to find the same IOVA on DCP again
+        if (iova_disp0 != iova_dcp) {
+            iova_dcp = dart_find_iova(dcp->dart_dcp, iova_disp0, size);
+            if (DART_IS_ERR(iova_dcp)) {
+                printf("display: failed to find IOVA for fb of %06zx bytes (dcp)\n", size);
+                return iova_dcp;
+            }
         }
 
         // assume this results in the same IOVA, not sure if this is required but matches what iboot
@@ -276,7 +285,7 @@ int display_start_dcp(void)
     // Find the framebuffer DVA
     fb_dva = dart_search(dcp->dart_disp, (void *)cur_boot_args.video.base);
     // framebuffer is not mapped on the M1 Ultra Mac Studio
-    if (DART_IS_ERR(fb_dva))
+    if (DART_IS_ERR(fb_dva) || !fb_dva)
         fb_dva = display_map_fb(0, pa, size);
     if (DART_IS_ERR(fb_dva)) {
         printf("display: failed to find display DVA\n");
