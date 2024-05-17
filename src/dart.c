@@ -320,9 +320,22 @@ dart_dev_t *dart_init_adt(const char *path, int instance, int device, bool keep_
                    dart->l1[i]);
         }
     }
-    if (ADT_GETPROP(adt, node, "vm-base", &dart->vm_base) < 0)
-        dart->vm_base = 0;
-    else
+    u32 len;
+    const void *prop = adt_getprop(adt, node, "vm-base", &len);
+    if (prop) {
+        if (len == sizeof(u32)) {
+            u32 tmp;
+            memcpy(&tmp, prop, sizeof(tmp));
+            dart->vm_base = tmp;
+        } else if (len == sizeof(u64)) {
+            u64 tmp;
+            memcpy(&tmp, prop, sizeof(tmp));
+            dart->vm_base = tmp;
+        } else {
+            printf("dart: unexpected length of vm-base property: %u\n", len);
+        }
+    }
+    if (dart->locked)
         dart->vm_base &= (1LLU << 36) - 1;
 
     return dart;
