@@ -250,7 +250,7 @@ void exc_sync(u64 *regs)
                 // Short-circuit the hypercall and handle the EL1 exception
                 el12 = 1;
                 msr(SPSR_EL2, mrs(SPSR_EL12));
-                msr(ELR_EL2, mrs(ELR_EL12));
+                elr = mrs(ELR_EL12);
                 break;
             default:
                 printf("Unknown HVC: 0x%x\n", imm);
