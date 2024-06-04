@@ -14,8 +14,8 @@ def _all():
                     yield 3, op1, CRn, CRm, op2
 
 dynamic_regs = [
-    sysreg.CNTVCT_ALIAS_EL0,
-    sysreg.CNTPCT_ALIAS_EL0,
+    sysreg.ACNTVCT_EL0,
+    sysreg.ACNTPCT_EL0,
 ]
 
 impdef_regs = list(_all())
