@@ -193,7 +193,7 @@ build/%.o: src/%.S
 	$(QUIET)echo "  AS    $@"
 	$(QUIET)mkdir -p $(DEPDIR)
 	$(QUIET)mkdir -p "$(dir $@)"
-	$(QUIET)$(AS) -c $(CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
+	$(QUIET)$(AS) -c $(BASE_CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
 
 $(BUILD_FP_OBJS): build/%.o: src/%.c
 	$(QUIET)echo "  CC FP $@"
