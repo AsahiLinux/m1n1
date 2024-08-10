@@ -2265,6 +2265,23 @@ int kboot_set_chosen(const char *name, const char *value)
     return i;
 }
 
+static int dt_setup_mtd_phram(void)
+{
+    char node_name[64];
+    snprintf(node_name, sizeof(node_name), "flash@%lx", (u64)adt);
+
+    int node = dt_get_or_add_reserved_mem(node_name, "phram", false, (u64)adt,
+                                          ALIGN_UP(cur_boot_args.devtree_size, SZ_16K));
+
+    if (node > 0) {
+        int ret = fdt_setprop_string(dt, node, "label", "adt");
+        if (ret)
+            bail("FDT: failed to setup ADT MTD phram label\n");
+    }
+
+    return 0;
+}
+
 int kboot_prepare_dt(void *fdt)
 {
     if (dt) {
@@ -2289,6 +2306,8 @@ int kboot_prepare_dt(void *fdt)
 
     if (fdt_add_mem_rsv(dt, (u64)_base, ((u64)_end) - ((u64)_base)))
         bail("FDT: couldn't add reservation for m1n1\n");
+
+    dt_setup_mtd_phram();
 
     if (dt_set_chosen())
         return -1;
