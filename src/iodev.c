@@ -18,17 +18,19 @@
 
 extern struct iodev iodev_uart;
 extern struct iodev iodev_fb;
+extern struct iodev iodev_log;
 extern struct iodev iodev_usb_vuart;
 
-struct iodev *iodevs[IODEV_MAX] = {
+struct iodev *iodevs[IODEV_NUM] = {
     [IODEV_UART] = &iodev_uart,
     [IODEV_FB] = &iodev_fb,
     [IODEV_USB_VUART] = &iodev_usb_vuart,
+    [IODEV_LOG] = &iodev_log,
 };
 
 char con_buf[CONSOLE_BUFFER_SIZE];
 size_t con_wp;
-size_t con_rp[IODEV_MAX];
+size_t con_rp[IODEV_NUM];
 
 void iodev_register_device(iodev_id_t id, struct iodev *dev)
 {
@@ -173,7 +175,7 @@ void iodev_console_write(const void *buf, size_t length)
     in_iodev++;
 
     dprintf("  iodev_console_write() wp=%d\n", con_wp);
-    for (iodev_id_t id = 0; id < IODEV_MAX; id++) {
+    for (iodev_id_t id = 0; id < IODEV_NUM; id++) {
         if (!iodevs[id])
             continue;
 
@@ -275,7 +277,7 @@ void iodev_console_kick(void)
 {
     iodev_console_write(NULL, 0);
 
-    for (iodev_id_t id = 0; id < IODEV_MAX; id++) {
+    for (iodev_id_t id = 0; id < IODEV_NUM; id++) {
         if (!iodevs[id])
             continue;
         if (!(iodevs[id]->usage & USAGE_CONSOLE))
@@ -287,7 +289,7 @@ void iodev_console_kick(void)
 
 void iodev_console_flush(void)
 {
-    for (iodev_id_t id = 0; id < IODEV_MAX; id++) {
+    for (iodev_id_t id = 0; id < IODEV_NUM; id++) {
         if (!iodevs[id])
             continue;
         if (!(iodevs[id]->usage & USAGE_CONSOLE))
