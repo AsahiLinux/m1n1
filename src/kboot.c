@@ -1256,8 +1256,8 @@ static int dt_device_set_reserved_mem_from_dart(int node, dart_dev_t *dart, cons
     return dt_device_set_reserved_mem(node, name, phandle, iova, size);
 }
 
-static int dt_get_or_add_reserved_mem(const char *node_name, const char *compat, u64 paddr,
-                                      size_t size)
+static int dt_get_or_add_reserved_mem(const char *node_name, const char *compat, bool nomap,
+                                      u64 paddr, size_t size)
 {
     int ret;
     int resv_node = fdt_path_offset(dt, "/reserved-memory");
@@ -1289,9 +1289,11 @@ static int dt_get_or_add_reserved_mem(const char *node_name, const char *compat,
     if (ret != 0)
         bail("FDT: couldn't set '%s.compatible' property: %d\n", node_name, ret);
 
-    ret = fdt_setprop_empty(dt, node, "no-map");
-    if (ret != 0)
-        bail("FDT: couldn't set '%s.no-map' property: %d\n", node_name, ret);
+    if (nomap) {
+        ret = fdt_setprop_empty(dt, node, "no-map");
+        if (ret != 0)
+            bail("FDT: couldn't set '%s.no-map' property: %d\n", node_name, ret);
+    }
 
     return node;
 }
@@ -1427,7 +1429,7 @@ static int dt_add_reserved_regions(const char *dcp_alias, const char *disp_alias
 
         snprintf(node_name, sizeof(node_name), "%s@%lx", name, region[i].paddr);
         int mem_node =
-            dt_get_or_add_reserved_mem(node_name, compat, region[i].paddr, region[i].size);
+            dt_get_or_add_reserved_mem(node_name, compat, true, region[i].paddr, region[i].size);
         if (mem_node < 0)
             goto err;
 
@@ -1623,7 +1625,8 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_al
             seg_size = ALIGN_UP(seg_size, SZ_16K);
         }
 
-        int mem_node = dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", seg->phys, seg_size);
+        int mem_node =
+            dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", true, seg->phys, seg_size);
         if (mem_node < 0)
             return ret;
         uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
@@ -1872,8 +1875,8 @@ static int dt_set_sio_fwdata(const char *adt_path, const char *fdt_alias)
         char node_name[64];
         snprintf(node_name, sizeof(node_name), "sio-firmware-data@%lx", mapping->phys);
 
-        int mem_node =
-            dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", mapping->phys, mapping->size);
+        int mem_node = dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", true, mapping->phys,
+                                                  mapping->size);
         if (mem_node < 0)
             return ret;
         uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
@@ -1997,7 +2000,7 @@ static int dt_set_isp_fwdata(void)
             bail("FDT: couldn't set '%s.phandle' property: %d\n", fdt_path, ret);
     }
 
-    int mem_node = dt_get_or_add_reserved_mem("isp-heap", "apple,asc-mem", phys, size);
+    int mem_node = dt_get_or_add_reserved_mem("isp-heap", "apple,asc-mem", true, phys, size);
     if (mem_node < 0)
         return ret;
 
