@@ -14,6 +14,8 @@ typedef enum _iodev_id_t {
     IODEV_USB_VUART,
     IODEV_USB0,
     IODEV_MAX = IODEV_USB0 + USB_IODEV_COUNT,
+    IODEV_LOG = IODEV_MAX, // hidden log buffer iodev
+    IODEV_NUM,
 } iodev_id_t;
 
 typedef enum _iodev_usage_t {
