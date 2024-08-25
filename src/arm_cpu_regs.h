@@ -309,6 +309,7 @@
 #define TCR_IPS_16TB   0b100UL
 #define TCR_TG1        GENMASK(31, 30)
 #define TCR_TG1_16K    0b01UL
+#define TCR_TG1_4K     0b10UL
 #define TCR_SH1        GENMASK(29, 28)
 #define TCR_SH1_IS     0b11UL
 #define TCR_ORGN1      GENMASK(27, 26)
@@ -321,6 +322,7 @@
 #define TCR_T1SZ_48BIT 16UL
 #define TCR_TG0        GENMASK(15, 14)
 #define TCR_TG0_16K    0b10UL
+#define TCR_TG0_4K     0b0UL
 #define TCR_SH0        GENMASK(13, 12)
 #define TCR_SH0_IS     0b11UL
 #define TCR_ORGN0      GENMASK(11, 10)

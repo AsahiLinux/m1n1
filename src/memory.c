@@ -13,7 +13,7 @@
 #include "utils.h"
 #include "xnuboot.h"
 
-#define PAGE_SIZE       0x4000
+#define PAGE_SIZE       get_page_size()
 #define CACHE_LINE_SIZE 64
 
 #define CACHE_RANGE_OP(func, op)                                                                   \
@@ -50,22 +50,27 @@ static inline void write_sctlr(u64 val)
     sysop("isb");
 }
 
-#define VADDR_L3_INDEX_BITS 11
-#define VADDR_L2_INDEX_BITS 11
-// We treat two concatenated L1 page tables as one
-#define VADDR_L1_INDEX_BITS 12
+#define VADDR_L3_INDEX_BITS (is_16k() ? 11 : 9)
+#define VADDR_L2_INDEX_BITS (is_16k() ? 11 : 9)
+// We treat two concatenated L1 page tables as one on 16K
+// And all the L1 page tables together on 4K...
+#define VADDR_L1_INDEX_BITS        (is_16k() ? 12 : 18)
+#define VADDR_L1_INDEX_BITS_ACTUAL (is_16k() ? 11 : 9)
+#define VADDR_L0_INDEX_BITS        (is_16k() ? 1 : 9)
 
-#define VADDR_L3_OFFSET_BITS 14
-#define VADDR_L2_OFFSET_BITS 25
-#define VADDR_L1_OFFSET_BITS 36
+#define VADDR_L3_OFFSET_BITS (is_16k() ? 14 : 12)
+#define VADDR_L2_OFFSET_BITS (is_16k() ? 25 : 21)
+#define VADDR_L1_OFFSET_BITS (is_16k() ? 36 : 30)
 
 #define VADDR_L1_ALIGN_MASK GENMASK(VADDR_L1_OFFSET_BITS - 1, VADDR_L2_OFFSET_BITS)
 #define VADDR_L2_ALIGN_MASK GENMASK(VADDR_L2_OFFSET_BITS - 1, VADDR_L3_OFFSET_BITS)
 #define PTE_TARGET_MASK     GENMASK(49, VADDR_L3_OFFSET_BITS)
 
-#define ENTRIES_PER_L1_TABLE BIT(VADDR_L1_INDEX_BITS)
-#define ENTRIES_PER_L2_TABLE BIT(VADDR_L2_INDEX_BITS)
-#define ENTRIES_PER_L3_TABLE BIT(VADDR_L3_INDEX_BITS)
+#define ENTRIES_PER_L0_TABLE        BIT(VADDR_L0_INDEX_BITS)
+#define ENTRIES_PER_L1_TABLE        BIT(VADDR_L1_INDEX_BITS)
+#define ENTRIES_PER_L1_TABLE_ACTUAL BIT(VADDR_L1_INDEX_BITS_ACTUAL)
+#define ENTRIES_PER_L2_TABLE        BIT(VADDR_L2_INDEX_BITS)
+#define ENTRIES_PER_L3_TABLE        BIT(VADDR_L3_INDEX_BITS)
 
 #define IS_PTE(pte) ((pte) && pte & PTE_VALID)
 
@@ -89,6 +94,22 @@ static inline void write_sctlr(u64 val)
  *
  * We initialize one double-size L1 table which covers the entire virtual memory space,
  * point to the two halves in the single L0 table and then create L2/L3 tables on demand.
+ */
+
+/*
+ * On 4K devices, the following virtual address space results:
+ *
+ * [L0 index]  [L1 index]  [L2 index]  [L3 index] [page offset]
+ *   9 bit       9 bits      9 bits     9 bits      11 bits
+ *
+ * To simplify things we treat the L1 page table as a concatenated table,
+ * which results in the following layout:
+ *
+ * [L1 index]  [L2 index]  [L3 index] [page offset]
+ *   18 bits     9 bits      9 bits      11 bits
+ *
+ * We initialize one giant L1 table which covers the entire virtual memory space,
+ * point to the parts in a single L0 table and then create L2/L3 tables on demand.
  */
 
 /*
@@ -301,14 +322,16 @@ static u64 mmu_make_table_pte(u64 *addr)
 
 static void mmu_init_pagetables(void)
 {
-    mmu_pt_L0 = memalign(PAGE_SIZE, sizeof(u64) * 2);
+    mmu_pt_L0 = memalign(PAGE_SIZE, sizeof(u64) * ENTRIES_PER_L0_TABLE);
     mmu_pt_L1 = memalign(PAGE_SIZE, sizeof(u64) * ENTRIES_PER_L1_TABLE);
 
-    memset64(mmu_pt_L0, 0, sizeof(u64) * 2);
+    memset64(mmu_pt_L0, 0, sizeof(u64) * ENTRIES_PER_L0_TABLE);
     memset64(mmu_pt_L1, 0, sizeof(u64) * ENTRIES_PER_L1_TABLE);
 
-    mmu_pt_L0[0] = mmu_make_table_pte(&mmu_pt_L1[0]);
-    mmu_pt_L0[1] = mmu_make_table_pte(&mmu_pt_L1[ENTRIES_PER_L1_TABLE >> 1]);
+    for (size_t i = 0; i < ENTRIES_PER_L0_TABLE; i++) {
+        mmu_pt_L0[i] = mmu_make_table_pte(&mmu_pt_L1[i * ENTRIES_PER_L1_TABLE_ACTUAL]);
+    }
+    return;
 }
 
 void mmu_add_mapping(u64 from, u64 to, size_t size, u8 attribute_index, u64 perms)
@@ -399,7 +422,7 @@ static void mmu_add_default_mappings(void)
 {
     ram_base = ALIGN_DOWN(cur_boot_args.phys_base, BIT(32));
     uint64_t ram_size = cur_boot_args.mem_size + cur_boot_args.phys_base - ram_base;
-    ram_size = ALIGN_DOWN(ram_size, 0x4000);
+    ram_size = ALIGN_DOWN(ram_size, PAGE_SIZE);
 
     printf("MMU: RAM base: 0x%lx\n", ram_base);
     printf("MMU: Top of normal RAM: 0x%lx\n", ram_base + ram_size);
@@ -466,12 +489,13 @@ static void mmu_configure(void)
                       (MAIR_ATTR_DEVICE_nGnRnE << MAIR_SHIFT_DEVICE_nGnRnE) |
                       (MAIR_ATTR_DEVICE_nGnRE << MAIR_SHIFT_DEVICE_nGnRE) |
                       (MAIR_ATTR_NORMAL_NC << MAIR_SHIFT_NORMAL_NC));
-    msr(TCR_EL1, FIELD_PREP(TCR_IPS, TCR_IPS_4TB) | FIELD_PREP(TCR_TG1, TCR_TG1_16K) |
+    msr(TCR_EL1, FIELD_PREP(TCR_IPS, TCR_IPS_4TB) |
+                     FIELD_PREP(TCR_TG1, is_16k() ? TCR_TG1_16K : TCR_TG1_4K) |
                      FIELD_PREP(TCR_SH1, TCR_SH1_IS) | FIELD_PREP(TCR_ORGN1, TCR_ORGN1_WBWA) |
                      FIELD_PREP(TCR_IRGN1, TCR_IRGN1_WBWA) | FIELD_PREP(TCR_T1SZ, TCR_T1SZ_48BIT) |
-                     FIELD_PREP(TCR_TG0, TCR_TG0_16K) | FIELD_PREP(TCR_SH0, TCR_SH0_IS) |
-                     FIELD_PREP(TCR_ORGN0, TCR_ORGN0_WBWA) | FIELD_PREP(TCR_IRGN0, TCR_IRGN0_WBWA) |
-                     FIELD_PREP(TCR_T0SZ, TCR_T0SZ_48BIT));
+                     FIELD_PREP(TCR_TG0, is_16k() ? TCR_TG0_16K : TCR_TG0_4K) |
+                     FIELD_PREP(TCR_SH0, TCR_SH0_IS) | FIELD_PREP(TCR_ORGN0, TCR_ORGN0_WBWA) |
+                     FIELD_PREP(TCR_IRGN0, TCR_IRGN0_WBWA) | FIELD_PREP(TCR_T0SZ, TCR_T0SZ_48BIT));
 
     msr(TTBR0_EL1, (uintptr_t)mmu_pt_L0);
     msr(TTBR1_EL1, (uintptr_t)mmu_pt_L0);

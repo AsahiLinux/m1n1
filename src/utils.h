@@ -352,11 +352,21 @@ static inline int has_el3(void)
     return !!(mrs(ID_AA64PFR0_EL1) & 0xf000);
 }
 
+static inline bool is_16k(void)
+{
+    return ((mrs(ID_AA64MMFR0_EL1) >> 20) & 0xf) == 0x1;
+}
+
 extern int boot_cpu_idx;
 extern u64 boot_cpu_mpidr;
 static inline int is_boot_cpu(void)
 {
     return boot_cpu_idx == -1 || boot_cpu_mpidr == mrs(MPIDR_EL1);
+}
+
+static inline size_t get_page_size(void)
+{
+    return is_16k() ? 16384 : 4096;
 }
 
 extern char _base[];
