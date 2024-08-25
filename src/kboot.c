@@ -75,13 +75,22 @@ void get_notchless_fb(u64 *fb_base, u64 *fb_height)
 
     u32 val;
 
-    if (ADT_GETPROP(adt, node, "partially-occluded-display", &val) < 0 || !val) {
+    if ((ADT_GETPROP(adt, node, "partially-occluded-display", &val) < 0 || !val) &&
+        chip_id != T8015) {
+        printf("FDT: No notch detected\n");
+        return;
+    }
+
+    // iPhone X
+    if (chip_id != T8015 || (board_id != 0x6 && board_id != 0xe)) {
         printf("FDT: No notch detected\n");
         return;
     }
 
     u64 hfrac = cur_boot_args.video.height * 16 / cur_boot_args.video.width;
     u64 new_height = cur_boot_args.video.width * hfrac / 16;
+    if (chip_id == T8015 && (board_id == 0x6 || board_id == 0xe))
+        new_height = 2346;
 
     if (new_height == cur_boot_args.video.height) {
         printf("FDT: Notch detected, but display aspect is already 16:%lu?\n", hfrac);
@@ -269,13 +278,15 @@ static int dt_set_chosen(void)
     if (node < 0)
         bail("FDT: /chosen node not found in devtree\n");
 
-    if (fdt_setprop(dt, node, "asahi,iboot1-version", system_firmware.iboot,
-                    strlen(system_firmware.iboot) + 1))
-        bail("FDT: couldn't set asahi,iboot1-version\n");
+    if (is_mac) {
+        if (fdt_setprop(dt, node, "asahi,iboot1-version", system_firmware.iboot,
+                        strlen(system_firmware.iboot) + 1))
+            bail("FDT: couldn't set asahi,iboot1-version\n");
 
-    if (fdt_setprop(dt, node, "asahi,system-fw-version", system_firmware.string,
-                    strlen(system_firmware.string) + 1))
-        bail("FDT: couldn't set asahi,system-fw-version\n");
+        if (fdt_setprop(dt, node, "asahi,system-fw-version", system_firmware.string,
+                        strlen(system_firmware.string) + 1))
+            bail("FDT: couldn't set asahi,system-fw-version\n");
+    }
 
     if (fdt_setprop(dt, node, "asahi,iboot2-version", os_firmware.iboot,
                     strlen(os_firmware.iboot) + 1))
@@ -301,12 +312,18 @@ static int dt_set_memory(void)
     if (anode < 0)
         bail("ADT: /chosen not found\n");
 
-    u64 dram_base, dram_size;
+    u64 dram_base = 0, dram_size = 0;
 
-    if (ADT_GETPROP(adt, anode, "dram-base", &dram_base) < 0)
-        bail("ADT: Failed to get dram-base\n");
-    if (ADT_GETPROP(adt, anode, "dram-size", &dram_size) < 0)
-        bail("ADT: Failed to get dram-size\n");
+    // iOS 12 and below seems to be missing a bunch of stuff...
+    if (ADT_GETPROP(adt, anode, "dram-base", &dram_base) < 0) {
+        printf("ADT: Failed to get dram-base\n");
+        dram_base = 0x800000000;
+    }
+
+    if (ADT_GETPROP(adt, anode, "dram-size", &dram_size) < 0) {
+        printf("ADT: Failed to get dram-size\n");
+        dram_size = mem_size_actual;
+    }
 
     // Tell the kernel our usable memory range. We cannot declare all of DRAM, and just reserve the
     // bottom and top, because the kernel would still map it (and just not use it), which breaks
@@ -629,8 +646,14 @@ static int dt_set_bluetooth(void)
     int ret;
     int anode = adt_path_offset(adt, "/arm-io/bluetooth");
 
-    if (anode < 0)
-        bail("ADT: /arm-io/bluetooth not found\n");
+    if (anode < 0) {
+        /*
+         * t8012-based system does not have bluetooth, and on
+         * some other devices bluetooth is connected with UART.
+         */
+        printf("ADT: /arm-io/bluetooth not found\n");
+        return 0;
+    }
 
     const char *path = fdt_get_alias(dt, "bluetooth0");
     if (path == NULL)
@@ -787,8 +810,14 @@ static int dt_set_wifi(void)
 {
     int anode = adt_path_offset(adt, "/arm-io/wlan");
 
-    if (anode < 0)
-        bail("ADT: /arm-io/wlan not found\n");
+    if (anode < 0) {
+        /*
+         * t8012-based system does not have wifi, and on some other
+         * devices WIFI is connected via an internal EHCI controller.
+         */
+        printf("ADT: /arm-io/wlan not found\n");
+        return 0;
+    }
 
     uint8_t info[16];
     if (ADT_GETPROP_ARRAY(adt, anode, "wifi-antenna-sku-info", info) < 0)
