@@ -30,6 +30,9 @@ void gxf_init(void)
 
 bool gxf_enabled(void)
 {
+    if (!supports_gxf())
+        return false;
+
     if (!(mrs(SYS_IMP_APL_SPRR_CONFIG_EL1) & SPRR_CONFIG_EN))
         return false;
 

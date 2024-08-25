@@ -447,8 +447,9 @@ struct vector_args {
 };
 
 extern u32 board_id, chip_id;
-extern bool is_mac;
-extern bool cpufeat_actlr_el2, cpufeat_fast_ipi;
+
+extern bool is_mac, has_dcp;
+extern bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
 
 extern struct vector_args next_stage;
 
