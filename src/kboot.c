@@ -408,6 +408,14 @@ static int dt_set_cpus(void)
             cpu++;
             node = next;
             continue;
+        } else {
+            printf("FDT: Reserving stack for CPU %d 0x%lx\n", cpu, (uint64_t)secondary_stacks[cpu]);
+            fdt_add_mem_rsv(dt, (uint64_t)secondary_stacks[cpu], SECONDARY_STACK_SIZE);
+            if (has_el3()) {
+                printf("FDT: Reserving EL3 stack for CPU %d 0x%lx\n", cpu,
+                       (uint64_t)secondary_stacks_el3[cpu]);
+                fdt_add_mem_rsv(dt, (uint64_t)secondary_stacks_el3[cpu], SECONDARY_STACK_SIZE);
+            }
         }
 
         u64 mpidr = smp_get_mpidr(cpu);
