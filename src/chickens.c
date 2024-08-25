@@ -69,7 +69,7 @@ void init_t6021_avalanche(int rev);
 void init_t6031_sawtooth(void);
 void init_t6031_everest(int rev);
 
-bool cpufeat_actlr_el2;
+bool cpufeat_actlr_el2, cpufeat_fast_ipi;
 
 const char *init_cpu(void)
 {

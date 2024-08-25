@@ -115,8 +115,12 @@ void _cpu_reset_c(void *stack)
     printf("  MPIDR: 0x%lx\n", mrs(MPIDR_EL1));
     const char *type = init_cpu();
     printf("  CPU: %s\n", type);
+    printf("  Running in EL%lu\n\n", mrs(CurrentEL) >> 2);
 
     exception_initialize();
+
+    if (in_el3())
+        return;
 
     if (!is_boot_cpu())
         smp_secondary_entry();
