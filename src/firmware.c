@@ -147,6 +147,8 @@ int firmware_init(void)
         printf("System FW version: %s (%s)\n", system_firmware.string, system_firmware.iboot);
     } else {
         printf("ADT: failed to find system-firmware-version\n");
+        system_firmware.string = "unknown";
+        system_firmware.iboot = "unknown";
         return -1;
     }
 
