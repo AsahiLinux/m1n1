@@ -223,6 +223,12 @@ void smp_start_secondaries(void)
         return;
     }
 
+    int arm_io_node;
+    if ((arm_io_node = adt_path_offset(adt, "/arm-io")) < 0) {
+        printf("Error getting /arm-io node\n");
+        return;
+    }
+
     int node = adt_path_offset(adt, "/cpus");
     if (node < 0) {
         printf("Error getting /cpus node\n");
@@ -275,7 +281,9 @@ void smp_start_secondaries(void)
         u32 cpu_id;
 
         if (ADT_GETPROP(adt, node, "cpu-id", &cpu_id) < 0)
-            continue;
+            if (ADT_GETPROP(adt, node, "reg", &cpu_id) < 0)
+                continue;
+
         if (cpu_id >= MAX_CPUS) {
             printf("cpu-id %d exceeds max CPU count %d: increase MAX_CPUS\n", cpu_id, MAX_CPUS);
             continue;
@@ -323,8 +331,16 @@ void smp_start_secondaries(void)
         u64 cpu_impl_reg[2];
         if (ADT_GETPROP(adt, cpu_node, "reg", &reg) < 0)
             continue;
-        if (ADT_GETPROP_ARRAY(adt, cpu_node, "cpu-impl-reg", cpu_impl_reg) < 0)
-            continue;
+        if (ADT_GETPROP_ARRAY(adt, cpu_node, "cpu-impl-reg", cpu_impl_reg) < 0) {
+            u32 reg_len;
+            const u64 *regs = adt_getprop(adt, arm_io_node, "reg", &reg_len);
+            if (!regs)
+                continue;
+            u32 index = 2 * i + 2;
+            if (reg_len < index)
+                continue;
+            memcpy(cpu_impl_reg, &regs[index], 16);
+        }
 
         u8 core = FIELD_GET(CPU_REG_CORE, reg);
         u8 cluster = FIELD_GET(CPU_REG_CLUSTER, reg);
@@ -339,6 +355,11 @@ void smp_start_secondaries(void)
 void smp_stop_secondaries(bool deep_sleep)
 {
     printf("Stopping secondary CPUs...\n");
+    int arm_io_node;
+    if ((arm_io_node = adt_path_offset(adt, "/arm-io")) < 0) {
+        printf("Error getting /arm-io node\n");
+        return;
+    }
     smp_set_wfe_mode(true);
 
     for (int i = 0; i < MAX_CPUS; i++) {
@@ -351,8 +372,16 @@ void smp_stop_secondaries(bool deep_sleep)
         u64 cpu_impl_reg[2];
         if (ADT_GETPROP(adt, node, "reg", &reg) < 0)
             continue;
-        if (ADT_GETPROP_ARRAY(adt, node, "cpu-impl-reg", cpu_impl_reg) < 0)
-            continue;
+        if (ADT_GETPROP_ARRAY(adt, node, "cpu-impl-reg", cpu_impl_reg) < 0) {
+            u32 reg_len;
+            const u64 *regs = adt_getprop(adt, arm_io_node, "reg", &reg_len);
+            if (!regs)
+                continue;
+            u32 index = 2 * i + 2;
+            if (reg_len < index)
+                continue;
+            memcpy(cpu_impl_reg, &regs[index], 16);
+        }
 
         u8 core = FIELD_GET(CPU_REG_CORE, reg);
         u8 cluster = FIELD_GET(CPU_REG_CLUSTER, reg);
