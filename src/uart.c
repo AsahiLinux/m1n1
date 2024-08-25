@@ -17,12 +17,19 @@ static u64 uart_base = 0;
 int uart_init(void)
 {
     int path[8];
-    int node = adt_path_offset_trace(adt, "/arm-io/uart0", path);
+    const char *uart_path;
 
-    if (node < 0) {
-        printf("!!! UART node not found!\n");
+    if (adt_path_offset_trace(adt, "/arm-io/uart6/debug-console", NULL) > 0) {
+        uart_path = "/arm-io/uart6";
+        /* T2 ADT does not have /arm-io/uart0/debug-console, but it is the correct UART */
+    } else if (adt_path_offset_trace(adt, "/arm-io/uart0", NULL) > 0) {
+        uart_path = "/arm-io/uart0";
+    } else {
+        printf("!!!Debug UART node not found!\n");
         return -1;
     }
+
+    adt_path_offset_trace(adt, uart_path, path);
 
     if (adt_get_reg(adt, path, "reg", 0, &uart_base, NULL)) {
         printf("!!! Failed to get UART reg property!\n");
