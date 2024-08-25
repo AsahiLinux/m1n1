@@ -58,7 +58,7 @@ int firmware_set_fdt(void *fdt, int node, const char *prop, const struct fw_vers
     return 0;
 }
 
-static void parse_version(const char *s, u32 *out)
+void firmware_parse_version(const char *s, u32 *out)
 {
     memset(out, 0, sizeof(*out) * IBOOT_VER_COMP);
 
@@ -86,21 +86,9 @@ static void detect_firmware(struct fw_version_info *info, const char *ver)
     info->iboot = ver;
 }
 
-// Note: semi-open range
-bool firmware_sfw_in_range(enum fw_version lower_bound, enum fw_version upper_bound)
+bool firmware_iboot_in_range(u32 min[IBOOT_VER_COMP], u32 max[IBOOT_VER_COMP],
+                             u32 this[IBOOT_VER_COMP])
 {
-    u32 min[IBOOT_VER_COMP] = {0};
-    u32 max[IBOOT_VER_COMP] = {UINT32_MAX};
-    u32 this[IBOOT_VER_COMP] = {0};
-
-    if (lower_bound > V_UNKNOWN && lower_bound < NUM_FW_VERSIONS)
-        parse_version(fw_versions[lower_bound].iboot, min);
-
-    if (upper_bound > V_UNKNOWN && upper_bound < NUM_FW_VERSIONS)
-        parse_version(fw_versions[upper_bound].iboot, max);
-
-    parse_version(system_firmware.iboot, this);
-
     int i;
     for (i = 0; i < IBOOT_VER_COMP; i++)
         if (this[i] != min[i])
@@ -114,6 +102,24 @@ bool firmware_sfw_in_range(enum fw_version lower_bound, enum fw_version upper_bo
             break;
 
     return this[i] < max[i];
+}
+
+// Note: semi-open range
+bool firmware_sfw_in_range(enum fw_version lower_bound, enum fw_version upper_bound)
+{
+    u32 min[IBOOT_VER_COMP] = {0};
+    u32 max[IBOOT_VER_COMP] = {UINT32_MAX};
+    u32 this[IBOOT_VER_COMP] = {0};
+
+    if (lower_bound > V_UNKNOWN && lower_bound < NUM_FW_VERSIONS)
+        firmware_parse_version(fw_versions[lower_bound].iboot, min);
+
+    if (upper_bound > V_UNKNOWN && upper_bound < NUM_FW_VERSIONS)
+        firmware_parse_version(fw_versions[upper_bound].iboot, max);
+
+    firmware_parse_version(system_firmware.iboot, this);
+
+    return firmware_iboot_in_range(min, max, this);
 }
 
 int firmware_init(void)
