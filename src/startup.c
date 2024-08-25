@@ -1,7 +1,9 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "adt.h"
 #include "chickens.h"
 #include "exception.h"
+#include "firmware.h"
 #include "smp.h"
 #include "string.h"
 #include "types.h"
@@ -59,8 +61,13 @@ void pan_fixup(void)
     sysop("isb");
 }
 
+u64 boot_flags, mem_size_actual;
 void dump_boot_args(struct boot_args *ba)
 {
+    if (ba->revision > 3) {
+        printf("Unsupported boot_args revision %hu\n!", ba->revision);
+    }
+
     printf("  revision:     %d\n", ba->revision);
     printf("  version:      %d\n", ba->version);
     printf("  virt_base:    0x%lx\n", ba->virt_base);
@@ -78,11 +85,61 @@ void dump_boot_args(struct boot_args *ba)
     printf("  machine_type: %d\n", ba->machine_type);
     printf("  devtree:      %p\n", ba->devtree);
     printf("  devtree_size: 0x%x\n", ba->devtree_size);
-    printf("  cmdline:      %s\n", ba->cmdline);
-    printf("  boot_flags:   0x%lx\n", ba->boot_flags);
-    printf("  mem_size_act: 0x%lx\n", ba->mem_size_actual);
+    int node = adt_path_offset(adt, "/chosen");
+
+    if (node < 0) {
+        printf("ADT: no /chosen found\n");
+        return;
+    }
+
+    /* This is called very early - before firmware information is initialized */
+    u32 len;
+    const char *p = adt_getprop(adt, node, "firmware-version", &len);
+    if (!p) {
+        printf("ADT: failed to find firmware-version\n");
+        return;
+    }
+
+    uint16_t version = ba->revision;
+    u32 iboot_min[IBOOT_VER_COMP] = {0};
+    u32 iboot_version[IBOOT_VER_COMP] = {0};
+    u32 iboot_ba_v1_max[IBOOT_VER_COMP] = {5539}; /* iOS 13 = 5540 */
+
+    firmware_parse_version(p, iboot_version);
+    if (firmware_iboot_in_range(iboot_min, iboot_ba_v1_max, iboot_version))
+        version = 1;
+
+    switch (version) {
+        case 1:
+            printf("  cmdline:      %s\n", ba->rv1.cmdline);
+            printf("  boot_flags:   0x%lx\n", ba->rv1.boot_flags);
+            printf("  mem_size_act: 0x%lx\n", ba->rv1.mem_size_actual);
+            boot_flags = ba->rv1.boot_flags;
+            mem_size_actual = ba->rv1.mem_size_actual;
+            break;
+        case 2:
+            printf("  cmdline:      %s\n", ba->rv2.cmdline);
+            printf("  boot_flags:   0x%lx\n", ba->rv2.boot_flags);
+            printf("  mem_size_act: 0x%lx\n", ba->rv2.mem_size_actual);
+            boot_flags = ba->rv2.boot_flags;
+            mem_size_actual = ba->rv2.mem_size_actual;
+            break;
+        case 3:
+        default:
+            printf("  cmdline:      %s\n", ba->rv3.cmdline);
+            printf("  boot_flags:   0x%lx\n", ba->rv3.boot_flags);
+            printf("  mem_size_act: 0x%lx\n", ba->rv3.mem_size_actual);
+            boot_flags = ba->rv3.boot_flags;
+            mem_size_actual = ba->rv3.mem_size_actual;
+            break;
+    }
+    if (!mem_size_actual) {
+        mem_size_actual = ALIGN_UP(ba->phys_base + ba->mem_size - 0x800000000, BIT(30));
+        printf("Correcting mem_size_actual to 0x%lx\n", mem_size_actual);
+    }
 }
 
+extern void get_device_info(void);
 void _start_c(void *boot_args, void *base)
 {
     UNUSED(base);
@@ -105,6 +162,8 @@ void _start_c(void *boot_args, void *base)
     }
 
     uart_puts("Initializing");
+    get_device_info();
+
     printf("CPU init (MIDR: 0x%lx)...\n", mrs(MIDR_EL1));
     const char *type = init_cpu();
     printf("  CPU: %s\n\n", type);
