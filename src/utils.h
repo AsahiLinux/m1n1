@@ -342,6 +342,16 @@ static inline int in_el2(void)
     return (mrs(CurrentEL) >> 2) == 2;
 }
 
+static inline int in_el3(void)
+{
+    return (mrs(CurrentEL) >> 2) == 3;
+}
+
+static inline int has_el3(void)
+{
+    return !!(mrs(ID_AA64PFR0_EL1) & 0xf000);
+}
+
 extern int boot_cpu_idx;
 extern u64 boot_cpu_mpidr;
 static inline int is_boot_cpu(void)
@@ -438,7 +448,7 @@ struct vector_args {
 
 extern u32 board_id, chip_id;
 extern bool is_mac;
-extern bool cpufeat_actlr_el2;
+extern bool cpufeat_actlr_el2, cpufeat_fast_ipi;
 
 extern struct vector_args next_stage;
 
