@@ -452,6 +452,7 @@ extern bool is_mac, has_dcp;
 extern bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
 
 extern struct vector_args next_stage;
+extern u64 boot_flags, mem_size_actual;
 
 void cpu_sleep(bool deep) __attribute__((noreturn));
 void deep_wfi(void);
