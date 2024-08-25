@@ -22,9 +22,13 @@
 
 /* HID registers */
 #define SYS_IMP_APL_HID0                sys_reg(3, 0, 15, 0, 0)
+#define HID0_LOOP_BUFFER_DISABLE        BIT(20)
+#define HID0_IC_PREFETCH_LIMIT_ONE_BRN  BIT(25)
 #define HID0_FETCH_WIDTH_DISABLE        BIT(28)
 #define HID0_CACHE_FUSION_DISABLE       BIT(36)
 #define HID0_SAME_PG_POWER_OPTIMIZATION BIT(45)
+#define HID0_IC_PREFETCH_DEPTH_MASK     GENMASK(62, 60)
+#define HID0_IC_PREFETCH_DEPTH_VALUE(x) (ULONG(x) << 60)
 
 #define SYS_IMP_APL_EHID0 sys_reg(3, 0, 15, 0, 1)
 #define EHID0_BLI_UNK32   BIT(32)
@@ -146,11 +150,13 @@
 #define EHID1_EN_LFSR_STALL_RS6                  BIT(62)
 #define EHID1_EN_LFSR                            BIT(63)
 
-#define SYS_IMP_APL_HID3                  sys_reg(3, 0, 15, 3, 0)
-#define HID3_DISABLE_ARBITER_FIX_BIF_CRD  BIT(44)
-#define HID3_DEV_PCIE_THROTTLE_LIMIT_MASK GENMASK(62, 57)
-#define HID3_DEV_PCIE_THROTTLE_LIMIT(x)   ((ULONG(x)) << 57)
-#define HID3_DEV_PCIE_THROTTLE_ENABLE     BIT(63)
+#define SYS_IMP_APL_HID3                                   sys_reg(3, 0, 15, 3, 0)
+#define HID3_DISABLE_DC_ZVA_CMD_ONLY                       BIT(25)
+#define HID3_DISABLE_ARBITER_FIX_BIF_CRD                   BIT(44)
+#define HID3_DIS_XMON_SNP_EVICT_TRIGGER_L2_STARAVTION_MODE BIT(50)
+#define HID3_DEV_PCIE_THROTTLE_LIMIT_MASK                  GENMASK(62, 57)
+#define HID3_DEV_PCIE_THROTTLE_LIMIT(x)                    ((ULONG(x)) << 57)
+#define HID3_DEV_PCIE_THROTTLE_ENABLE                      BIT(63)
 
 #define SYS_IMP_APL_HID4                                         sys_reg(3, 0, 15, 4, 0)
 #define HID4_INV_CORE_CLK_OBS_TO_SOC                             BIT(0)
@@ -209,6 +215,8 @@
 #define HID4_ENABLE_LFSR                                         BIT(63)
 
 #define SYS_IMP_APL_EHID4                                         sys_reg(3, 0, 15, 4, 1)
+#define SYS_IMP_APL_EHID3                                         sys_reg(3, 0, 15, 3, 1)
+#define EHID3_DISABLE_DC_ZVA_CMD_ONLY                             BIT(25)
 #define EHID4_DISABLE_HW_PREF_LD                                  BIT(0)
 #define EHID4_DISABLE_HW_PREF_ST                                  BIT(1)
 #define EHID4_DISABLE_SW_PRELOAD                                  BIT(2)
@@ -264,21 +272,37 @@
 #define EHID4_LFSR_SEED_MASK                                      GENMASK(62, 56)
 #define EHID4_ENABLE_LFSR                                         BIT(63)
 
-#define SYS_IMP_APL_HID5           sys_reg(3, 0, 15, 5, 0)
-#define HID5_BLZ_UNK_19_18_MASK    GENMASK(19, 18)
-#define HID5_BLZ_UNK18             BIT(18)
-#define HID5_BLZ_UNK19             BIT(19)
-#define HID5_DISABLE_FILL_2C_MERGE BIT(61)
+#define SYS_IMP_APL_HID5             sys_reg(3, 0, 15, 5, 0)
+#define HID5_SNOOP_EDB_RESV_MASK     GENMASK(15, 14)
+#define HID5_SNOOP_EDB_RESV_VALUE(x) ((ULONG(x)) << 14)
+#define HID5_BLZ_UNK_19_18_MASK      GENMASK(19, 18)
+#define HID5_BLZ_UNK18               BIT(18)
+#define HID5_BLZ_UNK19               BIT(19)
+#define HID5_DIS_HWP_LD              BIT(44)
+#define HID5_DIS_HWP_ST              BIT(45)
+#define HID5_DISABLE_FILL_2C_MERGE   BIT(61)
 
 #define SYS_IMP_APL_HID6             sys_reg(3, 0, 15, 6, 0)
 #define HID6_UP_CRD_TKN_INIT_C2(x)   ((ULONG(x)) << 5)
 #define HID6_UP_CRD_TKN_INIT_C2_MASK (0x1FUL << 5)
 
 #define SYS_IMP_APL_HID7                                              sys_reg(3, 0, 15, 7, 0)
+#define HID7_HID11_DISABLE_NEX_FAST_FMUL                              BIT(10)
 #define HID7_FORCE_NONSPEC_IF_SPEC_FLUSH_POINTER_INVALID_AND_MP_VALID BIT(16)
 #define HID7_FORCE_NONSPEC_IF_STEPPING                                BIT(20)
 #define HID7_FORCE_NONSPEC_TARGET_TIMER_SEL(x)                        ((ULONG(x)) << 24)
 #define HID7_FORCE_NONSPEC_TARGET_TIMER_SEL_MASK                      (3UL << 24)
+
+#define SYS_IMP_APL_HID8             sys_reg(3, 0, 15, 8, 0)
+#define HID8_DATA_SET_ID0_VALUE(x)   ((ULONG(x)) << 4)
+#define HID8_DATA_SET_ID0_VALUE_MASK GENMASK(7, 4)
+#define HID8_DATA_SET_ID1_VALUE(x)   ((ULONG(x)) << 8)
+#define HID8_DATA_SET_ID1_VALUE_MASK GENMASK(11, 8)
+#define WKE_FORCE_STRICT_ORDER       BIT(35)
+#define HID8_DATA_SET_ID2_VALUE(x)   ((ULONG(x)) << 56)
+#define HID8_DATA_SET_ID2_VALUE_MASK GENMASK(59, 56)
+#define HID8_DATA_SET_ID3_VALUE(x)   ((ULONG(x)) << 60)
+#define HID8_DATA_SET_ID3_VALUE_MASK GENMASK(63, 60)
 
 #define SYS_IMP_APL_HID9                sys_reg(3, 0, 15, 9, 0)
 #define HID9_AVL_UNK17                  BIT(17)
@@ -297,9 +321,14 @@
 #define HID10_FORCE_WAIT_STATE_DRAIN_UC BIT(32)
 #define HID10_DISABLE_ZVA_TEMPORAL_TSO  BIT(49)
 
-#define SYS_IMP_APL_HID11            sys_reg(3, 0, 15, 11, 0)
-#define HID11_ENABLE_FIX_UC_55719865 BIT(15)
-#define HID11_DISABLE_LD_NT_WIDGET   BIT(59)
+#define SYS_IMP_APL_HID11             sys_reg(3, 0, 15, 11, 0)
+#define SYS_IMP_APL_HID11_LEGACY      sys_reg(3, 0, 15, 13, 0) /* A7-A9 */
+#define HID11_DISABLE_FILL_C1_BUB_OPT BIT(7)
+#define HID11_ENABLE_FIX_UC_55719865  BIT(15)
+#define HID11_DISABLE_LD_NT_WIDGET    BIT(59)
+
+#define SYS_IMP_APL_EHID11           sys_reg(3, 0, 15, 11, 1)
+#define EHID11_SMB_DRAIN_THRESH_MASK GENMASK(41, 40)
 
 #define SYS_IMP_APL_HID12 sys_reg(3, 0, 15, 12, 0)
 
@@ -456,7 +485,11 @@
 #define SYS_IMP_APL_PMC9 sys_reg(3, 2, 15, 10, 0)
 
 #define SYS_IMP_APL_LSU_ERR_STS   sys_reg(3, 3, 15, 0, 0)
+#define SYS_IMP_APL_LSU_ERR_CTL   sys_reg(3, 3, 15, 1, 0)
 #define SYS_IMP_APL_E_LSU_ERR_STS sys_reg(3, 3, 15, 2, 0)
+
+#define LSU_ERR_STS_DISABLE_TLB_MULTI_HIT_ERROR_REPORTING BIT(54)
+#define LSU_ERR_CTL_DISABLE_TLB_MULTI_HIT_ERROR_REPORTING BIT(3)
 
 #define SYS_IMP_APL_L2C_ERR_STS sys_reg(3, 3, 15, 8, 0)
 
@@ -479,15 +512,19 @@
 #define SYS_IMP_APL_ACC_CFG   sys_reg(3, 5, 15, 4, 0)
 #define ACC_CFG_BP_SLEEP(x)   ((ULONG(x)) << 2)
 #define ACC_CFG_BP_SLEEP_MASK (3UL << 2)
+#define ACC_CFG_DEEP_SLEEP    BIT(24)
+#define ACC_CFG_SKIP_INIT     BIT(30)
 
-#define SYS_IMP_APL_CYC_OVRD     sys_reg(3, 5, 15, 5, 0)
-#define CYC_OVRD_FIQ_MODE(x)     ((ULONG(x)) << 20)
-#define CYC_OVRD_FIQ_MODE_MASK   (3UL << 20)
-#define CYC_OVRD_IRQ_MODE(x)     ((ULONG(x)) << 22)
-#define CYC_OVRD_IRQ_MODE_MASK   (3UL << 22)
-#define CYC_OVRD_WFI_MODE(x)     ((ULONG(x)) << 24)
-#define CYC_OVRD_WFI_MODE_MASK   (3UL << 24)
-#define CYC_OVRD_DISABLE_WFI_RET BIT(0)
+#define SYS_IMP_APL_CYC_OVRD              sys_reg(3, 5, 15, 5, 0)
+#define CYC_OVRD_FIQ_MODE(x)              ((ULONG(x)) << 20)
+#define CYC_OVRD_FIQ_MODE_MASK            (3UL << 20)
+#define CYC_OVRD_IRQ_MODE(x)              ((ULONG(x)) << 22)
+#define CYC_OVRD_IRQ_MODE_MASK            (3UL << 22)
+#define CYC_OVRD_WFI_MODE(x)              ((ULONG(x)) << 24)
+#define CYC_OVRD_WFI_MODE_MASK            (3UL << 24)
+#define CYC_OVRD_DISABLE_WFI_RET          BIT(0)
+#define CYC_OVRD_DSBL_SNOOP_TIME_MASK     GENMASK(31, 30)
+#define CYC_OVRD_DSBL_SNOOP_TIME_VALUE(x) (ULONG(x) << 30)
 
 #define SYS_IMP_APL_ACC_OVRD sys_reg(3, 5, 15, 6, 0)
 

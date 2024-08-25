@@ -3,6 +3,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include "soc.h"
 #include "types.h"
 
 #define printf(...) debug_printf(__VA_ARGS__)
@@ -324,9 +325,16 @@ static inline void write64_lo_hi(u64 addr, u64 val)
 #define dma_rmb() sysop("dmb oshld")
 #define dma_wmb() sysop("dmb oshst")
 
+extern u32 board_id, chip_id;
+static inline bool has_ecores(void)
+{
+    return !(chip_id == S5L8960X || chip_id == T7000 || chip_id == T7001 || chip_id == S8000 ||
+             chip_id == S8001 || chip_id == S8003);
+}
+
 static inline int is_ecore(void)
 {
-    return !(mrs(MPIDR_EL1) & (1 << 16));
+    return has_ecores() && !(mrs(MPIDR_EL1) & (1 << 16));
 }
 
 static inline int in_el2(void)
