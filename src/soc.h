@@ -5,6 +5,17 @@
 
 #include "../config.h"
 
+#define S5L8960X 0x8960
+#define T7000    0x7000
+#define T7001    0x7001
+#define S8000    0x8000
+#define S8001    0x8001
+#define S8003    0x8003
+#define T8010    0x8010
+#define T8011    0x8011
+#define T8012    0x8012
+#define T8015    0x8015
+
 #define T8103 0x8103
 #define T8112 0x8112
 #define T8122 0x8122
@@ -28,6 +39,20 @@
 #define EARLY_UART_BASE 0x235200000
 #elif TARGET == T6034 || TARGET == T6031
 #define EARLY_UART_BASE 0x391200000
+#elif TARGET == T8015
+#define EARLY_UART_BASE 0x22e600000
+#elif TARGET == T7000 || TARGET == T7001 || TARGET == S8000 || TARGET == S8001 ||                  \
+    TARGET == S8003 || TARGET == T8010 || TARGET == T8011
+#if TARGET == T7000 && defined(TARGET_BOARD) && TARGET_BOARD == 0x34 // Apple TV HD
+#define EARLY_UART_BASE 0x20a0d8000
+#else
+#define EARLY_UART_BASE 0x20a0c0000
+#endif
+
+#elif TARGET == T8012
+#define EARLY_UART_BASE 0x20a600000
+#elif TARGET == S5L8960X
+#define EARLY_UART_BASE 0x20a0a0000
 #endif
 
 #endif
