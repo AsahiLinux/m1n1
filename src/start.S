@@ -95,6 +95,7 @@ _start:
     bl debug_putc
     mov w0, '\n'
     bl debug_putc
+    bl pan_fixup
 
     mrs x8, CurrentEL
     cmp x8, #0xc
@@ -105,7 +106,6 @@ _start:
     bl _start_c
     b .
 
-.globl exception_initialize
 start_el3:
     bl exception_initialize
     adrp x8, _stack_bot_el3
@@ -197,6 +197,9 @@ debug_putc:
 .globl reboot
 .type reboot, @function
 reboot:
+    mrs x8, id_aa64pfr0_el1
+    tst w8, 0xf00
+    beq 1f
     mrs x0, CurrentEL
     cmp x0, #8
     beq 1f

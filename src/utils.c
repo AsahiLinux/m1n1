@@ -8,10 +8,11 @@
 #include "iodev.h"
 #include "smp.h"
 #include "types.h"
+#include "utils.h"
 #include "vsprintf.h"
 #include "xnuboot.h"
 
-bool is_mac = false;
+bool is_mac, has_dcp;
 
 static char ascii(char s)
 {
@@ -149,7 +150,7 @@ void spin_lock(spinlock_t *lock)
     __asm__ volatile("1:\n"
                      "mov\t%0, -1\n"
                      "2:\n"
-                     "\tcasa\t%0, %2, %1\n"
+                     "\tldaxr\t%0, %1\n"
                      "\tcmn\t%0, 1\n"
                      "\tbeq\t3f\n"
                      "\tldxr\t%0, %1\n"
@@ -158,6 +159,8 @@ void spin_lock(spinlock_t *lock)
                      "\twfe\n"
                      "\tb\t1b\n"
                      "3:"
+                     "\tstxr\t%w0, %2, %1\n"
+                     "\tcbnz\t%w0, 2b\n"
                      : "=&r"(tmp), "+m"(lock->lock)
                      : "r"(me)
                      : "cc", "memory");
