@@ -137,7 +137,6 @@ void exception_initialize(void)
         msr(CNTP_CTL_EL02, 7L);
         msr(CNTV_CTL_EL02, 7L);
     }
-
     if (cpufeat_fast_ipi) {
         reg_clr(SYS_IMP_APL_PMCR0, PMCR0_IACT | PMCR0_IMODE_MASK);
         reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
@@ -223,11 +222,13 @@ void print_regs(u64 *regs, int el12)
     if (is_ecore()) {
         printf("E_LSU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_E_LSU_ERR_STS));
         printf("E_FED_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_E_FED_ERR_STS));
-        printf("E_MMU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_E_MMU_ERR_STS));
+        if (cpufeat_fast_ipi)
+            printf("E_MMU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_E_MMU_ERR_STS));
     } else {
         printf("LSU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_LSU_ERR_STS));
         printf("FED_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_FED_ERR_STS));
-        printf("MMU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_MMU_ERR_STS));
+        if (cpufeat_fast_ipi)
+            printf("MMU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_MMU_ERR_STS));
     }
 }
 
@@ -383,15 +384,19 @@ void exc_fiq(u64 *regs)
         printf("  PMC IRQ, masking\n");
         reg_clr(SYS_IMP_APL_PMCR0, PMCR0_IACT | PMCR0_IMODE_MASK);
     }
-    reg = mrs(SYS_IMP_APL_UPMCR0);
-    if ((reg & UPMCR0_IMODE_MASK) == UPMCR0_IMODE_FIQ && (mrs(SYS_IMP_APL_UPMSR) & UPMSR_IACT)) {
-        printf("  UPMC IRQ, masking\n");
-        reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
-    }
 
-    if (mrs(SYS_IMP_APL_IPI_SR_EL1) & IPI_SR_PENDING) {
-        printf("  Fast IPI IRQ, clearing\n");
-        msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
+    if (cpufeat_fast_ipi) {
+        reg = mrs(SYS_IMP_APL_UPMCR0);
+        if ((reg & UPMCR0_IMODE_MASK) == UPMCR0_IMODE_FIQ &&
+            (mrs(SYS_IMP_APL_UPMSR) & UPMSR_IACT)) {
+            printf("  UPMC IRQ, masking\n");
+            reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
+        }
+
+        if (mrs(SYS_IMP_APL_IPI_SR_EL1) & IPI_SR_PENDING) {
+            printf("  Fast IPI IRQ, clearing\n");
+            msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
+        }
     }
 
     UNUSED(regs);

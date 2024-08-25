@@ -503,10 +503,12 @@ void mmu_init(void)
     mmu_init_pagetables();
     mmu_add_default_mappings();
     mmu_configure();
-    mmu_init_sprr();
+    if (cpufeat_mmu_sprr)
+        mmu_init_sprr();
 
     // Enable EL0 memory access by EL1
-    msr(PAN, 0);
+    if (supports_pan())
+        msr(PAN, 0);
 
     // RES1 bits
     u64 sctlr = SCTLR_LSMAOE | SCTLR_nTLSMD | SCTLR_TSCXT | SCTLR_ITD;
@@ -521,10 +523,12 @@ void mmu_init(void)
 static void mmu_secondary_setup(void)
 {
     mmu_configure();
-    mmu_init_sprr();
+    if (cpufeat_mmu_sprr)
+        mmu_init_sprr();
 
     // Enable EL0 memory access by EL1
-    msr(PAN, 0);
+    if (supports_pan())
+        msr(PAN, 0);
 
     // RES1 bits
     u64 sctlr = SCTLR_LSMAOE | SCTLR_nTLSMD | SCTLR_TSCXT | SCTLR_ITD;

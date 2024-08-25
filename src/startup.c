@@ -44,6 +44,21 @@ void apply_rela(uint64_t base, struct rela_entry *rela_start, struct rela_entry 
     }
 }
 
+extern uint32_t _v_sp0_sync[], _v_sp0_irq[], _v_sp0_fiq[], _v_sp0_serr[];
+void pan_fixup(void)
+{
+    if (supports_pan())
+        return;
+
+    /* Patch msr pan, #0 to nop */
+    _v_sp0_sync[0] = 0xd503201f;
+    _v_sp0_irq[0] = 0xd503201f;
+    _v_sp0_fiq[0] = 0xd503201f;
+    _v_sp0_serr[0] = 0xd503201f;
+
+    sysop("isb");
+}
+
 void dump_boot_args(struct boot_args *ba)
 {
     printf("  revision:     %d\n", ba->revision);
