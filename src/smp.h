@@ -6,10 +6,12 @@
 #include "types.h"
 #include "utils.h"
 
-#define MAX_CPUS 24
+#define MAX_CPUS     24
+#define MAX_EL3_CPUS 4
 
 #define SECONDARY_STACK_SIZE 0x10000
 extern u8 *secondary_stacks[MAX_CPUS];
+extern u8 *secondary_stacks_el3[MAX_EL3_CPUS];
 
 void smp_secondary_entry(void);
 

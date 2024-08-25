@@ -161,8 +161,21 @@ cpu_reset:
     bl debug_putc
 
     mov x0, sp
+
+    mrs x8, CurrentEL
+    cmp x8, #0xc
+    beq cpu_reset_el3
+
     bl _cpu_reset_c
     b .
+
+cpu_reset_el3:
+    bl _cpu_reset_c
+    adrp x6, _reset_stack_el1
+    add x6, x6, :lo12:_reset_stack_el1
+    ldr x6, [x6]
+    mov x0, x6
+    adr x7, _cpu_reset_c
 
 el3_eret_to_el1:
     adr x8, _vectors_start
