@@ -201,6 +201,11 @@ void aic_set_sw(int irq, bool active)
                 MASK_BIT(irq));
 }
 
+void aic_write(u32 reg, u32 val)
+{
+    write32(aic->base + reg, val);
+}
+
 uint32_t aic_ack(void)
 {
     return read32(aic->base + aic->regs.event);

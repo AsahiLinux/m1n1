@@ -39,6 +39,7 @@ extern struct aic *aic;
 
 void aic_init(void);
 void aic_set_sw(int irq, bool active);
+void aic_write(u32 reg, u32 val);
 uint32_t aic_ack(void);
 
 #endif
