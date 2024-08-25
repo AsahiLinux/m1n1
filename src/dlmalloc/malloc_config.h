@@ -15,7 +15,7 @@
 #define ABORT                 panic("dlmalloc: internal error\n")
 #define NO_MALLINFO           1
 #define NO_MALLOC_STATS       1
-#define malloc_getpagesize    16384
+#define malloc_getpagesize    get_page_size()
 #define LACKS_FCNTL_H         1
 #define LACKS_SYS_MMAN_H      1
 #define LACKS_SYS_PARAM_H     1
