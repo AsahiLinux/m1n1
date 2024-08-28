@@ -319,9 +319,6 @@ void smp_start_secondaries(void)
     }
 
     for (int i = 0; i < MAX_CPUS; i++) {
-
-        if (i == boot_cpu_idx)
-            continue;
         int cpu_node = cpu_nodes[i];
 
         if (!cpu_node)
@@ -340,6 +337,18 @@ void smp_start_secondaries(void)
             if (reg_len < index)
                 continue;
             memcpy(cpu_impl_reg, &regs[index], 16);
+        }
+
+        if (i == boot_cpu_idx) {
+            // Check if already locked
+            if (read64(cpu_impl_reg[0]) & 1)
+                continue;
+
+            // Unlocked, write _vectors_start into boot CPU's rvbar
+            write64(cpu_impl_reg[0], (u64)_vectors_start);
+            sysop("dmb sy");
+
+            continue;
         }
 
         u8 core = FIELD_GET(CPU_REG_CORE, reg);
