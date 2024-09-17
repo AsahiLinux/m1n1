@@ -400,8 +400,12 @@ void fb_init(bool clear)
                         &orig_logo);
     }
 
-    if (clear)
+    if (clear) {
         memset32(fb.ptr, 0, fb.size);
+    } else {
+        // Workaround for m1n1 stage 1 framebuffer UAF bug
+        memset32(fb.ptr, 0, min(256, fb.size));
+    }
 
     console.margin.rows = 2;
     console.margin.cols = 4;
