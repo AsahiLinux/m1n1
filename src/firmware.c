@@ -2,6 +2,7 @@
 
 #include "firmware.h"
 #include "adt.h"
+#include "stdint.h"
 #include "string.h"
 #include "types.h"
 #include "utils.h"
@@ -38,6 +39,9 @@ const struct fw_version_info fw_versions[NUM_FW_VERSIONS] = {
     [V13_5]     = {V13_5,     "13.5",       {13, 5, 0},     3, "iBoot-8422.141.2"},
     [V13_6_2]   = {V13_6_2,   "13.6.2",     {13, 6, 2},     3, "iBoot-8422.141.2.700.1"},
     [V14_1_1]   = {V14_1_1,   "14.1.1",     {14, 1, 1},     3, "iBoot-10151.41.12"},
+    [V15_0B1]   = {V15_0B1,   "15.0 beta",  {14, 99, 1},    3, "iBoot-11881.0.80.0.2"},
+    [V15_0]     = {V15_0,     "15.0",       {15, 0, 0},     3, "iBoot-11881.1.1"},
+
     // clang-format on
 };
 
@@ -54,6 +58,21 @@ int firmware_set_fdt(void *fdt, int node, const char *prop, const struct fw_vers
     return 0;
 }
 
+static void parse_version(const char *s, u32 *out)
+{
+    memset(out, 0, sizeof(*out) * IBOOT_VER_COMP);
+
+    for (int i = 0; i < IBOOT_VER_COMP; i++) {
+        while (*s && !(*s >= '0' && *s <= '9'))
+            s++;
+        if (!*s)
+            break;
+        out[i] = atol(s);
+        while (*s >= '0' && *s <= '9')
+            s++;
+    }
+}
+
 static void detect_firmware(struct fw_version_info *info, const char *ver)
 {
     for (size_t i = 0; i < ARRAY_SIZE(fw_versions); i++) {
@@ -65,6 +84,36 @@ static void detect_firmware(struct fw_version_info *info, const char *ver)
 
     *info = fw_versions[V_UNKNOWN];
     info->iboot = ver;
+}
+
+// Note: semi-open range
+bool firmware_sfw_in_range(enum fw_version lower_bound, enum fw_version upper_bound)
+{
+    u32 min[IBOOT_VER_COMP] = {0};
+    u32 max[IBOOT_VER_COMP] = {UINT32_MAX};
+    u32 this[IBOOT_VER_COMP] = {0};
+
+    if (lower_bound > V_UNKNOWN && lower_bound < NUM_FW_VERSIONS)
+        parse_version(fw_versions[lower_bound].iboot, min);
+
+    if (upper_bound > V_UNKNOWN && upper_bound < NUM_FW_VERSIONS)
+        parse_version(fw_versions[upper_bound].iboot, max);
+
+    parse_version(system_firmware.iboot, this);
+
+    int i;
+    for (i = 0; i < IBOOT_VER_COMP; i++)
+        if (this[i] != min[i])
+            break;
+
+    if (this[i] < min[i])
+        return false;
+
+    for (i = 0; i < IBOOT_VER_COMP; i++)
+        if (this[i] != max[i])
+            break;
+
+    return this[i] < max[i];
 }
 
 int firmware_init(void)
