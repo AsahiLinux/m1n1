@@ -144,6 +144,9 @@ void fb_unblit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride)
 {
     u8 *p = data;
 
+    if (!console.initialized)
+        return;
+
     for (u32 i = 0; i < h; i++) {
         for (u32 j = 0; j < w; j++) {
             rgb_t color = fb_get_pixel(x + j, y + i);
@@ -157,6 +160,9 @@ void fb_unblit(u32 x, u32 y, u32 w, u32 h, void *data, u32 stride)
 
 void fb_fill(u32 x, u32 y, u32 w, u32 h, rgb_t color)
 {
+    if (!console.initialized)
+        return;
+
     u32 c = rgb2pixel_30(color);
     for (u32 i = 0; i < h; i++)
         memset32(&fb.ptr[x + (y + i) * fb.stride], c, w * 4);
@@ -165,6 +171,9 @@ void fb_fill(u32 x, u32 y, u32 w, u32 h, rgb_t color)
 
 void fb_clear(rgb_t color)
 {
+    if (!console.initialized)
+        return;
+
     u32 c = rgb2pixel_30(color);
     memset32(fb.ptr, c, fb.stride * fb.height * 4);
     fb_update();
@@ -172,27 +181,42 @@ void fb_clear(rgb_t color)
 
 void fb_blit_image(u32 x, u32 y, const struct image *img)
 {
+    if (!console.initialized)
+        return;
+
     fb_blit(x, y, img->width, img->height, img->ptr, img->width, PIX_FMT_XRGB);
 }
 
 void fb_unblit_image(u32 x, u32 y, struct image *img)
 {
+    if (!console.initialized)
+        return;
+
     fb_unblit(x, y, img->width, img->height, img->ptr, img->width);
 }
 
 void fb_blit_logo(const struct image *logo)
 {
+    if (!console.initialized)
+        return;
+
     fb_blit_image((fb.width - logo->width) / 2, (fb.height - logo->height) / 2, logo);
 }
 
 void fb_display_logo(void)
 {
+    if (!console.initialized)
+        return;
+
     printf("fb: display logo\n");
     fb_blit_logo(logo);
 }
 
 void fb_restore_logo(void)
 {
+    if (!console.initialized)
+        return;
+
     if (!orig_logo.ptr)
         return;
     fb_blit_logo(&orig_logo);
@@ -259,6 +283,9 @@ static void fb_putchar(u8 c)
 
 void fb_console_scroll(u32 n)
 {
+    if (!console.initialized)
+        return;
+
     u32 row = 0;
     n = min(n, console.cursor.row);
     for (; row < console.cursor.max_row - n; ++row)
@@ -270,6 +297,9 @@ void fb_console_scroll(u32 n)
 
 void fb_console_reserve_lines(u32 n)
 {
+    if (!console.initialized)
+        return;
+
     if ((console.cursor.max_row - console.cursor.row) <= n)
         fb_console_scroll(1 + n - (console.cursor.max_row - console.cursor.row));
     fb_update();
@@ -404,7 +434,6 @@ void fb_shutdown(bool restore_logo)
         return;
 
     console.active = false;
-    console.initialized = false;
     fb_clear_console();
     if (restore_logo) {
         fb_restore_logo();
@@ -412,6 +441,7 @@ void fb_shutdown(bool restore_logo)
         orig_logo.ptr = NULL;
     }
     free(fb.ptr);
+    console.initialized = false;
 }
 
 void fb_reinit(void)
