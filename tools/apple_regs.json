@@ -276,7 +276,7 @@
     {"index": 0, "name": "SPRR_AMRANGE_EL2",            "fullname": "SPRR AM Range (EL2)",                                          "enc": [3, 6, 15, 14, 3 ], "width": 64},
     {"index": 0, "name": "VMKEYLO_EL2",                 "fullname": "Pointer Authentication VM Machine Key Low",                    "enc": [3, 6, 15, 14, 4 ], "width": 64},
     {"index": 0, "name": "VMKEYHI_EL2",                 "fullname": "Pointer Authentication VM Machine Key High",                   "enc": [3, 6, 15, 14, 5 ], "width": 64},
-    {"index": 0, "name": "ACTLR_EL12",                  "fullname": "Auxiliary Control Register (EL12)",                            "enc": [3, 6, 15, 14, 6 ], "width": 64},
+    {"index": 0, "name": "ACTLR_EL12_PRE",              "fullname": "Auxiliary Control Register (EL12, pre-spec)",                  "enc": [3, 6, 15, 14, 6 ], "width": 64},
     {"index": 0, "name": "APSTS_EL12",                  "fullname": "Pointer Authentication Status (EL12)",                         "enc": [3, 6, 15, 14, 7 ], "width": 64},
     {"index": 0, "name": "APCTL_EL12",                  "fullname": "Pointer Authentication Control (EL12)",                        "enc": [3, 6, 15, 15, 0 ], "width": 64},
     {"index": 0, "name": "GXF_CONFIG_EL12",             "fullname": "GXF Configuration Register (EL12)",                            "enc": [3, 6, 15, 15, 1 ], "width": 64},
@@ -332,5 +332,6 @@
             {"name": "TRAP_PM",                         "msb": 57, "lsb": 57},
             {"name": "TRAP_UPM",                        "msb": 58, "lsb": 58},
             {"name": "TRAP_s3_1z7_c15_cx_3",            "msb": 59, "lsb": 59}
-        ]}]}
+        ]}]},
+    {"index": 0, "name": "ACTLR_EL12",                  "fullname": "Auxiliary Control Register (EL12)",                            "enc": [3, 5, 1, 0, 1 ], "width": 64}
 ]

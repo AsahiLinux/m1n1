@@ -2,9 +2,10 @@
 
 #include "types.h"
 
-#define SYS_ACTLR_EL1 sys_reg(3, 0, 1, 0, 1)
-#define SYS_ACTLR_EL2 sys_reg(3, 4, 1, 0, 1)
-#define SYS_ACTLR_EL3 sys_reg(3, 6, 1, 0, 1)
+#define SYS_ACTLR_EL1  sys_reg(3, 0, 1, 0, 1)
+#define SYS_ACTLR_EL2  sys_reg(3, 4, 1, 0, 1)
+#define SYS_ACTLR_EL3  sys_reg(3, 6, 1, 0, 1)
+#define SYS_ACTLR_EL12 sys_reg(3, 5, 1, 0, 1)
 
 #define SYS_CNTHCTL_EL2 sys_reg(3, 4, 14, 1, 0)
 // HCR_EL2.E2H == 1

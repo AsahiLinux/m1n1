@@ -429,6 +429,7 @@ struct vector_args {
 };
 
 extern u32 board_id, chip_id;
+extern bool cpufeat_actlr_el2;
 
 extern struct vector_args next_stage;
 

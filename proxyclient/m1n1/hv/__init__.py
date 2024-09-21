@@ -50,7 +50,7 @@ class HV(Reloadable):
         MAIR_EL1: MAIR_EL12,
         AMAIR_EL1: AMAIR_EL12,
         CONTEXTIDR_EL1: CONTEXTIDR_EL12,
-        ACTLR_EL1: ACTLR_EL12,
+        # ACTLR_EL1: ACTLR_EL12, # Handled in hv_exc.c, depends on CPU version
         AMX_CONFIG_EL1: AMX_CONFIG_EL12,
         SPRR_CONFIG_EL1: SPRR_CONFIG_EL12,
         SPRR_PPERM_EL1: SPRR_PPERM_EL12,

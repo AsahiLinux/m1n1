@@ -42,6 +42,8 @@ void init_t6021_avalanche(int rev);
 void init_t6031_sawtooth(void);
 void init_t6031_everest(int rev);
 
+bool cpufeat_actlr_el2;
+
 const char *init_cpu(void)
 {
     const char *cpu = "Unknown";
@@ -141,6 +143,9 @@ const char *init_cpu(void)
             uart_puts("  Unknown CPU type");
             break;
     }
+
+    if (part >= MIDR_PART_T8110_BLIZZARD)
+        cpufeat_actlr_el2 = true;
 
     int core = mrs(MPIDR_EL1) & 0xff;
 

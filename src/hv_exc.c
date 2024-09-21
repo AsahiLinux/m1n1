@@ -229,7 +229,6 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         SYSREG_PASS(sys_reg(3, 1, 15, 9, 0));
         SYSREG_PASS(sys_reg(3, 1, 15, 10, 0));
         /* Noisy traps */
-        SYSREG_MAP(SYS_ACTLR_EL1, SYS_IMP_APL_ACTLR_EL12)
         SYSREG_PASS(SYS_IMP_APL_HID4)
         SYSREG_PASS(SYS_IMP_APL_EHID4)
         /* We don't normally trap hese, but if we do, they're noisy */
@@ -271,6 +270,20 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         SYSREG_PASS(sys_reg(1, 0, 8, 1, 1)) // TLBI VAE1OS
         SYSREG_PASS(sys_reg(1, 0, 8, 1, 2)) // TLBI ASIDE1OS
         SYSREG_PASS(sys_reg(1, 0, 8, 5, 1)) // TLBI RVAE1OS
+
+        case SYSREG_ISS(SYS_ACTLR_EL1):
+            if (is_read) {
+                if (cpufeat_actlr_el2)
+                    regs[rt] = mrs(SYS_ACTLR_EL12);
+                else
+                    regs[rt] = mrs(SYS_IMP_APL_ACTLR_EL12);
+            } else {
+                if (cpufeat_actlr_el2)
+                    msr(SYS_ACTLR_EL12, regs[rt]);
+                else
+                    msr(SYS_IMP_APL_ACTLR_EL12, regs[rt]);
+            }
+            return true;
 
         case SYSREG_ISS(SYS_IMP_APL_IPI_SR_EL1):
             if (is_read)
