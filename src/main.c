@@ -39,9 +39,18 @@ u32 board_id = ~0, chip_id = ~0;
 
 void get_device_info(void)
 {
+    const char *model = (const char *)adt_getprop(adt, 0, "model", NULL);
+    const char *target = (const char *)adt_getprop(adt, 0, "target-type", NULL);
+
     printf("Device info:\n");
-    printf("  Model: %s\n", (const char *)adt_getprop(adt, 0, "model", NULL));
-    printf("  Target: %s\n", (const char *)adt_getprop(adt, 0, "target-type", NULL));
+
+    if (model)
+        printf("  Model: %s\n", model);
+
+    if (target)
+        printf("  Target: %s\n", target);
+
+    is_mac = !!strstr(model, "Mac");
 
     int chosen = adt_path_offset(adt, "/chosen");
     if (chosen > 0) {

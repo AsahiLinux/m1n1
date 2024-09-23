@@ -4,11 +4,14 @@
 #include <stdarg.h>
 
 #include "utils.h"
+#include "cpu_regs.h"
 #include "iodev.h"
 #include "smp.h"
 #include "types.h"
 #include "vsprintf.h"
 #include "xnuboot.h"
+
+bool is_mac = false;
 
 static char ascii(char s)
 {
@@ -179,6 +182,21 @@ bool is_heap(void *addr)
     u64 top_of_ram = cur_boot_args.mem_size + cur_boot_args.phys_base;
 
     return p > top_of_kernel_data && p < top_of_ram;
+}
+
+bool supports_arch_retention(void)
+{
+    return mrs(AIDR_EL1) & AIDR_EL1_ARCH_RETENTION;
+}
+
+bool supports_gxf(void)
+{
+    return mrs(AIDR_EL1) & AIDR_EL1_GXF;
+}
+
+bool supports_pan(void)
+{
+    return (mrs(ID_AA64MMFR1_EL1) >> 20) & 0xf;
 }
 
 // TODO: update mapping?
