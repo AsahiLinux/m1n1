@@ -137,7 +137,10 @@ void hv_start(void *entry, u64 regs[4])
     hv_secondary_info.apvmkeyhi = mrs(SYS_IMP_APL_APVMKEYHI_EL2);
     hv_secondary_info.apsts = mrs(SYS_IMP_APL_APSTS_EL12);
     hv_secondary_info.actlr_el2 = mrs(ACTLR_EL2);
-    hv_secondary_info.actlr_el1 = mrs(SYS_IMP_APL_ACTLR_EL12);
+    if (cpufeat_actlr_el2)
+        hv_secondary_info.actlr_el1 = mrs(SYS_ACTLR_EL12);
+    else
+        hv_secondary_info.actlr_el1 = mrs(SYS_IMP_APL_ACTLR_EL12);
     hv_secondary_info.cnthctl = mrs(CNTHCTL_EL2);
     hv_secondary_info.sprr_config = mrs(SYS_IMP_APL_SPRR_CONFIG_EL1);
     hv_secondary_info.gxf_config = mrs(SYS_IMP_APL_GXF_CONFIG_EL1);
@@ -198,7 +201,10 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
     msr(SYS_IMP_APL_APVMKEYHI_EL2, info->apvmkeyhi);
     msr(SYS_IMP_APL_APSTS_EL12, info->apsts);
     msr(ACTLR_EL2, info->actlr_el2);
-    msr(SYS_IMP_APL_ACTLR_EL12, info->actlr_el1);
+    if (cpufeat_actlr_el2)
+        msr(SYS_ACTLR_EL12, info->actlr_el1);
+    else
+        msr(SYS_IMP_APL_ACTLR_EL12, info->actlr_el1);
     msr(CNTHCTL_EL2, info->cnthctl);
     msr(SYS_IMP_APL_SPRR_CONFIG_EL1, info->sprr_config);
     msr(SYS_IMP_APL_GXF_CONFIG_EL1, info->gxf_config);
