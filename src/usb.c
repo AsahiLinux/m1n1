@@ -253,6 +253,16 @@ void usb_init(void)
         return;
     }
 
+    /*
+     * A7-A11 uses a custom internal otg controller with the peripheral part
+     * being dwc2.
+     */
+    if (adt_path_offset(adt, "/arm-io/otgphyctrl") > 0 &&
+        adt_path_offset(adt, "/arm-io/usb-complex") > 0) {
+        /* We do not support the custom controller and dwc2 (yet). */
+        return;
+    }
+
     i2c_dev_t *i2c = i2c_init("/arm-io/i2c0");
     if (!i2c) {
         printf("usb: i2c init failed.\n");
