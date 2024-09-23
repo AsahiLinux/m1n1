@@ -379,5 +379,13 @@ class TLBI_RVA(Register64):
     TTL = 38, 37
     BaseADDR = 36, 0
 
+class MIDR_PART(IntEnum):
+    T8110_BLIZZARD = 0x30
+
+class MIDR(Register64):
+    REV_LOW = 3, 0
+    PART = 15, 4
+    REV_HIGH = 23, 20
+
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
