@@ -629,3 +629,13 @@
 /* Lockdown registers */
 #define SYS_IMP_APL_SPR_LOCKDOWN_EL2 sys_reg(3, 4, 15, 0, 5)
 #define SYS_IMP_APL_SPR_LOCKDOWN_EL1 sys_reg(3, 4, 15, 0, 6)
+
+/* Feature ID registers */
+#define AIDR_EL1_MUL53          BIT(0)
+#define AIDR_EL1_WKDM           BIT(1)
+#define AIDR_EL1_ARCH_RETENTION BIT(2)
+#define AIDR_EL1_AMX            BIT(4)
+#define AIDR_EL1_TSO            BIT(9)
+#define AIDR_EL1_GXF            BIT(16)
+#define AIDR_EL1_APFLG          BIT(19)
+#define AIDR_EL1_PSRV           BIT(20)

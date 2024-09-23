@@ -429,6 +429,7 @@ struct vector_args {
 };
 
 extern u32 board_id, chip_id;
+extern bool is_mac;
 extern bool cpufeat_actlr_el2;
 
 extern struct vector_args next_stage;
@@ -437,6 +438,9 @@ void cpu_sleep(bool deep) __attribute__((noreturn));
 void deep_wfi(void);
 
 bool is_heap(void *addr);
+bool supports_arch_retention(void);
+bool supports_gxf(void);
+bool supports_pan(void);
 u64 top_of_memory_alloc(size_t size);
 
 #endif

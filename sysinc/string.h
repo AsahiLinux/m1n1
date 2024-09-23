@@ -18,6 +18,7 @@ size_t strlen(const char *s);
 size_t strnlen(const char *s, size_t n);
 char *strchr(const char *s, int c);
 char *strrchr(const char *s, int c);
+char *strstr(const char *s1, const char *s2);
 long atol(const char *s);
 
 static inline int tolower(int c)
