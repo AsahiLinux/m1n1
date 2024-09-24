@@ -36,6 +36,16 @@ static void init_common_everest(void)
     reg_clr(s3_0_c15_c2_4, BIT(0) | BIT(1) | BIT(16) | BIT(17) | BIT(18) | BIT(22));
 }
 
+void init_t6030_everest(int rev)
+{
+    UNUSED(rev);
+    msr(s3_1_c15_c1_5, 0x1uL);
+    if (in_el2())
+        msr(s3_4_c15_c14_6, 0x3uL);
+    init_common_everest();
+    reg_set(SYS_IMP_APL_HID4, HID4_ENABLE_LFSR_STALL_LOAD_PIPE2_ISSUE);
+}
+
 void init_t6031_everest(int rev)
 {
     UNUSED(rev);
