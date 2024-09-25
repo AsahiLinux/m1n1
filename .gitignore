@@ -6,3 +6,6 @@ __pycache__
 *.swp
 *.orig
 *.rej
+m1n1\.spec
+m1n1-*\.src\.rpm
+m1n1-*\.tar\.gz
