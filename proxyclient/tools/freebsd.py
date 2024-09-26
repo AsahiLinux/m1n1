@@ -86,9 +86,9 @@ bootenv = list(filter(lambda x: not (x.startswith("baudrate") or (x.startswith("
 if loader is not None:
     # dtb_addr not used here, the prepared fdt's at a different location.  If
     # we use this one, we won't get any of our /chosen additions, for instance.
-    bootcmd = "distro_bootcmd=bootefi 0x%x - 0x%x" % (loader_base, loader_size)
+    bootcmd = "distro_bootcmd=bootefi 0x%x:0x%x" % (loader_base, loader_size)
 else:
-    bootcmd = "distro_bootcmd=devnum=0; run usb_boot"
+    bootcmd = "distro_bootcmd=devnum=0; run nvme_boot"
 
 if tty_dev is not None:
 	bootenv.append("baudrate=%d" % tty_dev.baudrate)
