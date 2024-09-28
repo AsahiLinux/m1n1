@@ -1566,6 +1566,8 @@ class HV(Reloadable):
                 cpu_start = 0x34000 + die * 0x20_0000_0000
             elif chip_id in (0x6020, 0x6021, 0x6022):
                 cpu_start = 0x28000 + die * 0x20_0000_0000
+            elif chip_id in (0x6030,):
+                cpu_start = 0x34000 + die * 0x20_0000_0000
             elif chip_id in (0x6031,):
                 cpu_start = 0x88000 + die * 0x20_0000_0000
             else:
@@ -1703,7 +1705,7 @@ class HV(Reloadable):
 
         print(f"Physical memory: 0x{phys_base:x} .. 0x{mem_top:x}")
         print(f"Guest region start: 0x{guest_base:x}")
-        
+
         self.entry = guest_base + entryoffset
 
         print(f"Mapping guest physical memory...")
