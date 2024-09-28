@@ -58,7 +58,7 @@ class AFKRingBufSniffer(AFKRingBuf):
         raise NotImplementedError()
 
     def get_wptr(self):
-        return struct.unpack("<I", self.read_buf(2 * self.BLOCK_SIZE, 4))[0]
+        return struct.unpack("<I", self.read_buf(2 * self.BLOCK_STEP, 4))[0]
 
     def read_buf(self, off, size):
         return self.ep.dart.ioread(self.ep.stream, self.base + off, size)
@@ -144,15 +144,15 @@ class AFKEp(EP):
 
     @msg(0x8a, DIR.RX, AFKEP_InitRB)
     def InitTX(self, msg):
-        off = msg.OFFSET * AFKRingBuf.BLOCK_SIZE
-        size = msg.SIZE * AFKRingBuf.BLOCK_SIZE
+        off = msg.OFFSET * AFKRingBuf.BLOCK_STEP
+        size = msg.SIZE * AFKRingBuf.BLOCK_STEP
         self.state.txbuf_info = (off, size)
         self.create_bufs()
 
     @msg(0x8b, DIR.RX, AFKEP_InitRB)
     def InitRX(self, msg):
-        off = msg.OFFSET * AFKRingBuf.BLOCK_SIZE
-        size = msg.SIZE * AFKRingBuf.BLOCK_SIZE
+        off = msg.OFFSET * AFKRingBuf.BLOCK_STEP
+        size = msg.SIZE * AFKRingBuf.BLOCK_STEP
         self.state.rxbuf_info = (off, size)
         self.create_bufs()
 
@@ -307,7 +307,7 @@ class EPICEp(AFKEp):
         sub = EPICSubHeader.parse_stream(fd)
 
         self.log(f"{dir}Ch {hdr.channel} Type {hdr.type} Ver {hdr.version} Tag {hdr.seq}")
-        self.log(f"  Len {sub.length} Ver {sub.version} Cat {sub.category} Type {sub.type:#x} Seq {sub.seq}")
+        self.log(f"  Len {sub.length} Ver {sub.version} Cat {sub.category} Type {int(sub.type):#x}/{sub.type} Seq {sub.seq}")
         # chexdump(data, print_fn=self.log)
 
         if sub.category == EPICCategory.REPORT:

@@ -246,6 +246,13 @@ DAPFT8110C = Struct(
     "pad" / Array(3, Hex(Int8ul)),
 )
 
+AOPRatios = Struct(
+    "r0" / Int8ul,
+    "r1" / Int8ul,
+    "r2" / Int8ul,
+    Const(0, Int8ul),
+)
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -326,6 +333,8 @@ DEV_PROPERTIES = {
         "*": {
             "clockSource": FourCC,
             "identifier": FourCC,
+            "ratios": AOPRatios,
+            "filterLengths": Hex(Int32ul),
         },
     },
     "*alc?/audio-leap-mic*": {

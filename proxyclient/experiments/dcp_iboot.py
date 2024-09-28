@@ -9,7 +9,7 @@ from construct import *
 from m1n1.setup import *
 from m1n1.shell import run_shell
 from m1n1 import asm
-from m1n1.hw.dart import DART, DARTRegs
+from m1n1.hw.dart import DART
 from m1n1.fw.dcp.iboot import DCPIBootClient, SurfaceFormat, EOTF, Transform, AddrFormat, Colorspace
 from m1n1.proxyutils import RegMonitor
 
