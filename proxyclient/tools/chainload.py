@@ -85,7 +85,9 @@ for name in ("mtp", "aop"):
 print("Setting secondary CPU RVBARs...")
 
 rvbar = entry & ~0xfff
-for cpu in u.adt["cpus"][1:]:
+for cpu in u.adt["cpus"]:
+    if cpu.state == "running":
+        continue
     addr, size = cpu.cpu_impl_reg
     print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
     p.write64(addr, rvbar)

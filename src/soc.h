@@ -12,6 +12,7 @@
 #define T6001 0x6001
 #define T6002 0x6002
 #define T6020 0x6020
+#define T6030 0x6030
 #define T6021 0x6021
 #define T6022 0x6022
 #define T6031 0x6031

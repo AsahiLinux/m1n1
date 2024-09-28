@@ -90,7 +90,7 @@ class HV(Reloadable):
         self.sym_offset = 0
         self.symbols = []
         self.symbol_dict = {}
-        self.sysreg = {0: {}}
+        self.sysreg = {0: {}, 6:{}}
         self.novm = False
         self._in_handler = False
         self._sigint_pending = False
@@ -1369,6 +1369,10 @@ class HV(Reloadable):
                 print(f"Disable iodev {iodev!s}")
                 self.p.iodev_set_usage(iodev, 0)
 
+        for cpu in self.adt["cpus"]:
+            if cpu.state == "running":
+                self.boot_cpu = cpu
+
         print("Initializing hypervisor over iodev %s" % self.iodev)
         self.p.hv_init()
 
@@ -1562,7 +1566,7 @@ class HV(Reloadable):
             chip_id = self.u.adt["/chosen"].chip_id
             if chip_id in (0x8103, 0x6000, 0x6001, 0x6002):
                 cpu_start = 0x54000 + die * 0x20_0000_0000
-            elif chip_id in (0x8112,):
+            elif chip_id in (0x8112,0x6030):
                 cpu_start = 0x34000 + die * 0x20_0000_0000
             elif chip_id in (0x6020, 0x6021, 0x6022):
                 cpu_start = 0x28000 + die * 0x20_0000_0000
@@ -1759,7 +1763,9 @@ class HV(Reloadable):
 
         print("Setting secondary CPU RVBARs...")
         rvbar = self.entry & ~0xfff
-        for cpu in self.adt["cpus"][1:]:
+        for cpu in self.adt["cpus"]:
+            if cpu.state == "running":
+                continue
             addr, size = cpu.cpu_impl_reg
             print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
             self.p.write64(addr, rvbar)
@@ -1910,7 +1916,7 @@ class HV(Reloadable):
         # Does not return
 
         self.started = True
-        self.started_cpus[0] = (0, 0, 0)
+        self.started_cpus[self.boot_cpu.cpu_id] = (0, self.boot_cpu.cluster_id, self.boot_cpu.reg & 0xff)
         self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)
 
 from .. import trace

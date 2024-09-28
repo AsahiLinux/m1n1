@@ -33,7 +33,33 @@ static struct aic aic2 = {
         },
 };
 
+static struct aic aic3 = {
+    .version = 3,
+    .regs =
+        {
+            .config = AIC3_IRQ_CFG,
+        },
+};
+
 struct aic *aic;
+
+static void aic_ext_int_cfg(int node){
+    u32 ext_intr_config_len;
+    const u8 *ext_intr_config = adt_getprop(adt, node, "aic-ext-intr-cfg", &ext_intr_config_len);
+
+    if (ext_intr_config) {
+        printf("AIC: Configuring %d external interrupts\n", ext_intr_config_len / 3);
+        for (u32 i = 0; i < ext_intr_config_len; i += 3) {
+            u8 die = ext_intr_config[i + 1] >> 4;
+            u16 irq = ext_intr_config[i] | ((ext_intr_config[i + 1] & 0xf) << 8);
+            u8 target = ext_intr_config[i + 2];
+            assert(die < aic->nr_die);
+            assert(irq < aic->nr_irq);
+            mask32(aic->base + aic->regs.config + die * aic->die_stride + 4 * irq,
+                   AIC2_IRQ_CFG_TARGET, FIELD_PREP(AIC2_IRQ_CFG_TARGET, target));
+        }
+    }
+}
 
 static int aic2_init(int node)
 {
@@ -80,22 +106,82 @@ static int aic2_init(int node)
     printf("AIC: AIC2 with %u/%u dies, %u/%u IRQs, reg_size:%05lx die_stride:%05x\n", aic->nr_die,
            aic->max_die, aic->nr_irq, aic->max_irq, aic->regs.reg_size, aic->die_stride);
 
-    u32 ext_intr_config_len;
-    const u8 *ext_intr_config = adt_getprop(adt, node, "aic-ext-intr-cfg", &ext_intr_config_len);
+    aic_ext_int_cfg(node);
+    return 0;
+}
 
-    if (ext_intr_config) {
-        printf("AIC: Configuring %d external interrupts\n", ext_intr_config_len / 3);
-        for (u32 i = 0; i < ext_intr_config_len; i += 3) {
-            u8 die = ext_intr_config[i + 1] >> 4;
-            u16 irq = ext_intr_config[i] | ((ext_intr_config[i + 1] & 0xf) << 8);
-            u8 target = ext_intr_config[i + 2];
-            assert(die < aic->nr_die);
-            assert(irq < aic->nr_irq);
-            mask32(aic->base + aic->regs.config + die * aic->die_stride + 4 * irq,
-                   AIC2_IRQ_CFG_TARGET, FIELD_PREP(AIC2_IRQ_CFG_TARGET, target));
-        }
+static int aic3_init(int node)
+{
+    int ret = ADT_GETPROP(adt, node, "aic-iack-offset", &aic->regs.event);
+    if (ret < 0) {
+        printf("AIC: failed to get property aic-iack-offset\n");
+        return ret;
     }
 
+    int maxnumirq_offset;
+    ret = ADT_GETPROP(adt, node, "maxnumirq-offset", &maxnumirq_offset);
+    if (ret < 0) {
+        printf("AIC: AIC3: failed to get property maxnumirq-offset\n");
+        return ret;
+    }
+
+    int max_irq_interrupt_umask = 0;
+    ADT_GETPROP(adt, node, "max_irq_interrupt_umask", &max_irq_interrupt_umask);
+    if (max_irq_interrupt_umask == 0) {
+        max_irq_interrupt_umask = 0xffff;
+    }
+
+    int maxnumirq = read32(aic->base + maxnumirq_offset);
+
+    aic->max_irq = maxnumirq & max_irq_interrupt_umask;
+    aic->max_die = (maxnumirq >> 0x18) & 0xf;
+
+    int cap0_offset;
+    ret = ADT_GETPROP(adt, node, "cap0-offset", &cap0_offset);
+    if (ret < 0) {
+        printf("AIC: AIC3: failed to get property cap0-offset\n");
+        return ret;
+    }
+
+    int cap0_max_interrupt_mask = 0;
+    ADT_GETPROP(adt, node, "cap0_max_interrupt_umask", &cap0_max_interrupt_mask);
+    if (cap0_max_interrupt_mask == 0) {
+        cap0_max_interrupt_mask = 0xffff;
+    }
+
+    int cap0 = read32(aic->base + cap0_offset);
+
+    aic->nr_irq = cap0 & cap0_max_interrupt_mask;
+    aic->nr_die = ((cap0 >> 0x18) & 0xf) + 1;
+
+    if (aic->max_die > AIC3_MAX_MAX_DIES) {
+        printf("AIC: AIC3: more max dies than supported: %u\n", aic->max_die);
+        return -1;
+    }
+
+    if (aic->max_irq > AIC_MAX_HW_NUM) {
+        printf("AIC: AIC3: more IRQs than supported: %u\n", aic->max_irq);
+        return -1;
+    }
+
+    const u64 start_off = aic->regs.config;
+    u64 off = start_off + AIC3_EXT_CFG_SECT_STRIDE; /* IRQ_CFG */
+
+    aic->regs.sw_set = off;
+    off += AIC3_CFG_SECT_STRIDE; /* SW_SET */
+    aic->regs.sw_clr = off;
+    off += AIC3_CFG_SECT_STRIDE; /* SW_CLR */
+    aic->regs.mask_set = off;
+    off += AIC3_CFG_SECT_STRIDE; /* MASK_SET */
+    aic->regs.mask_clr = off;
+
+    aic->die_stride = AIC3_DIE_STRIDE;
+    aic->regs.reg_size = aic->regs.event + 4;
+
+    printf("AIC: AIC3 with %u/%u dies, %u/%u IRQs, reg_size:%05lx die_stride:%05x\n", aic->nr_die,
+           aic->max_die, aic->nr_irq, aic->max_irq, aic->regs.reg_size, aic->die_stride);
+
+    aic_ext_int_cfg(node);
     return 0;
 }
 
@@ -113,6 +199,8 @@ void aic_init(void)
         aic = &aic1;
     } else if (adt_is_compatible(adt, node, "aic,2")) {
         aic = &aic2;
+    } else if (adt_is_compatible(adt, node, "aic,3")) {
+        aic = &aic3;
     } else {
         printf("AIC: Error: Unsupported version\n");
         return;
@@ -130,6 +218,11 @@ void aic_init(void)
     } else if (aic->version == 2) {
         printf("AIC: Version 2 @ 0x%lx\n", aic->base);
         int ret = aic2_init(node);
+        if (ret < 0)
+            aic = NULL;
+    } else if (aic->version == 3) {
+        printf("AIC: Version 3 @ 0x%lx\n", aic->base);
+        int ret = aic3_init(node);
         if (ret < 0)
             aic = NULL;
     }

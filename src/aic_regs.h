@@ -51,3 +51,9 @@
 
 #define AIC1_MAX_IRQ   0x400
 #define AIC_MAX_HW_NUM (0x80 * 32) // max_irq of the M1 Max
+
+// Apple Interrupt Controller 3
+#define AIC3_IRQ_CFG 0x10000
+#define AIC3_DIE_STRIDE 0x4a00
+#define AIC3_EXT_CFG_SECT_STRIDE 0x4000
+#define AIC3_CFG_SECT_STRIDE 0x200
