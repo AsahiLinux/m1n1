@@ -407,6 +407,7 @@ int display_configure(const char *config)
         if (display_needs_power_cycle) {
             if ((ret = dcp_ib_set_power(iboot, false)) < 0)
                 printf("display: failed to set power off (continuing anyway)\n");
+            mdelay(100);
         }
         // Sonoma bug workaround: Power on internal panel early
         if ((ret = dcp_ib_set_power(iboot, true)) < 0)
@@ -599,6 +600,16 @@ int display_init(void)
     else
         disp_path = "/arm-io/disp0";
 
+    bool has_notch = false;
+    int product = adt_path_offset(adt, "/product");
+    if (product < 0) {
+        printf("/product node not found!\n");
+    } else {
+        u32 val = 0;
+        ADT_GETPROP(adt, product, "partially-occluded-display", &val);
+        has_notch = !!val;
+    }
+
     int node = adt_path_offset(adt, disp_path);
     if (node < 0) {
         printf("%s node not found!\n", disp_path);
@@ -623,7 +634,8 @@ int display_init(void)
         fb_clear_direct(); // Old m1n1 stage1 ends up with an ugly logo situation, clear it.
         return display_configure(NULL);
 #ifndef CHAINLOADING
-    } else if ((chip_id == T8103 || chip_id == T8112) && firmware_sfw_in_range(V15_0B1, FW_MAX)) {
+    } else if (!has_notch && firmware_sfw_in_range(V15_0B1, FW_MAX) &&
+               os_firmware.version < V15_0B1) {
         printf("display: Internal display on t8103 or t8112 with Sequoia SFW, power cycling\n");
         display_needs_power_cycle = true;
         return display_configure(NULL);
