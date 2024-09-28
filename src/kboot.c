@@ -418,6 +418,8 @@ static int dt_set_cpus(void)
     int aic = fdt_node_offset_by_compatible(dt, -1, "apple,aic");
     if (aic == -FDT_ERR_NOTFOUND)
         aic = fdt_node_offset_by_compatible(dt, -1, "apple,aic2");
+    if (aic == -FDT_ERR_NOTFOUND)
+        aic = fdt_node_offset_by_compatible(dt, -1, "apple,aic3");
     if (aic < 0)
         bail_cleanup("FDT: Failed to find AIC node\n");
 
@@ -2168,6 +2170,8 @@ static int dt_transfer_virtios(void)
     int aic = fdt_node_offset_by_compatible(dt, -1, "apple,aic");
     if (aic == -FDT_ERR_NOTFOUND)
         aic = fdt_node_offset_by_compatible(dt, -1, "apple,aic2");
+    if (aic == -FDT_ERR_NOTFOUND)
+        aic = fdt_node_offset_by_compatible(dt, -1, "apple,aic3");
     if (aic < 0)
         bail("FDT: failed to find AIC node\n");
 
