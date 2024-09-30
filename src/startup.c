@@ -193,8 +193,10 @@ void _cpu_reset_c(void *stack)
 
     exception_initialize();
 
-    if (in_el3())
+    if (in_el3()) {
+        smp_secondary_prep_el3();
         return;
+    }
 
     if (!is_boot_cpu())
         smp_secondary_entry();

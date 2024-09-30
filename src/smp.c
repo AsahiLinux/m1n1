@@ -107,6 +107,12 @@ void smp_secondary_entry(void)
     }
 }
 
+void smp_secondary_prep_el3(void)
+{
+    msr(TPIDR_EL3, target_cpu);
+    return;
+}
+
 static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u64 cpu_start_base)
 {
     int i;

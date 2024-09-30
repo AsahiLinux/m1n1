@@ -242,3 +242,9 @@ _el1_vectors_start:
     hvc 0x1e
     .align 7
     hvc 0x1f
+
+.globl el3_call
+.type el3_call, @function
+el3_call:
+    smc 42
+    ret
