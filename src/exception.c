@@ -281,6 +281,10 @@ void exc_sync(u64 *regs)
         // Monitor call
         u32 imm = mrs(ESR_EL3) & 0xffff;
         switch (imm) {
+            case 42:
+                regs[0] = ((uint64_t(*)(uint64_t, uint64_t, uint64_t, uint64_t))regs[0])(
+                    regs[1], regs[2], regs[3], regs[4]);
+                return;
             default:
                 printf("Unknown SMC: 0x%x\n", imm);
                 break;
