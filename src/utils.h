@@ -353,6 +353,11 @@ static inline int has_el3(void)
     return !!(mrs(ID_AA64PFR0_EL1) & 0xf000);
 }
 
+static inline int has_el2(void)
+{
+    return !!(mrs(ID_AA64PFR0_EL1) & 0xf00);
+}
+
 static inline bool is_16k(void)
 {
     return ((mrs(ID_AA64MMFR0_EL1) >> 20) & 0xf) == 0x1;
