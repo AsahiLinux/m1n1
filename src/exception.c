@@ -246,7 +246,11 @@ void exc_sync(u64 *regs)
     if ((spsr & 0xf) == 0 && ((esr >> 26) & 0x3f) == 0x3c) {
         // On clean EL0 return, let the normal exception return
         // path take us back to the return thunk.
-        msr(SPSR_EL1, 0x09); // EL2h
+        if (has_el2())
+            msr(SPSR_EL1, 0x09); // EL2h
+        else
+            msr(SPSR_EL1, 0x05); // EL1h
+
         msr(ELR_EL1, el0_ret);
         return;
     }
