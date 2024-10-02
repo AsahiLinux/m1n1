@@ -246,6 +246,47 @@ DAPFT8110C = Struct(
     "pad" / Array(3, Hex(Int8ul)),
 )
 
+SIODMAShimData = Struct(
+    "name" / FourCC,
+    "base" / Hex(Int64ul),
+    "length" / Hex(Int64ul),
+    "unk1" / Hex(Int32ul),
+    "unk2" / Hex(Int32ul),
+    "unk3" / Hex(Int32ul),
+    "stride" / Hex(Int32ul),
+)
+
+SIOMapRange = Struct(
+    "unk1" / FourCC,
+    "addr" / Hex(Int64ul),
+    "len" / Hex(Int64ul),
+)
+
+SIODeviceType = Struct(
+    "id" / FourCC,
+    "count" / Int32ul,
+    "unk2" / Hex(Int32ul),
+)
+
+ASCSegmentRange = Struct(
+    "pa" / Hex(Int64ul),
+    "unk" / Hex(Int64ul),
+    "iova" / Hex(Int64ul),
+    "size" / Hex(Int32ul),
+    "flags" / Hex(Int32ul),
+)
+
+DMAChannelsData = Struct(
+    "channo" / Hex(Int32ul),
+    "datashape" / Hex(Int32ul),
+    "timeout" / Hex(Int32ul),
+    "limit" / Hex(Int32ul),
+    "threshold" / Hex(Int32ul),
+    "unk1" / Hex(Int32ul),
+    "unk2" / Hex(Int32ul),
+    "unk3" / Hex(Int32ul),
+)
+
 DEV_PROPERTIES = {
     "pmgr": {
         "*": {
@@ -341,6 +382,13 @@ DEV_PROPERTIES = {
     "apcie*": {
         "*": {
             "apcie-*-tunables": GreedyRange(TunableLocal),
+        }
+    },
+    "sio": {
+        "*": {
+            "map-range": SIOMapRange,
+            "device-type": SafeGreedyRange(SIODeviceType),
+            "dmashim": SafeGreedyRange(SIODMAShimData),
         }
     },
 }
@@ -439,6 +487,12 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
         # "interrupt-parent" has "interrupt-cells" = 2
         # parsing this correctly would require a second pass
         t = Array(len(v) // 4, Int32ul)
+
+    elif name == "dma-channels":
+        t = SafeGreedyRange(DMAChannelsData)
+
+    elif name == "segment-ranges":
+        t = SafeGreedyRange(ASCSegmentRange)
 
     if t is not None:
         v = Sequence(t, Terminated).parse(v)[0]
