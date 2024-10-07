@@ -179,8 +179,9 @@ static void smp_stop_cpu(int index, int die, int cluster, int core, u64 impl, u6
     // Request CPU stop
     write32(cpu_start_base + 0x0, 1 << (4 * cluster + core));
 
+    u64 dsleep = deep_sleep;
     // Put the CPU to sleep
-    smp_call1(index, cpu_sleep, deep_sleep);
+    smp_call2(index, cpu_sleep, dsleep, cpufeat_global_sleep);
 
     // If going into deep sleep, powering off the last core in a cluster kills our register
     // access, so just wait a bit.

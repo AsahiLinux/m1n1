@@ -70,6 +70,7 @@ void init_t6031_sawtooth(void);
 void init_t6031_everest(int rev);
 
 bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
+bool cpufeat_global_sleep;
 
 const char *init_cpu(void)
 {
@@ -240,6 +241,12 @@ const char *init_cpu(void)
 
     if (part >= MIDR_PART_T8015_MONSOON)
         cpufeat_fast_ipi = true;
+
+    if (part >= MIDR_PART_T8010_2_HURRICANE)
+        cpufeat_global_sleep = true;
+    else
+        /* Disable deep sleep */
+        reg_clr(SYS_IMP_APL_ACC_CFG, ACC_CFG_DEEP_SLEEP);
 
     /* Unmask external IRQs, set WFI mode to up (2) */
     reg_mask(SYS_IMP_APL_CYC_OVRD,
