@@ -6,6 +6,7 @@
 #include "aic_regs.h"
 #include "cpu_regs.h"
 #include "malloc.h"
+#include "memory.h"
 #include "pmgr.h"
 #include "soc.h"
 #include "string.h"
@@ -129,10 +130,14 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
         secondary_stacks_el3[index] = memalign(0x4000, SECONDARY_STACK_SIZE);
         _reset_stack = secondary_stacks_el3[index] + SECONDARY_STACK_SIZE; // EL3
         _reset_stack_el1 = secondary_stacks[index] + SECONDARY_STACK_SIZE; // EL1
+
+        dc_civac_range(&_reset_stack_el1, sizeof(void *));
     } else
         _reset_stack = secondary_stacks[index] + SECONDARY_STACK_SIZE;
 
-    sysop("dmb sy");
+    dc_civac_range(&_reset_stack, sizeof(void *));
+
+    sysop("dsb sy");
 
     write64(impl, (u64)_vectors_start);
 
