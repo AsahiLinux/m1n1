@@ -130,11 +130,15 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
         _reset_stack = secondary_stacks_el3[index] + SECONDARY_STACK_SIZE; // EL3
         _reset_stack_el1 = secondary_stacks[index] + SECONDARY_STACK_SIZE; // EL1
 
+        dc_civac_portable(&_reset_stack_el1);
+
         printf("EL1 stack: %p\nEL3 stack: %p\n", _reset_stack_el1, _reset_stack);
     } else
         _reset_stack = secondary_stacks[index] + SECONDARY_STACK_SIZE;
 
-    sysop("dmb sy");
+    dc_civac_portable(&_reset_stack);
+
+    sysop("dsb sy");
 
     write64(impl, (u64)_vectors_start);
 

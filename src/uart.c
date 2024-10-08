@@ -17,11 +17,11 @@ static u64 uart_base = 0;
 int uart_init(void)
 {
     int path[8];
-    const char* uart_path;
+    const char *uart_path;
 
     if (adt_path_offset_trace(adt, "/arm-io/uart6/debug-console", NULL) > 0) {
         uart_path = "/arm-io/uart6";
-    /* T2 ADT does not have /arm-io/uart0/debug-console, but it is the correct UART */
+        /* T2 ADT does not have /arm-io/uart0/debug-console, but it is the correct UART */
     } else if (adt_path_offset_trace(adt, "/arm-io/uart0", NULL) > 0) {
         uart_path = "/arm-io/uart0";
     } else {

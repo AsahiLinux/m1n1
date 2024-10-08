@@ -202,6 +202,27 @@ bool supports_pan(void)
     return (mrs(ID_AA64MMFR1_EL1) >> 20) & 0xf;
 }
 
+/*
+ * Portable DC CIVAC
+ * From xnu src:
+ * "It may be tempting to clean the cache (dc cvac), "
+ * "but see Cyclone UM 5.3.8.3 -- it's always a NOP on Cyclone."
+ *
+ * "Clean & Invalidate, however, will work as long as HID4.DisDCMvaOps isn't set."
+ */
+void dc_civac_portable(void *addr)
+{
+    if (cpufeat_workaround_cyclone_dc_civac) {
+        reg_clr(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA);
+        sysop("isb");
+    }
+    dc_civac(addr);
+    if (cpufeat_workaround_cyclone_dc_civac) {
+        reg_set(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA);
+        sysop("isb");
+    }
+}
+
 // TODO: update mapping?
 u64 top_of_memory_alloc(size_t size)
 {

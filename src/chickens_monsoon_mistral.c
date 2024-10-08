@@ -6,7 +6,8 @@
 static void init_t8015_common(void)
 {
     // "Disable refcount syncing between E and P"
-    reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_DSBL_SNOOP_TIME_MASK, CYC_OVRD_DSBL_SNOOP_TIME_VALUE(2));
+    reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_DSBL_SNOOP_TIME_MASK,
+             CYC_OVRD_DSBL_SNOOP_TIME_VALUE(2));
 
     // "WKdm write ack lost when bif_wke_colorWrAck_XXaH asserts concurrently for both colors"
     reg_set(SYS_IMP_APL_HID8, WKE_FORCE_STRICT_ORDER);
