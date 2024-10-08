@@ -19,11 +19,19 @@
 #define CACHE_RANGE_OP(func, op)                                                                   \
     void func(void *addr, size_t length)                                                           \
     {                                                                                              \
+        if (func == dc_civac_range && cpufeat_workaround_cyclone_cache) {                          \
+            reg_clr(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA);                                        \
+            sysop("isb");                                                                          \
+        }                                                                                          \
         u64 p = (u64)addr;                                                                         \
         u64 end = p + length;                                                                      \
         while (p < end) {                                                                          \
             cacheop(op, p);                                                                        \
             p += CACHE_LINE_SIZE;                                                                  \
+        }                                                                                          \
+        if (func == dc_civac_range && cpufeat_workaround_cyclone_cache) {                          \
+            reg_set(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA);                                        \
+            sysop("isb");                                                                          \
         }                                                                                          \
     }
 
