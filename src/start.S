@@ -95,11 +95,27 @@ _start:
     bl debug_putc
     mov w0, '\n'
     bl debug_putc
+    bl pan_fixup
+
+    mrs x8, CurrentEL
+    cmp x8, #0xc
+    beq start_el3
 
     mov x0, x19
     mov x1, x20
     bl _start_c
     b .
+
+start_el3:
+    bl exception_initialize
+    adrp x8, _stack_bot_el3
+    mov sp, x8
+    mov x0, x19
+    mov x1, x20
+    msr tpidr_el3, xzr
+    adrp x6, _stack_bot
+    adr x7, _start_c
+    b el3_eret_to_el1
 
 .globl exc_unk
 .type exc_unk, @function
@@ -145,8 +161,37 @@ cpu_reset:
     bl debug_putc
 
     mov x0, sp
+
+    mrs x8, CurrentEL
+    cmp x8, #0xc
+    beq cpu_reset_el3
+
     bl _cpu_reset_c
     b .
+
+cpu_reset_el3:
+    bl _cpu_reset_c
+    adrp x6, _reset_stack_el1
+    add x6, x6, :lo12:_reset_stack_el1
+    ldr x6, [x6]
+    mov x0, x6
+    adr x7, _cpu_reset_c
+
+el3_eret_to_el1:
+    adr x8, _vectors_start
+    msr sctlr_el1, xzr
+
+    mrs x8, scr_el3
+    orr x8, x8, #(1<<10) // EL1 execution state is AArch64
+    orr x8, x8, #(1<<0)  // EL1 is non-secure
+    msr scr_el3, x8
+    msr elr_el3, x7 // Set EL1 entry point
+    mov x8, #0x5 // EL1h
+    msr spsr_el3, x8
+
+    msr sp_el1, x6 // Set EL1 stack pointer
+
+    eret
 
 .globl debug_putc
 .type debug_putc, @function
@@ -165,6 +210,9 @@ debug_putc:
 .globl reboot
 .type reboot, @function
 reboot:
+    mrs x8, id_aa64pfr0_el1
+    tst w8, 0xf00
+    beq 1f
     mrs x0, CurrentEL
     cmp x0, #8
     beq 1f

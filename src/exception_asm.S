@@ -101,12 +101,17 @@ _exc_return:
 el0_call:
     str x30, [sp, #-16]!
 
+    mrs x5, CurrentEL
+    cmp x5, #4
+    beq 1f
+
     // Disable EL1
     mrs x5, hcr_el2
     orr x5, x5, #(1 << 27)
     msr hcr_el2, x5
     isb
 
+    1:
     mrs x5, daif
     msr daifclr, 3
     msr spsr_el1, x5
@@ -149,6 +154,10 @@ el0_ret:
 el1_call:
     str x30, [sp, #-16]!
 
+    mrs x5, CurrentEL
+    cmp x5, #4
+    beq _el1_thunk
+
     // Enable EL1, but only if not already done.
     // this check is here because writes to hcr_el2 are only possible from GL2
     // if that mode has been enabled
@@ -182,6 +191,10 @@ _el1_thunk:
     mov x3, x4
 
     blr x5
+
+    mrs x5, CurrentEL
+    cmp x5, #4
+    beq el1_ret
 
     hvc 0
     .long 0
@@ -229,3 +242,9 @@ _el1_vectors_start:
     hvc 0x1e
     .align 7
     hvc 0x1f
+
+.globl el3_call
+.type el3_call, @function
+el3_call:
+    smc 42
+    ret

@@ -2,6 +2,8 @@
 
 #include "smp.h"
 #include "adt.h"
+#include "aic.h"
+#include "aic_regs.h"
 #include "cpu_regs.h"
 #include "malloc.h"
 #include "pmgr.h"
@@ -10,10 +12,12 @@
 #include "types.h"
 #include "utils.h"
 
-#define CPU_START_OFF_T8103 0x54000
-#define CPU_START_OFF_T8112 0x34000
-#define CPU_START_OFF_T6020 0x28000
-#define CPU_START_OFF_T6031 0x88000
+#define CPU_START_OFF_S5L8960X 0x30000
+#define CPU_START_OFF_S8000    0xd4000
+#define CPU_START_OFF_T8103    0x54000
+#define CPU_START_OFF_T8112    0x34000
+#define CPU_START_OFF_T6020    0x28000
+#define CPU_START_OFF_T6031    0x88000
 
 #define CPU_REG_CORE    GENMASK(7, 0)
 #define CPU_REG_CLUSTER GENMASK(10, 8)
@@ -28,11 +32,14 @@ struct spin_table {
 };
 
 void *_reset_stack;
+void *_reset_stack_el1;
 
 #define DUMMY_STACK_SIZE 0x1000
-u8 dummy_stack[DUMMY_STACK_SIZE];
+u8 dummy_stack[DUMMY_STACK_SIZE];     // Highest EL
+u8 dummy_stack_el1[DUMMY_STACK_SIZE]; // EL1 stack if EL3 exists
 
 u8 *secondary_stacks[MAX_CPUS] = {dummy_stack};
+u8 *secondary_stacks_el3[MAX_EL3_CPUS];
 
 static bool wfe_mode = false;
 
@@ -63,14 +70,28 @@ void smp_secondary_entry(void)
     me->flag = 1;
     sysop("dmb sy");
     u64 target;
+    if (!cpufeat_fast_ipi)
+        aic_write(AIC_IPI_MASK_SET, AIC_IPI_SELF); // we only use the "other" IPI
 
     while (1) {
         while (!(target = me->target)) {
             if (wfe_mode) {
                 sysop("wfe");
             } else {
-                deep_wfi();
-                msr(SYS_IMP_APL_IPI_SR_EL1, 1);
+                if (!supports_arch_retention()) {
+                    // A7 - A11 does not support state retention across deep WFI
+                    // i.e. CPU always ends up at rvbar after deep WFI
+                    sysop("wfi");
+                } else {
+                    deep_wfi();
+                }
+                if (cpufeat_fast_ipi) {
+                    msr(SYS_IMP_APL_IPI_SR_EL1, 1);
+                } else {
+                    aic_ack(); // Actually read IPI reason
+                    aic_write(AIC_IPI_ACK, AIC_IPI_OTHER);
+                    aic_write(AIC_IPI_MASK_CLR, AIC_IPI_OTHER);
+                }
             }
             sysop("isb");
         }
@@ -85,11 +106,20 @@ void smp_secondary_entry(void)
     }
 }
 
+void smp_secondary_prep_el3(void)
+{
+    msr(TPIDR_EL3, target_cpu);
+    return;
+}
+
 static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u64 cpu_start_base)
 {
     int i;
 
     if (index >= MAX_CPUS)
+        return;
+
+    if (has_el3() && index >= MAX_EL3_CPUS)
         return;
 
     if (spin_table[index].flag)
@@ -101,9 +131,20 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
 
     target_cpu = index;
     secondary_stacks[index] = memalign(0x4000, SECONDARY_STACK_SIZE);
-    _reset_stack = secondary_stacks[index] + SECONDARY_STACK_SIZE;
+    if (has_el3()) {
+        secondary_stacks_el3[index] = memalign(0x4000, SECONDARY_STACK_SIZE);
+        _reset_stack = secondary_stacks_el3[index] + SECONDARY_STACK_SIZE; // EL3
+        _reset_stack_el1 = secondary_stacks[index] + SECONDARY_STACK_SIZE; // EL1
 
-    sysop("dmb sy");
+        dc_civac_portable(&_reset_stack_el1);
+
+        printf("EL1 stack: %p\nEL3 stack: %p\n", _reset_stack_el1, _reset_stack);
+    } else
+        _reset_stack = secondary_stacks[index] + SECONDARY_STACK_SIZE;
+
+    dc_civac_portable(&_reset_stack);
+
+    sysop("dsb sy");
 
     write64(impl, (u64)_vectors_start);
 
@@ -129,6 +170,7 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
         printf("  Started.\n");
 
     _reset_stack = dummy_stack + DUMMY_STACK_SIZE;
+    _reset_stack_el1 = dummy_stack_el1 + DUMMY_STACK_SIZE;
 }
 
 static void smp_stop_cpu(int index, int die, int cluster, int core, u64 impl, u64 cpu_start_base,
@@ -149,8 +191,9 @@ static void smp_stop_cpu(int index, int die, int cluster, int core, u64 impl, u6
     // Request CPU stop
     write32(cpu_start_base + 0x0, 1 << (4 * cluster + core));
 
+    u64 dsleep = deep_sleep;
     // Put the CPU to sleep
-    smp_call1(index, cpu_sleep, deep_sleep);
+    smp_call2(index, cpu_sleep, dsleep, cpufeat_global_sleep);
 
     // If going into deep sleep, powering off the last core in a cluster kills our register
     // access, so just wait a bit.
@@ -193,6 +236,12 @@ void smp_start_secondaries(void)
         return;
     }
 
+    int arm_io_node;
+    if ((arm_io_node = adt_path_offset(adt, "/arm-io")) < 0) {
+        printf("Error getting /arm-io node\n");
+        return;
+    }
+
     int node = adt_path_offset(adt, "/cpus");
     if (node < 0) {
         printf("Error getting /cpus node\n");
@@ -202,6 +251,20 @@ void smp_start_secondaries(void)
     memset(cpu_nodes, 0, sizeof(cpu_nodes));
 
     switch (chip_id) {
+        case S5L8960X:
+        case T7000:
+        case T7001:
+            cpu_start_off = CPU_START_OFF_S5L8960X;
+            break;
+        case S8000:
+        case S8001:
+        case S8003:
+        case T8010:
+        case T8011:
+        case T8012:
+        case T8015:
+            cpu_start_off = CPU_START_OFF_S8000;
+            break;
         case T8103:
         case T6000:
         case T6001:
@@ -231,7 +294,9 @@ void smp_start_secondaries(void)
         u32 cpu_id;
 
         if (ADT_GETPROP(adt, node, "cpu-id", &cpu_id) < 0)
-            continue;
+            if (ADT_GETPROP(adt, node, "reg", &cpu_id) < 0)
+                continue;
+
         if (cpu_id >= MAX_CPUS) {
             printf("cpu-id %d exceeds max CPU count %d: increase MAX_CPUS\n", cpu_id, MAX_CPUS);
             continue;
@@ -267,9 +332,6 @@ void smp_start_secondaries(void)
     }
 
     for (int i = 0; i < MAX_CPUS; i++) {
-
-        if (i == boot_cpu_idx)
-            continue;
         int cpu_node = cpu_nodes[i];
 
         if (!cpu_node)
@@ -279,8 +341,28 @@ void smp_start_secondaries(void)
         u64 cpu_impl_reg[2];
         if (ADT_GETPROP(adt, cpu_node, "reg", &reg) < 0)
             continue;
-        if (ADT_GETPROP_ARRAY(adt, cpu_node, "cpu-impl-reg", cpu_impl_reg) < 0)
+        if (ADT_GETPROP_ARRAY(adt, cpu_node, "cpu-impl-reg", cpu_impl_reg) < 0) {
+            u32 reg_len;
+            const u64 *regs = adt_getprop(adt, arm_io_node, "reg", &reg_len);
+            if (!regs)
+                continue;
+            u32 index = 2 * i + 2;
+            if (reg_len < index)
+                continue;
+            memcpy(cpu_impl_reg, &regs[index], 16);
+        }
+
+        if (i == boot_cpu_idx) {
+            // Check if already locked
+            if (read64(cpu_impl_reg[0]) & 1)
+                continue;
+
+            // Unlocked, write _vectors_start into boot CPU's rvbar
+            write64(cpu_impl_reg[0], (u64)_vectors_start);
+            sysop("dmb sy");
+
             continue;
+        }
 
         u8 core = FIELD_GET(CPU_REG_CORE, reg);
         u8 cluster = FIELD_GET(CPU_REG_CLUSTER, reg);
@@ -295,6 +377,11 @@ void smp_start_secondaries(void)
 void smp_stop_secondaries(bool deep_sleep)
 {
     printf("Stopping secondary CPUs...\n");
+    int arm_io_node;
+    if ((arm_io_node = adt_path_offset(adt, "/arm-io")) < 0) {
+        printf("Error getting /arm-io node\n");
+        return;
+    }
     smp_set_wfe_mode(true);
 
     for (int i = 0; i < MAX_CPUS; i++) {
@@ -307,8 +394,16 @@ void smp_stop_secondaries(bool deep_sleep)
         u64 cpu_impl_reg[2];
         if (ADT_GETPROP(adt, node, "reg", &reg) < 0)
             continue;
-        if (ADT_GETPROP_ARRAY(adt, node, "cpu-impl-reg", cpu_impl_reg) < 0)
-            continue;
+        if (ADT_GETPROP_ARRAY(adt, node, "cpu-impl-reg", cpu_impl_reg) < 0) {
+            u32 reg_len;
+            const u64 *regs = adt_getprop(adt, arm_io_node, "reg", &reg_len);
+            if (!regs)
+                continue;
+            u32 index = 2 * i + 2;
+            if (reg_len < index)
+                continue;
+            memcpy(cpu_impl_reg, &regs[index], 16);
+        }
 
         u8 core = FIELD_GET(CPU_REG_CORE, reg);
         u8 cluster = FIELD_GET(CPU_REG_CLUSTER, reg);
@@ -324,7 +419,11 @@ void smp_send_ipi(int cpu)
         return;
 
     u64 mpidr = spin_table[cpu].mpidr;
-    msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, (mpidr & 0xff) | ((mpidr & 0xff00) << 8));
+    if (cpufeat_fast_ipi) {
+        msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, (mpidr & 0xff) | ((mpidr & 0xff00) << 8));
+    } else {
+        aic_write(AIC_IPI_SEND, AIC_IPI_SEND_CPU(cpu));
+    }
 }
 
 void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)

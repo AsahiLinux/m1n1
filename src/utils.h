@@ -3,6 +3,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include "cpu_regs.h"
+#include "soc.h"
 #include "types.h"
 
 #define printf(...) debug_printf(__VA_ARGS__)
@@ -324,9 +326,16 @@ static inline void write64_lo_hi(u64 addr, u64 val)
 #define dma_rmb() sysop("dmb oshld")
 #define dma_wmb() sysop("dmb oshst")
 
+extern u32 board_id, chip_id;
+static inline bool has_ecores(void)
+{
+    return !(chip_id == S5L8960X || chip_id == T7000 || chip_id == T7001 || chip_id == S8000 ||
+             chip_id == S8001 || chip_id == S8003);
+}
+
 static inline int is_ecore(void)
 {
-    return !(mrs(MPIDR_EL1) & (1 << 16));
+    return has_ecores() && !(mrs(MPIDR_EL1) & (1 << 16));
 }
 
 static inline int in_el2(void)
@@ -334,11 +343,36 @@ static inline int in_el2(void)
     return (mrs(CurrentEL) >> 2) == 2;
 }
 
+static inline int in_el3(void)
+{
+    return (mrs(CurrentEL) >> 2) == 3;
+}
+
+static inline int has_el3(void)
+{
+    return !!(mrs(ID_AA64PFR0_EL1) & 0xf000);
+}
+
+static inline int has_el2(void)
+{
+    return !!(mrs(ID_AA64PFR0_EL1) & 0xf00);
+}
+
+static inline bool is_16k(void)
+{
+    return ((mrs(ID_AA64MMFR0_EL1) >> 20) & 0xf) == 0x1;
+}
+
 extern int boot_cpu_idx;
 extern u64 boot_cpu_mpidr;
 static inline int is_boot_cpu(void)
 {
     return boot_cpu_idx == -1 || boot_cpu_mpidr == mrs(MPIDR_EL1);
+}
+
+static inline size_t get_page_size(void)
+{
+    return is_16k() ? 16384 : 4096;
 }
 
 extern char _base[];
@@ -429,14 +463,22 @@ struct vector_args {
 };
 
 extern u32 board_id, chip_id;
-extern bool cpufeat_actlr_el2;
+
+extern bool is_mac, has_dcp;
+extern bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
+extern bool cpufeat_global_sleep, cpufeat_workaround_cyclone_dc_civac;
 
 extern struct vector_args next_stage;
+extern u64 boot_flags, mem_size_actual;
 
 void cpu_sleep(bool deep) __attribute__((noreturn));
 void deep_wfi(void);
+void dc_civac_portable(void *addr);
 
 bool is_heap(void *addr);
+bool supports_arch_retention(void);
+bool supports_gxf(void);
+bool supports_pan(void);
 u64 top_of_memory_alloc(size_t size);
 
 #endif

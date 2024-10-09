@@ -4,6 +4,7 @@ ENTRY(_start)
 _va_base = 0xFFFFFE0007004000;
 
 _stack_size = 0x20000;
+_stack_size_el3 = 0x8000;
 
 _max_payload_size = 64*1024*1024;
 
@@ -176,6 +177,10 @@ SECTIONS {
         *(COMMON)
         . = ALIGN(0x4000);
         _bss_end = .;
+        PROVIDE(_stack_top_el3 = .);
+        . += _stack_size_el3;
+        PROVIDE(_stack_bot_el3 = .);
+        . = ALIGN(0x4000);
         PROVIDE(_stack_top = .);
         . += _stack_size;
         PROVIDE(_stack_bot = .);

@@ -20,6 +20,8 @@
 
 // Target for device-specific debug builds
 //#define TARGET T8103
+// Some devices like Apple TV HD use other uarts for debug console
+//#define TARGET_BOARD 0x34
 
 #ifdef RELEASE
 # define FB_SILENT_MODE

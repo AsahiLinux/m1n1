@@ -4,11 +4,15 @@
 #include <stdarg.h>
 
 #include "utils.h"
+#include "cpu_regs.h"
 #include "iodev.h"
 #include "smp.h"
 #include "types.h"
+#include "utils.h"
 #include "vsprintf.h"
 #include "xnuboot.h"
+
+bool is_mac, has_dcp;
 
 static char ascii(char s)
 {
@@ -146,7 +150,7 @@ void spin_lock(spinlock_t *lock)
     __asm__ volatile("1:\n"
                      "mov\t%0, -1\n"
                      "2:\n"
-                     "\tcasa\t%0, %2, %1\n"
+                     "\tldaxr\t%0, %1\n"
                      "\tcmn\t%0, 1\n"
                      "\tbeq\t3f\n"
                      "\tldxr\t%0, %1\n"
@@ -155,6 +159,8 @@ void spin_lock(spinlock_t *lock)
                      "\twfe\n"
                      "\tb\t1b\n"
                      "3:"
+                     "\tstxr\t%w0, %2, %1\n"
+                     "\tcbnz\t%w0, 2b\n"
                      : "=&r"(tmp), "+m"(lock->lock)
                      : "r"(me)
                      : "cc", "memory");
@@ -179,6 +185,42 @@ bool is_heap(void *addr)
     u64 top_of_ram = cur_boot_args.mem_size + cur_boot_args.phys_base;
 
     return p > top_of_kernel_data && p < top_of_ram;
+}
+
+bool supports_arch_retention(void)
+{
+    return mrs(AIDR_EL1) & AIDR_EL1_ARCH_RETENTION;
+}
+
+bool supports_gxf(void)
+{
+    return mrs(AIDR_EL1) & AIDR_EL1_GXF;
+}
+
+bool supports_pan(void)
+{
+    return (mrs(ID_AA64MMFR1_EL1) >> 20) & 0xf;
+}
+
+/*
+ * Portable DC CIVAC
+ * From xnu src:
+ * "It may be tempting to clean the cache (dc cvac), "
+ * "but see Cyclone UM 5.3.8.3 -- it's always a NOP on Cyclone."
+ *
+ * "Clean & Invalidate, however, will work as long as HID4.DisDCMvaOps isn't set."
+ */
+void dc_civac_portable(void *addr)
+{
+    if (cpufeat_workaround_cyclone_dc_civac) {
+        reg_clr(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA);
+        sysop("isb");
+    }
+    dc_civac(addr);
+    if (cpufeat_workaround_cyclone_dc_civac) {
+        reg_set(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA);
+        sysop("isb");
+    }
 }
 
 // TODO: update mapping?

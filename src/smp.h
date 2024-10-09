@@ -6,12 +6,15 @@
 #include "types.h"
 #include "utils.h"
 
-#define MAX_CPUS 24
+#define MAX_CPUS     24
+#define MAX_EL3_CPUS 4
 
 #define SECONDARY_STACK_SIZE 0x10000
 extern u8 *secondary_stacks[MAX_CPUS];
+extern u8 *secondary_stacks_el3[MAX_EL3_CPUS];
 
 void smp_secondary_entry(void);
+void smp_secondary_prep_el3(void);
 
 void smp_start_secondaries(void);
 void smp_stop_secondaries(bool deep_sleep);
@@ -33,7 +36,9 @@ void smp_send_ipi(int cpu);
 
 static inline int smp_id(void)
 {
-    if (in_el2())
+    if (in_el3())
+        return mrs(TPIDR_EL3);
+    else if (in_el2())
         return mrs(TPIDR_EL2);
     else
         return mrs(TPIDR_EL1);

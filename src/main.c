@@ -39,9 +39,19 @@ u32 board_id = ~0, chip_id = ~0;
 
 void get_device_info(void)
 {
+    const char *model = (const char *)adt_getprop(adt, 0, "model", NULL);
+    const char *target = (const char *)adt_getprop(adt, 0, "target-type", NULL);
+
     printf("Device info:\n");
-    printf("  Model: %s\n", (const char *)adt_getprop(adt, 0, "model", NULL));
-    printf("  Target: %s\n", (const char *)adt_getprop(adt, 0, "target-type", NULL));
+
+    if (model)
+        printf("  Model: %s\n", model);
+
+    if (target)
+        printf("  Target: %s\n", target);
+
+    is_mac = !!strstr(model, "Mac");
+    has_dcp = adt_path_offset(adt, "/arm-io/dcp") > 0;
 
     int chosen = adt_path_offset(adt, "/chosen");
     if (chosen > 0) {
@@ -137,13 +147,13 @@ void m1n1_main(void)
 
     printf("Running in EL%lu\n\n", mrs(CurrentEL) >> 2);
 
-    get_device_info();
     firmware_init();
 
     heapblock_init();
 
 #ifndef BRINGUP
-    gxf_init();
+    if (supports_gxf())
+        gxf_init();
     mcc_init();
     mmu_init();
     aic_init();
@@ -151,13 +161,14 @@ void m1n1_main(void)
     wdt_disable();
 #ifndef BRINGUP
     pmgr_init();
-
 #ifdef USE_FB
     display_init();
     // Kick DCP to sleep, so dodgy monitors which cause reconnect cycles don't cause us to lose the
     // framebuffer.
-    display_shutdown(DCP_SLEEP_IF_EXTERNAL);
-    fb_init(false);
+    if (has_dcp)
+        display_shutdown(DCP_SLEEP_IF_EXTERNAL);
+    // On idevice we need to always clear, because otherwise it looks scuffed on white devices
+    fb_init(!is_mac);
     fb_display_logo();
 #ifdef FB_SILENT_MODE
     fb_set_active(!cur_boot_args.video.display);

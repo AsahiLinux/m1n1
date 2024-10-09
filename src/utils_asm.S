@@ -185,6 +185,8 @@ cpu_sleep:
     cmp x0, #0
     bne 1f
 
+    mov x4, x1
+
     mrs x1, SYS_IMP_APL_CYC_OVRD
     and x1, x1, #~CYC_OVRD_IRQ_MODE_MASK
     orr x1, x1, #CYC_OVRD_IRQ_MODE(2)
@@ -192,8 +194,10 @@ cpu_sleep:
     orr x1, x1, #CYC_OVRD_FIQ_MODE(2)
     msr SYS_IMP_APL_CYC_OVRD, x1
 1:
-
     cmp x0, #0
+    beq 3f
+
+    cmp x4, #0
     beq 2f
 
     mrs x1, SYS_IMP_APL_ACC_OVRD
@@ -205,14 +209,22 @@ cpu_sleep:
     orr x1, x1, #ACC_OVRD_DISABLE_PIO_ON_WFI_CPU
     orr x1, x1, #ACC_OVRD_DEEP_SLEEP
     msr SYS_IMP_APL_ACC_OVRD, x1
-2:
 
+    cmp x4, #0
+    bne 3f
+
+2:
+    mrs x1, SYS_IMP_APL_ACC_CFG
+    orr x1, x1, #ACC_CFG_DEEP_SLEEP
+    msr SYS_IMP_APL_ACC_CFG, x1
+
+3:
     mrs x1, SYS_IMP_APL_CYC_OVRD
     orr x1, x1, #CYC_OVRD_WFI_MODE(3)
     orr x1, x1, #CYC_OVRD_DISABLE_WFI_RET
     msr SYS_IMP_APL_CYC_OVRD, x1
 
-3:
+4:
     isb
     wfi
-    b 3b
+    b 4b

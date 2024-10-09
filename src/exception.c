@@ -30,6 +30,8 @@ static char *m_table[0x10] = {
     [0x05] = "EL1h", //
     [0x08] = "EL2t", //
     [0x09] = "EL2h", //
+    [0x0c] = "EL3t", //
+    [0x0d] = "EL3h", //
 };
 
 static char *gl_m_table[0x10] = {
@@ -114,6 +116,8 @@ static const char *get_exception_level(void)
             return "EL1";
         else if (lvl == 0x08)
             return "EL2";
+        else if (lvl == 0x0c)
+            return "EL3";
     }
 
     return "?";
@@ -121,7 +125,10 @@ static const char *get_exception_level(void)
 
 void exception_initialize(void)
 {
-    msr(VBAR_EL1, _vectors_start);
+    if (in_el3())
+        msr(VBAR_EL3, _vectors_start);
+    else
+        msr(VBAR_EL1, _vectors_start);
 
     // Clear FIQ sources
     msr(CNTP_CTL_EL0, 7L);
@@ -130,9 +137,11 @@ void exception_initialize(void)
         msr(CNTP_CTL_EL02, 7L);
         msr(CNTV_CTL_EL02, 7L);
     }
-    reg_clr(SYS_IMP_APL_PMCR0, PMCR0_IACT | PMCR0_IMODE_MASK);
-    reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
-    msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
+    if (cpufeat_fast_ipi) {
+        reg_clr(SYS_IMP_APL_PMCR0, PMCR0_IACT | PMCR0_IMODE_MASK);
+        reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
+        msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
+    }
 
     if (is_boot_cpu())
         msr(DAIF, 0 << 6); // Enable SError, IRQ and FIQ
@@ -168,8 +177,10 @@ void print_regs(u64 *regs, int el12)
     u64 sp = ((u64)(regs)) + 256;
 
     in_gl = in_gl12();
+    bool el3 = in_el3();
 
-    u64 spsr = in_gl ? mrs(SYS_IMP_APL_SPSR_GL1) : (el12 ? mrs(SPSR_EL12) : mrs(SPSR_EL1));
+    u64 spsr = in_gl ? mrs(SYS_IMP_APL_SPSR_GL1)
+                     : (el12 ? mrs(SPSR_EL12) : (el3 ? mrs(SPSR_EL3) : mrs(SPSR_EL1)));
 
     printf("Exception taken from %s\n", get_exception_source(spsr));
     printf("Running in %s\n", get_exception_level());
@@ -184,9 +195,12 @@ void print_regs(u64 *regs, int el12)
     printf("x24-x27: %016lx %016lx %016lx %016lx\n", regs[24], regs[25], regs[26], regs[27]);
     printf("x28-x30: %016lx %016lx %016lx\n", regs[28], regs[29], regs[30]);
 
-    u64 elr = in_gl ? mrs(SYS_IMP_APL_ELR_GL1) : (el12 ? mrs(ELR_EL12) : mrs(ELR_EL1));
-    u64 esr = in_gl ? mrs(SYS_IMP_APL_ESR_GL1) : (el12 ? mrs(ESR_EL12) : mrs(ESR_EL1));
-    u64 far = in_gl ? mrs(SYS_IMP_APL_FAR_GL1) : (el12 ? mrs(FAR_EL12) : mrs(FAR_EL1));
+    u64 elr = in_gl ? mrs(SYS_IMP_APL_ELR_GL1)
+                    : (el12 ? mrs(ELR_EL12) : (el3 ? mrs(ELR_EL3) : mrs(ELR_EL1)));
+    u64 esr = in_gl ? mrs(SYS_IMP_APL_ESR_GL1)
+                    : (el12 ? mrs(ESR_EL12) : (el3 ? mrs(ESR_EL3) : mrs(ESR_EL1)));
+    u64 far = in_gl ? mrs(SYS_IMP_APL_FAR_GL1)
+                    : (el12 ? mrs(FAR_EL12) : (el3 ? mrs(FAR_EL3) : mrs(FAR_EL1)));
 
     printf("PC:       0x%lx (rel: 0x%lx)\n", elr, elr - (u64)_base);
     printf("SP:       0x%lx\n", sp);
@@ -208,11 +222,13 @@ void print_regs(u64 *regs, int el12)
     if (is_ecore()) {
         printf("E_LSU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_E_LSU_ERR_STS));
         printf("E_FED_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_E_FED_ERR_STS));
-        printf("E_MMU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_E_MMU_ERR_STS));
+        if (cpufeat_fast_ipi)
+            printf("E_MMU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_E_MMU_ERR_STS));
     } else {
         printf("LSU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_LSU_ERR_STS));
         printf("FED_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_FED_ERR_STS));
-        printf("MMU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_MMU_ERR_STS));
+        if (cpufeat_fast_ipi)
+            printf("MMU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_MMU_ERR_STS));
     }
 }
 
@@ -221,15 +237,20 @@ void exc_sync(u64 *regs)
     u32 insn;
     int el12 = 0;
     bool in_gl = in_gl12();
+    bool el3 = in_el3();
 
-    u64 spsr = in_gl ? mrs(SYS_IMP_APL_SPSR_GL1) : mrs(SPSR_EL1);
-    u64 esr = in_gl ? mrs(SYS_IMP_APL_ESR_GL1) : mrs(ESR_EL1);
-    u64 elr = in_gl ? mrs(SYS_IMP_APL_ELR_GL1) : mrs(ELR_EL1);
+    u64 spsr = in_gl ? mrs(SYS_IMP_APL_SPSR_GL1) : (el3 ? mrs(SPSR_EL3) : mrs(SPSR_EL1));
+    u64 esr = in_gl ? mrs(SYS_IMP_APL_ESR_GL1) : (el3 ? mrs(ESR_EL3) : mrs(ESR_EL1));
+    u64 elr = in_gl ? mrs(SYS_IMP_APL_ELR_GL1) : (el3 ? mrs(ELR_EL3) : mrs(ELR_EL1));
 
     if ((spsr & 0xf) == 0 && ((esr >> 26) & 0x3f) == 0x3c) {
         // On clean EL0 return, let the normal exception return
         // path take us back to the return thunk.
-        msr(SPSR_EL1, 0x09); // EL2h
+        if (has_el2())
+            msr(SPSR_EL1, 0x09); // EL2h
+        else
+            msr(SPSR_EL1, 0x05); // EL1h
+
         msr(ELR_EL1, el0_ret);
         return;
     }
@@ -254,6 +275,18 @@ void exc_sync(u64 *regs)
                 break;
             default:
                 printf("Unknown HVC: 0x%x\n", imm);
+                break;
+        }
+    } else if (in_el3() && ((esr >> 26) & 0x3f) == 0x17) {
+        // Monitor call
+        u32 imm = mrs(ESR_EL3) & 0xffff;
+        switch (imm) {
+            case 42:
+                regs[0] = ((uint64_t(*)(uint64_t, uint64_t, uint64_t, uint64_t))regs[0])(
+                    regs[1], regs[2], regs[3], regs[4]);
+                return;
+            default:
+                printf("Unknown SMC: 0x%x\n", imm);
                 break;
         }
     } else {
@@ -297,6 +330,8 @@ void exc_sync(u64 *regs)
         printf("Recovering from exception (ELR=0x%lx)\n", elr);
     if (in_gl)
         msr(SYS_IMP_APL_ELR_GL1, elr);
+    if (el3)
+        msr(ELR_EL3, elr);
     else
         msr(ELR_EL1, elr);
 
@@ -357,15 +392,19 @@ void exc_fiq(u64 *regs)
         printf("  PMC IRQ, masking\n");
         reg_clr(SYS_IMP_APL_PMCR0, PMCR0_IACT | PMCR0_IMODE_MASK);
     }
-    reg = mrs(SYS_IMP_APL_UPMCR0);
-    if ((reg & UPMCR0_IMODE_MASK) == UPMCR0_IMODE_FIQ && (mrs(SYS_IMP_APL_UPMSR) & UPMSR_IACT)) {
-        printf("  UPMC IRQ, masking\n");
-        reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
-    }
 
-    if (mrs(SYS_IMP_APL_IPI_SR_EL1) & IPI_SR_PENDING) {
-        printf("  Fast IPI IRQ, clearing\n");
-        msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
+    if (cpufeat_fast_ipi) {
+        reg = mrs(SYS_IMP_APL_UPMCR0);
+        if ((reg & UPMCR0_IMODE_MASK) == UPMCR0_IMODE_FIQ &&
+            (mrs(SYS_IMP_APL_UPMSR) & UPMSR_IACT)) {
+            printf("  UPMC IRQ, masking\n");
+            reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
+        }
+
+        if (mrs(SYS_IMP_APL_IPI_SR_EL1) & IPI_SR_PENDING) {
+            printf("  Fast IPI IRQ, clearing\n");
+            msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
+        }
     }
 
     UNUSED(regs);
