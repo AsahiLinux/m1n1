@@ -21,6 +21,7 @@
     {"index": 0, "name": "EHID10_EL1",                  "fullname": "Hardware Implementation-Dependent Register 10 (E-core)",       "enc": [3, 0, 15, 10, 1 ], "width": 64},
     {"index": 0, "name": "HID11_EL1",                   "fullname": "Hardware Implementation-Dependent Register 11",                "enc": [3, 0, 15, 11, 0 ], "width": 64},
     {"index": 0, "name": "EHID11_EL1",                  "fullname": "Hardware Implementation-Dependent Register 11 (E-core)",       "enc": [3, 0, 15, 11, 1 ], "width": 64},
+    {"index": 0, "name": "HID12_EL1",                   "fullname": "Hardware Implementation-Dependent Register 12",                "enc": [3, 0, 15, 12, 0 ], "width": 64},
     {"index": 0, "name": "HID13_EL1",                   "fullname": "Hardware Implementation-Dependent Register 13",                "enc": [3, 0, 15, 14, 0 ], "width": 64},
     {"index": 0, "name": "HID14_EL1",                   "fullname": "Hardware Implementation-Dependent Register 14",                "enc": [3, 0, 15, 15, 0 ], "width": 64},
     {"index": 0, "name": "HID16_EL1",                   "fullname": "Hardware Implementation-Dependent Register 16",                "enc": [3, 0, 15, 15, 2 ], "width": 64},
