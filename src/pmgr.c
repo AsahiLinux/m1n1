@@ -21,14 +21,24 @@
 #define PMGR_FLAG_VIRTUAL 0x10
 
 struct pmgr_device {
-    u32 flags;
-    u16 parent[2];
-    u8 unk1[2];
+    u8 flags;
+    u16 unk1;
+    u8 id1;
+    union {
+        struct {
+            u8 parent[2];
+            u8 unk2[2];
+        } u8id;
+        struct {
+            u16 parent[2];
+        } u16id;
+    };
+    u8 unk3[2];
     u8 addr_offset;
     u8 psreg_idx;
-    u8 unk2[14];
-    u16 id;
-    u8 unk3[4];
+    u8 unk4[14];
+    u16 id2;
+    u8 unk5[4];
     const char name[0x10];
 } PACKED;
 
@@ -43,6 +53,8 @@ static u32 pmgr_ps_regs_len = 0;
 
 static const struct pmgr_device *pmgr_devices = NULL;
 static u32 pmgr_devices_len = 0;
+
+static bool pmgr_u8id = false;
 
 static uintptr_t pmgr_get_psreg(u8 idx)
 {
@@ -76,11 +88,19 @@ int pmgr_set_mode(uintptr_t addr, u8 target_mode)
     return 0;
 }
 
+static u16 pmgr_adt_get_id(const struct pmgr_device *device)
+{
+    if (pmgr_u8id)
+        return device->id1;
+    else
+        return device->id2;
+}
+
 static int pmgr_find_device(u16 id, const struct pmgr_device **device)
 {
     for (size_t i = 0; i < pmgr_devices_len; ++i) {
         const struct pmgr_device *i_device = &pmgr_devices[i];
-        if (i_device->id != id)
+        if (pmgr_adt_get_id(i_device) != id)
             continue;
 
         *device = i_device;
@@ -100,6 +120,17 @@ static uintptr_t pmgr_device_get_addr(u8 die, const struct pmgr_device *device)
 
     addr += (device->addr_offset << 3);
     return addr;
+}
+
+static void pmgr_adt_get_parents(const struct pmgr_device *device, u16 parent[2])
+{
+    if (pmgr_u8id) {
+        parent[0] = device->u8id.parent[0];
+        parent[1] = device->u8id.parent[1];
+    } else {
+        parent[0] = device->u16id.parent[0];
+        parent[1] = device->u16id.parent[1];
+    }
 }
 
 static int pmgr_set_mode_recursive(u8 die, u16 id, u8 target_mode, bool recurse)
@@ -127,9 +158,10 @@ static int pmgr_set_mode_recursive(u8 die, u16 id, u8 target_mode, bool recurse)
 
     if (recurse)
         for (int i = 0; i < 2; i++) {
-            if (device->parent[i]) {
-                u16 parent = FIELD_GET(PMGR_DEVICE_ID, device->parent[i]);
-                int ret = pmgr_set_mode_recursive(die, parent, target_mode, true);
+            u16 parents[2];
+            pmgr_adt_get_parents(device, parents);
+            if (parents[i]) {
+                int ret = pmgr_set_mode_recursive(die, parents[i], target_mode, true);
                 if (ret < 0)
                     return ret;
             }
@@ -346,6 +378,9 @@ int pmgr_init(void)
         for (size_t i = 0; i < pmgr_devices_len; ++i) {
             const struct pmgr_device *device = &pmgr_devices[i];
 
+            if (device->id1)
+                pmgr_u8id = true;
+
             if ((device->flags & PMGR_FLAG_VIRTUAL))
                 continue;
 
@@ -357,10 +392,12 @@ int pmgr_init(void)
 
             if (reg & PMGR_AUTO_ENABLE || FIELD_GET(PMGR_PS_TARGET, reg) == PMGR_PS_ACTIVE) {
                 for (int j = 0; j < 2; j++) {
-                    if (device->parent[j]) {
+                    u16 parent[2];
+                    pmgr_adt_get_parents(device, parent);
+                    if (parent[j]) {
                         const struct pmgr_device *pdevice;
-                        if (pmgr_find_device(device->parent[j], &pdevice)) {
-                            printf("pmgr: Failed to find parent #%d for %s\n", device->parent[j],
+                        if (pmgr_find_device(parent[j], &pdevice)) {
+                            printf("pmgr: Failed to find parent #%d for %s\n", parent[j],
                                    device->name);
                             continue;
                         }
