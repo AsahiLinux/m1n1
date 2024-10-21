@@ -6,7 +6,7 @@
 static void init_common_everest(void)
 {
     reg_set(SYS_IMP_APL_HID12, BIT(46));
-    reg_set(SYS_IMP_APL_HID3, BIT(63));
+    reg_set(SYS_IMP_APL_HID3, HID3_DEV_PCIE_THROTTLE_ENABLE);
     reg_mask(SYS_IMP_APL_HID3, GENMASK(ULONG(62), ULONG(56)), BIT(60) | BIT(59) | BIT(58));
     reg_clr(SYS_IMP_APL_HID3, BIT(4));
     reg_set(SYS_IMP_APL_HID9, BIT(17));
