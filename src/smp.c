@@ -319,6 +319,10 @@ void smp_start_secondaries(void)
             if (strcmp(state, "running") == 0) {
                 boot_cpu_idx = i;
                 boot_cpu_mpidr = mrs(MPIDR_EL1);
+                if (in_el2())
+                    msr(TPIDR_EL2, boot_cpu_idx);
+                else
+                    msr(TPIDR_EL1, boot_cpu_idx);
                 break;
             }
         }
@@ -329,6 +333,8 @@ void smp_start_secondaries(void)
             "Could not find currently running CPU in cpu table, can't start other processors!\n");
         return;
     }
+
+    spin_table[boot_cpu_idx].mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
 
     for (int i = 0; i < MAX_CPUS; i++) {
         int cpu_node = cpu_nodes[i];
@@ -369,8 +375,6 @@ void smp_start_secondaries(void)
 
         smp_start_cpu(i, die, cluster, core, cpu_impl_reg[0], pmgr_reg + cpu_start_off);
     }
-
-    spin_table[boot_cpu_idx].mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
 }
 
 void smp_stop_secondaries(bool deep_sleep)
@@ -432,7 +436,7 @@ void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
 
     struct spin_table *target = &spin_table[cpu];
 
-    if (cpu == 0)
+    if (cpu == boot_cpu_idx)
         return;
 
     u64 flag = target->flag;
