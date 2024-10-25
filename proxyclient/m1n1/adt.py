@@ -301,6 +301,12 @@ DEV_PROPERTIES = {
             "info-*": SafeGreedyRange(Hex(Int32ul)),
         },
     },
+    "spmi-cha**": {
+        "*": {
+            "info-*name*": CString("ascii"),
+            "info-*": SafeGreedyRange(Hex(Int32ul)),
+        },
+    },
     "stockholm-spmi": {
         "*": {
             "required-functions": ADTStringList,
