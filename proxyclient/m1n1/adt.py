@@ -759,7 +759,7 @@ class ADTNode:
     def walk_tree(self):
         yield self
         for child in self:
-            yield from child
+            yield from child.walk_tree()
 
     def build_addr_lookup(self):
         lookup = AddrLookup()
