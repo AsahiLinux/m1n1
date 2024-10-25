@@ -392,7 +392,7 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
     if v == b'' or v is None:
         return None, None
 
-    if name.startswith("function-"):
+    if name.startswith("function-") or name == 'function_ptd_read_mult':
         if len(v) == 4:
             t = FourCC
         else:
@@ -678,7 +678,7 @@ class ADTNode:
                 return f"zeroes({len(v):#x})"
             else:
                 return v.hex()
-        elif isinstance(k, str) and k.startswith("function-"):
+        elif isinstance(k, str) and (k.startswith("function-") or k == 'function_ptd_read_mult'):
             if isinstance(v, str):
                 return f"{v}()"
             elif v is None:
@@ -875,8 +875,14 @@ if __name__ == "__main__":
         assert '/' not in node.name
         assert len(set(n.name for n in node)) == len(node._children)
     def fmt_phandle(ph, context):
+        # some properties can contain multiple phandles...
+        # I should ideally make a type to label phandles rather than this hack
+        if isinstance(ph, int) and ph >> 32:
+            ph = ph.to_bytes(8, 'little')
+        if isinstance(ph, bytes) and len(ph) % 4 == 0:
+            return f"[{', '.join(fmt_phandle(int.from_bytes(ph[i:i+4], 'little'), context) for i in range(0, len(ph), 4))}]"
         if isinstance(ph, int) and ph in phandles:
-            ph = phandles[ph]._path
+            ph = phandles[ph]._path.split('/', 2)[-1]
         return f"@{ph!r}"
 
     print(adt.__str__(sort_keys=args.sort_keys, sort_nodes=args.sort_nodes, fmt_phandle=fmt_phandle))
