@@ -677,12 +677,15 @@ class ADTNode:
         else:
             return str(v)
 
-    def __str__(self, t=""):
+    def __str__(self, t="", sort_keys=False):
+        props = self._properties.items()
+        if sort_keys:
+            props = sorted(props)
         return "\n".join([
             t + f"{self.name} {{",
-            *(t + f"    {repr(k)[1:-1]} = {self._fmt_prop(k, v).replace('\n', '\n'+t+'        ')}" for k, v in self._properties.items() if k != "name"),
+            *(t + f"    {repr(k)[1:-1]} = {self._fmt_prop(k, v).replace('\n', '\n'+t+'        ')}" for k, v in props if k != "name"),
             *([""] if self._children else []),
-            *(i.__str__(t + "    ") for i in self._children),
+            *(i.__str__(t + "    ", sort_keys) for i in self._children),
             t + "}"
         ])
 
@@ -809,6 +812,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ADT test for m1n1')
     parser.add_argument('input', type=pathlib.Path)
     parser.add_argument('output', nargs='?', type=pathlib.Path)
+    parser.add_argument('--sort-keys', help='sort property keys within a node (useful for diffs)', action='store_true')
     parser.add_argument('-r', '--retrieve', help='retrieve and store the adt from m1n1', action='store_true')
     parser.add_argument('-a', '--dump-addr', help='dump address lookup table', action='store_true')
     args = parser.parse_args()
@@ -825,7 +829,7 @@ if __name__ == "__main__":
         adt_data = args.input.read_bytes()
 
     adt = load_adt(adt_data)
-    print(adt)
+    print(adt.__str__(sort_keys=args.sort_keys))
     new_data = adt.build()
     if args.output is not None:
         args.output.write_bytes(new_data)
