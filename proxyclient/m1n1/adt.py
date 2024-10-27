@@ -489,6 +489,23 @@ def build_prop(path, name, v, t=None):
 
     return t.build(v)
 
+PHANDLE_PROPS = {
+    'AAPL,phandle',
+    'interrupt-parent',
+    'iommu-parent',
+    'dma-parent',
+    'hdcp-parent',
+    'external-power-provider',
+
+    'atc-phy-parent',
+    'atc-phy',
+    'acio-parent',
+
+    'dp2hdmi-gpio-parent',
+    'dock',
+    'audio',
+}
+
 class ADTNode:
     def __init__(self, val=None, path="/", parent=None):
         self._children = []
@@ -642,13 +659,15 @@ class ADTNode:
         except KeyError:
             raise AttributeError("#interrupt-cells")
 
-    def _fmt_prop(self, k, v):
+    def _fmt_prop(self, k, v, fmt_phandle=None):
         t, is_template = self._types.get(k, (None, False))
         if is_template:
             return f"<< {v} >>"
         elif k == 'reg' and isinstance(v, ListContainer) and all(isinstance(x, Container) for x in v):
             fmt_value = lambda n: f'{n:#018x}' if isinstance(n, int) else ' '.join(f'{x:#010x}' for x in n)
             return "\n".join(["[", *(f"    (addr = {fmt_value(x.addr)}, size = {fmt_value(x.size)})," for x in v), "]"])
+        elif k in PHANDLE_PROPS:
+            return fmt_phandle(v, self) if fmt_phandle else f'@{v!r}'
         elif isinstance(v, ListContainer):
             vs = [self._fmt_prop((k, i), x) for i, x in enumerate(v)]
             if any(('\n' in v) for v in vs) or (len(vs) > 1 and max(map(len, vs)) > 20):
@@ -670,14 +689,15 @@ class ADTNode:
                     b = arg.to_bytes(4, "big")
                     is_ascii = all(0x20 <= c <= 0x7e for c in b)
                     args.append(f"{arg:#x}" if not is_ascii else f"'{b.decode('ascii')}'")
-                return f"{v.phandle}:{v.name}({', '.join(args)})"
+                phandle = fmt_phandle(v.phandle, self) if fmt_phandle else f'@{v!r}'
+                return f"{phandle}:{repr(v.name)[1:-1]}({', '.join(args)})"
             name.startswith("function-")
         elif isinstance(v, str):
             return repr(v)
         else:
             return str(v)
 
-    def __str__(self, t="", sort_keys=False, sort_nodes=False):
+    def __str__(self, t="", sort_keys=False, sort_nodes=False, fmt_phandle=None):
         props = self._properties.items()
         if sort_keys:
             props = sorted(props)
@@ -686,9 +706,9 @@ class ADTNode:
             children = sorted(children, key=lambda n: n.name)
         return "\n".join([
             t + f"{self.name} {{",
-            *(t + f"    {repr(k)[1:-1]} = {self._fmt_prop(k, v).replace('\n', '\n'+t+'        ')}" for k, v in props if k != "name"),
+            *(t + f"    {repr(k)[1:-1]} = {self._fmt_prop(k, v, fmt_phandle).replace('\n', '\n'+t+'        ')}" for k, v in props if k != "name"),
             *([""] if self._children else []),
-            *(i.__str__(t + "    ", sort_keys, sort_nodes) for i in children),
+            *(i.__str__(t + "    ", sort_keys, sort_nodes, fmt_phandle) for i in children),
             t + "}"
         ])
 
@@ -775,6 +795,22 @@ class ADTNode:
         for child in self:
             yield from child.walk_tree()
 
+    def build_phandle_lookup(self, verify_continuity=False, last_phandle=0):
+        phandles = {}
+        for node in self.walk_tree():
+            if 'AAPL,phandle' not in node._properties:
+                continue
+            ph = node._properties['AAPL,phandle']
+
+            assert isinstance(ph, int) and (ph not in phandles)
+            phandles[ph] = node
+
+            if verify_continuity:
+                assert ph == last_phandle + 1
+                last_phandle = ph
+
+        return phandles
+
     def build_addr_lookup(self):
         lookup = AddrLookup()
         for node in self.walk_tree():
@@ -833,7 +869,17 @@ if __name__ == "__main__":
         adt_data = args.input.read_bytes()
 
     adt = load_adt(adt_data)
-    print(adt.__str__(sort_keys=args.sort_keys, sort_nodes=args.sort_nodes))
+    phandles = adt.build_phandle_lookup(verify_continuity=True)
+    # since we'll refer to nodes by their path, make sure paths are unique
+    for node in adt.walk_tree():
+        assert '/' not in node.name
+        assert len(set(n.name for n in node)) == len(node._children)
+    def fmt_phandle(ph, context):
+        if isinstance(ph, int) and ph in phandles:
+            ph = phandles[ph]._path
+        return f"@{ph!r}"
+
+    print(adt.__str__(sort_keys=args.sort_keys, sort_nodes=args.sort_nodes, fmt_phandle=fmt_phandle))
     new_data = adt.build()
     if args.output is not None:
         args.output.write_bytes(new_data)
