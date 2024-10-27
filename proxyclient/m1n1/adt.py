@@ -646,14 +646,20 @@ class ADTNode:
         t, is_template = self._types.get(k, (None, False))
         if is_template:
             return f"<< {v} >>"
+        elif k == 'reg' and isinstance(v, ListContainer) and all(isinstance(x, Container) for x in v):
+            fmt_value = lambda n: f'{n:#018x}' if isinstance(n, int) else ' '.join(f'{x:#010x}' for x in n)
+            return "\n".join(["[", *(f"    (addr = {fmt_value(x.addr)}, size = {fmt_value(x.size)})," for x in v), "]"])
         elif isinstance(v, ListContainer):
-            return f"[{', '.join(self._fmt_prop(k, i) for i in v)}]"
+            vs = [self._fmt_prop((k, i), x) for i, x in enumerate(v)]
+            if any(('\n' in v) for v in vs) or (len(vs) > 1 and max(map(len, vs)) > 20):
+                return "\n".join(["[", *("- " + v.replace("\n", "\n    ") for v in vs), "]"])
+            return f"[{', '.join(vs)}]"
         elif isinstance(v, bytes):
             if all(i == 0 for i in v):
                 return f"zeroes({len(v):#x})"
             else:
                 return v.hex()
-        elif k.startswith("function-"):
+        elif isinstance(k, str) and k.startswith("function-"):
             if isinstance(v, str):
                 return f"{v}()"
             elif v is None:
@@ -666,14 +672,16 @@ class ADTNode:
                     args.append(f"{arg:#x}" if not is_ascii else f"'{b.decode('ascii')}'")
                 return f"{v.phandle}:{v.name}({', '.join(args)})"
             name.startswith("function-")
+        elif isinstance(v, str):
+            return repr(v)
         else:
             return str(v)
 
     def __str__(self, t=""):
         return "\n".join([
             t + f"{self.name} {{",
-            *(t + f"    {k} = {self._fmt_prop(k, v)}" for k, v in self._properties.items() if k != "name"),
-            "",
+            *(t + f"    {repr(k)[1:-1]} = {self._fmt_prop(k, v).replace('\n', '\n'+t+'        ')}" for k, v in self._properties.items() if k != "name"),
+            *([""] if self._children else []),
             *(i.__str__(t + "    ") for i in self._children),
             t + "}"
         ])
