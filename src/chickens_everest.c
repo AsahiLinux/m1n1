@@ -39,7 +39,7 @@ static void init_common_everest(void)
 void init_t6031_everest(int rev)
 {
     UNUSED(rev);
-    msr(s3_1_c15_c1_5, 0x3uL);
+    msr(s3_1_c15_c1_5, 0x1uL);
     if (in_el2())
         msr(s3_4_c15_c14_6, 0x3uL);
     init_common_everest();
