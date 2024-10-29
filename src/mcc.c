@@ -23,11 +23,11 @@ static bool mcc_initialized = false;
 #define T6000_DCS_STRIDE    0x100000
 #define T6000_DCS_COUNT     4
 
-#define T6031_PLANE_OFFSET  0
-#define T6031_PLANE_STRIDE  0x40000
-#define T6031_GLOBAL_OFFSET 0x100000
-#define T6031_DCS_OFFSET    0x400000
-#define T6031_DCS_STRIDE    0x200000
+#define T603X_PLANE_OFFSET  0
+#define T603X_PLANE_STRIDE  0x40000
+#define T603X_GLOBAL_OFFSET 0x100000
+#define T603X_DCS_OFFSET    0x400000
+#define T603X_DCS_STRIDE    0x200000
 
 #define PLANE_TZ_MAX_REGS 4
 
@@ -55,7 +55,15 @@ struct tz_regs t602x_tz_regs = {
     .enable = 0x6c8,
 };
 
-struct tz_regs t603x_tz_regs = {
+struct tz_regs t6030_tz_regs = {
+    .count = 4,
+    .stride = 0x14,
+    .start = 0x6dc,
+    .end = 0x6e0,
+    .enable = 0x6e8,
+};
+
+struct tz_regs t6031_tz_regs = {
     .count = 4,
     .stride = 0x14,
     .start = 0x6d8,
@@ -78,11 +86,11 @@ struct tz_regs t603x_tz_regs = {
     (FIELD_PREP(T6000_CACHE_STATUS_DATA_COUNT, T6000_CACHE_WAYS) |                                 \
      FIELD_PREP(T6000_CACHE_STATUS_TAG_COUNT, T6000_CACHE_WAYS))
 
-#define T6031_CACHE_WAYS        12
-#define T6031_CACHE_STATUS_MASK (T6000_CACHE_STATUS_DATA_COUNT | T6000_CACHE_STATUS_TAG_COUNT)
-#define T6031_CACHE_STATUS_VAL                                                                     \
-    (FIELD_PREP(T6000_CACHE_STATUS_DATA_COUNT, T6031_CACHE_WAYS) |                                 \
-     FIELD_PREP(T6000_CACHE_STATUS_TAG_COUNT, T6031_CACHE_WAYS))
+#define T603X_CACHE_WAYS        12
+#define T603X_CACHE_STATUS_MASK (T6000_CACHE_STATUS_DATA_COUNT | T6000_CACHE_STATUS_TAG_COUNT)
+#define T603X_CACHE_STATUS_VAL                                                                     \
+    (FIELD_PREP(T6000_CACHE_STATUS_DATA_COUNT, T603X_CACHE_WAYS) |                                 \
+     FIELD_PREP(T6000_CACHE_STATUS_TAG_COUNT, T603X_CACHE_WAYS))
 
 #define T8103_CACHE_WAYS        16
 #define T8103_CACHE_STATUS_MASK (T8103_CACHE_STATUS_DATA_COUNT | T8103_CACHE_STATUS_TAG_COUNT)
@@ -318,7 +326,7 @@ int mcc_init_t6000(int node, int *path, bool t602x)
     return 0;
 }
 
-int mcc_init_t6031(int node, int *path)
+int mcc_init_t603x(int node, int *path, int lsn)
 {
     u32 reg_len;
     u32 reg_offset = 3;
@@ -330,7 +338,7 @@ int mcc_init_t6031(int node, int *path)
 
     mcc_count = reg_len / 16 - reg_offset;
 
-    printf("MCC: Initializing T6031 MCCs (%d instances)...\n", mcc_count);
+    printf("MCC: Initializing T603%x MCCs (%d instances)...\n", lsn, mcc_count);
 
     if (mcc_count > MAX_MCC_INSTANCES) {
         printf("MCC: Too many instances, increase MAX_MCC_INSTANCES!\n");
@@ -357,26 +365,33 @@ int mcc_init_t6031(int node, int *path)
             return -1;
         }
 
-        mcc_regs[i].plane_base = base + T6031_PLANE_OFFSET;
-        mcc_regs[i].plane_stride = T6031_PLANE_STRIDE;
+        mcc_regs[i].plane_base = base + T603X_PLANE_OFFSET;
+        mcc_regs[i].plane_stride = T603X_PLANE_STRIDE;
         mcc_regs[i].plane_count = plane_count;
 
-        mcc_regs[i].global_base = base + T6031_GLOBAL_OFFSET;
+        mcc_regs[i].global_base = base + T603X_GLOBAL_OFFSET;
 
-        mcc_regs[i].dcs_base = base + T6031_DCS_OFFSET;
-        mcc_regs[i].dcs_stride = T6031_DCS_STRIDE;
+        mcc_regs[i].dcs_base = base + T603X_DCS_OFFSET;
+        mcc_regs[i].dcs_stride = T603X_DCS_STRIDE;
         mcc_regs[i].dcs_count = dcs_count;
 
         mcc_regs[i].cache_enable_val = 1;
-        mcc_regs[i].cache_ways = T6031_CACHE_WAYS;
-        mcc_regs[i].cache_status_mask = T6031_CACHE_STATUS_MASK;
-        mcc_regs[i].cache_status_val = T6031_CACHE_STATUS_VAL;
+        mcc_regs[i].cache_ways = T603X_CACHE_WAYS;
+        mcc_regs[i].cache_status_mask = T603X_CACHE_STATUS_MASK;
+        mcc_regs[i].cache_status_val = T603X_CACHE_STATUS_VAL;
         mcc_regs[i].cache_disable = 0;
 
-        mcc_regs[i].tz = &t603x_tz_regs;
+        if(lsn == 0){
+            mcc_regs[i].tz = &t6030_tz_regs;
+        } else if(lsn == 1){
+            mcc_regs[i].tz = &t6031_tz_regs;
+        } else {
+            printf("MCC: Unsupported chip (T603%x)", lsn);
+            return -1;
+        }
     }
 
-    printf("MCC: Initialized T6031 MCCs (%d instances, %d planes, %d channels)\n", mcc_count,
+    printf("MCC: Initialized T603%x MCCs (%d instances, %d planes, %d channels)\n", lsn, mcc_count,
            mcc_regs[0].plane_count, mcc_regs[0].dcs_count);
 
     mcc_initialized = true;
@@ -402,8 +417,10 @@ int mcc_init(void)
         return mcc_init_t6000(node, path, false);
     } else if (adt_is_compatible(adt, node, "mcc,t6020")) {
         return mcc_init_t6000(node, path, true);
+    } else if (adt_is_compatible(adt, node, "mcc,t6030")) {
+        return mcc_init_t603x(node, path, 0);
     } else if (adt_is_compatible(adt, node, "mcc,t6031")) {
-        return mcc_init_t6031(node, path);
+        return mcc_init_t603x(node, path, 1);
     } else {
         printf("MCC: Unsupported version:%s\n", adt_get_property(adt, node, "compatible")->value);
         return -1;

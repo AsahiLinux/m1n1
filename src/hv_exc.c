@@ -522,7 +522,7 @@ void hv_exc_fiq(struct exc_info *ctx)
 
     int interruptible_cpu = hv_pinned_cpu;
     if (interruptible_cpu == -1)
-        interruptible_cpu = 0;
+        interruptible_cpu = boot_cpu_idx;
 
     if (smp_id() != interruptible_cpu && !(mrs(ISR_EL1) & 0x40) && hv_want_cpu == -1) {
         // Non-interruptible CPU and it was just a timer tick (or spurious), so just update FIQs

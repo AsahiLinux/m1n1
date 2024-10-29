@@ -210,6 +210,7 @@ void smp_start_secondaries(void)
             break;
         case T8112:
         case T8122:
+        case T6030:
             cpu_start_off = CPU_START_OFF_T8112;
             break;
         case T6020:
@@ -265,6 +266,12 @@ void smp_start_secondaries(void)
             "Could not find currently running CPU in cpu table, can't start other processors!\n");
         return;
     }
+
+    if (in_el2())
+        msr(TPIDR_EL2, boot_cpu_idx);
+    else
+        msr(TPIDR_EL1, boot_cpu_idx);
+
 
     for (int i = 0; i < MAX_CPUS; i++) {
 
@@ -334,7 +341,7 @@ void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
 
     struct spin_table *target = &spin_table[cpu];
 
-    if (cpu == 0)
+    if (cpu == boot_cpu_idx)
         return;
 
     u64 flag = target->flag;

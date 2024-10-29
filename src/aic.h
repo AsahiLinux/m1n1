@@ -6,6 +6,7 @@
 #include "types.h"
 
 #define AIC_MAX_DIES 4
+#define AIC3_MAX_MAX_DIES 8
 
 struct aic_regs {
     uint64_t reg_size;
