@@ -90,7 +90,7 @@ class HV(Reloadable):
         self.sym_offset = 0
         self.symbols = []
         self.symbol_dict = {}
-        self.sysreg = {0: {}}
+        self.sysreg = {}
         self.novm = False
         self._in_handler = False
         self._sigint_pending = False
@@ -1633,7 +1633,7 @@ class HV(Reloadable):
 
         if not self.smp:
             for cpu in list(self.adt["cpus"]):
-                if cpu.name != "cpu0":
+                if cpu.state != "running":
                     print(f"Removing ADT node {cpu._path}")
                     try:
                         del self.adt["cpus"][cpu.name]
@@ -1759,7 +1759,9 @@ class HV(Reloadable):
 
         print("Setting secondary CPU RVBARs...")
         rvbar = self.entry & ~0xfff
-        for cpu in self.adt["cpus"][1:]:
+        for cpu in self.adt["cpus"]:
+            if cpu.state == "running":
+                continue
             addr, size = cpu.cpu_impl_reg
             print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
             self.p.write64(addr, rvbar)
@@ -1910,7 +1912,11 @@ class HV(Reloadable):
         # Does not return
 
         self.started = True
-        self.started_cpus[0] = (0, 0, 0)
+        for cpu_node in list(self.adt["cpus"]):
+            if cpu_node.state == "running":
+                break
+        self.started_cpus[cpu_node.cpu_id] = (getattr(cpu_node, "die_id", 0), cpu_node.cluster_id, cpu_node.cpu_id)
+        self.sysreg[cpu_node.cpu_id] = {}
         self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)
 
 from .. import trace
