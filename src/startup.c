@@ -143,11 +143,7 @@ extern void get_device_info(void);
 void _start_c(void *boot_args, void *base)
 {
     UNUSED(base);
-
-    if (in_el2())
-        msr(TPIDR_EL2, 0);
-    else
-        msr(TPIDR_EL1, 0);
+    u32 cpu_id = 0;
 
     memset64(_bss_start, 0, _bss_end - _bss_start);
     boot_args_addr = (u64)boot_args;
@@ -155,6 +151,26 @@ void _start_c(void *boot_args, void *base)
 
     adt =
         (void *)(((u64)cur_boot_args.devtree) - cur_boot_args.virt_base + cur_boot_args.phys_base);
+
+#ifndef BRINGUP
+    int node = adt_path_offset(adt, "/cpus");
+    if (node >= 0) {
+        ADT_FOREACH_CHILD(adt, node)
+        {
+            const char *state = adt_getprop(adt, node, "state", NULL);
+            if (!state)
+                continue;
+            if (strcmp(state, "running") == 0)
+                if (ADT_GETPROP(adt, node, "cpu-id", &cpu_id) == sizeof(cpu_id))
+                    break;
+        }
+    }
+#endif
+
+    if (in_el2())
+        msr(TPIDR_EL2, cpu_id);
+    else
+        msr(TPIDR_EL1, cpu_id);
 
     int ret = uart_init();
     if (ret < 0) {
@@ -164,7 +180,7 @@ void _start_c(void *boot_args, void *base)
     uart_puts("Initializing");
     get_device_info();
 
-    printf("CPU init (MIDR: 0x%lx)...\n", mrs(MIDR_EL1));
+    printf("CPU init (MIDR: 0x%lx smp_id:0x%x)...\n", mrs(MIDR_EL1), smp_id());
     const char *type = init_cpu();
     printf("  CPU: %s\n\n", type);
 
