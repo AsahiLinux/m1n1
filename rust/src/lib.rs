@@ -2,7 +2,7 @@
 #![no_std]
 #![deny(unsafe_op_in_unsafe_fn)]
 #![feature(alloc_error_handler)]
-#![feature(new_uninit)]
+#![feature(new_zeroed_alloc)]
 
 #[macro_use]
 extern crate alloc;
