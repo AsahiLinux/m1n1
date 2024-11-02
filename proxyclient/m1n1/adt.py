@@ -287,8 +287,8 @@ DEV_PROPERTIES = {
             "config-data": SafeGreedyRange(Int32ul),
         }
     },
-    "*pmu*": {
-        "*": {
+    "spmi-*": {
+        "pmu,*": {
             "info-*name*": CString("ascii"),
             "info-*": SafeGreedyRange(Hex(Int32ul)),
         },
