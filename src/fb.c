@@ -44,11 +44,18 @@ static struct {
     bool active;
 } console;
 
+extern u8 _binary_build_bootlogo_48_bin_start[];
 extern u8 _binary_build_bootlogo_128_bin_start[];
 extern u8 _binary_build_bootlogo_256_bin_start[];
 
 extern u8 _binary_build_font_bin_start[];
 extern u8 _binary_build_font_retina_bin_start[];
+
+const struct image logo_48 = {
+    .ptr = (void *)_binary_build_bootlogo_48_bin_start,
+    .width = 48,
+    .height = 48,
+};
 
 const struct image logo_128 = {
     .ptr = (void *)_binary_build_bootlogo_128_bin_start,
@@ -409,7 +416,13 @@ void fb_init(bool clear)
     fb.ptr = malloc(fb.size);
     memcpy(fb.ptr, fb.hwptr, fb.size);
 
-    if (cur_boot_args.video.depth & FB_DEPTH_FLAG_RETINA) {
+    // This is the touchbar, make everything tiny
+    if (chip_id == T8012) {
+        logo = &logo_48;
+        console.font.ptr = _binary_build_font_bin_start;
+        console.font.width = 8;
+        console.font.height = 16;
+    } else if (cur_boot_args.video.depth & FB_DEPTH_FLAG_RETINA) {
         logo = &logo_256;
         console.font.ptr = _binary_build_font_retina_bin_start;
         console.font.width = 16;
