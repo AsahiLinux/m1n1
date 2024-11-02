@@ -380,8 +380,11 @@ static void mmu_map_mmio(void)
         u64 bus = ranges[2] | ((u64)ranges[3] << 32);
         u64 size = ranges[4] | ((u64)ranges[5] << 32);
 
-        mmu_add_mapping(bus, bus, size, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
+        /* T2 is really stupid */
+        if (chip_id == T8012)
+            size = ALIGN_UP(size, PAGE_SIZE);
 
+        mmu_add_mapping(bus, bus, size, MAIR_IDX_DEVICE_nGnRnE, PERM_RW_EL0);
         ranges += 6;
     }
 }
