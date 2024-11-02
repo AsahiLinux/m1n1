@@ -134,7 +134,25 @@ void dump_boot_args(struct boot_args *ba)
             break;
     }
     if (!mem_size_actual) {
-        mem_size_actual = ALIGN_UP(ba->phys_base + ba->mem_size - 0x800000000, BIT(30));
+        if (chip_id == T8012) {
+            int anode = adt_path_offset(adt, "/arm-io/mcc");
+
+            /*
+             * For T8012, compute mem_size_actual from the amount of memory channels
+             * enabled as there are large amounts of reserved memory intended as
+             * SSD cache. Cannot use dram-size, it may not exist in older firmwares.
+             * /arm-io/mcc/dcs_num_channels is changed from 4 to 2 by iBoot on 1 GB RAM
+             * models.
+             */
+
+            u32 dcs_num_channels = 0;
+            if (anode > 0 && ADT_GETPROP(adt, anode, "dcs_num_channels", &dcs_num_channels) > 0)
+                mem_size_actual = dcs_num_channels * 0x20000000;
+            else
+                mem_size_actual = 0x40000000;
+        } else {
+            mem_size_actual = ALIGN_UP(ba->phys_base + ba->mem_size - 0x800000000, BIT(30));
+        }
         printf("Correcting mem_size_actual to 0x%lx\n", mem_size_actual);
     }
 }
