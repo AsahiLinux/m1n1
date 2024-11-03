@@ -175,6 +175,82 @@ static int dt_set_rng_seed_adt(int node)
     return 0;
 }
 
+static int dt_set_fb(void)
+{
+    if (!cur_boot_args.video.base) {
+        printf("FDT: Framebuffer unavailable, skipping framebuffer initialization");
+        return 0;
+    }
+
+    int fb = fdt_path_offset(dt, "/chosen/framebuffer");
+
+    if (fb < 0) {
+        printf("FDT: No framebuffer found\n");
+        return 0;
+    }
+
+    u64 fb_base, fb_height;
+    get_notchless_fb(&fb_base, &fb_height);
+    u64 fb_size = cur_boot_args.video.stride * fb_height;
+    u64 fbreg[2] = {cpu_to_fdt64(fb_base), cpu_to_fdt64(fb_size)};
+    char fbname[32];
+
+    snprintf(fbname, sizeof(fbname), "framebuffer@%lx", fb_base);
+
+    if (fdt_setprop(dt, fb, "reg", fbreg, sizeof(fbreg)))
+        bail("FDT: couldn't set framebuffer.reg property\n");
+
+    if (fdt_set_name(dt, fb, fbname))
+        bail("FDT: couldn't set framebuffer name\n");
+
+    if (fdt_setprop_u32(dt, fb, "width", cur_boot_args.video.width))
+        bail("FDT: couldn't set framebuffer width\n");
+
+    if (fdt_setprop_u32(dt, fb, "height", fb_height))
+        bail("FDT: couldn't set framebuffer height\n");
+
+    if (fdt_setprop_u32(dt, fb, "stride", cur_boot_args.video.stride))
+        bail("FDT: couldn't set framebuffer stride\n");
+
+    const char *format = NULL;
+
+    switch (cur_boot_args.video.depth & 0xff) {
+        case 32:
+            format = "x8r8g8b8";
+            break;
+        case 30:
+            format = "x2r10g10b10";
+            break;
+        case 16:
+            format = "r5g6b5";
+            break;
+        default:
+            printf("FDT: unsupported fb depth %lu, not enabling\n", cur_boot_args.video.depth);
+            return 0; // Do not error out, but don't set the FB
+    }
+
+    if (fdt_setprop_string(dt, fb, "format", format))
+        bail("FDT: couldn't set framebuffer format\n");
+
+    fdt_delprop(dt, fb, "status"); // may fail if it does not exist
+
+    printf("FDT: %s base 0x%lx size 0x%lx\n", fbname, fb_base, fb_size);
+
+    // We do not need to reserve the framebuffer, as it will be excluded from the usable RAM
+    // range already.
+
+    // save notch height in the dcp node if present
+    if (cur_boot_args.video.height - fb_height) {
+        int dcp = fdt_path_offset(dt, "dcp");
+        if (dcp >= 0)
+            if (fdt_appendprop_u32(dt, dcp, "apple,notch-height",
+                                   cur_boot_args.video.height - fb_height))
+                printf("FDT: couldn't set apple,notch-height\n");
+    }
+
+    return 0;
+}
+
 static int dt_set_chosen(void)
 {
 
@@ -207,70 +283,9 @@ static int dt_set_chosen(void)
         printf("FDT: initrd at %p size 0x%lx\n", initrd_start, initrd_size);
     }
 
-    if (cur_boot_args.video.base) {
-        int fb = fdt_path_offset(dt, "/chosen/framebuffer");
-        if (fb < 0)
-            bail("FDT: /chosen node not found in devtree\n");
+    if (dt_set_fb())
+        return -1;
 
-        u64 fb_base, fb_height;
-        get_notchless_fb(&fb_base, &fb_height);
-        u64 fb_size = cur_boot_args.video.stride * fb_height;
-        u64 fbreg[2] = {cpu_to_fdt64(fb_base), cpu_to_fdt64(fb_size)};
-        char fbname[32];
-
-        snprintf(fbname, sizeof(fbname), "framebuffer@%lx", fb_base);
-
-        if (fdt_setprop(dt, fb, "reg", fbreg, sizeof(fbreg)))
-            bail("FDT: couldn't set framebuffer.reg property\n");
-
-        if (fdt_set_name(dt, fb, fbname))
-            bail("FDT: couldn't set framebuffer name\n");
-
-        if (fdt_setprop_u32(dt, fb, "width", cur_boot_args.video.width))
-            bail("FDT: couldn't set framebuffer width\n");
-
-        if (fdt_setprop_u32(dt, fb, "height", fb_height))
-            bail("FDT: couldn't set framebuffer height\n");
-
-        if (fdt_setprop_u32(dt, fb, "stride", cur_boot_args.video.stride))
-            bail("FDT: couldn't set framebuffer stride\n");
-
-        const char *format = NULL;
-
-        switch (cur_boot_args.video.depth & 0xff) {
-            case 32:
-                format = "x8r8g8b8";
-                break;
-            case 30:
-                format = "x2r10g10b10";
-                break;
-            case 16:
-                format = "r5g6b5";
-                break;
-            default:
-                printf("FDT: unsupported fb depth %lu, not enabling\n", cur_boot_args.video.depth);
-                return 0; // Do not error out, but don't set the FB
-        }
-
-        if (fdt_setprop_string(dt, fb, "format", format))
-            bail("FDT: couldn't set framebuffer format\n");
-
-        fdt_delprop(dt, fb, "status"); // may fail if it does not exist
-
-        printf("FDT: %s base 0x%lx size 0x%lx\n", fbname, fb_base, fb_size);
-
-        // We do not need to reserve the framebuffer, as it will be excluded from the usable RAM
-        // range already.
-
-        // save notch height in the dcp node if present
-        if (cur_boot_args.video.height - fb_height) {
-            int dcp = fdt_path_offset(dt, "dcp");
-            if (dcp >= 0)
-                if (fdt_appendprop_u32(dt, dcp, "apple,notch-height",
-                                       cur_boot_args.video.height - fb_height))
-                    printf("FDT: couldn't set apple,notch-height\n");
-        }
-    }
     node = fdt_path_offset(dt, "/chosen");
     if (node < 0)
         bail("FDT: /chosen node not found in devtree\n");
@@ -2383,6 +2398,43 @@ static int dt_transfer_virtios(void)
     return 0;
 }
 
+/*
+ * Remove unneeded apple,always-on from unused memory channels on T8012.
+ * This is needed because the amount of memory and the amount of used
+ * memory channels depends on the storage configuration of the host Mac
+ * and can only be determined at runtime.
+ */
+static int dt_set_pmgr(void)
+{
+    if (chip_id != T8012)
+        return 0;
+
+    if (mem_size_actual > 0x40000000)
+        return 0;
+
+    int pmgr_node = fdt_path_offset(dt, "/soc/power-management@20e000000");
+    if (pmgr_node < 0) {
+        printf("FDT: Failed to find pmgr node\n");
+        return 0;
+    }
+
+    int dcs2_node = fdt_path_offset(dt, "/soc/power-management@20e000000/power-controller@80258");
+    if (dcs2_node < 0)
+        bail("FDT: failed to find ps_dcs2 node\n");
+
+    /* Allow failure */
+    fdt_delprop(dt, dcs2_node, "apple,always-on");
+
+    int dcs3_node = fdt_path_offset(dt, "/soc/power-management@20e000000/power-controller@80260");
+    if (dcs3_node < 0)
+        bail("FDT: failed to find ps_dcs3 node\n");
+
+    /* Allow failure */
+    fdt_delprop(dt, dcs3_node, "apple,always-on");
+
+    return 0;
+}
+
 void kboot_set_initrd(void *start, size_t size)
 {
     initrd_start = start;
@@ -2569,6 +2621,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_reserve_asc_firmware("/arm-io/isp", "/arm-io/isp0", "isp", false, isp_iova_base()))
         return -1;
     if (dt_set_isp_fwdata())
+        return -1;
+    if (dt_set_pmgr())
         return -1;
 #ifndef RELEASE
     if (dt_transfer_virtios())
