@@ -55,22 +55,22 @@ struct dapf_t8110_config {
     u8 unk4;
 } PACKED;
 
-static int dapf_init_t8110(const char *path, u64 base, int node)
+struct dapf_t8110b_config {
+    u64 start;
+    u64 end;
+    u32 r20;
+    u32 unk1;
+    u32 r4;
+    u32 unk2[5];
+    u8 unk3;
+    u8 r0_hi;
+    u8 r0_lo;
+    u8 unk4;
+    u32 pad;
+} PACKED;
+
+static int dapf_init_t8110a(u64 base, struct dapf_t8110_config *config, u32 length)
 {
-    u32 length;
-    const char *prop = "dapf-instance-0";
-    const struct dapf_t8110_config *config = adt_getprop(adt, node, prop, &length);
-
-    if (!config || !length) {
-        printf("dapf: Error getting ADT node %s property %s.\n", path, prop);
-        return -1;
-    }
-
-    if (length % sizeof(*config) != 0) {
-        printf("dapf: Invalid length for %s property %s\n", path, prop);
-        return -1;
-    }
-
     int count = length / sizeof(*config);
 
     for (int i = 0; i < count; i++) {
@@ -82,6 +82,45 @@ static int dapf_init_t8110(const char *path, u64 base, int node)
         base += 0x40;
     }
     return 0;
+}
+
+static int dapf_init_t8110b(u64 base, struct dapf_t8110b_config *config, u32 length)
+{
+    int count = length / sizeof(*config);
+
+    for (int i = 0; i < count; i++) {
+        write32(base + 0x04, config[i].r4);
+        write64(base + 0x08, config[i].start);
+        write64(base + 0x10, config[i].end);
+        write32(base + 0x00, (config[i].r0_hi << 4) | config[i].r0_lo);
+        write32(base + 0x20, config[i].r20);
+        base += 0x40;
+    }
+    return 0;
+}
+
+static int dapf_init_t8110(const char *path, u64 base, int node)
+{
+    u32 length;
+    const char *prop = "dapf-instance-0";
+    const void *config = adt_getprop(adt, node, prop, &length);
+
+    if (!config || !length) {
+        printf("dapf: Error getting ADT node %s property %s.\n", path, prop);
+        return -1;
+    }
+
+    // The least common multiple of 52 and 56 is 728 which is in the range of
+    // the observed lengthe for "dapf-instance-0". The 52 byte variant is more
+    // common and prefering that works so far.
+    if (length % sizeof(struct dapf_t8110_config) == 0) {
+        return dapf_init_t8110a(base, (struct dapf_t8110_config *)config, length);
+    } else if (length % sizeof(struct dapf_t8110b_config) == 0) {
+        return dapf_init_t8110b(base, (struct dapf_t8110b_config *)config, length);
+    } else {
+        printf("dapf: Invalid length for %s property %s\n", path, prop);
+        return -1;
+    }
 }
 
 int dapf_init(const char *path, int index)
@@ -140,8 +179,8 @@ int dapf_init_all(void)
 {
     int ret = 0;
     int count = 0;
-
     struct entry *entry = dapf_entries;
+
     while (entry->path != NULL) {
         if (adt_path_offset(adt, entry->path) < 0) {
             entry++;
