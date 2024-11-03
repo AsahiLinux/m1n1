@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 #![no_std]
 #![deny(unsafe_op_in_unsafe_fn)]
+#![feature(cfg_version)]
 #![feature(alloc_error_handler)]
 #![feature(new_uninit)]
+#![cfg_attr(version("1.82"), feature(new_zeroed_alloc))]
 
 #[macro_use]
 extern crate alloc;
