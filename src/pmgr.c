@@ -374,12 +374,14 @@ int pmgr_init(void)
 
     printf("pmgr: Cleaning up device states...\n");
 
+    // detect whether u8 or u16 PMGR IDs are used by comparing the IDs of the
+    // first 2 devices
+    if (pmgr_devices_len >= 2)
+        pmgr_u8id = pmgr_devices[0].id1 != pmgr_devices[1].id1;
+
     for (u8 die = 0; die < pmgr_dies; ++die) {
         for (size_t i = 0; i < pmgr_devices_len; ++i) {
             const struct pmgr_device *device = &pmgr_devices[i];
-
-            if (device->id1)
-                pmgr_u8id = true;
 
             if ((device->flags & PMGR_FLAG_VIRTUAL))
                 continue;
