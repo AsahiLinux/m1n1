@@ -155,6 +155,7 @@ OBJECTS := \
 	sio.o \
 	smc.o \
 	smp.o \
+	spmi.o \
 	start.o \
 	startup.o \
 	string.o \
