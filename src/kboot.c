@@ -1876,6 +1876,55 @@ static int dt_set_display(void)
     return dt_vram_reserved_region(disp_cfg->dcp_alias, "disp0");
 }
 
+static int dt_set_sep(void)
+{
+    const char *path = fdt_get_alias(dt, "sep");
+    if (path == NULL) {
+        printf("FDT: sep alias not found in devtree\n");
+        return 0;
+    }
+
+    int anode_mmap = adt_path_offset(adt, "/chosen/memory-map");
+    if (anode_mmap < 0)
+        bail("ADT: /chosen/memory-map not found \n");
+
+    u64 phys_map[2];
+    size_t ret = ADT_GETPROP_ARRAY(adt, anode_mmap, "SEPFW", phys_map);
+    if (ret != sizeof(phys_map))
+        bail("ADT: could not get sepfw memory\n");
+
+    const char *node_name = "sep-firmware";
+    int mem_node =
+        dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", false, phys_map[0], phys_map[1]);
+    if (mem_node < 0)
+        bail("FDT: failed to reserve sepfw");
+
+    uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
+    ret = dt_device_add_mem_region(path, mem_phandle, "sepfw");
+    if (ret < 0)
+        bail("FDT: failed to add sepfw region");
+
+    int node = fdt_path_offset(dt, path);
+    if (node < 0)
+        bail("FDT: sep not not found in devtree\n");
+
+    int anode_manifest = adt_path_offset(adt, "/chosen/boot-object-manifests");
+    if (anode_manifest < 0)
+        bail("ADT: /chosen/boot-object-manifests not found \n");
+
+    ret = ADT_GETPROP_ARRAY(adt, anode_manifest, "lpol", phys_map);
+    if (ret != sizeof(phys_map))
+        bail("ADT: could not get local policy\n");
+    fdt_setprop(dt, node, "local-policy-manifest", (void *)phys_map[0], phys_map[1]);
+
+    ret = ADT_GETPROP_ARRAY(adt, anode_manifest, "ibot", phys_map);
+    if (ret != sizeof(phys_map))
+        bail("ADT: could not get iboot manifest\n");
+    fdt_setprop(dt, node, "iboot-manifest", (void *)phys_map[0], phys_map[1]);
+
+    return 0;
+}
+
 static int dt_set_sio_fwdata(const char *adt_path, const char *fdt_alias)
 {
     int node = fdt_path_offset(dt, fdt_alias);
@@ -2429,6 +2478,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_gpu(dt))
         return -1;
     if (dt_set_multitouch())
+        return -1;
+    if (dt_set_sep())
         return -1;
     if (dt_set_nvram())
         return -1;
