@@ -76,13 +76,7 @@ void get_notchless_fb(u64 *fb_base, u64 *fb_height)
     u32 val;
 
     if ((ADT_GETPROP(adt, node, "partially-occluded-display", &val) < 0 || !val) &&
-        chip_id != T8015) {
-        printf("FDT: No notch detected\n");
-        return;
-    }
-
-    // iPhone X
-    if (chip_id != T8015 || (board_id != 0x6 && board_id != 0xe)) {
+        (chip_id != T8015 || (board_id != 0x6 && board_id != 0xe))) {
         printf("FDT: No notch detected\n");
         return;
     }
