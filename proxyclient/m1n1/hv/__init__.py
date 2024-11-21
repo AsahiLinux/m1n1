@@ -1757,7 +1757,12 @@ class HV(Reloadable):
         if use_xnu_symbols == True:
             self.sym_offset = vmin - guest_base + self.tba.phys_base - self.tba.virt_base
 
-        self.iface.writemem(guest_base + self.bootargs_off, BootArgs.build(self.tba))
+        if self.tba.revision <= 1:
+            self.iface.writemem(guest_base + self.bootargs_off, BootArgs_r1.build(self.tba))
+        elif self.tba.revision == 2:
+            self.iface.writemem(guest_base + self.bootargs_off, BootArgs_r2.build(self.tba))
+        elif self.tba.revision == 3:
+            self.iface.writemem(guest_base + self.bootargs_off, BootArgs_r3.build(self.tba))
 
         print("Setting secondary CPU RVBARs...")
         rvbar = self.entry & ~0xfff
