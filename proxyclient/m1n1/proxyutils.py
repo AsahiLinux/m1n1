@@ -44,9 +44,14 @@ class ProxyUtils(Reloadable):
         self.iface = p.iface
         self.proxy = p
         self.base = p.get_base()
-        self.ba_addr = p.get_bootargs()
+        (self.ba_addr, self.ba_rev) = p.get_bootargs_rev()
 
-        self.ba = self.iface.readstruct(self.ba_addr, BootArgs)
+        if self.ba_rev <= 1:
+            self.ba = self.iface.readstruct(self.ba_addr, BootArgs_r1)
+        elif  self.ba_rev == 2:
+            self.ba = self.iface.readstruct(self.ba_addr, BootArgs_r2)
+        elif  self.ba_rev == 3:
+            self.ba = self.iface.readstruct(self.ba_addr, BootArgs_r3)
 
         # We allocate a 128MB heap, 128MB after the m1n1 heap, without telling it about it.
         # This frees up from having to coordinate memory management or free stuff after a Python

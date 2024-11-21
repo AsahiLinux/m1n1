@@ -721,6 +721,10 @@ class M1N1Proxy(Reloadable):
                 self.request(self.P_CALL, addr, *args, reboot=True)
     def get_bootargs(self):
         return self.request(self.P_GET_BOOTARGS)
+    def get_bootargs_rev(self):
+        ba_addr = self.request(self.P_GET_BOOTARGS)
+        rev = self.read16(ba_addr)
+        return (ba_addr, rev)
     def get_base(self):
         return self.request(self.P_GET_BASE)
     def set_baud(self, baudrate):

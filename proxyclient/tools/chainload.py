@@ -17,7 +17,7 @@ parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
 
 from m1n1.setup import *
-from m1n1.tgtypes import BootArgs
+from m1n1.tgtypes import BootArgs_r1, BootArgs_r2, BootArgs_r3
 from m1n1.macho import MachO
 from m1n1 import asm
 
@@ -113,7 +113,12 @@ if args.xnu:
     tba.virt_base = 0xfffffe0010000000 + (tba.phys_base & (32 * 1024 * 1024 - 1))
     tba.devtree = u.ba.devtree - u.ba.virt_base + tba.virt_base
 
-iface.writemem(image_addr + bootargs_off, BootArgs.build(tba))
+if tba.revision <= 1:
+    iface.writemem(image_addr + bootargs_off, BootArgs_r1.build(tba))
+elif tba.revision == 2:
+    iface.writemem(image_addr + bootargs_off, BootArgs_r2.build(tba))
+elif tba.revision == 3:
+    iface.writemem(image_addr + bootargs_off, BootArgs_r3.build(tba))
 
 print(f"Copying stub...")
 
