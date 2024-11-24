@@ -136,7 +136,7 @@ class AGX:
 
         # All channels have 0x100 items
         item_count = ring_size
-        item_size = cls.item_size
+        item_size = cls.item_size()
         ring_size = item_count * item_size
 
         self.log(f"Allocating {count} channel(s) for {name} ({item_count} * {item_size:#x} bytes each)")
