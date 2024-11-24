@@ -1738,6 +1738,17 @@ class PerfCounterDesc(ConstructClass):
         "pad0" / Int8ul,
         "pad1" / Int32ul,
     )
+    def __init__(self):
+        self.regs = 0
+        self.dis_mask = 0
+        self.en_mask = 0
+        self.source_mask = 0
+        self.base_reg = 0
+        self.unk_type = 0
+        self.count = 0
+        self.index = 0
+        self.pad0 = 0
+        self.pad1 = 0
 
 class InitData_RegionC(ConstructClass):
     subcon = Struct(
@@ -1904,11 +1915,28 @@ class InitData_RegionC(ConstructClass):
         self.unk_62 = 0
         self.unk_66_0 = bytes(0xc)
         self.unk_66 = 1
-        self.unk_6a = bytes(0x16)
-        self.unk_80 = bytes(0xf80)
-        self.unk_1000 = bytes(0x7000)
-        self.unk_8000 = bytes(0x900)
-        self.unk_8900_0 = 0
+        self.unk_6a = bytes(0x12)
+
+        self.perfctrs = [PerfCounterDesc() for i in range(512)]
+        self.perfctr_count = 0
+        self.unk_4080 = bytes(0x3f80)
+        self.unk_8000 = bytes(0x878)
+        self.unk_8878 = 0
+        self.unk_887c = 0
+        self.unk_8880 = bytes(0x10)
+        self.unk_8890 = 0
+
+        self.unkptr_8894 = 0
+        self.size_889c = 0
+        self.unkptr_88a0 = 0
+        self.perf_source_list = 0
+        self.perf_source_count = 0
+        self.unkptr_88b4 = 0
+        self.unk_88bc = 0
+        self.unk_88c0 = 0
+        self.unk_88c2 = 0
+        self.unkpad_88c3 = 0
+        self.unk_88c4 = 0
         self.unk_8900 = 1
         # Accessed with OSIncrementAtomic/OSDecrementAtomic
         self.unk_atomic = 0

@@ -536,10 +536,10 @@ def build_initdata(agx):
     if cs_pstates:
         hwdata.cs_max_pstate = cs_pstates.count - 1
         hwdata.cs_frequencies = [(ps.freq // 1000000)
-                                 for ps in cs_pstates.states] + [0] * (16 - cs_pstates.count)
+                                 for ps in cs_pstates.states[0]] + [0] * (16 - cs_pstates.count)
         hwdata.cs_voltages = [[(ps.volt // 1000), 0]
-                              for ps in cs_pstates.states] + [[0, 0]] * (16 - cs_pstates.count)
-        hwdata.cs_voltages_sram = [[max(i[0], cs_pstates.min_sram_volt // 1000) if i[0] else 0, 0] for i in hwdata.cs_voltages]
+                              for ps in cs_pstates.states[0]] + [[0, 0]] * (16 - cs_pstates.count)
+        hwdata.cs_voltages_sram = [[max(i[0], cs_pstates.min_sram_volt[0] // 1000) if i[0] else 0, 0] for i in hwdata.cs_voltages]
     else:
         hwdata.cs_max_pstate = 0
         hwdata.cs_frequencies = [0] * 16
@@ -550,10 +550,10 @@ def build_initdata(agx):
     if afr_pstates:
         hwdata.afr_max_pstate = afr_pstates.count - 1
         hwdata.afr_frequencies = [(ps.freq // 1000000)
-                                 for ps in afr_pstates.states] + [0] * (8 - afr_pstates.count)
+                                 for ps in afr_pstates.states[0]] + [0] * (8 - afr_pstates.count)
         hwdata.afr_voltages = [[(ps.volt // 1000), 0]
-                              for ps in afr_pstates.states] + [[0, 0]] * (8 - afr_pstates.count)
-        hwdata.afr_voltages_sram = [[max(i[0], afr_pstates.min_sram_volt // 1000) if i[0] else 0, 0] for i in hwdata.afr_voltages]
+                              for ps in afr_pstates.states[0]] + [[0, 0]] * (8 - afr_pstates.count)
+        hwdata.afr_voltages_sram = [[max(i[0], afr_pstates.min_sram_volt[0] // 1000) if i[0] else 0, 0] for i in hwdata.afr_voltages]
     else:
         hwdata.afr_max_pstate = 0
         hwdata.afr_frequencies = [0] * 8

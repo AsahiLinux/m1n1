@@ -850,7 +850,7 @@ class GPURenderer:
         if Ver.check("V >= V13_0B4"):
             ts1.unk_ts_addr = wc_3d.unk_ts._addr
         ts1.uuid = uuid_3d
-        ts1.unk_30_padding = 0x0
+        ts1.unk_30 = 0x0
         ms.append(ts1)
 
         if Ver.check("G >= G14X"):
@@ -870,7 +870,7 @@ class GPURenderer:
         if Ver.check("V >= V13_0B4"):
             ts2.unk_ts_addr = wc_3d.unk_ts._addr
         ts2.uuid = uuid_3d
-        ts2.unk_30_padding = 0x0
+        ts2.unk_30 = 0x0
         ms.append(ts2)
 
         finish_3d = Finalize3DCmd()
@@ -1202,7 +1202,7 @@ class GPURenderer:
         if Ver.check("V >= V13_0B4"):
             ts1.unk_ts_addr = wc_ta.unk_ts._addr
         ts1.uuid = uuid_ta
-        ts1.unk_30_padding = 0x0
+        ts1.unk_30 = 0x0
         ms.append(ts1)
 
         if Ver.check("G >= G14X"):
@@ -1222,7 +1222,7 @@ class GPURenderer:
         if Ver.check("V >= V13_0B4"):
             ts2.unk_ts_addr = wc_ta.unk_ts._addr
         ts2.uuid = uuid_ta
-        ts2.unk_30_padding = 0x0
+        ts2.unk_30 = 0x0
         ms.append(ts2)
 
         finish_ta = FinalizeTACmd()
