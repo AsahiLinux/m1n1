@@ -1294,7 +1294,12 @@ class GPURenderer:
         work = self.work[-1]
 
         ##### Wait for work completion
-        while not self.ev_3d.fired:
+        while True:
+            self.stamp_3d1.pull()
+            self.stamp_ta1.pull()
+            if (self.stamp_3d1.value >= self.stamp_value_3d and
+                self.stamp_ta1.value >= self.stamp_value_ta):
+                break
             self.agx.wait_for_events(timeout=2.0)
 
         if not self.ev_3d.fired:
