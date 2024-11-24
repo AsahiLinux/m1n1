@@ -219,6 +219,7 @@ class GPURenderer:
         self.mshook_3d = None
 
     def submit(self, cmdbuf, wait_for=None):
+        clustering = True
         nclusters = 8
 
         work = GPUWork(self)
@@ -985,6 +986,10 @@ class GPURenderer:
 
         import random
 
+        tiling_control = agx.chip_info.tiling_control
+        if not clustering:
+            tiling_control |= 1
+
         if not use_registers:
             wc_ta.struct_2 = StartTACmdStruct2()
             wc_ta.struct_2.unk_0 = 0 if unk1 else 0x200
@@ -1011,7 +1016,7 @@ class GPURenderer:
             wc_ta.struct_2.encoder_addr = cmdbuf.encoder_ptr
             wc_ta.struct_2.tvb_cluster_meta2 = unk_tile_buf3._addr
             wc_ta.struct_2.tvb_cluster_meta3 = unk_tile_buf4._addr
-            wc_ta.struct_2.tiling_control = 0xa040 #0xa041 # fixed
+            wc_ta.struct_2.tiling_control = tiling_control
             wc_ta.struct_2.unk_b0 = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0] # fixed
             wc_ta.struct_2.pipeline_base = self.ctx.pipeline_base
             wc_ta.struct_2.tvb_cluster_meta4 = unk_tile_buf5._addr | 0x3000_0000_0000_0000
@@ -1051,7 +1056,7 @@ class GPURenderer:
                 0x1c898:    0x0,                                # if lsb set, faults in UL1C0, possibly missing addr.
                 0x1c948:    unk_tile_buf3._addr,                # tvb_cluster_meta2
                 0x1c888:    unk_tile_buf4._addr,                # tvb_cluster_meta3
-                0x1c890:    0x180341,                           # tvb_tiling_control
+                0x1c890:    tiling_control,                     # tvb_tiling_control
                 0x1c918:    0x4,
                 0x1c079:    tvb_heapmeta._addr,
                 0x1c9d8:    tvb_heapmeta._addr,
@@ -1190,7 +1195,7 @@ class GPURenderer:
         start_ta.unk_168 = 0x0 # fixed
         start_ta.unk_16c = 0x0 # fixed
         start_ta.unk_170 = 0x0 # fixed
-        start_ta.unk_178 = 0x0 # fixed?
+        start_ta.unk_178 = 0 if clustering else 1
         start_ta.counter = wc_ta.counter
         start_ta.unkptr_180 = self.event_control.unk_buf._addr
 

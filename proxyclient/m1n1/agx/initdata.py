@@ -168,6 +168,7 @@ CHIP_INFO = {
         unk_hws2_0 = 0,
         unk_hws2_4 = [0] * 8,
         unk_hws2_24 = 0,
+        tiling_control = 0xa041,
     ),
     0x6001: Container(
         chip_id = 0x6001,
@@ -220,6 +221,7 @@ CHIP_INFO = {
         unk_hws2_0 = 0,
         unk_hws2_4 = [0] * 8,
         unk_hws2_24 = 0,
+        tiling_control = 0xa540,
     ),
     0x6002: Container(
         chip_id = 0x6002,
@@ -275,6 +277,7 @@ CHIP_INFO = {
         unk_hws2_0 = 0,
         unk_hws2_4 = [0] * 8,
         unk_hws2_24 = 0,
+        tiling_control = 0xa540,
     ),
     0x8112: Container(
         chip_id = 0x8112,
@@ -331,6 +334,7 @@ CHIP_INFO = {
             10700, 10700, 10700, 10700,
         ],
         rc_unk_54 = 0xffff,
+        tiling_control = 0xa041,
     ),
     0x6021: Container(
         chip_id = 0x6021,
@@ -395,6 +399,7 @@ CHIP_INFO = {
             7500, 125, 125, 125, 125, 125, 125, 125
         ],
         rc_unk_54 = 4000,
+        tiling_control = 0x180340,
     ),
     0x6020: Container(
         chip_id = 0x6020,
@@ -459,12 +464,14 @@ CHIP_INFO = {
             7500, 125, 125, 125, 125, 125, 125, 125
         ],
         rc_unk_54 = 4000,
+        tiling_control = 0x180340,
     ),
 }
 def build_initdata(agx):
     sgx = agx.u.adt["/arm-io/sgx"]
     chosen = agx.u.adt["/chosen"]
     chip_info = CHIP_INFO[chosen.chip_id]
+    agx.chip_info = chip_info
 
     initdata = agx.kshared.new(InitData)
 
