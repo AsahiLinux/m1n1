@@ -333,7 +333,7 @@ class UartInterface(Reloadable):
             self.dev.close()
             print("Waiting for reconnection... ", end="")
             sys.stdout.flush()
-            for i in range(100):
+            for i in range(200):
                 print(".", end="")
                 sys.stdout.flush()
                 try:
