@@ -185,6 +185,8 @@ class GPUAllocator:
         self.agx = agx
         self.ctx = ctx
         self.name = name
+        self.start = start
+        self.size = size
         self.va = Heap(start, start + size, block=va_block)
         self.verbose = 0
         self.guard_pages = guard_pages

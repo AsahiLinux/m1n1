@@ -1059,7 +1059,7 @@ class AGXHWDataB(ConstructClass):
         "unk_20" / Int64ul,
         "unk_28" / Int64ul,
         "unk_30" / Int64ul,
-        "unkptr_38" / Int64ul,
+        "timestamp_region_base" / Int64ul,
         "pad_40" / HexDump(Bytes(0x20)),
         Ver("V < V13_0B4", "yuv_matrices" / Array(15, Array(3, Array(4, Int16sl)))),
         Ver("V >= V13_0B4", "yuv_matrices" / Array(63, Array(3, Array(4, Int16sl)))),
@@ -1217,7 +1217,7 @@ class AGXHWDataB(ConstructClass):
         self.unk_30 = 0x6f_ffff8000
         self.pad_40 = bytes(0x20)
         # unmapped?
-        self.unkptr_38 = 0xffffffa0_11800000
+        self.timestamp_region_base = 0
         self.pad_1c8 = bytes(8)
 
         # Note: these are rounded poorly, need to recompute.

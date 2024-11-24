@@ -16,14 +16,13 @@ class GPUContext:
         self.u = self.agx.u
         self.p = self.agx.p
         self.verbose = False
+        self.ctx = None
 
         #self.job_list = agx.kshared.new(JobList)
         #self.job_list.first_job = 0
         #self.job_list.last_head = self.job_list._addr # Empty list has self as last_head
         #self.job_list.unkptr_10 = 0
         #self.job_list.push()
-
-        self.gpu_context = agx.kobj.new(GPUContextData).push()
 
         self.ttbr0_base = self.u.memalign(self.agx.PAGE_SIZE, self.agx.PAGE_SIZE)
         self.p.memset32(self.ttbr0_base, 0, self.agx.PAGE_SIZE)
@@ -67,7 +66,7 @@ class GPUContext:
         #if isinstance(obj.val, ConstructClassBase):
             #obj.val._addr = obj._addr
 
-        self.agx.log(f"[Context@{self.gpu_context._addr:#x}] Map {obj._name} size {obj._size:#x} @ {obj._addr:#x} ({obj._paddr:#x})")
+        self.agx.log(f"[Context@{self.ctx}] Map {obj._name} size {obj._size:#x} @ {obj._addr:#x} ({obj._paddr:#x})")
 
         flags2 = {"AttrIndex": MemoryAttr.Shared}
         flags2.update(flags)
@@ -105,11 +104,10 @@ class GPUContext:
         self.free(self.objects[obj._addr])
 
 class GPUWorkQueue:
-    def __init__(self, agx, context, job_list):
+    def __init__(self, agx, scheduler_context, job_list):
         self.agx = agx
         self.u = agx.u
         self.p = agx.p
-        self.context = context
 
         self.info = agx.kobj.new(CommandQueueInfo)
 
@@ -123,7 +121,7 @@ class GPUWorkQueue:
         self.info.rb_addr = self.ring._addr
         self.info.job_list = job_list
         self.info.gpu_buf_addr = agx.kobj.buf(0x2c18, "GPUWorkQueue.gpu_buf")
-        self.info.gpu_context = context.gpu_context
+        self.info.gpu_context = scheduler_context
         self.info.push()
 
         self.wptr = 0

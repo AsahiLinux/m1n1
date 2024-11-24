@@ -121,6 +121,7 @@ class GPURenderer:
     def __init__(self, ctx, buffers=16, bm_slot=0, queue=0):
         self.agx = agx = ctx.agx
         self.queue = queue
+        self.scheduler_context = agx.kobj.new(GPUContextData).push()
 
         # 0..63
         self.ctx = ctx
@@ -146,13 +147,8 @@ class GPURenderer:
 
         ##### Work Queues
 
-        self.ts3d_1 = agx.kshared.new(Int64ul, name="3D timestamp 1")
-        self.ts3d_2 = agx.kshared.new(Int64ul, name="3D timestamp 2")
-        self.tsta_1 = agx.kshared.new(Int64ul, name="TA timestamp 1")
-        self.tsta_2 = agx.kshared.new(Int64ul, name="TA timestamp 2")
-
-        self.wq_3d = GPU3DWorkQueue(agx, ctx, self.job_list)
-        self.wq_ta = GPUTAWorkQueue(agx, ctx, self.job_list)
+        self.wq_3d = GPU3DWorkQueue(agx, self.scheduler_context, self.job_list)
+        self.wq_ta = GPUTAWorkQueue(agx, self.scheduler_context, self.job_list)
 
         self.wq_3d.info.uuid = 0x3D0000 | bm_slot
         self.wq_3d.info.push()
@@ -227,6 +223,23 @@ class GPURenderer:
 
         work = GPUWork(self)
         self.work.append(work)
+
+        def mktimestamp(alloc, name):
+            ts = alloc.new(Int64ul, name=name)
+            ts.val = 0
+            ts.push()
+            work.add(ts)
+            return ts
+
+        work.ts3d_start = mktimestamp(self.agx.kshared, "3D timestamp start")
+        work.ts3d_end = mktimestamp(self.agx.kshared, "3D timestamp end")
+        work.tsta_start = mktimestamp(self.agx.kshared, "TA timestamp start")
+        work.tsta_end = mktimestamp(self.agx.kshared, "TA timestamp end")
+
+        work.ns3d_start = mktimestamp(self.agx.ktimestamp, "3D user timestamp start")
+        work.ns3d_end = mktimestamp(self.agx.ktimestamp, "3D user timestamp end")
+        work.nsta_start = mktimestamp(self.agx.ktimestamp, "TA timestamp start")
+        work.nsta_end = mktimestamp(self.agx.ktimestamp, "TA timestamp end")
 
         self.buffer_mgr.increment()
 
@@ -503,16 +516,12 @@ class GPURenderer:
         wc_3d.unk_buf2.unk_8 = 0
         wc_3d.unk_buf2.unk_10 = 1
         wc_3d.ts1 = TimeStamp(0)
-        wc_3d.ts2 = TimeStamp(self.ts3d_1._addr)
-        wc_3d.ts3 = TimeStamp(self.ts3d_2._addr)
-        wc_3d.unk_914 = 0
-        wc_3d.unk_918 = 0
-        wc_3d.unk_920 = 0
+        wc_3d.ts_pointers = TimeStampPointers(work.ts3d_start._addr, work.ts3d_end._addr)
+        wc_3d.user_ts_pointers = TimeStampPointers(work.ns3d_start._addr, work.ns3d_end._addr)
         wc_3d.client_sequence = 1
         # Ventura
-        wc_3d.unk_928_0 = 0
-        wc_3d.unk_928_4 = 0
         wc_3d.unk_ts = TimeStamp()
+        wc_3d.unk_ts2 = TimeStamp()
 
         use_registers = Ver.check("G >= G14X")
 
@@ -673,10 +682,11 @@ class GPURenderer:
             }
 
             if False:
+                # These are actually appended by the firmware?
                 regs[0x10211] = 0x134
                 regs[0x10420] = 0x134
                 regs[0x1c838] = 0x1
-                regs[0x1ca28] = 0x1502961540
+                regs[0x1ca28] = 0x1502961540 # buf_desc.unkptr_18
                 regs[0x1731] = 0x1
 
             wc_3d.registers = [RegisterDefinition(k, v) for k, v in regs.items()]
@@ -843,10 +853,10 @@ class GPURenderer:
         ts1.unk_2 = 0x0
         ts1.unk_3 = 0x80
         ts1.ts0_addr = wc_3d.ts1._addr
-        ts1.ts1_addr = wc_3d.ts2._addr
-        ts1.ts2_addr = wc_3d.ts2._addr
+        ts1.ts_pointers_addr = wc_3d.ts_pointers._addr
+        ts1.unk_addr = 0xdeadbeef
         ts1.cmdqueue_ptr = self.wq_3d.info._addr
-        ts1.unk_24 = 0x0
+        ts1.user_ts_pointers_addr = wc_3d.user_ts_pointers._addr
         if Ver.check("V >= V13_0B4"):
             ts1.unk_ts_addr = wc_3d.unk_ts._addr
         ts1.uuid = uuid_3d
@@ -863,10 +873,10 @@ class GPURenderer:
         ts2.unk_2 = 0x0
         ts2.unk_3 = 0x0
         ts2.ts0_addr = wc_3d.ts1._addr
-        ts2.ts1_addr = wc_3d.ts2._addr
-        ts2.ts2_addr = wc_3d.ts3._addr
+        ts2.ts_pointers_addr = wc_3d.ts_pointers._addr
+        ts2.unk_addr = 0xdeadbeef
         ts2.cmdqueue_ptr = self.wq_3d.info._addr
-        ts2.unk_24 = 0x0
+        ts2.user_ts_pointers_addr = wc_3d.user_ts_pointers._addr
         if Ver.check("V >= V13_0B4"):
             ts2.unk_ts_addr = wc_3d.unk_ts._addr
         ts2.uuid = uuid_3d
@@ -962,17 +972,12 @@ class GPURenderer:
         wc_ta.unk_594 = WorkCommand0_UnkBuf()
 
         wc_ta.ts1 = TimeStamp(0)
-        wc_ta.ts2 = TimeStamp(self.tsta_1._addr)
-        wc_ta.ts3 = TimeStamp(self.tsta_2._addr)
-        wc_ta.unk_5c4 = 0
-        wc_ta.unk_5c8 = 0
-        wc_ta.unk_5cc = 0
-        wc_ta.unk_5d0 = 0
+        wc_ta.ts_pointers = TimeStampPointers(work.tsta_start._addr, work.tsta_end._addr)
+        wc_ta.user_ts_pointers = TimeStampPointers(work.nsta_start._addr, work.nsta_end._addr)
         wc_ta.client_sequence = 1
         # Ventura
-        wc_ta.unk_5d8_0 = 0
-        wc_ta.unk_5d8_4 = 0
         wc_ta.unk_ts = TimeStamp()
+        wc_ta.unk_ts2 = TimeStamp()
 
         # Structures embedded in WorkCommandTA
         if not use_registers:
@@ -1083,11 +1088,12 @@ class GPURenderer:
             }
 
             if False:
+                # These are actually appended by the firmware?
                 regs[0x10209] = 0x133
                 regs[0x1c9f0] = 0x133
                 regs[0x1c830] = 0x1
                 regs[0x1c9f0] = 0x1502960fa0
-                regs[0x16c39] = 0x1502960fa0
+                regs[0x16c39] = 0x1502960fa0 # buf_desc.unkptr_18
                 regs[0x1c910] = 0xa0000b0125
                 regs[0x1c8e0] = 0xff # core_mask_0
                 regs[0x1c8e8] = 0x00 # core_mask_1
@@ -1195,10 +1201,10 @@ class GPURenderer:
         ts1.unk_2 = 0x0
         ts1.unk_3 = 0x80
         ts1.ts0_addr = wc_ta.ts1._addr
-        ts1.ts1_addr = wc_ta.ts2._addr
-        ts1.ts2_addr = wc_ta.ts2._addr
+        ts1.ts_pointers_addr = wc_ta.ts_pointers._addr
+        ts1.unk_addr = 0xdeadbeef
         ts1.cmdqueue_ptr = self.wq_ta.info._addr
-        ts1.unk_24 = 0x0
+        ts1.user_ts_pointers_addr = wc_ta.user_ts_pointers._addr
         if Ver.check("V >= V13_0B4"):
             ts1.unk_ts_addr = wc_ta.unk_ts._addr
         ts1.uuid = uuid_ta
@@ -1215,10 +1221,10 @@ class GPURenderer:
         ts2.unk_2 = 0x0
         ts2.unk_3 = 0x0
         ts2.ts0_addr = wc_ta.ts1._addr
-        ts2.ts1_addr = wc_ta.ts2._addr
-        ts2.ts2_addr = wc_ta.ts3._addr
+        ts2.ts_pointers_addr = wc_ta.ts_pointers._addr
+        ts2.unk_addr = 0xdeadbeef
         ts2.cmdqueue_ptr = self.wq_ta.info._addr
-        ts2.unk_24 = 0x0
+        ts2.user_ts_pointers_addr = wc_ta.user_ts_pointers._addr
         if Ver.check("V >= V13_0B4"):
             ts2.unk_ts_addr = wc_ta.unk_ts._addr
         ts2.uuid = uuid_ta

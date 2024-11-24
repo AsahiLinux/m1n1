@@ -499,6 +499,7 @@ def build_initdata(agx):
 
     # size: 0xb80, io stuff
     hwdata = agx.kobj.new(AGXHWDataB(sgx, chip_info), track=False)
+    hwdata.timestamp_region_base = agx.ktimestamp.start
     hwdata.io_mappings = build_iomappings(agx, chosen.chip_id)
 
     if chip_info.sram_base:

@@ -28,6 +28,17 @@ class TimeStamp(ConstructValueClass):
     def __init__(self, value=0):
         self.value = value
 
+class TimeStampPointers(ConstructClass):
+    subcon = Struct(
+        "start_addr" / Int64ul,
+        "end_addr" / Int64ul,
+    )
+
+    def __init__(self, start_addr=0, end_addr=0):
+        super().__init__()
+        self.start_addr = start_addr
+        self.end_addr = end_addr
+
 class TsFlag(ConstructValueClass):
     subcon = Int8ul
 
@@ -906,12 +917,12 @@ class TimestampCmd(ConstructClass):
         # all these pointers point to 0xfa0... addresses. Might be where the timestamp should be writen?
         "ts0_addr" / Int64ul,
         "ts0" / ROPointer(this.ts0_addr, TimeStamp),
-        "ts1_addr" / Int64ul,
-        "ts1" / ROPointer(this.ts1_addr, TimeStamp),
-        "ts2_addr" / Int64ul,
-        "ts2" / ROPointer(this.ts2_addr, TimeStamp),
+        "ts_pointers_addr" / Int64ul,
+        "ts_pointers" / ROPointer(this.ts_pointers_addr, TimeStampPointers),
+        "unk_addr" / Int64ul,
         "cmdqueue_ptr" / Int64ul,
-        "unk_24" / Int64ul,
+        "user_ts_pointers_addr" / Int64ul,
+        "ts_pointers" / ROPointer(this.user_ts_pointers_addr, TimeStampPointers),
         Ver("V >= V13_0B4", "unk_ts_addr" / Int64ul),
         "uuid" / Int32ul,
         "unk_30" / Int32ul,

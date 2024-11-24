@@ -77,12 +77,14 @@ class AGX:
         self.kgpurw = GPUAllocator(self, "kernel GPU RW",
                                  self.kern_va_base + 0x70000000, 0x1000000,
                                  AttrIndex=MemoryAttr.Shared, AP=0, UXN=1, PXN=1)
+        self.ktimestamp = GPUAllocator(self, "ktimestamp",
+                                    self.kern_va_base + 0x71000000, 0x4000000,
+                                    AttrIndex=MemoryAttr.Shared, AP=1, guard_pages=1)
 
         self.klow = GPUAllocator(self, "kernel_low",
                                  0x1500000000, 0x100000,
                                  AttrIndex=MemoryAttr.Shared, AP=0, UXN=1, PXN=1)
         self.klow.align_to_end = False
-
 
         self.io_allocator = Heap(self.kern_va_base + 0x68000000,
                                  self.kern_va_base + 0x70000000,
