@@ -445,7 +445,12 @@ class GPUContextData(ConstructClass):
         "unk_1" / Int8ul,
         "unk_2" / Default(Bytes(3), bytes(3)),
         "unk_5" / Int8ul,
-        "unk_6" / Default(Bytes(0x18), bytes(0x18)),
+        "unk_6" / Int32ul,
+        "unk_a" / Int32ul,
+        "unk_e" / Int32ul,
+        "unk_12" / Int32ul,
+        "unk_16" / Int32ul,
+        "unk_1a" / Int32ul,
         "unk_1e" / Int8ul,
         "unk_1f" / Int8ul,
         "unk_20" / Default(Bytes(3), bytes(3)),
@@ -457,6 +462,12 @@ class GPUContextData(ConstructClass):
         self.unk_0 = 0xff
         self.unk_1 = 0xff
         self.unk_5 = 1
+        self.unk_6 = 0
+        self.unk_a = 0
+        self.unk_e = 0
+        self.unk_12 = 0
+        self.unk_16 = 0
+        self.unk_1a = 0
         self.unk_1e = 0xff
         self.unk_1f = 0
         self.unk_23 = 2
