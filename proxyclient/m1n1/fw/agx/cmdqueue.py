@@ -441,8 +441,8 @@ class JobList(ConstructClass):
 
 class GPUContextData(ConstructClass):
     subcon = Struct(
-        "unk_0" / Int8ul,
-        "unk_1" / Int8ul,
+        "queue_table_index" / Int8ul,
+        "pid_table_index" / Int8ul,
         "unk_2" / Default(Bytes(3), bytes(3)),
         "unk_5" / Int8ul,
         "unk_6" / Int32ul,
@@ -459,8 +459,8 @@ class GPUContextData(ConstructClass):
     )
 
     def __init__(self):
-        self.unk_0 = 0xff
-        self.unk_1 = 0xff
+        self.queue_table_index = 0xff
+        self.pid_table_index = 0xff
         self.unk_5 = 1
         self.unk_6 = 0
         self.unk_a = 0
@@ -521,12 +521,12 @@ class CommandQueueInfo(ConstructClass):
         "gpu_rptr2" / Hex(Int32ul),
         "gpu_rptr3" / Hex(Int32ul),
         "event_id" / Int32sl,
-        "unk_30" / Hex(Int32ul), # read by CPU
+        "priority" / Hex(Int32ul), # read by CPU
         "unk_34" / Hex(Int32ul),
         "unk_38" / Hex(Int64ul),
         "unk_40" / Hex(Int32ul), # 1
         "unk_44" / Hex(Int32ul), # 0
-        "unk_48" / Hex(Int32ul), # 1, 2
+        "prio5" / Hex(Int32ul), # 1, 2
         "unk_4c" / Int32sl, # -1
         "uuid" / Hex(Int32ul), # Counts up for each new process or command queue
         "unk_54" / Int32sl,
@@ -539,7 +539,7 @@ class CommandQueueInfo(ConstructClass):
         "unk_8c" / Int32ul,
         "unk_90" / Int32ul,
         "unk_94" / Int32ul,
-        "pending" / Int32ul,
+        "inflight_commands" / Int32ul,
         "unk_9c" / Int32ul,
         Ver("V >= V13_2 && G < G14X", "unk_a0_0" / Int32ul),
         "gpu_context_addr" / Hex(Int64ul), # GPU managed context, shared between 3D and TA. Passed to DC_DestroyContext
@@ -566,7 +566,7 @@ class CommandQueueInfo(ConstructClass):
         self.unk_8c = 0
         self.unk_90 = 0
         self.unk_94 = 0
-        self.pending = 0
+        self.inflight_commands = 0
         self.unk_9c = 0
         self.unk_a0_0 = 0
         self.set_prio(0)
@@ -575,33 +575,33 @@ class CommandQueueInfo(ConstructClass):
 
     def set_prio(self, p):
         if p == 0:
-            self.unk_30 = 0
+            self.priority = 0
             self.unk_34 = 0 # 0-3?
             self.unk_38 = 0xffff_ffff_ffff_0000
             self.unk_40 = 1
             self.unk_44 = 0
-            self.unk_48 = 1
+            self.prio5 = 1
         elif p == 1:
-            self.unk_30 = 1
+            self.priority = 1
             self.unk_34 = 1
             self.unk_38 = 0xffff_ffff_0000_0000
             self.unk_40 = 0
             self.unk_44 = 0
-            self.unk_48 = 0
+            self.prio5 = 0
         elif p == 2:
-            self.unk_30 = 2
+            self.priority = 2
             self.unk_34 = 2
             self.unk_38 = 0xffff_0000_0000_0000
             self.unk_40 = 0
             self.unk_44 = 0
-            self.unk_48 = 2
+            self.prio5 = 2
         else:
-            self.unk_30 = 3
+            self.priority = 3
             self.unk_34 = 3
             self.unk_38 = 0x0000_0000_0000_0000
             self.unk_40 = 0
             self.unk_44 = 0
-            self.unk_48 = 3
+            self.prio5 = 3
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)

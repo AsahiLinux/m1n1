@@ -67,6 +67,7 @@ class GPUCmdQueueChannel(GPUTXChannel):
         msg.head = queue.wptr
         msg.event_number = event
         msg.new_queue = 1 if queue.first_time else 0
+        msg.timestamp = 0
         queue.first_time = False
         #print(msg)
         self.send_message(msg)

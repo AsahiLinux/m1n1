@@ -96,6 +96,7 @@ class AGX:
         self.p.iodev_set_usage(IODEV.FB, 0)
 
         self.initdata_hook = None
+        self.halts_processed = 0
 
         # Early init, needed?
         self.poke_sgx()
@@ -204,15 +205,46 @@ class AGX:
     def kick_firmware(self):
         self.asc.db.doorbell(0x10)
 
-    def show_irqs(self):
-        hw_state = self.aic_base + 0x4200
+
+    def get_irqs(self):
+        hw_state = self.aic_base + 0x6800
         irqs = []
         for irq in self.sgx_dev.interrupts:
             v = int(bool((self.p.read32(hw_state + (irq // 32) * 4) & (1 << (irq % 32)))))
             irqs.append(v)
+        return irqs
+
+    def show_irqs(self):
+        irqs = self.get_irqs()
         self.log(f' SGX IRQ state: {irqs}')
 
+    def check_for_halt(self):
+        irqs = self.get_irqs()
+        if irqs[0]:
+            if self.mon:
+                self.mon.poll()
+            self.poll_objects()
+            self.log(f' SGX IRQ fired, checking for halt')
+            self.wait_halt()
+            self.log(r' (\________/) ')
+            self.log(r'  |        |  ')
+            self.log(r"'.| \  , / |.'")
+            self.log(r'--| / (( \ |--')
+            self.log(r".'|  _-_-  |'.")
+            self.log(r'  |________|  ')
+            self.log(r'')
+            self.log(r' Halted nya~!!!!!')
+            self.show_irqs()
+            self.show_pending_stamps()
+            self.check_fault()
+            self.recover()
+
     def timeout(self, msg):
+        self.log(msg)
+        if msg.counter < self.halts_processed:
+            self.log(f" Spurious, skipping")
+            return
+
         if self.mon:
             self.mon.poll()
         self.poll_objects()
@@ -300,6 +332,14 @@ class AGX:
         self.log(f" GPU fault at {fault_addr:#x}{info}")
         self.log(f" Faulting unit: {agx_decode_unit(fault_info.UNIT)}")
 
+    def wait_halt(self):
+        status = self.fw_status
+        while True:
+            halted = bool(status.halted.val)
+            self.log(f" Halted: {halted}")
+            if halted:
+                return
+
     def recover(self):
         status = self.fw_status
         self.log(f" Halt count: {status.halt_count.val}")
@@ -307,6 +347,7 @@ class AGX:
         self.log(f" Halted: {halted}")
         if halted:
             self.log(f" Attempting recovery...")
+            self.halts_processed = status.halt_count.val
             status.halted.val = 0
             status.resume.val = 1
         else:

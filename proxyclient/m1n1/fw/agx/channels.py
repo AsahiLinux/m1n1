@@ -21,7 +21,8 @@ class RunCmdQueueMsg(ConstructClass):
         "head" / Default(Int32ul, 0),
         "event_number" / Default(Int32ul, 0),
         "new_queue" / Default(Int32ul, 0),
-        "data" / HexDump(Default(Bytes(0x18), bytes(0x18))),
+        "timestamp" / Default(Int64ul, 0),
+        "data" / HexDump(Default(Bytes(0x10), bytes(0x10))),
         Ver("G >= G14 && V >= V13_2 && G < G14X", ZPadding(0x10)),
     )
 
@@ -359,8 +360,7 @@ class FlagMsg(ConstructClass):
 class TimeoutMsg(ConstructClass):
     subcon = Struct (
         "msg_type" / Hex(Const(4, Int32ul)),
-        "counter" / Hex(Int32ul),
-        "unk_8" / Hex(Int32ul),
+        "counter" / Hex(Int64ul),
         "stamp_index" / Hex(Int32sl),
         "unkpad_16" / HexDump(Bytes(0x38 - 0x10)),
     )
@@ -374,11 +374,18 @@ class GrowTVBMsg(ConstructClass):
         "tail" / HexDump(Bytes(0x38 - 0x10)),
     )
 
+class ChannelError(ConstructClass):
+    subcon = Struct (
+        "msg_type" / Hex(Const(8, Int32ul)),
+        "tail" / HexDump(Bytes(0x38 - 0x4)),
+    )
+
 EventMsg = FixedSized(0x38, Select(
     FaultMsg,
     FlagMsg,
     TimeoutMsg,
     GrowTVBMsg,
+    ChannelError,
     HexDump(Bytes(0x38)),
 ))
 

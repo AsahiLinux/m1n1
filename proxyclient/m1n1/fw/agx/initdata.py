@@ -1578,6 +1578,49 @@ class InitData_GPUGlobalStats3D(ConstructClass):
         self.unk_4 = 0
         self.stats = InitData_GPUStats3D()
 
+class AGXFaultInfo(ConstructClass):
+    subcon = Struct(
+        "status" / Int32ul,
+        "do_not_halt" / Int32ul,
+        "did_not_halt" / Int32ul,
+        "unk_c" / Default(Int32ul, 0),
+        "unk_10" / Default(Int32ul, 0),
+        "unk_14" / Default(Int32ul, 0),
+        "total_halts" / Default(Int32ul, 0),
+        "unk_1c" / Default(Int32ul, 0),
+        "unk_20" / Default(Int32ul, 0),
+        "unk_24" / Default(Int32ul, 0),
+        "unk_28" / Default(Int32ul, 0),
+        "unk_2c" / Default(Int32ul, 0),
+        "unk_30" / Default(Int32ul, 0),
+        "unk_34" / Default(Int32ul, 0),
+        "unk_38" / Default(Int32ul, 0),
+        "unk_3c" / Default(Int32ul, 0),
+        "unk_40" / Default(Int32ul, 0),
+        "unk_44" / Default(Int32ul, 0),
+        "unk_48" / Default(Int32ul, 0),
+        "unk_4c" / Default(Int32ul, 0),
+        "unk_50" / Default(Int32ul, 0),
+        "unk_54" / Default(Int32ul, 0),
+        "unk_58" / Default(Int32ul, 0),
+        "unk_5c" / Default(Int32ul, 0),
+        "unk_60" / Default(Int32ul, 0),
+        "unk_64" / Default(Int32ul, 0),
+        "unk_68" / Default(Int32ul, 0),
+        "unk_6c" / Default(Int32ul, 0),
+        "unk_70" / Default(Int32ul, 0),
+        "unk_74" / Default(Int32ul, 0),
+        "unk_78" / Default(Int32ul, 0),
+        "unk_7c" / Default(Int32ul, 0),
+    )
+
+    def __init__(self):
+        self.status = 0
+        self.do_not_halt = 0
+        self.did_not_halt = 0
+
+        pass
+
 class InitData_RegionB(ConstructClass):
     subcon = Struct(
         "channels" / ChannelInfoSet,
@@ -1592,8 +1635,8 @@ class InitData_RegionB(ConstructClass):
         "stats_cp" / ROPointer(this.stats_cp_addr, Bytes(0x140)),
         "hwdata_a_addr" / Int64ul,
         "hwdata_a" / ROPointer(this.hwdata_a_addr, AGXHWDataA),
-        "unkptr_190" / Int64ul, # size: 0x80, empty
-        "unk_190" / ROPointer(this.unkptr_190, Bytes(0x80)),
+        "fault_info_addr" / Int64ul, # size: 0x80, empty
+        "fault_info" / ROPointer(this.fault_info_addr, AGXFaultInfo),
         "unkptr_198" / Int64ul, # size: 0xc0, fw writes timestamps into this
         "unk_198" / ROPointer(this.unkptr_198, Bytes(0xc0)),
         "hwdata_b_addr" / Int64ul, # size: 0xb80, io stuff

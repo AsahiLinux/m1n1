@@ -499,7 +499,7 @@ def build_initdata(agx):
     regionB.hwdata_a = agx.kobj.new(AGXHWDataA(sgx, chip_info), track=False)
 
     # size: 0x80, empty
-    regionB.unk_190 = agx.kobj.new_buf(0x80, "RegionB.unkptr_190").push()
+    regionB.fault_info = agx.kshared.new(AGXFaultInfo).push()
 
     # size: 0xc0, fw writes timestamps into this
     regionB.unk_198 = agx.kobj.new_buf(0xc0, "RegionB.unkptr_198").push()

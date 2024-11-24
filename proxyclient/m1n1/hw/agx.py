@@ -46,85 +46,85 @@ class SGXInfoRegs(RegMap):
     ID_8024         = 0x8024, Register32,
 
 class UNIT_00(IntEnum):
-    DCMPn           = 0x00
-    UL1Cn           = 0x01
-    CMPn            = 0x02
-    GSL1_n          = 0x03
-    IAPn            = 0x04
-    VCEn            = 0x05
-    TEn             = 0x06
-    RASn            = 0x07
-    VDMn            = 0x08
-    PPPn            = 0x09
-    IPFn            = 0x0a
-    IPF_CPFn        = 0x0b
-    VFn             = 0x0c
-    VF_CPFn         = 0x0d
-    ZLSn            = 0x0e
+    DCMPn           = 0x00 # VDM/PDM/CDM
+    UL1Cn           = 0x01 # VDM/PDM/CDM
+    CMPn            = 0x02 # VDM/PDM/CDM
+    GSL1_n          = 0x03 # VDM/PDM/CDM
+    IAPn            = 0x04 # VDM/PDM/CDM
+    VCEn            = 0x05 # VDM
+    TEn             = 0x06 # VDM
+    RASn            = 0x07 # VDM
+    VDMn            = 0x08 # VDM
+    PPPn            = 0x09 # VDM
+    IPFn            = 0x0a # PDM
+    IPF_CPFn        = 0x0b # PDM
+    VFn             = 0x0c # PDM
+    VF_CPFn         = 0x0d # PDM
+    ZLSn            = 0x0e # PDM
 
 class UNIT_A0(IntEnum):
-    dPM             = 0xa1
-    dCDM_KS0        = 0xa2
-    dCDM_KS1        = 0xa3
-    dCDM_KS2        = 0xa4
-    dIPP            = 0xa5
-    dIPP_CS         = 0xa6
-    dVDM_CSD        = 0xa7
-    dVDM_SSD        = 0xa8
-    dVDM_ILF        = 0xa9
-    dVDM_ILD        = 0xaa
-    dRDE0           = 0xab
-    dRDE1           = 0xac
-    FC              = 0xad
-    GSL2            = 0xae
+    dPM             = 0xa1 # VDM/PDM/CDM
+    dCDM_KS0        = 0xa2 # CDM
+    dCDM_KS1        = 0xa3 # CDM
+    dCDM_KS2        = 0xa4 # CDM
+    dIPP            = 0xa5 # PDM
+    dIPP_CS         = 0xa6 # PDM
+    dVDM_CSD        = 0xa7 # VDM
+    dVDM_SSD        = 0xa8 # VDM
+    dVDM_ILF        = 0xa9 # VDM
+    dVDM_ILD        = 0xaa # VDM
+    dRDE0           = 0xab # VDM/PDM/CDM
+    dRDE1           = 0xac # VDM/PDM/CDM
+    FC              = 0xad # VDM/PDM/CDM
+    GSL2            = 0xae # VDM/PDM/CDM
 
-    GL2CC_META0     = 0xb0
-    GL2CC_META1     = 0xb1
-    GL2CC_META2     = 0xb2
-    GL2CC_META3     = 0xb3
-    GL2CC_META4     = 0xb4
-    GL2CC_META5     = 0xb5
-    GL2CC_META6     = 0xb6
-    GL2CC_META7     = 0xb7
-    GL2CC_MB        = 0xb8
+    GL2CC_META0     = 0xb0 # VDM/PDM/CDM
+    GL2CC_META1     = 0xb1 # VDM/PDM/CDM
+    GL2CC_META2     = 0xb2 # VDM/PDM/CDM
+    GL2CC_META3     = 0xb3 # VDM/PDM/CDM
+    GL2CC_META4     = 0xb4 # VDM/PDM/CDM
+    GL2CC_META5     = 0xb5 # VDM/PDM/CDM
+    GL2CC_META6     = 0xb6 # VDM/PDM/CDM
+    GL2CC_META7     = 0xb7 # VDM/PDM/CDM
+    GL2CC_MB        = 0xb8 # VDM/PDM/CDM
 
 class UNIT_D0_T602X(IntEnum):
-    gCDM_CS         = 0xd0
-    gCDM_ID         = 0xd1
-    gCDM_CSR        = 0xd2
-    gCDM_CSW        = 0xd3
-    gCDM_CTXR       = 0xd4
-    gCDM_CTXW       = 0xd5
-    gIPP            = 0xd6
-    gIPP_CS         = 0xd7
-    gKSM_RCE        = 0xd8
+    gCDM_CS         = 0xd0 # CDM
+    gCDM_ID         = 0xd1 # CDM
+    gCDM_CSR        = 0xd2 # CDM
+    gCDM_CSW        = 0xd3 # CDM
+    gCDM_CTXR       = 0xd4 # CDM
+    gCDM_CTXW       = 0xd5 # CDM
+    gIPP            = 0xd6 # PDM
+    gIPP_CS         = 0xd7 # PDM
+    gKSM_RCE        = 0xd8 # VDM/PDM/CDM
 
 class UNIT_E0_T602X(IntEnum):
-    gPM_SPn         = 0xe0
-    gVDM_CSD_SPn    = 0xe1
-    gVDM_SSD_SPn    = 0xe2
-    gVDM_ILF_SPn    = 0xe3
-    gVDM_TFP_SPn    = 0xe4
-    gVDM_MMB_SPn    = 0xe5
-    gRDE_SPn        = 0xe6
+    gPM_SPn         = 0xe0 # VDM/PDM/CDM
+    gVDM_CSD_SPn    = 0xe1 # VDM
+    gVDM_SSD_SPn    = 0xe2 # VDM
+    gVDM_ILF_SPn    = 0xe3 # VDM
+    gVDM_TFP_SPn    = 0xe4 # VDM
+    gVDM_MMB_SPn    = 0xe5 # VDM
+    gRDE_SPn        = 0xe6 # VDM/PDM/CDM
 
 class UNIT_E0_T8103(IntEnum):
-    gPM_SPn         = 0xe0
-    gVDM_CSD_SPn    = 0xe1
-    gVDM_SSD_SPn    = 0xe2
-    gVDM_ILF_SPn    = 0xe3
-    gVDM_TFP_SPn    = 0xe4
-    gVDM_MMB_SPn    = 0xe5
-    gCDM_CS_SPn_KS0 = 0xe6
-    gCDM_CS_SPn_KS1 = 0xe7
-    gCDM_CS_SPn_KS2 = 0xe8
-    gCDM_SPn_KS0    = 0xe9
-    gCDM_SPn_KS1    = 0xea
-    gCDM_SPn_KS2    = 0xeb
-    gIPP_SPn        = 0xec
-    gIPP_CS_SPn     = 0xed
-    gRDE0_SPn       = 0xee
-    gRDE1_SPn       = 0xef
+    gPM_SPn         = 0xe0 # VDM/PDM/CDM
+    gVDM_CSD_SPn    = 0xe1 # VDM
+    gVDM_SSD_SPn    = 0xe2 # VDM
+    gVDM_ILF_SPn    = 0xe3 # VDM
+    gVDM_TFP_SPn    = 0xe4 # VDM
+    gVDM_MMB_SPn    = 0xe5 # VDM
+    gCDM_CS_SPn_KS0 = 0xe6 # CDM
+    gCDM_CS_SPn_KS1 = 0xe7 # CDM
+    gCDM_CS_SPn_KS2 = 0xe8 # CDM
+    gCDM_SPn_KS0    = 0xe9 # CDM
+    gCDM_SPn_KS1    = 0xea # CDM
+    gCDM_SPn_KS2    = 0xeb # CDM
+    gIPP_SPn        = 0xec # PDM
+    gIPP_CS_SPn     = 0xed # PDM
+    gRDE0_SPn       = 0xee # VDM/PDM/CDM
+    gRDE1_SPn       = 0xef # VDM/PDM/CDM
 
 def agx_decode_unit(v):
     if v < 0xa0:
