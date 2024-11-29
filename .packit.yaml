@@ -1,0 +1,41 @@
+# See the documentation for more information:
+# https://packit.dev/docs/configuration/
+
+specfile_path: m1n1.spec
+files_to_sync:
+  - m1n1.spec
+  - .packit.yaml
+
+actions:
+  # Fetch the specfile from Rawhide, drop any patches and disable rpmautospec
+  post-upstream-clone: "bash -c \"curl -s https://src.fedoraproject.org/rpms/m1n1/raw/main/f/m1n1.spec | sed -e '/^Patch: /d' -e '/^%autochangelog$/d' > m1n1.spec\""
+
+srpm_build_deps:
+  - bash
+  - curl
+  - sed
+
+jobs:
+- job: copr_build
+  trigger: commit
+  owner: "@asahi"
+  project: packit-builds
+  targets:
+    - fedora-all-aarch64
+    - fedora-all-armhfp
+    - fedora-all-i386
+    - fedora-all-ppc64le
+    - fedora-all-s390x
+    - fedora-all-x86_64
+
+- job: copr_build
+  trigger: pull_request
+  owner: "@asahi"
+  project: packit-builds
+  targets:
+    - fedora-all-aarch64
+    - fedora-all-armhfp
+    - fedora-all-i386
+    - fedora-all-ppc64le
+    - fedora-all-s390x
+    - fedora-all-x86_64
