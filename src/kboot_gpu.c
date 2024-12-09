@@ -398,9 +398,6 @@ static int dt_set_region(void *dt, int sgx, const char *name, const char *path)
     if (fdt_setprop_inplace(dt, node, "reg", reg, sizeof(reg)))
         bail("FDT: GPU: failed to set reg prop for %s\n", path);
 
-    if (fdt_setprop_empty(dt, node, "no-map"))
-        bail("FDT: GPU: failed to set no-map prop for %s\n", path);
-
     return 0;
 }
 
