@@ -26,6 +26,8 @@ void init_t6020_blizzard(void);
 void init_t6020_avalanche(int rev);
 void init_t6021_blizzard(void);
 void init_t6021_avalanche(int rev);
+void init_t6030_sawtooth(void);
+void init_t6030_everest(int rev);
 void init_t6031_sawtooth(void);
 void init_t6031_everest(int rev);
 
@@ -162,6 +164,16 @@ const char *init_cpu(void)
         case MIDR_PART_T6021_BLIZZARD:
             cpu = "M2 Max Blizzard";
             init_t6021_blizzard();
+            break;
+
+        case MIDR_PART_T6030_EVEREST:
+            cpu = "M3 Pro Everest";
+            init_t6030_everest(rev);
+            break;
+
+        case MIDR_PART_T6030_SAWTOOTH:
+            cpu = "M3 Pro Sawtooth";
+            init_t6030_sawtooth();
             break;
 
         case MIDR_PART_T6031_EVEREST:
