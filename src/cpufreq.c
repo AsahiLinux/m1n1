@@ -353,6 +353,13 @@ static const struct cluster_t t6031_clusters[] = {
     {"PCPU1", 0x212e00000, true, 1, 6},
     {},
 };
+
+static const struct cluster_t t6030_clusters[] = {
+    {"ECPU0", 0x210e00000, false, 1, 5},
+    {"PCPU0", 0x211e00000, true, 1, 6},
+    {},
+};
+
 const struct cluster_t *cpufreq_get_clusters(void)
 {
     switch (chip_id) {
@@ -387,6 +394,8 @@ const struct cluster_t *cpufreq_get_clusters(void)
             return t6020_clusters;
         case T6022:
             return t6022_clusters;
+        case T6030:
+            return t6030_clusters;
         case T6031:
             return t6031_clusters;
         default:
@@ -498,6 +507,8 @@ const struct feat_t *cpufreq_get_features(void)
         case T6021:
         case T6022:
             return t6020_features;
+        case T6030:
+            return t6030_features;
         case T6031:
             return t6031_features;
         default:
