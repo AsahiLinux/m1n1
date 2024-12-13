@@ -1612,6 +1612,7 @@ class HV(Reloadable):
                            "/arm-io/dart-apciec%d",
                            "/arm-io/apciec%d-piodma",
                            "/arm-io/i2c0/hpmBusManager/hpm%d",
+                           "/arm-io/nub-spmi-a0/hpm%d",
                            "/arm-io/atc%d-dpxbar",
                            "/arm-io/atc%d-dpphy",
                            "/arm-io/atc%d-dpin0",
