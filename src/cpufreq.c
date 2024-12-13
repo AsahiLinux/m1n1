@@ -449,6 +449,17 @@ static const struct feat_t t6020_features[] = {
     {},
 };
 
+static const struct feat_t t6030_features[] = {
+    {"cpu-apsc", CLUSTER_PSTATE, CLUSTER_PSTATE_M2_APSC_DIS, 0, CLUSTER_PSTATE_APSC_BUSY, false},
+    {"ppt-thrtl", 0x48400, 0, BIT(63), 0, false},
+    {"ppt-thrtl", 0x48408, 0, BIT(63), 0, false},
+    {"llc-thrtl", 0x40270, 0, BIT(63), 0, false},
+    {"amx-thrtl", 0x40250, 0, BIT(63), 0, false},
+    {"cpu-fixed-freq-pll-relock", CLUSTER_PSTATE, 0, CLUSTER_PSTATE_FIXED_FREQ_PLL_RECLOCK, 0,
+     false},
+    {},
+};
+
 static const struct feat_t t6031_features[] = {
     {"cpu-apsc", CLUSTER_PSTATE, CLUSTER_PSTATE_M2_APSC_DIS, 0, CLUSTER_PSTATE_APSC_BUSY, false},
     {"ppt-thrtl", 0x48400, 0, BIT(63), 0, false},
