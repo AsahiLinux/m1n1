@@ -88,8 +88,7 @@ p.dc_cvau(code, len(util.data))
 p.ic_ivau(code, len(util.data))
 
 def bench_cpu(idx, loops=10000000):
-    boot_cpu_name = "cpu" + str(p.get_boot_cpu_idx())
-    if (cpu + idx) == boot_cpu_name:
+    if u.adt["cpus"][idx].state == "running":
         elapsed = p.call(util.bench, loops) / tfreq
     else:
         elapsed = p.smp_call_sync(idx, util.bench, loops) / tfreq
