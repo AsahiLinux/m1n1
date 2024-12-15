@@ -10,8 +10,6 @@ static void init_common_sawtooth(void)
 
 void init_t6030_sawtooth(void)
 {
-    // disable CNTFREQ scaling 1GHz
-    msr(s3_1_c15_c1_5, 0x3uL);
     init_common_sawtooth();
     reg_mask(SYS_IMP_APL_EHID9, EHID9_DEV_2_THROTTLE_LIMIT_MASK, EHID9_DEV_2_THROTTLE_LIMIT(62));
     reg_set(SYS_IMP_APL_EHID9, EHID9_DEV_2_THROTTLE_ENABLE);
