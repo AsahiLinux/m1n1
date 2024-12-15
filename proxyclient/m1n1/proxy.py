@@ -495,8 +495,6 @@ class M1N1Proxy(Reloadable):
     P_REBOOT = 0x010
     P_SLEEP = 0x011
     P_EL3_CALL = 0x012
-    P_GET_BOOT_CPU_IDX = 0x013
-    P_GET_BOOT_CPU_MPIDR = 0x014
 
     P_WRITE64 = 0x100
     P_WRITE32 = 0x101
@@ -727,10 +725,6 @@ class M1N1Proxy(Reloadable):
         ba_addr = self.request(self.P_GET_BOOTARGS)
         rev = self.read16(ba_addr)
         return (ba_addr, rev)
-    def get_boot_cpu_idx(self):
-        return self.request(self.P_GET_BOOT_CPU_IDX)
-    def get_boot_cpu_mpidr(self):
-        return self.request(self.P_GET_BOOT_CPU_MPIDR)
     def get_base(self):
         return self.request(self.P_GET_BASE)
     def set_baud(self, baudrate):
