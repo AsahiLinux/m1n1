@@ -288,7 +288,6 @@ static const struct feat_t t6030_features[] = {
     {},
 };
 
-
 const struct feat_t *cpufreq_get_features(void)
 {
     switch (chip_id) {

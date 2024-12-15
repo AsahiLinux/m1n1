@@ -55,7 +55,7 @@ void init_t6030_everest(int rev)
              HID13_POST_OFF_CYCLES(4) | HID13_POST_ON_CYCLES(5) | HID13_PRE_CYCLES(1) |
                  HID13_GROUP0_FF0_DELAY(0) | HID13_GROUP0_FF1_DELAY(4) | HID13_GROUP0_FF2_DELAY(4) |
                  HID13_GROUP0_FF3_DELAY(4) | HID13_GROUP0_FF4_DELAY(4) | HID13_GROUP0_FF5_DELAY(4) |
-                 HID13_GROUP0_FF6_DELAY(4) | HID13_GROUP0_FF7_DELAY(4) | HID13_RESET_CYCLES(0))
+                 HID13_GROUP0_FF6_DELAY(4) | HID13_GROUP0_FF7_DELAY(4) | HID13_RESET_CYCLES(0));
 
     msr(SYS_IMP_APL_HID26,
         HID26_GROUP1_OFFSET(0x16 | (0x2 << 8) | (0x2 << 12) | (0x2 << 16) | (0x2 << 20) |
@@ -69,7 +69,8 @@ void init_t6030_everest(int rev)
              BIT(40) | BIT(36) | BIT(32) | BIT(28) | BIT(24) | BIT(20) | BIT(16) | 0x2b00uL |
                  BIT(4) | BIT(0));
 
-    reg_set(SYS_IMP_APL_HID18, BIT(61) | HID18_GENTER_SPECULATION_DISABLE | HID18_GEXIT_EL_SPECULATION_DISABLE);
+    reg_set(SYS_IMP_APL_HID18,
+            BIT(61) | HID18_GENTER_SPECULATION_DISABLE | HID18_GEXIT_EL_SPECULATION_DISABLE);
 
     reg_set(s3_0_c15_c2_3, BIT(3));
     reg_clr(s3_0_c15_c2_4, BIT(0) | BIT(1) | BIT(16) | BIT(17) | BIT(18) | BIT(22));
