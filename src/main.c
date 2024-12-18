@@ -147,6 +147,7 @@ void m1n1_main(void)
 
     printf("Running in EL%lu\n\n", mrs(CurrentEL) >> 2);
 
+    get_device_info();
     firmware_init();
 
     heapblock_init();
