@@ -51,7 +51,7 @@ void get_device_info(void)
         printf("  Target: %s\n", target);
 
     is_mac = !!strstr(model, "Mac");
-    has_dcp = adt_path_offset(adt, "/arm-io/dcp") > 0;
+    has_dcp = !!adt_path_offset(adt, "/arm-io/dcp") || !!adt_path_offset(adt, "/arm-io/dcpext0");
 
     int chosen = adt_path_offset(adt, "/chosen");
     if (chosen > 0) {
