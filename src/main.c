@@ -51,7 +51,6 @@ void get_device_info(void)
         printf("  Target: %s\n", target);
 
     is_mac = !!strstr(model, "Mac");
-    has_dcp = adt_path_offset(adt, "/arm-io/dcp") > 0;
 
     int chosen = adt_path_offset(adt, "/chosen");
     if (chosen > 0) {
@@ -165,8 +164,7 @@ void m1n1_main(void)
     display_init();
     // Kick DCP to sleep, so dodgy monitors which cause reconnect cycles don't cause us to lose the
     // framebuffer.
-    if (has_dcp)
-        display_shutdown(DCP_SLEEP_IF_EXTERNAL);
+    display_shutdown(DCP_SLEEP_IF_EXTERNAL);
     // On idevice we need to always clear, because otherwise it looks scuffed on white devices
     fb_init(!is_mac);
     fb_display_logo();
