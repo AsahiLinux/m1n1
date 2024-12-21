@@ -30,6 +30,7 @@ static dcp_dev_t *dcp;
 static dcp_iboot_if_t *iboot;
 static u64 fb_dva;
 static u64 fb_size;
+bool has_dcp;
 bool display_is_external;
 bool display_is_dptx;
 bool display_needs_power_cycle;
@@ -244,14 +245,23 @@ static uintptr_t display_map_fb(uintptr_t iova, u64 paddr, u64 size)
 
 const display_config_t *display_get_config(void)
 {
+    const display_config_t *conf = NULL;
+
     if (adt_is_compatible(adt, 0, "J473AP"))
-        return &display_config_m2;
+        conf = &display_config_m2;
     else if (adt_is_compatible(adt, 0, "J474sAP") || adt_is_compatible(adt, 0, "J475cAP"))
-        return &display_config_m2_pro_max;
+        conf = &display_config_m2_pro_max;
     else if (adt_is_compatible(adt, 0, "J180dAP") || adt_is_compatible(adt, 0, "J475dAP"))
-        return &display_config_m2_ultra;
+        conf = &display_config_m2_ultra;
     else
-        return &display_config_m1;
+        conf = &display_config_m1;
+
+    has_dcp = adt_path_offset(adt, conf->dcp) > 0;
+    if (!has_dcp) {
+        return NULL;
+    }
+
+    return conf;
 }
 
 int display_start_dcp(void)
@@ -264,12 +274,12 @@ int display_start_dcp(void)
     return 0;
 #endif
 
+    const display_config_t *disp_cfg = display_get_config();
+
     if (!has_dcp) {
-        printf("display: DCP not present\n");
+        printf("display: device has no DCP. Display will not be initialised.\n");
         return -1;
     }
-
-    const display_config_t *disp_cfg = display_get_config();
 
     display_is_dptx = !!disp_cfg->dptx_phy[0];
 
@@ -655,6 +665,10 @@ int display_init(void)
 
 void display_shutdown(dcp_shutdown_mode mode)
 {
+    /* We have no DCP, so just exit */
+    if (!has_dcp)
+        return;
+
     if (iboot) {
         dcp_ib_shutdown(iboot);
         switch (mode) {
