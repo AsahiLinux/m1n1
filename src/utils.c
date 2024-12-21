@@ -12,7 +12,7 @@
 #include "vsprintf.h"
 #include "xnuboot.h"
 
-bool is_mac, has_dcp;
+bool is_mac;
 
 static char ascii(char s)
 {
