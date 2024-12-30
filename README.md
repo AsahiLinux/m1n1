@@ -23,6 +23,7 @@ install the required dependencies:
 
 ```shell
 $ brew install llvm
+$ brew install lld    # Necessary as of recent versions of llvm
 ```
 
 After that, just type `make`.
