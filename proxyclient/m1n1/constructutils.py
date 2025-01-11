@@ -797,7 +797,7 @@ class Ver(Subconstruct):
     try:
         _version = sys.modules["m1n1.constructutils"].Ver._version
     except (KeyError, AttributeError):
-        _version = {"V": os.environ.get("AGX_FWVER", "V12_3"),
+        _version = {"V": os.environ.get("AGX_FWVER", "V13_5"),
                     "G": os.environ.get("AGX_GPU", "G13")}
 
     MATRIX = {
