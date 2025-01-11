@@ -2051,7 +2051,7 @@ static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix
 
     int acnt = 0, phcnt = 0;
     u64 *addrs = calloc(max_devs, sizeof(u64));
-    u32 *phandles = calloc(max_devs * 4, sizeof(u32)); // Allow up to 4 extra nodes per device
+    u32 *phandles = calloc(max_devs * 5, sizeof(u32)); // Allow up to 5 extra nodes per device
     if (!addrs || !phandles)
         bail_cleanup("FDT: out of memory\n");
 
@@ -2151,6 +2151,18 @@ static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix
                 }
             }
 
+            int port = fdt_subnode_offset(dt, node, "port");
+            if (port >= 0) {
+                int endpoint = fdt_subnode_offset(dt, port, "endpoint");
+                if (endpoint >= 0) {
+                    const fdt32_t *remote_endpoint =
+                        fdt_getprop(dt, endpoint, "remote-endpoint", NULL);
+                    if (remote_endpoint) {
+                        phandles[phcnt++] = fdt32_ld(remote_endpoint);
+                    }
+                }
+            }
+
             const char *status = fdt_getprop(dt, node, "status", NULL);
             if (!status || strcmp(status, "disabled")) {
                 printf("FDT: Disabling missing device %s/%s\n", path, name);
@@ -2165,22 +2177,65 @@ static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix
         {
             const char *name = fdt_get_name(dt, node, NULL);
             u32 phandle = fdt_get_phandle(dt, node);
+            if (!phandle)
+                continue;
 
             for (int i = 0; i < phcnt; i++) {
                 if (phandles[i] != phandle)
                     continue;
 
+                phandles[i] = 0;
+
                 const char *status = fdt_getprop(dt, node, "status", NULL);
                 if (status && !strcmp(status, "disabled"))
                     continue;
 
-                printf("FDT: Disabling secondary device %s/%s\n", path, name);
+                printf("FDT: Disabling secondary device %s/%s (%d)\n", path, name, phandle);
 
                 if (fdt_setprop_string(dt, node, "status", "disabled") < 0)
                     bail_cleanup("FDT: failed to set status property of %s/%s\n", path, name);
-                break;
             }
         }
+    }
+
+    for (int i = 0; i < phcnt; i++) {
+        if (!phandles[i])
+            continue;
+
+        int node = fdt_node_offset_by_phandle(dt, phandles[i]);
+        if (node < 0)
+            bail_cleanup("FDT: failed to find secondary phandle %d\n", phandles[i]);
+
+        const char *name = fdt_get_name(dt, node, NULL);
+
+        // Should be usb-pd/connector/ports/port/endpoint
+        if (!strcmp(name, "endpoint")) {
+            for (int i = 0; i < 4; i++)
+                if (node >= 0)
+                    node = fdt_parent_offset(dt, node);
+            if (node < 0) {
+                printf("FDT: failed to walk up from endpoint phandle %d\n", phandles[i]);
+                continue;
+            }
+            name = fdt_get_name(dt, node, NULL);
+            if (strncmp(name, "usb-pd", 6)) {
+                printf("FDT: unexpected secondary device %s walking up from endpoint\n", name);
+                continue;
+            }
+        } else {
+            printf("FDT: unexpected secondary device %s (%d)\n", name, phandles[i]);
+            continue;
+        }
+
+        const char *status = fdt_getprop(dt, node, "status", NULL);
+        if (status && !strcmp(status, "disabled"))
+            continue;
+
+        printf("FDT: Disabling secondary device %s\n", name);
+
+        if (fdt_setprop_string(dt, node, "status", "disabled") < 0)
+            bail_cleanup("FDT: failed to set status property of %s\n", name);
+        break;
     }
 
     ret = 0;
