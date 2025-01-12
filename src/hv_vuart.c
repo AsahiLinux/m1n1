@@ -70,6 +70,8 @@ static void handle_vuart_passthrough(uint8_t b)
 
     if (b == PREFIX[state])
         state++;
+    else
+        state = 0;
 
     if (!PREFIX[state])
         printf("%s", PREFIX);
