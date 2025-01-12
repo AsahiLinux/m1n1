@@ -53,6 +53,30 @@ static void update_irq(void)
     //     printf("HV: vuart UTRSTAT=0x%x UFSTAT=0x%x UCON=0x%x\n", utrstat, ufstat, ucon);
 }
 
+static void handle_vuart_passthrough(uint8_t b)
+{
+    const char PREFIX[] = "HVLOG: ";
+    static int state = 0;
+
+    if (!PREFIX[state]) {
+        if (b == '\r' || b == '\n') {
+            printf("\n");
+            state = 0;
+            return;
+        }
+        printf("%c", b);
+        return;
+    }
+
+    if (b == PREFIX[state])
+        state++;
+    else
+        state = 0;
+
+    if (!PREFIX[state])
+        printf("%s", PREFIX);
+}
+
 static bool handle_vuart(struct exc_info *ctx, u64 addr, u64 *val, bool write, int width)
 {
     UNUSED(ctx);
@@ -72,6 +96,7 @@ static bool handle_vuart(struct exc_info *ctx, u64 addr, u64 *val, bool write, i
                 uint8_t b = *val;
                 if (iodev_can_write(IODEV_USB_VUART))
                     iodev_write(IODEV_USB_VUART, &b, 1);
+                handle_vuart_passthrough(b);
                 break;
             }
             case UTRSTAT:
