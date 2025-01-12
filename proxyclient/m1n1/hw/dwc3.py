@@ -219,6 +219,10 @@ class Dwc3CoreRegs(RegMap):
     DWC3_GFLADJ = 0x630, Register32
     DWC3_GHWPARAMS9 = 0x680, Register32
 
+    DWC3_D38 = 0xd38, Register32
+    DWC3_D3C = 0xd3c, Register32
+    DWC3_D40 = 0xd40, Register32
+
 
 class R_PIPEHANDLER_OVERRIDE(Register32):
     RXVALID = 0
@@ -227,15 +231,17 @@ class R_PIPEHANDLER_OVERRIDE(Register32):
 
 class E_PIPEHANDLER_MUX_MODE(IntEnum):
     USB3_PHY = 0
-    DUMMY_PHY = 1
-    UNK2 = 2
+    UNK1 = 1
+    DUMMY_PHY = 2
+    UNK3 = 3
 
 
 class E_PIPEHANDLER_CLK_SELECT(IntEnum):
     UNK0 = 0
     USB3_PHY = 1
-    DUMMY_PHY = 2
-    UNK4 = 4
+    UNK2 = 2
+    UNK3 = 3
+    DUMMY_PHY = 4
 
 
 class R_PIPEHANDLER_MUX_CTRL(Register32):
