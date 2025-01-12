@@ -1736,15 +1736,23 @@ class HV(Reloadable):
         if hasattr(self.u.adt["chosen"]["memory-map"], "Kernel_mach__header"):
             self.adt["chosen"]["memory-map"].Kernel_mach__header = (guest_base, 0)
 
-        for name in ("mtp", "aop"):
-            if name in self.adt["/arm-io"]:
-                iop = self.adt[f"/arm-io/{name}"]
-                nub = self.adt[f"/arm-io/{name}/iop-{name}-nub"]
-                if iop.segment_names.endswith(";__OS_LOG"):
-                    iop.segment_names = iop.segment_names[:-9]
-                    nub.segment_names = nub.segment_names[:-9]
-                    iop.segment_ranges = iop.segment_ranges[:-32]
-                    nub.segment_ranges = nub.segment_ranges[:-32]
+        def remove_oslog(node):
+            names = node.segment_names.split(";")
+            try:
+                idx = names.index("__OS_LOG")
+            except ValueError:
+                return
+            print(f"Removing __OS_LOG from {node.name}")
+            names = names[:idx] + names[idx + 1:]
+            node.segment_names = ";".join(names)
+            node.segment_ranges = node.segment_ranges[:idx * 32] + node.segment_ranges[32 + idx * 32: ]
+
+        for node in self.adt["/arm-io"]:
+            if hasattr(node, "segment_names"):
+                remove_oslog(node)
+            for nub in node:
+                if hasattr(nub, "segment_names"):
+                    remove_oslog(nub)
 
         print(f"Setting up bootargs at 0x{guest_base + self.bootargs_off:x}...")
 
