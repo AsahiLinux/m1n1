@@ -31,14 +31,14 @@ static const struct adt_tunable_info atc_tunables[] = {
     /* global tunables applied after power on or reset */
     {"tunable_ATC0AXI2AF", "apple,tunable-axi2af", 0x0, 0x4000, true},
     {"tunable_ATC_FABRIC", "apple,tunable-common", 0x45000, 0x4000, true},
-    {"tunable_AUS_CMN_TOP", "apple,tunable-common", 0x800, 0x4000, true},
+    {"tunable_USB_ACIOPHY_TOP", "apple,tunable-common", 0x0, 0x4000, true},
     {"tunable_AUS_CMN_SHM", "apple,tunable-common", 0xa00, 0x4000, true},
+    {"tunable_AUS_CMN_TOP", "apple,tunable-common", 0x800, 0x4000, true},
     {"tunable_AUSPLL_CORE", "apple,tunable-common", 0x2200, 0x4000, true},
     {"tunable_AUSPLL_TOP", "apple,tunable-common", 0x2000, 0x4000, true},
     {"tunable_CIO3PLL_CORE", "apple,tunable-common", 0x2a00, 0x4000, true},
     {"tunable_CIO3PLL_TOP", "apple,tunable-common", 0x2800, 0x4000, true},
     {"tunable_CIO_CIO3PLL_TOP", "apple,tunable-common", 0x2800, 0x4000, false},
-    {"tunable_USB_ACIOPHY_TOP", "apple,tunable-common", 0x0, 0x4000, true},
     /* lane-specific tunables applied after a cable is connected */
     {"tunable_DP_LN0_AUSPMA_TX_TOP", "apple,tunable-lane0-dp", 0xc000, 0x1000, true},
     {"tunable_DP_LN1_AUSPMA_TX_TOP", "apple,tunable-lane1-dp", 0x13000, 0x1000, true},
