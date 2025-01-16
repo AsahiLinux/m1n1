@@ -36,6 +36,24 @@ struct usb_drd_regs {
 static tps6598x_irq_state_t tps6598x_irq_state[USB_IODEV_COUNT];
 static bool usb_is_initialized = false;
 
+#define PIPEHANDLER_MUX_CTRL             0x0c
+#define PIPEHANDLER_MUX_CTRL_USB3        0x08
+#define PIPEHANDLER_MUX_CTRL_USB4_TUNNEL 0x11
+#define PIPEHANDLER_MUX_CTRL_DUMMY       0x22
+
+#define PIPEHANDLER_LOCK_REQ 0x10
+#define PIPEHANDLER_LOCK_ACK 0x14
+#define PIPEHANDLER_LOCK_EN  BIT(0)
+
+#define PIPEHANDLER_AON_GEN                     0x1C
+#define PIPEHANDLER_AON_GEN_DWC3_FORCE_CLAMP_EN BIT(4)
+#define PIPEHANDLER_AON_GEN_DWC3_RESET_N        BIT(0)
+
+#define PIPEHANDLER_NONSELECTED_OVERRIDE 0x20
+#define PIPEHANDLER_NATIVE_RESET         BIT(12)
+#define PIPEHANDLER_DUMMY_PHY_EN         BIT(15)
+#define PIPEHANDLER_NATIVE_POWER_DOWN    GENMASK(3, 0)
+
 static dart_dev_t *usb_dart_init(u32 idx)
 {
     int mapper_offset;
@@ -126,10 +144,9 @@ int usb_phy_bringup(u32 idx)
     write32(usb_regs.atc + 0x1c, 0x008c0813);
     write32(usb_regs.atc + 0x00, 0x00000002);
 
-    write32(usb_regs.drd_regs_unk3 + 0x0c, 0x00000002);
-    write32(usb_regs.drd_regs_unk3 + 0x0c, 0x00000022);
-    write32(usb_regs.drd_regs_unk3 + 0x1c, 0x00000021);
-    write32(usb_regs.drd_regs_unk3 + 0x20, 0x00009332);
+    write32(usb_regs.drd_regs_unk3 + PIPEHANDLER_MUX_CTRL, PIPEHANDLER_MUX_CTRL_DUMMY);
+    write32(usb_regs.drd_regs_unk3 + PIPEHANDLER_AON_GEN, PIPEHANDLER_AON_GEN_DWC3_RESET_N);
+    write32(usb_regs.drd_regs_unk3 + PIPEHANDLER_NONSELECTED_OVERRIDE, 0x9332);
 
     return 0;
 }
