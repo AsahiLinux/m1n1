@@ -37,6 +37,8 @@
 
 #define MAX_DISP_MAPPINGS 8
 
+#define MAX_MEM_REGIONS 32
+
 static void *dt = NULL;
 static int dt_bufsize = 0;
 static void *initrd_start = NULL;
@@ -330,13 +332,75 @@ static int dt_set_memory(void)
     printf("FDT: DRAM at 0x%lx size 0x%lx\n", dram_base, dram_size);
     printf("FDT: Usable memory is 0x%lx..0x%lx (0x%lx)\n", dram_min, dram_max, dram_max - dram_min);
 
-    u64 memreg[2] = {cpu_to_fdt64(dram_min), cpu_to_fdt64(dram_max - dram_min)};
+    struct {
+        fdt64_t start;
+        fdt64_t size;
+    } memreg[MAX_MEM_REGIONS] = {{cpu_to_fdt64(dram_min), cpu_to_fdt64(dram_max - dram_min)}};
+    int num_regions = 1;
+
+    int resv_node = fdt_path_offset(dt, "/reserved-memory");
+    if (resv_node < 0) {
+        printf("FDT: '/reserved-memory' not found\n");
+    } else {
+        int node;
+
+        /* Find all reserved memory nodes */
+        fdt_for_each_subnode(node, dt, resv_node)
+        {
+            const char *name = fdt_get_name(dt, node, NULL);
+            const char *status = fdt_getprop(dt, node, "status", NULL);
+            if (status && !strcmp(status, "disabled"))
+                continue;
+
+            if (fdt_getprop(dt, node, "no-map", NULL))
+                continue;
+
+            const fdt64_t *reg = fdt_getprop(dt, node, "reg", NULL);
+            if (!reg)
+                continue;
+
+            u64 resv_start = fdt64_to_cpu(reg[0]);
+            u64 resv_len = fdt64_to_cpu(reg[1]);
+            u64 resv_end = resv_start + resv_len;
+
+            if (resv_start < dram_min) {
+                if (resv_end > dram_min) {
+                    bail("FDT: reserved-memory node %s intersects start of RAM (%lx..%lx "
+                         "%lx..%lx)\n",
+                         name, resv_start, resv_end, dram_min, dram_max);
+                }
+            } else if (resv_end > dram_max) {
+                if (resv_start < dram_max) {
+                    bail("FDT: reserved-memory node %s intersects end of RAM (%lx..%lx %lx..%lx)\n",
+                         name, resv_start, resv_end, dram_min, dram_max);
+                }
+            } else {
+                continue;
+            }
+
+            if ((resv_start | resv_len) & (SZ_16K - 1)) {
+                bail("FDT: reserved-memory node %s not page-aligned, ignoring (%lx..%lx)\n", name,
+                     resv_start, resv_end);
+                continue;
+            }
+
+            printf("FDT: Adding reserved-memory node %s (%lx..%lx) to RAM map\n", name, resv_start,
+                   resv_end);
+
+            if (num_regions >= MAX_MEM_REGIONS) {
+                bail("FDT: Out of memory regions for reserved-memory\n");
+            }
+
+            memreg[num_regions].start = cpu_to_fdt64(resv_start);
+            memreg[num_regions++].size = cpu_to_fdt64(resv_len);
+        }
+    }
 
     int node = fdt_path_offset(dt, "/memory");
     if (node < 0)
         bail("FDT: /memory node not found in devtree\n");
 
-    if (fdt_setprop(dt, node, "reg", memreg, sizeof(memreg)))
+    if (fdt_setprop(dt, node, "reg", memreg, sizeof(memreg[0]) * num_regions))
         bail("FDT: couldn't set memory.reg property\n");
 
     return 0;
