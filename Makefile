@@ -205,7 +205,7 @@ $(BUILD_FP_OBJS): build/%.o: src/%.c
 	$(QUIET)mkdir -p "$(dir $@)"
 	$(QUIET)$(CC) -c $(BASE_CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
 
-build/%.o: src/%.c
+build/%.o: src/%.c build/build_tag.stamp build/build_cfg.stamp
 	$(QUIET)echo "  CC    $@"
 	$(QUIET)mkdir -p $(DEPDIR)
 	$(QUIET)mkdir -p "$(dir $@)"
@@ -231,17 +231,19 @@ build/$(NAME).bin: build/$(NAME)-raw.elf
 	$(QUIET)echo "  RAW   $@"
 	$(QUIET)$(OBJCOPY) -O binary --strip-debug $< $@
 
-src/../build/build_tag.h: always_rebuild
+build/build_tag.stamp src/../build/build_tag.h: always_rebuild
 	$(QUIET)mkdir -p build
 	$(QUIET)./version.sh > build/build_tag.tmp
 	$(QUIET)cmp -s build/build_tag.h build/build_tag.tmp 2>/dev/null || \
 	( mv -f build/build_tag.tmp build/build_tag.h && echo "  TAG   build/build_tag.h" )
+	$(QUIET)[ ! -e build/build_tag.stamp ] && touch build/build_tag.stamp || true
 
-src/../build/build_cfg.h: always_rebuild
+build/build_cfg.stamp src/../build/build_cfg.h: always_rebuild
 	$(QUIET)mkdir -p build
 	$(QUIET)for i in $(CFG); do echo "#define $$i"; done > build/build_cfg.tmp
 	$(QUIET)cmp -s build/build_cfg.h build/build_cfg.tmp 2>/dev/null || \
 	( mv -f build/build_cfg.tmp build/build_cfg.h && echo "  CFG   build/build_cfg.h" )
+	$(QUIET)[ ! -e build/build_cfg.stamp ] && touch build/build_cfg.stamp || true
 
 build/%.bin: data/%.bin
 	$(QUIET)echo "  IMG   $@"
@@ -257,9 +259,5 @@ build/%.bin: font/%.bin
 	$(QUIET)echo "  CP    $@"
 	$(QUIET)mkdir -p "$(dir $@)"
 	$(QUIET)cp $< $@
-
-build/main.o: build/build_tag.h build/build_cfg.h src/main.c
-build/usb_dwc3.o: build/build_tag.h src/usb_dwc3.c
-build/chainload.o: build/build_cfg.h src/usb_dwc3.c
 
 -include $(DEPDIR)/*
