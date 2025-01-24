@@ -176,7 +176,7 @@ DEPDIR := build/.deps
 .PHONY: all clean format invoke_cc always_rebuild
 all: build/$(TARGET) build/$(TARGET_RAW)
 clean:
-	rm -rf build/*
+	rm -rf build/* build/.deps
 format:
 	$(CLANG_FORMAT) -i src/*.c src/dcp/*.c src/math/*.c src/*.h src/dcp/*.h src/math/*.h sysinc/*.h
 format-check:
@@ -205,7 +205,7 @@ $(BUILD_FP_OBJS): build/%.o: src/%.c
 	$(QUIET)mkdir -p "$(dir $@)"
 	$(QUIET)$(CC) -c $(BASE_CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
 
-build/%.o: src/%.c build/build_tag.stamp build/build_cfg.stamp
+build/%.o: src/%.c build-tag build-cfg
 	$(QUIET)echo "  CC    $@"
 	$(QUIET)mkdir -p $(DEPDIR)
 	$(QUIET)mkdir -p "$(dir $@)"
@@ -231,19 +231,18 @@ build/$(NAME).bin: build/$(NAME)-raw.elf
 	$(QUIET)echo "  RAW   $@"
 	$(QUIET)$(OBJCOPY) -O binary --strip-debug $< $@
 
-build/build_tag.stamp src/../build/build_tag.h: always_rebuild
+.INTERMEDIATE: build-tag build-cfg
+build-tag src/../build/build_tag.h &:
 	$(QUIET)mkdir -p build
 	$(QUIET)./version.sh > build/build_tag.tmp
 	$(QUIET)cmp -s build/build_tag.h build/build_tag.tmp 2>/dev/null || \
 	( mv -f build/build_tag.tmp build/build_tag.h && echo "  TAG   build/build_tag.h" )
-	$(QUIET)[ ! -e build/build_tag.stamp ] && touch build/build_tag.stamp || true
 
-build/build_cfg.stamp src/../build/build_cfg.h: always_rebuild
+build-cfg src/../build/build_cfg.h &:
 	$(QUIET)mkdir -p build
 	$(QUIET)for i in $(CFG); do echo "#define $$i"; done > build/build_cfg.tmp
 	$(QUIET)cmp -s build/build_cfg.h build/build_cfg.tmp 2>/dev/null || \
 	( mv -f build/build_cfg.tmp build/build_cfg.h && echo "  CFG   build/build_cfg.h" )
-	$(QUIET)[ ! -e build/build_cfg.stamp ] && touch build/build_cfg.stamp || true
 
 build/%.bin: data/%.bin
 	$(QUIET)echo "  IMG   $@"
