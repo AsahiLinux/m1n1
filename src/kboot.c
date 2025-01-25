@@ -2510,7 +2510,7 @@ int kboot_prepare_dt(void *fdt)
     dt_bufsize = fdt_totalsize(fdt);
     assert(dt_bufsize);
 
-    dt_bufsize += 64 * 1024; // Add 64K of buffer for modifications
+    dt_bufsize += 6 * SZ_16K; // Add 96K of buffer for modifications
     dt = memalign(DT_ALIGN, dt_bufsize);
 
     if (fdt_open_into(fdt, dt, dt_bufsize) < 0)
@@ -2582,6 +2582,10 @@ int kboot_prepare_dt(void *fdt)
 
     if (fdt_pack(dt))
         bail("FDT: fdt_pack() failed\n");
+
+    u32 dt_remain = dt_bufsize - fdt_totalsize(dt);
+    if (dt_remain < SZ_16K)
+        printf("FDT: free dt buffer space low, %u bytes left\n", dt_remain);
 
     printf("FDT prepared at %p\n", dt);
 
