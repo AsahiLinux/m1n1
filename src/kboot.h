@@ -21,5 +21,7 @@ void kboot_set_initrd(void *start, size_t size);
 int kboot_set_chosen(const char *name, const char *value);
 int kboot_prepare_dt(void *fdt);
 int kboot_boot(void *kernel);
+int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_alt, const char *fdt_path,
+                            bool remap, u64 base, bool nomap);
 
 #endif

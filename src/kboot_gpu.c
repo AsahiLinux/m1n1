@@ -674,5 +674,10 @@ int dt_set_gpu(void *dt)
     if (firmware_set_fdt(dt, gpu, "apple,firmware-compat", compat))
         return -1;
 
+    if (dt_reserve_asc_firmware("/arm-io/gfx-asc", NULL, NULL, false, 0, false)) {
+        // Nonfatal, this is for crashdumps only
+        printf("FDT: GPU: Failed to reserve ASC firmware\n");
+    }
+
     return 0;
 }

@@ -1628,12 +1628,16 @@ static int dt_vram_reserved_region(const char *dcp_alias, const char *disp_alias
                                    disp_reserved_regions_vram, &region, 1);
 }
 
-static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_alt,
-                                   const char *fdt_path, bool remap, u64 base)
+int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_alt, const char *fdt_path,
+                            bool remap, u64 base, bool nomap)
 {
     int ret = 0;
 
-    int fdt_node = fdt_path_offset(dt, fdt_path);
+    int fdt_node = 0;
+
+    if (fdt_path) {
+        fdt_node = fdt_path_offset(dt, fdt_path);
+    }
     if (fdt_node < 0) {
         printf("FDT: '%s' not found\n", fdt_path);
         return 0;
@@ -1645,13 +1649,17 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_al
     if (node < 0)
         bail("ADT: '%s' not found\n", adt_path);
 
-    uint32_t dev_phandle = fdt_get_phandle(dt, fdt_node);
-    if (!dev_phandle) {
-        ret = fdt_generate_phandle(dt, &dev_phandle);
-        if (!ret)
-            ret = fdt_setprop_u32(dt, fdt_node, "phandle", dev_phandle);
-        if (ret != 0)
-            bail("FDT: couldn't set '%s.phandle' property: %d\n", fdt_path, ret);
+    uint32_t dev_phandle = 0;
+
+    if (fdt_node) {
+        fdt_get_phandle(dt, fdt_node);
+        if (!dev_phandle) {
+            ret = fdt_generate_phandle(dt, &dev_phandle);
+            if (!ret)
+                ret = fdt_setprop_u32(dt, fdt_node, "phandle", dev_phandle);
+            if (ret != 0)
+                bail("FDT: couldn't set '%s.phandle' property: %d\n", fdt_path, ret);
+        }
     }
 
     const struct adt_segment_ranges *seg;
@@ -1673,18 +1681,21 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_al
         }
 
         int mem_node =
-            dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", true, seg->phys, seg_size);
+            dt_get_or_add_reserved_mem(node_name, "apple,asc-mem", nomap, seg->phys, seg_size);
         if (mem_node < 0)
             return ret;
-        uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
 
-        ret = dt_device_set_reserved_mem(mem_node, node_name, dev_phandle, iova, seg_size);
-        if (ret < 0)
-            return ret;
+        if (fdt_node) {
+            uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
 
-        ret = dt_device_add_mem_region(fdt_path, mem_phandle, NULL);
-        if (ret < 0)
-            return ret;
+            ret = dt_device_set_reserved_mem(mem_node, node_name, dev_phandle, iova, seg_size);
+            if (ret < 0)
+                return ret;
+
+            ret = dt_device_add_mem_region(fdt_path, mem_phandle, NULL);
+            if (ret < 0)
+                return ret;
+        }
 
         seg++;
     }
@@ -1715,7 +1726,7 @@ static int dt_reserve_dcpext_firmware(void)
         if (dcpext_node < 0)
             continue;
 
-        int ret = dt_reserve_asc_firmware(adt_path, NULL, dcpext_alias, true, 0);
+        int ret = dt_reserve_asc_firmware(adt_path, NULL, dcpext_alias, true, 0, true);
         if (ret < 0)
             bail("FDT: reserving ASC firmware for %s failed!\n", dcpext_alias);
 
@@ -2019,7 +2030,7 @@ static int dt_setup_sio(void)
         char adt_path[16];
         snprintf(adt_path, sizeof(adt_path), "/arm-io/%s", sio_names[i]);
 
-        if (dt_reserve_asc_firmware(adt_path, NULL, sio_names[i], true, 0))
+        if (dt_reserve_asc_firmware(adt_path, NULL, sio_names[i], true, 0, true))
             continue;
         if (dt_set_sio_fwdata(adt_path, sio_names[i]))
             continue;
@@ -2563,7 +2574,7 @@ int kboot_prepare_dt(void *fdt)
         return -1;
     if (dt_setup_sio())
         return -1;
-    if (dt_reserve_asc_firmware("/arm-io/isp", "/arm-io/isp0", "isp", false, isp_iova_base()))
+    if (dt_reserve_asc_firmware("/arm-io/isp", "/arm-io/isp0", "isp", false, isp_iova_base(), true))
         return -1;
     if (dt_set_isp_fwdata())
         return -1;
