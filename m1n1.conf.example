@@ -1,0 +1,21 @@
+# This configuration file specifies options for the m1n1 bootloader.
+#
+# Be careful when editing this file, as incorrect settings can cause your system to fail to boot.
+#
+# Display configuration (Mac Mini / Mac Studio only)
+
+# Force re-configuration of the display to defaults in m1n1 stage 2
+# This is redundant unless your m1n1 stage 1 is buggy or ancient
+#display=auto
+
+# Configure the boot display to the default 4K mode
+#display=3840x2160
+
+# Configure the boot display to 4K at 60Hz (or closest available)
+#display=3840x2160@60
+
+# Configure the boot display to 4K at 59.97Hz (or closest available)
+#display=3840x2160@59.94
+
+# Add an arbitrary property to /chosen in the device tree
+#chosen.foo=bar
