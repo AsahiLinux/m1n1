@@ -99,7 +99,7 @@ _exc_return:
 .globl el0_call
 .type el0_call, @function
 el0_call:
-    str x30, [sp, #-16]!
+    stp x29, x30, [sp, #-16]!
 
     mrs x5, CurrentEL
     cmp x5, #4
@@ -112,9 +112,9 @@ el0_call:
     isb
 
     1:
-    mrs x5, daif
-    msr daifset, 3
-    msr spsr_el1, x5
+    mrs x29, daif
+    msr daifset, #0xf
+    msr spsr_el1, x29
 
     ldr x5, =_el0_thunk
     msr elr_el1, x5
@@ -146,13 +146,14 @@ _el0_thunk:
 .globl el0_ret
 .type el0_ret, @function
 el0_ret:
-    ldr x30, [sp], #16
+    msr daif, x29
+    ldp x29, x30, [sp], #16
     ret
 
 .globl el1_call
 .type el1_call, @function
 el1_call:
-    str x30, [sp, #-16]!
+    stp x29, x30, [sp, #-16]!
 
     mrs x5, CurrentEL
     cmp x5, #4
@@ -168,10 +169,11 @@ el1_call:
     msr hcr_el2, x6
     isb
 
-    1: mrs x5, daif
-    msr daifset, 3
+    1:
+    mrs x29, daif
+    msr daifset, #0xf
     mov x6, #5
-    orr x5, x5, x6 // EL1h
+    orr x5, x29, x6 // EL1h
     msr spsr_el2, x5
 
     ldr x5, =_el1_thunk
@@ -202,7 +204,8 @@ _el1_thunk:
 .globl el1_ret
 .type el1_ret, @function
 el1_ret:
-    ldr x30, [sp], #16
+    msr daif, x29
+    ldp x29, x30, [sp], #16
     ret
 
 .align 11

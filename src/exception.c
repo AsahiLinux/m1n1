@@ -247,9 +247,9 @@ void exc_sync(u64 *regs)
         // On clean EL0 return, let the normal exception return
         // path take us back to the return thunk.
         if (has_el2())
-            msr(SPSR_EL1, 0x09); // EL2h
+            msr(SPSR_EL1, 0x09 | (0xf << 6)); // EL2h
         else
-            msr(SPSR_EL1, 0x05); // EL1h
+            msr(SPSR_EL1, 0x05 | (0xf << 6)); // EL1h
 
         msr(ELR_EL1, el0_ret);
         return;
