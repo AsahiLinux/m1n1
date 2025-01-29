@@ -325,6 +325,7 @@
 #define SYS_IMP_APL_HID11_LEGACY      sys_reg(3, 0, 15, 13, 0) /* A7-A9 */
 #define HID11_DISABLE_FILL_C1_BUB_OPT BIT(7)
 #define HID11_ENABLE_FIX_UC_55719865  BIT(15)
+#define HID11_DISABLE_DMP             BIT(30)
 #define HID11_DISABLE_LD_NT_WIDGET    BIT(59)
 
 #define SYS_IMP_APL_EHID11           sys_reg(3, 0, 15, 11, 1)

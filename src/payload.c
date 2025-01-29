@@ -11,6 +11,7 @@
 #include "display.h"
 #include "heapblock.h"
 #include "kboot.h"
+#include "mitigations.h"
 #include "smp.h"
 #include "utils.h"
 
@@ -195,6 +196,8 @@ static bool check_var(u8 **p)
         chainload_spec = val;
     } else if (IS_VAR("display=")) {
         display_configure(val);
+    } else if (IS_VAR("mitigations=")) {
+        mitigations_configure(val);
     } else if (IS_VAR("tso=")) {
         enable_tso = val[0] == '1';
     } else {
@@ -287,6 +290,7 @@ int payload_run(void)
     if (kernel && fdt) {
         cpufreq_init();
         smp_start_secondaries();
+        mitigations_perform();
         if (enable_tso) {
 
             do_enable_tso();

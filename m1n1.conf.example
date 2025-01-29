@@ -19,3 +19,9 @@
 
 # Add an arbitrary property to /chosen in the device tree
 #chosen.foo=bar
+
+# Vulnerability mitigations
+# Available options:
+# - gofetch: Mitigate the GoFetch vulnerability (disable the DMP systemwide)
+#   Affected CPUs: M1 and M2 series (M3 and later are unaffected)
+#mitigations=gofetch

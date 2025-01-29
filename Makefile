@@ -129,6 +129,7 @@ OBJECTS := \
 	isp.o \
 	kboot.o kboot_atc.o \
 	main.o \
+	mitigations.o \
 	mcc.o \
 	memory.o memory_asm.o \
 	nvme.o \
