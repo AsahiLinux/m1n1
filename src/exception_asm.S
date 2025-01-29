@@ -113,7 +113,7 @@ el0_call:
 
     1:
     mrs x5, daif
-    msr daifclr, 3
+    msr daifset, 3
     msr spsr_el1, x5
 
     ldr x5, =_el0_thunk
@@ -169,7 +169,7 @@ el1_call:
     isb
 
     1: mrs x5, daif
-    msr daifclr, 3
+    msr daifset, 3
     mov x6, #5
     orr x5, x5, x6 // EL1h
     msr spsr_el2, x5
