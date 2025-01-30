@@ -243,15 +243,30 @@ void exc_sync(u64 *regs)
     u64 esr = in_gl ? mrs(SYS_IMP_APL_ESR_GL1) : (el3 ? mrs(ESR_EL3) : mrs(ESR_EL1));
     u64 elr = in_gl ? mrs(SYS_IMP_APL_ELR_GL1) : (el3 ? mrs(ELR_EL3) : mrs(ELR_EL1));
 
-    if ((spsr & 0xf) == 0 && ((esr >> 26) & 0x3f) == 0x3c) {
+    u32 iss = esr & 0xffffff;
+
+    if ((spsr & 0xf) == 0 && ((esr >> 26) & 0x3f) == 0x3c && iss == 0) {
+        // brk 0
         // On clean EL0 return, let the normal exception return
         // path take us back to the return thunk.
-        if (has_el2())
-            msr(SPSR_EL1, 0x09 | (0xf << 6)); // EL2h
-        else
-            msr(SPSR_EL1, 0x05 | (0xf << 6)); // EL1h
+
+        spsr &= ~0x1f;
+        spsr |= 0xf << 6;
+        if (has_el2()) {
+            spsr |= 0x09; // EL2h
+        } else {
+            spsr |= 0x05; // EL1h
+        }
+
+        msr(SPSR_EL1, spsr);
 
         msr(ELR_EL1, el0_ret);
+        return;
+    }
+
+    if (((esr >> 26) & 0x3f) == 0x3c && iss == 1) {
+        // brk 1: Capture PSTATE
+        regs[0] = spsr;
         return;
     }
 

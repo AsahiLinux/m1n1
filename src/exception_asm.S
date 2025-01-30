@@ -112,9 +112,14 @@ el0_call:
     isb
 
     1:
-    mrs x29, daif
+    // Capture PSTATE
+    mov x6, x0
+    brk 1
+    mov x29, x0
+    bic x5, x0, #0xf
     msr daifset, #0xf
-    msr spsr_el1, x29
+    msr spsr_el1, x5
+    mov x0, x6
 
     ldr x5, =_el0_thunk
     msr elr_el1, x5
@@ -170,11 +175,16 @@ el1_call:
     isb
 
     1:
-    mrs x29, daif
-    msr daifset, #0xf
+    // Capture PSTATE
+    mov x6, x0
+    brk 1
+    mov x29, x0
+    bic x5, x0, #0xf
     mov x6, #5
-    orr x5, x29, x6 // EL1h
-    msr spsr_el2, x5
+    orr x5, x5, x6 // EL1h
+    msr daifset, #0xf
+    msr spsr_el1, x5
+    mov x0, x6
 
     ldr x5, =_el1_thunk
     msr elr_el2, x5
