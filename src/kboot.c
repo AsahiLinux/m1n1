@@ -1888,7 +1888,10 @@ static int dt_set_display(void)
 
     const display_config_t *disp_cfg = display_get_config();
 
-    return dt_vram_reserved_region(disp_cfg->dcp_alias, "disp0");
+    if (disp_cfg)
+        return dt_vram_reserved_region(disp_cfg->dcp_alias, "disp0");
+    else
+        return dt_vram_reserved_region("dcp", "disp0");
 }
 
 static int dt_set_sep(void)
