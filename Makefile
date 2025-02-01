@@ -3,10 +3,12 @@ RUSTARCH ?= aarch64-unknown-none-softfloat
 ifeq ($(shell uname),Darwin)
 USE_CLANG ?= 1
 $(info INFO: Building on Darwin)
-ifeq ($(shell uname -p),arm)
-TOOLCHAIN ?= /opt/homebrew/opt/llvm/bin/
+BREW ?= $(shell command -v brew)
+TOOLCHAIN ?= $(shell $(BREW) --prefix llvm)/bin/
+ifeq ($(shell ls $(TOOLCHAIN)/ld.lld 2>/dev/null),)
+LLDDIR ?= $(shell $(BREW) --prefix lld)/bin/
 else
-TOOLCHAIN ?= /usr/local/opt/llvm/bin/
+LLDDIR ?= $(TOOLCHAIN)
 endif
 $(info INFO: Toolchain path: $(TOOLCHAIN))
 endif
@@ -17,10 +19,14 @@ else
 ARCH ?= aarch64-linux-gnu-
 endif
 
+ifneq ($(TOOLCHAIN),$(LLDDIR))
+$(info INFO: LLD path: $(LLDDIR))
+endif
+
 ifeq ($(USE_CLANG),1)
 CC := $(TOOLCHAIN)clang --target=$(ARCH)
 AS := $(TOOLCHAIN)clang --target=$(ARCH)
-LD := $(TOOLCHAIN)ld.lld
+LD := $(LLDDIR)ld.lld
 OBJCOPY := $(TOOLCHAIN)llvm-objcopy
 CLANG_FORMAT ?= $(TOOLCHAIN)clang-format
 EXTRA_CFLAGS ?=
