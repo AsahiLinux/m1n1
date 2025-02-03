@@ -378,7 +378,7 @@ static int dt_set_memory(void)
                 continue;
             }
 
-            if ((resv_start | resv_len) & (SZ_16K - 1)) {
+            if ((resv_start | resv_len) & (get_page_size() - 1)) {
                 bail("FDT: reserved-memory node %s not page-aligned, ignoring (%lx..%lx)\n", name,
                      resv_start, resv_end);
                 continue;
