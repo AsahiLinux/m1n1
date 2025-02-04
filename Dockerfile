@@ -1,4 +1,5 @@
-FROM debian:buster-slim
+### Build stage
+FROM debian:buster-slim AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y build-essential bash curl git locales gcc-aarch64-linux-gnu libc6-dev-arm64-cross device-tree-compiler \
@@ -12,5 +13,15 @@ ENV PATH "/root/.cargo/bin:${PATH}"
 
 WORKDIR /m1n1
 COPY . .
+
+### Runtime stage
+FROM debian:buster-slim
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG en_US.utf8
+ENV PATH "/root/.cargo/bin:${PATH}"
+
+COPY --from=builder /m1n1 /m1n1
+
+WORKDIR /m1n1
 
 CMD ["/bin/bash"]
