@@ -26,6 +26,7 @@ int pmgr_adt_power_disable_index(const char *path, u32 index);
 int pmgr_adt_reset(const char *path);
 
 int pmgr_reset(int die, const char *name);
+int pmgr_power_on(int die, const char *name);
 
 int pmgr_set_mode(uintptr_t addr, u8 target_mode);
 
