@@ -128,6 +128,10 @@ impl<'a> ADT<'a> {
             }
         }
     }
+
+    pub fn first_property_offset(offset: i32) -> i32 {
+        offset + size_of::<ADTNodeHeader>() as i32
+    }
 }
 
 extern "C" {
@@ -136,6 +140,11 @@ extern "C" {
 
 unsafe extern "C" {
     unsafe fn adt_get_size() -> c_uint;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_first_property_offset(_dt: *const c_void, offset: c_int) -> c_int {
+    ADT::first_property_offset(offset) as c_int
 }
 
 #[no_mangle]
