@@ -84,6 +84,17 @@ impl ADTNode {
             }
         }
     }
+
+    pub fn as_ptr(&self) -> *const u8 {
+        self as *const ADTNode as *const u8
+    }
+
+    pub fn first_property(&self) -> Result<&'static ADTProperty, AdtError> {
+        // SAFETY: We can never have a node that does not have at least one
+        // property, and that property is always at the byte immediately following
+        // the node header.
+        unsafe { ADTProperty::from_ptr(self.as_ptr().add(size_of::<ADTNode>()) as usize) }
+    }
 }
 
 impl ADTProperty {
@@ -137,6 +148,10 @@ impl ADTProperty {
             }
         }
     }
+
+    pub fn as_ptr(&self) -> *const u8 {
+        self as *const ADTProperty as *const u8
+    }
 }
 
 extern "C" {
@@ -145,6 +160,19 @@ extern "C" {
 
 unsafe extern "C" {
     unsafe fn adt_get_size() -> c_uint;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_first_property_offset(_dt: *const c_void, offset: c_int) -> c_int {
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+
+    let p: *const u8 = ADTNode::from_ptr(ptr)
+        .unwrap()
+        .first_property()
+        .unwrap()
+        .as_ptr();
+
+    unsafe { p.sub(adt as usize) as c_int }
 }
 
 #[no_mangle]
