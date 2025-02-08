@@ -2,6 +2,7 @@
 
 #include "adt.h"
 #include "string.h"
+#include "xnuboot.h"
 
 /* This API is designed to match libfdt's read-only API */
 
@@ -48,6 +49,11 @@ int _adt_check_prop_offset(const void *adt, int offset)
         return -ADT_ERR_BADOFFSET;
 
     return 0;
+}
+
+u32 adt_get_size(void)
+{
+    return cur_boot_args.devtree_size;
 }
 
 int adt_check_header(const void *adt)
