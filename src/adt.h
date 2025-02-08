@@ -36,6 +36,9 @@ struct adt_node_hdr {
 
 /* This API is designed to match libfdt's read-only API */
 
+/* Required for Rust until we move xnuboot across */
+u32 adt_get_size(void);
+
 /* Basic sanity check */
 int adt_check_header(const void *adt);
 
