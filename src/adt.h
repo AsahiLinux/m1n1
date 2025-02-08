@@ -47,11 +47,7 @@ static inline int adt_get_property_count(const void *adt, int offset)
     return ADT_NODE(adt, offset)->property_count;
 }
 
-static inline int adt_first_property_offset(const void *adt, int offset)
-{
-    UNUSED(adt);
-    return offset + sizeof(struct adt_node_hdr);
-}
+int adt_first_property_offset(const void *adt, int offset);
 
 static inline int adt_next_property_offset(const void *adt, int offset)
 {
