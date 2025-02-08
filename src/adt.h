@@ -59,10 +59,7 @@ static inline int adt_next_property_offset(const void *adt, int offset)
     return offset + sizeof(struct adt_property) + ((prop->size + ADT_ALIGN - 1) & ~(ADT_ALIGN - 1));
 }
 
-static inline const struct adt_property *adt_get_property_by_offset(const void *adt, int offset)
-{
-    return ADT_PROP(adt, offset);
-}
+const struct adt_property *adt_get_property_by_offset(const void *adt, int offset);
 
 static inline int adt_get_child_count(const void *adt, int offset)
 {
