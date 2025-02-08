@@ -1,0 +1,176 @@
+// SPDX-License-Identifier: MIT
+use core::ffi::*;
+use core::mem::size_of;
+
+// const ADT_ERR_NOTFOUND: i32 = 1;
+const ADT_ERR_BADOFFSET: i32 = 4;
+// const ADT_ERR_BADPATH: i32 = 5;
+// const ADT_ERR_BADNCELLS: i32 = 14;
+// const ADT_ERR_BADVALUE: i32 = 15;
+// const ADT_ERR_BADLENGTH: i32 = 20;
+
+const ADT_ALIGN: i32 = 4;
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct ADTProperty {
+    name: [c_char; 32],
+    size: u32,
+    value: [u8],
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct ADTNodeHeader {
+    property_count: u32,
+    child_count: u32,
+}
+
+#[repr(C, packed(1))]
+pub struct ADTSegmentRanges {
+    phys: u64,
+    iova: u64,
+    remap: u64,
+    size: u32,
+    unk: u32,
+}
+
+#[repr(C)]
+pub struct ADT<'a> {
+    size: usize,
+    data: &'a [u8],
+}
+
+impl<'a> ADT<'a> {
+    /// Not required... yet
+    pub fn from_raw(ptr: *const ADT) -> Self {
+        // SAFETY: ptr comes from iBoot, we know it points to the ADT
+        unsafe {
+            let sz: usize = adt_get_size() as usize;
+            Self {
+                size: sz,
+                data: core::slice::from_raw_parts(ptr as *const u8, sz),
+            }
+        }
+    }
+
+    /// These are only needed internally. The public API guarantees
+    /// that every property or node returned is valid via these routines.
+    fn check_node(node: *const ADTNodeHeader) -> Result<i32, i32> {
+        // SAFETY: by the time we've called this, we already know we have
+        // an aligned node
+        unsafe {
+            if node as usize + size_of::<ADTNodeHeader>()
+                > adt.add(adt_get_size() as usize) as usize
+                || (*node).property_count > 2048
+                || (*node).property_count == 0
+                || (*node).child_count > 2048
+            {
+                return Err(-ADT_ERR_BADOFFSET);
+            }
+        }
+        Ok(0)
+    }
+
+    /// Make sure our offset is sane
+    fn check_offset(offset: i32) -> Result<i32, i32> {
+        if offset < 0 || (offset % ADT_ALIGN != 0) {
+            Err(-ADT_ERR_BADOFFSET)
+        } else {
+            Ok(0)
+        }
+    }
+
+    /// Properties can have a maximum of 1 MB of data in value
+    fn check_property(prop: *const ADTProperty) -> Result<i32, i32> {
+        if prop.is_null() {
+            return Err(-ADT_ERR_BADOFFSET);
+        }
+
+        // SAFETY: We know the pointer is not null
+        unsafe {
+            if (*prop).size & 0x7ff00000 != 0 {
+                return Err(-ADT_ERR_BADOFFSET);
+            } else {
+                Ok(0)
+            }
+        }
+    }
+
+    /// Do some cursed shit to get a fat pointer to ADTProperty
+    fn adt_prop_ptr(ptr: *const u8) -> *const ADTProperty {
+        // SAFETY: If we're calling this, we know we have a property
+        // at the address
+        unsafe {
+            let val_size: usize = *(ptr.add(32)) as usize;
+            // sizeof name + sizeof size + sizeof value
+            let sp: *const [u8] = core::slice::from_raw_parts(
+                ptr,
+                size_of::<[char; 32]>() + size_of::<u32>() + val_size,
+            );
+            sp as *const ADTProperty
+        }
+    }
+
+    /// Check a given offset for an ADT node. Returns a static reference
+    /// to ADTNodeHeader if successful, or a known ADT error code if
+    /// unseuccessful
+    pub fn node_at(offset: i32) -> Result<&'static ADTNodeHeader, i32> {
+        ADT::check_offset(offset)?;
+
+        // SAFETY: adt is always a valid pointer
+        unsafe {
+            let node = adt.add(offset as usize) as *const ADTNodeHeader;
+            let ret = ADT::check_node(node);
+            match ret {
+                Ok(_i) => Ok(&*node),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// Check a given offset for an ADT property. Returns a static reference to
+    /// an ADTProperty if successful, or a known ADT error code if unseuccessful
+    pub fn property_at(offset: i32) -> Result<&'static ADTProperty, i32> {
+        ADT::check_offset(offset)?;
+
+        // SAFETY: ad is always valid, and our offset is proven aligned above
+        unsafe {
+            let prop = ADT::adt_prop_ptr(adt.add(offset as usize) as *const u8);
+            let ret = ADT::check_property(prop);
+            match ret {
+                Ok(_i) => Ok(&*prop),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// Return the value of the property at the given offset. Returns a None
+    /// if the offset does not point to a valid property.
+    ///
+    /// TODO: should this be a private backend called by a specific method for
+    /// each possible data type?
+    pub fn value_at(offset: i32) -> Option<&'static [u8]> {
+        let prop = ADT::property_at(offset);
+
+        // SAFETY: If we get a property, then the property is safe. We know the
+        // size of p.value in bytes.
+        unsafe {
+            match prop {
+                Ok(p) => Some(core::slice::from_raw_parts(
+                    p.value.as_ptr(),
+                    p.size as usize,
+                )),
+                Err(_) => None,
+            }
+        }
+    }
+}
+
+extern "C" {
+    static adt: *const c_void; // Global, immutable
+}
+
+unsafe extern "C" {
+    unsafe fn adt_get_size() -> c_int;
+}
