@@ -145,6 +145,10 @@ impl<'a> ADT<'a> {
         }
     }
 
+    pub fn first_property_offset(offset: i32) -> i32 {
+        offset + size_of::<ADTNodeHeader>() as i32
+    }
+
     /// Return the value of the property at the given offset. Returns a None
     /// if the offset does not point to a valid property.
     ///
@@ -175,6 +179,11 @@ unsafe extern "C" {
     unsafe fn adt_get_size() -> c_int;
 }
 
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_first_property_offset(_dt: *const c_void, offset: c_int) -> c_int {
+    ADT::first_property_offset(offset) as c_int
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn adt_get_property_by_offset(
