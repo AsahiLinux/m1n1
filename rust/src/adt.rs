@@ -174,3 +174,16 @@ extern "C" {
 unsafe extern "C" {
     unsafe fn adt_get_size() -> c_int;
 }
+
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_get_property_by_offset(
+    _dt: *const c_void,
+    offset: c_int,
+) -> *const c_void {
+    let prop = ADT::property_at(offset);
+    match prop {
+        Ok(p) => p as *const ADTProperty as *const c_void,
+        Err(_) => core::ptr::null(),
+    }
+}
