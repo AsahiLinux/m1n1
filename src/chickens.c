@@ -59,6 +59,7 @@ const struct midr_part_features features_a11 = {
     .acc_cfg = true,
     .cyc_ovrd = true,
     .sleep_mode = SLEEP_GLOBAL,
+    .uncore_version = UNCORE_V1,
     .nex_powergating = true,
     .fast_ipi = true,
 };
@@ -68,6 +69,7 @@ const struct midr_part_features features_m1 = {
     .acc_cfg = true,
     .cyc_ovrd = true,
     .sleep_mode = SLEEP_GLOBAL,
+    .uncore_version = UNCORE_V2,
     .nex_powergating = true,
     .fast_ipi = true,
     .mmu_sprr = true,
@@ -80,6 +82,7 @@ const struct midr_part_features features_m2 = {
     .acc_cfg = true,
     .cyc_ovrd = true,
     .sleep_mode = SLEEP_GLOBAL,
+    .uncore_version = UNCORE_V2,
     .nex_powergating = true,
     .fast_ipi = true,
     .mmu_sprr = true,
@@ -91,6 +94,7 @@ const struct midr_part_features features_m2 = {
 // XXX figure out what features are actually available on M4
 const struct midr_part_features features_m4 = {
     .sleep_mode = SLEEP_NONE, // XXX probably new mode required
+    .uncore_version = UNCORE_V2,
     .fast_ipi = true,
     .actlr_el2 = true,
 };
