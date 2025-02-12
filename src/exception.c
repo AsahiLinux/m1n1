@@ -139,7 +139,7 @@ void exception_initialize(void)
     }
     if (cpu_features->fast_ipi) {
         reg_clr(SYS_IMP_APL_PMCR0, PMCR0_IACT | PMCR0_IMODE_MASK);
-        reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
+        reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_T8020);
         msr(SYS_IMP_APL_IPI_SR_EL1, IPI_SR_PENDING);
     }
 
@@ -410,10 +410,10 @@ void exc_fiq(u64 *regs)
 
     if (cpu_features->fast_ipi) {
         reg = mrs(SYS_IMP_APL_UPMCR0);
-        if ((reg & UPMCR0_IMODE_MASK) == UPMCR0_IMODE_FIQ &&
+        if (FIELD_GET(UPMCR0_IMODE_T8020, reg) == UPMCR0_IMODE_FIQ &&
             (mrs(SYS_IMP_APL_UPMSR) & UPMSR_IACT)) {
             printf("  UPMC IRQ, masking\n");
-            reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
+            reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_T8020);
         }
 
         if (mrs(SYS_IMP_APL_IPI_SR_EL1) & IPI_SR_PENDING) {

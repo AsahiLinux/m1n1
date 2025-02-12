@@ -589,18 +589,98 @@
 #define ACC_OVRD_SPR_OCLA_SEL                           ((ULONG(x)) << 62)
 #define ACC_OVRD_SPR_OCLA_SEL_MASK                      GENMASK(63, 62)
 
+/* UPMC registers */
 #define SYS_IMP_APL_UPMCR0 sys_reg(3, 7, 15, 0, 4)
-#define UPMCR0_IMODE_OFF   (0 << 16)
-#define UPMCR0_IMODE_AIC   (2 << 16)
-#define UPMCR0_IMODE_HALT  (3 << 16)
-#define UPMCR0_IMODE_FIQ   (4 << 16)
-#define UPMCR0_IMODE_MASK  (7 << 16)
+
+#define UPMCR0_IMODE_OFF  0
+#define UPMCR0_IMODE_AIC  2
+#define UPMCR0_IMODE_HALT 3
+#define UPMCR0_IMODE_FIQ  4
+
+#define UPMCR0_PMI_SHIFT_T8015         12
+#define UPMCR0_IMODE_T8015             GENMASK(10, 8)
+#define UPMCR0_IMODE_CNT_EN_MASK_T8015 MASK(8)
+#define UPMCR0_CNT_MASK_T8015                                                                      \
+    (UPMCR0_IMODE_CNT_EN_MASK_T8015 | (UPMCR0_IMODE_CNT_EN_MASK_T8015 << UPMCR0_PMI_SHIFT_T8015))
+
+#define UPMCR0_PMI_SHIFT_T8020         20
+#define UPMCR0_IMODE_T8020             GENMASK(18, 16)
+#define UPMCR0_IMODE_CNT_EN_MASK_T8020 MASK(16)
+#define UPMCR0_CNT_MASK_T8020                                                                      \
+    (UPMCR0_IMODE_CNT_EN_MASK_T8020 | (UPMCR0_IMODE_CNT_EN_MASK_T8020 << UPMCR0_PMI_SHIFT_T8020))
+
+#define SYS_IMP_APL_UPMECM0_EL1     sys_reg(3, 7, 15, 3, 4)
+#define UPMECM0_EVT_CORE_MASK_CNT_0 GENMASK(15, 0)
+#define UPMECM0_EVT_CORE_MASK_CNT_1 GENMASK(31, 16)
+#define UPMECM0_EVT_CORE_MASK_CNT_2 GENMASK(47, 32)
+#define UPMECM0_EVT_CORE_MASK_CNT_3 GENMASK(63, 48)
+
+#define SYS_IMP_APL_UPMECM1_EL1     sys_reg(3, 7, 15, 4, 4)
+#define UPMECM1_EVT_CORE_MASK_CNT_4 GENMASK(15, 0)
+#define UPMECM1_EVT_CORE_MASK_CNT_5 GENMASK(31, 16)
+#define UPMECM1_EVT_CORE_MASK_CNT_6 GENMASK(47, 32)
+#define UPMECM1_EVT_CORE_MASK_CNT_7 GENMASK(63, 48)
+
+#define SYS_IMP_APL_UPMECM2_EL1      sys_reg(3, 7, 15, 8, 5)
+#define UPMECM2_EVT_CORE_MASK_CNT_8  GENMASK(15, 0)
+#define UPMECM2_EVT_CORE_MASK_CNT_9  GENMASK(31, 16)
+#define UPMECM2_EVT_CORE_MASK_CNT_10 GENMASK(47, 32)
+#define UPMECM2_EVT_CORE_MASK_CNT_11 GENMASK(63, 48)
+
+#define SYS_IMP_APL_UPMECM3_EL1      sys_reg(3, 7, 15, 9, 5)
+#define UPMECM3_EVT_CORE_MASK_CNT_12 GENMASK(15, 0)
+#define UPMECM3_EVT_CORE_MASK_CNT_13 GENMASK(31, 16)
+#define UPMECM3_EVT_CORE_MASK_CNT_14 GENMASK(47, 32)
+#define UPMECM3_EVT_CORE_MASK_CNT_15 GENMASK(63, 48)
+
+#define SYS_IMP_APL_UPMPCM_EL1 sys_reg(3, 7, 15, 5, 4)
+#define UPMPCM_PMI_CORE_MASK   GENMASK(7, 0)
+
+#define SYS_IMP_APL_UPMESR0_EL1 sys_reg(3, 7, 15, 1, 4)
+#define UPMESR0_EVT_CNT_0       GENMASK(7, 0)
+#define UPMESR0_EVT_CNT_1       GENMASK(15, 8)
+#define UPMESR0_EVT_CNT_2       GENMASK(23, 16)
+#define UPMESR0_EVT_CNT_3       GENMASK(31, 24)
+#define UPMESR0_EVT_CNT_4       GENMASK(39, 32)
+#define UPMESR0_EVT_CNT_5       GENMASK(47, 40)
+#define UPMESR0_EVT_CNT_6       GENMASK(55, 48)
+#define UPMESR0_EVT_CNT_7       GENMASK(63, 56)
+
+#define SYS_IMP_APL_UPMESR1_EL1 sys_reg(3, 7, 15, 11, 5)
+#define UPMESR1_EVT_CNT_8       GENMASK(7, 0)
+#define UPMESR1_EVT_CNT_9       GENMASK(15, 8)
+#define UPMESR1_EVT_CNT_10      GENMASK(23, 16)
+#define UPMESR1_EVT_CNT_11      GENMASK(31, 24)
+#define UPMESR1_EVT_CNT_12      GENMASK(39, 32)
+#define UPMESR1_EVT_CNT_13      GENMASK(47, 40)
+#define UPMESR1_EVT_CNT_14      GENMASK(55, 48)
+#define UPMESR1_EVT_CNT_15      GENMASK(63, 56)
+
+#define SYS_IMP_APL_UPMC0  sys_reg(3, 7, 15, 7, 4)
+#define SYS_IMP_APL_UPMC1  sys_reg(3, 7, 15, 8, 4)
+#define SYS_IMP_APL_UPMC2  sys_reg(3, 7, 15, 9, 4)
+#define SYS_IMP_APL_UPMC3  sys_reg(3, 7, 15, 10, 4)
+#define SYS_IMP_APL_UPMC4  sys_reg(3, 7, 15, 11, 4)
+#define SYS_IMP_APL_UPMC5  sys_reg(3, 7, 15, 12, 4)
+#define SYS_IMP_APL_UPMC6  sys_reg(3, 7, 15, 13, 4)
+#define SYS_IMP_APL_UPMC7  sys_reg(3, 7, 15, 14, 4)
+#define SYS_IMP_APL_UPMC8  sys_reg(3, 7, 15, 0, 5)
+#define SYS_IMP_APL_UPMC9  sys_reg(3, 7, 15, 1, 5)
+#define SYS_IMP_APL_UPMC10 sys_reg(3, 7, 15, 2, 5)
+#define SYS_IMP_APL_UPMC11 sys_reg(3, 7, 15, 3, 5)
+#define SYS_IMP_APL_UPMC12 sys_reg(3, 7, 15, 4, 5)
+#define SYS_IMP_APL_UPMC13 sys_reg(3, 7, 15, 5, 5)
+#define SYS_IMP_APL_UPMC14 sys_reg(3, 7, 15, 6, 5)
+#define SYS_IMP_APL_UPMC15 sys_reg(3, 7, 15, 7, 5)
 
 #define SYS_IMP_APL_CORE_NRG_ACC_DAT     sys_reg(3, 7, 15, 1, 1)
 #define SYS_IMP_APL_CORE_SRM_NRG_ACC_DAT sys_reg(3, 7, 15, 3, 1)
 
-#define SYS_IMP_APL_UPMSR sys_reg(3, 7, 15, 6, 4)
-#define UPMSR_IACT        (BIT(0))
+#define SYS_IMP_APL_UPMSR    sys_reg(3, 7, 15, 6, 4)
+#define UPMSR_IACT           BIT(0)
+#define UPMSR_CTI_T8020      BIT(1)
+#define UPMSR_OVERFLOW_T8015 GENMASK(8, 1)
+#define UPMSR_OVERFLOW_T8020 GENMASK(17, 2)
 
 /* SPRR and GXF registers */
 #define SYS_IMP_APL_SPRR_CONFIG_EL1  sys_reg(3, 6, 15, 1, 0)
