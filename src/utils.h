@@ -467,6 +467,7 @@ extern u32 board_id, chip_id;
 extern bool is_mac;
 extern bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
 extern bool cpufeat_global_sleep, cpufeat_workaround_cyclone_cache;
+extern int cpufeat_uncore_version;
 
 extern struct vector_args next_stage;
 extern u64 boot_flags, mem_size_actual;
