@@ -561,9 +561,10 @@ void hv_exc_fiq(struct exc_info *ctx)
     }
 
     reg = mrs(SYS_IMP_APL_UPMCR0);
-    if ((reg & UPMCR0_IMODE_MASK) == UPMCR0_IMODE_FIQ && (mrs(SYS_IMP_APL_UPMSR) & UPMSR_IACT)) {
+    if (FIELD_GET(UPMCR0_IMODE_T8020, reg) == UPMCR0_IMODE_FIQ &&
+        (mrs(SYS_IMP_APL_UPMSR) & UPMSR_IACT)) {
         printf("[FIQ] UPMC IRQ, masking");
-        reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_MASK);
+        reg_clr(SYS_IMP_APL_UPMCR0, UPMCR0_IMODE_T8020);
         hv_exc_proxy(ctx, START_EXCEPTION_LOWER, EXC_FIQ, NULL);
     }
 
