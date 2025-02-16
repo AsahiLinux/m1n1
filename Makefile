@@ -234,9 +234,20 @@ build/$(NAME).macho: build/$(NAME).elf
 	$(QUIET)echo "  MACHO $@"
 	$(QUIET)$(OBJCOPY) -O binary --strip-debug $< $@
 
+ifeq ($(LOGO),)
 build/$(NAME).bin: build/$(NAME)-raw.elf
 	$(QUIET)echo "  RAW   $@"
 	$(QUIET)$(OBJCOPY) -O binary --strip-debug $< $@
+
+else
+build/$(NAME)-asahi.bin: build/$(NAME)-raw.elf
+	$(QUIET)echo "  RAW   $@"
+	$(QUIET)$(OBJCOPY) -O binary --strip-debug $< $@
+
+build/$(NAME).bin: build/$(NAME)-asahi.bin build/$(LOGO).logo
+	$(QUIET)echo "  RAW   $@"
+	$(QUIET)cat $^ > $@
+endif
 
 .INTERMEDIATE: build-tag build-cfg
 build-tag src/../build/build_tag.h &:
@@ -265,5 +276,17 @@ build/%.bin: font/%.bin
 	$(QUIET)echo "  CP    $@"
 	$(QUIET)mkdir -p "$(dir $@)"
 	$(QUIET)cp $< $@
+
+build/%.rgba: data/%.png
+	$(eval SIZE := $(lastword $(subst _, ,$*)))
+	$(QUIET)echo "  MAGIC $@"
+	$(QUIET)mkdir -p "$(dir $@)"
+	$(QUIET)magick $< -background black -flatten -depth 8 -crop $(SIZE)x$(SIZE) -resize $(SIZE)x$(SIZE) rgba:$@
+
+build/%.logo: build/%_256.rgba build/%_128.rgba
+	$(QUIET)echo "  PAYLOAD $@"
+	$(QUIET)mkdir -p "$(dir $@)"
+	$(QUIET)echo -n "m1n1_logo_256128" > $@
+	$(QUIET)cat $^ >> $@
 
 -include $(DEPDIR)/*
