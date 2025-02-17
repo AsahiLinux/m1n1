@@ -434,20 +434,6 @@ void fb_init(bool clear)
         console.font.height = 16;
     }
 
-    if (!orig_logo.ptr) {
-        orig_logo = *logo;
-        orig_logo.ptr = malloc(orig_logo.width * orig_logo.height * 4);
-        fb_unblit_image((fb.width - orig_logo.width) / 2, (fb.height - orig_logo.height) / 2,
-                        &orig_logo);
-    }
-
-    if (clear) {
-        memset32(fb.ptr, 0, fb.size);
-    } else {
-        // Workaround for m1n1 stage 1 framebuffer UAF bug
-        memset32(fb.ptr, 0, min(256, fb.size));
-    }
-
     console.margin.rows = 2;
     console.margin.cols = 4;
     console.cursor.col = 0;
@@ -466,6 +452,20 @@ void fb_init(bool clear)
 
     console.initialized = true;
     console.active = false;
+
+    if (!orig_logo.ptr) {
+        orig_logo = *logo;
+        orig_logo.ptr = malloc(orig_logo.width * orig_logo.height * 4);
+        fb_unblit_image((fb.width - orig_logo.width) / 2, (fb.height - orig_logo.height) / 2,
+                        &orig_logo);
+    }
+
+    if (clear) {
+        memset32(fb.ptr, 0, fb.size);
+    } else {
+        // Workaround for m1n1 stage 1 framebuffer UAF bug
+        memset32(fb.ptr, 0, min(256, fb.size));
+    }
 
     fb_clear_console();
 
