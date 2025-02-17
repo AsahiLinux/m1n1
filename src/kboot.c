@@ -207,7 +207,8 @@ static int dt_set_chosen(void)
         printf("FDT: initrd at %p size 0x%lx\n", initrd_start, initrd_size);
     }
 
-    if (cur_boot_args.video.base) {
+    if (cur_boot_args.video.base &&
+        (adt_path_offset(adt, "/arm-io/disp0") > 0 || (chip_id != T8012 && chip_id != T7000))) {
         int fb = fdt_path_offset(dt, "/chosen/framebuffer");
         if (fb < 0)
             bail("FDT: /chosen node not found in devtree\n");
@@ -2383,6 +2384,37 @@ static int dt_transfer_virtios(void)
     return 0;
 }
 
+static int dt_set_pmgr(void)
+{
+    if (chip_id != T8012)
+        return 0;
+
+    if (mem_size_actual > 0x40000000)
+        return 0;
+
+    int pmgr_node = fdt_path_offset(dt, "/soc/power-management@20e000000");
+    if (pmgr_node < 0) {
+        printf("FDT: Failed to find pmgr node\n");
+        return 0;
+    }
+
+    int dcs2_node = fdt_path_offset(dt, "/soc/power-management@20e000000/power-controller@80258");
+    if (dcs2_node < 0)
+        bail("FDT: failed to find ps_dcs2 node\n");
+
+    /* Allow failure */
+    fdt_delprop(dt, dcs2_node, "apple,always-on");
+
+    int dcs3_node = fdt_path_offset(dt, "/soc/power-management@20e000000/power-controller@80260");
+    if (dcs3_node < 0)
+        bail("FDT: failed to find ps_dcs3 node\n");
+
+    /* Allow failure */
+    fdt_delprop(dt, dcs3_node, "apple,always-on");
+
+    return 0;
+}
+
 void kboot_set_initrd(void *start, size_t size)
 {
     initrd_start = start;
@@ -2569,6 +2601,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_reserve_asc_firmware("/arm-io/isp", "/arm-io/isp0", "isp", false, isp_iova_base()))
         return -1;
     if (dt_set_isp_fwdata())
+        return -1;
+    if (dt_set_pmgr())
         return -1;
 #ifndef RELEASE
     if (dt_transfer_virtios())
