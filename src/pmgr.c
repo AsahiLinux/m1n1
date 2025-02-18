@@ -341,6 +341,28 @@ int pmgr_reset(int die, const char *name)
     return pmgr_reset_device(die, dev);
 }
 
+int pmgr_power_on(int die, const char *name)
+{
+    const struct pmgr_device *dev = NULL;
+
+    for (unsigned int i = 0; i < pmgr_devices_len; ++i) {
+        if (strncmp(pmgr_devices[i].name, name, 0x10) == 0) {
+            dev = &pmgr_devices[i];
+            break;
+        }
+    }
+
+    if (!dev)
+        return -1;
+
+    uintptr_t addr = pmgr_device_get_addr(die, dev);
+
+    if (!addr)
+        return -1;
+
+    return pmgr_set_mode(addr, PMGR_PS_ACTIVE);
+}
+
 int pmgr_init(void)
 {
     int node = adt_path_offset(adt, "/arm-io");
