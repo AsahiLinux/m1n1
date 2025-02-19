@@ -15,7 +15,7 @@ on:
 
 jobs:
   format-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-2024.04-arm
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
