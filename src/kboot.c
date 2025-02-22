@@ -1818,7 +1818,7 @@ static int dt_set_display(void)
     dart_lock_adt("/arm-io/dart-disp0", 0);
 
     /* Add "/reserved-memory" nodes with iommu mapping and link them to their
-     * devices. The memory is already excluded from useable RAM so these nodes
+     * devices. The memory is already excluded from usable RAM so these nodes
      * are only required to inform the OS about the existing mappings.
      * Required for disp0, dcp and all dcpext.
      * Checks for dcp* / disp*_piodma / disp* aliases and fails silently if
@@ -2525,7 +2525,7 @@ int kboot_prepare_dt(void *fdt)
     if (fdt_add_mem_rsv(dt, (u64)_base, ((u64)_end) - ((u64)_base)))
         bail("FDT: couldn't add reservation for m1n1\n");
 
-    /* setup console log buffer early to cpature as much log as possible */
+    /* setup console log buffer early to capture as much log as possible */
     dt_setup_mtd_phram();
 
     if (dt_set_chosen())

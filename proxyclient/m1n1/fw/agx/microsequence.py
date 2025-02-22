@@ -914,7 +914,7 @@ class TimestampCmd(ConstructClass):
         "unk_1" / Int8ul,
         "unk_2" / Int8ul,
         "unk_3" / Int8ul, # Sometimes 0x80
-        # all these pointers point to 0xfa0... addresses. Might be where the timestamp should be writen?
+        # all these pointers point to 0xfa0... addresses. Might be where the timestamp should be written?
         "ts0_addr" / Int64ul,
         "ts0" / ROPointer(this.ts0_addr, TimeStamp),
         "ts_pointers_addr" / Int64ul,

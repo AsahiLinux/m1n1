@@ -51,7 +51,7 @@ const char *init_cpu(void)
     printf("  CPU part: 0x%x rev: 0x%x\n", part, rev);
 
     if (part >= MIDR_PART_T8015_MONSOON) {
-        /* Enable NEX powergating, the reset cycles might be overriden by chickens */
+        /* Enable NEX powergating, the reset cycles might be overridden by chickens */
         if (!is_ecore()) {
             reg_mask(SYS_IMP_APL_HID13, HID13_RESET_CYCLES_MASK, HID13_RESET_CYCLES(12));
             reg_set(SYS_IMP_APL_HID14, HID14_ENABLE_NEX_POWER_GATING);

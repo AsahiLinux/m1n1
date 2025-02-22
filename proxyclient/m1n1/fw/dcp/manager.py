@@ -122,7 +122,7 @@ class DCPManager(DCPBaseManager):
     def enable_backlight_message_ap_gated(self, unkB):
         print(f"enable_backlight_message_ap_gated({unkB})")
 
-    # wrapper for set_digital_out_mode to print information on the setted modes
+    # wrapper for set_digital_out_mode to print information on the set modes
     def SetDigitalOutMode(self, color_id, timing_id):
         color_mode = [x for x in self.dcpav_prop['ColorElements'] if x['ID'] == color_id][0]
         timing_mode = [x for x in self.dcpav_prop['TimingElements'] if x['ID'] == timing_id][0]

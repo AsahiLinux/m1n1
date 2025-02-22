@@ -65,7 +65,7 @@ class R_SMSTA(Register32):
     XIP     = 28            # Xaction in progress
     XEN     = 27            # Xaction ended
     UJF     = 26            # UnJam failure
-    JMD     = 25            # Jam ocurred
+    JMD     = 25            # Jam occurred
     JAM     = 24            # Currently jammed
     MTO     = 23            # Master timeout
     MTA     = 22            # Master arb lost
