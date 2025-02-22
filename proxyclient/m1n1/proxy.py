@@ -642,6 +642,7 @@ class M1N1Proxy(Reloadable):
     P_DAPF_INIT = 0x1201
 
     P_CPUFREQ_INIT = 0x1300
+    P_CPUFREQ_PREPARE_BAUD = 0x1301
 
     def __init__(self, iface, debug=False):
         self.debug = debug
@@ -1141,6 +1142,8 @@ class M1N1Proxy(Reloadable):
 
     def cpufreq_init(self):
         return self.request(self.P_CPUFREQ_INIT)
+    def cpufreq_prepare_1500000_baud(self):
+        self.request(self.P_CPUFREQ_PREPARE_BAUD)
 
 __all__.extend(k for k, v in globals().items()
                if (callable(v) or isinstance(v, type)) and v.__module__ == __name__)
