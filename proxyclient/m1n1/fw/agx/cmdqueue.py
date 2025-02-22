@@ -48,7 +48,7 @@ class WorkCommandInitBM(ConstructClass):
 
 class WorkCommandComputeUnk10(ConstructClass):
     """
-        occassionally sent before WorkCommandCP on the SubmitCP queue.
+        occasionally sent before WorkCommandCP on the SubmitCP queue.
     """
     subcon = Struct(
         "magic" / Const(0xa, Hex(Int32ul)),
@@ -57,7 +57,7 @@ class WorkCommandComputeUnk10(ConstructClass):
 
 class WorkCommandComputeUnk11(ConstructClass):
     """
-        occassionally sent before WorkCommandCP on the SubmitCP queue.
+        occasionally sent before WorkCommandCP on the SubmitCP queue.
     """
     subcon = Struct(
         "magic" / Const(0xb, Hex(Int32ul)),

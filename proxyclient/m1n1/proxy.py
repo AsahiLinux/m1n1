@@ -471,7 +471,7 @@ REGION_RW_EL0 = 0xa0000000000
 REGION_RX_EL1 = 0xc0000000000
 
 # Uses UartInterface.proxyreq() to send requests to M1N1 and process
-# reponses sent back.
+# responses sent back.
 class M1N1Proxy(Reloadable):
     S_OK = 0
     S_BADCMD = -1

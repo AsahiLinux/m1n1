@@ -711,7 +711,7 @@ static inline struct fdt_property *fdt_get_property_w(void *fdt, int nodeoffset,
  * to within the device blob itself, not a copy of the value).  If
  * lenp is non-NULL, the length of the property value is also
  * returned, in the integer pointed to by lenp.  If namep is non-NULL,
- * the property's namne will also be returned in the char * pointed to
+ * the property's name will also be returned in the char * pointed to
  * by namep (this will be a pointer to within the device tree's string
  * block, not a new copy of the name).
  *

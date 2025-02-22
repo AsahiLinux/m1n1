@@ -146,7 +146,7 @@ class ANETaskManager:
 
 		# transfer to main queue (now in in TM range)
 		self.regs.REQ_ADDR.val = self.tq.REQ_ADDR1[qid].val
-		# doesnt go through if 0
+		# doesn't go through if 0
 		self.regs.REQ_INFO.val = self.tq.REQ_SIZE1[qid].val | req.td_count
 		# let's do magic
 		self.regs.REQ_PUSH.val = self.tq_prty[qid] | (qid & 7) << 8

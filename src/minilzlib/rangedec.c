@@ -18,7 +18,7 @@ Abstract:
     50%. Probabilities are stored using 11-bits (2048 \=\= 100%), and thus use 16
     bits of storage. Finally, the range decoder is adaptive, meaning that each
     time a bit is decoded, the probabilities are updated: each 0 increases the
-    probability of another 0, and each 1 decrases it. The algorithm adapts the
+    probability of another 0, and each 1 decreases it. The algorithm adapts the
     probabilities using an exponential moving average with a shift ratio of 5.
 
 Author:
