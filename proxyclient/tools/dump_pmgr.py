@@ -11,7 +11,7 @@ dt = u.adt
 
 pmgr = dt["/arm-io/pmgr"]
 
-dev_by_id = {dev.id: dev for dev in pmgr.devices}
+dev_by_id = {dt.pmgr_dev_get_id(dev): dev for dev in pmgr.devices}
 pd_by_id = {pd.id: pd for pd in pmgr.power_domains}
 clk_by_id = {clk.id: clk for clk in pmgr.clocks}
 
@@ -47,8 +47,8 @@ print()
 print("=== Devices ===")
 for i, dev in enumerate(pmgr.devices):
     flags = ", ".join(k for k in dev.flags if k[0] != "_" and dev.flags[k])
-    s = f" #{i:3d} {dev.name:20s} id: {dev.id:3d} psreg: {dev.psreg:2d}:{dev.psidx:2d} "
-    s += f" flags: {flags:24s} unk1_0: {dev.unk1_0} unk1_1: {dev.unk1_1} unk1_2: {dev.unk1_2} "
+    s = f" #{i:3d} {dev.name:20s} id: {u.adt.pmgr_dev_get_id(dev):3d} psreg: {dev.psreg:2d}:{dev.psidx:2d} "
+    s += f" flags: {flags:24s} unk1_0: {dev.unk1_0} unk1_1: {dev.unk1_1} id1: {dev.id1} "
     s += f" perf_reg: {dev.perf_block}:{dev.perf_idx:#04x} unk3: {dev.unk3:3d} {dev.unk2_0:2d} {dev.ps_cfg16:2d} {dev.unk2_3:3d}"
 
     if not dev.flags.no_ps:
@@ -63,10 +63,10 @@ for i, dev in enumerate(pmgr.devices):
         s += f" pd: {pd.name:20s}"
     else:
         s += "                         "
-    if any(dev.parents):
-        s += " parents: " + ", ".join(dev_by_id[idx].name if idx in dev_by_id else f"#{idx}" for idx in dev.parents if idx)
+    if any(dt.pmgr_dev_get_parents(dev)):
+        s += " parents: " + ", ".join(dev_by_id[idx].name if idx in dev_by_id else f"#{idx}" for idx in dt.pmgr_dev_get_parents(dev) if idx)
     print(s)
-    for i in dev_users.get(dev.id, []):
+    for i in dev_users.get(dt.pmgr_dev_get_id(dev), []):
         print(f"  User: {i}")
 
 print()
@@ -107,6 +107,10 @@ for clk in range(256):
             print(f"  User: {j}")
 
 print()
+
+if chip_id in (0x8960, 0x7000, 0x7001, 0x8000, 0x8001, 0x8003, 0x8010, 0x8012, 0x8015):
+    exit(0)
+
 print("=== Boot clocks ===")
 for i, (freq, reg, nclk) in enumerate(zip(arm_io.clock_frequencies,
                                           arm_io.clock_frequencies_regs,

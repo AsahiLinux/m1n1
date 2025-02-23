@@ -22,7 +22,10 @@ if args.print:
 		print(dev.name)
 	sys.exit(0)
 
-granule = 0x4000
+if chip_id in (0x8960, 0x7000, 0x7001):
+	granule = 0x1000
+else:
+	granule = 0x4000
 
 lp = LinkedProgram(u)
 lp.load_inline_c(f'''
@@ -96,7 +99,7 @@ else:
 
 pd_did_enable = set()
 pmgr = u.adt["/arm-io/pmgr"]
-ps_dev_by_id = {dev.id: dev for dev in pmgr.devices}
+ps_dev_by_id = {u.adt.pmgr_dev_get_id(dev): dev for dev in pmgr.devices}
 ps_deps = dict()
 ps_addrs = dict()
 
@@ -110,7 +113,7 @@ for dev in pmgr.devices:
 	ps_addrs[dev.name] = addr
 	ps_deps[dev.name] = [
 		ps_dev_by_id[idx].name for idx
-		in dev.parents if idx in ps_dev_by_id
+		in u.adt.pmgr_dev_get_parents(dev) if idx in ps_dev_by_id
 	]
 
 if lp.is_t6000():
