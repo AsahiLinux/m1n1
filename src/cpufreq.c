@@ -19,8 +19,13 @@
 #define CLUSTER_PSTATE_DESIRED2               GENMASK(15, 12)
 #define CLUSTER_PSTATE_APSC_BUSY              BIT(7)
 #define CLUSTER_PSTATE_DESIRED1               GENMASK(4, 0)
+#define CLUSTER_PSTATE_DESIRED1_S5L8960X      GENMASK(24, 22)
 
-#define CLUSTER_SWITCH_TIMEOUT 100
+#define PMGR_VOLTAGE_CTL_OFF_S5L8960X 0x20c00
+#define PMGR_VOLTAGE_CTL_OFF_T7000    0x23000
+#define PMGR_VOLTAGE_CTL_OFF_S8000    0xa0000
+
+#define CLUSTER_SWITCH_TIMEOUT 400
 
 struct cluster_t {
     const char *name;
@@ -42,6 +47,17 @@ struct feat_t {
 static u32 pstate_reg_to_pstate(u64 val)
 {
     switch (chip_id) {
+        case S5L8960X:
+        case T7000:
+        case T7001:
+            return FIELD_GET(CLUSTER_PSTATE_DESIRED1_S5L8960X, val);
+        case S8000:
+        case S8001:
+        case S8003:
+        case T8010:
+        case T8011:
+        case T8012:
+        case T8015:
         case T8103:
         case T6000:
         case T6001:
@@ -64,6 +80,19 @@ static int set_pstate(const struct cluster_t *cluster, uint32_t pstate)
 
     if (pstate_reg_to_pstate(val) != pstate) {
         switch (chip_id) {
+            case S5L8960X:
+            case T7000:
+            case T7001:
+                val &= ~CLUSTER_PSTATE_DESIRED1_S5L8960X;
+                val |= CLUSTER_PSTATE_SET | FIELD_PREP(CLUSTER_PSTATE_DESIRED1_S5L8960X, pstate);
+                break;
+            case S8000:
+            case S8001:
+            case S8003:
+            case T8010:
+            case T8011:
+            case T8012:
+            case T8015:
             case T8103:
             case T6000:
             case T6001:
@@ -121,7 +150,40 @@ int cpufreq_init_cluster(const struct cluster_t *cluster, const struct feat_t *f
         }
     }
 
+    int pmgr_path[8];
+    u64 pmgr_reg;
+
+    if (adt_path_offset_trace(adt, "/arm-io/pmgr", pmgr_path) < 0) {
+        printf("Error getting /arm-io/pmgr node\n");
+        return -1;
+    }
+
+    if (adt_get_reg(adt, pmgr_path, "reg", 0, &pmgr_reg, NULL) < 0) {
+        printf("Error getting /arm-io/pmgr regs\n");
+        return -1;
+    }
+
     switch (chip_id) {
+        case S5L8960X:
+            write32(pmgr_reg + PMGR_VOLTAGE_CTL_OFF_S5L8960X, 1);
+            break;
+        case T7000:
+        case T7001:
+            write32(pmgr_reg + PMGR_VOLTAGE_CTL_OFF_T7000, 1);
+            break;
+        case S8000:
+        case S8001:
+        case S8003:
+        case T8010:
+        case T8011:
+        case T8012:
+        case T8015:
+            /*
+             * On T8015 this will result in the register being written
+             * two times (for two clusters). However, this is fine.
+             */
+            write32(pmgr_reg + PMGR_VOLTAGE_CTL_OFF_S8000, 1);
+            break;
         case T8103:
         case T6000:
         case T6001:
@@ -201,6 +263,44 @@ void cpufreq_fixup_cluster(const struct cluster_t *cluster)
     }
 }
 
+static const struct cluster_t s5l8960x_clusters[] = {
+    {"CPU", 0x202200000, false, 2, 6},
+    {},
+};
+
+static const struct cluster_t t7000_clusters[] = {
+    {"CPU", 0x202200000, false, 2, 5},
+    {},
+};
+
+static const struct cluster_t t7001_clusters[] = {
+    {"CPU", 0x202200000, false, 2, 7},
+    {},
+};
+
+static const struct cluster_t s8000_clusters[] = {
+    {"CPU", 0x202200000, false, 2, 7},
+    {},
+};
+
+static const struct cluster_t t8010_clusters[] = {
+    /* Fused cluster, kernel expects E-core entry */
+    {"CPU", 0x202f00000, false, 2, 4},
+    {},
+};
+
+static const struct cluster_t t8012_clusters[] = {
+    /* Fused cluster, kernel expects P-core entry */
+    {"CPU", 0x202f00000, false, 6, 10},
+    {},
+};
+
+static const struct cluster_t t8015_clusters[] = {
+    {"ECPU", 0x208e00000, false, 2, 6},
+    {"PCPU", 0x208e80000, true, 2, 7},
+    {},
+};
+
 static const struct cluster_t t8103_clusters[] = {
     {"ECPU", 0x210e00000, false, 1, 5},
     {"PCPU", 0x211e00000, true, 1, 7},
@@ -256,6 +356,23 @@ static const struct cluster_t t6031_clusters[] = {
 const struct cluster_t *cpufreq_get_clusters(void)
 {
     switch (chip_id) {
+        case S5L8960X:
+            return s5l8960x_clusters;
+        case T7000:
+            return t7000_clusters;
+        case T7001:
+            return t7001_clusters;
+        case S8000:
+        case S8001:
+        case S8003:
+            return s8000_clusters;
+        case T8010:
+        case T8011:
+            return t8010_clusters;
+        case T8012:
+            return t8012_clusters;
+        case T8015:
+            return t8015_clusters;
         case T8103:
             return t8103_clusters;
         case T6000:
@@ -277,6 +394,27 @@ const struct cluster_t *cpufreq_get_clusters(void)
             return NULL;
     }
 }
+
+static const struct feat_t s5l8960x_features[] = {
+    {},
+};
+
+static const struct feat_t s8000_features[] = {
+    {"cpu-apsc", CLUSTER_PSTATE, CLUSTER_PSTATE_M1_APSC_DIS, 0, CLUSTER_PSTATE_APSC_BUSY, false},
+    {},
+};
+
+static const struct feat_t t8010_features[] = {
+    {"cpu-apsc", CLUSTER_PSTATE, CLUSTER_PSTATE_M1_APSC_DIS, 0, CLUSTER_PSTATE_APSC_BUSY, false},
+    {},
+};
+
+static const struct feat_t t8015_features[] = {
+    {"cpu-apsc", CLUSTER_PSTATE, CLUSTER_PSTATE_M1_APSC_DIS, 0, CLUSTER_PSTATE_APSC_BUSY, false},
+    {"cpu-fixed-freq-pll-relock", CLUSTER_PSTATE, 0, CLUSTER_PSTATE_FIXED_FREQ_PLL_RECLOCK, 0,
+     false},
+    {},
+};
 
 static const struct feat_t t8103_features[] = {
     {"cpu-apsc", CLUSTER_PSTATE, CLUSTER_PSTATE_M1_APSC_DIS, 0, CLUSTER_PSTATE_APSC_BUSY, false},
@@ -324,6 +462,20 @@ static const struct feat_t t6031_features[] = {
 const struct feat_t *cpufreq_get_features(void)
 {
     switch (chip_id) {
+        case S5L8960X:
+        case T7000:
+        case T7001:
+            return s5l8960x_features;
+        case S8000:
+        case S8001:
+        case S8003:
+            return s8000_features;
+        case T8010:
+        case T8011:
+        case T8012:
+            return t8010_features;
+        case T8015:
+            return t8015_features;
         case T8103:
         case T6000:
         case T6001:
@@ -352,6 +504,10 @@ int cpufreq_init(void)
 
     if (!cluster || !features)
         return -1;
+
+    /* Without this, CLUSTER_PSTATE_BUSY gets stuck */
+    if (chip_id == T8012 || chip_id == T8015)
+        pmgr_power_on(0, "SPMI");
 
     bool err = false;
     while (cluster->base) {
