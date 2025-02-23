@@ -39,16 +39,49 @@ struct feat_t {
     bool pcluster_only;
 };
 
+static u32 pstate_reg_to_pstate(u64 val)
+{
+    switch (chip_id) {
+        case T8103:
+        case T6000:
+        case T6001:
+        case T6002:
+        case T8112:
+        case T6020:
+        case T6021:
+        case T6022:
+        case T6031:
+            return FIELD_GET(CLUSTER_PSTATE_DESIRED1, val);
+        default:
+            printf("cpufreq: Chip 0x%x is unsupported\n", chip_id);
+            return 0;
+    }
+}
+
 static int set_pstate(const struct cluster_t *cluster, uint32_t pstate)
 {
     u64 val = read64(cluster->base + CLUSTER_PSTATE);
 
-    if (FIELD_GET(CLUSTER_PSTATE_DESIRED1, val) != pstate) {
-        val &= ~CLUSTER_PSTATE_DESIRED1;
-        val |= CLUSTER_PSTATE_SET | FIELD_PREP(CLUSTER_PSTATE_DESIRED1, pstate);
-        if (chip_id == T8103 || chip_id <= T6002) {
-            val &= ~CLUSTER_PSTATE_DESIRED2;
-            val |= CLUSTER_PSTATE_SET | FIELD_PREP(CLUSTER_PSTATE_DESIRED2, pstate);
+    if (pstate_reg_to_pstate(val) != pstate) {
+        switch (chip_id) {
+            case T8103:
+            case T6000:
+            case T6001:
+            case T6002:
+                val &= ~CLUSTER_PSTATE_DESIRED2;
+                val |= CLUSTER_PSTATE_SET | FIELD_PREP(CLUSTER_PSTATE_DESIRED2, pstate);
+                /* fallthrough */
+            case T8112:
+            case T6020:
+            case T6021:
+            case T6022:
+            case T6031:
+                val &= ~CLUSTER_PSTATE_DESIRED1;
+                val |= CLUSTER_PSTATE_SET | FIELD_PREP(CLUSTER_PSTATE_DESIRED1, pstate);
+                break;
+            default:
+                printf("cpufreq: Chip 0x%x is unsupported\n", chip_id);
+                return -1;
         }
         write64(cluster->base + CLUSTER_PSTATE, val);
         if (poll32(cluster->base + CLUSTER_PSTATE, CLUSTER_PSTATE_BUSY, 0, CLUSTER_SWITCH_TIMEOUT) <
@@ -88,11 +121,27 @@ int cpufreq_init_cluster(const struct cluster_t *cluster, const struct feat_t *f
         }
     }
 
-    /* Unknown */
-    write64(cluster->base + 0x440f8, 1);
+    switch (chip_id) {
+        case T8103:
+        case T6000:
+        case T6001:
+        case T6002:
+        case T8112:
+        case T6020:
+        case T6021:
+        case T6022:
+        case T6031:
+            /* Unknown */
+            write64(cluster->base + 0x440f8, 1);
 
-    /* Initialize APSC */
-    set64(cluster->base + 0x200f8, BIT(40));
+            /* Initialize APSC */
+            set64(cluster->base + 0x200f8, BIT(40));
+            break;
+        default:
+            printf("cpufreq: Chip 0x%x is unsupported\n", chip_id);
+            break;
+    }
+
     switch (chip_id) {
         case T8103: {
             u64 lo = read64(cluster->base + 0x70000 + cluster->apsc_pstate * 0x20);
@@ -129,11 +178,15 @@ void cpufreq_fixup_cluster(const struct cluster_t *cluster)
         u64 bits = 0;
         switch (chip_id) {
             case T8103:
-            case T6000 ... T6002:
+            case T6000:
+            case T6001:
+            case T6002:
                 bits = CLUSTER_PSTATE_UNK_M1;
                 break;
             case T8112:
-            case T6020 ... T6022:
+            case T6020:
+            case T6021:
+            case T6022:
                 bits = CLUSTER_PSTATE_UNK_M2;
                 break;
             default:
@@ -272,7 +325,9 @@ const struct feat_t *cpufreq_get_features(void)
 {
     switch (chip_id) {
         case T8103:
-        case T6000 ... T6002:
+        case T6000:
+        case T6001:
+        case T6002:
             return t8103_features;
         case T8112:
             return t8112_features;
