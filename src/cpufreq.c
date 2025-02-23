@@ -84,7 +84,7 @@ static int set_pstate(const struct cluster_t *cluster, uint32_t pstate)
                 return -1;
         }
         write64(cluster->base + CLUSTER_PSTATE, val);
-        if (poll32(cluster->base + CLUSTER_PSTATE, CLUSTER_PSTATE_BUSY, 0, CLUSTER_SWITCH_TIMEOUT) <
+        if (poll64(cluster->base + CLUSTER_PSTATE, CLUSTER_PSTATE_BUSY, 0, CLUSTER_SWITCH_TIMEOUT) <
             0) {
             printf("cpufreq: Timed out waiting for cluster %s P-State switch\n", cluster->name);
             return -1;
