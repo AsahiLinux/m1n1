@@ -1,11 +1,10 @@
 # SPDX-License-Identifier: MIT
 """m1n1 tests common fixtures"""
 
-import importlib
-
 import pytest
 
 from proxyclient.m1n1.asm import ARMAsm
+from proxyclient.m1n1.toolchain import Toolchain
 
 CODE_LOCATION = 0x1238
 
@@ -113,4 +112,4 @@ def fx_loadobjs_nm_error():
 @pytest.fixture
 def fx_toolchain():
     """Return toolchain"""
-    return importlib.import_module("proxyclient.m1n1.asm")
+    return Toolchain()
