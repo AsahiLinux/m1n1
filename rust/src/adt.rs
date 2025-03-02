@@ -181,7 +181,7 @@ extern "C" {
 }
 
 unsafe extern "C" {
-    unsafe fn adt_get_size() -> c_int;
+    unsafe fn adt_get_size() -> c_uint;
 }
 
 
