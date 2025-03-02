@@ -3,6 +3,7 @@ import struct
 
 from ..utils import *
 from .spmi import SPMI
+from .i2c import I2C
 
 __all__ = ["PMU"]
 
@@ -11,26 +12,35 @@ class PMU:
     def __init__(self, u, adt_path=None):
         self.u = u
         if adt_path is None:
-            adt_path = PMU.find_primary_pmu(u.adt)
+            (adt_path, bus_type) = PMU.find_primary_pmu(u.adt)
 
         self.node = u.adt[adt_path]
-        self.spmi = SPMI(u, adt_path.rpartition('/')[0])
+        self.bus_type = bus_type
+        if bus_type == "spmi":
+            self.spmi = SPMI(u, adt_path.rpartition('/')[0])
+            self.primary = u.adt[adt_path].is_primary == 1
+        elif bus_type == "i2c":
+            self.i2c = I2C(u, adt_path.rpartition('/')[0])
+            self.primary = u.adt[adt_path].name == "pmu"
         self.adt_path = adt_path
-        self.primary = u.adt[adt_path].is_primary == 1
         self.reg = u.adt[adt_path].reg[0]
 
     def reset_panic_counter(self):
-        if self.primary:
+        if self.primary and self.bus_type == "spmi" and self.u.adt["/chosen"].chip_id not in (0x8012, 0x8015):
             leg_scrpad = self.node.info_leg__scrpad[0]
             self.spmi.write8(self.reg, leg_scrpad + 2, 0) # error counts
 
     @staticmethod
     def find_primary_pmu(adt):
         for child in adt["/arm-io"]:
-            if child.name.startswith("nub-spmi"):
+            if child.name.startswith("nub-spmi") or child.name.startswith("spmi"):
                 for pmu in child:
                     compat = getattr(pmu, "compatible")[0] if hasattr(pmu, "compatible") else "unset"
                     primary = (getattr(pmu, "is-primary") == 1) if hasattr(pmu, "is-primary")  else False
-                    if compat == "pmu,spmi" and primary:
-                        return pmu._path.removeprefix('/device-tree')
-        raise KeyError(f"primary 'pmu,spmi' node not found")
+                    if (compat == "pmu,spmi" or compat == "pmu,d2422") and primary:
+                        return (pmu._path.removeprefix('/device-tree'), "spmi")
+            elif child.name == "i2c0":
+                for dev in child:
+                    if dev.name == "pmu":
+                        return ("/arm-io/i2c0/pmu", "i2c")
+        raise KeyError(f"primary pmu node not found")
