@@ -22,7 +22,7 @@ Building on ARM64 macOS is supported with clang and LLVM; you need to use Homebr
 install the required dependencies:
 
 ```shell
-$ brew install llvm
+$ brew install llvm lld
 ```
 
 After that, just type `make`.
