@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-2024.04-arm
 
     steps:
       - uses: actions/checkout@v2
