@@ -34,6 +34,11 @@ static const u8 initramfs_magic[] = {
     'i', 't', 'r', 'a', 'm', 'f', 's'}; // followed by size as little endian uint32_t
 static const u8 empty[] = {0, 0, 0, 0};
 
+// custom logo is RGBA with 256x256 retina logo followed by half resolution
+static const u8 custom_logo_magic[] = {'m', '1', 'n', '1', '_', 'l', 'o', 'g',
+                                       'o', '_', '2', '5', '6', '1', '2', '8'};
+#define CUSTOM_LOGO_SIZE (4 * ((256 * 256) + (128 * 128)))
+
 static char expect_compatible[256];
 static struct kernel_header *kernel = NULL;
 static void *fdt = NULL;
@@ -241,6 +246,10 @@ static void *load_one_payload(void *start, size_t size)
         printf("Found a m1n1 initramfs payload at %p, 0x%x bytes\n", p, size);
         p += sizeof(initramfs_magic) + 4;
         return load_cpio(p, size);
+    } else if (!memcmp(p, custom_logo_magic, sizeof(custom_logo_magic))) {
+        printf("Found a m1n1 custom logo payload at %p, skipping 0x%lx bytes\n", p,
+               sizeof(custom_logo_magic) + CUSTOM_LOGO_SIZE);
+        return p + sizeof(custom_logo_magic) + CUSTOM_LOGO_SIZE;
     } else if (check_var(&p)) {
         return p;
     } else if (!memcmp(p, empty, sizeof empty) ||
@@ -258,6 +267,25 @@ void do_enable_tso(void)
     u64 actlr = mrs(ACTLR_EL1);
     actlr |= BIT(1); // Enable TSO
     msr(ACTLR_EL1, actlr);
+}
+
+bool payload_logo(void **custom_128, void **custom_256)
+{
+    void *p = _payload_start;
+
+    *custom_128 = NULL;
+    *custom_256 = NULL;
+
+    if (!memcmp(p, custom_logo_magic, sizeof(custom_logo_magic))) {
+        void *data = p + sizeof(custom_logo_magic);
+        printf("Found a m1n1 custom logo payload at %p\n", p);
+        *custom_256 = data;
+        *custom_128 = data + 4 * 256 * 256;
+
+        return true;
+    }
+
+    return false;
 }
 
 int payload_run(void)
