@@ -151,6 +151,11 @@ impl<'a> ADT<'a> {
     pub fn first_property_offset(offset: i32) -> i32 {
         offset + size_of::<ADTNodeHeader>() as i32
     }
+
+    pub fn next_property_offset(offset: i32) -> Result<i32, AdtError> {
+        let prop = ADT::property_at(offset)?;
+        Ok(offset + 32 + 4 + ((prop.size as i32 + (ADT_ALIGN - 1)) & !(ADT_ALIGN - 1)))
+    }
 }
 
 extern "C" {
@@ -165,6 +170,11 @@ unsafe extern "C" {
 #[no_mangle]
 pub unsafe extern "C" fn adt_first_property_offset(_dt: *const c_void, offset: c_int) -> c_int {
     ADT::first_property_offset(offset) as c_int
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_next_property_offset(_dt: *const c_void, offset: c_int) -> c_int {
+    ADT::next_property_offset(offset).unwrap() as c_int
 }
 
 #[no_mangle]
