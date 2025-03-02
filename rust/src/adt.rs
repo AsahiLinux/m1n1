@@ -152,6 +152,18 @@ impl ADTProperty {
     pub fn as_ptr(&self) -> *const u8 {
         self as *const ADTProperty as *const u8
     }
+
+    pub fn next_property(&self) -> Result<&'static ADTProperty, AdtError> {
+        // SAFETY: We know we are a valid property, and if the calculated pointer
+        // does not also point to one, ADTProperty::from_ptr() will catch it.
+        let ptr: usize = unsafe {
+            self.as_ptr()
+                .add(size_of::<[c_char; 32]>())
+                .add(size_of::<u32>())
+                .add((self.size as usize + (ADT_ALIGN - 1)) & !(ADT_ALIGN - 1)) as usize
+        };
+        ADTProperty::from_ptr(ptr)
+    }
 }
 
 extern "C" {
@@ -173,6 +185,21 @@ pub unsafe extern "C" fn adt_first_property_offset(_dt: *const c_void, offset: c
         .as_ptr();
 
     unsafe { p.sub(adt as usize) as c_int }
+}
+
+// This function has load-bearing UB on the C side... The sound Rust equivalent
+// breaks this. Recreate the UB here rather than call the new Rust function.
+#[no_mangle]
+pub unsafe extern "C" fn adt_next_property_offset(_dt: *const c_void, offset: c_int) -> c_int {
+    let ptr: usize = unsafe { adt.add(offset as usize) as usize };
+    let p = ADTProperty::from_ptr(ptr).unwrap();
+    unsafe {
+        p.as_ptr()
+            .add(size_of::<[c_char; 32]>())
+            .add(size_of::<u32>())
+            .add((p.size as usize + (ADT_ALIGN - 1)) & !(ADT_ALIGN - 1))
+            .sub(adt as usize) as c_int
+    }
 }
 
 #[no_mangle]
