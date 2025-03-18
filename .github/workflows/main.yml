@@ -36,6 +36,7 @@ jobs:
 
       - name: Run format-check
         run: |
+          . "$HOME/.cargo/env"
           make format CLANG_FORMAT=clang-format-18
           git diff
           git reset --hard
