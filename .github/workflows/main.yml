@@ -21,6 +21,11 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
+      - name: Install aarch64-linux-gnu- toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y gcc-aarch64-linux-gnu
+
       - name: install nightly rust
         run: |
           rm -f ~/.cargo/bin/rustfmt
