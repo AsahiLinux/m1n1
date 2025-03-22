@@ -85,8 +85,16 @@ PMGRDevices = SafeGreedyRange(Struct(
     "flags" / PMGRDeviceFlags,
     "unk1_0" / Int8ul,
     "unk1_1" / Int8ul,
-    "unk1_2" / Int8ul,
-    "parents" / Array(2, Int16ul),
+    "id1" / Int8ul,
+    "parents_un" / Union (0,
+        "u8id" / Struct(
+            "parents" / Array(2, Int8ul),
+            "unk_u8id" / Array(2, Int8ul),
+        ),
+        "u16id" / Struct (
+            "parents" / Array(2, Int16ul),
+        ),
+    ),
     "perf_idx" / Int8ul,
     "perf_block" / Int8ul,
     "psidx" / Int8ul,
@@ -94,10 +102,10 @@ PMGRDevices = SafeGreedyRange(Struct(
     "unk2_0" / Int16ul,
     "pd" / Int8ul,
     "ps_cfg16" / Int8ul,
-    Const(0, Int32ul),
-    Const(0, Int32ul),
+    "unk2_1" / Int32ul,
+    "unk2_2" / Int32ul,
     "unk2_3" / Int16ul,
-    "id" / Int16ul,
+    "id2" / Int16ul,
     "unk3" / Int32ul,
     "name" / PaddedString(16, "ascii")
 ))
@@ -801,8 +809,25 @@ class ADTNode:
         self[name] = node
         return node
 
+    def pmgr_init(self):
+        self.pmgr_u8id = (self["/arm-io/pmgr"].devices[0].id1 != self["/arm-io/pmgr"].devices[1].id1)
+
+    def pmgr_dev_get_id(self, dev):
+        if self.pmgr_u8id:
+            return dev.id1
+        else:
+            return dev.id2
+
+    def pmgr_dev_get_parents(self, dev):
+        if self.pmgr_u8id:
+            return dev.parents_un.u8id.parents 
+        else:
+            return dev.parents_un.u16id.parents 
+
 def load_adt(data):
-    return ADTNode(ADTNodeStruct.parse(data))
+    node = ADTNode(ADTNodeStruct.parse(data))
+    node.pmgr_init()
+    return node
 
 if __name__ == "__main__":
     import sys, argparse, pathlib
