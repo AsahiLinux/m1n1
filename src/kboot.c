@@ -2014,6 +2014,63 @@ static int dt_set_display(void)
         return dt_vram_reserved_region("dcp", "disp0");
 }
 
+static const char *excluded_pmp_props[] = {
+    "compatible",    "AAPL,phandle",    "region-base", "region-size",
+    "segment-names", "segment-ranges",  "pre-loaded",  "firmware-name",
+    "dram-capacity", "coredump-enable", "name",        NULL,
+};
+
+static bool skip_pmp_prop(const char *prop_name)
+{
+    for (int i = 0; excluded_pmp_props[i]; i++)
+        if (!strcmp(prop_name, excluded_pmp_props[i]))
+            return true;
+    return false;
+}
+
+static int dt_set_pmp(void)
+{
+    int pmp_node = fdt_path_offset(dt, "pmp");
+    if (pmp_node < 0) {
+        printf("FDT: pmp not found in devtree\n");
+        return 0;
+    }
+    int chosen_anode = adt_path_offset(adt, "/chosen");
+    if (chosen_anode < 0)
+        bail("ADT: /chosen not found \n");
+    int pmp_iop_anode = adt_path_offset(adt, "/arm-io/pmp/iop-pmp-nub");
+    if (pmp_iop_anode < 0)
+        bail("ADT: /arm-io/pmp/iop-pmp-nub not found \n");
+
+    u32 board_id, dram_vendor_id, dram_capacity = 0xFFFFFFFF;
+    if (ADT_GETPROP(adt, chosen_anode, "board-id", &board_id) < 0)
+        bail("ADT: failed to get board id\n");
+    if (ADT_GETPROP(adt, chosen_anode, "dram-vendor-id", &dram_vendor_id) < 0)
+        bail("ADT: failed to get dram vendor id\n");
+    ADT_GETPROP(adt, pmp_iop_anode, "dram-capacity", &dram_capacity);
+
+    if (fdt_setprop_u32(dt, pmp_node, "apple,board-id", board_id))
+        bail("FDT: failed to set board id\n");
+    if (fdt_setprop_u32(dt, pmp_node, "apple,dram-vendor-id", dram_vendor_id))
+        bail("FDT: failed to set dram vendor id\n");
+    if (dram_capacity != 0xFFFFFFFF &&
+        fdt_setprop_u32(dt, pmp_node, "apple,dram-capacity", dram_capacity))
+        bail("FDT: failed to set dram capacity\n");
+
+    ADT_FOREACH_PROPERTY(adt, pmp_iop_anode, prop)
+    {
+        if (skip_pmp_prop(prop->name))
+            continue;
+        char prop_name[128];
+        snprintf(prop_name, sizeof(prop_name), "apple,tunable-%s", prop->name);
+        if (fdt_setprop(dt, pmp_node, prop_name, prop->value, prop->size))
+            bail("FDT: failed to transfer pmp tunable");
+    }
+    pmp_node = fdt_path_offset(dt, "pmp");
+    fdt_setprop_string(dt, pmp_node, "status", "okay");
+    return 0;
+}
+
 static int dt_set_sep(void)
 {
     const char *path = fdt_get_alias(dt, "sep");
@@ -2748,6 +2805,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_multitouch())
         return -1;
     if (dt_set_sep())
+        return -1;
+    if (dt_set_pmp())
         return -1;
     if (dt_set_nvram())
         return -1;
