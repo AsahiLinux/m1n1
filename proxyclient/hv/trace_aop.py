@@ -8,6 +8,7 @@ from m1n1.constructutils import *
 from m1n1.fw.afk.rbep import *
 from m1n1.fw.afk.epic import *
 from m1n1.fw.aop import *
+from m1n1.fw.aop.base import AOPBase
 from m1n1.fw.aop.ipc import *
 
 import sys
@@ -238,7 +239,7 @@ class AOPTracer(ASCTracer, AOPBase):
         self.default_bootargs = None
         super().__init__(hv, devpath, verbose)
         self.u = hv.u
-        AOPBase.__init__(self, hv.u, self.dev)
+        AOPBase.__init__(self, hv.u)
 
     def start(self, *args):
         self.default_bootargs = self.read_bootargs()
