@@ -71,9 +71,6 @@ class AOPBase:
     def __init__(self, u):
         self.u = u
         self.nub_base = u.adt["/arm-io/aop/iop-aop-nub"].region_base
-        if u.adt["arm-io"].compatible[0] == "arm-io,t6000":
-            # argh
-            self.nub_base -= 0x2_0000_0000
 
     @property
     def _bootargs_span(self):
