@@ -441,6 +441,52 @@ static int dt_set_serial_number(void)
     return 0;
 }
 
+static int dt_set_smbios(void)
+{
+    int fdt_root = fdt_path_offset(dt, "/");
+    int len, node, smbios_node;
+
+    if (fdt_root < 0)
+        bail("FDT: could not open a handle to FDT root.\n");
+
+    node = fdt_add_subnode(dt, fdt_root, "smbios");
+    if (node < 0)
+        bail("FDT: failed to add node 'smbios' to  '/'\n");
+    fdt_setprop_string(dt, node, "compatible", "u-boot,sysinfo-smbios");
+
+    smbios_node = fdt_add_subnode(dt, node, "smbios");
+    if (smbios_node < 0)
+        bail("FDT: failed to add node 'smbios' to  '/smbios'\n");
+
+    node = fdt_add_subnode(dt, smbios_node, "system");
+    if (node < 0)
+        bail("FDT: failed to add node 'system' to  '/smbios'\n");
+    fdt_setprop_string(dt, node, "manufacturer", "Apple");
+    const char *model = fdt_getprop(dt, fdt_root, "model", &len);
+    if (!model)
+        bail("FDT: failed to get model property\n");
+    if (len < 6)
+        fdt_setprop_string(dt, node, "product", "Unknown");
+    else
+        fdt_setprop_string(dt, node, "product", model + 6);
+
+    node = fdt_add_subnode(dt, smbios_node, "baseboard");
+    if (node < 0)
+        bail("FDT: failed to add node 'baseboard' to  '/smbios'\n");
+    fdt_setprop_string(dt, node, "manufacturer", "Apple");
+    const char *target_type = adt_getprop(adt, 0, "target-type", NULL);
+    if (!target_type)
+        bail("ADT: failed to get target-type property\n");
+    fdt_setprop_string(dt, node, "product", target_type);
+
+    node = fdt_add_subnode(dt, smbios_node, "chassis");
+    if (node < 0)
+        bail("FDT: failed to add node 'chassis' to  '/smbios'\n");
+    fdt_setprop_string(dt, node, "manufacturer", "Apple");
+
+    return 0;
+}
+
 static int dt_set_cpus(void)
 {
     int ret = 0;
@@ -2583,6 +2629,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_chosen())
         return -1;
     if (dt_set_serial_number())
+        return -1;
+    if (dt_set_smbios())
         return -1;
     if (dt_set_cpus())
         return -1;
