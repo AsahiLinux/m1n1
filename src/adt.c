@@ -56,11 +56,6 @@ u32 adt_get_size(void)
     return cur_boot_args.devtree_size;
 }
 
-int adt_check_header(const void *adt)
-{
-    return _adt_check_node_offset(adt, 0);
-}
-
 static int _adt_string_eq(const char *a, const char *b, size_t len)
 {
     return (strlen(a) == len) && (memcmp(a, b, len) == 0);

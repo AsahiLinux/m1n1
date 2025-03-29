@@ -175,6 +175,16 @@ unsafe extern "C" {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn adt_check_header(_dt: *const c_void) -> c_int {
+    unsafe {
+        match ADTNode::from_ptr(adt as *const ADTNode) {
+            Ok(_) => 0,
+            Err(e) => e as c_int,
+        }
+    }
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn adt_first_property_offset(_dt: *const c_void, offset: c_int) -> c_int {
     let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
 
