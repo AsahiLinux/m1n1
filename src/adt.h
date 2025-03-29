@@ -36,6 +36,9 @@ struct adt_node_hdr {
 
 /* This API is designed to match libfdt's read-only API */
 
+/* Required for Rust until we move xnuboot across */
+u32 adt_get_size(void);
+
 /* Basic sanity check */
 int adt_check_header(const void *adt);
 
@@ -44,22 +47,11 @@ static inline int adt_get_property_count(const void *adt, int offset)
     return ADT_NODE(adt, offset)->property_count;
 }
 
-static inline int adt_first_property_offset(const void *adt, int offset)
-{
-    UNUSED(adt);
-    return offset + sizeof(struct adt_node_hdr);
-}
+int adt_first_property_offset(const void *adt, int offset);
 
-static inline int adt_next_property_offset(const void *adt, int offset)
-{
-    const struct adt_property *prop = ADT_PROP(adt, offset);
-    return offset + sizeof(struct adt_property) + ((prop->size + ADT_ALIGN - 1) & ~(ADT_ALIGN - 1));
-}
+int adt_next_property_offset(const void *adt, int offset);
 
-static inline const struct adt_property *adt_get_property_by_offset(const void *adt, int offset)
-{
-    return ADT_PROP(adt, offset);
-}
+const struct adt_property *adt_get_property_by_offset(const void *adt, int offset);
 
 static inline int adt_get_child_count(const void *adt, int offset)
 {

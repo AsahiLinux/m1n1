@@ -2,6 +2,7 @@
 
 #include "adt.h"
 #include "string.h"
+#include "xnuboot.h"
 
 /* This API is designed to match libfdt's read-only API */
 
@@ -23,36 +24,9 @@
     } while (0)
 #endif
 
-int _adt_check_node_offset(const void *adt, int offset)
+u32 adt_get_size(void)
 {
-    if ((offset < 0) || (offset % ADT_ALIGN))
-        return -ADT_ERR_BADOFFSET;
-
-    const struct adt_node_hdr *node = ADT_NODE(adt, offset);
-
-    // Sanity check
-    if (node->property_count > 2048 || !node->property_count || node->child_count > 2048)
-        return -ADT_ERR_BADOFFSET;
-
-    return 0;
-}
-
-int _adt_check_prop_offset(const void *adt, int offset)
-{
-    if ((offset < 0) || (offset % ADT_ALIGN))
-        return -ADT_ERR_BADOFFSET;
-
-    const struct adt_property *prop = ADT_PROP(adt, offset);
-
-    if (prop->size & 0x7ff00000) // up to 1MB properties
-        return -ADT_ERR_BADOFFSET;
-
-    return 0;
-}
-
-int adt_check_header(const void *adt)
-{
-    return _adt_check_node_offset(adt, 0);
+    return cur_boot_args.devtree_size;
 }
 
 static int _adt_string_eq(const char *a, const char *b, size_t len)
