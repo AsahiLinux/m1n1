@@ -550,3 +550,23 @@ void cpufreq_fixup(void)
         cpufreq_fixup_cluster(cluster++);
     }
 }
+
+// sets the CPU to a frequency suitable for baudrate 1500000
+void cpufreq_prepare_1500000_baud(void)
+{
+    switch (chip_id) {
+        case S5L8960X:
+        case T7000:
+        case T7001:
+        case S8000:
+        case S8001:
+        case S8003:
+        case T8010:
+        case T8011:
+        case T8015:
+            cpufreq_init();
+            break;
+        default:
+            break;
+    }
+}
