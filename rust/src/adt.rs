@@ -166,6 +166,13 @@ unsafe extern "C" {
     unsafe fn adt_get_size() -> c_uint;
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn adt_check_header(_dt: *const c_void) -> c_int {
+    match ADT::node_at(0) {
+        Ok(_i) => 0,
+        Err(e) => e as c_int,
+    }
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn adt_first_property_offset(_dt: *const c_void, offset: c_int) -> c_int {
