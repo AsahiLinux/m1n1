@@ -24,20 +24,6 @@
     } while (0)
 #endif
 
-int _adt_check_node_offset(const void *adt, int offset)
-{
-    if ((offset < 0) || (offset % ADT_ALIGN))
-        return -ADT_ERR_BADOFFSET;
-
-    const struct adt_node_hdr *node = ADT_NODE(adt, offset);
-
-    // Sanity check
-    if (node->property_count > 2048 || !node->property_count || node->child_count > 2048)
-        return -ADT_ERR_BADOFFSET;
-
-    return 0;
-}
-
 int _adt_check_prop_offset(const void *adt, int offset)
 {
     if ((offset < 0) || (offset % ADT_ALIGN))
