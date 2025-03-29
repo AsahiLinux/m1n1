@@ -184,6 +184,14 @@ unsafe extern "C" {
     unsafe fn adt_get_size() -> c_uint;
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn adt_check_header(_dt: *const c_void) -> c_int {
+    let node_valid = ADT::node_at(0);
+    match node_valid {
+        Ok(_i) => 0,
+        Err(e) => e,
+    }
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn adt_first_property_offset(_dt: *const c_void, offset: c_int) -> c_int {
