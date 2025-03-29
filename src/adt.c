@@ -24,19 +24,6 @@
     } while (0)
 #endif
 
-int _adt_check_prop_offset(const void *adt, int offset)
-{
-    if ((offset < 0) || (offset % ADT_ALIGN))
-        return -ADT_ERR_BADOFFSET;
-
-    const struct adt_property *prop = ADT_PROP(adt, offset);
-
-    if (prop->size & 0x7ff00000) // up to 1MB properties
-        return -ADT_ERR_BADOFFSET;
-
-    return 0;
-}
-
 u32 adt_get_size(void)
 {
     return cur_boot_args.devtree_size;
