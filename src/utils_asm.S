@@ -179,13 +179,16 @@ deep_wfi:
 
     ret
 
+.extern cpufeat_global_sleep
 .globl cpu_sleep
 .type cpu_sleep, @function
 cpu_sleep:
+    adrp x4, cpufeat_global_sleep
+    add x4, x4, :lo12:cpufeat_global_sleep
+    ldrb w4, [x4]
+
     cmp x0, #0
     bne 1f
-
-    mov x4, x1
 
     mrs x1, SYS_IMP_APL_CYC_OVRD
     and x1, x1, #~CYC_OVRD_IRQ_MODE_MASK
