@@ -38,6 +38,7 @@ enum cpufeat_sleep_mode cpufeat_sleep_mode;
 struct midr_part_features {
     enum cpufeat_sleep_mode sleep_mode;
     bool disable_dc_mva;
+    bool acc_cfg;
     bool cyc_ovrd;
     bool workaround_cyclone_cache;
     bool nex_powergating;
@@ -57,6 +58,7 @@ struct midr_part_info {
 
 const struct midr_part_features features_a7 = {
     .disable_dc_mva = true,
+    .acc_cfg = true,
     .cyc_ovrd = true,
     .workaround_cyclone_cache = true,
     .sleep_mode = SLEEP_LEGACY,
@@ -70,6 +72,7 @@ const struct midr_part_features features_a7 = {
 
 const struct midr_part_features features_a10 = {
     .disable_dc_mva = true,
+    .acc_cfg = true,
     .cyc_ovrd = true,
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
@@ -83,6 +86,7 @@ const struct midr_part_features features_a10 = {
 
 const struct midr_part_features features_a11 = {
     .disable_dc_mva = true,
+    .acc_cfg = true,
     .cyc_ovrd = true,
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
@@ -96,6 +100,7 @@ const struct midr_part_features features_a11 = {
 
 const struct midr_part_features features_m1 = {
     .disable_dc_mva = true,
+    .acc_cfg = true,
     .cyc_ovrd = true,
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
@@ -109,6 +114,7 @@ const struct midr_part_features features_m1 = {
 
 const struct midr_part_features features_m2 = {
     .disable_dc_mva = true,
+    .acc_cfg = true,
     .cyc_ovrd = true,
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
@@ -234,7 +240,9 @@ const char *init_cpu(void)
     }
 
     // Enable branch prediction state retention across ACC sleep
-    reg_mask(SYS_IMP_APL_ACC_CFG, ACC_CFG_BP_SLEEP_MASK, ACC_CFG_BP_SLEEP(3));
+    if (midr_part_info->features->acc_cfg) {
+        reg_mask(SYS_IMP_APL_ACC_CFG, ACC_CFG_BP_SLEEP_MASK, ACC_CFG_BP_SLEEP(3));
+    }
 
     return midr_part_info->name;
 }
