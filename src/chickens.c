@@ -42,6 +42,7 @@ struct midr_part_features {
     bool fast_ipi;
     bool mmu_sprr;
     bool siq_cfg;
+    bool amx;
 };
 
 struct midr_part_info {
@@ -58,6 +59,7 @@ const struct midr_part_features features_a7 = {
     .fast_ipi = false,
     .mmu_sprr = false,
     .siq_cfg = false,
+    .amx = false,
 };
 
 const struct midr_part_features features_a10 = {
@@ -67,6 +69,7 @@ const struct midr_part_features features_a10 = {
     .fast_ipi = false,
     .mmu_sprr = false,
     .siq_cfg = false,
+    .amx = false,
 };
 
 const struct midr_part_features features_a11 = {
@@ -76,6 +79,7 @@ const struct midr_part_features features_a11 = {
     .fast_ipi = true,
     .mmu_sprr = false,
     .siq_cfg = false,
+    .amx = false,
 };
 
 const struct midr_part_features features_m1 = {
@@ -85,6 +89,7 @@ const struct midr_part_features features_m1 = {
     .fast_ipi = true,
     .mmu_sprr = true,
     .siq_cfg = true,
+    .amx = true,
 };
 
 const struct midr_part_info midr_parts[] = {
@@ -180,13 +185,12 @@ const char *init_cpu(void)
         sysop("isb");
     }
 
-    if (part >= MIDR_PART_T8101_ICESTORM && part != MIDR_PART_T8301_THUNDER) {
+    if (midr_part_info->features->amx) {
+        // XXX is this really AMX?
         int core = mrs(MPIDR_EL1) & 0xff;
         msr(SYS_IMP_APL_AMX_CTX_EL1, core);
-    }
-
-    if (part >= MIDR_PART_T8030_LIGHTNING)
         msr(SYS_IMP_APL_AMX_CTL_EL1, 0x100);
+    }
 
     if (cpufeat_sleep_mode == SLEEP_LEGACY) {
         /* Disable deep sleep */
