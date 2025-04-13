@@ -32,11 +32,12 @@ void init_t6031_sawtooth(int rev);
 void init_t6031_everest(int rev);
 
 bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
-bool cpufeat_workaround_cyclone_cache;
+bool cpufeat_workaround_cyclone_cache, cpufeat_cyc_ovrd;
 enum cpufeat_sleep_mode cpufeat_sleep_mode;
 
 struct midr_part_features {
     enum cpufeat_sleep_mode sleep_mode;
+    bool cyc_ovrd;
     bool workaround_cyclone_cache;
     bool nex_powergating;
     bool fast_ipi;
@@ -54,6 +55,7 @@ struct midr_part_info {
 };
 
 const struct midr_part_features features_a7 = {
+    .cyc_ovrd = true,
     .workaround_cyclone_cache = true,
     .sleep_mode = SLEEP_LEGACY,
     .nex_powergating = false,
@@ -65,6 +67,7 @@ const struct midr_part_features features_a7 = {
 };
 
 const struct midr_part_features features_a10 = {
+    .cyc_ovrd = true,
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
     .nex_powergating = false,
@@ -76,6 +79,7 @@ const struct midr_part_features features_a10 = {
 };
 
 const struct midr_part_features features_a11 = {
+    .cyc_ovrd = true,
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
     .nex_powergating = true,
@@ -87,6 +91,7 @@ const struct midr_part_features features_a11 = {
 };
 
 const struct midr_part_features features_m1 = {
+    .cyc_ovrd = true,
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
     .nex_powergating = true,
@@ -98,6 +103,7 @@ const struct midr_part_features features_m1 = {
 };
 
 const struct midr_part_features features_m2 = {
+    .cyc_ovrd = true,
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
     .nex_powergating = true,
@@ -173,6 +179,7 @@ const char *init_cpu(void)
     cpufeat_fast_ipi = midr_part_info->features->fast_ipi;
     cpufeat_mmu_sprr = midr_part_info->features->mmu_sprr;
     cpufeat_actlr_el2 = midr_part_info->features->actlr_el2;
+    cpufeat_cyc_ovrd = midr_part_info->features->cyc_ovrd;
 
     /* This is performed unconditionally on all cores (necessary?) */
     if (is_ecore())
@@ -211,10 +218,12 @@ const char *init_cpu(void)
         reg_clr(SYS_IMP_APL_ACC_CFG, ACC_CFG_DEEP_SLEEP);
     }
 
-    /* Unmask external IRQs, set WFI mode to up (2) */
-    reg_mask(SYS_IMP_APL_CYC_OVRD,
-             CYC_OVRD_FIQ_MODE_MASK | CYC_OVRD_IRQ_MODE_MASK | CYC_OVRD_WFI_MODE_MASK,
-             CYC_OVRD_FIQ_MODE(0) | CYC_OVRD_IRQ_MODE(0) | CYC_OVRD_WFI_MODE(2));
+    if (cpufeat_cyc_ovrd) {
+        /* Unmask external IRQs, set WFI mode to up (2) */
+        reg_mask(SYS_IMP_APL_CYC_OVRD,
+                 CYC_OVRD_FIQ_MODE_MASK | CYC_OVRD_IRQ_MODE_MASK | CYC_OVRD_WFI_MODE_MASK,
+                 CYC_OVRD_FIQ_MODE(0) | CYC_OVRD_IRQ_MODE(0) | CYC_OVRD_WFI_MODE(2));
+    }
 
     // Enable branch prediction state retention across ACC sleep
     reg_mask(SYS_IMP_APL_ACC_CFG, ACC_CFG_BP_SLEEP_MASK, ACC_CFG_BP_SLEEP(3));

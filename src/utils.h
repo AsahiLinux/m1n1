@@ -484,7 +484,7 @@ enum cpufeat_sleep_mode {
 
 extern bool is_mac;
 extern bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
-extern bool cpufeat_workaround_cyclone_cache;
+extern bool cpufeat_workaround_cyclone_cache, cpufeat_cyc_ovrd;
 extern enum cpufeat_sleep_mode cpufeat_sleep_mode;
 
 extern struct vector_args next_stage;
