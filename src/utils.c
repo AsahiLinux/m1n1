@@ -194,7 +194,7 @@ bool supports_arch_retention(void)
 
 bool supports_gxf(void)
 {
-    return (mrs(AIDR_EL1) & AIDR_EL1_GXF) && cpufeat_mmu_sprr;
+    return (mrs(AIDR_EL1) & AIDR_EL1_GXF) && cpu_features->mmu_sprr;
 }
 
 bool supports_pan(void)
@@ -234,21 +234,21 @@ void deep_wfi(void)
         return;
     }
 
-    if (cpufeat_cyc_ovrd) {
+    if (cpu_features->cyc_ovrd) {
         cyc_ovrd = mrs(SYS_IMP_APL_CYC_OVRD);
         msr(SYS_IMP_APL_CYC_OVRD, cyc_ovrd | CYC_OVRD_WFI_MODE(3));
     }
 
     _deep_wfi_helper();
 
-    if (cpufeat_cyc_ovrd)
+    if (cpu_features->cyc_ovrd)
         msr(SYS_IMP_APL_CYC_OVRD, cyc_ovrd);
 }
 
 void cpu_sleep(bool deep)
 {
     if (deep) {
-        switch (cpufeat_sleep_mode) {
+        switch (cpu_features->sleep_mode) {
             case SLEEP_GLOBAL:
                 reg_mask(SYS_IMP_APL_ACC_OVRD, ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP_MASK,
                          ACC_OVRD_PWR_DN_SRM(3) | ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP(2) |
@@ -264,13 +264,13 @@ void cpu_sleep(bool deep)
                 break;
         }
     } else {
-        if (cpufeat_cyc_ovrd) {
+        if (cpu_features->cyc_ovrd) {
             reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_FIQ_MODE_MASK | CYC_OVRD_IRQ_MODE_MASK,
                      CYC_OVRD_FIQ_MODE(2) | CYC_OVRD_IRQ_MODE(2));
         }
     }
 
-    if (cpufeat_cyc_ovrd) {
+    if (cpu_features->cyc_ovrd) {
         // disable wfi retention mode to allow deepest sleep states
         reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK,
                  CYC_OVRD_WFI_MODE(3) | CYC_OVRD_DISABLE_WFI_RET);
