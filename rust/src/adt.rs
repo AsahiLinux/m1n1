@@ -304,3 +304,26 @@ pub unsafe extern "C" fn adt_getprop(
 
     p.value.as_ptr() as *const c_void
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_getprop_by_offset(
+    _dt: *const c_void,
+    offset: c_int,
+    namep: *mut *const c_char,
+    lenp: *mut c_uint,
+) -> *const c_void {
+    let p = match ADT::property_at(offset) {
+        Ok(prop) => prop,
+        Err(_) => return core::ptr::null(),
+    };
+
+    if !namep.is_null() {
+        unsafe { *namep = p.name.as_ptr() }
+    }
+
+    if !lenp.is_null() {
+        unsafe { *lenp = p.size as u32 }
+    }
+
+    p.value.as_ptr() as *const c_void
+}
