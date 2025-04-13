@@ -34,42 +34,60 @@ void init_t6031_everest(int rev);
 bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
 bool cpufeat_global_sleep, cpufeat_workaround_cyclone_cache;
 
+struct midr_part_features {
+    bool workaround_cyclone_cache;
+};
+
 struct midr_part_info {
     int part;
     const char *name;
     void (*init)(int rev);
+    const struct midr_part_features *features;
+};
+
+const struct midr_part_features features_a7 = {
+    .workaround_cyclone_cache = true,
+};
+
+const struct midr_part_features features_a10 = {
+    .workaround_cyclone_cache = false,
 };
 
 const struct midr_part_info midr_parts[] = {
-    {MIDR_PART_S5L8960X_CYCLONE, "A7 Cyclone", init_s5l8960x_cyclone},
-    {MIDR_PART_T7000_TYPHOON, "A8 Typhoon", init_t7000_typhoon},
-    {MIDR_PART_T7001_TYPHOON, "A8X Typhoon", init_t7001_typhoon},
-    {MIDR_PART_S8000_TWISTER, "A9 Twister (Samsung)", init_samsung_twister},
-    {MIDR_PART_S8001_3_TWISTER, "A9(X) Twister (TSMC)", init_tsmc_twister},
-    {MIDR_PART_T8010_2_HURRICANE, "A10/T2 Hurricane-Zephyr", init_t8010_2_hurricane_zephyr},
-    {MIDR_PART_T8011_HURRICANE, "A10X Hurricane-Zephyr", init_t8011_hurricane_zephyr},
-    {MIDR_PART_T8015_MONSOON, "A11 Monsoon", init_t8015_monsoon},
-    {MIDR_PART_T8015_MISTRAL, "A11 Mistral", init_t8015_mistral},
-    {MIDR_PART_T8103_FIRESTORM, "M1 Firestorm", init_t8103_firestorm},
-    {MIDR_PART_T6000_FIRESTORM, "M1 Pro Firestorm", init_t6000_firestorm},
-    {MIDR_PART_T6001_FIRESTORM, "M1 Max Firestorm", init_t6001_firestorm},
-    {MIDR_PART_T8103_ICESTORM, "M1 Icestorm", init_m1_icestorm},
-    {MIDR_PART_T6000_ICESTORM, "M1 Pro Icestorm", init_m1_icestorm},
-    {MIDR_PART_T6001_ICESTORM, "M1 Max Icestorm", init_m1_icestorm},
-    {MIDR_PART_T8112_AVALANCHE, "M2 Avalanche", init_t8112_avalanche},
-    {MIDR_PART_T8112_BLIZZARD, "M2 Blizzard", init_t8112_blizzard},
-    {MIDR_PART_T6020_AVALANCHE, "M2 Pro Avalanche", init_t6020_avalanche},
-    {MIDR_PART_T6020_BLIZZARD, "M2 Pro Blizzard", init_t6020_blizzard},
-    {MIDR_PART_T6021_AVALANCHE, "M2 Max Avalanche", init_t6021_avalanche},
-    {MIDR_PART_T6021_BLIZZARD, "M2 Max Blizzard", init_t6021_blizzard},
-    {MIDR_PART_T6030_EVEREST, "M3 Pro Everest", init_t6030_everest},
-    {MIDR_PART_T6030_SAWTOOTH, "M3 Pro Sawtooth", init_t6030_sawtooth},
-    {MIDR_PART_T6031_EVEREST, "M3 Max Everest", init_t6031_everest},
-    {MIDR_PART_T6031_SAWTOOTH, "M3 Max Sawtooth", init_t6031_sawtooth},
+    {MIDR_PART_S5L8960X_CYCLONE, "A7 Cyclone", init_s5l8960x_cyclone, &features_a7},
+    {MIDR_PART_T7000_TYPHOON, "A8 Typhoon", init_t7000_typhoon, &features_a7},
+    {MIDR_PART_T7001_TYPHOON, "A8X Typhoon", init_t7001_typhoon, &features_a7},
+    {MIDR_PART_S8000_TWISTER, "A9 Twister (Samsung)", init_samsung_twister, &features_a7},
+    {MIDR_PART_S8001_3_TWISTER, "A9(X) Twister (TSMC)", init_tsmc_twister, &features_a7},
+    {MIDR_PART_T8010_2_HURRICANE, "A10/T2 Hurricane-Zephyr", init_t8010_2_hurricane_zephyr,
+     &features_a10},
+    {MIDR_PART_T8011_HURRICANE, "A10X Hurricane-Zephyr", init_t8011_hurricane_zephyr,
+     &features_a10},
+    {MIDR_PART_T8015_MONSOON, "A11 Monsoon", init_t8015_monsoon, &features_a10},
+    {MIDR_PART_T8015_MISTRAL, "A11 Mistral", init_t8015_mistral, &features_a10},
+    {MIDR_PART_T8103_FIRESTORM, "M1 Firestorm", init_t8103_firestorm, &features_a10},
+    {MIDR_PART_T6000_FIRESTORM, "M1 Pro Firestorm", init_t6000_firestorm, &features_a10},
+    {MIDR_PART_T6001_FIRESTORM, "M1 Max Firestorm", init_t6001_firestorm, &features_a10},
+    {MIDR_PART_T8103_ICESTORM, "M1 Icestorm", init_m1_icestorm, &features_a10},
+    {MIDR_PART_T6000_ICESTORM, "M1 Pro Icestorm", init_m1_icestorm, &features_a10},
+    {MIDR_PART_T6001_ICESTORM, "M1 Max Icestorm", init_m1_icestorm, &features_a10},
+    {MIDR_PART_T8112_AVALANCHE, "M2 Avalanche", init_t8112_avalanche, &features_a10},
+    {MIDR_PART_T8112_BLIZZARD, "M2 Blizzard", init_t8112_blizzard, &features_a10},
+    {MIDR_PART_T6020_AVALANCHE, "M2 Pro Avalanche", init_t6020_avalanche, &features_a10},
+    {MIDR_PART_T6020_BLIZZARD, "M2 Pro Blizzard", init_t6020_blizzard, &features_a10},
+    {MIDR_PART_T6021_AVALANCHE, "M2 Max Avalanche", init_t6021_avalanche, &features_a10},
+    {MIDR_PART_T6021_BLIZZARD, "M2 Max Blizzard", init_t6021_blizzard, &features_a10},
+    {MIDR_PART_T6030_EVEREST, "M3 Pro Everest", init_t6030_everest, &features_a10},
+    {MIDR_PART_T6030_SAWTOOTH, "M3 Pro Sawtooth", init_t6030_sawtooth, &features_a10},
+    {MIDR_PART_T6031_EVEREST, "M3 Max Everest", init_t6031_everest, &features_a10},
+    {MIDR_PART_T6031_SAWTOOTH, "M3 Max Sawtooth", init_t6031_sawtooth, &features_a10},
 };
+
+const struct midr_part_features features_unknown = {};
 
 const struct midr_part_info midr_part_info_unknown = {
     .name = "Unknown",
+    .features = &features_unknown,
 };
 
 const char *init_cpu(void)
@@ -92,6 +110,8 @@ const char *init_cpu(void)
 
     if (!midr_part_info)
         midr_part_info = &midr_part_info_unknown;
+
+    cpufeat_workaround_cyclone_cache = midr_part_info->features->workaround_cyclone_cache;
 
     /* This is performed unconditionally on all cores (necessary?) */
     if (is_ecore())
@@ -139,7 +159,6 @@ const char *init_cpu(void)
     else {
         /* Disable deep sleep */
         reg_clr(SYS_IMP_APL_ACC_CFG, ACC_CFG_DEEP_SLEEP);
-        cpufeat_workaround_cyclone_cache = true;
     }
 
     /* Unmask external IRQs, set WFI mode to up (2) */
