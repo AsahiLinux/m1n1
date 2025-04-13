@@ -8,8 +8,10 @@ static void init_common_sawtooth(void)
     reg_set(SYS_IMP_APL_EHID0, EHID0_BLI_UNK32);
 }
 
-void init_t6030_sawtooth(void)
+void init_t6030_sawtooth(int rev)
 {
+    UNUSED(rev);
+
     init_common_sawtooth();
     reg_mask(SYS_IMP_APL_EHID9, EHID9_DEV_2_THROTTLE_LIMIT_MASK, EHID9_DEV_2_THROTTLE_LIMIT(62));
     reg_set(SYS_IMP_APL_EHID9, EHID9_DEV_2_THROTTLE_ENABLE);
@@ -19,8 +21,10 @@ void init_t6030_sawtooth(void)
     reg_mask(SYS_IMP_APL_HID5, HID5_BLZ_UNK_19_18_MASK, HID5_BLZ_UNK19);
 }
 
-void init_t6031_sawtooth(void)
+void init_t6031_sawtooth(int rev)
 {
+    UNUSED(rev);
+
     init_common_sawtooth();
 
     reg_mask(SYS_IMP_APL_EHID9, EHID9_DEV_2_THROTTLE_LIMIT_MASK, EHID9_DEV_2_THROTTLE_LIMIT(62));
