@@ -42,10 +42,7 @@ u32 adt_get_size(void);
 /* Basic sanity check */
 int adt_check_header(const void *adt);
 
-static inline int adt_get_property_count(const void *adt, int offset)
-{
-    return ADT_NODE(adt, offset)->property_count;
-}
+int adt_get_property_count(const void *adt, int offset);
 
 int adt_first_property_offset(const void *adt, int offset);
 
