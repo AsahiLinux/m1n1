@@ -194,7 +194,7 @@ bool supports_arch_retention(void)
 
 bool supports_gxf(void)
 {
-    return mrs(AIDR_EL1) & AIDR_EL1_GXF;
+    return (mrs(AIDR_EL1) & AIDR_EL1_GXF) && cpufeat_mmu_sprr;
 }
 
 bool supports_pan(void)
