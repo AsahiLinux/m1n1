@@ -222,6 +222,26 @@ u64 top_of_memory_alloc(size_t size)
     return ret;
 }
 
+extern void _deep_wfi_helper(void);
+void deep_wfi(void)
+{
+    u64 cyc_ovrd;
+
+    if (!supports_arch_retention()) {
+        // A7 - A11 does not support state retention across deep WFI
+        // i.e. CPU always ends up at rvbar after deep WFI
+        sysop("wfi");
+        return;
+    }
+
+    cyc_ovrd = mrs(SYS_IMP_APL_CYC_OVRD);
+    msr(SYS_IMP_APL_CYC_OVRD, cyc_ovrd | CYC_OVRD_WFI_MODE(3));
+
+    _deep_wfi_helper();
+
+    msr(SYS_IMP_APL_CYC_OVRD, cyc_ovrd);
+}
+
 void cpu_sleep(bool deep)
 {
     if (deep) {

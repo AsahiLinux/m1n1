@@ -150,13 +150,9 @@ put_simd_state:
     ldp q30, q31, [x0], #32
     ret
 
-.globl deep_wfi
-.type deep_wfi, @function
-deep_wfi:
-    mrs x0, SYS_IMP_APL_CYC_OVRD
-    orr x1, x0, #CYC_OVRD_WFI_MODE(3)
-    msr SYS_IMP_APL_CYC_OVRD, x1
-
+.globl _deep_wfi_helper
+.type _deep_wfi_helper, @function
+_deep_wfi_helper:
     stp x30, x0, [sp, #-16]!
     stp x28, x29, [sp, #-16]!
     stp x26, x27, [sp, #-16]!
@@ -174,7 +170,5 @@ deep_wfi:
     ldp x26, x27, [sp], #16
     ldp x28, x29, [sp], #16
     ldp x30, x0, [sp], #16
-
-    msr SYS_IMP_APL_CYC_OVRD, x0
 
     ret
