@@ -133,20 +133,6 @@ int adt_getprop_copy(const void *adt, int nodeoffset, const char *name, void *ou
     return len;
 }
 
-int adt_first_child_offset(const void *adt, int offset)
-{
-    const struct adt_node_hdr *node = ADT_NODE(adt, offset);
-
-    u32 cnt = node->property_count;
-    offset = adt_first_property_offset(adt, offset);
-
-    while (cnt--) {
-        offset = adt_next_property_offset(adt, offset);
-    }
-
-    return offset;
-}
-
 int adt_next_sibling_offset(const void *adt, int offset)
 {
     const struct adt_node_hdr *node = ADT_NODE(adt, offset);
