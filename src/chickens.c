@@ -6,29 +6,29 @@
 #include "uart.h"
 #include "utils.h"
 
-void init_s5l8960x_cyclone(void);
-void init_t7000_typhoon(void);
-void init_t7001_typhoon(void);
+void init_s5l8960x_cyclone(int rev);
+void init_t7000_typhoon(int rev);
+void init_t7001_typhoon(int rev);
 void init_samsung_twister(int rev);
-void init_tsmc_twister(void);
-void init_t8010_2_hurricane_zephyr(void);
-void init_t8011_hurricane_zephyr(void);
-void init_t8015_monsoon(void);
-void init_t8015_mistral(void);
-void init_t8015_monsoon(void);
-void init_m1_icestorm(void);
+void init_tsmc_twister(int rev);
+void init_t8010_2_hurricane_zephyr(int rev);
+void init_t8011_hurricane_zephyr(int rev);
+void init_t8015_monsoon(int rev);
+void init_t8015_mistral(int rev);
+void init_t8015_monsoon(int rev);
+void init_m1_icestorm(int rev);
 void init_t8103_firestorm(int rev);
 void init_t6000_firestorm(int rev);
 void init_t6001_firestorm(int rev);
-void init_t8112_blizzard(void);
+void init_t8112_blizzard(int rev);
 void init_t8112_avalanche(int rev);
-void init_t6020_blizzard(void);
+void init_t6020_blizzard(int rev);
 void init_t6020_avalanche(int rev);
-void init_t6021_blizzard(void);
+void init_t6021_blizzard(int rev);
 void init_t6021_avalanche(int rev);
-void init_t6030_sawtooth(void);
+void init_t6030_sawtooth(int rev);
 void init_t6030_everest(int rev);
-void init_t6031_sawtooth(void);
+void init_t6031_sawtooth(int rev);
 void init_t6031_everest(int rev);
 
 bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
@@ -63,17 +63,17 @@ const char *init_cpu(void)
     switch (part) {
         case MIDR_PART_S5L8960X_CYCLONE:
             cpu = "A7 Cyclone";
-            init_s5l8960x_cyclone();
+            init_s5l8960x_cyclone(rev);
             break;
 
         case MIDR_PART_T7000_TYPHOON:
             cpu = "A8 Typhoon";
-            init_t7000_typhoon();
+            init_t7000_typhoon(rev);
             break;
 
         case MIDR_PART_T7001_TYPHOON:
             cpu = "A8X Typhoon";
-            init_t7001_typhoon();
+            init_t7001_typhoon(rev);
             break;
 
         case MIDR_PART_S8000_TWISTER:
@@ -83,27 +83,27 @@ const char *init_cpu(void)
 
         case MIDR_PART_S8001_3_TWISTER:
             cpu = "A9(X) Twister (TSMC)";
-            init_tsmc_twister();
+            init_tsmc_twister(rev);
             break;
 
         case MIDR_PART_T8010_2_HURRICANE:
             cpu = "A10/T2 Hurricane-Zephyr";
-            init_t8010_2_hurricane_zephyr();
+            init_t8010_2_hurricane_zephyr(rev);
             break;
 
         case MIDR_PART_T8011_HURRICANE:
             cpu = "A10X Hurricane-Zephyr";
-            init_t8011_hurricane_zephyr();
+            init_t8011_hurricane_zephyr(rev);
             break;
 
         case MIDR_PART_T8015_MONSOON:
             cpu = "A11 Monsoon";
-            init_t8015_monsoon();
+            init_t8015_monsoon(rev);
             break;
 
         case MIDR_PART_T8015_MISTRAL:
             cpu = "A11 Mistral";
-            init_t8015_mistral();
+            init_t8015_mistral(rev);
             break;
 
         case MIDR_PART_T8103_FIRESTORM:
@@ -123,17 +123,17 @@ const char *init_cpu(void)
 
         case MIDR_PART_T8103_ICESTORM:
             cpu = "M1 Icestorm";
-            init_m1_icestorm();
+            init_m1_icestorm(rev);
             break;
 
         case MIDR_PART_T6000_ICESTORM:
             cpu = "M1 Pro Icestorm";
-            init_m1_icestorm();
+            init_m1_icestorm(rev);
             break;
 
         case MIDR_PART_T6001_ICESTORM:
             cpu = "M1 Max Icestorm";
-            init_m1_icestorm();
+            init_m1_icestorm(rev);
             break;
 
         case MIDR_PART_T8112_AVALANCHE:
@@ -143,7 +143,7 @@ const char *init_cpu(void)
 
         case MIDR_PART_T8112_BLIZZARD:
             cpu = "M2 Blizzard";
-            init_t8112_blizzard();
+            init_t8112_blizzard(rev);
             break;
 
         case MIDR_PART_T6020_AVALANCHE:
@@ -153,7 +153,7 @@ const char *init_cpu(void)
 
         case MIDR_PART_T6020_BLIZZARD:
             cpu = "M2 Pro Blizzard";
-            init_t6020_blizzard();
+            init_t6020_blizzard(rev);
             break;
 
         case MIDR_PART_T6021_AVALANCHE:
@@ -163,7 +163,7 @@ const char *init_cpu(void)
 
         case MIDR_PART_T6021_BLIZZARD:
             cpu = "M2 Max Blizzard";
-            init_t6021_blizzard();
+            init_t6021_blizzard(rev);
             break;
 
         case MIDR_PART_T6030_EVEREST:
@@ -173,7 +173,7 @@ const char *init_cpu(void)
 
         case MIDR_PART_T6030_SAWTOOTH:
             cpu = "M3 Pro Sawtooth";
-            init_t6030_sawtooth();
+            init_t6030_sawtooth(rev);
             break;
 
         case MIDR_PART_T6031_EVEREST:
@@ -183,7 +183,7 @@ const char *init_cpu(void)
 
         case MIDR_PART_T6031_SAWTOOTH:
             cpu = "M3 Max Sawtooth";
-            init_t6031_sawtooth();
+            init_t6031_sawtooth(rev);
             break;
 
         default:

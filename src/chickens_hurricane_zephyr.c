@@ -25,13 +25,17 @@ static void init_common_hurricane_zephyr(void)
     reg_set(SYS_IMP_APL_HID1, HID1_CONSERVATIVE_SIQ);
 }
 
-void init_t8010_2_hurricane_zephyr(void)
+void init_t8010_2_hurricane_zephyr(int rev)
 {
+    UNUSED(rev);
+
     init_common_hurricane_zephyr();
 }
 
-void init_t8011_hurricane_zephyr(void)
+void init_t8011_hurricane_zephyr(int rev)
 {
+    UNUSED(rev);
+
     init_common_hurricane_zephyr();
 
     reg_clr(SYS_IMP_APL_HID3, HID3_DISABLE_DC_ZVA_CMD_ONLY);
