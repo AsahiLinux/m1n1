@@ -41,6 +41,7 @@ struct midr_part_features {
     bool nex_powergating;
     bool fast_ipi;
     bool mmu_sprr;
+    bool siq_cfg;
 };
 
 struct midr_part_info {
@@ -56,6 +57,7 @@ const struct midr_part_features features_a7 = {
     .nex_powergating = false,
     .fast_ipi = false,
     .mmu_sprr = false,
+    .siq_cfg = false,
 };
 
 const struct midr_part_features features_a10 = {
@@ -64,6 +66,7 @@ const struct midr_part_features features_a10 = {
     .nex_powergating = false,
     .fast_ipi = false,
     .mmu_sprr = false,
+    .siq_cfg = false,
 };
 
 const struct midr_part_features features_a11 = {
@@ -72,6 +75,7 @@ const struct midr_part_features features_a11 = {
     .nex_powergating = true,
     .fast_ipi = true,
     .mmu_sprr = false,
+    .siq_cfg = false,
 };
 
 const struct midr_part_features features_m1 = {
@@ -80,6 +84,7 @@ const struct midr_part_features features_m1 = {
     .nex_powergating = true,
     .fast_ipi = true,
     .mmu_sprr = true,
+    .siq_cfg = true,
 };
 
 const struct midr_part_info midr_parts[] = {
@@ -168,14 +173,15 @@ const char *init_cpu(void)
     if (part >= MIDR_PART_T8110_BLIZZARD)
         cpufeat_actlr_el2 = true;
 
-    if (part >= MIDR_PART_T8101_ICESTORM && part != MIDR_PART_T8301_THUNDER) {
-        int core = mrs(MPIDR_EL1) & 0xff;
-
+    if (midr_part_info->features->siq_cfg) {
         // Enable IRQs (at least necessary on t600x)
         // XXX 0 causes pathological behavior in EL1, 2 works.
         msr(SYS_IMP_APL_SIQ_CFG_EL1, 2);
         sysop("isb");
+    }
 
+    if (part >= MIDR_PART_T8101_ICESTORM && part != MIDR_PART_T8301_THUNDER) {
+        int core = mrs(MPIDR_EL1) & 0xff;
         msr(SYS_IMP_APL_AMX_CTX_EL1, core);
     }
 
