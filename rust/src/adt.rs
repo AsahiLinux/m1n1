@@ -345,3 +345,25 @@ pub unsafe extern "C" fn adt_get_property_namelen(
         Err(_) => core::ptr::null(),
     }
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_getprop(
+    _dt: *const c_void,
+    offset: c_int,
+    name: *const c_char,
+    lenp: *mut c_uint,
+) -> *const c_void {
+    let strname: &str = unsafe { CStr::from_ptr(name).to_str().unwrap() };
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+
+    let p = match ADTNode::from_ptr(ptr).unwrap().named_prop(strname) {
+        Ok(prop) => prop,
+        Err(_) => return core::ptr::null(),
+    };
+
+    if !lenp.is_null() {
+        unsafe { *lenp = p.size as u32 }
+    }
+
+    p.value.as_ptr() as *const c_void
+}

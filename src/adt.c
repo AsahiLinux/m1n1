@@ -42,22 +42,6 @@ static int _adt_nodename_eq(const char *a, const char *b, size_t len)
         return 0;
 }
 
-const void *adt_getprop_namelen(const void *adt, int nodeoffset, const char *name, size_t namelen,
-                                u32 *lenp)
-{
-    const struct adt_property *prop;
-
-    prop = adt_get_property_namelen(adt, nodeoffset, name, namelen);
-
-    if (!prop)
-        return NULL;
-
-    if (lenp)
-        *lenp = prop->size;
-
-    return prop->value;
-}
-
 const void *adt_getprop_by_offset(const void *adt, int offset, const char **namep, u32 *lenp)
 {
     const struct adt_property *prop;
@@ -71,11 +55,6 @@ const void *adt_getprop_by_offset(const void *adt, int offset, const char **name
     if (lenp)
         *lenp = prop->size;
     return prop->value;
-}
-
-const void *adt_getprop(const void *adt, int nodeoffset, const char *name, u32 *lenp)
-{
-    return adt_getprop_namelen(adt, nodeoffset, name, strlen(name), lenp);
 }
 
 int adt_setprop(void *adt, int nodeoffset, const char *name, void *value, size_t len)
