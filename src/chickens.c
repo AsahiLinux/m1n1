@@ -88,6 +88,13 @@ const struct midr_part_features features_m2 = {
     .actlr_el2 = true,
 };
 
+// XXX figure out what features are actually available on M4
+const struct midr_part_features features_m4 = {
+    .sleep_mode = SLEEP_NONE, // XXX probably new mode required
+    .fast_ipi = true,
+    .actlr_el2 = true,
+};
+
 /*
  * Note: E and P core MUST always have the same features since we store them in
  * a global variable and the init function is called for all cores.
@@ -122,6 +129,8 @@ const struct midr_part_info midr_parts[] = {
     {MIDR_PART_T6030_SAWTOOTH, "M3 Pro Sawtooth", init_t6030_sawtooth, &features_m2},
     {MIDR_PART_T6031_EVEREST, "M3 Max Everest", init_t6031_everest, &features_m2},
     {MIDR_PART_T6031_SAWTOOTH, "M3 Max Sawtooth", init_t6031_sawtooth, &features_m2},
+    {MIDR_PART_T8132_DONAN_ECORE, "M4 Donan (E core)", NULL, &features_m4},
+    {MIDR_PART_T8132_DONAN_PCORE, "M4 Donan (P core)", NULL, &features_m4},
 };
 
 const struct midr_part_features features_unknown = {
