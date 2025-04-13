@@ -32,9 +32,11 @@ void init_t6031_sawtooth(int rev);
 void init_t6031_everest(int rev);
 
 bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
-bool cpufeat_global_sleep, cpufeat_workaround_cyclone_cache;
+bool cpufeat_workaround_cyclone_cache;
+enum cpufeat_sleep_mode cpufeat_sleep_mode;
 
 struct midr_part_features {
+    enum cpufeat_sleep_mode sleep_mode;
     bool workaround_cyclone_cache;
 };
 
@@ -47,10 +49,12 @@ struct midr_part_info {
 
 const struct midr_part_features features_a7 = {
     .workaround_cyclone_cache = true,
+    .sleep_mode = SLEEP_LEGACY,
 };
 
 const struct midr_part_features features_a10 = {
     .workaround_cyclone_cache = false,
+    .sleep_mode = SLEEP_GLOBAL,
 };
 
 const struct midr_part_info midr_parts[] = {
@@ -83,7 +87,9 @@ const struct midr_part_info midr_parts[] = {
     {MIDR_PART_T6031_SAWTOOTH, "M3 Max Sawtooth", init_t6031_sawtooth, &features_a10},
 };
 
-const struct midr_part_features features_unknown = {};
+const struct midr_part_features features_unknown = {
+    .sleep_mode = SLEEP_NONE,
+};
 
 const struct midr_part_info midr_part_info_unknown = {
     .name = "Unknown",
@@ -112,6 +118,7 @@ const char *init_cpu(void)
         midr_part_info = &midr_part_info_unknown;
 
     cpufeat_workaround_cyclone_cache = midr_part_info->features->workaround_cyclone_cache;
+    cpufeat_sleep_mode = midr_part_info->features->sleep_mode;
 
     /* This is performed unconditionally on all cores (necessary?) */
     if (is_ecore())
@@ -154,9 +161,7 @@ const char *init_cpu(void)
     if (part >= MIDR_PART_T8015_MONSOON)
         cpufeat_fast_ipi = true;
 
-    if (part >= MIDR_PART_T8010_2_HURRICANE)
-        cpufeat_global_sleep = true;
-    else {
+    if (cpufeat_sleep_mode == SLEEP_LEGACY) {
         /* Disable deep sleep */
         reg_clr(SYS_IMP_APL_ACC_CFG, ACC_CFG_DEEP_SLEEP);
     }
