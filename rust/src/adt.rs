@@ -156,6 +156,18 @@ impl<'a> ADT<'a> {
         let prop = ADT::property_at(offset)?;
         Ok(offset + 32 + 4 + ((prop.size as i32 + (ADT_ALIGN - 1)) & !(ADT_ALIGN - 1)))
     }
+
+    pub fn first_child_offset(offset: i32) -> Result<i32, AdtError> {
+        let node = ADT::node_at(offset)?;
+        let mut cnt = node.property_count;
+        let mut off = ADT::first_property_offset(offset);
+
+        while cnt > 0 {
+            off = ADT::next_property_offset(off)?;
+            cnt -= 1;
+        }
+        Ok(off)
+    }
 }
 
 extern "C" {
@@ -182,6 +194,11 @@ pub unsafe extern "C" fn adt_first_property_offset(_dt: *const c_void, offset: c
 #[no_mangle]
 pub unsafe extern "C" fn adt_next_property_offset(_dt: *const c_void, offset: c_int) -> c_int {
     ADT::next_property_offset(offset).unwrap() as c_int
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_first_child_offset(_dt: *const c_void, offset: c_int) -> c_int {
+    ADT::first_child_offset(offset).unwrap() as c_int
 }
 
 #[no_mangle]
