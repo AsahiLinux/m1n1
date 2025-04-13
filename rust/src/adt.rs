@@ -176,6 +176,29 @@ impl<'a> ADT<'a> {
         }
         Ok(off)
     }
+
+    pub fn get_property_by_name(
+        nodeoffset: i32,
+        name: &str,
+    ) -> Result<&'static ADTProperty, AdtError> {
+        let node_prop_cnt = ADT::get_property_count(nodeoffset)?;
+        let first_prop_offset = ADT::first_property_offset(nodeoffset);
+        let mut cur_prop_offset = first_prop_offset;
+
+        for _i in 0..node_prop_cnt {
+            let prop = ADT::property_at(cur_prop_offset)?;
+            if CStr::from_bytes_until_nul(&prop.name)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                == name
+            {
+                return Ok(prop);
+            }
+            cur_prop_offset = ADT::next_property_offset(cur_prop_offset)?;
+        }
+        Err(AdtError::NotFound)
+    }
 }
 
 extern "C" {
@@ -225,6 +248,36 @@ pub unsafe extern "C" fn adt_get_property_by_offset(
     offset: c_int,
 ) -> *const c_void {
     match ADT::property_at(offset) {
+        Ok(p) => p as *const ADTProperty as *const c_void,
+        Err(_) => core::ptr::null(),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_get_property(
+    _dt: *const c_void,
+    nodeoffset: c_int,
+    name: *const c_char,
+) -> *const c_void {
+    let strname: &str;
+    unsafe { strname = CStr::from_ptr(name).to_str().unwrap() }
+    match ADT::get_property_by_name(nodeoffset, strname) {
+        Ok(p) => p as *const ADTProperty as *const c_void,
+        Err(_) => core::ptr::null(),
+    }
+}
+
+/// TODO: Remove once no more callers reference this
+#[no_mangle]
+pub unsafe extern "C" fn adt_get_property_namelen(
+    _dt: *const c_void,
+    nodeoffset: c_int,
+    name: *const c_char,
+    _len: c_int,
+) -> *const c_void {
+    let strname: &str;
+    unsafe { strname = CStr::from_ptr(name).to_str().unwrap() }
+    match ADT::get_property_by_name(nodeoffset, strname) {
         Ok(p) => p as *const ADTProperty as *const c_void,
         Err(_) => core::ptr::null(),
     }
