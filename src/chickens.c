@@ -37,6 +37,7 @@ enum cpufeat_sleep_mode cpufeat_sleep_mode;
 
 struct midr_part_features {
     enum cpufeat_sleep_mode sleep_mode;
+    bool disable_dc_mva;
     bool cyc_ovrd;
     bool workaround_cyclone_cache;
     bool nex_powergating;
@@ -55,6 +56,7 @@ struct midr_part_info {
 };
 
 const struct midr_part_features features_a7 = {
+    .disable_dc_mva = true,
     .cyc_ovrd = true,
     .workaround_cyclone_cache = true,
     .sleep_mode = SLEEP_LEGACY,
@@ -67,6 +69,7 @@ const struct midr_part_features features_a7 = {
 };
 
 const struct midr_part_features features_a10 = {
+    .disable_dc_mva = true,
     .cyc_ovrd = true,
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
@@ -79,6 +82,7 @@ const struct midr_part_features features_a10 = {
 };
 
 const struct midr_part_features features_a11 = {
+    .disable_dc_mva = true,
     .cyc_ovrd = true,
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
@@ -91,6 +95,7 @@ const struct midr_part_features features_a11 = {
 };
 
 const struct midr_part_features features_m1 = {
+    .disable_dc_mva = true,
     .cyc_ovrd = true,
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
@@ -103,6 +108,7 @@ const struct midr_part_features features_m1 = {
 };
 
 const struct midr_part_features features_m2 = {
+    .disable_dc_mva = true,
     .cyc_ovrd = true,
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
@@ -181,11 +187,13 @@ const char *init_cpu(void)
     cpufeat_actlr_el2 = midr_part_info->features->actlr_el2;
     cpufeat_cyc_ovrd = midr_part_info->features->cyc_ovrd;
 
-    /* This is performed unconditionally on all cores (necessary?) */
-    if (is_ecore())
-        reg_set(SYS_IMP_APL_EHID4, EHID4_DISABLE_DC_MVA | EHID4_DISABLE_DC_SW_L2_OPS);
-    else
-        reg_set(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA | HID4_DISABLE_DC_SW_L2_OPS);
+    if (midr_part_info->features->disable_dc_mva) {
+        /* This is performed unconditionally on all cores (necessary?) */
+        if (is_ecore())
+            reg_set(SYS_IMP_APL_EHID4, EHID4_DISABLE_DC_MVA | EHID4_DISABLE_DC_SW_L2_OPS);
+        else
+            reg_set(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA | HID4_DISABLE_DC_SW_L2_OPS);
+    }
 
     if (midr_part_info->features->nex_powergating) {
         /* Enable NEX powergating, the reset cycles might be overridden by chickens */
