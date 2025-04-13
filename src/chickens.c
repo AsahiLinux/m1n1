@@ -62,12 +62,6 @@ const struct midr_part_features features_a7 = {
     .cyc_ovrd = true,
     .workaround_cyclone_cache = true,
     .sleep_mode = SLEEP_LEGACY,
-    .nex_powergating = false,
-    .fast_ipi = false,
-    .mmu_sprr = false,
-    .siq_cfg = false,
-    .amx = false,
-    .actlr_el2 = false,
 };
 
 const struct midr_part_features features_a10 = {
@@ -76,47 +70,33 @@ const struct midr_part_features features_a10 = {
     .cyc_ovrd = true,
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
-    .nex_powergating = false,
-    .fast_ipi = false,
-    .mmu_sprr = false,
-    .siq_cfg = false,
-    .amx = false,
-    .actlr_el2 = false,
 };
 
 const struct midr_part_features features_a11 = {
     .disable_dc_mva = true,
     .acc_cfg = true,
     .cyc_ovrd = true,
-    .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
     .nex_powergating = true,
     .fast_ipi = true,
-    .mmu_sprr = false,
-    .siq_cfg = false,
-    .amx = false,
-    .actlr_el2 = false,
 };
 
 const struct midr_part_features features_m1 = {
     .disable_dc_mva = true,
     .acc_cfg = true,
     .cyc_ovrd = true,
-    .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
     .nex_powergating = true,
     .fast_ipi = true,
     .mmu_sprr = true,
     .siq_cfg = true,
     .amx = true,
-    .actlr_el2 = false,
 };
 
 const struct midr_part_features features_m2 = {
     .disable_dc_mva = true,
     .acc_cfg = true,
     .cyc_ovrd = true,
-    .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
     .nex_powergating = true,
     .fast_ipi = true,
