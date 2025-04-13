@@ -95,6 +95,34 @@ impl ADTNode {
         // the node header.
         unsafe { ADTProperty::from_ptr(self.as_ptr().add(size_of::<ADTNode>()) as usize) }
     }
+
+    /// Walk the properties at the top of the curret node's memory to arrive at
+    /// the first child node of the current node
+    pub fn first_child(&self) -> Result<&'static ADTNode, AdtError> {
+        if self.child_count < 1 {
+            return Err(AdtError::NotFound);
+        }
+
+        let mut p = self.first_property()?;
+
+        // We already have the first property
+        for _ in 0..self.property_count - 1 {
+            p = p.next_property()?;
+        }
+
+        // SAFETY: We will only ever reach this code when we can guarantee that
+        // p is a reference to the very last property of the node, meaning that
+        // the next byte after it must be a child node.
+        unsafe {
+            ADTNode::from_ptr(
+                p.as_ptr()
+                    .add(size_of::<[c_char; 32]>())
+                    .add(size_of::<u32>())
+                    .add((p.size as usize + (ADT_ALIGN - 1)) & !(ADT_ALIGN - 1))
+                    as *const ADTNode,
+            )
+        }
+    }
 }
 
 impl ADTProperty {
@@ -209,6 +237,33 @@ pub unsafe extern "C" fn adt_next_property_offset(_dt: *const c_void, offset: c_
             .add(size_of::<u32>())
             .add((p.size as usize + (ADT_ALIGN - 1)) & !(ADT_ALIGN - 1))
             .sub(adt as usize) as c_int
+    }
+}
+
+// This function has load-bearing UB on the C side... The sound Rust equivalent
+// breaks this. Recreate the UB here rather than call the new Rust function.
+#[no_mangle]
+pub unsafe extern "C" fn adt_first_child_offset(_dt: *const c_void, offset: c_int) -> c_int {
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+    let n = ADTNode::from_ptr(ptr).unwrap();
+
+    let mut p: &ADTProperty = n.first_property().unwrap();
+
+    for _ in 0..n.property_count - 1 {
+        p = p.next_property().unwrap();
+    }
+
+    unsafe {
+        ADTNode::from_ptr(
+            p.as_ptr()
+                .add(size_of::<[c_char; 32]>())
+                .add(size_of::<u32>())
+                .add((p.size as usize + (ADT_ALIGN - 1)) & !(ADT_ALIGN - 1))
+                as *const ADTNode,
+        )
+        .unwrap()
+        .as_ptr()
+        .sub(adt as usize) as c_int
     }
 }
 
