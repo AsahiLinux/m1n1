@@ -71,7 +71,7 @@ void smp_secondary_entry(void)
     me->flag = 1;
     sysop("dmb sy");
     u64 target;
-    if (!cpufeat_fast_ipi)
+    if (!cpu_features->fast_ipi)
         aic_write(AIC_IPI_MASK_SET, AIC_IPI_SELF); // we only use the "other" IPI
 
     while (1) {
@@ -81,7 +81,7 @@ void smp_secondary_entry(void)
             } else {
                 deep_wfi();
 
-                if (cpufeat_fast_ipi) {
+                if (cpu_features->fast_ipi) {
                     msr(SYS_IMP_APL_IPI_SR_EL1, 1);
                 } else {
                     aic_ack(); // Actually read IPI reason
@@ -420,7 +420,7 @@ void smp_send_ipi(int cpu)
         return;
 
     u64 mpidr = spin_table[cpu].mpidr;
-    if (cpufeat_fast_ipi) {
+    if (cpu_features->fast_ipi) {
         msr(SYS_IMP_APL_IPI_RR_GLOBAL_EL1, (mpidr & 0xff) | ((mpidr & 0xff00) << 8));
     } else {
         aic_write(AIC_IPI_SEND, AIC_IPI_SEND_CPU(cpu));
