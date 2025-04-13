@@ -123,6 +123,20 @@ impl ADTNode {
             )
         }
     }
+
+    /// Searches the node for a property with the given name, and returns it if
+    /// found.
+    pub fn named_prop(&self, name: &str) -> Result<&'static ADTProperty, AdtError> {
+        let mut p = self.first_property()?;
+
+        for _ in 0..self.property_count {
+            if p.name() == name {
+                return Ok(p);
+            }
+            p = p.next_property()?;
+        }
+        Err(AdtError::NotFound)
+    }
 }
 
 impl ADTProperty {
@@ -191,6 +205,13 @@ impl ADTProperty {
                 .add((self.size as usize + (ADT_ALIGN - 1)) & !(ADT_ALIGN - 1)) as usize
         };
         ADTProperty::from_ptr(ptr)
+    }
+
+    pub fn name(&self) -> &str {
+        CStr::from_bytes_until_nul(&self.name)
+            .unwrap()
+            .to_str()
+            .unwrap()
     }
 }
 
@@ -287,6 +308,40 @@ pub unsafe extern "C" fn adt_get_property_by_offset(
     let ptr: usize = unsafe { adt.add(offset as usize) as usize };
     match ADTProperty::from_ptr(ptr) {
         Ok(p) => p as *const ADTProperty as *const c_void,
+        Err(_) => core::ptr::null(),
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_get_property(
+    _dt: *const c_void,
+    offset: c_int,
+    name: *const c_char,
+) -> *const c_void {
+    let strname: &str = unsafe { CStr::from_ptr(name).to_str().unwrap() };
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+    let n = ADTNode::from_ptr(ptr).unwrap();
+
+    match n.named_prop(strname) {
+        Ok(p) => p.as_ptr() as *const c_void,
+        Err(_) => core::ptr::null(),
+    }
+}
+
+/// TODO: Remove once no more callers reference this
+#[no_mangle]
+pub unsafe extern "C" fn adt_get_property_namelen(
+    _dt: *const c_void,
+    offset: c_int,
+    name: *const c_char,
+    _len: c_int,
+) -> *const c_void {
+    let strname: &str = unsafe { CStr::from_ptr(name).to_str().unwrap() };
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+    let n = ADTNode::from_ptr(ptr).unwrap();
+
+    match n.named_prop(strname) {
+        Ok(p) => p.as_ptr() as *const c_void,
         Err(_) => core::ptr::null(),
     }
 }
