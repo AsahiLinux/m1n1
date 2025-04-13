@@ -245,15 +245,23 @@ void deep_wfi(void)
 void cpu_sleep(bool deep)
 {
     if (deep) {
-        if (cpufeat_global_sleep) {
-            reg_mask(SYS_IMP_APL_ACC_OVRD, ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP_MASK,
-                     ACC_OVRD_PWR_DN_SRM(3) | ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP(2) |
-                         ACC_OVRD_TRAIN_DOWN_LINK(3) | ACC_OVRD_POWER_DOWN_CPM(3) |
-                         ACC_OVRD_DISABLE_PIO_ON_WFI_CPU | ACC_OVRD_DEEP_SLEEP);
-        } else {
-            reg_set(SYS_IMP_APL_ACC_CFG, ACC_CFG_DEEP_SLEEP);
+        switch (cpufeat_sleep_mode) {
+            case SLEEP_GLOBAL:
+                reg_mask(SYS_IMP_APL_ACC_OVRD, ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP_MASK,
+                         ACC_OVRD_PWR_DN_SRM(3) | ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP(2) |
+                             ACC_OVRD_TRAIN_DOWN_LINK(3) | ACC_OVRD_POWER_DOWN_CPM(3) |
+                             ACC_OVRD_DISABLE_PIO_ON_WFI_CPU | ACC_OVRD_DEEP_SLEEP);
+                break;
+
+            case SLEEP_LEGACY:
+                reg_set(SYS_IMP_APL_ACC_CFG, ACC_CFG_DEEP_SLEEP);
+                break;
+
+            default:
+                break;
         }
     } else {
+        // XXX: does this work for SLEEP_LEGACY?
         reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_FIQ_MODE_MASK | CYC_OVRD_IRQ_MODE_MASK,
                  CYC_OVRD_FIQ_MODE(2) | CYC_OVRD_IRQ_MODE(2));
     }
