@@ -234,12 +234,15 @@ void deep_wfi(void)
         return;
     }
 
-    cyc_ovrd = mrs(SYS_IMP_APL_CYC_OVRD);
-    msr(SYS_IMP_APL_CYC_OVRD, cyc_ovrd | CYC_OVRD_WFI_MODE(3));
+    if (cpufeat_cyc_ovrd) {
+        cyc_ovrd = mrs(SYS_IMP_APL_CYC_OVRD);
+        msr(SYS_IMP_APL_CYC_OVRD, cyc_ovrd | CYC_OVRD_WFI_MODE(3));
+    }
 
     _deep_wfi_helper();
 
-    msr(SYS_IMP_APL_CYC_OVRD, cyc_ovrd);
+    if (cpufeat_cyc_ovrd)
+        msr(SYS_IMP_APL_CYC_OVRD, cyc_ovrd);
 }
 
 void cpu_sleep(bool deep)
@@ -261,14 +264,17 @@ void cpu_sleep(bool deep)
                 break;
         }
     } else {
-        // XXX: does this work for SLEEP_LEGACY?
-        reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_FIQ_MODE_MASK | CYC_OVRD_IRQ_MODE_MASK,
-                 CYC_OVRD_FIQ_MODE(2) | CYC_OVRD_IRQ_MODE(2));
+        if (cpufeat_cyc_ovrd) {
+            reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_FIQ_MODE_MASK | CYC_OVRD_IRQ_MODE_MASK,
+                     CYC_OVRD_FIQ_MODE(2) | CYC_OVRD_IRQ_MODE(2));
+        }
     }
 
-    // disable wfi retention mode to allow deepest sleep states
-    reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK,
-             CYC_OVRD_WFI_MODE(3) | CYC_OVRD_DISABLE_WFI_RET);
+    if (cpufeat_cyc_ovrd) {
+        // disable wfi retention mode to allow deepest sleep states
+        reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK,
+                 CYC_OVRD_WFI_MODE(3) | CYC_OVRD_DISABLE_WFI_RET);
+    }
 
     // enter deep sleep
     while (1) {
