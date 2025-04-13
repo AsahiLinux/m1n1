@@ -145,7 +145,7 @@ const struct midr_part_info midr_part_info_unknown = {
     .features = &features_unknown,
 };
 
-const char *init_cpu(void)
+void init_cpu(void)
 {
     const struct midr_part_info *midr_part_info = NULL;
     msr(OSLAR_EL1, 0);
@@ -165,6 +165,8 @@ const char *init_cpu(void)
 
     if (!midr_part_info)
         midr_part_info = &midr_part_info_unknown;
+
+    printf("  CPU: %s\n", midr_part_info->name);
 
     cpufeat_workaround_cyclone_cache = midr_part_info->features->workaround_cyclone_cache;
     cpufeat_sleep_mode = midr_part_info->features->sleep_mode;
@@ -223,6 +225,4 @@ const char *init_cpu(void)
     if (midr_part_info->features->acc_cfg) {
         reg_mask(SYS_IMP_APL_ACC_CFG, ACC_CFG_BP_SLEEP_MASK, ACC_CFG_BP_SLEEP(3));
     }
-
-    return midr_part_info->name;
 }
