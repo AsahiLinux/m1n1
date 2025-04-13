@@ -25,7 +25,6 @@ jobs:
   targets:
     - fedora-all-aarch64
     - fedora-rawhide-i386
-    - fedora-rawhide-ppc64le
     - fedora-rawhide-s390x
     - fedora-rawhide-x86_64
 
@@ -36,6 +35,5 @@ jobs:
   targets:
     - fedora-all-aarch64
     - fedora-rawhide-i386
-    - fedora-rawhide-ppc64le
     - fedora-rawhide-s390x
     - fedora-rawhide-x86_64
