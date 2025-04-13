@@ -39,6 +39,7 @@ struct midr_part_features {
     enum cpufeat_sleep_mode sleep_mode;
     bool workaround_cyclone_cache;
     bool nex_powergating;
+    bool fast_ipi;
 };
 
 struct midr_part_info {
@@ -52,18 +53,21 @@ const struct midr_part_features features_a7 = {
     .workaround_cyclone_cache = true,
     .sleep_mode = SLEEP_LEGACY,
     .nex_powergating = false,
+    .fast_ipi = false,
 };
 
 const struct midr_part_features features_a10 = {
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
     .nex_powergating = false,
+    .fast_ipi = false,
 };
 
 const struct midr_part_features features_a11 = {
     .workaround_cyclone_cache = false,
     .sleep_mode = SLEEP_GLOBAL,
     .nex_powergating = true,
+    .fast_ipi = true,
 };
 
 const struct midr_part_info midr_parts[] = {
@@ -128,6 +132,7 @@ const char *init_cpu(void)
 
     cpufeat_workaround_cyclone_cache = midr_part_info->features->workaround_cyclone_cache;
     cpufeat_sleep_mode = midr_part_info->features->sleep_mode;
+    cpufeat_fast_ipi = midr_part_info->features->fast_ipi;
 
     /* This is performed unconditionally on all cores (necessary?) */
     if (is_ecore())
@@ -166,9 +171,6 @@ const char *init_cpu(void)
 
     if (part >= MIDR_PART_T8030_LIGHTNING)
         msr(SYS_IMP_APL_AMX_CTL_EL1, 0x100);
-
-    if (part >= MIDR_PART_T8015_MONSOON)
-        cpufeat_fast_ipi = true;
 
     if (cpufeat_sleep_mode == SLEEP_LEGACY) {
         /* Disable deep sleep */
