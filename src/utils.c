@@ -221,3 +221,30 @@ u64 top_of_memory_alloc(size_t size)
 
     return ret;
 }
+
+void cpu_sleep(bool deep)
+{
+    if (deep) {
+        if (cpufeat_global_sleep) {
+            reg_mask(SYS_IMP_APL_ACC_OVRD, ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP_MASK,
+                     ACC_OVRD_PWR_DN_SRM(3) | ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP(2) |
+                         ACC_OVRD_TRAIN_DOWN_LINK(3) | ACC_OVRD_POWER_DOWN_CPM(3) |
+                         ACC_OVRD_DISABLE_PIO_ON_WFI_CPU | ACC_OVRD_DEEP_SLEEP);
+        } else {
+            reg_set(SYS_IMP_APL_ACC_CFG, ACC_CFG_DEEP_SLEEP);
+        }
+    } else {
+        reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_FIQ_MODE_MASK | CYC_OVRD_IRQ_MODE_MASK,
+                 CYC_OVRD_FIQ_MODE(2) | CYC_OVRD_IRQ_MODE(2));
+    }
+
+    // disable wfi retention mode to allow deepest sleep states
+    reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK,
+             CYC_OVRD_WFI_MODE(3) | CYC_OVRD_DISABLE_WFI_RET);
+
+    // enter deep sleep
+    while (1) {
+        sysop("isb");
+        sysop("wfi");
+    }
+}
