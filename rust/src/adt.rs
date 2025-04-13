@@ -190,6 +190,11 @@ pub unsafe extern "C" fn adt_get_child_count(_dt: *const c_void, offset: c_int) 
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn adt_get_property_count(_dt: *const c_void, offset: c_int) -> c_int {
+    ADT::node_at(offset).unwrap().property_count as c_int
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn adt_get_property_by_offset(
     _dt: *const c_void,
     offset: c_int,
