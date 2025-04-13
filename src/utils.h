@@ -482,10 +482,22 @@ enum cpufeat_sleep_mode {
     SLEEP_GLOBAL,
 };
 
+struct midr_part_features {
+    enum cpufeat_sleep_mode sleep_mode;
+    bool disable_dc_mva;
+    bool acc_cfg;
+    bool cyc_ovrd;
+    bool workaround_cyclone_cache;
+    bool nex_powergating;
+    bool fast_ipi;
+    bool mmu_sprr;
+    bool siq_cfg;
+    bool amx;
+    bool actlr_el2;
+};
+
 extern bool is_mac;
-extern bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
-extern bool cpufeat_workaround_cyclone_cache, cpufeat_cyc_ovrd;
-extern enum cpufeat_sleep_mode cpufeat_sleep_mode;
+extern const struct midr_part_features *cpu_features;
 
 extern struct vector_args next_stage;
 extern u64 boot_flags, mem_size_actual;

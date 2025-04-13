@@ -19,7 +19,7 @@
 #define CACHE_RANGE_OP(func, op)                                                                   \
     void func(void *addr, size_t length)                                                           \
     {                                                                                              \
-        if (func == dc_civac_range && cpufeat_workaround_cyclone_cache) {                          \
+        if (func == dc_civac_range && cpu_features->workaround_cyclone_cache) {                    \
             reg_clr(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA);                                        \
             sysop("isb");                                                                          \
         }                                                                                          \
@@ -29,7 +29,7 @@
             cacheop(op, p);                                                                        \
             p += CACHE_LINE_SIZE;                                                                  \
         }                                                                                          \
-        if (func == dc_civac_range && cpufeat_workaround_cyclone_cache) {                          \
+        if (func == dc_civac_range && cpu_features->workaround_cyclone_cache) {                    \
             reg_set(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA);                                        \
             sysop("isb");                                                                          \
         }                                                                                          \
@@ -538,7 +538,7 @@ void mmu_init(void)
     mmu_init_pagetables();
     mmu_add_default_mappings();
     mmu_configure();
-    if (cpufeat_mmu_sprr)
+    if (cpu_features->mmu_sprr)
         mmu_init_sprr();
 
     // Enable EL0 memory access by EL1
@@ -558,7 +558,7 @@ void mmu_init(void)
 static void mmu_secondary_setup(void)
 {
     mmu_configure();
-    if (cpufeat_mmu_sprr)
+    if (cpu_features->mmu_sprr)
         mmu_init_sprr();
 
     // Enable EL0 memory access by EL1

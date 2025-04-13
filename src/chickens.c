@@ -31,24 +31,6 @@ void init_t6030_everest(int rev);
 void init_t6031_sawtooth(int rev);
 void init_t6031_everest(int rev);
 
-bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
-bool cpufeat_workaround_cyclone_cache, cpufeat_cyc_ovrd;
-enum cpufeat_sleep_mode cpufeat_sleep_mode;
-
-struct midr_part_features {
-    enum cpufeat_sleep_mode sleep_mode;
-    bool disable_dc_mva;
-    bool acc_cfg;
-    bool cyc_ovrd;
-    bool workaround_cyclone_cache;
-    bool nex_powergating;
-    bool fast_ipi;
-    bool mmu_sprr;
-    bool siq_cfg;
-    bool amx;
-    bool actlr_el2;
-};
-
 struct midr_part_info {
     int part;
     const char *name;
@@ -106,6 +88,12 @@ const struct midr_part_features features_m2 = {
     .actlr_el2 = true,
 };
 
+/*
+ * Note: E and P core MUST always have the same features since we store them in
+ * a global variable and the init function is called for all cores.
+ * Different behavior between the cores should be implemented with is_ecore()
+ * instead.
+ */
 const struct midr_part_info midr_parts[] = {
     {MIDR_PART_S5L8960X_CYCLONE, "A7 Cyclone", init_s5l8960x_cyclone, &features_a7},
     {MIDR_PART_T7000_TYPHOON, "A8 Typhoon", init_t7000_typhoon, &features_a7},
@@ -145,6 +133,8 @@ const struct midr_part_info midr_part_info_unknown = {
     .features = &features_unknown,
 };
 
+const struct midr_part_features *cpu_features = &features_unknown;
+
 void init_cpu(void)
 {
     const struct midr_part_info *midr_part_info = NULL;
@@ -168,14 +158,9 @@ void init_cpu(void)
 
     printf("  CPU: %s\n", midr_part_info->name);
 
-    cpufeat_workaround_cyclone_cache = midr_part_info->features->workaround_cyclone_cache;
-    cpufeat_sleep_mode = midr_part_info->features->sleep_mode;
-    cpufeat_fast_ipi = midr_part_info->features->fast_ipi;
-    cpufeat_mmu_sprr = midr_part_info->features->mmu_sprr;
-    cpufeat_actlr_el2 = midr_part_info->features->actlr_el2;
-    cpufeat_cyc_ovrd = midr_part_info->features->cyc_ovrd;
+    cpu_features = midr_part_info->features;
 
-    if (midr_part_info->features->disable_dc_mva) {
+    if (cpu_features->disable_dc_mva) {
         /* This is performed unconditionally on all cores (necessary?) */
         if (is_ecore())
             reg_set(SYS_IMP_APL_EHID4, EHID4_DISABLE_DC_MVA | EHID4_DISABLE_DC_SW_L2_OPS);
@@ -183,7 +168,7 @@ void init_cpu(void)
             reg_set(SYS_IMP_APL_HID4, HID4_DISABLE_DC_MVA | HID4_DISABLE_DC_SW_L2_OPS);
     }
 
-    if (midr_part_info->features->nex_powergating) {
+    if (cpu_features->nex_powergating) {
         /* Enable NEX powergating, the reset cycles might be overridden by chickens */
         if (!is_ecore()) {
             reg_mask(SYS_IMP_APL_HID13, HID13_RESET_CYCLES_MASK, HID13_RESET_CYCLES(12));
@@ -195,26 +180,26 @@ void init_cpu(void)
     if (midr_part_info->init)
         midr_part_info->init(rev);
 
-    if (midr_part_info->features->siq_cfg) {
+    if (cpu_features->siq_cfg) {
         // Enable IRQs (at least necessary on t600x)
         // XXX 0 causes pathological behavior in EL1, 2 works.
         msr(SYS_IMP_APL_SIQ_CFG_EL1, 2);
         sysop("isb");
     }
 
-    if (midr_part_info->features->amx) {
+    if (cpu_features->amx) {
         // XXX is this really AMX?
         int core = mrs(MPIDR_EL1) & 0xff;
         msr(SYS_IMP_APL_AMX_CTX_EL1, core);
         msr(SYS_IMP_APL_AMX_CTL_EL1, 0x100);
     }
 
-    if (cpufeat_sleep_mode == SLEEP_LEGACY) {
+    if (cpu_features->sleep_mode == SLEEP_LEGACY) {
         /* Disable deep sleep */
         reg_clr(SYS_IMP_APL_ACC_CFG, ACC_CFG_DEEP_SLEEP);
     }
 
-    if (cpufeat_cyc_ovrd) {
+    if (cpu_features->cyc_ovrd) {
         /* Unmask external IRQs, set WFI mode to up (2) */
         reg_mask(SYS_IMP_APL_CYC_OVRD,
                  CYC_OVRD_FIQ_MODE_MASK | CYC_OVRD_IRQ_MODE_MASK | CYC_OVRD_WFI_MODE_MASK,
@@ -222,7 +207,7 @@ void init_cpu(void)
     }
 
     // Enable branch prediction state retention across ACC sleep
-    if (midr_part_info->features->acc_cfg) {
+    if (cpu_features->acc_cfg) {
         reg_mask(SYS_IMP_APL_ACC_CFG, ACC_CFG_BP_SLEEP_MASK, ACC_CFG_BP_SLEEP(3));
     }
 }
