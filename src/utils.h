@@ -476,9 +476,16 @@ struct vector_args {
 
 extern u32 board_id, chip_id;
 
+enum cpufeat_sleep_mode {
+    SLEEP_NONE,
+    SLEEP_LEGACY,
+    SLEEP_GLOBAL,
+};
+
 extern bool is_mac;
 extern bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
-extern bool cpufeat_global_sleep, cpufeat_workaround_cyclone_cache;
+extern bool cpufeat_workaround_cyclone_cache;
+extern enum cpufeat_sleep_mode cpufeat_sleep_mode;
 
 extern struct vector_args next_stage;
 extern u64 boot_flags, mem_size_actual;
