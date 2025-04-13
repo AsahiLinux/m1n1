@@ -29,11 +29,6 @@ u32 adt_get_size(void)
     return cur_boot_args.devtree_size;
 }
 
-static int _adt_string_eq(const char *a, const char *b, size_t len)
-{
-    return (strlen(a) == len) && (memcmp(a, b, len) == 0);
-}
-
 static int _adt_nodename_eq(const char *a, const char *b, size_t len)
 {
     if (memcmp(a, b, len) != 0)
@@ -45,26 +40,6 @@ static int _adt_nodename_eq(const char *a, const char *b, size_t len)
         return 1;
     else
         return 0;
-}
-
-const struct adt_property *adt_get_property_namelen(const void *adt, int offset, const char *name,
-                                                    size_t namelen)
-{
-    dprintf("adt_get_property_namelen(%p, %d, \"%s\", %u)\n", adt, offset, name, namelen);
-
-    ADT_FOREACH_PROPERTY(adt, offset, prop)
-    {
-        dprintf(" off=0x%x name=\"%s\"\n", offset, prop->name);
-        if (_adt_string_eq(prop->name, name, namelen))
-            return prop;
-    }
-
-    return NULL;
-}
-
-const struct adt_property *adt_get_property(const void *adt, int nodeoffset, const char *name)
-{
-    return adt_get_property_namelen(adt, nodeoffset, name, strlen(name));
 }
 
 const void *adt_getprop_namelen(const void *adt, int nodeoffset, const char *name, size_t namelen,
