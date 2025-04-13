@@ -27,7 +27,9 @@ void init_samsung_twister(int rev)
     init_twister_common();
 }
 
-void init_tsmc_twister(void)
+void init_tsmc_twister(int rev)
 {
+    UNUSED(rev);
+
     init_twister_common();
 }

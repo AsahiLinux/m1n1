@@ -23,21 +23,27 @@ static void init_common_cyclone_typhoon(void)
     reg_set(SYS_IMP_APL_HID8, HID8_DATA_SET_ID0_VALUE(0xf) | HID8_DATA_SET_ID1_VALUE(0xf));
 }
 
-void init_t7000_typhoon(void)
+void init_t7000_typhoon(int rev)
 {
+    UNUSED(rev);
+
     init_common_cyclone_typhoon();
 }
 
-void init_t7001_typhoon(void)
+void init_t7001_typhoon(int rev)
 {
+    UNUSED(rev);
+
     init_common_cyclone_typhoon();
 
     // Change memcache data ID from 0 to 15
     reg_set(SYS_IMP_APL_HID8, HID8_DATA_SET_ID2_VALUE(0xf));
 }
 
-void init_s5l8960x_cyclone(void)
+void init_s5l8960x_cyclone(int rev)
 {
+    UNUSED(rev);
+
     init_common_cyclone_typhoon();
     reg_set(SYS_IMP_APL_HID1, HID1_DIS_LSP_FLUSH_WITH_CONTEXT_SWITCH);
 }
