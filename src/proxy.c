@@ -604,6 +604,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_CPUFREQ_INIT:
             reply->retval = cpufreq_init();
             break;
+        case P_CPUFREQ_PREPARE_BAUD:
+            cpufreq_prepare_1500000_baud();
+            break;
 
         default:
             reply->status = S_BADCMD;
