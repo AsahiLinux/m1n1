@@ -273,12 +273,12 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
 
         case SYSREG_ISS(SYS_ACTLR_EL1):
             if (is_read) {
-                if (cpufeat_actlr_el2)
+                if (cpu_features->actlr_el2)
                     regs[rt] = mrs(SYS_ACTLR_EL12);
                 else
                     regs[rt] = mrs(SYS_IMP_APL_ACTLR_EL12);
             } else {
-                if (cpufeat_actlr_el2)
+                if (cpu_features->actlr_el2)
                     msr(SYS_ACTLR_EL12, regs[rt]);
                 else
                     msr(SYS_IMP_APL_ACTLR_EL12, regs[rt]);
