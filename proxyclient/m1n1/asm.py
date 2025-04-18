@@ -1,61 +1,26 @@
 # SPDX-License-Identifier: MIT
 import os, tempfile, shutil, subprocess, re
 from . import sysreg
+from .toolchain import Toolchain
 
 __all__ = ["AsmException", "ARMAsm"]
-
-uname = os.uname()
-
-if uname.sysname == "Darwin":
-    DEFAULT_ARCH = "aarch64-linux-gnu-"
-    if uname.machine == "arm64":
-        TOOLCHAIN = "/opt/homebrew/opt/llvm/bin/"
-    else:
-        TOOLCHAIN = "/usr/local/opt/llvm/bin/"
-    USE_CLANG = "1"
-elif uname.sysname == "OpenBSD":
-    DEFAULT_ARCH = "aarch64-none-elf-"
-    TOOLCHAIN = "/usr/local/bin/"
-    USE_CLANG = "1"
-else:
-    if uname.machine == "aarch64":
-        DEFAULT_ARCH = ""
-    else:
-        DEFAULT_ARCH = "aarch64-linux-gnu-"
-    USE_CLANG = "0"
-    TOOLCHAIN = ""
-
-use_clang = os.environ.get("USE_CLANG", USE_CLANG).strip() == "1"
-toolchain = os.environ.get("TOOLCHAIN", TOOLCHAIN)
-
-if use_clang:
-    CC = toolchain + "clang --target=%ARCH"
-    LD = toolchain + "ld.lld"
-    OBJCOPY = toolchain + "llvm-objcopy"
-    OBJDUMP = toolchain + "llvm-objdump"
-    NM = toolchain + "llvm-nm"
-else:
-    CC = toolchain + "%ARCHgcc"
-    LD = toolchain + "%ARCHld"
-    OBJCOPY = toolchain + "%ARCHobjcopy"
-    OBJDUMP = toolchain + "%ARCHobjdump"
-    NM = toolchain + "%ARCHnm"
 
 class AsmException(Exception):
     pass
 
 class BaseAsm(object):
     def __init__(self, source, addr = 0):
+        self.toolchain = Toolchain()
         self.source = source
         self._tmp = tempfile.mkdtemp() + os.sep
         self.addr = addr
         self.compile(source)
 
     def _call(self, program, args):
-        subprocess.check_call(program.replace("%ARCH", self.ARCH) + " " + args, shell=True)
+        subprocess.check_call(program + " " + args, shell=True)
 
     def _get(self, program, args):
-        return subprocess.check_output(program.replace("%ARCH", self.ARCH) + " " + args, shell=True).decode("ascii")
+        return subprocess.check_output(program + " " + args, shell=True).decode("ascii")
 
     def compile(self, source):
         for name, enc in sysreg.sysreg_fwd.items():
@@ -72,10 +37,10 @@ class BaseAsm(object):
         self.bfile = self._tmp + "b.b"
         self.nfile = self._tmp + "b.n"
 
-        self._call(CC, f"{self.CFLAGS} -c -o {self.ofile} {self.sfile}")
-        self._call(LD, f"{self.LDFLAGS} --Ttext={self.addr:#x} -o {self.elffile} {self.ofile}")
-        self._call(OBJCOPY, f"-j.text -O binary {self.elffile} {self.bfile}")
-        self._call(NM, f"{self.elffile} > {self.nfile}")
+        self._call(self.toolchain.CC, f"-c -o {self.ofile} {self.sfile}")
+        self._call(self.toolchain.LD, f"--Ttext={self.addr:#x} -o {self.elffile} {self.ofile}")
+        self._call(self.toolchain.OBJCOPY, f"-j.text -O binary {self.elffile} {self.bfile}")
+        self._call(self.toolchain.NM, f"{self.elffile} > {self.nfile}")
 
         with open(self.bfile, "rb") as fd:
             self.data = fd.read()
@@ -91,10 +56,10 @@ class BaseAsm(object):
         self.end = self.start + self.len
 
     def objdump(self):
-        self._call(OBJDUMP, f"-rd {self.elffile}")
+        self._call(self.toolchain.OBJDUMP, f"-rd {self.elffile}")
 
     def disassemble(self):
-        output = self._get(OBJDUMP, f"-zd {self.elffile}")
+        output = self._get(self.toolchain.OBJDUMP, f"-zd {self.elffile}")
 
         for line in output.split("\n"):
             if not line or line.startswith("/"):
@@ -110,12 +75,6 @@ class BaseAsm(object):
             self._tmp = None
 
 class ARMAsm(BaseAsm):
-    ARCH = os.path.join(os.environ.get("ARCH", DEFAULT_ARCH))
-    CFLAGS = "-pipe -Wall -march=armv8.4-a"
-    if use_clang:
-        LDFLAGS = "-maarch64elf"
-    else:
-        LDFLAGS = "-maarch64linux"
     HEADER = """
     .text
     .globl _start

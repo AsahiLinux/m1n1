@@ -5,13 +5,14 @@ import subprocess
 import tempfile
 import bisect
 
-from .asm import NM, LD, OBJCOPY, ARMAsm
+from .toolchain import Toolchain
 
 __all__ = ["LinkedProgram"]
 
+_toolchain = Toolchain()
 
 def tool_output_lines(progname, *args):
-    with subprocess.Popen([progname.replace("%ARCH", ARMAsm.ARCH)] + list(args),
+    with subprocess.Popen([progname] + list(args),
             stdout=subprocess.PIPE) as proc:
         for line in proc.stdout:
             yield line.decode("ascii")
@@ -20,7 +21,7 @@ def tool_output_lines(progname, *args):
             raise Exception(f"{progname} (args: {args}) exited with status {proc.returncode}")
 
 def run_tool(progname, *args, silent=False):
-    subprocess.check_call([progname.replace("%ARCH", ARMAsm.ARCH)] + list(args),
+    subprocess.check_call([progname] + list(args),
                         stdout=subprocess.DEVNULL if silent else None)
 
 
@@ -50,7 +51,7 @@ class LinkedProgram:
 
         tmp = os.path.join(tempfile.mkdtemp(), "bin")
         path = os.path.join(self.SOURCE_ROOT, self.base_object)
-        run_tool(OBJCOPY, "-O", "binary", path, tmp, "--only-section=.rela.dyn")
+        run_tool(_toolchain.OBJCOPY, "-O", "binary", path, tmp, "--only-section=.rela.dyn")
         rela_objfile = open(tmp, "rb").read()
 
         if rela_objfile[:len(rela_target)] != rela_target:
@@ -65,7 +66,7 @@ class LinkedProgram:
         path = pathlib.Path(self.SOURCE_ROOT, relpath)
         symaddrs = dict()
 
-        for line in tool_output_lines(NM, "-g", path):
+        for line in tool_output_lines(_toolchain.NM, "-g", path):
             addr_str, t, name = line.split()
             addr = int(addr_str, 16) + offset
             if t in ignore:
@@ -99,8 +100,8 @@ class LinkedProgram:
             f.write("}\n")
             for sym in self.symbols:
                 f.write(f"{sym[1]} = 0x{sym[0]:x};\n")
-        run_tool(LD, "-EL", "-maarch64elf", "-T", ld_script, "-o", elffile, objfile)
-        run_tool(OBJCOPY, "-O", "binary", elffile, binfile)
+        run_tool(_toolchain.LD, "-EL", "-maarch64elf", "-T", ld_script, "-o", elffile, objfile)
+        run_tool(_toolchain.OBJCOPY, "-O", "binary", elffile, binfile)
         #run_tool("objdump", "-d", elffile)
         self._load_elf_symbols(elffile, ignore="A")
         with open(binfile, "rb") as f:
