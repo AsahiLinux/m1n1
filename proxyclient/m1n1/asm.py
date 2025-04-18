@@ -27,10 +27,11 @@ else:
 
 use_clang = os.environ.get("USE_CLANG", USE_CLANG).strip() == "1"
 toolchain = os.environ.get("TOOLCHAIN", TOOLCHAIN)
+llddir = os.environ.get("LLDDIR", toolchain)
 
 if use_clang:
     CC = toolchain + "clang --target=%ARCH"
-    LD = toolchain + "ld.lld"
+    LD = llddir + "ld.lld"
     OBJCOPY = toolchain + "llvm-objcopy"
     OBJDUMP = toolchain + "llvm-objdump"
     NM = toolchain + "llvm-nm"
