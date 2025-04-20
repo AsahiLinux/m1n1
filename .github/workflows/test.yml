@@ -1,0 +1,66 @@
+name: test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Pytest (${{ matrix.os }} + ${{ matrix.compiler }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: gcc
+          - os: ubuntu-latest
+            compiler: llvm
+          - os: macos-13
+            compiler: llvm-brew
+          - os: macos-14
+            compiler: llvm-brew
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Install arm64 GCC cross-compiler
+        if: matrix.compiler == 'gcc'
+        run: |
+          sudo apt-get update
+          sudo apt install gcc-aarch64-linux-gnu
+
+      - name: Install Clang
+        if: matrix.compiler == 'llvm'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm lld
+
+      - name: Install Clang on macOS w/ brew
+        if: matrix.compiler == 'llvm-brew'
+        run: |
+          brew install llvm lld
+
+      - name: Run pytest with clang
+        if: matrix.os == 'ubuntu-latest' && matrix.compiler == 'llvm'
+        env:
+          USE_CLANG: '1'
+        run: PATH="$(llvm-config --prefix)/bin:$PATH" pytest
+
+      - name: Run pytest without clang
+        if: matrix.compiler != 'llvm'
+        run: pytest
