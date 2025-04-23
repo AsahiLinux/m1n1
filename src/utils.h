@@ -479,6 +479,7 @@ extern u32 board_id, chip_id;
 extern bool is_mac;
 extern bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
 extern bool cpufeat_global_sleep, cpufeat_workaround_cyclone_cache;
+extern bool has_pan;
 
 extern struct vector_args next_stage;
 extern u64 boot_flags, mem_size_actual;
@@ -489,7 +490,6 @@ void deep_wfi(void);
 bool is_heap(void *addr);
 bool supports_arch_retention(void);
 bool supports_gxf(void);
-bool supports_pan(void);
 u64 top_of_memory_alloc(size_t size);
 
 #endif

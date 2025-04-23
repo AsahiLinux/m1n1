@@ -197,11 +197,6 @@ bool supports_gxf(void)
     return mrs(AIDR_EL1) & AIDR_EL1_GXF;
 }
 
-bool supports_pan(void)
-{
-    return (mrs(ID_AA64MMFR1_EL1) >> 20) & 0xf;
-}
-
 // TODO: update mapping?
 u64 top_of_memory_alloc(size_t size)
 {

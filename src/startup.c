@@ -14,6 +14,7 @@
 u64 boot_args_addr;
 struct boot_args cur_boot_args;
 void *adt;
+bool has_pan;
 
 struct rela_entry {
     uint64_t off, type, addend;
@@ -49,7 +50,8 @@ void apply_rela(uint64_t base, struct rela_entry *rela_start, struct rela_entry 
 extern uint32_t _v_sp0_sync[], _v_sp0_irq[], _v_sp0_fiq[], _v_sp0_serr[];
 void pan_fixup(void)
 {
-    if (supports_pan())
+    has_pan = ((mrs(ID_AA64MMFR1_EL1) >> 20) & 0xf) != 0;
+    if (has_pan)
         return;
 
     /* Patch msr pan, #0 to nop */

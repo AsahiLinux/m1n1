@@ -542,7 +542,7 @@ void mmu_init(void)
         mmu_init_sprr();
 
     // Enable EL0 memory access by EL1
-    if (supports_pan())
+    if (has_pan)
         msr(PAN, 0);
 
     // RES1 bits
@@ -562,7 +562,7 @@ static void mmu_secondary_setup(void)
         mmu_init_sprr();
 
     // Enable EL0 memory access by EL1
-    if (supports_pan())
+    if (has_pan)
         msr(PAN, 0);
 
     // RES1 bits
