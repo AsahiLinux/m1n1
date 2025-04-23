@@ -165,7 +165,6 @@ void _start_c(void *boot_args, void *base)
     UNUSED(base);
     u32 cpu_id = 0;
 
-    memset64(_bss_start, 0, _bss_end - _bss_start);
     boot_args_addr = (u64)boot_args;
     memcpy(&cur_boot_args, boot_args, sizeof(cur_boot_args));
 

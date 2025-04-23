@@ -81,6 +81,18 @@ _start:
     mov w0, 'n'
     bl debug_putc
 
+    adrp x1, _bss_start
+    add x1, x1, :lo12:_bss_start
+    adrp x2, _bss_end
+    add x2, x2, :lo12:_bss_end
+    cmp x2, x1
+    beq 1f
+1:
+    str xzr, [x1], #8
+    cmp x1, x2
+    b.lo 1b
+2:
+
     adrp x0, _base
     mov x20, x0
     adrp x1, _rela_start
@@ -95,6 +107,7 @@ _start:
     bl debug_putc
     mov w0, '\n'
     bl debug_putc
+
     bl pan_fixup
 
     mrs x8, CurrentEL
