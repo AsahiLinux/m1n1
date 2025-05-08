@@ -41,7 +41,7 @@ $ docker-compose run m1n1 make
 
 ## Usage
 
-Our [wiki](https://github.com/AsahiLinux/docs/wiki/m1n1%3AUser-Guide) has more information on how to
+Our [wiki](https://asahilinux.org/docs/sw/m1n1-user-guide/) has more information on how to
 use m1n1.
 
 To install on an OS container based on macOS <12.1, use `m1n1.macho`:
