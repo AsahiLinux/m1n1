@@ -554,6 +554,13 @@ def bootstrap_port(iface, proxy):
         do_baud = False
 
     if do_baud:
+        # adjust cpufreq for 1500000 as neccessary
+        try:
+            proxy.cpufreq_prepare_1500000_baud()
+        except ProxyCommandError:
+            # Old m1n1 version, those devices don't need cpufreq adjustment anyways
+            pass
+
         try:
             iface.nop()
             proxy.set_baud(1500000)
