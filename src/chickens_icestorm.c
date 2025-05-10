@@ -18,8 +18,10 @@ static void init_common_icestorm(void)
     reg_clr(SYS_IMP_APL_EHID20, EHID20_TRAP_SMC);
 }
 
-void init_m1_icestorm(void)
+void init_m1_icestorm(int rev)
 {
+    UNUSED(rev);
+
     init_common_icestorm();
 
     reg_set(SYS_IMP_APL_EHID20, EHID20_FORCE_NONSPEC_IF_OLDEST_REDIR_VALID_AND_OLDER |

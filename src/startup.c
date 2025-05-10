@@ -199,8 +199,8 @@ void _start_c(void *boot_args, void *base)
     get_device_info();
 
     printf("CPU init (MIDR: 0x%lx smp_id:0x%x)...\n", mrs(MIDR_EL1), smp_id());
-    const char *type = init_cpu();
-    printf("  CPU: %s\n\n", type);
+    init_cpu();
+    printf("\n");
 
     printf("boot_args at %p\n", boot_args);
 
@@ -221,8 +221,7 @@ void _cpu_reset_c(void *stack)
 
     printf("\n  Stack base: %p\n", stack);
     printf("  MPIDR: 0x%lx\n", mrs(MPIDR_EL1));
-    const char *type = init_cpu();
-    printf("  CPU: %s\n", type);
+    init_cpu();
     printf("  Running in EL%lu\n\n", mrs(CurrentEL) >> 2);
 
     exception_initialize();
