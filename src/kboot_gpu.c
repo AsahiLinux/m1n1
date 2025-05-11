@@ -4,6 +4,7 @@
 #include "adt.h"
 #include "assert.h"
 #include "firmware.h"
+#include "malloc.h"
 #include "math.h"
 #include "pmgr.h"
 #include "soc.h"
@@ -36,6 +37,29 @@ struct aux_perf_states {
     u64 count;
     struct aux_perf_state states[];
 };
+
+int32_t rust_gpu_initdata_size(uint32_t compat_maj, uint32_t compat_min, size_t *data_a,
+                               size_t *data_b, size_t *globals);
+
+struct initdata_inputs {
+    size_t perf_state_table_count;
+    size_t perf_state_count;
+    const struct perf_state *c_perf_states;
+    uint32_t *max_pwr;
+    float *core_leak;
+    float *sram_leak;
+    float *cs_leak;
+    float *afr_leak;
+    size_t n_perf_states_cs;
+    const struct aux_perf_state *pstates_cs;
+    size_t n_perf_states_afr;
+    const struct aux_perf_state *pstates_afr;
+    uint32_t compat_maj;
+    uint32_t compat_min;
+};
+
+int32_t rust_fill_gpu_initdata(struct initdata_inputs *ins, void *data_a, void *data_b,
+                               void *globals);
 
 static int get_core_counts(u32 *count, u32 nclusters, u32 ncores)
 {
@@ -373,6 +397,26 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
     return 0;
 }
 
+static int dt_set_resvmem(void *dt, const char *path, u64 base, u64 size)
+{
+    int node = fdt_path_offset(dt, path);
+    if (node < 0)
+        bail("FDT: GPU: failed to find %s node\n", path);
+
+    fdt64_t reg[2];
+
+    fdt64_st(&reg[0], base);
+    fdt64_st(&reg[1], size);
+
+    if (fdt_setprop_string(dt, node, "status", "okay"))
+        bail("FDT: GPU: failed to un-disable memory region");
+
+    if (fdt_setprop(dt, node, "reg", reg, sizeof(reg)))
+        bail("FDT: GPU: failed to set reg prop for %s\n", path);
+
+    return 0;
+}
+
 static int dt_set_region(void *dt, int sgx, const char *name, const char *path)
 {
     u64 base, size;
@@ -386,19 +430,7 @@ static int dt_set_region(void *dt, int sgx, const char *name, const char *path)
     if (ADT_GETPROP(adt, sgx, prop, &size) < 0 || !base)
         bail("ADT: GPU: failed to find %s property\n", prop);
 
-    int node = fdt_path_offset(dt, path);
-    if (node < 0)
-        bail("FDT: GPU: failed to find %s node\n", path);
-
-    fdt64_t reg[2];
-
-    fdt64_st(&reg[0], base);
-    fdt64_st(&reg[1], size);
-
-    if (fdt_setprop_inplace(dt, node, "reg", reg, sizeof(reg)))
-        bail("FDT: GPU: failed to set reg prop for %s\n", path);
-
-    return 0;
+    return dt_set_resvmem(dt, path, base, size);
 }
 
 int fdt_set_float_array(void *dt, int node, const char *name, float *val, int count)
@@ -690,6 +722,55 @@ int dt_set_gpu(void *dt)
 
     if (firmware_set_fdt(dt, gpu, "apple,firmware-compat", compat))
         return -1;
+    // Ignoring errors for old dts compat
+    firmware_set_fdt(dt, gpu, "apple,firmware-abi", compat);
 
+    size_t data_a_size, data_b_size, globals_size;
+    if (rust_gpu_initdata_size(compat->num[0], compat->num[1], &data_a_size, &data_b_size,
+                               &globals_size) == -1)
+        return -1;
+
+    void *data_a = (void *)top_of_memory_alloc(ALIGN_UP(data_a_size, SZ_16K));
+    void *data_b = (void *)top_of_memory_alloc(ALIGN_UP(data_b_size, SZ_16K));
+    void *globals = (void *)top_of_memory_alloc(ALIGN_UP(globals_size, SZ_16K));
+    memset(data_a, 0, data_a_size);
+    memset(data_b, 0, data_b_size);
+    memset(globals, 0, globals_size);
+
+    size_t n_perf_states_cs = 0, n_perf_states_afr = 0;
+    const struct aux_perf_state *pstate_cs_raw = NULL, *pstate_afr_raw = NULL;
+
+    if (has_cs_afr) {
+        n_perf_states_cs = perf_states_cs->count;
+        n_perf_states_afr = perf_states_afr->count;
+        pstate_cs_raw = perf_states_cs->states;
+        pstate_afr_raw = perf_states_afr->states;
+    }
+    struct initdata_inputs ins = {
+        .perf_state_table_count = perf_state_table_count,
+        .perf_state_count = perf_state_count,
+        .c_perf_states = perf_states,
+        .max_pwr = max_pwr,
+        .core_leak = core_leak,
+        .sram_leak = sram_leak,
+        .cs_leak = cs_leak,
+        .afr_leak = afr_leak,
+        .n_perf_states_cs = n_perf_states_cs,
+        .pstates_cs = pstate_cs_raw,
+        .n_perf_states_afr = n_perf_states_afr,
+        .pstates_afr = pstate_afr_raw,
+        .compat_maj = compat->num[0],
+        .compat_min = compat->num[1],
+    };
+    if (rust_fill_gpu_initdata(&ins, data_a, data_b, globals) == -1)
+        return -1;
+
+    if (dt_set_resvmem(dt, "/reserved-memory/hw-cal-a", (u64)data_a, ALIGN_UP(data_a_size, SZ_16K)))
+        return 0; // Old dts.
+    if (dt_set_resvmem(dt, "/reserved-memory/hw-cal-b", (u64)data_b, ALIGN_UP(data_b_size, SZ_16K)))
+        return -1;
+    if (dt_set_resvmem(dt, "/reserved-memory/globals", (u64)globals,
+                       ALIGN_UP(globals_size, SZ_16K)))
+        return -1;
     return 0;
 }

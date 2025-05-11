@@ -614,6 +614,14 @@ impl ADTProperty {
 
         Ok(u32::from_ne_bytes(self.value[..4].try_into().unwrap()))
     }
+
+    pub fn u64(&self) -> Result<u64, AdtError> {
+        if self.size != 8 {
+            return Err(AdtError::BadLength);
+        }
+
+        Ok(u64::from_ne_bytes(self.value[..8].try_into().unwrap()))
+    }
 }
 
 extern "C" {
