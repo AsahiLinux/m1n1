@@ -1393,8 +1393,8 @@ static int dt_device_set_reserved_mem_from_dart(int node, dart_dev_t *dart, cons
     return dt_device_set_reserved_mem(node, name, phandle, iova, size);
 }
 
-static int dt_get_or_add_reserved_mem(const char *node_name, const char *compat, bool nomap,
-                                      u64 paddr, size_t size)
+int dt_get_or_add_reserved_mem(const char *node_name, const char *compat, bool nomap, u64 paddr,
+                               size_t size)
 {
     int ret;
     int resv_node = fdt_path_offset(dt, "/reserved-memory");
@@ -1435,7 +1435,7 @@ static int dt_get_or_add_reserved_mem(const char *node_name, const char *compat,
     return node;
 }
 
-static int dt_device_add_mem_region(const char *alias, uint32_t phandle, const char *name)
+int dt_device_add_mem_region(const char *alias, uint32_t phandle, const char *name)
 {
     int ret;
     int dev_node = fdt_path_offset(dt, alias);
@@ -2640,7 +2640,8 @@ int kboot_prepare_dt(void *fdt)
     dt_bufsize = fdt_totalsize(fdt);
     assert(dt_bufsize);
 
-    dt_bufsize += 6 * SZ_16K; // Add 96K of buffer for modifications
+    // Add 96K of buffer for modifications + 192K for GPU init data
+    dt_bufsize += 18 * SZ_16K;
     dt = memalign(DT_ALIGN, dt_bufsize);
 
     if (fdt_open_into(fdt, dt, dt_bufsize) < 0)
