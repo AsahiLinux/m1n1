@@ -12,3 +12,5 @@ __pycache__
 /m1n1-*\.src\.rpm
 /m1n1-*\.tar\.gz
 /rust-fatfs-*\.tar\.gz
+target
+.idea

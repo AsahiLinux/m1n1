@@ -2569,7 +2569,8 @@ int kboot_prepare_dt(void *fdt)
     dt_bufsize = fdt_totalsize(fdt);
     assert(dt_bufsize);
 
-    dt_bufsize += 6 * SZ_16K; // Add 96K of buffer for modifications
+    // Add 96K of buffer for modifications + 192K for GPU init data
+    dt_bufsize += 18 * SZ_16K;
     dt = memalign(DT_ALIGN, dt_bufsize);
 
     if (fdt_open_into(fdt, dt, dt_bufsize) < 0)

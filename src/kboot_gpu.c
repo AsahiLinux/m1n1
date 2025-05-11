@@ -4,6 +4,7 @@
 #include "adt.h"
 #include "assert.h"
 #include "firmware.h"
+#include "malloc.h"
 #include "math.h"
 #include "pmgr.h"
 #include "soc.h"
@@ -36,6 +37,33 @@ struct aux_perf_states {
     u64 count;
     struct aux_perf_state states[];
 };
+
+int32_t rust_gpu_initdata_size(uint32_t compat_maj, uint32_t compat_min, size_t *data_a,
+                               size_t *data_b, size_t *globals);
+
+struct initdata_inputs {
+    size_t perf_state_table_count;
+    size_t perf_state_count;
+    const struct perf_state *c_perf_states;
+    uint32_t *max_pwr;
+    float *core_leak;
+    float *sram_leak;
+    float *cs_leak;
+    float *afr_leak;
+    size_t n_perf_states_cs;
+    const struct aux_perf_state *pstates_cs;
+    size_t n_perf_states_afr;
+    const struct aux_perf_state *pstates_afr;
+    uint32_t base_pstate;
+    uint64_t uat_ttb_base;
+    uint32_t num_cores;
+    uint32_t compat_maj;
+    uint32_t compat_min;
+    uint32_t gpu_rev_id;
+};
+
+int32_t rust_fill_gpu_initdata(struct initdata_inputs *ins, void *data_a, void *data_b,
+                               void *globals);
 
 static int get_core_counts(u32 *count, u32 nclusters, u32 ncores)
 {
@@ -674,5 +702,70 @@ int dt_set_gpu(void *dt)
     if (firmware_set_fdt(dt, gpu, "apple,firmware-compat", compat))
         return -1;
 
+    size_t data_a_size, data_b_size, globals_size;
+    if (rust_gpu_initdata_size(compat->num[0], compat->num[1], &data_a_size, &data_b_size,
+                               &globals_size) == -1)
+        return -1;
+
+    void *data_a = calloc(1, data_a_size);
+    void *data_b = calloc(1, data_b_size);
+    void *globals = calloc(1, globals_size);
+    size_t n_perf_states_cs = 0, n_perf_states_afr = 0;
+    const struct aux_perf_state *pstate_cs_raw = NULL, *pstate_afr_raw = NULL;
+    u64 uat_ttb_base;
+    ADT_GETPROP(adt, sgx, "gpu-region-base", &uat_ttb_base);
+    u64 gpu_base;
+
+    int adt_sgx_path[8];
+    if (adt_path_offset_trace(adt, "/arm-io/sgx", adt_sgx_path) < 0)
+        bail("ADT: GPU: Failed to get sgx\n");
+
+    if (adt_get_reg(adt, adt_sgx_path, "reg", 0, &gpu_base, NULL) < 0)
+        bail("ADT: GPU: Failed to get sgx reg 0\n");
+
+    u32 base_pstate;
+    if (ADT_GETPROP(adt, sgx, "gpu-perf-base-pstate", &base_pstate) < 0)
+        base_pstate = 1;
+
+    u32 id_version = read32(gpu_base + 0xd04000);
+    u32 num_cores = read32(gpu_base + 0xd04010) & 0xff;
+    u32 gpu_rev_id = (id_version >> 8) & 0xff;
+    if (has_cs_afr) {
+        n_perf_states_cs = perf_states_cs->count;
+        n_perf_states_afr = perf_states_afr->count;
+        pstate_cs_raw = perf_states_cs->states;
+        pstate_afr_raw = perf_states_afr->states;
+    }
+    struct initdata_inputs ins = {
+        .perf_state_table_count = perf_state_table_count,
+        .perf_state_count = perf_state_count,
+        .c_perf_states = perf_states,
+        .max_pwr = max_pwr,
+        .core_leak = core_leak,
+        .sram_leak = sram_leak,
+        .cs_leak = cs_leak,
+        .afr_leak = afr_leak,
+        .n_perf_states_cs = n_perf_states_cs,
+        .pstates_cs = pstate_cs_raw,
+        .n_perf_states_afr = n_perf_states_afr,
+        .pstates_afr = pstate_afr_raw,
+        .base_pstate = base_pstate,
+        .uat_ttb_base = uat_ttb_base,
+        .num_cores = num_cores,
+        .compat_maj = compat->num[0],
+        .compat_min = compat->num[1],
+        .gpu_rev_id = gpu_rev_id,
+    };
+    if (rust_fill_gpu_initdata(&ins, data_a, data_b, globals) == -1)
+        return -1;
+    if (fdt_setprop(dt, gpu, "apple,hw-cal-a", data_a, data_a_size))
+        bail("FDT: couldn't set apple,hw-cal-a\n");
+    if (fdt_setprop(dt, gpu, "apple,hw-cal-b", data_b, data_b_size))
+        bail("FDT: couldn't set apple,hw-cal-b\n");
+    if (fdt_setprop(dt, gpu, "apple,hw-cal-globals", globals, globals_size))
+        bail("FDT: couldn't set apple,hw-cal-globals\n");
+    free(data_a);
+    free(data_b);
+    free(globals);
     return 0;
 }
