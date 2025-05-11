@@ -4,6 +4,7 @@
 #include "adt.h"
 #include "assert.h"
 #include "firmware.h"
+#include "malloc.h"
 #include "math.h"
 #include "pmgr.h"
 #include "soc.h"
@@ -36,6 +37,33 @@ struct aux_perf_states {
     u64 count;
     struct aux_perf_state states[];
 };
+
+int32_t rust_gpu_initdata_size(uint32_t compat_maj, uint32_t compat_min, size_t *data_a,
+                               size_t *data_b, size_t *globals);
+
+struct initdata_inputs {
+    size_t perf_state_table_count;
+    size_t perf_state_count;
+    const struct perf_state *c_perf_states;
+    uint32_t *max_pwr;
+    float *core_leak;
+    float *sram_leak;
+    float *cs_leak;
+    float *afr_leak;
+    size_t n_perf_states_cs;
+    const struct aux_perf_state *pstates_cs;
+    size_t n_perf_states_afr;
+    const struct aux_perf_state *pstates_afr;
+    uint32_t base_pstate;
+    uint64_t uat_ttb_base;
+    uint32_t num_cores;
+    uint32_t compat_maj;
+    uint32_t compat_min;
+    uint32_t gpu_rev_id;
+};
+
+int32_t rust_fill_gpu_initdata(struct initdata_inputs *ins, void *data_a, void *data_b,
+                               void *globals);
 
 static int get_core_counts(u32 *count, u32 nclusters, u32 ncores)
 {
@@ -373,6 +401,29 @@ static int calc_power_t600x(u32 count, u32 table_count, const struct perf_state 
     return 0;
 }
 
+static int dt_add_gpu_resv(void *dt, int sgx, const char *adt_name, const char *dt_name)
+{
+    u64 base, size;
+    char prop[64];
+
+    snprintf(prop, sizeof(prop), "%s-base", adt_name);
+    if (ADT_GETPROP(adt, sgx, prop, &base) < 0 || !base)
+        bail("ADT: GPU: failed to find %s property\n", prop);
+
+    snprintf(prop, sizeof(prop), "%s-size", adt_name);
+    if (ADT_GETPROP(adt, sgx, prop, &size) < 0 || !base)
+        bail("ADT: GPU: failed to find %s property\n", prop);
+
+    snprintf(prop, sizeof(prop), "uat-%s", dt_name);
+    int mem_node = dt_get_or_add_reserved_mem(prop, "apple,asc-mem", false, base, size);
+    uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
+    const char *path = fdt_get_alias(dt, "gpu");
+    if (dt_device_add_mem_region(path, mem_phandle, dt_name) < 0)
+        bail("FDT: failed to add %s region", prop);
+
+    return 0;
+}
+
 static int dt_set_region(void *dt, int sgx, const char *name, const char *path)
 {
     u64 base, size;
@@ -639,12 +690,21 @@ int dt_set_gpu(void *dt)
         printf("\n");
     }
 
-    if (dt_set_region(dt, sgx, "gfx-handoff", "/reserved-memory/uat-handoff"))
-        return -1;
-    if (dt_set_region(dt, sgx, "gfx-shared-region", "/reserved-memory/uat-pagetables"))
-        return -1;
-    if (dt_set_region(dt, sgx, "gpu-region", "/reserved-memory/uat-ttbs"))
-        return -1;
+    if (fdt_get_property(dt, gpu, "memory-region", NULL)) {
+        if (dt_set_region(dt, sgx, "gfx-handoff", "/reserved-memory/uat-handoff"))
+            return -1;
+        if (dt_set_region(dt, sgx, "gfx-shared-region", "/reserved-memory/uat-pagetables"))
+            return -1;
+        if (dt_set_region(dt, sgx, "gpu-region", "/reserved-memory/uat-ttbs"))
+            return -1;
+    } else {
+        if (dt_add_gpu_resv(dt, sgx, "gpu-region", "ttbs"))
+            return -1;
+        if (dt_add_gpu_resv(dt, sgx, "gfx-shared-region", "pagetables"))
+            return -1;
+        if (dt_add_gpu_resv(dt, sgx, "gfx-handoff", "handoff"))
+            return -1;
+    }
 
     // refresh gpu dt node offset after modifying the dt in dt_set_region()
     gpu = fdt_path_offset(dt, "gpu");
@@ -673,6 +733,86 @@ int dt_set_gpu(void *dt)
 
     if (firmware_set_fdt(dt, gpu, "apple,firmware-compat", compat))
         return -1;
+
+    size_t data_a_size, data_b_size, globals_size;
+    if (rust_gpu_initdata_size(compat->num[0], compat->num[1], &data_a_size, &data_b_size,
+                               &globals_size) == -1)
+        return -1;
+
+    void *data_a = (void *)top_of_memory_alloc(ALIGN_UP(data_a_size, SZ_16K));
+    void *data_b = (void *)top_of_memory_alloc(ALIGN_UP(data_b_size, SZ_16K));
+    void *globals = (void *)top_of_memory_alloc(ALIGN_UP(globals_size, SZ_16K));
+    memset(data_a, 0, data_a_size);
+    memset(data_b, 0, data_b_size);
+    memset(globals, 0, globals_size);
+
+    size_t n_perf_states_cs = 0, n_perf_states_afr = 0;
+    const struct aux_perf_state *pstate_cs_raw = NULL, *pstate_afr_raw = NULL;
+    u64 uat_ttb_base;
+    ADT_GETPROP(adt, sgx, "gpu-region-base", &uat_ttb_base);
+    u64 gpu_base;
+
+    int adt_sgx_path[8];
+    if (adt_path_offset_trace(adt, "/arm-io/sgx", adt_sgx_path) < 0)
+        bail("ADT: GPU: Failed to get sgx\n");
+
+    if (adt_get_reg(adt, adt_sgx_path, "reg", 0, &gpu_base, NULL) < 0)
+        bail("ADT: GPU: Failed to get sgx reg 0\n");
+
+    u32 base_pstate;
+    if (ADT_GETPROP(adt, sgx, "gpu-perf-base-pstate", &base_pstate) < 0)
+        base_pstate = 1;
+
+    u32 id_version = read32(gpu_base + 0xd04000);
+    u32 num_cores = read32(gpu_base + 0xd04010) & 0xff;
+    u32 gpu_rev_id = (id_version >> 8) & 0xff;
+    if (has_cs_afr) {
+        n_perf_states_cs = perf_states_cs->count;
+        n_perf_states_afr = perf_states_afr->count;
+        pstate_cs_raw = perf_states_cs->states;
+        pstate_afr_raw = perf_states_afr->states;
+    }
+    struct initdata_inputs ins = {
+        .perf_state_table_count = perf_state_table_count,
+        .perf_state_count = perf_state_count,
+        .c_perf_states = perf_states,
+        .max_pwr = max_pwr,
+        .core_leak = core_leak,
+        .sram_leak = sram_leak,
+        .cs_leak = cs_leak,
+        .afr_leak = afr_leak,
+        .n_perf_states_cs = n_perf_states_cs,
+        .pstates_cs = pstate_cs_raw,
+        .n_perf_states_afr = n_perf_states_afr,
+        .pstates_afr = pstate_afr_raw,
+        .base_pstate = base_pstate,
+        .uat_ttb_base = uat_ttb_base,
+        .num_cores = num_cores,
+        .compat_maj = compat->num[0],
+        .compat_min = compat->num[1],
+        .gpu_rev_id = gpu_rev_id,
+    };
+    if (rust_fill_gpu_initdata(&ins, data_a, data_b, globals) == -1)
+        return -1;
+
+    const char *path = fdt_get_alias(dt, "gpu");
+    int mem_node = dt_get_or_add_reserved_mem("gpu-cal-a", "apple,asc-mem", false, (u64)data_a,
+                                              ALIGN_UP(data_a_size, SZ_16K));
+    uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
+    if (dt_device_add_mem_region(path, mem_phandle, "hw-cal-a") < 0)
+        bail("FDT: failed to add hw-cal-a region");
+
+    mem_node = dt_get_or_add_reserved_mem("gpu-cal-b", "apple,asc-mem", false, (u64)data_b,
+                                          ALIGN_UP(data_b_size, SZ_16K));
+    mem_phandle = fdt_get_phandle(dt, mem_node);
+    if (dt_device_add_mem_region(path, mem_phandle, "hw-cal-b") < 0)
+        bail("FDT: failed to add hw-cal-b region");
+
+    mem_node = dt_get_or_add_reserved_mem("gpu-globals", "apple,asc-mem", false, (u64)globals,
+                                          ALIGN_UP(globals_size, SZ_16K));
+    mem_phandle = fdt_get_phandle(dt, mem_node);
+    if (dt_device_add_mem_region(path, mem_phandle, "globals") < 0)
+        bail("FDT: failed to add globals region");
 
     return 0;
 }
