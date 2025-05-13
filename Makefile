@@ -67,10 +67,8 @@ endif
 # Required for no_std + alloc for now
 export RUSTC_BOOTSTRAP=1
 RUST_LIB := librust.a
-RUST_LIBS :=
 ifeq ($(CHAINLOADING),1)
 CFG += CHAINLOADING
-RUST_LIBS += $(RUST_LIB)
 endif
 
 LDFLAGS := -EL -maarch64elf --no-undefined -X -Bsymbolic \
@@ -162,7 +160,7 @@ OBJECTS := \
 	vsprintf.o \
 	wdt.o \
 	$(DCP_OBJECTS) \
-	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS) $(RUST_LIBS)
+	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS) $(RUST_LIB)
 
 FP_OBJECTS := \
 	kboot_gpu.o \
