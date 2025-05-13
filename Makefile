@@ -64,11 +64,25 @@ ifeq ($(RELEASE),1)
 CFG += RELEASE
 endif
 
-# Required for no_std + alloc for now
-export RUSTC_BOOTSTRAP=1
-RUST_LIB := librust.a
+WANT_RUST := 0
 ifeq ($(CHAINLOADING),1)
 CFG += CHAINLOADING
+WANT_RUST := 1
+endif
+ifneq ($(NO_GPU_INIT),1)
+WANT_RUST := 1
+GPU_OBJECTS := kboot_gpu.o
+CFG += DO_GPU_INIT
+else
+GPU_OBJECTS :=
+endif
+
+# Required for no_std + alloc for now
+export RUSTC_BOOTSTRAP=1
+ifeq ($(WANT_RUST),1)
+RUST_LIB := librust.a
+else
+RUST_LIB :=
 endif
 
 ifeq ($(BUILDSTD),1)
@@ -169,7 +183,7 @@ OBJECTS := \
 	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS) $(RUST_LIB)
 
 FP_OBJECTS := \
-	kboot_gpu.o \
+	$(GPU_OBJECTS) \
 	math/expf.o \
 	math/exp2f_data.o \
 	math/powf.o \
