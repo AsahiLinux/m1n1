@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "../build/build_cfg.h"
+
 #include <stdint.h>
 
 #include "kboot.h"
@@ -47,7 +49,33 @@ static char *chosen_params[MAX_CHOSEN_PARAMS][2];
 
 extern const char *const m1n1_version;
 
+#ifdef DO_GPU_INIT
 int dt_set_gpu(void *dt);
+#else
+static int dt_set_gpu(void *dt)
+{
+    int gpu, node;
+
+    gpu = fdt_path_offset(dt, "gpu");
+    if (gpu >= 0)
+        fdt_setprop_string(dt, gpu, "status", "disabled");
+
+    node = fdt_path_offset(dt, "/reserved-memory/uat-handoff");
+    if (node >= 0)
+        fdt_setprop_string(dt, node, "status", "disabled");
+
+    node = fdt_path_offset(dt, "/reserved-memory/uat-pagetables");
+    if (node >= 0)
+        fdt_setprop_string(dt, node, "status", "disabled");
+
+    node = fdt_path_offset(dt, "/reserved-memory/uat-ttbs");
+    if (node >= 0)
+        fdt_setprop_string(dt, node, "status", "disabled");
+
+    printf("m1n1 was built without rust support, GPU will not be initialized\n");
+    return 0;
+}
+#endif
 
 #define DT_ALIGN 16384
 
@@ -2569,7 +2597,8 @@ int kboot_prepare_dt(void *fdt)
     dt_bufsize = fdt_totalsize(fdt);
     assert(dt_bufsize);
 
-    dt_bufsize += 6 * SZ_16K; // Add 96K of buffer for modifications
+    // Add 96K of buffer for modifications + 192K for GPU init data
+    dt_bufsize += 18 * SZ_16K;
     dt = memalign(DT_ALIGN, dt_bufsize);
 
     if (fdt_open_into(fdt, dt, dt_bufsize) < 0)
