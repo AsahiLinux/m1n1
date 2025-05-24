@@ -8,6 +8,15 @@ static void init_common_sawtooth(void)
     reg_set(SYS_IMP_APL_EHID0, EHID0_BLI_UNK32);
 }
 
+void init_t8122_sawtooth(void)
+{
+    reg_clr(SYS_IMP_APL_EHID9, EHID9_DEV_2_THROTTLE_ENABLE);
+    reg_clr(SYS_IMP_APL_EHID9, BIT(53));
+    reg_mask(SYS_IMP_APL_EHID9, EHID9_DEV_2_THROTTLE_LIMIT_MASK, EHID9_DEV_2_THROTTLE_LIMIT(8));
+    reg_set(SYS_IMP_APL_EHID10, BIT(47));
+    reg_set(SYS_IMP_APL_EHID7, BIT(6));
+}
+
 void init_t6030_sawtooth(int rev)
 {
     UNUSED(rev);
