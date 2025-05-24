@@ -26,6 +26,8 @@ void init_t6020_blizzard(int rev);
 void init_t6020_avalanche(int rev);
 void init_t6021_blizzard(int rev);
 void init_t6021_avalanche(int rev);
+void init_t8122_sawtooth(int rev);
+void init_t8122_everest(int rev);
 void init_t6030_sawtooth(int rev);
 void init_t6030_everest(int rev);
 void init_t6031_sawtooth(int rev);
@@ -147,6 +149,8 @@ const struct midr_part_info midr_parts[] = {
     {MIDR_PART_T6030_SAWTOOTH, "M3 Pro Sawtooth", init_t6030_sawtooth, &features_m3},
     {MIDR_PART_T6031_EVEREST, "M3 Max Everest", init_t6031_everest, &features_m3},
     {MIDR_PART_T6031_SAWTOOTH, "M3 Max Sawtooth", init_t6031_sawtooth, &features_m3},
+    {MIDR_PART_T8122_EVEREST, "M3 Everest", init_t8122_everest, &features_m3},
+    {MIDR_PART_T8122_SAWTOOTH, "M3 Sawtooth", init_t8122_sawtooth, &features_m3},
     {MIDR_PART_T8132_DONAN_ECORE, "M4 Donan (E core)", NULL, &features_m4},
     {MIDR_PART_T8132_DONAN_PCORE, "M4 Donan (P core)", NULL, &features_m4},
 };
