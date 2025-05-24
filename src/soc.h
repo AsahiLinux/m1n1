@@ -28,6 +28,7 @@
 #define T6022 0x6022
 #define T6030 0x6030
 #define T6031 0x6031
+#define T6032 0x6032
 #define T6034 0x6034
 
 #ifdef TARGET
@@ -35,6 +36,8 @@
 // Mx SoCs
 #if TARGET == T8103 || TARGET == T8112
 #define EARLY_UART_BASE 0x235200000
+#elif TARGET == T8122
+#define EARLY_UART_BASE 0x2a1200000
 #elif TARGET == T8132
 #define EARLY_UART_BASE 0x3ad200000
 // Mx Pro/Max/Ultra SoCs
@@ -43,7 +46,7 @@
 #define EARLY_UART_BASE 0x39b200000
 #elif TARGET == T6030
 #define EARLY_UART_BASE 0x289200000
-#elif TARGET == T6034 || TARGET == T6031
+#elif TARGET == T6034 || TARGET == T6031 || TARGET == T6032
 #define EARLY_UART_BASE 0x391200000
 // earlier SoCs
 #elif TARGET == T8015
