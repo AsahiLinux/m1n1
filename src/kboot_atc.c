@@ -11,6 +11,30 @@
 
 #define MAX_ATC_DEVS 8
 
+#define CIO3PLL_DCO_NCTRL            0x2a38
+#define CIO3PLL_DCO_COARSEBIN_EFUSE0 GENMASK(6, 0)
+#define CIO3PLL_DCO_COARSEBIN_EFUSE1 GENMASK(23, 17)
+
+#define CIO3PLL_FRACN_CAN             0x2aa4
+#define CIO3PLL_DLL_CAL_START_CAPCODE GENMASK(18, 17)
+
+#define CIO3PLL_DTC_VREG        0x2a20
+#define CIO3PLL_DTC_VREG_ADJUST GENMASK(16, 14)
+
+#define AUS_COMMON_SHIM_BLK_VREG 0x0a04
+#define AUS_VREG_TRIM            GENMASK(6, 2)
+
+#define AUSPLL_DCO_EFUSE_SPARE         0x222c
+#define AUSPLL_RODCO_ENCAP_EFUSE       GENMASK(10, 9)
+#define AUSPLL_RODCO_BIAS_ADJUST_EFUSE GENMASK(14, 12)
+
+#define AUSPLL_FRACN_CAN         0x22a4
+#define AUSPLL_DLL_START_CAPCODE GENMASK(18, 17)
+
+#define AUSPLL_CLKOUT_DTC_VREG 0x2220
+#define AUSPLL_DTC_VREG_ADJUST GENMASK(16, 14)
+#define AUSPLL_DTC_VREG_BYPASS BIT(7)
+
 struct atc_tunable {
     u32 offset : 24;
     u32 size : 8;
@@ -25,6 +49,21 @@ struct adt_tunable_info {
     size_t reg_offset;
     size_t reg_size;
     bool required;
+};
+
+struct atc_fuse_info {
+    u64 fuse_addr;
+    u8 fuse_bit;
+    u8 fuse_len;
+    u32 reg_offset;
+    u32 reg_mask;
+};
+
+struct atc_fuse_hw {
+    const char *compatible;
+    s32 port; /* -1 for don't care */
+    const struct atc_fuse_info *fuses;
+    size_t n_fuses;
 };
 
 static const struct adt_tunable_info atc_tunables[] = {
@@ -59,6 +98,110 @@ static const struct adt_tunable_info atc_tunables[] = {
     {"tunable_CIO_LN1_AUSPMA_RX_SHM", "apple,tunable-lane1-cio", 0x12000, 0x1000, true},
     {"tunable_CIO_LN1_AUSPMA_RX_EQ", "apple,tunable-lane1-cio", 0x11000, 0x1000, true},
 };
+
+static const struct atc_fuse_info atc_fuses_t8103_port0[] = {
+    {0x23d2bc434, 9, 6, CIO3PLL_DCO_NCTRL, CIO3PLL_DCO_COARSEBIN_EFUSE0},
+    {0x23d2bc434, 15, 6, CIO3PLL_DCO_NCTRL, CIO3PLL_DCO_COARSEBIN_EFUSE1},
+    {0x23d2bc434, 21, 2, CIO3PLL_FRACN_CAN, CIO3PLL_DLL_CAL_START_CAPCODE},
+    {0x23d2bc434, 23, 3, CIO3PLL_DTC_VREG, CIO3PLL_DTC_VREG_ADJUST},
+    {0x23d2bc434, 4, 5, AUS_COMMON_SHIM_BLK_VREG, AUS_VREG_TRIM},
+    {0x23d2bc430, 29, 2, AUSPLL_DCO_EFUSE_SPARE, AUSPLL_RODCO_ENCAP_EFUSE},
+    {0x23d2bc430, 26, 3, AUSPLL_DCO_EFUSE_SPARE, AUSPLL_RODCO_BIAS_ADJUST_EFUSE},
+    {0x23d2bc434, 2, 2, AUSPLL_FRACN_CAN, AUSPLL_DLL_START_CAPCODE},
+    {0x23d2bc430, 31, 3, AUSPLL_CLKOUT_DTC_VREG, AUSPLL_DTC_VREG_ADJUST},
+    {0x23d2bc434, 4, 5, AUS_COMMON_SHIM_BLK_VREG, AUS_VREG_TRIM},
+};
+
+static const struct atc_fuse_info atc_fuses_t8103_port1[] = {
+    {0x23d2bc438, 19, 6, CIO3PLL_DCO_NCTRL, CIO3PLL_DCO_COARSEBIN_EFUSE0},
+    {0x23d2bc438, 25, 6, CIO3PLL_DCO_NCTRL, CIO3PLL_DCO_COARSEBIN_EFUSE1},
+    {0x23d2bc438, 31, 1, CIO3PLL_FRACN_CAN, CIO3PLL_DLL_CAL_START_CAPCODE},
+    /* next three rows are some kind of workaround for port 1 */
+    {0x23d2bc438, 14, 5, AUS_COMMON_SHIM_BLK_VREG, AUS_VREG_TRIM},
+    {0x23d2bc43c, 0, 1, CIO3PLL_FRACN_CAN, CIO3PLL_DLL_CAL_START_CAPCODE},
+    {0x23d2bc43c, 1, 3, CIO3PLL_DTC_VREG, CIO3PLL_DTC_VREG_ADJUST},
+    {0x23d2bc438, 7, 2, AUSPLL_DCO_EFUSE_SPARE, AUSPLL_RODCO_ENCAP_EFUSE},
+    {0x23d2bc438, 4, 3, AUSPLL_DCO_EFUSE_SPARE, AUSPLL_RODCO_BIAS_ADJUST_EFUSE},
+    {0x23d2bc438, 12, 2, AUSPLL_FRACN_CAN, AUSPLL_DLL_START_CAPCODE},
+    {0x23d2bc438, 9, 3, AUSPLL_CLKOUT_DTC_VREG, AUSPLL_DTC_VREG_ADJUST},
+    {0x23d2bc438, 14, 4, AUS_COMMON_SHIM_BLK_VREG, AUS_VREG_TRIM},
+};
+
+static const struct atc_fuse_hw atc_fuses[] = {
+    {"atc-phy,t8103", 0, atc_fuses_t8103_port0, ARRAY_SIZE(atc_fuses_t8103_port0)},
+    {"atc-phy,t8103", 1, atc_fuses_t8103_port1, ARRAY_SIZE(atc_fuses_t8103_port1)},
+    {"atc-phy,t6020", -1, NULL, 0},
+};
+
+static u32 read_fuse(const struct atc_fuse_info *fuse)
+{
+    union {
+        u64 dword;
+        u32 words[2];
+    } fuse_data;
+
+    if (fuse->fuse_bit + fuse->fuse_len > 64) {
+        printf("kboot: ATC fuse 0x%lx:%d:%d out of range\n", fuse->fuse_addr, fuse->fuse_bit,
+               fuse->fuse_len);
+        return 0;
+    }
+
+    /* Any other read triggers SErrors */
+    fuse_data.words[0] = read32(fuse->fuse_addr);
+    fuse_data.words[1] = read32(fuse->fuse_addr + 4);
+
+    /*
+     * Assuming we read 01 23 45 67 89 ab cd ef above and have bit_offset 12
+     * and len 4 we want to end up with 0x2. When treating the data as u64
+     * this is 0xefcdab8967452301 such that we can simply shift it by 12 bits
+     * to get 0x000efcdab8967452 and then AND it with 0xf to
+     * finally get 0x2 which is the value we want.
+     */
+    fuse_data.dword >>= fuse->fuse_bit;
+    fuse_data.dword &= (1ULL << fuse->fuse_len) - 1;
+    return FIELD_PREP(fuse->reg_mask, fuse_data.dword);
+}
+
+static int dt_append_atc_fuses_helper(void *dt, int fdt_node, const struct atc_fuse_info *fuses,
+                                      size_t n_fuses)
+{
+    for (size_t i = 0; i < n_fuses; ++i) {
+        if (fdt_appendprop_u32(dt, fdt_node, "apple,tunable-fuses", fuses[i].reg_offset) < 0)
+            return -1;
+        if (fdt_appendprop_u32(dt, fdt_node, "apple,tunable-fuses", fuses[i].reg_mask) < 0)
+            return -1;
+        if (fdt_appendprop_u32(dt, fdt_node, "apple,tunable-fuses", read_fuse(&fuses[i])) < 0)
+            return -1;
+    }
+
+    return 0;
+}
+
+static int dt_append_fuses(void *dt, int adt_node, int fdt_node, int port)
+{
+    for (size_t i = 0; i < ARRAY_SIZE(atc_fuses); ++i) {
+        if (!adt_is_compatible(adt, adt_node, atc_fuses[i].compatible))
+            continue;
+        if (atc_fuses[i].port >= 0 && port != atc_fuses[i].port)
+            continue;
+
+        /*
+         * Starting with t6020 fuses are no longer required. Create an empty
+         * property to indicate to the driver that no fuses are intentional.
+         */
+        if (!atc_fuses[i].fuses)
+            return fdt_setprop(dt, fdt_node, "apple,tunable-fuses", NULL, 0);
+
+        return dt_append_atc_fuses_helper(dt, fdt_node, atc_fuses[i].fuses, atc_fuses[i].n_fuses);
+    }
+
+    /*
+     * don't fail here until we have added all devices to retain backwards
+     * compatibility with the previous atcphy version
+     */
+    printf("kboot: no fuses found for atcphy port %d\n", port);
+    return 0;
+}
 
 static int dt_append_atc_tunable(void *dt, int adt_node, int fdt_node,
                                  const struct adt_tunable_info *tunable_info)
@@ -112,7 +255,7 @@ static int dt_append_atc_tunable(void *dt, int adt_node, int fdt_node,
     return 0;
 }
 
-static void dt_copy_atc_tunables(void *dt, const char *adt_path, const char *dt_alias)
+static void dt_copy_atc_tunables(void *dt, const char *adt_path, const char *dt_alias, int port)
 {
     int ret;
 
@@ -132,6 +275,13 @@ static void dt_copy_atc_tunables(void *dt, const char *adt_path, const char *dt_
         return;
     }
 
+    ret = dt_append_fuses(dt, adt_node, fdt_node, port);
+    if (ret) {
+        printf("kboot: Unable to copy ATC fuses for %s - USB3/Thunderbolt will not work\n",
+               adt_path);
+        goto cleanup;
+    }
+
     for (size_t i = 0; i < sizeof(atc_tunables) / sizeof(*atc_tunables); ++i) {
         ret = dt_append_atc_tunable(dt, adt_node, fdt_node, &atc_tunables[i]);
         if (ret)
@@ -148,6 +298,7 @@ cleanup:
      */
     for (size_t i = 0; i < sizeof(atc_tunables) / sizeof(*atc_tunables); ++i)
         fdt_delprop(dt, fdt_node, atc_tunables[i].fdt_name);
+    fdt_delprop(dt, fdt_node, "apple,tunable-fuses");
 
     printf("FDT: Unable to setup ATC tunables for %s - USB3/Thunderbolt will not work\n", adt_path);
 }
@@ -164,7 +315,7 @@ int kboot_setup_atc(void *dt)
         memset(fdt_alias, 0, sizeof(adt_path));
         snprintf(fdt_alias, sizeof(fdt_alias), "atcphy%d", i);
 
-        dt_copy_atc_tunables(dt, adt_path, fdt_alias);
+        dt_copy_atc_tunables(dt, adt_path, fdt_alias, i);
     }
 
     return 0;
