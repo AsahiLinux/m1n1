@@ -9,15 +9,14 @@
 struct sart_dev {
     uintptr_t base;
     u32 protected_entries;
+    /* This is probably a bitfield but the exact meaning of each bit is unknown. */
+    u32 flags_allow;
 
     void (*get_entry)(sart_dev_t *sart, int index, u8 *flags, void **paddr, size_t *size);
     bool (*set_entry)(sart_dev_t *sart, int index, u8 flags, void *paddr, size_t size);
 };
 
 #define APPLE_SART_MAX_ENTRIES 16
-
-/* This is probably a bitfield but the exact meaning of each bit is unknown. */
-#define APPLE_SART_FLAGS_ALLOW 0xff
 
 /* SARTv2 registers */
 #define APPLE_SART2_CONFIG(idx)       (0x00 + 4 * (idx))
@@ -29,6 +28,8 @@ struct sart_dev {
 #define APPLE_SART2_PADDR(idx)  (0x40 + 4 * (idx))
 #define APPLE_SART2_PADDR_SHIFT 12
 
+#define APPLE_SART2_FLAGS_ALLOW 0xff
+
 /* SARTv3 registers */
 #define APPLE_SART3_CONFIG(idx) (0x00 + 4 * (idx))
 
@@ -38,6 +39,8 @@ struct sart_dev {
 #define APPLE_SART3_SIZE(idx)  (0x80 + 4 * (idx))
 #define APPLE_SART3_SIZE_SHIFT 12
 #define APPLE_SART3_SIZE_MAX   GENMASK(29, 0)
+
+#define APPLE_SART3_FLAGS_ALLOW 0xff
 
 static void sart2_get_entry(sart_dev_t *sart, int index, u8 *flags, void **paddr, size_t *size)
 {
@@ -133,10 +136,12 @@ sart_dev_t *sart_init(const char *adt_path)
         case 2:
             sart->get_entry = sart2_get_entry;
             sart->set_entry = sart2_set_entry;
+            sart->flags_allow = APPLE_SART2_FLAGS_ALLOW;
             break;
         case 3:
             sart->get_entry = sart3_get_entry;
             sart->set_entry = sart3_set_entry;
+            sart->flags_allow = APPLE_SART3_FLAGS_ALLOW;
             break;
         default:
             printf("sart: SART %s has unknown version %d\n", adt_path, *sart_version);
@@ -185,7 +190,7 @@ bool sart_add_allowed_region(sart_dev_t *sart, void *paddr, size_t sz)
         if (e_flags)
             continue;
 
-        return sart->set_entry(sart, i, APPLE_SART_FLAGS_ALLOW, paddr, sz);
+        return sart->set_entry(sart, i, sart->flags_allow, paddr, sz);
     }
 
     printf("sart: no more free entries\n");
