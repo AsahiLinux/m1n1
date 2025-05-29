@@ -13,15 +13,19 @@ static void init_t8015_common(void)
     reg_set(SYS_IMP_APL_HID8, WKE_FORCE_STRICT_ORDER);
 }
 
-void init_t8015_mistral(void)
+void init_t8015_mistral(int rev)
 {
+    UNUSED(rev);
+
     init_t8015_common();
 
     // "Atomic launch eligibility is erroneously taken away when a store at SMB gets invalidated"
     reg_clr(SYS_IMP_APL_EHID11, EHID11_SMB_DRAIN_THRESH_MASK);
 }
 
-void init_t8015_monsoon(void)
+void init_t8015_monsoon(int rev)
 {
+    UNUSED(rev);
+
     init_t8015_common();
 }
