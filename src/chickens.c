@@ -33,6 +33,7 @@ void init_t6031_everest(int rev);
 
 bool cpufeat_actlr_el2, cpufeat_fast_ipi, cpufeat_mmu_sprr;
 bool cpufeat_global_sleep, cpufeat_workaround_cyclone_cache;
+int cpufeat_uncore_version;
 
 const char *init_cpu(void)
 {
@@ -211,8 +212,13 @@ const char *init_cpu(void)
     if (part >= MIDR_PART_T8030_LIGHTNING)
         msr(SYS_IMP_APL_AMX_CTL_EL1, 0x100);
 
-    if (part >= MIDR_PART_T8015_MONSOON)
+    if (part >= MIDR_PART_T8015_MONSOON) {
+        cpufeat_uncore_version = 1;
         cpufeat_fast_ipi = true;
+    }
+
+    if (part >= MIDR_PART_T8020_VORTEX)
+        cpufeat_uncore_version = 2;
 
     if (part >= MIDR_PART_T8010_2_HURRICANE)
         cpufeat_global_sleep = true;
