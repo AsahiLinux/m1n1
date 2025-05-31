@@ -9,6 +9,7 @@
 #[macro_use]
 extern crate alloc;
 
+pub mod adt;
 pub mod chainload;
 pub mod dlmalloc;
 pub mod gpt;
