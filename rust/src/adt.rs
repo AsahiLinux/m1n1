@@ -2,6 +2,8 @@
 use core::ffi::*;
 use core::mem::size_of;
 
+use crate::c_size_t;
+
 #[derive(Debug)]
 pub enum AdtError {
     NotFound = -1,
@@ -96,6 +98,11 @@ impl ADTNode {
         unsafe { ADTProperty::from_ptr(self.as_ptr().add(size_of::<ADTNode>()) as usize) }
     }
 
+    pub fn first_property_mut(&self) -> Result<&'static mut ADTProperty, AdtError> {
+        // SAFETY: We know we are a valid node, and our header never changes size
+        unsafe { ADTProperty::from_ptr_mut(self.as_ptr().add(size_of::<ADTNode>()) as usize) }
+    }
+
     /// Walk the properties at the top of the curret node's memory to arrive at
     /// the first child node of the current node
     pub fn first_child(&self) -> Result<&'static ADTNode, AdtError> {
@@ -137,6 +144,20 @@ impl ADTNode {
         }
         Err(AdtError::NotFound)
     }
+
+    /// Searches the node for a property with the given name, and returns a mutable
+    /// reference to it if found
+    pub fn named_prop_mut(&self, name: &str) -> Result<&'static mut ADTProperty, AdtError> {
+        let mut p = self.first_property_mut()?;
+
+        for _ in 0..self.property_count {
+            if p.name() == name {
+                return Ok(p);
+            }
+            p = p.next_property_mut()?;
+        }
+        Err(AdtError::NotFound)
+    }
 }
 
 impl ADTProperty {
@@ -144,7 +165,7 @@ impl ADTProperty {
     ///
     /// We need to do this manually since we do not know the size of
     /// ADTProperty.value beforehand.
-    fn fat_ptr(ptr: *const u8) -> *const ADTProperty {
+    fn fat_ptr(ptr: *const u8) -> *mut ADTProperty {
         // SAFETY: This function is only ever called when we can guarantee that
         // ptr points to a valid ADTProperty.
         unsafe {
@@ -154,7 +175,7 @@ impl ADTProperty {
                 size_of::<[char; 32]>() + size_of::<u32>() + *(ptr.add(32)) as usize,
             );
 
-            sp as *const ADTProperty
+            sp as *mut ADTProperty
         }
     }
 
@@ -191,6 +212,19 @@ impl ADTProperty {
         }
     }
 
+    fn from_ptr_mut(ptr: usize) -> Result<&'static mut ADTProperty, AdtError> {
+        check_ptr(ptr)?;
+
+        // SAFETY: Refer to the immutable function
+        unsafe {
+            let prop = ADTProperty::fat_ptr(ptr as *const u8);
+            match ADTProperty::check(prop) {
+                Ok(()) => Ok(&mut *prop),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
     pub fn as_ptr(&self) -> *const u8 {
         self as *const ADTProperty as *const u8
     }
@@ -207,11 +241,38 @@ impl ADTProperty {
         ADTProperty::from_ptr(ptr)
     }
 
+    pub fn next_property_mut(&self) -> Result<&'static mut ADTProperty, AdtError> {
+        // SAFETY: We know we are a valid property
+        let ptr: usize = unsafe {
+            self.as_ptr()
+                .add(32)
+                .add(4)
+                .add((self.size as usize + (ADT_ALIGN - 1)) & !(ADT_ALIGN - 1)) as usize
+        };
+        ADTProperty::from_ptr_mut(ptr)
+    }
+
     pub fn name(&self) -> &str {
         CStr::from_bytes_until_nul(&self.name)
             .unwrap()
             .to_str()
             .unwrap()
+    }
+
+    pub fn set(&mut self, val: &[u8]) -> Result<usize, AdtError> {
+        if val.len() != self.size as usize {
+            return Err(AdtError::BadLength);
+        }
+
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                val.as_ptr(),
+                self.value.as_mut_ptr(),
+                self.size as usize,
+            );
+        }
+
+        Ok(self.size as usize)
     }
 }
 
@@ -390,4 +451,37 @@ pub unsafe extern "C" fn adt_getprop_by_offset(
     }
 
     p.value.as_ptr() as *const c_void
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_setprop(
+    _dt: *const c_void,
+    offset: c_int,
+    name: *const c_char,
+    val: *const c_void,
+    len: *const c_size_t,
+) -> c_int {
+    let buf: &[u8];
+    let strname: &str;
+    let ptr: *const ADTNode;
+    unsafe {
+        buf = core::slice::from_raw_parts(val as *const u8, len as usize);
+        strname = CStr::from_ptr(name).to_str().unwrap();
+        ptr = adt.add(offset as usize) as *const ADTNode;
+    };
+
+    let n = match ADTNode::from_ptr(ptr) {
+        Ok(node) => node,
+        Err(e) => return e as c_int,
+    };
+
+    let p = match n.named_prop_mut(strname) {
+        Ok(prop) => prop,
+        Err(e) => return e as c_int,
+    };
+
+    match p.set(buf) {
+        Ok(sz) => sz.try_into().unwrap(),
+        Err(e) => e as c_int,
+    }
 }
