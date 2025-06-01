@@ -167,8 +167,12 @@ impl ADTNode {
         Err(AdtError::NotFound)
     }
 
+    pub fn name(&self) -> Result<&str, AdtError> {
+        self.named_prop("name")?.str()
+    }
+
     /// Searches the node for a property with the given name, and returns a mutable
-    /// reference to it if found
+    /// reference to it if found.
     pub fn named_prop_mut(&self, name: &str) -> Result<&'static mut ADTProperty, AdtError> {
         let mut p = self.first_property_mut()?;
 
@@ -572,4 +576,10 @@ pub unsafe extern "C" fn adt_is_compatible(
         .unwrap()
         .is_compatible(strcompat)
         .unwrap()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_get_name(_dt: *const c_void, offset: c_int) -> *const c_char {
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+    ADTNode::from_ptr(ptr).unwrap().name().unwrap().as_ptr() as *const c_char
 }
