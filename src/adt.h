@@ -61,8 +61,6 @@ int adt_path_offset(const void *adt, const char *path);
 int adt_path_offset_trace(const void *adt, const char *path, int *offsets);
 
 const char *adt_get_name(const void *adt, int nodeoffset);
-const struct adt_property *adt_get_property_namelen(const void *adt, int nodeoffset,
-                                                    const char *name, size_t namelen);
 const struct adt_property *adt_get_property(const void *adt, int nodeoffset, const char *name);
 const void *adt_getprop_by_offset(const void *adt, int offset, const char **namep, u32 *lenp);
 const void *adt_getprop(const void *adt, int nodeoffset, const char *name, u32 *lenp);

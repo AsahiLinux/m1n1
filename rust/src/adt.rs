@@ -375,22 +375,6 @@ pub unsafe extern "C" fn adt_get_property(
     }
 }
 
-/// TODO: Remove once no more callers reference this
-#[no_mangle]
-pub unsafe extern "C" fn adt_get_property_namelen(
-    _dt: *const c_void,
-    nodeoffset: c_int,
-    name: *const c_char,
-    _len: c_int,
-) -> *const c_void {
-    let strname: &str;
-    unsafe { strname = CStr::from_ptr(name).to_str().unwrap() }
-    match ADT::get_property_by_name(nodeoffset, strname) {
-        Ok(p) => p as *const ADTProperty as *const c_void,
-        Err(_) => core::ptr::null(),
-    }
-}
-
 #[no_mangle]
 pub unsafe extern "C" fn adt_getprop(
     _dt: *const c_void,
