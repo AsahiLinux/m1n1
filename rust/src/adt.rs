@@ -54,6 +54,21 @@ fn check_ptr(ptr: usize) -> Result<(), AdtError> {
     }
 }
 
+/// Determine if an ADT node's name is equal to some string bounded by a length.
+/// This is required to match the semantics expected when doing a full ADT path
+/// trace.
+fn node_names_equal(a: &str, b: &str) -> bool {
+    if a == b {
+        return true;
+    }
+
+    if b.contains('@') && a.as_bytes().get(b.len()) == Some(&b'@') {
+        return true;
+    }
+
+    false
+}
+
 impl ADTNode {
     /// Check that the node pointed to is within the bounds of the ADT and
     /// has a valid property and child count
@@ -179,6 +194,20 @@ impl ADTNode {
         }
         Ok(c)
     }
+
+    /// Walks the node's subnodes and searches for one with the specified name
+    pub fn subnode_by_name(&self, name: &str, len: usize) -> Result<&'static ADTNode, AdtError> {
+        let mut c = self.first_child()?;
+
+        for _ in 0..self.child_count {
+            let prop = c.named_prop("name")?;
+            if node_names_equal(prop.str()?, &name[..len]) {
+                return Ok(c);
+            }
+            c = c.next_sibling()?;
+        }
+        Err(AdtError::NotFound)
+    }
 }
 
 impl ADTProperty {
@@ -278,6 +307,16 @@ impl ADTProperty {
             .unwrap()
             .to_str()
             .unwrap()
+    }
+
+    pub fn str(&self) -> Result<&str, AdtError> {
+        match CStr::from_bytes_until_nul(&self.value) {
+            Ok(cs) => match cs.to_str() {
+                Ok(s) => Ok(s),
+                Err(_e) => Err(AdtError::BadValue),
+            },
+            Err(_e) => Err(AdtError::BadValue),
+        }
     }
 
     pub fn set(&mut self, val: &[u8]) -> Result<usize, AdtError> {
@@ -490,6 +529,47 @@ pub unsafe extern "C" fn adt_setprop(
 
     match p.set(buf) {
         Ok(sz) => sz.try_into().unwrap(),
+        Err(e) => e as c_int,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_subnode_offset(
+    _dt: *const c_void,
+    offset: c_int,
+    name: *const c_char,
+) -> c_int {
+    let strname: &str = unsafe { CStr::from_ptr(name).to_str().unwrap() };
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+
+    let n = match ADTNode::from_ptr(ptr) {
+        Ok(node) => node,
+        Err(e) => return e as c_int,
+    };
+
+    match n.subnode_by_name(strname, strname.len()) {
+        Ok(s) => unsafe { s.as_ptr().sub(adt as usize) as c_int },
+        Err(e) => e as c_int,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_subnode_offset_namelen(
+    _dt: *const c_void,
+    offset: c_int,
+    name: *const c_char,
+    len: c_size_t,
+) -> c_int {
+    let strname: &str = unsafe { CStr::from_ptr(name).to_str().unwrap() };
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+
+    let n = match ADTNode::from_ptr(ptr) {
+        Ok(node) => node,
+        Err(e) => return e as c_int,
+    };
+
+    match n.subnode_by_name(strname, len) {
+        Ok(s) => unsafe { s.as_ptr().sub(adt as usize) as c_int },
         Err(e) => e as c_int,
     }
 }
