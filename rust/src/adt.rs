@@ -2,6 +2,8 @@
 use core::ffi::*;
 use core::mem::size_of;
 
+use crate::c_size_t;
+
 #[derive(Debug)]
 pub enum AdtError {
     NotFound = -1,
@@ -88,7 +90,7 @@ impl<'a> ADT<'a> {
 
     /// Manually create a fat pointer to the ADTProperty at ptr. This is required
     /// as ADTProperty.value is an unsized slice of bytes
-    fn adt_prop_ptr(ptr: *const u8) -> *const ADTProperty {
+    fn adt_prop_ptr(ptr: *const u8) -> *mut ADTProperty {
         // SAFETY: ptr is only ever a byte offset into ADT memory, which
         // is given to us by iBoot and can be assumed valid.
         unsafe {
@@ -99,7 +101,7 @@ impl<'a> ADT<'a> {
                 size_of::<[char; 32]>() + size_of::<u32>() + val_size,
             );
 
-            sp as *const ADTProperty
+            sp as *mut ADTProperty
         }
     }
 
@@ -124,6 +126,21 @@ impl<'a> ADT<'a> {
             let prop = ADT::adt_prop_ptr(adt.add(offset as usize) as *const u8);
             match ADT::check_property(prop) {
                 Ok(()) => Ok(&*prop),
+                Err(e) => Err(e),
+            }
+        }
+    }
+
+    /// Mutable version of ADT::property_at()
+    pub fn property_at_mut(offset: i32) -> Result<&'static mut ADTProperty, AdtError> {
+        ADT::check_offset(offset)?;
+
+        // SAFETY: adt is always valid, and our offset is proven aligned above
+        unsafe {
+            let prop = ADT::adt_prop_ptr(adt.add(offset as usize) as *const u8);
+            let ret = ADT::check_property(prop);
+            match ret {
+                Ok(_i) => Ok(&mut *prop),
                 Err(e) => Err(e),
             }
         }
@@ -174,6 +191,43 @@ impl<'a> ADT<'a> {
             cur_prop_offset = ADT::next_property_offset(cur_prop_offset)?;
         }
         Err(AdtError::NotFound)
+    }
+
+    pub fn get_property_by_name_mut(
+        nodeoffset: i32,
+        name: &str,
+    ) -> Result<&'static mut ADTProperty, AdtError> {
+        let node_prop_cnt = ADT::node_at(nodeoffset)?.property_count;
+        let first_prop_offset = ADT::first_property_offset(nodeoffset);
+        let mut cur_prop_offset = first_prop_offset;
+
+        for _i in 0..node_prop_cnt {
+            let prop = ADT::property_at_mut(cur_prop_offset)?;
+            if CStr::from_bytes_until_nul(&prop.name)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                == name
+            {
+                return Ok(prop);
+            }
+            cur_prop_offset = ADT::next_property_offset(cur_prop_offset)?;
+        }
+        Err(AdtError::NotFound)
+    }
+
+    pub fn set_property(nodeoffset: i32, name: &str, val: &[u8]) -> Result<usize, AdtError> {
+        let p = ADT::get_property_by_name_mut(nodeoffset, name)?;
+
+        if val.len() != p.size as usize {
+            return Err(AdtError::BadLength);
+        }
+
+        unsafe {
+            core::ptr::copy_nonoverlapping(val.as_ptr(), p.value.as_mut_ptr(), p.size as usize);
+        }
+
+        Ok(p.size as usize)
     }
 }
 
@@ -301,4 +355,25 @@ pub unsafe extern "C" fn adt_getprop_by_offset(
     }
 
     p.value.as_ptr() as *const c_void
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_setprop(
+    _dt: *const c_void,
+    nodeoffset: c_int,
+    name: *const c_char,
+    val: *const c_void,
+    len: *const c_size_t,
+) -> c_int {
+    let buf: &[u8];
+    let strname: &str;
+    unsafe {
+        buf = core::slice::from_raw_parts(val as *const u8, len as usize);
+        strname = CStr::from_ptr(name).to_str().unwrap();
+    };
+
+    match ADT::set_property(nodeoffset, strname, buf) {
+        Ok(sz) => sz.try_into().unwrap(),
+        Err(e) => e as c_int,
+    }
 }
