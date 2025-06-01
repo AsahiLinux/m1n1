@@ -311,6 +311,14 @@ impl<'a> ADT<'a> {
             .unwrap()
             .contains(compatible))
     }
+
+    pub fn node_name(offset: i32) -> Result<&'static str, AdtError> {
+        let p = ADT::get_property_by_name(offset, "name")?;
+        Ok(CStr::from_bytes_until_nul(&p.value)
+            .unwrap()
+            .to_str()
+            .unwrap())
+    }
 }
 
 extern "C" {
@@ -488,4 +496,12 @@ pub unsafe extern "C" fn adt_is_compatible(
     let strcompat: &str;
     unsafe { strcompat = CStr::from_ptr(compat).to_str().unwrap() }
     ADT::is_compatible(offset, strcompat).unwrap()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_get_name(_dt: *const c_void, nodeoffset: c_int) -> *const c_char {
+    ADT::get_property_by_name(nodeoffset, "name")
+        .unwrap()
+        .value
+        .as_ptr() as *const c_char
 }

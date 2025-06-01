@@ -85,11 +85,6 @@ int adt_path_offset_trace(const void *adt, const char *path, int *offsets)
     return offset;
 }
 
-const char *adt_get_name(const void *adt, int nodeoffset)
-{
-    return adt_getprop(adt, nodeoffset, "name", NULL);
-}
-
 static void get_cells(u64 *dst, const u32 **src, int cells)
 {
     *dst = 0;
