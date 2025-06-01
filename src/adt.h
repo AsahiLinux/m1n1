@@ -81,13 +81,6 @@ bool adt_is_compatible(const void *adt, int nodeoffset, const char *compat);
         for (node = adt_first_child_offset(adt, node); _child_count--;                             \
              node = adt_next_sibling_offset(adt, node))
 
-#define ADT_FOREACH_PROPERTY(adt, node, prop)                                                      \
-    for (int _prop_count = adt_get_property_count(adt, node),                                      \
-             _poff = adt_first_property_offset(adt, node);                                         \
-         _prop_count; _prop_count = 0)                                                             \
-        for (const struct adt_property *prop = ADT_PROP(adt, _poff); _prop_count--;                \
-             prop = ADT_PROP(adt, _poff = adt_next_property_offset(adt, _poff)))
-
 /* Common ADT properties */
 struct adt_segment_ranges {
     u64 phys;
