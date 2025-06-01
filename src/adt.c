@@ -29,19 +29,6 @@ u32 adt_get_size(void)
     return cur_boot_args.devtree_size;
 }
 
-static int _adt_nodename_eq(const char *a, const char *b, size_t len)
-{
-    if (memcmp(a, b, len) != 0)
-        return 0;
-
-    if (a[len] == '\0')
-        return 1;
-    else if (!memchr(b, '@', len) && (a[len] == '@'))
-        return 1;
-    else
-        return 0;
-}
-
 int adt_getprop_copy(const void *adt, int nodeoffset, const char *name, void *out, size_t len)
 {
     u32 plen;
@@ -56,26 +43,6 @@ int adt_getprop_copy(const void *adt, int nodeoffset, const char *name, void *ou
 
     memcpy(out, p, len);
     return len;
-}
-
-int adt_subnode_offset_namelen(const void *adt, int offset, const char *name, size_t namelen)
-{
-    ADT_CHECK_HEADER(adt);
-
-    ADT_FOREACH_CHILD(adt, offset)
-    {
-        const char *cname = adt_get_name(adt, offset);
-
-        if (_adt_nodename_eq(cname, name, namelen))
-            return offset;
-    }
-
-    return -ADT_ERR_NOTFOUND;
-}
-
-int adt_subnode_offset(const void *adt, int parentoffset, const char *name)
-{
-    return adt_subnode_offset_namelen(adt, parentoffset, name, strlen(name));
 }
 
 int adt_path_offset(const void *adt, const char *path)
