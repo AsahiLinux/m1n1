@@ -169,6 +169,18 @@ impl<'a> ADT<'a> {
         Ok(off)
     }
 
+    pub fn next_sibling_offset(offset: i32) -> Result<i32, AdtError> {
+        let node = ADT::node_at(offset)?;
+        let mut cnt = node.child_count;
+        let mut off = ADT::first_child_offset(offset)?;
+
+        while cnt > 0 {
+            off = ADT::next_sibling_offset(off)?;
+            cnt -= 1;
+        }
+        Ok(off)
+    }
+
     /// Search the node at the given byte offset for a property with the given name.
     pub fn get_property_by_name(
         nodeoffset: i32,
@@ -260,6 +272,11 @@ pub unsafe extern "C" fn adt_next_property_offset(_dt: *const c_void, offset: c_
 #[no_mangle]
 pub unsafe extern "C" fn adt_first_child_offset(_dt: *const c_void, offset: c_int) -> c_int {
     ADT::first_child_offset(offset).unwrap() as c_int
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_next_sibling_offset(_dt: *const c_void, offset: c_int) -> c_int {
+    ADT::next_sibling_offset(offset).unwrap() as c_int
 }
 
 #[no_mangle]
