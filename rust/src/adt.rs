@@ -208,6 +208,10 @@ impl ADTNode {
         }
         Err(AdtError::NotFound)
     }
+
+    pub fn is_compatible(&self, compatible: &str) -> Result<bool, AdtError> {
+        Ok(self.named_prop("compatible")?.str()?.contains(compatible))
+    }
 }
 
 impl ADTProperty {
@@ -554,4 +558,18 @@ pub unsafe extern "C" fn adt_subnode_offset_namelen(
         Ok(s) => unsafe { s.as_ptr().sub(adt as usize) as c_int },
         Err(e) => e as c_int,
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_is_compatible(
+    _dt: *const c_void,
+    offset: c_int,
+    compat: *const c_char,
+) -> bool {
+    let strcompat: &str = unsafe { CStr::from_ptr(compat).to_str().unwrap() };
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+    ADTNode::from_ptr(ptr)
+        .unwrap()
+        .is_compatible(strcompat)
+        .unwrap()
 }
