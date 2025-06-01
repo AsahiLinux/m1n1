@@ -42,20 +42,6 @@ static int _adt_nodename_eq(const char *a, const char *b, size_t len)
         return 0;
 }
 
-int adt_setprop(void *adt, int nodeoffset, const char *name, void *value, size_t len)
-{
-    u32 plen;
-    void *prop = (void *)adt_getprop(adt, nodeoffset, name, &plen);
-    if (!prop)
-        return -ADT_ERR_NOTFOUND;
-
-    if (len != plen)
-        return -ADT_ERR_BADLENGTH;
-
-    memcpy(prop, value, len);
-    return len;
-}
-
 int adt_getprop_copy(const void *adt, int nodeoffset, const char *name, void *out, size_t len)
 {
     u32 plen;
