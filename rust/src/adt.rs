@@ -265,6 +265,43 @@ impl<'a> ADT<'a> {
 
         Ok(p.size as usize)
     }
+
+    /// Determine if an ADT node's name is equal to some string bounded by a length.
+    /// This is required to match the semantics expected when doing a full ADT path
+    /// trace.
+    fn node_names_equal(a: &str, b: &str, len: usize) -> bool {
+        if a == &b[..len] {
+            return true;
+        }
+
+        if b[..len].contains('@') && a.as_bytes().get(len) == Some(&b'@') {
+            return true;
+        }
+
+        false
+    }
+
+    pub fn get_subnode_offset_by_name(
+        parentoffset: i32,
+        name: &str,
+        len: usize,
+    ) -> Result<i32, AdtError> {
+        let cnt = ADT::node_at(parentoffset)?.child_count;
+        let mut current_offset = ADT::first_child_offset(parentoffset)?;
+
+        for _i in 0..cnt {
+            let prop = ADT::get_property_by_name(current_offset, "name")?;
+            let strname = CStr::from_bytes_until_nul(&prop.value)
+                .unwrap()
+                .to_str()
+                .unwrap();
+            if ADT::node_names_equal(strname, name, len) {
+                return Ok(current_offset);
+            }
+            current_offset = ADT::next_sibling_offset(current_offset)?;
+        }
+        Err(AdtError::NotFound)
+    }
 }
 
 extern "C" {
@@ -416,6 +453,35 @@ pub unsafe extern "C" fn adt_setprop(
 
     match ADT::set_property(nodeoffset, strname, buf) {
         Ok(sz) => sz.try_into().unwrap(),
+        Err(e) => e as c_int,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_subnode_offset(
+    _dt: *const c_void,
+    offset: c_int,
+    name: *const c_char,
+) -> c_int {
+    let strname: &str;
+    unsafe { strname = CStr::from_ptr(name).to_str().unwrap() }
+    match ADT::get_subnode_offset_by_name(offset, strname, strname.len()) {
+        Ok(p) => p as c_int,
+        Err(e) => e as c_int,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_subnode_offset_namelen(
+    _dt: *const c_void,
+    offset: c_int,
+    name: *const c_char,
+    len: c_size_t,
+) -> c_int {
+    let strname: &str;
+    unsafe { strname = CStr::from_ptr(name).to_str().unwrap() }
+    match ADT::get_subnode_offset_by_name(offset, strname, len) {
+        Ok(p) => p as c_int,
         Err(e) => e as c_int,
     }
 }
