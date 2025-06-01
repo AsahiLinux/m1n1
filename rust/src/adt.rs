@@ -302,6 +302,15 @@ impl<'a> ADT<'a> {
         }
         Err(AdtError::NotFound)
     }
+
+    pub fn is_compatible(offset: i32, compatible: &str) -> Result<bool, AdtError> {
+        let prop = ADT::get_property_by_name(offset, "compatible")?;
+        Ok(CStr::from_bytes_until_nul(&prop.value)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .contains(compatible))
+    }
 }
 
 extern "C" {
@@ -468,4 +477,15 @@ pub unsafe extern "C" fn adt_subnode_offset_namelen(
         Ok(p) => p as c_int,
         Err(e) => e as c_int,
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_is_compatible(
+    _dt: *const c_void,
+    offset: c_int,
+    compat: *const c_char,
+) -> bool {
+    let strcompat: &str;
+    unsafe { strcompat = CStr::from_ptr(compat).to_str().unwrap() }
+    ADT::is_compatible(offset, strcompat).unwrap()
 }
