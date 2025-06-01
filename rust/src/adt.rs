@@ -104,12 +104,9 @@ impl ADTNode {
     }
 
     /// Walk the properties at the top of the curret node's memory to arrive at
-    /// the first child node of the current node
-    pub fn first_child(&self) -> Result<&'static ADTNode, AdtError> {
-        if self.child_count < 1 {
-            return Err(AdtError::NotFound);
-        }
-
+    /// the node immediately following it. This could be a child node or a sibling.
+    /// Use the relevant wrappers for additional safety.
+    fn next_node(&self) -> Result<&'static ADTNode, AdtError> {
         let mut p = self.first_property()?;
 
         // We already have the first property
@@ -119,7 +116,7 @@ impl ADTNode {
 
         // SAFETY: We will only ever reach this code when we can guarantee that
         // p is a reference to the very last property of the node, meaning that
-        // the next byte after it must be a child node.
+        // the next byte after it must be a node.
         unsafe {
             ADTNode::from_ptr(
                 p.as_ptr()
@@ -129,6 +126,16 @@ impl ADTNode {
                     as *const ADTNode,
             )
         }
+    }
+
+    /// Walk the properties at the top of the curret node's memory to arrive at
+    /// the first child node of the current node
+    pub fn first_child(&self) -> Result<&'static ADTNode, AdtError> {
+        if self.child_count < 1 {
+            return Err(AdtError::NotFound);
+        }
+
+        self.next_node()
     }
 
     /// Searches the node for a property with the given name, and returns it if
@@ -157,6 +164,20 @@ impl ADTNode {
             p = p.next_property_mut()?;
         }
         Err(AdtError::NotFound)
+    }
+
+    /// Returns a reference to the current node's closest sibling
+    pub fn next_sibling(&self) -> Result<&'static ADTNode, AdtError> {
+        if self.child_count < 1 {
+            return self.next_node();
+        }
+
+        let mut c = self.first_child()?;
+
+        for _ in 0..self.child_count {
+            c = c.next_sibling()?;
+        }
+        Ok(c)
     }
 }
 
@@ -347,6 +368,13 @@ pub unsafe extern "C" fn adt_first_child_offset(_dt: *const c_void, offset: c_in
         .as_ptr()
         .sub(adt as usize) as c_int
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_next_sibling_offset(_dt: *const c_void, offset: c_int) -> c_int {
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+    let n = ADTNode::from_ptr(ptr).unwrap();
+    unsafe { n.next_sibling().unwrap().as_ptr().sub(adt as usize) as c_int }
 }
 
 #[no_mangle]
