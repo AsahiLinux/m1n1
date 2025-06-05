@@ -333,10 +333,12 @@ int payload_run(void)
 
         for (size_t i = 0; i < chosen_cnt; i++) {
             char *val = memchr(chosen[i], '=', MAX_VAR_NAME + 1);
+            char var[MAX_VAR_NAME + 1];
 
             assert(val);
-            val[0] = 0; // Terminate var name
-            if (kboot_set_chosen(chosen[i] + 7, val + 1) < 0)
+            memcpy(var, chosen[i], val - chosen[i]);
+            var[val - chosen[i]] = 0; // Terminate var name
+            if (kboot_set_chosen(var + 7, val + 1) < 0)
                 printf("Failed to kboot set %s='%s'\n", chosen[i], val);
         }
 
