@@ -73,6 +73,12 @@ CFG += CHAINLOADING
 RUST_LIBS += $(RUST_LIB)
 endif
 
+ifeq ($(BUILDSTD),1)
+CARGO_FLAGS := -Z build-std=alloc,core
+else
+CARGO_FLAGS :=
+endif
+
 LDFLAGS := -EL -maarch64elf --no-undefined -X -Bsymbolic \
 	-z notext --no-apply-dynamic-relocs --orphan-handling=warn \
 	-z nocopyreloc --gc-sections -pie
@@ -197,7 +203,7 @@ build/$(RUST_LIB): rust/src/* rust/*
 	$(QUIET)echo "  RS    $@"
 	$(QUIET)mkdir -p $(DEPDIR)
 	$(QUIET)mkdir -p "$(dir $@)"
-	$(QUIET)cargo build --target $(RUSTARCH) --lib --release --manifest-path rust/Cargo.toml --target-dir build
+	$(QUIET)cargo build $(CARGO_FLAGS) --target $(RUSTARCH) --lib --release --manifest-path rust/Cargo.toml --target-dir build
 	$(QUIET)cp "build/$(RUSTARCH)/release/${RUST_LIB}" "$@"
 
 build/%.o: src/%.S
