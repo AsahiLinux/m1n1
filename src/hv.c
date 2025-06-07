@@ -96,7 +96,8 @@ void hv_init(void)
     }
 
     // Set deep WFI back to defaults
-    reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
+    if (cpu_features->cyc_ovrd)
+        reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
 
     sysop("dsb ishst");
     sysop("tlbi alle1is");
@@ -137,7 +138,7 @@ void hv_start(void *entry, u64 regs[4])
     hv_secondary_info.apvmkeyhi = mrs(SYS_IMP_APL_APVMKEYHI_EL2);
     hv_secondary_info.apsts = mrs(SYS_IMP_APL_APSTS_EL12);
     hv_secondary_info.actlr_el2 = mrs(ACTLR_EL2);
-    if (cpufeat_actlr_el2)
+    if (cpu_features->actlr_el2)
         hv_secondary_info.actlr_el1 = mrs(SYS_ACTLR_EL12);
     else
         hv_secondary_info.actlr_el1 = mrs(SYS_IMP_APL_ACTLR_EL12);
@@ -201,7 +202,7 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
     msr(SYS_IMP_APL_APVMKEYHI_EL2, info->apvmkeyhi);
     msr(SYS_IMP_APL_APSTS_EL12, info->apsts);
     msr(ACTLR_EL2, info->actlr_el2);
-    if (cpufeat_actlr_el2)
+    if (cpu_features->actlr_el2)
         msr(SYS_ACTLR_EL12, info->actlr_el1);
     else
         msr(SYS_IMP_APL_ACTLR_EL12, info->actlr_el1);
@@ -209,7 +210,8 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
     msr(SYS_IMP_APL_SPRR_CONFIG_EL1, info->sprr_config);
     msr(SYS_IMP_APL_GXF_CONFIG_EL1, info->gxf_config);
 
-    reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
+    if (cpu_features->cyc_ovrd)
+        reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
 
     if (gxf_enabled())
         gl2_call(hv_set_gxf_vbar, 0, 0, 0, 0);

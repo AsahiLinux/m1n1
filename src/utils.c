@@ -194,7 +194,7 @@ bool supports_arch_retention(void)
 
 bool supports_gxf(void)
 {
-    return mrs(AIDR_EL1) & AIDR_EL1_GXF;
+    return (mrs(AIDR_EL1) & AIDR_EL1_GXF) && cpu_features->mmu_sprr;
 }
 
 bool supports_pan(void)
@@ -220,4 +220,65 @@ u64 top_of_memory_alloc(size_t size)
     }
 
     return ret;
+}
+
+extern void _deep_wfi_helper(void);
+void deep_wfi(void)
+{
+    u64 cyc_ovrd;
+
+    if (!supports_arch_retention()) {
+        // A7 - A11 does not support state retention across deep WFI
+        // i.e. CPU always ends up at rvbar after deep WFI
+        sysop("wfi");
+        return;
+    }
+
+    if (cpu_features->cyc_ovrd) {
+        cyc_ovrd = mrs(SYS_IMP_APL_CYC_OVRD);
+        msr(SYS_IMP_APL_CYC_OVRD, cyc_ovrd | CYC_OVRD_WFI_MODE(3));
+    }
+
+    _deep_wfi_helper();
+
+    if (cpu_features->cyc_ovrd)
+        msr(SYS_IMP_APL_CYC_OVRD, cyc_ovrd);
+}
+
+void cpu_sleep(bool deep)
+{
+    if (deep) {
+        switch (cpu_features->sleep_mode) {
+            case SLEEP_GLOBAL:
+                reg_mask(SYS_IMP_APL_ACC_OVRD, ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP_MASK,
+                         ACC_OVRD_PWR_DN_SRM(3) | ACC_OVRD_DIS_L2_FLUSH_ACC_SLEEP(2) |
+                             ACC_OVRD_TRAIN_DOWN_LINK(3) | ACC_OVRD_POWER_DOWN_CPM(3) |
+                             ACC_OVRD_DISABLE_PIO_ON_WFI_CPU | ACC_OVRD_DEEP_SLEEP);
+                break;
+
+            case SLEEP_LEGACY:
+                reg_set(SYS_IMP_APL_ACC_CFG, ACC_CFG_DEEP_SLEEP);
+                break;
+
+            default:
+                break;
+        }
+    } else {
+        if (cpu_features->cyc_ovrd) {
+            reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_FIQ_MODE_MASK | CYC_OVRD_IRQ_MODE_MASK,
+                     CYC_OVRD_FIQ_MODE(2) | CYC_OVRD_IRQ_MODE(2));
+        }
+    }
+
+    if (cpu_features->cyc_ovrd) {
+        // disable wfi retention mode to allow deepest sleep states
+        reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK,
+                 CYC_OVRD_WFI_MODE(3) | CYC_OVRD_DISABLE_WFI_RET);
+    }
+
+    // enter deep sleep
+    while (1) {
+        sysop("isb");
+        sysop("wfi");
+    }
 }
