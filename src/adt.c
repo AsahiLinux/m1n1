@@ -29,22 +29,6 @@ u32 adt_get_size(void)
     return cur_boot_args.devtree_size;
 }
 
-int adt_getprop_copy(const void *adt, int nodeoffset, const char *name, void *out, size_t len)
-{
-    u32 plen;
-
-    const void *p = adt_getprop(adt, nodeoffset, name, &plen);
-
-    if (!p)
-        return -ADT_ERR_NOTFOUND;
-
-    if (plen != len)
-        return -ADT_ERR_BADLENGTH;
-
-    memcpy(out, p, len);
-    return len;
-}
-
 int adt_path_offset(const void *adt, const char *path)
 {
     return adt_path_offset_trace(adt, path, NULL);
