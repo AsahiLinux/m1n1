@@ -295,6 +295,18 @@ impl<'a> ADT<'a> {
             .to_str()
             .unwrap())
     }
+
+    pub fn copy_prop_val(nodeoffset: i32, name: &str, ptr: usize) -> Result<usize, AdtError> {
+        let p = ADT::get_property_by_name(nodeoffset, name)?;
+
+        // SAFETY: Everything here is a known quantity. Callers are reponsible for allocating
+        // p.size bytes at ptr, and we know p points to a valid ADTProperty.
+        unsafe {
+            core::ptr::copy_nonoverlapping(p.value.as_ptr(), ptr as *mut u8, p.size as usize);
+        }
+
+        Ok(p.size as usize)
+    }
 }
 
 extern "C" {
@@ -478,4 +490,26 @@ pub unsafe extern "C" fn adt_get_name(_dt: *const c_void, nodeoffset: c_int) -> 
         .unwrap()
         .value
         .as_ptr() as *const c_char
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_getprop_copy(
+    _dt: *const c_void,
+    nodeoffset: c_int,
+    name: *const c_char,
+    out: *mut c_void,
+    len: c_size_t,
+) -> c_int {
+    let strname: &str = unsafe { CStr::from_ptr(name).to_str().unwrap() };
+
+    match ADT::copy_prop_val(nodeoffset, strname, out as usize) {
+        Ok(p) => {
+            if p != len {
+                return AdtError::BadLength as c_int;
+            } else {
+                return len as c_int;
+            }
+        }
+        Err(e) => e as c_int,
+    }
 }
