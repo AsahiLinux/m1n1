@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 use core::ffi::*;
 use core::mem::size_of;
+use alloc::boxed::Box;
+use alloc::alloc::Layout;
 
 use crate::c_size_t;
 
@@ -319,6 +321,35 @@ impl<'a> ADT<'a> {
             .to_str()
             .unwrap())
     }
+
+    fn copy_prop(p: &ADTProperty) -> Box<ADTProperty> {
+        let hsz: usize = size_of::<[c_char; 32]>() + size_of::<u32>();
+        let sz: usize = hsz + p.size as usize;
+        let layout = Layout::from_size_align(sz, 4).unwrap();
+
+        let raw: *mut u8;
+
+        // SAFETY: Everything here is a known quantity. We're cloning an
+        // object of a known size and type.
+        unsafe {
+            raw = alloc::alloc::alloc(layout);
+            if raw.is_null() {
+                alloc::alloc::handle_alloc_error(layout);
+            }
+
+            core::ptr::write(raw.cast::<[c_char; 32]>(), p.name);
+            core::ptr::write(raw.add(32).cast::<u32>(), p.size);
+            core::ptr::copy_nonoverlapping(p.value.as_ptr(), raw.add(hsz), p.size as usize);
+
+            Box::from_raw(ADT::adt_prop_ptr(raw))
+        }
+    }
+
+    pub fn get_prop_copy(nodeoffset: i32, name: &str) -> Result<Box<ADTProperty>, AdtError> {
+        let p = ADT::get_property_by_name(nodeoffset, name)?;
+
+        Ok(ADT::copy_prop(p))
+    }
 }
 
 extern "C" {
@@ -505,3 +536,22 @@ pub unsafe extern "C" fn adt_get_name(_dt: *const c_void, nodeoffset: c_int) -> 
         .value
         .as_ptr() as *const c_char
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_getprop_copy(_dt: *const c_void, nodeoffset: c_int, name: *const c_char, out: *mut *mut c_void, len: c_size_t) -> c_int {
+    let strname: &str;
+    unsafe { strname = CStr::from_ptr(name).to_str().unwrap() }
+    match ADT::get_prop_copy(nodeoffset, strname) {
+        Ok(mut p) => unsafe {
+            if p.size as usize != len {
+                return AdtError::BadLength as c_int;
+            } else {
+                *out = &mut *p as *mut ADTProperty as *mut c_void;
+                return len as c_int;
+            }
+
+        },
+        Err(e) => e as c_int
+    }
+}
+
