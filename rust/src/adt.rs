@@ -342,6 +342,18 @@ impl ADTProperty {
 
         Ok(self.size as usize)
     }
+
+    /// Copy an ADTProperty's value to a preallocated buffer
+    pub fn copy_raw(&self, ptr: usize) -> Result<usize, AdtError> {
+        // SAFETY: Callers are reponsible for allocating self.size bytes at ptr,
+        // and we never reach this code if we aren't already certain that we are
+        // a valid property
+        unsafe {
+            core::ptr::copy_nonoverlapping(self.value.as_ptr(), ptr as *mut u8, self.size as usize);
+        }
+
+        Ok(self.size as usize)
+    }
 }
 
 extern "C" {
@@ -582,4 +594,37 @@ pub unsafe extern "C" fn adt_is_compatible(
 pub unsafe extern "C" fn adt_get_name(_dt: *const c_void, offset: c_int) -> *const c_char {
     let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
     ADTNode::from_ptr(ptr).unwrap().name().unwrap().as_ptr() as *const c_char
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_getprop_copy(
+    _dt: *const c_void,
+    offset: c_int,
+    name: *const c_char,
+    out: *mut c_void,
+    len: c_size_t,
+) -> c_int {
+    let strname: &str = unsafe { CStr::from_ptr(name).to_str().unwrap() };
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+
+    let n = match ADTNode::from_ptr(ptr) {
+        Ok(node) => node,
+        Err(e) => return e as c_int,
+    };
+
+    let p = match n.named_prop(strname) {
+        Ok(prop) => prop,
+        Err(e) => return e as c_int,
+    };
+
+    match p.copy_raw(out as usize) {
+        Ok(l) => {
+            if l != len {
+                return AdtError::BadLength as c_int;
+            } else {
+                return len as c_int;
+            }
+        }
+        Err(e) => e as c_int,
+    }
 }
