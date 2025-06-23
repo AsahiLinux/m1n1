@@ -15,6 +15,7 @@ pub enum AdtError {
 }
 
 const ADT_ALIGN: usize = 4;
+const ADT_MAX_DEPTH: usize = 8;
 
 /// An ADT node consists of a header (the part described by the struct), packed
 /// key:value properties, and subnodes. Properties are always before subnodes
@@ -100,6 +101,70 @@ impl ADTNode {
                 Err(e) => Err(e),
             }
         }
+    }
+
+    /// Get a reference to a node at a specified path, tracing the path to the
+    /// desired node
+    pub fn from_path_trace(
+        path: &str,
+        mut breadcrumbs: Option<&mut [Option<&'static ADTNode>]>,
+    ) -> Result<&'static ADTNode, AdtError> {
+        let ptr: *const ADTNode = unsafe { adt as *const ADTNode };
+        let mut p = path;
+        let mut bc_idx: usize = 0;
+
+        let head = ADTNode::from_ptr(ptr)?;
+        let mut n = head;
+
+        while !p.is_empty() {
+            p = p.trim_start_matches('/');
+
+            if p.is_empty() {
+                break;
+            }
+
+            let (cursor, rest) = match p.find('/') {
+                Some(pos) => p.split_at(pos),
+                None => (p, ""),
+            };
+
+            match n.subnode_by_name(cursor, cursor.len()) {
+                Ok(sn) => {
+                    n = sn;
+                }
+                Err(e) => {
+                    if let Some(b) = breadcrumbs.as_mut() {
+                        if bc_idx < b.len() {
+                            b[bc_idx] = Some(head);
+                        } else {
+                            return Err(AdtError::BadPath);
+                        }
+                    }
+                    return Err(e);
+                }
+            };
+
+            if let Some(b) = breadcrumbs.as_mut() {
+                if bc_idx < b.len() {
+                    b[bc_idx] = Some(n);
+                    bc_idx += 1;
+                } else {
+                    return Err(AdtError::BadPath);
+                }
+            }
+
+            p = rest;
+        }
+
+        if let Some(b) = breadcrumbs.as_mut() {
+            b[bc_idx] = Some(head)
+        }
+
+        Ok(n)
+    }
+
+    pub fn from_path(path: &str) -> Result<&'static ADTNode, AdtError> {
+        ADTNode::from_path_trace(path, None)
     }
 
     pub fn as_ptr(&self) -> *const u8 {
@@ -624,6 +689,36 @@ pub unsafe extern "C" fn adt_getprop_copy(
             } else {
                 return len as c_int;
             }
+        }
+        Err(e) => e as c_int,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_path_offset_trace(
+    _dt: *const c_void,
+    path: *const c_char,
+    offsets: *mut i32,
+) -> c_int {
+    let strpath: &str = unsafe { CStr::from_ptr(path).to_str().unwrap() };
+
+    // We don't know how deep the path will be, but we do know that it can't be
+    // deeper than 8 nodes
+    let mut refs: [Option<&'static ADTNode>; ADT_MAX_DEPTH] = [None; ADT_MAX_DEPTH];
+
+    match ADTNode::from_path_trace(strpath, Some(&mut refs)) {
+        Ok(n) => {
+            if !offsets.is_null() {
+                for (i, &r) in refs.iter().enumerate() {
+                    if r.is_some() {
+                        unsafe {
+                            *offsets.add(i) =
+                                (r.unwrap().as_ptr() as *const u8).sub(adt as usize) as i32;
+                        }
+                    }
+                }
+            }
+            unsafe { n.as_ptr().sub(adt as usize) as c_int }
         }
         Err(e) => e as c_int,
     }
