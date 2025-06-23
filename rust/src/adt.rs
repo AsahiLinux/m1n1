@@ -307,6 +307,62 @@ impl<'a> ADT<'a> {
 
         Ok(p.size as usize)
     }
+
+    /// Trace a given ADT path and return the offset of the final node.
+    pub fn path_offset_trace(path: &str, mut offsets: Option<&mut [i32]>) -> Result<i32, AdtError> {
+        let mut offset = 0;
+        let mut p = path;
+        let mut oi = 0;
+
+        match ADT::node_at(0) {
+            Ok(_) => {}
+            Err(e) => return Err(e),
+        }
+
+        while !p.is_empty() {
+            p = p.trim_start_matches('/');
+
+            if p.is_empty() {
+                break;
+            }
+
+            let (seg, rest) = match p.find('/') {
+                Some(pos) => p.split_at(pos),
+                None => (p, ""), // We're at the final node in the path
+            };
+
+            match ADT::get_subnode_offset_by_name(offset, seg, seg.len()) {
+                Ok(o) => offset = o,
+                Err(e) => {
+                    if let Some(offsets) = offsets.as_mut() {
+                        if oi < offsets.len() {
+                            offsets[oi] = 0;
+                        } else {
+                            return Err(AdtError::BadPath);
+                        }
+                    }
+                    return Err(e);
+                }
+            };
+
+            if let Some(offsets) = offsets.as_mut() {
+                if oi < offsets.len() {
+                    offsets[oi] = offset;
+                    oi += 1;
+                } else {
+                    return Err(AdtError::BadPath);
+                }
+            }
+
+            p = rest;
+        }
+
+        if let Some(offsets) = offsets.as_mut() {
+            offsets[oi] = 0;
+        }
+
+        Ok(offset)
+    }
 }
 
 extern "C" {
@@ -510,6 +566,31 @@ pub unsafe extern "C" fn adt_getprop_copy(
                 return len as c_int;
             }
         }
+        Err(e) => e as c_int,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_path_offset_trace(
+    _dt: *const c_void,
+    path: *const c_char,
+    offsets: *mut i32,
+) -> c_int {
+    let strpath: &str = unsafe { CStr::from_ptr(path).to_str().unwrap() };
+    let o: Option<&mut [i32]> = unsafe {
+        // Derive a fat pointer from offsets. We (currently)
+        // never have any paths that are more than 8 nodes deep,
+        // so this is safe. If we're called by adt_path_offset(),
+        // then offsets is null.
+        if !offsets.is_null() {
+            Some(core::slice::from_raw_parts_mut(offsets, 8))
+        } else {
+            None
+        }
+    };
+
+    match ADT::path_offset_trace(strpath, o) {
+        Ok(offset) => offset as c_int,
         Err(e) => e as c_int,
     }
 }

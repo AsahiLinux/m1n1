@@ -34,41 +34,6 @@ int adt_path_offset(const void *adt, const char *path)
     return adt_path_offset_trace(adt, path, NULL);
 }
 
-int adt_path_offset_trace(const void *adt, const char *path, int *offsets)
-{
-    const char *end = path + strlen(path);
-    const char *p = path;
-    int offset = 0;
-
-    ADT_CHECK_HEADER(adt);
-
-    while (*p) {
-        const char *q;
-
-        while (*p == '/')
-            p++;
-        if (!*p)
-            break;
-        q = strchr(p, '/');
-        if (!q)
-            q = end;
-
-        offset = adt_subnode_offset_namelen(adt, offset, p, q - p);
-        if (offset < 0)
-            break;
-
-        if (offsets)
-            *offsets++ = offset;
-
-        p = q;
-    }
-
-    if (offsets)
-        *offsets++ = 0;
-
-    return offset;
-}
-
 static void get_cells(u64 *dst, const u32 **src, int cells)
 {
     *dst = 0;
