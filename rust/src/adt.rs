@@ -723,3 +723,13 @@ pub unsafe extern "C" fn adt_path_offset_trace(
         Err(e) => e as c_int,
     }
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_path_offset(_dt: *const c_void, path: *const c_char) -> c_int {
+    let strpath: &str = unsafe { CStr::from_ptr(path).to_str().unwrap() };
+
+    match ADTNode::from_path(strpath) {
+        Ok(n) => unsafe { n.as_ptr().sub(adt as usize) as c_int },
+        Err(e) => e as c_int,
+    }
+}
