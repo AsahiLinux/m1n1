@@ -70,6 +70,151 @@ fn node_names_equal(a: &str, b: &str) -> bool {
     false
 }
 
+fn get_cells(src: &[u32]) -> u64 {
+    let mut val: u64 = 0;
+
+    src.iter()
+        .enumerate()
+        .for_each(|(i, &x)| val |= (x as u64) << (32 * i));
+
+    val
+}
+
+/// Retrieve the register container (addr, size) of a given node at the end of
+/// a node path trace.
+///
+/// Each addr and size is a contiguous array of u32s with `#address-cells` or
+/// `#size-cells` elements. The entire `reg` property is similarly a contiguous
+/// array of these containers [(addr, size), (addr, size), ...]. The `i` argument
+/// is an index into this array.
+pub fn get_reg_container(
+    nodes: &[Option<&'static ADTNode>],
+    pname: &str,
+    i: i32,
+) -> Result<(u64, u64), AdtError> {
+    let head = unsafe { ADTNode::from_ptr(adt as *const ADTNode)? };
+
+    // Sanity check to make sure we have at least one node in the path
+    if nodes[0].is_none() {
+        return Err(AdtError::BadPath);
+    }
+
+    if nodes[0].unwrap().as_ptr() == unsafe { adt as *const u8 } {
+        return Err(AdtError::BadOffset);
+    }
+
+    let mut cursor: usize = nodes.len() - 1;
+
+    while nodes[cursor].is_none() {
+        cursor -= 1;
+    }
+
+    let mut node = nodes[cursor].unwrap();
+
+    let mut parent = {
+        if cursor > 0 {
+            nodes[cursor - 1].unwrap()
+        } else {
+            head
+        }
+    };
+
+    let mut addr_cells = parent.named_prop("#address-cells")?.u32()?;
+
+    let mut size_cells = parent.named_prop("#size-cells")?.u32()?;
+
+    if addr_cells < 1 || addr_cells > 2 || size_cells > 2 {
+        return Err(AdtError::BadNCells);
+    }
+
+    let reg = node.named_prop(pname)?;
+
+    if reg.size == 0 {
+        return Err(AdtError::NotFound);
+    }
+
+    // Check that the reg property is big enough to contain a reg
+    // container at index i.
+    if reg.size < (i as u32 + 1) * (addr_cells + size_cells) * 4 {
+        return Err(AdtError::BadValue);
+    }
+
+    let addr_elems: &[u32];
+    let size_elems: &[u32];
+
+    // SAFETY: For a reg property, this pointer arithmetic is always true,
+    // as we check above that i is within bounds.
+    unsafe {
+        let aref_ptr: *const u32 =
+            (reg.value.as_ptr() as *const u32).add((i as u32 * (addr_cells + size_cells)) as usize);
+
+        let sref_ptr = aref_ptr.add((addr_cells) as usize);
+
+        addr_elems = core::slice::from_raw_parts(aref_ptr, addr_cells as usize);
+
+        size_elems = core::slice::from_raw_parts(sref_ptr, size_cells as usize);
+    }
+
+    let mut addr = get_cells(addr_elems);
+    let size = get_cells(size_elems);
+
+    while parent.as_ptr() != head.as_ptr() {
+        cursor -= 1;
+        node = parent;
+        parent = {
+            if cursor > 0 {
+                nodes[cursor - 1].unwrap()
+            } else {
+                head
+            }
+        };
+
+        let ranges = node.named_prop("ranges")?;
+
+        let paddr_cells = parent.named_prop("#address-cells")?.u32()?;
+
+        if paddr_cells < 1 || paddr_cells > 2 || size_cells > 2 {
+            return Err(AdtError::BadNCells);
+        }
+
+        let mut n_ranges = ranges.size / (4 * (paddr_cells + addr_cells + size_cells));
+
+        while n_ranges != 0 {
+            let ca_ref: &[u32];
+            let pa_ref: &[u32];
+            let cs_ref: &[u32];
+
+            unsafe {
+                let ca_ptr = ranges.value.as_ptr() as *const u32;
+                let pa_ptr = ca_ptr.add(addr_cells as usize);
+                let cs_ptr = pa_ptr.add(addr_cells as usize);
+
+                ca_ref = core::slice::from_raw_parts(ca_ptr, addr_cells as usize);
+
+                pa_ref = core::slice::from_raw_parts(pa_ptr, paddr_cells as usize);
+
+                cs_ref = core::slice::from_raw_parts(cs_ptr, size_cells as usize);
+            }
+
+            let child_addr = get_cells(ca_ref);
+            let parent_addr = get_cells(pa_ref);
+            let child_size = get_cells(cs_ref);
+
+            if addr >= child_addr && (addr + size) <= (child_addr + child_size) {
+                addr = addr - child_addr + parent_addr;
+                break;
+            }
+            n_ranges -= 1;
+        }
+
+        size_cells = parent.named_prop("#size-cells")?.u32()?;
+
+        addr_cells = paddr_cells;
+    }
+
+    Ok((addr, size))
+}
+
 impl ADTNode {
     /// Check that the node pointed to is within the bounds of the ADT and
     /// has a valid property and child count
@@ -419,6 +564,14 @@ impl ADTProperty {
 
         Ok(self.size as usize)
     }
+
+    pub fn u32(&self) -> Result<u32, AdtError> {
+        if self.size != 4 {
+            return Err(AdtError::BadLength);
+        }
+
+        Ok(u32::from_ne_bytes(self.value[..4].try_into().unwrap()))
+    }
 }
 
 extern "C" {
@@ -731,5 +884,58 @@ pub unsafe extern "C" fn adt_path_offset(_dt: *const c_void, path: *const c_char
     match ADTNode::from_path(strpath) {
         Ok(n) => unsafe { n.as_ptr().sub(adt as usize) as c_int },
         Err(e) => e as c_int,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_get_reg(
+    _dt: *const c_void,
+    offsets: *mut i32,
+    prop: *const c_char,
+    i: c_int,
+    paddr: *mut u64,
+    psize: *mut u64,
+) -> c_int {
+    let strname: &str = unsafe { CStr::from_ptr(prop).to_str().unwrap() };
+    let o: &[i32];
+    let mut n_offs: usize = 0;
+    let mut refs: [Option<&'static ADTNode>; ADT_MAX_DEPTH] = [None; ADT_MAX_DEPTH];
+
+    unsafe {
+        // Unlike adt_path_offset_trace(), we need to know
+        // the exact number of nodes in the path.
+        if *offsets == 0 {
+            return AdtError::BadOffset as c_int;
+        }
+
+        while *offsets.add(n_offs) != 0 {
+            n_offs += 1;
+        }
+
+        o = core::slice::from_raw_parts_mut(offsets, n_offs);
+        for (i, &offset) in o.iter().enumerate() {
+            refs[i] = Some(ADTNode::from_ptr(adt.add(offset as usize) as *const ADTNode).unwrap());
+        }
+    }
+
+    match get_reg_container(&refs, strname, i) {
+        Ok((a, s)) => {
+            if !paddr.is_null() {
+                unsafe {
+                    *paddr = a;
+                }
+            }
+
+            if !psize.is_null() {
+                unsafe {
+                    *psize = s;
+                }
+            }
+
+            return 0;
+        }
+        Err(e) => {
+            return e as c_int;
+        }
     }
 }
