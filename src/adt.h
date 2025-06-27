@@ -3,19 +3,7 @@
 #ifndef XDT_H
 #define XDT_H
 
-#include <stddef.h>
-#include <stdint.h>
-
 #include "types.h"
-
-#define ADT_ERR_NOTFOUND  1
-#define ADT_ERR_BADOFFSET 4
-#define ADT_ERR_BADPATH   5
-#define ADT_ERR_BADNCELLS 14
-#define ADT_ERR_BADVALUE  15
-#define ADT_ERR_BADLENGTH 20
-
-#define ADT_ALIGN 4
 
 extern void *adt;
 
