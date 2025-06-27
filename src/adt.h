@@ -30,10 +30,6 @@ struct adt_node_hdr {
     u32 child_count;
 };
 
-#define ADT_NODE(adt, offset) ((const struct adt_node_hdr *)(((u8 *)(adt)) + (offset)))
-#define ADT_PROP(adt, offset) ((const struct adt_property *)(((u8 *)(adt)) + (offset)))
-#define ADT_SIZE(node)        ((node)->size & 0x7fffffff)
-
 /* This API is designed to match libfdt's read-only API */
 
 /* Required for Rust until we move xnuboot across */
