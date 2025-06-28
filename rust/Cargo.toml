@@ -13,9 +13,3 @@ crate-type = [ "staticlib" ]
 [dependencies]
 fatfs = { path = "vendor/rust-fatfs", default-features = false, features = ["lfn", "alloc"] }
 uuid = { version = "1.7.0", default-features = false }
-
-[patch.crates-io]
-uuid = { path = "vendor/uuid" }
-log = { path = "vendor/log" }
-bitflags = { path = "vendor/bitflags" }
-cfg-if = { path = "vendor/cfg-if" }

@@ -4,15 +4,3 @@
 [submodule "rust/vendor/rust-fatfs"]
 	path = rust/vendor/rust-fatfs
 	url = https://github.com/rafalh/rust-fatfs
-[submodule "rust/vendor/bitflags"]
-	path = rust/vendor/bitflags
-	url = https://github.com/bitflags/bitflags
-[submodule "rust/vendor/cfg-if"]
-	path = rust/vendor/cfg-if
-	url = https://github.com/alexcrichton/cfg-if
-[submodule "rust/vendor/uuid"]
-	path = rust/vendor/uuid
-	url = https://github.com/uuid-rs/uuid
-[submodule "rust/vendor/log"]
-	path = rust/vendor/log
-	url = https://github.com/rust-lang/log
