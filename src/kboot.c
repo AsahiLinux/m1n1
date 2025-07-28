@@ -993,8 +993,10 @@ static int dt_set_wifi(void)
     u32 len;
     const u8 *cal_blob = adt_getprop(adt, anode, "wifi-calibration-msf", &len);
 
-    if (!cal_blob || !len)
-        bail("ADT: Failed to get wifi-calibration-msf\n");
+    if (!cal_blob || !len) {
+        printf("ADT: Failed to get wifi-calibration-msf. Replaced module?\n");
+        return 0;
+    }
 
     fdt_setprop(dt, node, "brcm,cal-blob", cal_blob, len);
 
