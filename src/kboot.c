@@ -787,8 +787,10 @@ static int dt_set_bluetooth_cal(int anode, int node, const char *adt_name, const
     u32 len;
     const u8 *cal_blob = adt_getprop(adt, anode, adt_name, &len);
 
-    if (!cal_blob || !len)
-        bail("ADT: Failed to get %s\n", adt_name);
+    if (!cal_blob || !len) {
+        printf("ADT: Failed to get %s. Replaced module?\n", adt_name);
+        return 0;
+    }
 
     fdt_setprop(dt, node, fdt_name, cal_blob, len);
     return 0;
