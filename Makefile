@@ -54,7 +54,7 @@ BASE_CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-P
 	-Wsign-compare -Wunused-parameter -Wno-multichar \
 	-ffreestanding -fpic -ffunction-sections -fdata-sections \
 	-nostdinc -isystem $(shell $(CC) -print-file-name=include) -isystem sysinc \
-	-fno-stack-protector -mstrict-align -march=armv8.2-a \
+	-fno-stack-protector -mstrict-align -Wa,-march=armv8.2-a \
 	$(EXTRA_CFLAGS)
 
 CFLAGS := $(BASE_CFLAGS) -mgeneral-regs-only
