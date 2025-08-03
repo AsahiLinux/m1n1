@@ -1,6 +1,4 @@
-# m1n1: an experimentation playground for Apple Silicon
-
-(And to some extent a Linux bootloader)
+# m1n1: A bootloader and experimentation playground for Apple Silicon
 
 ## Building
 
