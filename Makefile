@@ -64,13 +64,25 @@ ifeq ($(RELEASE),1)
 CFG += RELEASE
 endif
 
-# Required for no_std + alloc for now
-export RUSTC_BOOTSTRAP=1
-RUST_LIB := librust.a
-RUST_LIBS :=
+WANT_RUST := 0
 ifeq ($(CHAINLOADING),1)
 CFG += CHAINLOADING
-RUST_LIBS += $(RUST_LIB)
+WANT_RUST := 1
+endif
+ifneq ($(NO_GPU_INIT),1)
+WANT_RUST := 1
+GPU_OBJECTS := kboot_gpu.o
+CFG += DO_GPU_INIT
+else
+GPU_OBJECTS :=
+endif
+
+# Required for no_std + alloc for now
+export RUSTC_BOOTSTRAP=1
+ifeq ($(WANT_RUST),1)
+RUST_LIB := librust.a
+else
+RUST_LIB :=
 endif
 
 ifeq ($(BUILDSTD),1)
@@ -168,10 +180,10 @@ OBJECTS := \
 	vsprintf.o \
 	wdt.o \
 	$(DCP_OBJECTS) \
-	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS) $(RUST_LIBS)
+	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS) $(RUST_LIB)
 
 FP_OBJECTS := \
-	kboot_gpu.o \
+	$(GPU_OBJECTS) \
 	math/expf.o \
 	math/exp2f_data.o \
 	math/powf.o \
@@ -179,7 +191,7 @@ FP_OBJECTS := \
 
 BUILD_OBJS := $(patsubst %,build/%,$(OBJECTS))
 BUILD_FP_OBJS := $(patsubst %,build/%,$(FP_OBJECTS))
-BUILD_ALL_OBJS := $(BUILD_OBJS) $(BUILD_FP_OBJS)
+BUILD_ALL_OBJS := $(BUILD_FP_OBJS) $(BUILD_OBJS)
 NAME := m1n1
 TARGET := m1n1.macho
 TARGET_RAW := m1n1.bin
@@ -199,7 +211,7 @@ rustfmt:
 rustfmt-check:
 	cd rust && cargo fmt --check
 
-build/$(RUST_LIB): rust/src/* rust/*
+build/$(RUST_LIB): rust/src/* rust/* rust/src/gpu/* rust/src/gpu/hw/*
 	$(QUIET)echo "  RS    $@"
 	$(QUIET)mkdir -p $(DEPDIR)
 	$(QUIET)mkdir -p "$(dir $@)"
