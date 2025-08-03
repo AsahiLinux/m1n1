@@ -226,6 +226,7 @@ extern void _deep_wfi_helper(void);
 void deep_wfi(void)
 {
     u64 cyc_ovrd;
+    const bool cpu_feat_cyc_ovrd = cpu_features->cyc_ovrd;
 
     if (!supports_arch_retention()) {
         // A7 - A11 does not support state retention across deep WFI
@@ -234,14 +235,14 @@ void deep_wfi(void)
         return;
     }
 
-    if (cpu_features->cyc_ovrd) {
+    if (cpu_feat_cyc_ovrd) {
         cyc_ovrd = mrs(SYS_IMP_APL_CYC_OVRD);
         msr(SYS_IMP_APL_CYC_OVRD, cyc_ovrd | CYC_OVRD_WFI_MODE(3));
     }
 
     _deep_wfi_helper();
 
-    if (cpu_features->cyc_ovrd)
+    if (cpu_feat_cyc_ovrd)
         msr(SYS_IMP_APL_CYC_OVRD, cyc_ovrd);
 }
 
