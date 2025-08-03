@@ -266,7 +266,9 @@ static inline void write64_lo_hi(u64 addr, u64 val)
 #define __mrs(reg)                                                                                 \
     ({                                                                                             \
         u64 val;                                                                                   \
-        __asm__ volatile("mrs\t%0, " #reg : "=r"(val));                                            \
+        __asm__ volatile(".arch armv8.2-a\n"                                                       \
+                         "mrs\t%0, " #reg                                                          \
+                         : "=r"(val));                                                             \
         val;                                                                                       \
     })
 #define _mrs(reg) __mrs(reg)
@@ -274,7 +276,10 @@ static inline void write64_lo_hi(u64 addr, u64 val)
 #define __msr(reg, val)                                                                            \
     ({                                                                                             \
         u64 __val = (u64)val;                                                                      \
-        __asm__ volatile("msr\t" #reg ", %0" : : "r"(__val));                                      \
+        __asm__ volatile(".arch armv8.2-a\n"                                                       \
+                         "msr\t" #reg ", %0"                                                       \
+                         :                                                                         \
+                         : "r"(__val));                                                            \
     })
 #define _msr(reg, val) __msr(reg, val)
 
