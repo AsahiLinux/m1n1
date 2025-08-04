@@ -555,6 +555,14 @@ def bootstrap_port(iface, proxy):
 
     if do_baud:
         try:
+            chip_id = proxy.get_chipid()
+            # These chips are too slow for baudrate 1500000 at their default frequency
+            if chip_id in (0x8960, 0x7000, 0x7001, 0x8000, 0x8001, 0x8003, 0x8010, 0x8011, 0x8015):
+                proxy.cpufreq_init()
+        # Old m1n1 version, assume they are not one of those chips
+        except ProxyCommandError: {}
+
+        try:
             iface.nop()
             proxy.set_baud(1500000)
         except UartTimeout:
