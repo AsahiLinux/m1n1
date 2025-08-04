@@ -119,6 +119,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_EL3_CALL:
             reply->retval = el3_call((void *)request->args[0], request->args[1], request->args[2],
                                      request->args[3], request->args[4]);
+            break;
 
         case P_WRITE64:
             exc_guard = GUARD_SKIP;
