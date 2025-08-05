@@ -26,6 +26,9 @@
 #define ASC_MBOX_A2I_CONTROL_T8015 0x108
 #define ASC_MBOX_I2A_CONTROL_T8015 0x10c
 
+#define ASC_CPU_CONTROL_T8015       0x0
+#define ASC_CPU_CONTROL_START_T8015 0x1
+
 struct asc_ops {
     bool (*send)(asc_dev_t *asc, const struct asc_message *msg);
     bool (*recv)(asc_dev_t *asc, struct asc_message *msg);
@@ -133,6 +136,40 @@ const struct asc_ops t8015_ans2_ops = {
     .cpu_running = &ascwrap_v4_cpu_running,
 };
 
+static bool t8015_cpu_running(asc_dev_t *asc)
+{
+    if (!asc->cpu_base)
+        return true;
+
+    return read32(asc->cpu_base + ASC_CPU_CONTROL_T8015) & ASC_CPU_CONTROL_START_T8015;
+}
+
+static void t8015_cpu_start(asc_dev_t *asc)
+{
+    if (!asc->cpu_base)
+        return;
+
+    set32(asc->cpu_base + ASC_CPU_CONTROL_T8015, ASC_CPU_CONTROL_START_T8015);
+}
+
+static void t8015_cpu_stop(asc_dev_t *asc)
+{
+    if (!asc->cpu_base)
+        return;
+
+    clear32(asc->cpu_base + ASC_CPU_CONTROL_T8015, ASC_CPU_CONTROL_START_T8015);
+}
+
+const struct asc_ops t8015_ops = {
+    .send = &ascwrap_v4_send,
+    .recv = &ascwrap_v4_recv,
+    .can_send = &t8015_can_send,
+    .can_recv = &t8015_can_recv,
+    .cpu_start = &t8015_cpu_start,
+    .cpu_stop = &t8015_cpu_stop,
+    .cpu_running = &t8015_cpu_running,
+};
+
 asc_dev_t *asc_init(const char *path)
 {
     int asc_path[8];
@@ -152,7 +189,16 @@ asc_dev_t *asc_init(const char *path)
     if (!asc)
         return NULL;
 
-    if (adt_is_compatible(adt, node, "iop-ans2,t8015")) {
+    if (adt_is_compatible(adt, node, "iop-pmp,t8015") ||
+        adt_is_compatible(adt, node, "iop,t8015")) {
+        // there is also a iop-gfx,t8015 but how that works is unknown
+        asc->base = base + 0x8000;
+        asc->ops = &t8015_ops;
+
+        if (adt_get_reg(adt, asc_path, "reg", 2, (u64 *)&asc->cpu_base, NULL) < 0)
+            asc->cpu_base = 0;
+
+    } else if (adt_is_compatible(adt, node, "iop-ans2,t8015")) {
         asc->base = base + 0x8000;
         asc->ops = &t8015_ans2_ops;
 
