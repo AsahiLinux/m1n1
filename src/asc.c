@@ -23,10 +23,85 @@
 #define ASC_MBOX_I2A_RECV0   0x830
 #define ASC_MBOX_I2A_RECV1   0x838
 
+struct asc_ops {
+    bool (*send)(asc_dev_t *asc, const struct asc_message *msg);
+    bool (*recv)(asc_dev_t *asc, struct asc_message *msg);
+    bool (*can_recv)(asc_dev_t *asc);
+    bool (*can_send)(asc_dev_t *asc);
+    void (*cpu_start)(asc_dev_t *asc);
+    void (*cpu_stop)(asc_dev_t *asc);
+    bool (*cpu_running)(asc_dev_t *asc);
+};
+
 struct asc_dev {
     uintptr_t cpu_base;
     uintptr_t base;
+    const struct asc_ops *ops;
     int iop_node;
+};
+
+static void ascwrap_v4_cpu_start(asc_dev_t *asc)
+{
+    set32(asc->cpu_base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
+}
+
+static void ascwrap_v4_cpu_stop(asc_dev_t *asc)
+{
+    clear32(asc->cpu_base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
+}
+
+static bool ascwrap_v4_cpu_running(asc_dev_t *asc)
+{
+    return read32(asc->cpu_base + ASC_CPU_CONTROL) & ASC_CPU_CONTROL_START;
+}
+
+static bool ascwrap_v4_send(asc_dev_t *asc, const struct asc_message *msg)
+{
+    if (poll32(asc->base + ASC_MBOX_A2I_CONTROL, ASC_MBOX_CONTROL_FULL, 0, 200000)) {
+        printf("asc: A2I mailbox full for 200ms. Is the ASC stuck?");
+        return false;
+    }
+
+    dma_wmb();
+    write64(asc->base + ASC_MBOX_A2I_SEND0, msg->msg0);
+    write64(asc->base + ASC_MBOX_A2I_SEND1, msg->msg1);
+
+    // printf("sent msg: %lx %x\n", msg->msg0, msg->msg1);
+    return true;
+}
+
+static bool ascwrap_v4_recv(asc_dev_t *asc, struct asc_message *msg)
+{
+    if (!asc_can_recv(asc))
+        return false;
+
+    msg->msg0 = read64(asc->base + ASC_MBOX_I2A_RECV0);
+    msg->msg1 = (u32)read64(asc->base + ASC_MBOX_I2A_RECV1);
+    dma_rmb();
+
+    // printf("received msg: %lx %x\n", msg->msg0, msg->msg1);
+
+    return true;
+}
+
+static bool ascwrap_v4_can_recv(asc_dev_t *asc)
+{
+    return !(read32(asc->base + ASC_MBOX_I2A_CONTROL) & ASC_MBOX_CONTROL_EMPTY);
+}
+
+static bool ascwrap_v4_can_send(asc_dev_t *asc)
+{
+    return !(read32(asc->base + ASC_MBOX_A2I_CONTROL) & ASC_MBOX_CONTROL_FULL);
+}
+
+const struct asc_ops ascwrap_v4_ops = {
+    .send = &ascwrap_v4_send,
+    .recv = &ascwrap_v4_recv,
+    .can_send = &ascwrap_v4_can_send,
+    .can_recv = &ascwrap_v4_can_recv,
+    .cpu_start = &ascwrap_v4_cpu_start,
+    .cpu_stop = &ascwrap_v4_cpu_stop,
+    .cpu_running = &ascwrap_v4_cpu_running,
 };
 
 asc_dev_t *asc_init(const char *path)
@@ -48,12 +123,23 @@ asc_dev_t *asc_init(const char *path)
     if (!asc)
         return NULL;
 
-    asc->iop_node = adt_first_child_offset(adt, node);
-    asc->cpu_base = base;
-    asc->base = base + 0x8000;
+    if (adt_is_compatible(adt, node, "iop,ascwrap-v4") ||
+        adt_is_compatible(adt, node, "iop-sep,ascwrap-v4")) {
+        asc->cpu_base = base;
+        asc->base = base + 0x8000;
+        asc->ops = &ascwrap_v4_ops;
+    } else {
+        printf("asc: Unsupported compatible\n");
+        goto out_free;
+    }
 
-    // clear32(base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
+    asc->iop_node = adt_first_child_offset(adt, node);
+
     return asc;
+
+out_free:
+    free(asc);
+    return NULL;
 }
 
 void asc_free(asc_dev_t *asc)
@@ -68,36 +154,27 @@ int asc_get_iop_node(asc_dev_t *asc)
 
 void asc_cpu_start(asc_dev_t *asc)
 {
-    set32(asc->cpu_base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
+    asc->ops->cpu_start(asc);
 }
 
 void asc_cpu_stop(asc_dev_t *asc)
 {
-    clear32(asc->cpu_base + ASC_CPU_CONTROL, ASC_CPU_CONTROL_START);
+    asc->ops->cpu_stop(asc);
 }
 
 bool asc_cpu_running(asc_dev_t *asc)
 {
-    return read32(asc->cpu_base + ASC_CPU_CONTROL) & ASC_CPU_CONTROL_START;
+    return asc->ops->cpu_running(asc);
 }
 
 bool asc_can_recv(asc_dev_t *asc)
 {
-    return !(read32(asc->base + ASC_MBOX_I2A_CONTROL) & ASC_MBOX_CONTROL_EMPTY);
+    return asc->ops->can_recv(asc);
 }
 
 bool asc_recv(asc_dev_t *asc, struct asc_message *msg)
 {
-    if (!asc_can_recv(asc))
-        return false;
-
-    msg->msg0 = read64(asc->base + ASC_MBOX_I2A_RECV0);
-    msg->msg1 = (u32)read64(asc->base + ASC_MBOX_I2A_RECV1);
-    dma_rmb();
-
-    // printf("received msg: %lx %x\n", msg->msg0, msg->msg1);
-
-    return true;
+    return asc->ops->recv(asc, msg);
 }
 
 bool asc_recv_timeout(asc_dev_t *asc, struct asc_message *msg, u32 delay_usec)
@@ -112,20 +189,10 @@ bool asc_recv_timeout(asc_dev_t *asc, struct asc_message *msg, u32 delay_usec)
 
 bool asc_can_send(asc_dev_t *asc)
 {
-    return !(read32(asc->base + ASC_MBOX_A2I_CONTROL) & ASC_MBOX_CONTROL_FULL);
+    return asc->ops->can_send(asc);
 }
 
 bool asc_send(asc_dev_t *asc, const struct asc_message *msg)
 {
-    if (poll32(asc->base + ASC_MBOX_A2I_CONTROL, ASC_MBOX_CONTROL_FULL, 0, 200000)) {
-        printf("asc: A2I mailbox full for 200ms. Is the ASC stuck?");
-        return false;
-    }
-
-    dma_wmb();
-    write64(asc->base + ASC_MBOX_A2I_SEND0, msg->msg0);
-    write64(asc->base + ASC_MBOX_A2I_SEND1, msg->msg1);
-
-    // printf("sent msg: %lx %x\n", msg->msg0, msg->msg1);
-    return true;
+    return asc->ops->send(asc, msg);
 }
