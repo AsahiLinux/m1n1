@@ -23,6 +23,9 @@
 #define ASC_MBOX_I2A_RECV0   0x830
 #define ASC_MBOX_I2A_RECV1   0x838
 
+#define ASC_MBOX_A2I_CONTROL_T8015 0x108
+#define ASC_MBOX_I2A_CONTROL_T8015 0x10c
+
 struct asc_ops {
     bool (*send)(asc_dev_t *asc, const struct asc_message *msg);
     bool (*recv)(asc_dev_t *asc, struct asc_message *msg);
@@ -110,6 +113,26 @@ const struct asc_ops ascwrap_v4_ops = {
     .cpu_running = &ascwrap_v4_cpu_running,
 };
 
+static bool t8015_can_recv(asc_dev_t *asc)
+{
+    return !(read32(asc->base + ASC_MBOX_I2A_CONTROL_T8015) & ASC_MBOX_CONTROL_EMPTY);
+}
+
+static bool t8015_can_send(asc_dev_t *asc)
+{
+    return !(read32(asc->base + ASC_MBOX_A2I_CONTROL_T8015) & ASC_MBOX_CONTROL_FULL);
+}
+
+const struct asc_ops t8015_ans2_ops = {
+    .send = &ascwrap_v4_send,
+    .recv = &ascwrap_v4_recv,
+    .can_send = &t8015_can_send,
+    .can_recv = &t8015_can_recv,
+    .cpu_start = &ascwrap_v4_cpu_start,
+    .cpu_stop = &ascwrap_v4_cpu_stop,
+    .cpu_running = &ascwrap_v4_cpu_running,
+};
+
 asc_dev_t *asc_init(const char *path)
 {
     int asc_path[8];
@@ -129,8 +152,16 @@ asc_dev_t *asc_init(const char *path)
     if (!asc)
         return NULL;
 
-    if (adt_is_compatible(adt, node, "iop,ascwrap-v4") ||
-        adt_is_compatible(adt, node, "iop-sep,ascwrap-v4")) {
+    if (adt_is_compatible(adt, node, "iop-ans2,t8015")) {
+        asc->base = base + 0x8000;
+        asc->ops = &t8015_ans2_ops;
+
+        if (adt_get_reg(adt, asc_path, "reg", 1, (u64 *)&asc->cpu_base, NULL) < 0) {
+            printf("asc: Error getting T8015 ANS2 %s CPU base address.\n", path);
+            goto out_free;
+        }
+    } else if (adt_is_compatible(adt, node, "iop,ascwrap-v4") ||
+               adt_is_compatible(adt, node, "iop-sep,ascwrap-v4")) {
         asc->cpu_base = base;
         asc->base = base + 0x8000;
         asc->ops = &ascwrap_v4_ops;
