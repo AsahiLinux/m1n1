@@ -57,7 +57,13 @@ static bool ascwrap_v4_cpu_running(asc_dev_t *asc)
 
 static bool ascwrap_v4_send(asc_dev_t *asc, const struct asc_message *msg)
 {
-    if (poll32(asc->base + ASC_MBOX_A2I_CONTROL, ASC_MBOX_CONTROL_FULL, 0, 200000)) {
+    bool can_send = false;
+    u64 timeout = timeout_calculate(200000);
+    while (!timeout_expired(timeout))
+        if ((can_send = asc_can_send(asc)))
+            break;
+
+    if (!can_send) {
         printf("asc: A2I mailbox full for 200ms. Is the ASC stuck?");
         return false;
     }
