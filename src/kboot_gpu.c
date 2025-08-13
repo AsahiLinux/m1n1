@@ -500,6 +500,23 @@ int dt_set_gpu(void *dt)
         return 0;
     }
 
+    /* check for old-style downstream compatibles */
+    bool downstream_dtb = false;
+    downstream_dtb |= fdt_node_check_compatible(dt, gpu, "apple,agx-t8103") == 0;
+    downstream_dtb |= fdt_node_check_compatible(dt, gpu, "apple,agx-t8112") == 0;
+    downstream_dtb |= fdt_node_check_compatible(dt, gpu, "apple,agx-t6000") == 0;
+    downstream_dtb |= fdt_node_check_compatible(dt, gpu, "apple,agx-t6001") == 0;
+    downstream_dtb |= fdt_node_check_compatible(dt, gpu, "apple,agx-t6002") == 0;
+    downstream_dtb |= fdt_node_check_compatible(dt, gpu, "apple,agx-t6020") == 0;
+    downstream_dtb |= fdt_node_check_compatible(dt, gpu, "apple,agx-t6021") == 0;
+    downstream_dtb |= fdt_node_check_compatible(dt, gpu, "apple,agx-t6022") == 0;
+
+    if (!downstream_dtb) {
+        printf("FDT: no old style agx compatible found, disabling GPU node\n");
+        fdt_setprop_string(dt, gpu, "status", "disabled");
+        return 0;
+    }
+
     int len;
     const fdt32_t *opps_ph = fdt_getprop(dt, gpu, "operating-points-v2", &len);
     if (!opps_ph || len != 4)
