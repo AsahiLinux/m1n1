@@ -54,10 +54,10 @@ BASE_CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-P
 	-Wsign-compare -Wunused-parameter -Wno-multichar \
 	-ffreestanding -fpic -ffunction-sections -fdata-sections \
 	-nostdinc -isystem $(shell $(CC) -print-file-name=include) -isystem sysinc \
-	-fno-stack-protector -mstrict-align -march=armv8.2-a \
+	-fno-stack-protector -mstrict-align -Wa,-march=armv8.2-a \
 	$(EXTRA_CFLAGS)
 
-CFLAGS := $(BASE_CFLAGS) -mgeneral-regs-only
+CFLAGS := $(BASE_CFLAGS) -mgeneral-regs-only -march=armv8-a -mno-outline-atomics
 
 CFG :=
 ifeq ($(RELEASE),1)
@@ -102,6 +102,8 @@ DCP_OBJECTS := $(patsubst %,dcp/%, \
 	parser.o \
 	system_ep.o)
 
+HV_C_OBJECTS := hv.o hv_vm.o hv_exc.o hv_vuart.o hv_wdt.o hv_aic.o hv_virtio.o
+
 OBJECTS := \
 	adt.o \
 	afk.o \
@@ -134,7 +136,7 @@ OBJECTS := \
 	firmware.o \
 	gxf.o gxf_asm.o \
 	heapblock.o \
-	hv.o hv_vm.o hv_exc.o hv_vuart.o hv_wdt.o hv_asm.o hv_aic.o hv_virtio.o \
+	hv_asm.o \
 	i2c.o \
 	iodev.o \
 	iova.o \
@@ -179,7 +181,8 @@ FP_OBJECTS := \
 
 BUILD_OBJS := $(patsubst %,build/%,$(OBJECTS))
 BUILD_FP_OBJS := $(patsubst %,build/%,$(FP_OBJECTS))
-BUILD_ALL_OBJS := $(BUILD_OBJS) $(BUILD_FP_OBJS)
+BUILD_HV_C_OBJS := $(patsubst %,build/%,$(HV_C_OBJECTS))
+BUILD_ALL_OBJS := $(BUILD_OBJS) $(BUILD_FP_OBJS) $(BUILD_HV_C_OBJS)
 NAME := m1n1
 TARGET := m1n1.macho
 TARGET_RAW := m1n1.bin
@@ -216,7 +219,13 @@ $(BUILD_FP_OBJS): build/%.o: src/%.c
 	$(QUIET)echo "  CC FP $@"
 	$(QUIET)mkdir -p $(DEPDIR)
 	$(QUIET)mkdir -p "$(dir $@)"
-	$(QUIET)$(CC) -c $(BASE_CFLAGS) -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
+	$(QUIET)$(CC) -c $(BASE_CFLAGS) -march=armv8-a -mno-outline-atomics -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
+
+$(BUILD_HV_C_OBJS): build/%.o: src/%.c
+	$(QUIET)echo "  CC HV $@"
+	$(QUIET)mkdir -p $(DEPDIR)
+	$(QUIET)mkdir -p "$(dir $@)"
+	$(QUIET)$(CC) -c $(BASE_CFLAGS) -march=armv8.2-a -MMD -MF $(DEPDIR)/$(*F).d -MQ "$@" -MP -o $@ $<
 
 build/%.o: src/%.c build-tag build-cfg
 	$(QUIET)echo "  CC    $@"
