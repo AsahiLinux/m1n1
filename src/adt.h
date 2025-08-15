@@ -39,7 +39,6 @@ int adt_get_child_count(const void *adt, int offset);
 int adt_first_child_offset(const void *adt, int offset);
 int adt_next_sibling_offset(const void *adt, int offset);
 
-int adt_subnode_offset_namelen(const void *adt, int parentoffset, const char *name, size_t namelen);
 int adt_subnode_offset(const void *adt, int parentoffset, const char *name);
 int adt_path_offset(const void *adt, const char *path);
 int adt_path_offset_trace(const void *adt, const char *path, int *offsets);

@@ -273,7 +273,7 @@ impl ADTNode {
                 None => (p, ""),
             };
 
-            match n.subnode_by_name(cursor, cursor.len()) {
+            match n.subnode_by_name(cursor) {
                 Ok(sn) => {
                     n = sn;
                 }
@@ -410,12 +410,12 @@ impl ADTNode {
     }
 
     /// Walks the node's subnodes and searches for one with the specified name
-    pub fn subnode_by_name(&self, name: &str, len: usize) -> Result<&'static ADTNode, AdtError> {
+    pub fn subnode_by_name(&self, name: &str) -> Result<&'static ADTNode, AdtError> {
         let mut c = self.first_child()?;
 
         for _ in 0..self.child_count {
             let prop = c.named_prop("name")?;
-            if node_names_equal(prop.str()?, &name[..len]) {
+            if node_names_equal(prop.str()?, name) {
                 return Ok(c);
             }
             c = c.next_sibling()?;
@@ -767,28 +767,7 @@ pub unsafe extern "C" fn adt_subnode_offset(
         Err(e) => return e as c_int,
     };
 
-    match n.subnode_by_name(strname, strname.len()) {
-        Ok(s) => unsafe { s.as_ptr().sub(adt as usize) as c_int },
-        Err(e) => e as c_int,
-    }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn adt_subnode_offset_namelen(
-    _dt: *const c_void,
-    offset: c_int,
-    name: *const c_char,
-    len: c_size_t,
-) -> c_int {
-    let strname: &str = unsafe { CStr::from_ptr(name).to_str().unwrap() };
-    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
-
-    let n = match ADTNode::from_ptr(ptr) {
-        Ok(node) => node,
-        Err(e) => return e as c_int,
-    };
-
-    match n.subnode_by_name(strname, len) {
+    match n.subnode_by_name(strname) {
         Ok(s) => unsafe { s.as_ptr().sub(adt as usize) as c_int },
         Err(e) => e as c_int,
     }
