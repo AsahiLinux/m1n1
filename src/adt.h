@@ -30,8 +30,6 @@ int adt_get_property_count(const void *adt, int offset);
 
 int adt_first_property_offset(const void *adt, int offset);
 
-int adt_next_property_offset(const void *adt, int offset);
-
 const struct adt_property *adt_get_property_by_offset(const void *adt, int offset);
 
 int adt_get_child_count(const void *adt, int offset);
