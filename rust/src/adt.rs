@@ -343,31 +343,11 @@ pub unsafe extern "C" fn adt_next_property_offset(_dt: *const c_void, offset: c_
     }
 }
 
-// This function has load-bearing UB on the C side... The sound Rust equivalent
-// breaks this. Recreate the UB here rather than call the new Rust function.
 #[no_mangle]
 pub unsafe extern "C" fn adt_first_child_offset(_dt: *const c_void, offset: c_int) -> c_int {
     let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
     let n = ADTNode::from_ptr(ptr).unwrap();
-
-    let mut p: &ADTProperty = n.first_property().unwrap();
-
-    for _ in 0..n.property_count - 1 {
-        p = p.next_property().unwrap();
-    }
-
-    unsafe {
-        ADTNode::from_ptr(
-            p.as_ptr()
-                .add(size_of::<[c_char; 32]>())
-                .add(size_of::<u32>())
-                .add((p.size as usize + (ADT_ALIGN - 1)) & !(ADT_ALIGN - 1))
-                as *const ADTNode,
-        )
-        .unwrap()
-        .as_ptr()
-        .sub(adt as usize) as c_int
-    }
+    unsafe { n.first_child().unwrap().as_ptr().sub(adt as usize) as c_int }
 }
 
 #[no_mangle]
