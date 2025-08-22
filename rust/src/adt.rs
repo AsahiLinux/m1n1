@@ -335,10 +335,6 @@ impl ADTNode {
             p = rest;
         }
 
-        if let Some(b) = breadcrumbs.as_mut() {
-            b[bc_idx] = Some(head)
-        }
-
         Ok(n)
     }
 
@@ -885,10 +881,13 @@ pub unsafe extern "C" fn adt_path_offset_trace(
         Ok(n) => {
             if !offsets.is_null() {
                 for (i, &r) in refs.iter().enumerate() {
-                    if r.is_some() {
-                        unsafe {
-                            *offsets.add(i) =
-                                (r.unwrap().as_ptr() as *const u8).sub(adt as usize) as i32;
+                    unsafe {
+                        let val = r
+                            .map(|r| r.as_ptr().sub(adt as usize) as i32)
+                            .unwrap_or_default();
+                        *offsets.add(i) = val;
+                        if val == 0 {
+                            break;
                         }
                     }
                 }
