@@ -80,6 +80,16 @@ fn get_cells(src: &[u32]) -> u64 {
     val
 }
 
+fn get_cells_u8(src: &[u8]) -> u64 {
+    let mut val: u64 = 0;
+
+    for chunk in src.rchunks_exact(4) {
+        val = (val << 32) | (u32::from_le_bytes(chunk.try_into().unwrap()) as u64)
+    }
+
+    val
+}
+
 /// Retrieve the register container (addr, size) of a given node at the end of
 /// a node path trace.
 ///
@@ -177,34 +187,21 @@ pub fn get_reg_container(
             return Err(AdtError::BadNCells);
         }
 
-        let mut n_ranges = ranges.size / (4 * (paddr_cells + addr_cells + size_cells));
+        let entry_size = (4 * (paddr_cells + addr_cells + size_cells)) as usize;
+        let slice = unsafe { core::slice::from_raw_parts(ranges.value.as_ptr(), ranges.size as _) };
 
-        while n_ranges != 0 {
-            let ca_ref: &[u32];
-            let pa_ref: &[u32];
-            let cs_ref: &[u32];
+        for range in slice.chunks_exact(entry_size) {
+            let (ca_ref, remainder) = range.split_at(4 * addr_cells as usize);
+            let (pa_ref, cs_ref) = remainder.split_at(4 * paddr_cells as usize);
 
-            unsafe {
-                let ca_ptr = ranges.value.as_ptr() as *const u32;
-                let pa_ptr = ca_ptr.add(addr_cells as usize);
-                let cs_ptr = pa_ptr.add(addr_cells as usize);
-
-                ca_ref = core::slice::from_raw_parts(ca_ptr, addr_cells as usize);
-
-                pa_ref = core::slice::from_raw_parts(pa_ptr, paddr_cells as usize);
-
-                cs_ref = core::slice::from_raw_parts(cs_ptr, size_cells as usize);
-            }
-
-            let child_addr = get_cells(ca_ref);
-            let parent_addr = get_cells(pa_ref);
-            let child_size = get_cells(cs_ref);
+            let child_addr = get_cells_u8(ca_ref);
+            let parent_addr = get_cells_u8(pa_ref);
+            let child_size = get_cells_u8(cs_ref);
 
             if addr >= child_addr && (addr + size) <= (child_addr + child_size) {
                 addr = addr - child_addr + parent_addr;
                 break;
             }
-            n_ranges -= 1;
         }
 
         size_cells = parent.named_prop("#size-cells")?.u32()?;
