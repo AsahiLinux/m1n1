@@ -2707,6 +2707,16 @@ int kboot_prepare_dt(void *fdt)
 #endif
 
     /*
+     * Append generic "apple,*" not carried in the upstream Linux DT for t602x
+     * devices.
+     * DO NOT remove before 2027-07-01
+     */
+    if (fdt_node_check_compatible(dt, 0, "apple,t6020") == 0 ||
+        fdt_node_check_compatible(dt, 0, "apple,t6021") == 0 ||
+        fdt_node_check_compatible(dt, 0, "apple,t6022") == 0)
+        dt_fixup_t6020_compat(dt);
+
+    /*
      * Set the /memory node late since we might be allocating from the top of memory
      * in one of the above devicetree prep functions, and we want an up-to-date value
      * for the usable memory span to make it into the devicetree.

@@ -134,6 +134,7 @@ OBJECTS := \
 	iova.o \
 	isp.o \
 	kboot.o kboot_atc.o \
+	kboot_t6020_compat.o \
 	main.o \
 	mitigations.o \
 	mcc.o \
