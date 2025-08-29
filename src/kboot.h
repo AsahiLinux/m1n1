@@ -5,6 +5,9 @@
 
 #include "types.h"
 
+// declarations for kboot_t6020_compat.c
+int dt_fixup_t6020_compat(void *dt);
+
 struct kernel_header {
     u32 code[2];     /* Executable code */
     u64 text_offset; /* Image load offset, little endian */
