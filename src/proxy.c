@@ -406,7 +406,7 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->retval = pmgr_power_enable(request->args[0]);
             break;
         case P_PMGR_POWER_DISABLE:
-            reply->retval = pmgr_power_enable(request->args[0]);
+            reply->retval = pmgr_power_disable(request->args[0]);
             break;
         case P_PMGR_ADT_POWER_ENABLE:
             reply->retval = pmgr_adt_power_enable((const char *)request->args[0]);
