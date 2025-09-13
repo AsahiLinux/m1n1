@@ -145,7 +145,7 @@ class Toolchain:
 
         # pylint: disable=invalid-name
         self.CC = clangdir + "clang --target=" + self.ARCH + " " + self.CFLAGS
-        self.LD = llddir + "ld.lld -maarch64elf"
+        self.LD = llddir + "ld.lld -maarch64elf --pie"
         self.OBJCOPY = clangdir + "llvm-objcopy"
         self.OBJDUMP = clangdir + "llvm-objdump"
         self.NM = clangdir + "llvm-nm"
