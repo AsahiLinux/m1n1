@@ -1,0 +1,81 @@
+# This is a basic workflow to help you get started with Actions
+
+name: installer
+
+# Controls when the action will run.
+on:
+  # Triggers the workflow on main branch. Build errors are catched in the
+  # build workflow so failures here are likely caused by the external
+  # sources. No need to run this on pull-requests unless this file is changed.
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    paths: [ .github/workflows/installer.yml ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  uefi-only-boot-bin:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Install aarch64-linux-gnu- toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+                               gcc-aarch64-linux-gnu \
+                               libgnutls28-dev \
+                               device-tree-compiler
+
+      - name: Install nightly rust
+        run: |
+          export RUSTUP_TOOLCHAIN=stable
+          rustup target install aarch64-unknown-none-softfloat
+
+      - name: Build
+        run: make -k -j2 ARCH=aarch64-linux-gnu- RELEASE=1
+
+      - name: Fetch u-boot and downstream device trees
+        run: |
+          mkdir -p uefi-only
+          git clone --depth 1 --no-tags --single-branch -b asahi-releng \
+              https://github.com/AsahiLinux/u-boot.git uefi-only/u-boot
+          git clone --depth=1 --no-tags --single-branch -b asahi \
+              --no-checkout --filter=tree:0 \
+              https://github.com/AsahiLinux/linux.git uefi-only/linux
+          cd uefi-only/linux
+          git sparse-checkout set --no-cone /arch/arm64/boot/dts/apple/
+          git checkout
+
+      - name: Update u-boot apple device trees
+        run: |
+          cp -f uefi-only/linux/arch/arm64/boot/dts/apple/*.dts \
+                uefi-only/linux/arch/arm64/boot/dts/apple/*.dtsi \
+                uefi-only/linux/arch/arm64/boot/dts/apple/*.h \
+                uefi-only/u-boot/arch/arm/dts/
+
+      - name: Build u-boot
+        run: |
+          cd uefi-only/u-boot
+          make CROSS_COMPILE=aarch64-linux-gnu- apple_m1_defconfig
+          make CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm -k -j2
+
+      - name: Create m1n1 uefi only boot.bin
+        run: |
+          gzip -k uefi-only/u-boot/u-boot-nodtb.bin
+          cat build/m1n1.bin \
+              uefi-only/u-boot/arch/arm/dts/t60*.dtb \
+              uefi-only/u-boot/arch/arm/dts/t81*.dtb \
+              > uefi-only/boot.bin
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uefi-only_boot.bin
+          path: |
+            uefi-only/boot.bin
