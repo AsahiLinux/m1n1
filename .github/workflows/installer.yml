@@ -21,9 +21,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v5
         with:
           submodules: recursive
+
+      - name: Checkout linux
+        uses: actions/checkout@v5
+        with:
+          repository: AsahiLinux/linux
+          ref: 'asahi'
+          path: linux
+          sparse-checkout: 'arch/arm64/boot/dts/apple/'
+          fetch-tags: 'true'
+
+      - name: Checkout u-boot
+        uses: actions/checkout@v5
+        with:
+          repository: AsahiLinux/u-boot
+          ref: 'asahi-releng'
+          path: u-boot
 
       - name: Install aarch64-linux-gnu- toolchain
         run: |
@@ -41,37 +58,25 @@ jobs:
       - name: Build
         run: make -k -j2 ARCH=aarch64-linux-gnu- RELEASE=1
 
-      - name: Fetch u-boot and downstream device trees
-        run: |
-          mkdir -p uefi-only
-          git clone --depth 1 --no-tags --single-branch -b asahi-releng \
-              https://github.com/AsahiLinux/u-boot.git uefi-only/u-boot
-          git clone --depth=1 --no-tags --single-branch -b asahi \
-              --no-checkout --filter=tree:0 \
-              https://github.com/AsahiLinux/linux.git uefi-only/linux
-          cd uefi-only/linux
-          git sparse-checkout set --no-cone /arch/arm64/boot/dts/apple/
-          git checkout
-
       - name: Update u-boot apple device trees
         run: |
-          cp -f uefi-only/linux/arch/arm64/boot/dts/apple/*.dts \
-                uefi-only/linux/arch/arm64/boot/dts/apple/*.dtsi \
-                uefi-only/linux/arch/arm64/boot/dts/apple/*.h \
-                uefi-only/u-boot/arch/arm/dts/
+          cp -f linux/arch/arm64/boot/dts/apple/*.dts \
+                linux/arch/arm64/boot/dts/apple/*.dtsi \
+                linux/arch/arm64/boot/dts/apple/*.h \
+                u-boot/arch/arm/dts/
 
       - name: Build u-boot
         run: |
-          cd uefi-only/u-boot
+          cd u-boot
           make CROSS_COMPILE=aarch64-linux-gnu- apple_m1_defconfig
           make CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm -k -j2
 
       - name: Create m1n1 uefi only boot.bin
         run: |
-          gzip -k uefi-only/u-boot/u-boot-nodtb.bin
+          gzip -k u-boot/u-boot-nodtb.bin
           cat build/m1n1.bin \
-              uefi-only/u-boot/arch/arm/dts/t60*.dtb \
-              uefi-only/u-boot/arch/arm/dts/t81*.dtb \
+              u-boot/arch/arm/dts/t60*.dtb \
+              u-boot/arch/arm/dts/t81*.dtb \
               > uefi-only/boot.bin
 
       - uses: actions/upload-artifact@v4
