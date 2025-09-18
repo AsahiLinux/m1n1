@@ -84,6 +84,7 @@ jobs:
           cat build/m1n1.bin \
               u-boot/arch/arm/dts/t60*.dtb \
               u-boot/arch/arm/dts/t81*.dtb \
+              u-boot/u-boot-nodtb.bin.gz \
               > uefi-only/out/esp/m1n1/boot.bin
 
       - uses: actions/upload-artifact@v4
