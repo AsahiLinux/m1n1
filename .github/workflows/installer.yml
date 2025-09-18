@@ -73,14 +73,15 @@ jobs:
 
       - name: Create m1n1 uefi only boot.bin
         run: |
+          mkdir -p uefi-only/out/esp/m1n1/
           gzip -k u-boot/u-boot-nodtb.bin
           cat build/m1n1.bin \
               u-boot/arch/arm/dts/t60*.dtb \
               u-boot/arch/arm/dts/t81*.dtb \
-              > uefi-only/boot.bin
+              > uefi-only/out/esp/m1n1/boot.bin
 
       - uses: actions/upload-artifact@v4
         with:
           name: uefi-only_boot.bin
           path: |
-            uefi-only/boot.bin
+            uefi-only/out
