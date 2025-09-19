@@ -24,5 +24,8 @@ void kboot_set_initrd(void *start, size_t size);
 int kboot_set_chosen(const char *name, const char *value);
 int kboot_prepare_dt(void *fdt);
 int kboot_boot(void *kernel);
+int dt_get_or_add_reserved_mem(const char *node_name, const char *compat, bool nomap, u64 paddr,
+                               size_t size);
+int dt_device_add_mem_region(const char *alias, uint32_t phandle, const char *name);
 
 #endif

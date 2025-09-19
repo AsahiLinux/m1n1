@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "../build/build_cfg.h"
+
 #include <stdint.h>
 
 #include "kboot.h"
@@ -47,7 +49,45 @@ static char *chosen_params[MAX_CHOSEN_PARAMS][2];
 
 extern const char *const m1n1_version;
 
+#ifdef DO_GPU_INIT
 int dt_set_gpu(void *dt);
+#else
+static int dt_set_gpu(void *dt)
+{
+    int gpu, node;
+
+    gpu = fdt_path_offset(dt, "gpu");
+    if (gpu >= 0)
+        fdt_setprop_string(dt, gpu, "status", "disabled");
+
+    node = fdt_path_offset(dt, "/reserved-memory/uat-handoff");
+    if (node >= 0)
+        fdt_setprop_string(dt, node, "status", "disabled");
+
+    node = fdt_path_offset(dt, "/reserved-memory/uat-pagetables");
+    if (node >= 0)
+        fdt_setprop_string(dt, node, "status", "disabled");
+
+    node = fdt_path_offset(dt, "/reserved-memory/uat-ttbs");
+    if (node >= 0)
+        fdt_setprop_string(dt, node, "status", "disabled");
+
+    node = fdt_path_offset(dt, "/reserved-memory/globals");
+    if (node >= 0)
+        fdt_setprop_string(dt, node, "status", "disabled");
+
+    node = fdt_path_offset(dt, "/reserved-memory/hw-cal-a");
+    if (node >= 0)
+        fdt_setprop_string(dt, node, "status", "disabled");
+
+    node = fdt_path_offset(dt, "/reserved-memory/hw-cal-b");
+    if (node >= 0)
+        fdt_setprop_string(dt, node, "status", "disabled");
+
+    printf("m1n1 was built without rust support, GPU will not be initialized\n");
+    return 0;
+}
+#endif
 
 #define DT_ALIGN 16384
 
@@ -1393,8 +1433,8 @@ static int dt_device_set_reserved_mem_from_dart(int node, dart_dev_t *dart, cons
     return dt_device_set_reserved_mem(node, name, phandle, iova, size);
 }
 
-static int dt_get_or_add_reserved_mem(const char *node_name, const char *compat, bool nomap,
-                                      u64 paddr, size_t size)
+int dt_get_or_add_reserved_mem(const char *node_name, const char *compat, bool nomap, u64 paddr,
+                               size_t size)
 {
     int ret;
     int resv_node = fdt_path_offset(dt, "/reserved-memory");
@@ -1435,7 +1475,7 @@ static int dt_get_or_add_reserved_mem(const char *node_name, const char *compat,
     return node;
 }
 
-static int dt_device_add_mem_region(const char *alias, uint32_t phandle, const char *name)
+int dt_device_add_mem_region(const char *alias, uint32_t phandle, const char *name)
 {
     int ret;
     int dev_node = fdt_path_offset(dt, alias);
@@ -2403,7 +2443,11 @@ err:
     return ret;
 }
 
-static int dt_transfer_virtios(void)
+#ifdef RELEASE
+__attribute__((unused))
+#endif
+static int
+dt_transfer_virtios(void)
 {
     int path[3];
     path[0] = adt_path_offset(adt, "/arm-io/");
@@ -2640,7 +2684,8 @@ int kboot_prepare_dt(void *fdt)
     dt_bufsize = fdt_totalsize(fdt);
     assert(dt_bufsize);
 
-    dt_bufsize += 6 * SZ_16K; // Add 96K of buffer for modifications
+    // Add 96K of buffer for modifications + 192K for GPU init data
+    dt_bufsize += 18 * SZ_16K;
     dt = memalign(DT_ALIGN, dt_bufsize);
 
     if (fdt_open_into(fdt, dt, dt_bufsize) < 0)
