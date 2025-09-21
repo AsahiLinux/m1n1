@@ -8,7 +8,8 @@ on:
   # build workflow so failures here are likely caused by the external
   # sources. No need to run this on pull-requests unless this file is changed.
   push:
-    branches: [ main ]
+    branches: [ main, 'releases/**' ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
     paths: [ .github/workflows/installer.yml ]
