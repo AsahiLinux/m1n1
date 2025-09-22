@@ -772,5 +772,17 @@ int dt_set_gpu(void *dt)
     if (dt_set_resvmem(dt, "/reserved-memory/globals", (u64)globals,
                        ALIGN_UP(globals_size, SZ_16K)))
         return -1;
+
+    /* Save init data sizes for debugging */
+    // refresh gpu dt node offset after modifying the dt in dt_set_region()
+    gpu = fdt_path_offset(dt, "gpu");
+    if (gpu < 0) {
+        printf("FDT: GPU: gpu alias not found in device tree\n");
+        return 0;
+    }
+    fdt_setprop_u32(dt, gpu, "debug,hw-cal-a-size", data_a_size);
+    fdt_setprop_u32(dt, gpu, "debug,hw-cal-b-size", data_b_size);
+    fdt_setprop_u32(dt, gpu, "debug,globals-size", globals_size);
+
     return 0;
 }
