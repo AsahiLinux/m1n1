@@ -293,7 +293,7 @@ static int dt_append_atc_fuses_helper(void *dt, int fdt_node, const struct atc_f
 static int dt_append_fuses(void *dt, int adt_node, int fdt_node, int port)
 {
     for (size_t i = 0; i < ARRAY_SIZE(atc_fuses); ++i) {
-        if (!adt_is_compatible(adt, adt_node, atc_fuses[i].compatible))
+        if (!adt_is_compatible_at(adt, adt_node, atc_fuses[i].compatible, 0))
             continue;
         if (atc_fuses[i].port >= 0 && port != atc_fuses[i].port)
             continue;
