@@ -277,17 +277,22 @@ impl ADTNode {
         }
     }
 
+    /// Get a reference to the root node
+    pub fn root() -> Result<&'static ADTNode, AdtError> {
+        let ptr: *const ADTNode = unsafe { adt as *const ADTNode };
+        ADTNode::from_ptr(ptr)
+    }
+
     /// Get a reference to a node at a specified path, tracing the path to the
     /// desired node
     pub fn from_path_trace(
         path: &str,
         mut breadcrumbs: Option<&mut [Option<&'static ADTNode>]>,
     ) -> Result<&'static ADTNode, AdtError> {
-        let ptr: *const ADTNode = unsafe { adt as *const ADTNode };
         let mut p = path;
         let mut bc_idx: usize = 0;
 
-        let head = ADTNode::from_ptr(ptr)?;
+        let head = ADTNode::root()?;
         let mut n = head;
 
         while !p.is_empty() {
