@@ -828,10 +828,19 @@ pub unsafe extern "C" fn rust_fill_gpu_initdata(
     let id_version = unsafe { read32(gpu_base + 0xd04000) };
     let num_cores = unsafe { read32(gpu_base + 0xd04010) } & 0xff;
     let gpu_rev_raw = (id_version >> 8) & 0xff;
-    let base_pstate = sgx
-        .named_prop("gpu-perf-base-pstate")
-        .and_then(|prop| prop.u32())
-        .unwrap_or(1);
+    let compatible = ADTNode::root()
+        .and_then(|r| Ok(r.compatible(0)))
+        .unwrap_or(None);
+    let base_pstate = match compatible {
+        /* ADT has no "gpu-perf-base-pstate", use 3 as the downstream Linux DT */
+        Some("J274AP") => 3,
+        /* Apple does not do this, but they probably should */
+        Some("J474sAP") => 3,
+        _ => sgx
+            .named_prop("gpu-perf-base-pstate")
+            .and_then(|prop| prop.u32())
+            .unwrap_or(1),
+    };
     let uat_ttb_base = match sgx
         .named_prop("gpu-region-base")
         .and_then(|prop| prop.u64())
