@@ -37,6 +37,38 @@ pub struct ADTProperty {
     value: [u8],
 }
 
+/// ADTPropertyStringIterator
+#[derive(Debug)]
+pub struct ADTPropertyStringIterator<'a> {
+    value: &'a [u8],
+}
+
+impl<'a> Iterator for ADTPropertyStringIterator<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<&'a str> {
+        match CStr::from_bytes_until_nul(self.value) {
+            Ok(cs) => match cs.to_str() {
+                Ok(s) => {
+                    match self.value.iter().position(|&x| x == 0) {
+                        Some(nul) => self.value = &self.value[(nul + 1)..],
+                        None => self.value = &[],
+                    }
+                    Some(s)
+                }
+                Err(_) => {
+                    self.value = &[];
+                    None
+                }
+            },
+            Err(_) => {
+                self.value = &[];
+                None
+            }
+        }
+    }
+}
+
 #[repr(C, packed(1))]
 pub struct ADTSegmentRanges {
     phys: u64,
@@ -423,6 +455,11 @@ impl ADTNode {
     pub fn is_compatible(&self, compatible: &str) -> Result<bool, AdtError> {
         Ok(self.named_prop("compatible")?.str()?.contains(compatible))
     }
+
+    pub fn compatible(&self, index: usize) -> Option<&str> {
+        let prop = self.named_prop("compatible").ok()?;
+        prop.str_iter().nth(index)
+    }
 }
 
 impl ADTProperty {
@@ -531,6 +568,12 @@ impl ADTProperty {
                 Err(_e) => Err(AdtError::BadValue),
             },
             Err(_e) => Err(AdtError::BadValue),
+        }
+    }
+
+    pub fn str_iter<'a>(&'a self) -> ADTPropertyStringIterator<'a> {
+        ADTPropertyStringIterator {
+            value: unsafe { core::slice::from_raw_parts(self.value.as_ptr(), self.size as usize) },
         }
     }
 
@@ -767,6 +810,18 @@ pub unsafe extern "C" fn adt_is_compatible(
         .unwrap()
         .is_compatible(strcompat)
         .unwrap()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_is_compatible_at(
+    _dt: *const c_void,
+    offset: c_int,
+    compat: *const c_char,
+    index: usize,
+) -> bool {
+    let strcompat: &str = unsafe { CStr::from_ptr(compat).to_str().unwrap() };
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+    ADTNode::from_ptr(ptr).unwrap().compatible(index).unwrap() == strcompat
 }
 
 #[no_mangle]
