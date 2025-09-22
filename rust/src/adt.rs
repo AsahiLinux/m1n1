@@ -453,7 +453,8 @@ impl ADTNode {
     }
 
     pub fn is_compatible(&self, compatible: &str) -> Result<bool, AdtError> {
-        Ok(self.named_prop("compatible")?.str()?.contains(compatible))
+        let prop = self.named_prop("compatible")?;
+        Ok(prop.str_iter().any(|c| c == compatible))
     }
 
     pub fn compatible(&self, index: usize) -> Option<&str> {
