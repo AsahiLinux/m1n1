@@ -141,6 +141,16 @@ pub(crate) const HWCONFIG_T6001: HwConfig = HwConfig {
     ..HWCONFIG_T6002
 };
 
+pub(crate) const HWCONFIG_T6001_STUDIO: HwConfig = HwConfig {
+    avg_power_ki_only: f32!(0.6375),
+    avg_power_kp: f32!(0.58),
+    avg_power_target_filter_tc: 1,
+    ppm_ki: f32!(5.8),
+    ppm_kp: f32!(0.355),
+
+    ..HWCONFIG_T6001
+};
+
 pub(crate) const HWCONFIG_T6000: HwConfig = HwConfig {
     chip_id: 0x6000,
     gpu_variant: GpuVariant::S,

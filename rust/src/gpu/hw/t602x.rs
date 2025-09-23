@@ -159,6 +159,15 @@ pub(crate) const HWCONFIG_T6021: super::HwConfig = HwConfig {
     ..HWCONFIG_T6022
 };
 
+pub(crate) const HWCONFIG_T6021_STUDIO: super::HwConfig = HwConfig {
+    idle_off_standby_timer_default: 3000,
+    perf_boost_ce_step: 100,
+    perf_boost_min_util: 75,
+    perf_tgt_utilization: 70,
+
+    ..HWCONFIG_T6021
+};
+
 pub(crate) const HWCONFIG_T6020: super::HwConfig = HwConfig {
     chip_id: 0x6020,
     gpu_variant: GpuVariant::S,

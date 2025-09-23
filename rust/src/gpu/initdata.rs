@@ -694,14 +694,33 @@ pub struct CAuxPerfState {
 
 fn chip_hwcfg() -> Option<&'static HwConfig> {
     let chp_id = unsafe { chip_id };
+    let is_studio = match ADTNode::root() {
+        Ok(node) => {
+            let prime_compat = node.compatible(0).unwrap_or("");
+            prime_compat == "J375cAP" || prime_compat == ("J475cAP")
+        }
+        _ => false,
+    };
     Some(match chp_id {
         0x8103 => &hw::t8103::HWCONFIG,
         0x8112 => &hw::t8112::HWCONFIG,
         0x6000 => &hw::t600x::HWCONFIG_T6000,
-        0x6001 => &hw::t600x::HWCONFIG_T6001,
+        0x6001 => {
+            if is_studio {
+                &hw::t600x::HWCONFIG_T6001_STUDIO
+            } else {
+                &hw::t600x::HWCONFIG_T6001
+            }
+        }
         0x6002 => &hw::t600x::HWCONFIG_T6002,
         0x6020 => &hw::t602x::HWCONFIG_T6020,
-        0x6021 => &hw::t602x::HWCONFIG_T6021,
+        0x6021 => {
+            if is_studio {
+                &hw::t602x::HWCONFIG_T6021_STUDIO
+            } else {
+                &hw::t602x::HWCONFIG_T6021
+            }
+        }
         0x6022 => &hw::t602x::HWCONFIG_T6022,
         _ => {
             println!("Unknown chip id: 0x{:x}", chp_id);
