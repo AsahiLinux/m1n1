@@ -80,16 +80,18 @@ jobs:
 
       - name: Create m1n1 uefi only boot.bin
         run: |
-          mkdir -p uefi-only/out/esp/m1n1/
+          mkdir -p out/esp/m1n1/
           gzip -k u-boot/u-boot-nodtb.bin
           cat build/m1n1.bin \
               u-boot/arch/arm/dts/t60*.dtb \
               u-boot/arch/arm/dts/t81*.dtb \
               u-boot/u-boot-nodtb.bin.gz \
-              > uefi-only/out/esp/m1n1/boot.bin
+              > out/esp/m1n1/boot.bin
+          cd out
+          zip -r uefi-only-${{ env.GIT_DATE }}-${{ env.KERNEL_REF }}.zip esp
 
       - uses: actions/upload-artifact@v4
         with:
-          name: uefi-only-${{ env.GIT_DATE }}-${{ env.KERNEL_REF }}
+          name: ci-uefi-only-${{ env.GIT_DATE }}-${{ env.KERNEL_REF }}
           path: |
-            uefi-only/out
+            out/uefi-only-${{ env.GIT_DATE }}-${{ env.KERNEL_REF }}.zip
