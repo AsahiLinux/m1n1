@@ -83,7 +83,7 @@ static void _hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, 
             break;
         case EXC_EXIT_GUEST:
             hv_rendezvous();
-            spin_unlock(&bhl);
+            hv_spin_unlock(&bhl);
             hv_exit_guest(); // does not return
         default:
             printf("Guest exception not handled, rebooting.\n");
@@ -101,10 +101,10 @@ static void hv_maybe_switch_cpu(struct exc_info *ctx, uartproxy_boot_reason_t re
             _hv_exc_proxy(ctx, reason, type, extra);
         } else {
             // Unlock the HV so the target CPU can get into the proxy
-            spin_unlock(&bhl);
+            hv_spin_unlock(&bhl);
             while (hv_want_cpu != -1)
                 sysop("dmb sy");
-            spin_lock(&bhl);
+            hv_spin_lock(&bhl);
         }
     }
 }
@@ -122,10 +122,10 @@ void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type
             _hv_exc_proxy(ctx, reason, type, extra);
         } else {
             // Unlock the HV so the target CPU can get into the proxy
-            spin_unlock(&bhl);
+            hv_spin_unlock(&bhl);
             while ((hv_pinned_cpu != -1 && hv_pinned_cpu != smp_id()) || hv_want_cpu != -1)
                 sysop("dmb sy");
-            spin_lock(&bhl);
+            hv_spin_lock(&bhl);
         }
     }
 
@@ -405,7 +405,7 @@ static void hv_exc_entry(void)
         sysop("msr daifclr, 4");
 
     __atomic_and_fetch(&hv_cpus_in_guest, ~BIT(smp_id()), __ATOMIC_ACQUIRE);
-    spin_lock(&bhl);
+    hv_spin_lock(&bhl);
     hv_wdt_breadcrumb('X');
     exc_entry_time = mrs(CNTPCT_EL0);
     /* disable PMU counters in the hypervisor */
@@ -421,7 +421,7 @@ static void hv_exc_exit(struct exc_info *ctx)
     /* reenable PMU counters */
     reg_set(SYS_IMP_APL_PMCR0, PERCPU(exc_entry_pmcr0_cnt));
     msr(CNTVOFF_EL2, stolen_time);
-    spin_unlock(&bhl);
+    hv_spin_unlock(&bhl);
     hv_maybe_exit();
     __atomic_or_fetch(&hv_cpus_in_guest, BIT(smp_id()), __ATOMIC_ACQUIRE);
 
