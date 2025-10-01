@@ -231,9 +231,12 @@ static const struct atc_fuse_info atc_fuses_t8112_port1[] = {
     {0x23d2c8488, 8, 5, AUS_COMMON_SHIM_BLK_VREG, AUS_VREG_TRIM},
 };
 
+// Order "atc-phy" compatibles in reverse chronologically order to deal with mutliple compatible
+// strings in ADT atc-phy nodes.
 static const struct atc_fuse_hw atc_fuses[] = {
-    {"atc-phy,t8103", 0, atc_fuses_t8103_port0, ARRAY_SIZE(atc_fuses_t8103_port0)},
-    {"atc-phy,t8103", 1, atc_fuses_t8103_port1, ARRAY_SIZE(atc_fuses_t8103_port1)},
+    {"atc-phy,t6020", -1, NULL, 0},
+    {"atc-phy,t8112", 0, atc_fuses_t8112_port0, ARRAY_SIZE(atc_fuses_t8112_port0)},
+    {"atc-phy,t8112", 1, atc_fuses_t8112_port1, ARRAY_SIZE(atc_fuses_t8112_port1)},
     /* t6002 uses the same fuses and the same atc-phy,t6000 compatible */
     {"atc-phy,t6000", 0, atc_fuses_t6000_port0, ARRAY_SIZE(atc_fuses_t6000_port0)},
     {"atc-phy,t6000", 1, atc_fuses_t6000_port1, ARRAY_SIZE(atc_fuses_t6000_port1)},
@@ -241,9 +244,8 @@ static const struct atc_fuse_hw atc_fuses[] = {
     {"atc-phy,t6000", 3, atc_fuses_t6000_port3, ARRAY_SIZE(atc_fuses_t6000_port3)},
     {"atc-phy,t6000", 4, atc_fuses_t6000_port4, ARRAY_SIZE(atc_fuses_t6000_port4)},
     {"atc-phy,t6000", 5, atc_fuses_t6000_port5, ARRAY_SIZE(atc_fuses_t6000_port5)},
-    {"atc-phy,t8112", 0, atc_fuses_t8112_port0, ARRAY_SIZE(atc_fuses_t8112_port0)},
-    {"atc-phy,t8112", 1, atc_fuses_t8112_port1, ARRAY_SIZE(atc_fuses_t8112_port1)},
-    {"atc-phy,t6020", -1, NULL, 0},
+    {"atc-phy,t8103", 0, atc_fuses_t8103_port0, ARRAY_SIZE(atc_fuses_t8103_port0)},
+    {"atc-phy,t8103", 1, atc_fuses_t8103_port1, ARRAY_SIZE(atc_fuses_t8103_port1)},
 };
 
 static u32 read_fuse(const struct atc_fuse_info *fuse)
