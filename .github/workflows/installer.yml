@@ -51,9 +51,8 @@ jobs:
                                libgnutls28-dev \
                                device-tree-compiler
 
-      - name: Install nightly rust
+      - name: Install aarch64-unknown-none-softfloat rust target
         run: |
-          export RUSTUP_TOOLCHAIN=stable
           rustup target install aarch64-unknown-none-softfloat
 
       # env vars to include date and kernel tag in artifact name
