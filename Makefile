@@ -167,7 +167,7 @@ OBJECTS := \
 	vsprintf.o \
 	wdt.o \
 	$(DCP_OBJECTS) \
-	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS) $(RUST_LIB)
+	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS)
 
 FP_OBJECTS := \
 	kboot_gpu.o \
@@ -178,7 +178,8 @@ FP_OBJECTS := \
 
 BUILD_OBJS := $(patsubst %,build/%,$(OBJECTS))
 BUILD_FP_OBJS := $(patsubst %,build/%,$(FP_OBJECTS))
-BUILD_ALL_OBJS := $(BUILD_OBJS) $(BUILD_FP_OBJS)
+BUILD_RUST_LIB := $(patsubst %,build/%,$(RUST_LIB))
+BUILD_ALL_OBJS := $(BUILD_OBJS) $(BUILD_FP_OBJS) $(BUILD_RUST_LIB)
 NAME := m1n1
 TARGET := m1n1.macho
 TARGET_RAW := m1n1.bin
@@ -198,7 +199,7 @@ rustfmt:
 rustfmt-check:
 	cd rust && cargo fmt --check
 
-build/$(RUST_LIB): rust/src/* rust/*
+build/$(RUST_LIB): rust/src/*.rs rust/src/gpu/*.rs rust/src/gpu/hw/*.rs rust/Cargo.toml rust/Cargo.lock
 	$(QUIET)echo "  RS    $@"
 	$(QUIET)mkdir -p $(DEPDIR)
 	$(QUIET)mkdir -p "$(dir $@)"
