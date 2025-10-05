@@ -445,18 +445,19 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
         t = SafeGreedyRange(Struct("bus_addr" / at, "parent_addr" / pat, "size" / st))
 
     elif name.startswith("dapf-instance-"):
-        try:
-            flags = node.dart_options
-        except AttributeError:
-            return None, v
-        if flags & 0x40:
-            if len(v) % DAPFT8110B.sizeof() == 0:
-                if len(v) % DAPFT8110C.sizeof() != 0:
-                    t = GreedyRange(DAPFT8110B)
-            else:
-                t = GreedyRange(DAPFT8110C)
-        else:
+        # Using the length to identify the DAPF T8110 variant is not safe as
+        # the least common multiple of 52 and 56 is 728. While this is just
+        # used for parsing and printing this length based selection is good
+        # enough. 0x40 from "dart-options" used previously does not identify
+        # the layout.
+        if len(v) % DAPFT8110.sizeof() == 0:
             t = GreedyRange(DAPFT8110)
+        elif len(v) % DAPFT8110B.sizeof() == 0:
+            t = GreedyRange(DAPFT8110B)
+        elif len(v) % DAPFT8110C.sizeof() == 0:
+            t = GreedyRange(DAPFT8110C)
+        else:
+            return None, v
 
     elif name == "interrupts":
         # parse "interrupts" as Array of Int32ul, wrong for nodes whose
