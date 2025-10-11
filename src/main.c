@@ -111,7 +111,7 @@ void run_actions(void)
             if (i % 100 == 99)
                 printf(".");
         }
-        printf(" Timed out\n");
+        printf(" Timed out.\n");
     }
 #endif
 #endif
