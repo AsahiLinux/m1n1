@@ -69,15 +69,15 @@ struct atc_fuse_hw {
 static const struct adt_tunable_info atc_tunables[] = {
     /* global tunables applied after power on or reset */
     {"tunable_ATC0AXI2AF", "apple,tunable-axi2af", 0x0, 0x4000, true},
-    {"tunable_ATC_FABRIC", "apple,tunable-common", 0x45000, 0x4000, true},
-    {"tunable_USB_ACIOPHY_TOP", "apple,tunable-common", 0x0, 0x4000, true},
-    {"tunable_AUS_CMN_SHM", "apple,tunable-common", 0xa00, 0x4000, true},
-    {"tunable_AUS_CMN_TOP", "apple,tunable-common", 0x800, 0x4000, true},
-    {"tunable_AUSPLL_CORE", "apple,tunable-common", 0x2200, 0x4000, true},
-    {"tunable_AUSPLL_TOP", "apple,tunable-common", 0x2000, 0x4000, true},
-    {"tunable_CIO3PLL_CORE", "apple,tunable-common", 0x2a00, 0x4000, true},
-    {"tunable_CIO3PLL_TOP", "apple,tunable-common", 0x2800, 0x4000, true},
-    {"tunable_CIO_CIO3PLL_TOP", "apple,tunable-common", 0x2800, 0x4000, false},
+    {"tunable_ATC_FABRIC", "apple,tunable-common-b", 0x45000, 0x4000, true},
+    {"tunable_USB_ACIOPHY_TOP", "apple,tunable-common-b", 0x0, 0x4000, true},
+    {"tunable_AUS_CMN_SHM", "apple,tunable-common-b", 0xa00, 0x4000, true},
+    {"tunable_AUS_CMN_TOP", "apple,tunable-common-b", 0x800, 0x4000, true},
+    {"tunable_AUSPLL_CORE", "apple,tunable-common-b", 0x2200, 0x4000, true},
+    {"tunable_AUSPLL_TOP", "apple,tunable-common-b", 0x2000, 0x4000, true},
+    {"tunable_CIO3PLL_CORE", "apple,tunable-common-b", 0x2a00, 0x4000, true},
+    {"tunable_CIO3PLL_TOP", "apple,tunable-common-b", 0x2800, 0x4000, true},
+    {"tunable_CIO_CIO3PLL_TOP", "apple,tunable-common-b", 0x2800, 0x4000, false},
     /* lane-specific tunables applied after a cable is connected */
     {"tunable_DP_LN0_AUSPMA_TX_TOP", "apple,tunable-lane0-dp", 0xc000, 0x1000, true},
     {"tunable_DP_LN1_AUSPMA_TX_TOP", "apple,tunable-lane1-dp", 0x13000, 0x1000, true},
@@ -281,11 +281,11 @@ static int dt_append_atc_fuses_helper(void *dt, int fdt_node, const struct atc_f
                                       size_t n_fuses)
 {
     for (size_t i = 0; i < n_fuses; ++i) {
-        if (fdt_appendprop_u32(dt, fdt_node, "apple,tunable-fuses", fuses[i].reg_offset) < 0)
+        if (fdt_appendprop_u32(dt, fdt_node, "apple,tunable-common-a", fuses[i].reg_offset) < 0)
             return -1;
-        if (fdt_appendprop_u32(dt, fdt_node, "apple,tunable-fuses", fuses[i].reg_mask) < 0)
+        if (fdt_appendprop_u32(dt, fdt_node, "apple,tunable-common-a", fuses[i].reg_mask) < 0)
             return -1;
-        if (fdt_appendprop_u32(dt, fdt_node, "apple,tunable-fuses", read_fuse(&fuses[i])) < 0)
+        if (fdt_appendprop_u32(dt, fdt_node, "apple,tunable-common-a", read_fuse(&fuses[i])) < 0)
             return -1;
     }
 
@@ -305,7 +305,7 @@ static int dt_append_fuses(void *dt, int adt_node, int fdt_node, int port)
          * property to indicate to the driver that no fuses are intentional.
          */
         if (!atc_fuses[i].fuses)
-            return fdt_setprop(dt, fdt_node, "apple,tunable-fuses", NULL, 0);
+            return fdt_setprop(dt, fdt_node, "apple,tunable-common-a", NULL, 0);
 
         return dt_append_atc_fuses_helper(dt, fdt_node, atc_fuses[i].fuses, atc_fuses[i].n_fuses);
     }
@@ -403,6 +403,36 @@ static void dt_copy_atc_tunables(void *dt, const char *adt_path, const char *dt_
             goto cleanup;
     }
 
+    /*
+     * For backwards compatibility with downstream drivers copy apple,tunable-common-b to
+     * apple,tunable-common and apple,tunable-common-a to apple,tunable-fuses.
+     * Don't remove this before 2027-01-01.
+     */
+    int prop_len;
+    const void *tunable_common_a = fdt_getprop(dt, fdt_node, "apple,tunable-common-b", &prop_len);
+    if (!tunable_common_a) {
+        printf("kboot: Unable to find apple,tunable-common-b for %s\n", adt_path);
+        goto cleanup;
+    }
+    ret = fdt_setprop(dt, fdt_node, "apple,tunable-common", tunable_common_a, prop_len);
+    if (ret) {
+        printf("kboot: Unable to copy apple,tunable-common-b to apple,tunable-common for %s\n",
+               adt_path);
+        goto cleanup;
+    }
+
+    const void *tunable_common_b = fdt_getprop(dt, fdt_node, "apple,tunable-common-b", &prop_len);
+    if (!tunable_common_b) {
+        printf("kboot: Unable to find apple,tunable-common-b for %s\n", adt_path);
+        goto cleanup;
+    }
+    ret = fdt_setprop(dt, fdt_node, "apple,tunable-fuses", tunable_common_b, prop_len);
+    if (ret) {
+        printf("kboot: Unable to copy apple,tunable-common-a to apple,tunable-fuses for %s\n",
+               adt_path);
+        goto cleanup;
+    }
+
     return;
 
 cleanup:
@@ -413,6 +443,8 @@ cleanup:
      */
     for (size_t i = 0; i < sizeof(atc_tunables) / sizeof(*atc_tunables); ++i)
         fdt_delprop(dt, fdt_node, atc_tunables[i].fdt_name);
+    fdt_delprop(dt, fdt_node, "apple,tunable-common-a");
+    fdt_delprop(dt, fdt_node, "apple,tunable-common");
     fdt_delprop(dt, fdt_node, "apple,tunable-fuses");
 
     printf("FDT: Unable to setup ATC tunables for %s - USB3/Thunderbolt will not work\n", adt_path);
