@@ -4,6 +4,7 @@
 #include "kboot_atc.h"
 #include "adt.h"
 #include "devicetree.h"
+#include "malloc.h"
 #include "pmgr.h"
 #include "utils.h"
 
@@ -409,12 +410,23 @@ static void dt_copy_atc_tunables(void *dt, const char *adt_path, const char *dt_
      * Don't remove this before 2027-01-01.
      */
     int prop_len;
-    const void *tunable_common_b = fdt_getprop(dt, fdt_node, "apple,tunable-common-b", &prop_len);
-    if (!tunable_common_b) {
+    const void *tunable_common_b_fdt =
+        fdt_getprop(dt, fdt_node, "apple,tunable-common-b", &prop_len);
+    if (!tunable_common_b_fdt) {
         printf("kboot: Unable to find apple,tunable-common-b for %s\n", adt_path);
         goto cleanup;
     }
+
+    void *tunable_common_b = malloc(prop_len);
+    if (!tunable_common_b) {
+        printf("kboot: Unable to copy apple,tunable-common-b to apple,tunable-common for %s\n",
+               adt_path);
+        goto cleanup;
+    }
+    memcpy(tunable_common_b, tunable_common_b_fdt, prop_len);
+
     ret = fdt_setprop(dt, fdt_node, "apple,tunable-common", tunable_common_b, prop_len);
+    free(tunable_common_b);
     if (ret) {
         printf("kboot: Unable to copy apple,tunable-common-b to apple,tunable-common for %s\n",
                adt_path);
