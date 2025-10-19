@@ -405,7 +405,7 @@ static void dt_copy_atc_tunables(void *dt, const char *adt_path, const char *dt_
 
     /*
      * For backwards compatibility with downstream drivers copy apple,tunable-common-b to
-     * apple,tunable-common and apple,tunable-common-a to apple,tunable-fuses.
+     * apple,tunable-common.
      * Don't remove this before 2027-01-01.
      */
     int prop_len;
@@ -417,18 +417,6 @@ static void dt_copy_atc_tunables(void *dt, const char *adt_path, const char *dt_
     ret = fdt_setprop(dt, fdt_node, "apple,tunable-common", tunable_common_a, prop_len);
     if (ret) {
         printf("kboot: Unable to copy apple,tunable-common-b to apple,tunable-common for %s\n",
-               adt_path);
-        goto cleanup;
-    }
-
-    const void *tunable_common_b = fdt_getprop(dt, fdt_node, "apple,tunable-common-b", &prop_len);
-    if (!tunable_common_b) {
-        printf("kboot: Unable to find apple,tunable-common-b for %s\n", adt_path);
-        goto cleanup;
-    }
-    ret = fdt_setprop(dt, fdt_node, "apple,tunable-fuses", tunable_common_b, prop_len);
-    if (ret) {
-        printf("kboot: Unable to copy apple,tunable-common-a to apple,tunable-fuses for %s\n",
                adt_path);
         goto cleanup;
     }
@@ -445,7 +433,6 @@ cleanup:
         fdt_delprop(dt, fdt_node, atc_tunables[i].fdt_name);
     fdt_delprop(dt, fdt_node, "apple,tunable-common-a");
     fdt_delprop(dt, fdt_node, "apple,tunable-common");
-    fdt_delprop(dt, fdt_node, "apple,tunable-fuses");
 
     printf("FDT: Unable to setup ATC tunables for %s - USB3/Thunderbolt will not work\n", adt_path);
 }
