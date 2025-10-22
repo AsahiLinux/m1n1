@@ -315,7 +315,7 @@ void usb_init(void)
         return;
 
     /*
-     * M3 models do not use i2c, but instead SPMI with a new controller.
+     * M3/M4 models do not use i2c, but instead SPMI with a new controller.
      * We can get USB going for now by just bringing up the phys.
      */
     if (adt_path_offset(adt, "/arm-io/nub-spmi-a0/hpm0") > 0) {
@@ -399,6 +399,19 @@ void usb_i2c_restore_irqs(const char *i2c_path, bool force)
 
 void usb_hpm_restore_irqs(bool force)
 {
+    /*
+     * Do not try to restore irqs on M3/M4 which don't use i2c
+     */
+    if (adt_path_offset(adt, "/arm-io/nub-spmi-a0/hpm0") > 0)
+        return;
+
+    /*
+     * Do not try to restore irqs on A7-A11 which don't use i2c
+     */
+    if (adt_path_offset(adt, "/arm-io/otgphyctrl") > 0 &&
+        adt_path_offset(adt, "/arm-io/usb-complex") > 0)
+        return;
+
     if (adt_is_compatible(adt, 0, "J180dAP"))
         usb_i2c_restore_irqs("/arm-io/i2c3", force);
     usb_i2c_restore_irqs("/arm-io/i2c0", force);
