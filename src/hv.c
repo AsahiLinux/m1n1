@@ -154,16 +154,16 @@ void hv_start(void *entry, u64 regs[4])
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
 
     __atomic_and_fetch(&hv_cpus_in_guest, ~BIT(smp_id()), __ATOMIC_ACQUIRE);
-    spin_lock(&bhl);
+    hv_spin_lock(&bhl);
 
     hv_wdt_stop();
 
     printf("HV: Exiting hypervisor (main CPU)\n");
 
-    spin_unlock(&bhl);
+    hv_spin_unlock(&bhl);
     // Wait a bit for the guest CPUs to exit on their own if they are in the process.
     udelay(200000);
-    spin_lock(&bhl);
+    hv_spin_lock(&bhl);
 
     hv_started_cpus[boot_cpu_idx] = false;
 
@@ -174,15 +174,15 @@ void hv_start(void *entry, u64 regs[4])
         hv_should_exit[i] = true;
         if (hv_started_cpus[i]) {
             printf("HV: Waiting for CPU %d to exit\n", i);
-            spin_unlock(&bhl);
+            hv_spin_unlock(&bhl);
             smp_wait(i);
-            spin_lock(&bhl);
+            hv_spin_lock(&bhl);
             hv_started_cpus[i] = false;
         }
     }
 
     printf("HV: All CPUs exited\n");
-    spin_unlock(&bhl);
+    hv_spin_unlock(&bhl);
 }
 
 static void hv_init_secondary(struct hv_secondary_info_t *info)
@@ -223,14 +223,14 @@ static void hv_enter_secondary(void *entry, u64 regs[4])
 {
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
 
-    spin_lock(&bhl);
+    hv_spin_lock(&bhl);
 
     printf("HV: Exiting from CPU %d\n", smp_id());
 
     __atomic_and_fetch(&hv_cpus_in_guest, ~BIT(smp_id()), __ATOMIC_ACQUIRE);
 
     hv_started_cpus[smp_id()] = false;
-    spin_unlock(&bhl);
+    hv_spin_unlock(&bhl);
 }
 
 void hv_start_secondary(int cpu, void *entry, u64 regs[4])
@@ -392,4 +392,42 @@ void hv_tick(struct exc_info *ctx)
             hv_exc_proxy(ctx, START_HV, HV_USER_INTERRUPT, NULL);
     }
     hv_vuart_poll();
+}
+
+void hv_spin_lock(spinlock_t *lock)
+{
+    s64 tmp;
+    s64 me = smp_id();
+    if (__atomic_load_n(&lock->lock, __ATOMIC_ACQUIRE) == me) {
+        lock->count++;
+        return;
+    }
+
+    __asm__ volatile("1:\n"
+                     "mov\t%0, -1\n"
+                     "2:\n"
+                     "\tcasa\t%0, %2, %1\n"
+                     "\tcmn\t%0, 1\n"
+                     "\tbeq\t3f\n"
+                     "\tldxr\t%0, %1\n"
+                     "\tcmn\t%0, 1\n"
+                     "\tbeq\t2b\n"
+                     "\twfe\n"
+                     "\tb\t1b\n"
+                     "3:"
+                     : "=&r"(tmp), "+m"(lock->lock)
+                     : "r"(me)
+                     : "cc", "memory");
+
+    assert(__atomic_load_n(&lock->lock, __ATOMIC_RELAXED) == me);
+    lock->count++;
+}
+
+void hv_spin_unlock(spinlock_t *lock)
+{
+    s64 me = smp_id();
+    assert(__atomic_load_n(&lock->lock, __ATOMIC_RELAXED) == me);
+    assert(lock->count > 0);
+    if (!--lock->count)
+        __atomic_store_n(&lock->lock, -1L, __ATOMIC_RELEASE);
 }
