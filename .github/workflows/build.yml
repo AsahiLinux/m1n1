@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -34,7 +34,7 @@ jobs:
       - name: Build
         run: make -k -j2 ARCH=aarch64-linux-gnu- CHAINLOADING=1
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: m1n1
           path: |
