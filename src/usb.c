@@ -286,7 +286,7 @@ static int usb_init_i2c(const char *i2c_path)
         const char *name = adt_get_name(adt, node);
         if (!name || memcmp(name, "hpm", 3) || name[4] != '\0')
             continue; // unexpected hpm node name
-        u32 idx = name[3] - 30;
+        u32 idx = name[3] - '0';
         if (idx >= USB_IODEV_COUNT)
             continue; // unexpected hpm index
 
@@ -374,7 +374,7 @@ void usb_i2c_restore_irqs(const char *i2c_path, bool force)
         const char *name = adt_get_name(adt, node);
         if (!name || memcmp(name, "hpm", 3) || name[4] != '\0')
             continue; // unexpected hpm node name
-        u32 idx = name[3] - 30;
+        u32 idx = name[3] - '0';
         if (idx >= USB_IODEV_COUNT)
             continue; // unexpected hpm index
 
