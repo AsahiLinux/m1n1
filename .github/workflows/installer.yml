@@ -23,12 +23,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
       - name: Checkout linux
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: AsahiLinux/linux
           ref: 'asahi'
@@ -37,7 +37,7 @@ jobs:
           fetch-tags: 'true'
 
       - name: Checkout u-boot
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: AsahiLinux/u-boot
           ref: 'asahi-releng'
@@ -89,7 +89,7 @@ jobs:
           cd out
           zip -r uefi-only-${{ env.GIT_DATE }}-${{ env.KERNEL_REF }}.zip esp
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ci-uefi-only-${{ env.GIT_DATE }}-${{ env.KERNEL_REF }}
           path: |
