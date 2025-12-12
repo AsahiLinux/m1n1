@@ -18,9 +18,9 @@ jobs:
             compiler: gcc
           - os: ubuntu-latest
             compiler: llvm
-          - os: macos-13
-            compiler: llvm-brew
           - os: macos-14
+            compiler: llvm-brew
+          - os: macos-15
             compiler: llvm-brew
 
     steps:
