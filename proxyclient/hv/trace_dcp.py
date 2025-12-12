@@ -344,10 +344,10 @@ class EPICEp(AFKEp):
             self.serv_map[key] = srv
 
     def handle_report(self, hdr, sub, fd):
-        if sub.type == 0x30:
+        if sub.type == EPICSubtype.ANNOUNCE:
             self.handle_report_init(hdr, sub, fd)
         else:
-            self.log(f"Report {sub.type:#x}")
+            self.log(f"Report {sub.type}")
             chexdump(fd.read(), print_fn=self.log)
 
     def handle_notify(self, hdr, sub, fd):
@@ -391,7 +391,7 @@ class EPICEp(AFKEp):
             fd.seek(off)
             cmd = EPICCmd.parse_stream(fd)
             if not cmd.rxbuf:
-                self.log(f"Response {sub.type:#x}: {cmd.retcode:#x}")
+                self.log(f"Response {sub.type}: {cmd.retcode:#x}")
                 return
 
             data = self.dart.ioread(self.stream, cmd.rxbuf, cmd.rxlen)
@@ -417,7 +417,7 @@ class EPICEp(AFKEp):
         cmd = EPICCmd.parse_stream(fd)
         payload = fd.read()
 
-        if sub.type == 0xc0 and cmd.txbuf:
+        if sub.type == EPICSubtype.STD_SERVICE and cmd.txbuf:
             data = self.dart.ioread(self.stream, cmd.txbuf, cmd.txlen)
             if len(data) < 64:
                 self.log(f"EPIC: short cmd, len={len(data)}")
@@ -433,7 +433,7 @@ class EPICEp(AFKEp):
                 self.log(f"[???] > group {sgroup} command {scmd}")
                 chexdump(data[64:64+slen], print_fn=lambda msg: self.log(f"[???] {msg}"))
         else:
-            self.log(f"Command {sub.type:#x}: {cmd.retcode:#x}")
+            self.log(f"Command {sub.type}: {cmd.retcode:#x}")
             if payload:
                 chexdump(payload, print_fn=self.log)
             if cmd.txbuf:
