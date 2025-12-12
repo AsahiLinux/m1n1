@@ -293,6 +293,8 @@
 #define HID7_FORCE_NONSPEC_TARGET_TIMER_SEL(x)                        ((ULONG(x)) << 24)
 #define HID7_FORCE_NONSPEC_TARGET_TIMER_SEL_MASK                      (3UL << 24)
 
+#define SYS_IMP_APL_EHID7 sys_reg(3, 0, 15, 7, 1)
+
 #define SYS_IMP_APL_HID8             sys_reg(3, 0, 15, 8, 0)
 #define HID8_DATA_SET_ID0_VALUE(x)   ((ULONG(x)) << 4)
 #define HID8_DATA_SET_ID0_VALUE_MASK GENMASK(7, 4)
