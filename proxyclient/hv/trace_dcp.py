@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 
+import os
 import struct
 from io import BytesIO
 
@@ -37,8 +38,7 @@ def get_dcp_device(dev_type, dcp):
     else:
         raise KeyError(dev_type)
 
-dcp_name = "dcp0"
-#dcp_name = "dcpext0"
+dcp_name = os.environ.get("TRACE_DCP", "dcp0")
 
 trace_device(get_dcp_device(DCPDevType.DCP, dcp_name), True, ranges=[1])
 
