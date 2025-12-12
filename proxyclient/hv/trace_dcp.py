@@ -23,6 +23,8 @@ class DCPDevType(IntEnum):
 def get_alias(node):
     if "aliases" in u.adt and hasattr(u.adt["aliases"], node):
         return u.adt["aliases"].getprop(node).rsplit('/', 1)[1]
+    if node == "dcp0" and node not in u.adt:
+        return "dcp"
     return node
 
 def get_dcp_device(dev_type, dcp):
