@@ -334,5 +334,8 @@
             {"name": "TRAP_UPM",                        "msb": 58, "lsb": 58},
             {"name": "TRAP_s3_1z7_c15_cx_3",            "msb": 59, "lsb": 59}
         ]}]},
-    {"index": 0, "name": "ACTLR_EL12",                  "fullname": "Auxiliary Control Register (EL12)",                            "enc": [3, 5, 1, 0, 1 ], "width": 64}
+    {"index": 0, "name": "ACTLR_EL12",                  "fullname": "Auxiliary Control Register (EL12)",                            "enc": [3, 5, 1, 0, 1 ], "width": 64},
+    {"index": 0, "name": "AGTCNTRDIR_EL1",              "fullname": "AGT Counter Redirect Register (EL1)",                          "enc": [3, 1, 15,  1, 5 ], "width": 64},
+    {"index": 0, "name": "AGTCNTRDIR_EL12",             "fullname": "AGT Counter Redirect Register (EL12)",                         "enc": [3, 4, 15, 14, 6 ], "width": 64}
+
 ]

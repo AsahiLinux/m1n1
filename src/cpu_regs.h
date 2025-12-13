@@ -454,6 +454,13 @@
 #define HID27_GROUP3_OFFSET(x)   ((ULONG(x)) << 8)
 #define HID27_GROUP3_OFFSET_MASK (0xffUL << 8)
 
+// Apple Generic Timer Counter Redirect registers
+#define SYS_IMP_APL_AGTCNTRDIR_EL1  sys_reg(3, 1, 15, 1, 5)
+#define SYS_IMP_APL_AGTCNTRDIR_EL12 sys_reg(3, 4, 15, 14, 6)
+#define AGTCNTRDIR_DISABLE          BIT(1)
+#define AGTCNTRDIR_EL0_TRAP_CTL     BIT(0)
+
+// Performance monitor registers
 #define SYS_IMP_APL_PMCR0 sys_reg(3, 1, 15, 0, 0)
 #define PMCR0_CNT_EN_MASK (MASK(8) | GENMASK(33, 32))
 #define PMCR0_IMODE_OFF   (0 << 8)
