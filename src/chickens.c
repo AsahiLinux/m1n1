@@ -91,6 +91,21 @@ const struct midr_part_features features_m2 = {
     .actlr_el2 = true,
 };
 
+const struct midr_part_features features_m3 = {
+    .disable_dc_mva = true,
+    .acc_cfg = true,
+    .cyc_ovrd = true,
+    .sleep_mode = SLEEP_GLOBAL,
+    .uncore_version = UNCORE_V2,
+    .nex_powergating = true,
+    .fast_ipi = true,
+    .mmu_sprr = true,
+    .siq_cfg = true,
+    .amx = true,
+    .actlr_el2 = true,
+    .counter_redirect = true,
+};
+
 // XXX figure out what features are actually available on M4
 const struct midr_part_features features_m4 = {
     .sleep_mode = SLEEP_NONE, // XXX probably new mode required
@@ -128,10 +143,10 @@ const struct midr_part_info midr_parts[] = {
     {MIDR_PART_T6020_BLIZZARD, "M2 Pro Blizzard", init_t6020_blizzard, &features_m2},
     {MIDR_PART_T6021_AVALANCHE, "M2 Max Avalanche", init_t6021_avalanche, &features_m2},
     {MIDR_PART_T6021_BLIZZARD, "M2 Max Blizzard", init_t6021_blizzard, &features_m2},
-    {MIDR_PART_T6030_EVEREST, "M3 Pro Everest", init_t6030_everest, &features_m2},
-    {MIDR_PART_T6030_SAWTOOTH, "M3 Pro Sawtooth", init_t6030_sawtooth, &features_m2},
-    {MIDR_PART_T6031_EVEREST, "M3 Max Everest", init_t6031_everest, &features_m2},
-    {MIDR_PART_T6031_SAWTOOTH, "M3 Max Sawtooth", init_t6031_sawtooth, &features_m2},
+    {MIDR_PART_T6030_EVEREST, "M3 Pro Everest", init_t6030_everest, &features_m3},
+    {MIDR_PART_T6030_SAWTOOTH, "M3 Pro Sawtooth", init_t6030_sawtooth, &features_m3},
+    {MIDR_PART_T6031_EVEREST, "M3 Max Everest", init_t6031_everest, &features_m3},
+    {MIDR_PART_T6031_SAWTOOTH, "M3 Max Sawtooth", init_t6031_sawtooth, &features_m3},
     {MIDR_PART_T8132_DONAN_ECORE, "M4 Donan (E core)", NULL, &features_m4},
     {MIDR_PART_T8132_DONAN_PCORE, "M4 Donan (P core)", NULL, &features_m4},
 };
@@ -221,5 +236,12 @@ void init_cpu(void)
     // Enable branch prediction state retention across ACC sleep
     if (cpu_features->acc_cfg) {
         reg_mask(SYS_IMP_APL_ACC_CFG, ACC_CFG_BP_SLEEP_MASK, ACC_CFG_BP_SLEEP(3));
+    }
+
+    // Set up counter redirect for scaled 1 GHz counter frequency (ARMv8.6-a requirement)
+    if (cpu_features->counter_redirect) {
+        msr(SYS_IMP_APL_AGTCNTRDIR_EL1, 0);
+        if (in_el2())
+            msr(SYS_IMP_APL_AGTCNTRDIR_EL12, 0);
     }
 }
