@@ -89,7 +89,7 @@ jobs:
           cd out
           zip -r uefi-only-${{ env.GIT_DATE }}-${{ env.KERNEL_REF }}.zip esp
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: ci-uefi-only-${{ env.GIT_DATE }}-${{ env.KERNEL_REF }}
           path: |

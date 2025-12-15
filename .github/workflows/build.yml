@@ -34,7 +34,7 @@ jobs:
       - name: Build
         run: make -k -j2 ARCH=aarch64-linux-gnu- CHAINLOADING=1
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: m1n1
           path: |
