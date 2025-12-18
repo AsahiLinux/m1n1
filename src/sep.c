@@ -3,9 +3,11 @@
 #include <string.h>
 
 #include "adt.h"
+#include "akf.h"
 #include "asc.h"
 #include "malloc.h"
 #include "sep.h"
+#include "soc.h"
 #include "types.h"
 #include "utils.h"
 
@@ -21,6 +23,7 @@
 #define SEP_TIMEOUT 1000
 
 enum sep_mbox_type {
+    SEP_MBOX_TYPE_AKF,
     SEP_MBOX_TYPE_ASC,
 };
 
@@ -28,6 +31,7 @@ static struct sep_dev {
     enum sep_mbox_type type;
     sep_capabilities_t capabilities;
     union {
+        akf_dev_t *akf;
         asc_dev_t *asc;
     };
 } *sep_dev;
@@ -50,15 +54,25 @@ int sep_init(void)
     }
 
     sep_dev = calloc(0, sizeof(*sep_dev));
-    sep_dev->type = SEP_MBOX_TYPE_ASC;
+
+    if (adt_is_compatible(adt, node, "iop,s5l8960x") || adt_is_compatible(adt, node, "iop,s8000")) {
+        sep_dev->type = SEP_MBOX_TYPE_AKF;
+    } else {
+        sep_dev->type = SEP_MBOX_TYPE_ASC;
+    }
 
     switch (sep_dev->type) {
+        case SEP_MBOX_TYPE_AKF:
+            sep_dev->akf = akf_init(path);
+            break;
         case SEP_MBOX_TYPE_ASC:
             sep_dev->asc = asc_init(path);
             break;
     }
 
-    sep_dev->capabilities |= SEP_CAPABILITY_GETRAND;
+    if (chip_id != S5L8960X && chip_id != T7000 && chip_id != T7001 && chip_id != S8000 &&
+        chip_id != S8001 && chip_id != S8003)
+        sep_dev->capabilities |= SEP_CAPABILITY_GETRAND;
 
     return 0;
 }
@@ -66,6 +80,11 @@ int sep_init(void)
 bool sep_send(u64 msg)
 {
     switch (sep_dev->type) {
+        case SEP_MBOX_TYPE_AKF: {
+            const struct akf_message akf_msg = {.msg0 = FIELD_GET(msg, MASK(32)),
+                                                .msg1 = FIELD_GET(msg, GENMASK(63, 32))};
+            return akf_send(sep_dev->akf, &akf_msg);
+        }
         case SEP_MBOX_TYPE_ASC: {
             const struct asc_message asc_msg = {.msg0 = msg};
             return asc_send(sep_dev->asc, &asc_msg);
@@ -77,6 +96,13 @@ bool sep_send(u64 msg)
 bool sep_recv(u64 *reply)
 {
     switch (sep_dev->type) {
+        case SEP_MBOX_TYPE_AKF: {
+            struct akf_message akf_reply;
+            int retval = akf_recv_timeout(sep_dev->akf, &akf_reply, SEP_TIMEOUT);
+            *reply =
+                FIELD_PREP(MASK(32), akf_reply.msg0) | FIELD_PREP(GENMASK(63, 32), akf_reply.msg1);
+            return retval;
+        }
         case SEP_MBOX_TYPE_ASC: {
             struct asc_message asc_reply;
             int retval = asc_recv_timeout(sep_dev->asc, &asc_reply, SEP_TIMEOUT);
