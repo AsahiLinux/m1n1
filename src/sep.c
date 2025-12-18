@@ -26,8 +26,8 @@ enum sep_mbox_type {
 
 static struct sep_dev {
     enum sep_mbox_type type;
+    sep_capabilities_t capabilities;
     union {
-        akf_dev_t *akf;
         asc_dev_t *asc;
     };
 } *sep_dev;
@@ -58,6 +58,8 @@ int sep_init(void)
             break;
     }
 
+    sep_dev->capabilities |= SEP_CAPABILITY_GETRAND;
+
     return 0;
 }
 
@@ -87,6 +89,11 @@ bool sep_recv(u64 *reply)
 
 size_t sep_get_random(void *buffer, size_t len)
 {
+    if (!(sep_dev->capabilities & SEP_CAPABILITY_GETRAND)) {
+        printf("sep: SEP does not support GETRAND\n");
+        return 0;
+    }
+
     const u64 msg_getrand =
         FIELD_PREP(SEP_MSG_EP, SEP_EP_ROM) | FIELD_PREP(SEP_MSG_CMD, SEP_MSG_GETRAND);
     int ret;
@@ -121,4 +128,9 @@ size_t sep_get_random(void *buffer, size_t len)
     }
 
     return done;
+}
+
+sep_capabilities_t sep_get_capabilities(void)
+{
+    return sep_dev->capabilities;
 }

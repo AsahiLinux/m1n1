@@ -108,6 +108,9 @@ static int dt_set_rng_seed_sep(int node)
     u64 kaslr_seed;
     uint8_t rng_seed[128]; // same size used by Linux for kexec
 
+    if (!(sep_get_capabilities() & SEP_CAPABILITY_GETRAND))
+        return -1;
+
     if (sep_get_random(&kaslr_seed, sizeof(kaslr_seed)) != sizeof(kaslr_seed))
         bail("SEP: couldn't get enough random bytes for KASLR seed\n");
     if (sep_get_random(rng_seed, sizeof(rng_seed)) != sizeof(rng_seed))
