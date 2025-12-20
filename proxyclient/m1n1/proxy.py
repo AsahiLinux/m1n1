@@ -566,7 +566,7 @@ class M1N1Proxy(Reloadable):
     P_HEAPBLOCK_ALLOC = 0x600
     P_MALLOC = 0x601
     P_MEMALIGN = 0x602
-    P_FREE = 0x602
+    P_FREE = 0x603
 
     P_KBOOT_BOOT = 0x700
     P_KBOOT_SET_CHOSEN = 0x701
