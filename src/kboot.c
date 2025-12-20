@@ -21,6 +21,7 @@
 #include "pmgr.h"
 #include "sep.h"
 #include "sio.h"
+#include "smc.h"
 #include "smp.h"
 #include "tunables.h"
 #include "types.h"
@@ -2745,6 +2746,13 @@ int kboot_boot(void *kernel)
     usb_init();
     pcie_init();
     dapf_init_all();
+
+    if (chip_id == T8015 || chip_id == T8012) {
+        smc_power_on();
+        asc_dev_t *smc = asc_init("/arm-io/smc");
+        asc_cpu_start(smc);
+        asc_free(smc);
+    }
 
     printf("Setting SMP mode to WFE...\n");
     smp_set_wfe_mode(true);
