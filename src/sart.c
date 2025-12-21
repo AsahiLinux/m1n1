@@ -9,6 +9,8 @@
 struct sart_dev {
     uintptr_t base;
     u32 protected_entries;
+    /* This is probably a bitfield but the exact meaning of each bit is unknown. */
+    u32 flags_allow;
 
     void (*get_entry)(sart_dev_t *sart, int index, u8 *flags, void **paddr, size_t *size);
     bool (*set_entry)(sart_dev_t *sart, int index, u8 flags, void *paddr, size_t size);
@@ -16,8 +18,17 @@ struct sart_dev {
 
 #define APPLE_SART_MAX_ENTRIES 16
 
-/* This is probably a bitfield but the exact meaning of each bit is unknown. */
-#define APPLE_SART_FLAGS_ALLOW 0xff
+/* SARTv0 registers */
+#define APPLE_SART0_CONFIG(idx)       (0x00 + 4 * (idx))
+#define APPLE_SART0_CONFIG_FLAGS      GENMASK(28, 24)
+#define APPLE_SART0_CONFIG_SIZE       GENMASK(18, 0)
+#define APPLE_SART0_CONFIG_SIZE_SHIFT 12
+#define APPLE_SART0_CONFIG_SIZE_MAX   GENMASK(18, 0)
+
+#define APPLE_SART0_PADDR(idx)  (0x40 + 4 * (idx))
+#define APPLE_SART0_PADDR_SHIFT 12
+
+#define APPLE_SART0_FLAGS_ALLOW 0xf
 
 /* SARTv2 registers */
 #define APPLE_SART2_CONFIG(idx)       (0x00 + 4 * (idx))
@@ -29,6 +40,8 @@ struct sart_dev {
 #define APPLE_SART2_PADDR(idx)  (0x40 + 4 * (idx))
 #define APPLE_SART2_PADDR_SHIFT 12
 
+#define APPLE_SART2_FLAGS_ALLOW 0xff
+
 /* SARTv3 registers */
 #define APPLE_SART3_CONFIG(idx) (0x00 + 4 * (idx))
 
@@ -38,6 +51,42 @@ struct sart_dev {
 #define APPLE_SART3_SIZE(idx)  (0x80 + 4 * (idx))
 #define APPLE_SART3_SIZE_SHIFT 12
 #define APPLE_SART3_SIZE_MAX   GENMASK(29, 0)
+
+#define APPLE_SART3_FLAGS_ALLOW 0xff
+
+static void sart0_get_entry(sart_dev_t *sart, int index, u8 *flags, void **paddr, size_t *size)
+{
+    u32 cfg = read32(sart->base + APPLE_SART0_CONFIG(index));
+    *flags = FIELD_GET(APPLE_SART0_CONFIG_FLAGS, cfg);
+    *size = (size_t)FIELD_GET(APPLE_SART0_CONFIG_SIZE, cfg) << APPLE_SART0_CONFIG_SIZE_SHIFT;
+    *paddr =
+        (void *)((u64)read32(sart->base + APPLE_SART0_PADDR(index)) << APPLE_SART0_PADDR_SHIFT);
+}
+
+static bool sart0_set_entry(sart_dev_t *sart, int index, u8 flags, void *paddr_, size_t size)
+{
+    u32 cfg;
+    u64 paddr = (u64)paddr_;
+
+    if (size & ((1 << APPLE_SART0_CONFIG_SIZE_SHIFT) - 1))
+        return false;
+    if (paddr & ((1 << APPLE_SART0_PADDR_SHIFT) - 1))
+        return false;
+
+    size >>= APPLE_SART0_CONFIG_SIZE_SHIFT;
+    paddr >>= APPLE_SART0_PADDR_SHIFT;
+
+    if (size > APPLE_SART0_CONFIG_SIZE_MAX)
+        return false;
+
+    cfg = FIELD_PREP(APPLE_SART0_CONFIG_FLAGS, flags);
+    cfg |= FIELD_PREP(APPLE_SART0_CONFIG_SIZE, size);
+
+    write32(sart->base + APPLE_SART0_PADDR(index), paddr);
+    write32(sart->base + APPLE_SART0_CONFIG(index), cfg);
+
+    return true;
+}
 
 static void sart2_get_entry(sart_dev_t *sart, int index, u8 *flags, void **paddr, size_t *size)
 {
@@ -118,9 +167,14 @@ sart_dev_t *sart_init(const char *adt_path)
     }
 
     const u32 *sart_version = adt_getprop(adt, node, "sart-version", NULL);
+    const u32 sart_version_zero = 0;
     if (!sart_version) {
-        printf("sart: SART %s has no sart-version property\n", adt_path);
-        return NULL;
+        if (adt_is_compatible(adt, node, "sart,t8015")) {
+            sart_version = &sart_version_zero;
+        } else {
+            printf("sart: SART %s has no sart-version property\n", adt_path);
+            return NULL;
+        }
     }
 
     sart_dev_t *sart = calloc(1, sizeof(*sart));
@@ -130,13 +184,19 @@ sart_dev_t *sart_init(const char *adt_path)
     sart->base = base;
 
     switch (*sart_version) {
+        case 0:
+            sart->get_entry = sart0_get_entry;
+            sart->set_entry = sart0_set_entry;
+            sart->flags_allow = APPLE_SART0_FLAGS_ALLOW;
         case 2:
             sart->get_entry = sart2_get_entry;
             sart->set_entry = sart2_set_entry;
+            sart->flags_allow = APPLE_SART2_FLAGS_ALLOW;
             break;
         case 3:
             sart->get_entry = sart3_get_entry;
             sart->set_entry = sart3_set_entry;
+            sart->flags_allow = APPLE_SART3_FLAGS_ALLOW;
             break;
         default:
             printf("sart: SART %s has unknown version %d\n", adt_path, *sart_version);
@@ -185,7 +245,7 @@ bool sart_add_allowed_region(sart_dev_t *sart, void *paddr, size_t sz)
         if (e_flags)
             continue;
 
-        return sart->set_entry(sart, i, APPLE_SART_FLAGS_ALLOW, paddr, sz);
+        return sart->set_entry(sart, i, sart->flags_allow, paddr, sz);
     }
 
     printf("sart: no more free entries\n");
