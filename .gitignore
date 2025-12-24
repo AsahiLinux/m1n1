@@ -6,3 +6,5 @@ __pycache__
 *.swp
 *.orig
 *.rej
+/rust/target
+.idea
