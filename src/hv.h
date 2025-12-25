@@ -106,6 +106,8 @@ u64 hv_get_far(void);
 u64 hv_get_elr(void);
 u64 hv_get_afsr1(void);
 void hv_set_elr(u64 val);
+void hv_spin_lock(spinlock_t *lock);
+void hv_spin_unlock(spinlock_t *lock);
 
 /* HV main */
 void hv_init(void);
