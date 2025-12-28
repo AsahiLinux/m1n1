@@ -4,7 +4,6 @@
 #![feature(cfg_version)]
 #![feature(alloc_error_handler)]
 #![cfg_attr(not(version("1.82")), feature(new_uninit))]
-#![cfg_attr(version("1.82"), feature(new_zeroed_alloc))]
 
 #[macro_use]
 extern crate alloc;
