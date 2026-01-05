@@ -50,6 +50,7 @@ impl F32 {
     pub(crate) const fn from_f32(v: f32) -> F32 {
         // Replace with to_bits() after kernel Rust minreq is >= 1.83.0
         #[allow(clippy::transmute_float_to_int)]
+        #[allow(unnecessary_transmutes)]
         // SAFETY: Transmuting f32 to u32 is always safe
         F32(unsafe { core::mem::transmute::<f32, u32>(v) })
     }
