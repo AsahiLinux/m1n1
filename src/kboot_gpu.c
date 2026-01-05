@@ -543,21 +543,6 @@ int dt_set_gpu(void *dt)
     downstream_dtb |= fdt_node_check_compatible(dt, gpu, "apple,agx-t6021") == 0;
     downstream_dtb |= fdt_node_check_compatible(dt, gpu, "apple,agx-t6022") == 0;
 
-    if (!downstream_dtb) {
-        printf("FDT: no old style agx compatible found, disabling GPU node\n");
-        fdt_setprop_string(dt, gpu, "status", "disabled");
-        return 0;
-    }
-
-    int len;
-    const fdt32_t *opps_ph = fdt_getprop(dt, gpu, "operating-points-v2", &len);
-    if (!opps_ph || len != 4)
-        bail("FDT: GPU: operating-points-v2 not found\n");
-
-    int opps = fdt_node_offset_by_phandle(dt, fdt32_ld(opps_ph));
-    if (opps < 0)
-        bail("FDT: GPU: node for phandle %u not found\n", fdt32_ld(opps_ph));
-
     int sgx = adt_path_offset(adt, "/arm-io/sgx");
     if (sgx < 0)
         bail("ADT: GPU: /arm-io/sgx node not found\n");
@@ -638,56 +623,67 @@ int dt_set_gpu(void *dt)
         printf("\n");
     }
 
-    if (fdt_set_float_array(dt, gpu, "apple,core-leak-coef", core_leak, perf_state_table_count))
-        return -1;
+    if (downstream_dtb) {
+        if (fdt_set_float_array(dt, gpu, "apple,core-leak-coef", core_leak, perf_state_table_count))
+            return -1;
 
-    if (fdt_set_float_array(dt, gpu, "apple,sram-leak-coef", sram_leak, perf_state_table_count))
-        return -1;
+        if (fdt_set_float_array(dt, gpu, "apple,sram-leak-coef", sram_leak, perf_state_table_count))
+            return -1;
 
-    u32 i = 0;
-    int opp;
-    fdt_for_each_subnode(opp, dt, opps)
-    {
-        fdt32_t volts[MAX_CLUSTERS];
+        int len;
+        const fdt32_t *opps_ph = fdt_getprop(dt, gpu, "operating-points-v2", &len);
+        if (!opps_ph || len != 4)
+            bail("FDT: GPU: operating-points-v2 not found\n");
 
-        for (u32 j = 0; j < perf_state_table_count; j++) {
-            volts[j] = cpu_to_fdt32(perf_states[i + j * perf_state_count].volt * 1000);
+        int opps = fdt_node_offset_by_phandle(dt, fdt32_ld(opps_ph));
+        if (opps < 0)
+            bail("FDT: GPU: node for phandle %u not found\n", fdt32_ld(opps_ph));
+
+        u32 i = 0;
+        int opp;
+        fdt_for_each_subnode(opp, dt, opps)
+        {
+            fdt32_t volts[MAX_CLUSTERS];
+
+            for (u32 j = 0; j < perf_state_table_count; j++) {
+                volts[j] = cpu_to_fdt32(perf_states[i + j * perf_state_count].volt * 1000);
+            }
+
+            if (i >= perf_state_count)
+                bail("FDT: GPU: Expected %d operating points, but found more\n", perf_state_count);
+
+            if (fdt_setprop_inplace(dt, opp, "opp-microvolt", &volts,
+                                    sizeof(u32) * perf_state_table_count))
+                bail("FDT: GPU: Failed to set opp-microvolt for PS %d\n", i);
+
+            if (fdt_setprop_inplace_u64(dt, opp, "opp-hz", perf_states[i].freq))
+                bail("FDT: GPU: Failed to set opp-hz for PS %d\n", i);
+
+            if (fdt_setprop_inplace_u32(dt, opp, "opp-microwatt", max_pwr[i]))
+                bail("FDT: GPU: Failed to set opp-microwatt for PS %d\n", i);
+
+            i++;
         }
 
-        if (i >= perf_state_count)
-            bail("FDT: GPU: Expected %d operating points, but found more\n", perf_state_count);
+        if (i != perf_state_count)
+            bail("FDT: GPU: Expected %d operating points, but found %d\n", perf_state_count, i);
 
-        if (fdt_setprop_inplace(dt, opp, "opp-microvolt", &volts,
-                                sizeof(u32) * perf_state_table_count))
-            bail("FDT: GPU: Failed to set opp-microvolt for PS %d\n", i);
+        if (has_cs_afr) {
+            int ret = fdt_set_aux_opp(dt, gpu, "apple,cs-opp", perf_states_cs, dies);
+            if (ret)
+                return ret;
 
-        if (fdt_setprop_inplace_u64(dt, opp, "opp-hz", perf_states[i].freq))
-            bail("FDT: GPU: Failed to set opp-hz for PS %d\n", i);
+            if (fdt_set_float_array(dt, gpu, "apple,cs-leak-coef", cs_leak, dies))
+                return -1;
+        }
 
-        if (fdt_setprop_inplace_u32(dt, opp, "opp-microwatt", max_pwr[i]))
-            bail("FDT: GPU: Failed to set opp-microwatt for PS %d\n", i);
-
-        i++;
-    }
-
-    if (i != perf_state_count)
-        bail("FDT: GPU: Expected %d operating points, but found %d\n", perf_state_count, i);
-
-    if (has_cs_afr) {
-        int ret = fdt_set_aux_opp(dt, gpu, "apple,cs-opp", perf_states_cs, dies);
-        if (ret)
-            return ret;
-
-        if (fdt_set_float_array(dt, gpu, "apple,cs-leak-coef", cs_leak, dies))
-            return -1;
-    }
-
-    if (has_cs_afr) {
-        int ret = fdt_set_aux_opp(dt, gpu, "apple,afr-opp", perf_states_afr, dies);
-        if (ret)
-            return ret;
-        if (fdt_set_float_array(dt, gpu, "apple,afr-leak-coef", afr_leak, dies))
-            return -1;
+        if (has_cs_afr) {
+            int ret = fdt_set_aux_opp(dt, gpu, "apple,afr-opp", perf_states_afr, dies);
+            if (ret)
+                return ret;
+            if (fdt_set_float_array(dt, gpu, "apple,afr-leak-coef", afr_leak, dies))
+                return -1;
+        }
     }
 
     if (dt_set_region(dt, sgx, "gfx-handoff", "/reserved-memory/uat-handoff"))
@@ -704,9 +700,6 @@ int dt_set_gpu(void *dt)
         return 0;
     }
 
-    if (firmware_set_fdt(dt, gpu, "apple,firmware-version", &os_firmware))
-        return -1;
-
     const struct fw_version_info *compat;
 
     switch (os_firmware.version) {
@@ -722,8 +715,12 @@ int dt_set_gpu(void *dt)
             break;
     }
 
-    if (firmware_set_fdt(dt, gpu, "apple,firmware-compat", compat))
-        return -1;
+    if (downstream_dtb) {
+        if (firmware_set_fdt(dt, gpu, "apple,firmware-version", &os_firmware))
+            return -1;
+        if (firmware_set_fdt(dt, gpu, "apple,firmware-compat", compat))
+            return -1;
+    }
     // Ignoring errors for old dts compat
     firmware_set_fdt(dt, gpu, "apple,firmware-abi", compat);
 
