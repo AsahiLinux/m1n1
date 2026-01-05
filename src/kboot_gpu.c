@@ -624,6 +624,20 @@ int dt_set_gpu(void *dt)
     }
     printf("\n");
 
+    if (has_cs_afr) {
+        printf("FDT: GPU: CS leakage table: ");
+        for (u32 i = 0; i < dies; i++) {
+            printf("%d.%03d ", (int)cs_leak[i], ((int)(cs_leak[i] * 1000) % 1000));
+        }
+        printf("\n");
+
+        printf("FDT: GPU: AFR leakage table: ");
+        for (u32 i = 0; i < dies; i++) {
+            printf("%d.%03d ", (int)afr_leak[i], ((int)(afr_leak[i] * 1000) % 1000));
+        }
+        printf("\n");
+    }
+
     if (fdt_set_float_array(dt, gpu, "apple,core-leak-coef", core_leak, perf_state_table_count))
         return -1;
 
@@ -666,12 +680,6 @@ int dt_set_gpu(void *dt)
 
         if (fdt_set_float_array(dt, gpu, "apple,cs-leak-coef", cs_leak, dies))
             return -1;
-
-        printf("FDT: GPU: CS leakage table: ");
-        for (u32 i = 0; i < dies; i++) {
-            printf("%d.%03d ", (int)cs_leak[i], ((int)(cs_leak[i] * 1000) % 1000));
-        }
-        printf("\n");
     }
 
     if (has_cs_afr) {
@@ -680,12 +688,6 @@ int dt_set_gpu(void *dt)
             return ret;
         if (fdt_set_float_array(dt, gpu, "apple,afr-leak-coef", afr_leak, dies))
             return -1;
-
-        printf("FDT: GPU: AFR leakage table: ");
-        for (u32 i = 0; i < dies; i++) {
-            printf("%d.%03d ", (int)afr_leak[i], ((int)(afr_leak[i] * 1000) % 1000));
-        }
-        printf("\n");
     }
 
     if (dt_set_region(dt, sgx, "gfx-handoff", "/reserved-memory/uat-handoff"))
