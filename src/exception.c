@@ -278,6 +278,9 @@ void exc_sync(u64 *regs)
     if (((esr >> 26) & 0x3f) == 0x3c && iss == 1) {
         // brk 1: Capture PSTATE
         regs[0] = spsr;
+
+        elr += 4;
+        msr(ELR_EL1, elr);
         return;
     }
 
