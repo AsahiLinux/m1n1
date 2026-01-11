@@ -356,7 +356,7 @@ void exc_sync(u64 *regs)
         printf("Recovering from exception (ELR=0x%lx)\n", elr);
     if (in_gl)
         msr(SYS_IMP_APL_ELR_GL1, elr);
-    if (el3)
+    else if (el3)
         msr(ELR_EL3, elr);
     else
         msr(ELR_EL1, elr);
