@@ -25,21 +25,21 @@ void el0_ret(void);
 void el1_ret(void);
 
 static char *m_table[0x10] = {
-    [0x00] = "EL0t", //
-    [0x04] = "EL1t", //
-    [0x05] = "EL1h", //
-    [0x08] = "EL2t", //
-    [0x09] = "EL2h", //
-    [0x0c] = "EL3t", //
-    [0x0d] = "EL3h", //
+    [SPSR_M_EL0] = "EL0t",  //
+    [SPSR_M_EL1T] = "EL1t", //
+    [SPSR_M_EL1H] = "EL1h", //
+    [SPSR_M_EL2T] = "EL2t", //
+    [SPSR_M_EL2H] = "EL2h", //
+    [SPSR_M_EL3T] = "EL3t", //
+    [SPSR_M_EL3H] = "EL3h", //
 };
 
 static char *gl_m_table[0x10] = {
-    [0x00] = "GL0t", //
-    [0x04] = "GL1t", //
-    [0x05] = "GL1h", //
-    [0x08] = "GL2t", //
-    [0x09] = "GL2h", //
+    [SPSR_M_EL0] = "GL0t",  //
+    [SPSR_M_EL1T] = "GL1t", //
+    [SPSR_M_EL1H] = "GL1h", //
+    [SPSR_M_EL2T] = "GL2t", //
+    [SPSR_M_EL2H] = "GL2h", //
 };
 
 static char *ec_table[0x40] = {
@@ -254,19 +254,22 @@ void exc_sync(u64 *regs)
     u64 esr = in_gl ? mrs(SYS_IMP_APL_ESR_GL1) : (el3 ? mrs(ESR_EL3) : mrs(ESR_EL1));
     u64 elr = in_gl ? mrs(SYS_IMP_APL_ELR_GL1) : (el3 ? mrs(ELR_EL3) : mrs(ELR_EL1));
 
-    u32 iss = esr & 0xffffff;
+    u32 elsp = spsr & SPSR_M_EL;
+    u32 ec = (esr & ESR_EC) >> ESR_EC_SHIFT;
+    u32 iss = esr & ESR_ISS;
 
-    if ((spsr & 0xf) == 0 && ((esr >> 26) & 0x3f) == 0x3c && iss == 0) {
+    // check brk instructions
+    if (ec == ESR_EC_BRK && iss == 0 && elsp == SPSR_M_EL0) {
         // brk 0
         // On clean EL0 return, let the normal exception return
         // path take us back to the return thunk.
+        spsr |= SPSR_D | SPSR_A | SPSR_I | SPSR_F;
 
-        spsr &= ~0x1f;
-        spsr |= 0xf << 6;
+        spsr &= ~SPSR_M;
         if (has_el2()) {
-            spsr |= 0x09; // EL2h
+            spsr |= SPSR_M_EL2H;
         } else {
-            spsr |= 0x05; // EL1h
+            spsr |= SPSR_M_EL1H;
         }
 
         msr(SPSR_EL1, spsr);
@@ -274,8 +277,7 @@ void exc_sync(u64 *regs)
         msr(ELR_EL1, el0_ret);
         return;
     }
-
-    if (((esr >> 26) & 0x3f) == 0x3c && iss == 1) {
+    if (ec == ESR_EC_BRK && iss == 1) {
         // brk 1: Capture PSTATE
         regs[0] = spsr;
 
@@ -284,7 +286,7 @@ void exc_sync(u64 *regs)
         return;
     }
 
-    if (in_el2() && !in_gl12() && (spsr & 0xf) == 5 && ((esr >> 26) & 0x3f) == 0x16) {
+    if (ec == ESR_EC_HVC && in_el2() && !in_gl12() && elsp == SPSR_M_EL1H) {
         // Hypercall
         u32 imm = mrs(ESR_EL2) & 0xffff;
         switch (imm) {
@@ -306,7 +308,7 @@ void exc_sync(u64 *regs)
                 printf("Unknown HVC: 0x%x\n", imm);
                 break;
         }
-    } else if (in_el3() && ((esr >> 26) & 0x3f) == 0x17) {
+    } else if (ec == ESR_EC_SMC && in_el3()) {
         // Monitor call
         u32 imm = mrs(ESR_EL3) & 0xffff;
         switch (imm) {

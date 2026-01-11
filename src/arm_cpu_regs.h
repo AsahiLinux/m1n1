@@ -48,11 +48,12 @@
 #define SYS_CNTP_CTL_EL02  sys_reg(3, 5, 14, 2, 1)
 #define SYS_CNTP_CVAL_EL02 sys_reg(3, 5, 14, 2, 2)
 
-#define SYS_ESR_EL2 sys_reg(3, 4, 5, 2, 0)
-#define ESR_ISS2    GENMASK(36, 32)
-#define ESR_EC      GENMASK(31, 26)
-#define ESR_IL      BIT(25)
-#define ESR_ISS     GENMASK(24, 0)
+#define SYS_ESR_EL2  sys_reg(3, 4, 5, 2, 0)
+#define ESR_ISS2     GENMASK(36, 32)
+#define ESR_EC       GENMASK(31, 26)
+#define ESR_EC_SHIFT 26
+#define ESR_IL       BIT(25)
+#define ESR_ISS      GENMASK(24, 0)
 
 #define ESR_EC_UNKNOWN      0b000000
 #define ESR_EC_WFI          0b000001
@@ -277,6 +278,21 @@
 #define SPSR_I     BIT(7)
 #define SPSR_F     BIT(6)
 #define SPSR_M     GENMASK(4, 0)
+#define SPSR_M_ES  BIT(4)
+#define SPSR_M_EL  GENMASK(3, 0)
+
+#define SPSR_M_EL0  0b0000UL
+#define SPSR_M_EL1T 0b0100UL
+#define SPSR_M_EL1H 0b0101UL
+// only for SPSR_EL1
+#define SPSR_M_EL1T_NV 0b1000UL
+#define SPSR_M_EL1H_NV 0b1001UL
+// only for SPSR_EL2 and SPSR_EL3
+#define SPSR_M_EL2T 0b1000UL
+#define SPSR_M_EL2H 0b1001UL
+// only for SPSR_EL3
+#define SPSR_M_EL3T 0b1100UL
+#define SPSR_M_EL3H 0b1101UL
 
 #define SYS_TCR_EL1    sys_reg(3, 0, 2, 0, 2)
 #define TCR_DS         BIT(59)
