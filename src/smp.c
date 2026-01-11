@@ -94,8 +94,8 @@ void smp_secondary_entry(void)
         sysop("dmb sy");
         me->flag++;
         sysop("dmb sy");
-        me->retval = ((u64(*)(u64 a, u64 b, u64 c, u64 d))target)(me->args[0], me->args[1],
-                                                                  me->args[2], me->args[3]);
+        me->retval = ((u64 (*)(u64 a, u64 b, u64 c, u64 d))target)(me->args[0], me->args[1],
+                                                                   me->args[2], me->args[3]);
         sysop("dmb sy");
         me->target = 0;
         sysop("dmb sy");

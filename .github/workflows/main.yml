@@ -27,18 +27,18 @@ jobs:
           rm -f ~/.cargo/bin/cargo-fmt
           rustup toolchain install nightly --component rustfmt --component clippy --allow-downgrade
 
-      - name: install clang-format-18
+      - name: install clang-format-20
         run: |
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
           sudo add-apt-repository 'deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-18 main'
           sudo apt update
-          sudo apt install clang-format-18
+          sudo apt install clang-format-20
 
       - name: Run format-check
         run: |
           . "$HOME/.cargo/env"
-          make format CLANG_FORMAT=clang-format-18
+          make format CLANG_FORMAT=clang-format-20
           git diff
           git reset --hard
-          make format-check CLANG_FORMAT=clang-format-18
+          make format-check CLANG_FORMAT=clang-format-20
           make rustfmt-check
