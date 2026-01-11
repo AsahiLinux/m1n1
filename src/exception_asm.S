@@ -160,8 +160,8 @@ el0_ret:
 el1_call:
     stp x29, x30, [sp, #-16]!
 
-    mrs x5, CurrentEL
-    cmp x5, #4
+    mrs x29, CurrentEL
+    cmp x29, #4
     beq _el1_thunk
 
     // Enable EL1, but only if not already done.
@@ -175,16 +175,18 @@ el1_call:
     isb
 
     1:
-    // Capture PSTATE
-    mov x6, x0
-    brk 1
+    // Capture PSTATE into x0
     mov x29, x0
+    brk 1
     bic x5, x0, #0xf
     mov x6, #5
     orr x5, x5, x6 // EL1h
     msr daifset, #0xf
     msr spsr_el1, x5
-    mov x0, x6
+    mov x0, x29
+
+    // We're not in EL1.
+    mov x29, #0
 
     ldr x5, =_el1_thunk
     msr elr_el2, x5
@@ -204,8 +206,7 @@ _el1_thunk:
 
     blr x5
 
-    mrs x5, CurrentEL
-    cmp x5, #4
+    cmp x29, #4
     beq el1_ret
 
     hvc 0
