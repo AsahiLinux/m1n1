@@ -1600,6 +1600,10 @@ class HV(Reloadable):
         soc_name = "Virtual " + self.adt["product"].product_soc_name + " on m1n1 hypervisor"
         self.adt["product"].product_soc_name = soc_name
 
+        # change default serial to uart0 instead of UART-via-dockchannel
+        # to re-enable XNU serial output for newer macOS versions
+        self.adt["defaults"].serial_device = getattr(self.adt["/arm-io/uart0"], "AAPL,phandle")
+
         if self.iodev >= IODEV.USB0:
             idx = self.iodev - IODEV.USB0
             for prefix in ("/arm-io/dart-usb%d",
