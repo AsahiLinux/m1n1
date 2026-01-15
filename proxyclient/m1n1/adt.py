@@ -810,16 +810,16 @@ class ADTNode:
         return node
 
     def pmgr_init(self):
-        self.pmgr_u8id = (self["/arm-io/pmgr"].devices[0].id1 != self["/arm-io/pmgr"].devices[1].id1)
+        self._pmgr_u8id = (self["/arm-io/pmgr"].devices[0].id1 != self["/arm-io/pmgr"].devices[1].id1)
 
     def pmgr_dev_get_id(self, dev):
-        if self.pmgr_u8id:
+        if self._pmgr_u8id:
             return dev.id1
         else:
             return dev.id2
 
     def pmgr_dev_get_parents(self, dev):
-        if self.pmgr_u8id:
+        if self._pmgr_u8id:
             return dev.parents_un.u8id.parents 
         else:
             return dev.parents_un.u16id.parents 
