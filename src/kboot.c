@@ -1483,7 +1483,7 @@ static int dt_set_dcp_firmware(const char *alias)
             break;
         case V13_5B4:
         case V13_5:
-        case V13_6_2:
+        case V13_6_1:
             compat = &fw_versions[V13_5];
             break;
         default:
@@ -2151,7 +2151,7 @@ static int dt_set_isp_fwdata(void)
     const struct fw_version_info *compat;
 
     switch (os_firmware.version) {
-        case V13_6_2:
+        case V13_6_1:
             compat = &fw_versions[V13_5];
             break;
         default:
