@@ -1218,7 +1218,7 @@ static int dt_set_acio_tunables(void)
         snprintf(adt_path, sizeof(adt_path), "/arm-io/acio%d", i);
 
         memset(fdt_alias, 0, sizeof(fdt_alias));
-        snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_rc", i);
+        snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_acio", i);
         dt_copy_acio_tunables(adt_path, fdt_alias, usb4_rc_tunables,
                               sizeof(usb4_rc_tunables) / sizeof(*usb4_rc_tunables));
 
