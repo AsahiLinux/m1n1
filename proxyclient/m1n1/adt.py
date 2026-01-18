@@ -301,6 +301,13 @@ DEV_PROPERTIES = {
             "info-*": SafeGreedyRange(Hex(Int32ul)),
         },
     },
+    # PMU nodes on M3 Ultra/M4 Max / macOS 15.6.1 are named "spmi-*"
+    "spmi-*": {
+        "pmu,spmi": {
+            "info-*name*": CString("ascii"),
+            "info-*": SafeGreedyRange(Hex(Int32ul)),
+        },
+    },
     "stockholm-spmi": {
         "*": {
             "required-functions": ADTStringList,
