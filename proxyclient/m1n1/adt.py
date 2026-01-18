@@ -710,6 +710,8 @@ class ADTNode:
 
     @property
     def _reg_struct(self):
+        if not hasattr(self._parent, "address_cells") or not hasattr(self._parent, "size_cells"):
+            return Int32ul
         ac, sc = self._parent.address_cells, self._parent.size_cells
         return Struct(
             "addr" / Hex(Int64ul) if ac == 2 else Array(ac, Hex(Int32ul)),
