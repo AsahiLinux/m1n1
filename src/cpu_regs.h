@@ -293,6 +293,8 @@
 #define HID7_FORCE_NONSPEC_TARGET_TIMER_SEL(x)                        ((ULONG(x)) << 24)
 #define HID7_FORCE_NONSPEC_TARGET_TIMER_SEL_MASK                      (3UL << 24)
 
+#define SYS_IMP_APL_EHID7 sys_reg(3, 0, 15, 7, 1)
+
 #define SYS_IMP_APL_HID8             sys_reg(3, 0, 15, 8, 0)
 #define HID8_DATA_SET_ID0_VALUE(x)   ((ULONG(x)) << 4)
 #define HID8_DATA_SET_ID0_VALUE_MASK GENMASK(7, 4)
@@ -454,6 +456,12 @@
 #define HID27_GROUP3_OFFSET(x)   ((ULONG(x)) << 8)
 #define HID27_GROUP3_OFFSET_MASK (0xffUL << 8)
 
+// AGTCNTRDIR registers
+#define SYS_IMP_APL_AGTCNTRDIR_EL1 sys_reg(3, 1, 15, 1, 5)
+
+#define SYS_IMP_APL_AGTCNTRDIR_EL12 sys_reg(3, 4, 15, 14, 6)
+
+// Performance monitor registers
 #define SYS_IMP_APL_PMCR0 sys_reg(3, 1, 15, 0, 0)
 #define PMCR0_CNT_EN_MASK (MASK(8) | GENMASK(33, 32))
 #define PMCR0_IMODE_OFF   (0 << 8)
