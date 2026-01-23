@@ -94,6 +94,8 @@ if args.u_boot:
     bootenv = list(filter(lambda x: not (
         x.startswith("baudrate") or
         x.startswith("boot_") or
+        x.startswith("bootdelay=") or
+        x.startswith("preboot=") or
         x.startswith("bootcmd")
         ), bootenv))
 
@@ -109,6 +111,7 @@ if args.u_boot:
     if tty_dev is not None:
         bootenv.append("baudrate=%d" % tty_dev.baudrate)
     bootenv.append(bootcmd)
+    bootenv.append("bootdelay=0")
     if args.bootargs is not None:
         bootenv.append("bootargs=" + args.bootargs)
 
