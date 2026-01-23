@@ -14,14 +14,20 @@ parser.add_argument('--compression', choices=['auto', 'none', 'gz', 'xz'], defau
 parser.add_argument('-b', '--bootargs', type=str, metavar='"boot arguments"')
 parser.add_argument('-t', '--tty', type=str)
 parser.add_argument('-u', '--u-boot', type=pathlib.Path, help="load u-boot before linux")
+parser.add_argument('-E', '--efi', action="store_true", help="payload is EFI stub (requires u-boot)")
 parser.add_argument('-T', '--tso', action="store_true", help="enable TSO")
 args = parser.parse_args()
 
 from m1n1.setup import *
 
+if args.efi and args.u_boot is None:
+        raise Exception("Booting EFI stubs requires u-boot.")
+
 if args.compression == 'auto':
     suffix = args.payload.suffix
-    if suffix == '.gz':
+    if args.efi:
+        args.compression = 'none'
+    elif suffix == '.gz':
         args.compression = 'gz'
     elif suffix == '.xz':
         args.compression = 'xz'
@@ -91,8 +97,12 @@ if args.u_boot:
         x.startswith("bootcmd")
         ), bootenv))
 
-    if initramfs is not None:
+    if args.efi and initramfs is not None:
+        bootcmd = "bootcmd=bootefi 0x%x:0x%x 0x%x:0x%x $fdtcontroladdr" % (kernel_base, kernel_size, initramfs_base, initramfs_size)
+    elif initramfs is not None:
         bootcmd = "bootcmd=booti 0x%x 0x%x:0x%x $fdtcontroladdr" % (kernel_base, initramfs_base, initramfs_size)
+    elif args.efi:
+        bootcmd = "bootcmd=bootefi 0x%x:0x%x $fdtcontroladdr" % (kernel_base, kernel_size)
     else:
         bootcmd = "bootcmd=booti 0x%x - $fdtcontroladdr" % (kernel_base)
 
