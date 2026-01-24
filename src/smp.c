@@ -140,7 +140,9 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
 
     sysop("dsb sy");
 
-    write64(impl, (u64)_vectors_start);
+    if ((read64(impl) & 0xfffffffff000) != (u64)_vectors_start) {
+        write64(impl, (u64)_vectors_start);
+    }
 
     cpu_start_base += die * PMGR_DIE_OFFSET;
 
@@ -267,6 +269,7 @@ void smp_start_secondaries(void)
             break;
         case T8112:
         case T8122:
+        case T8132:
             cpu_start_off = CPU_START_OFF_T8112;
             break;
         case T6020:
