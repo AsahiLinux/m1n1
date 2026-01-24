@@ -100,7 +100,16 @@ for cpu in u.adt["cpus"]:
         continue
     addr, size = cpu.cpu_impl_reg
     print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
-    p.write64(addr, rvbar)
+
+    val = p.read64(addr)
+    locked = val & 1
+    do_write = val & 0xfffffffff000 == rvbar:
+
+    if locked and do_write:
+        raise Exception("RVBAR is locked and does not already contain start address")
+
+    if do_write:
+        p.write64(addr, rvbar)
 
 u.push_adt()
 

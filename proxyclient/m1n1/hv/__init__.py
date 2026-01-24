@@ -1786,6 +1786,15 @@ class HV(Reloadable):
                 continue
             addr, size = cpu.cpu_impl_reg
             print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
+            # On some platforms (M4) iBoot already sets this
+            # to the m1n1 entrypoint and locks the register.
+            # Skip the write if the value is already correct.
+            val = self.p.read64(addr)
+            if val & 0xfffffffff000 == rvbar:
+                continue
+            if val & 1:
+                print(f"{hex(val & 0xfffffffff000)} != {hex(rvbar)}")
+                print("The cpu_impl_reg is already locked, this might fail...")
             self.p.write64(addr, rvbar)
 
     def _load_macho_symbols(self):
