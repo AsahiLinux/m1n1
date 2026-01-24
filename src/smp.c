@@ -24,6 +24,9 @@
 #define CPU_REG_CLUSTER GENMASK(10, 8)
 #define CPU_REG_DIE     GENMASK(14, 11)
 
+#define RVBAR_LOCK BIT(0)
+#define RVBAR_ADDR GENMASK(47, 12)
+
 struct spin_table {
     u64 mpidr;
     u64 flag;
@@ -123,6 +126,14 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
 
     printf("Starting CPU %d (%d:%d:%d)... ", index, die, cluster, core);
 
+    u64 rvbar_value = read64(impl);
+    bool write_rvbar = FIELD_GET(RVBAR_ADDR, rvbar_value) != (u64)_vectors_start;
+    if (FIELD_GET(RVBAR_LOCK, rvbar_value) && write_rvbar) {
+        printf("Failed! \n    RVBAR (=0x%lx) is locked and differs from entry point (=0x%lx)\n",
+               rvbar_value, (u64)_vectors_start);
+        return;
+    }
+
     memset(&spin_table[index], 0, sizeof(struct spin_table));
 
     target_cpu = index;
@@ -140,7 +151,9 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
 
     sysop("dsb sy");
 
-    write64(impl, (u64)_vectors_start);
+    if (write_rvbar) {
+        write64(impl, (u64)_vectors_start);
+    }
 
     cpu_start_base += die * PMGR_DIE_OFFSET;
 
