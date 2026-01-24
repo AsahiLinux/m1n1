@@ -1785,8 +1785,13 @@ class HV(Reloadable):
             if cpu.state == "running":
                 continue
             addr, size = cpu.cpu_impl_reg
-            print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
-            self.p.write64(addr, rvbar)
+            val = self.p.read64(addr)
+            if val & 0xffff_ffff_f000 != rvbar:
+                if val & 1:
+                    raise Exception(f"RVBAR for {cpu.name} (={val:x}) is locked but differs from entry point (={rvbar:x})")
+
+                print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
+                self.p.write64(addr, rvbar)
 
     def _load_macho_symbols(self):
         self.symbol_dict = self.macho.symbols
