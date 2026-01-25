@@ -205,6 +205,17 @@ debug_putc:
     beq 1b
     str w0, [x1, UTXH]
 #endif
+#ifdef EARLY_DOCKCHANNEL_UART_BASE
+    ldr x1, =EARLY_DOCKCHANNEL_UART_BASE
+    add x1, x1, #0x4000
+
+1:
+    ldr w2, [x1, 0x14]
+    cmp w2, #0
+    beq 1b
+
+    str w0, [x1, 0x04]
+#endif
     ret
 
 .globl reboot
