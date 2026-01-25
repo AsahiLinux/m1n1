@@ -135,9 +135,10 @@ int uartproxy_run(struct uartproxy_msg_start *start)
     UartRequest request;
     UartReply reply = {REQ_BOOT};
     if (!start) {
-        // Startup notification only goes out via UART
+        // Startup notification only goes out via UART and Dockchannel UART
         reply.checksum = checksum(&reply, REPLY_SIZE - 4);
         iodev_write(IODEV_UART, &reply, REPLY_SIZE);
+        iodev_write(IODEV_DOCKCHANNEL_UART, &reply, REPLY_SIZE);
     } else {
         // Exceptions / hooks keep the current iodev
         iodev = uartproxy_iodev;
@@ -202,8 +203,8 @@ int uartproxy_run(struct uartproxy_msg_start *start)
         switch (request.type) {
             case REQ_NOP:
                 enabled_features = request.features & PROXY_FEAT_ALL;
-                if (iodev == IODEV_UART) {
-                    // Don't allow disabling checksums on UART
+                if (iodev == IODEV_UART || iodev == IODEV_DOCKCHANNEL_UART) {
+                    // Don't allow disabling checksums on UART or Dockchannel UART
                     enabled_features &= ~PROXY_FEAT_DISABLE_DATA_CSUMS;
                 }
 

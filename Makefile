@@ -134,6 +134,7 @@ OBJECTS := \
 	dcp_iboot.o \
 	devicetree.o \
 	display.o \
+	dockchannel_uart.o \
 	exception.o exception_asm.o \
 	fb.o font.o font_retina.o \
 	firmware.o \
