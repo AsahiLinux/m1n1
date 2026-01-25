@@ -2,6 +2,7 @@
 
 #include "adt.h"
 #include "chickens.h"
+#include "dockchannel_uart.h"
 #include "exception.h"
 #include "firmware.h"
 #include "smp.h"
@@ -194,6 +195,9 @@ void _start_c(void *boot_args, void *base)
     if (ret < 0) {
         debug_putc('!');
     }
+
+    /* Use Dockchannel as a secondary UART for now and ignore failure */
+    dockchannel_uart_init();
 
     uart_puts("Initializing");
     get_device_info();

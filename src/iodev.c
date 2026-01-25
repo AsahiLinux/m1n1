@@ -17,16 +17,20 @@
 #define CONSOLE_BUFFER_SIZE 8192
 
 extern struct iodev iodev_uart;
+extern struct iodev iodev_dockchannel_uart;
 extern struct iodev iodev_fb;
 extern struct iodev iodev_log;
 extern struct iodev iodev_usb_vuart;
 
+/* clang-format off */
 struct iodev *iodevs[IODEV_NUM] = {
     [IODEV_UART] = &iodev_uart,
+    [IODEV_DOCKCHANNEL_UART] = &iodev_dockchannel_uart,
     [IODEV_FB] = &iodev_fb,
     [IODEV_USB_VUART] = &iodev_usb_vuart,
     [IODEV_LOG] = &iodev_log,
 };
+/* clang-format on */
 
 char con_buf[CONSOLE_BUFFER_SIZE];
 size_t con_wp;
@@ -148,15 +152,24 @@ int in_iodev = 0;
 
 static DECLARE_SPINLOCK(console_lock);
 
+static void _iodev_console_write_helper(iodev_id_t iod, char prefix, const void *buf, size_t length)
+{
+    if (!length)
+        return;
+    if (!(iodevs[iod]->usage & USAGE_CONSOLE))
+        return;
+
+    iodevs[iod]->ops->write(iodevs[iod]->opaque, &prefix, 1);
+    iodevs[iod]->ops->write(iodevs[iod]->opaque, buf, length);
+}
+
 void iodev_console_write(const void *buf, size_t length)
 {
     bool do_lock = mmu_active();
 
     if (!do_lock && !is_boot_cpu()) {
-        if (length && iodevs[IODEV_UART]->usage & USAGE_CONSOLE) {
-            iodevs[IODEV_UART]->ops->write(iodevs[IODEV_UART]->opaque, "*", 1);
-            iodevs[IODEV_UART]->ops->write(iodevs[IODEV_UART]->opaque, buf, length);
-        }
+        _iodev_console_write_helper(IODEV_UART, '*', buf, length);
+        _iodev_console_write_helper(IODEV_DOCKCHANNEL_UART, '*', buf, length);
         return;
     }
 
@@ -164,10 +177,9 @@ void iodev_console_write(const void *buf, size_t length)
         spin_lock(&console_lock);
 
     if (in_iodev) {
-        if (length && iodevs[IODEV_UART]->usage & USAGE_CONSOLE) {
-            iodevs[IODEV_UART]->ops->write(iodevs[IODEV_UART]->opaque, "+", 1);
-            iodevs[IODEV_UART]->ops->write(iodevs[IODEV_UART]->opaque, buf, length);
-        }
+        _iodev_console_write_helper(IODEV_UART, '+', buf, length);
+        _iodev_console_write_helper(IODEV_DOCKCHANNEL_UART, '+', buf, length);
+
         if (do_lock)
             spin_unlock(&console_lock);
         return;
