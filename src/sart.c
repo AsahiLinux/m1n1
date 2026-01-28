@@ -188,6 +188,7 @@ sart_dev_t *sart_init(const char *adt_path)
             sart->get_entry = sart0_get_entry;
             sart->set_entry = sart0_set_entry;
             sart->flags_allow = APPLE_SART0_FLAGS_ALLOW;
+            break;
         case 2:
             sart->get_entry = sart2_get_entry;
             sart->set_entry = sart2_set_entry;
