@@ -36,6 +36,26 @@ class LLVMResolver:
         return _t
 
 
+class LLVMConfigLLVMResolver(LLVMResolver):
+    """
+    Class to resolve toolchain prefixes on systems with `llvm-config`
+    """
+
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self):
+        super().__init__()
+        result = subprocess.run(
+            "llvm-config --bindir".split(),
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=2,
+        )
+        llvm_prefix = result.stdout.strip()
+        self.clangdir = self.ldddir = llvm_prefix + "/"
+
+
 class BrewLLVMResolver(LLVMResolver):
     """
     Class to resolve toolchain prefixes on brewed system
@@ -67,9 +87,12 @@ class BrewLLVMResolver(LLVMResolver):
 
 
 _brew_path = shutil.which("brew")
+_llvm_config_path = shutil.which("llvm-config")
 
 _llvm_resolver = LLVMResolver()
-if bool(_brew_path):
+if bool(_llvm_config_path):
+    _llvm_resolver = LLVMConfigLLVMResolver()
+elif bool(_brew_path):
     _llvm_resolver = BrewLLVMResolver()
 
 

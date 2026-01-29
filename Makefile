@@ -3,24 +3,31 @@ RUSTARCH ?= aarch64-unknown-none-softfloat
 ifeq ($(shell uname),Darwin)
 USE_CLANG ?= 1
 $(info INFO: Building on Darwin)
+
+ifeq ($(shell command -v llvm-config 2>/dev/null),)
 BREW ?= $(shell command -v brew)
-TOOLCHAIN ?= $(shell $(BREW) --prefix llvm)/bin/
-ifeq ($(shell ls $(TOOLCHAIN)/ld.lld 2>/dev/null),)
+LLVMCONFIG ?= $(shell $(BREW) --prefix llvm)/bin/llvm-config
+else
+LLVMCONFIG ?= $(shell command -v llvm-config)
+endif
+TOOLCHAIN ?= $(shell $(LLVMCONFIG) --bindir)/
+$(info INFO: Toolchain path: $(TOOLCHAIN))
+
+ifeq ($(shell ls $(TOOLCHAIN)ld.lld 2>/dev/null),)
+BREW ?= $(shell command -v brew)
 LLDDIR ?= $(shell $(BREW) --prefix lld)/bin/
 else
 LLDDIR ?= $(TOOLCHAIN)
 endif
-$(info INFO: Toolchain path: $(TOOLCHAIN))
+ifneq ($(TOOLCHAIN),$(LLDDIR))
+$(info INFO: LLD path: $(LLDDIR))
+endif
 endif
 
 ifeq ($(shell uname -m),aarch64)
 ARCH ?=
 else
 ARCH ?= aarch64-linux-gnu-
-endif
-
-ifneq ($(TOOLCHAIN),$(LLDDIR))
-$(info INFO: LLD path: $(LLDDIR))
 endif
 
 ifeq ($(USE_CLANG),1)
