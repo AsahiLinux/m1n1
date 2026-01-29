@@ -10,20 +10,23 @@ $ cd m1n1
 $ make
 ```
 
-The output will be in build/m1n1.macho.
-
-To build on a native arm64 machine, use `make ARCH=`.
-
-To build verbosely, use `make V=1`.
-
-Building on ARM64 macOS is supported with clang and LLVM; you need to use Homebrew to
-install the required dependencies:
-
+To build on a native ARM64 machine:
+* On Linux, use `make ARCH=`.
+* On macOS using Homebrew:
 ```shell
 $ brew install llvm lld
+$ make
+```
+* On macOS using MacPorts:
+```shell
+$ sudo port install llvm clang
+$ sudo port select llvm llvm-mp-<version>
+$ make
 ```
 
-After that, just type `make`.
+The output will be in `build/m1n1.macho`.
+
+To build verbosely, use `make V=1`.
 
 ### Building using the container setup
 
