@@ -1908,6 +1908,7 @@ class HV(Reloadable):
 
         adt_blob = self.adt.build()
         print(f"Uploading ADT (0x{len(adt_blob):x} bytes)...")
+        assert len(adt_blob) <= align(self.u.ba.devtree_size)
         self.iface.writemem(self.adt_base, adt_blob)
 
         print("Improving logo...")
