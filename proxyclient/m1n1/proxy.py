@@ -724,7 +724,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_GET_BOOTARGS)
     def get_bootargs_rev(self):
         ba_addr = self.request(self.P_GET_BOOTARGS)
-        rev = self.read16(ba_addr)
+        # can be misaligned..
+        rev = self.read8(ba_addr) | (self.read8(ba_addr+1) << 8)
         return (ba_addr, rev)
     def get_base(self):
         return self.request(self.P_GET_BASE)
