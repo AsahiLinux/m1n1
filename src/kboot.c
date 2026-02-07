@@ -2403,11 +2403,7 @@ err:
     return ret;
 }
 
-#ifdef RELEASE
-__attribute__((unused))
-#endif
-static int
-dt_transfer_virtios(void)
+__attribute__((unused)) static int dt_transfer_virtios(void)
 {
     int path[3];
     path[0] = adt_path_offset(adt, "/arm-io/");
