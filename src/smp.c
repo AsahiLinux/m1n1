@@ -123,6 +123,14 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
 
     printf("Starting CPU %d (%d:%d:%d)... ", index, die, cluster, core);
 
+    u64 rvbar_value = read64(impl);
+    bool rvbar_locked = rvbar_value & 1;
+    bool write_rvbar = (rvbar_value & 0xfffffffff000) != (u64)_vectors_start;
+    if (rvbar_locked && write_rvbar) {
+        printf("RVBAR is locked and does not already contain start address:\n  0x%lx != 0x%lx\n", rvbar_value, (u64)_vectors_start);
+        return;
+    }
+
     memset(&spin_table[index], 0, sizeof(struct spin_table));
 
     target_cpu = index;
@@ -140,7 +148,9 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
 
     sysop("dsb sy");
 
-    write64(impl, (u64)_vectors_start);
+    if (write_rvbar) {
+        write64(impl, (u64)_vectors_start);
+    }
 
     cpu_start_base += die * PMGR_DIE_OFFSET;
 
@@ -267,6 +277,7 @@ void smp_start_secondaries(void)
             break;
         case T8112:
         case T8122:
+        case T8132:
             cpu_start_off = CPU_START_OFF_T8112;
             break;
         case T6020:
