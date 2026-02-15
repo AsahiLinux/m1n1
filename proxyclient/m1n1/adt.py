@@ -416,7 +416,7 @@ def parse_prop(node, path, node_name, name, v, is_template=False):
     if v == b'' or v is None:
         return None, None
 
-    if name.startswith("function-"):
+    if name.startswith("function-") or name == 'function_ptd_read_mult':
         if len(v) == 4:
             t = FourCC
         else:
@@ -513,6 +513,23 @@ def build_prop(path, name, v, t=None):
         t = Array(len(v), Int32ul)
 
     return t.build(v)
+
+PHANDLE_PROPS = {
+    'AAPL,phandle',
+    'interrupt-parent',
+    'iommu-parent',
+    'dma-parent',
+    'hdcp-parent',
+    'external-power-provider',
+
+    'atc-phy-parent',
+    'atc-phy',
+    'acio-parent',
+
+    'dp2hdmi-gpio-parent',
+    'dock',
+    'audio',
+}
 
 class ADTNode:
     def __init__(self, val=None, path="/", parent=None):
@@ -667,18 +684,26 @@ class ADTNode:
         except KeyError:
             raise AttributeError("#interrupt-cells")
 
-    def _fmt_prop(self, k, v):
+    def _fmt_prop(self, k, v, fmt_phandle=None):
         t, is_template = self._types.get(k, (None, False))
         if is_template:
             return f"<< {v} >>"
+        elif k == 'reg' and isinstance(v, ListContainer) and all(isinstance(x, Container) for x in v):
+            fmt_value = lambda n: f'{n:#018x}' if isinstance(n, int) else ' '.join(f'{x:#010x}' for x in n)
+            return "\n".join(["[", *(f"    (addr = {fmt_value(x.addr)}, size = {fmt_value(x.size)})," for x in v), "]"])
+        elif k in PHANDLE_PROPS:
+            return fmt_phandle(v, self) if fmt_phandle else f'@{v!r}'
         elif isinstance(v, ListContainer):
-            return f"[{', '.join(self._fmt_prop(k, i) for i in v)}]"
+            vs = [self._fmt_prop((k, i), x) for i, x in enumerate(v)]
+            if any(('\n' in v) for v in vs) or (len(vs) > 1 and max(map(len, vs)) > 20):
+                return "\n".join(["[", *("- " + v.replace("\n", "\n    ") for v in vs), "]"])
+            return f"[{', '.join(vs)}]"
         elif isinstance(v, bytes):
             if all(i == 0 for i in v):
                 return f"zeroes({len(v):#x})"
             else:
                 return v.hex()
-        elif k.startswith("function-"):
+        elif isinstance(k, str) and (k.startswith("function-") or k == 'function_ptd_read_mult'):
             if isinstance(v, str):
                 return f"{v}()"
             elif v is None:
@@ -689,17 +714,26 @@ class ADTNode:
                     b = arg.to_bytes(4, "big")
                     is_ascii = all(0x20 <= c <= 0x7e for c in b)
                     args.append(f"{arg:#x}" if not is_ascii else f"'{b.decode('ascii')}'")
-                return f"{v.phandle}:{v.name}({', '.join(args)})"
+                phandle = fmt_phandle(v.phandle, self) if fmt_phandle else f'@{v!r}'
+                return f"{phandle}:{repr(v.name)[1:-1]}({', '.join(args)})"
             name.startswith("function-")
+        elif isinstance(v, str):
+            return repr(v)
         else:
             return str(v)
 
-    def __str__(self, t=""):
+    def __str__(self, t="", sort_keys=False, sort_nodes=False, fmt_phandle=None):
+        props = self._properties.items()
+        if sort_keys:
+            props = sorted(props)
+        children = self._children
+        if sort_nodes:
+            children = sorted(children, key=lambda n: n.name)
         return "\n".join([
             t + f"{self.name} {{",
-            *(t + f"    {k} = {self._fmt_prop(k, v)}" for k, v in self._properties.items() if k != "name"),
-            "",
-            *(i.__str__(t + "    ") for i in self._children),
+            *(t + f"    {repr(k)[1:-1]} = {self._fmt_prop(k, v, fmt_phandle).replace('\n', '\n'+t+'        ')}" for k, v in props if k != "name"),
+            *([""] if self._children else []),
+            *(i.__str__(t + "    ", sort_keys, sort_nodes, fmt_phandle) for i in children),
             t + "}"
         ])
 
@@ -786,7 +820,23 @@ class ADTNode:
     def walk_tree(self):
         yield self
         for child in self:
-            yield from child
+            yield from child.walk_tree()
+
+    def build_phandle_lookup(self, verify_continuity=False, last_phandle=0):
+        phandles = {}
+        for node in self.walk_tree():
+            if 'AAPL,phandle' not in node._properties:
+                continue
+            ph = node._properties['AAPL,phandle']
+
+            assert isinstance(ph, int) and (ph not in phandles)
+            phandles[ph] = node
+
+            if verify_continuity:
+                assert ph == last_phandle + 1
+                last_phandle = ph
+
+        return phandles
 
     def build_addr_lookup(self):
         lookup = AddrLookup()
@@ -845,6 +895,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ADT test for m1n1')
     parser.add_argument('input', type=pathlib.Path)
     parser.add_argument('output', nargs='?', type=pathlib.Path)
+    parser.add_argument('--sort-keys', help='sort property keys within a node (useful for diffs)', action='store_true')
+    parser.add_argument('--sort-nodes', help='sort node children by name (useful for diffs)', action='store_true')
     parser.add_argument('-r', '--retrieve', help='retrieve and store the adt from m1n1', action='store_true')
     parser.add_argument('-a', '--dump-addr', help='dump address lookup table', action='store_true')
     args = parser.parse_args()
@@ -861,7 +913,23 @@ if __name__ == "__main__":
         adt_data = args.input.read_bytes()
 
     adt = load_adt(adt_data)
-    print(adt)
+    phandles = adt.build_phandle_lookup(verify_continuity=True)
+    # since we'll refer to nodes by their path, make sure paths are unique
+    for node in adt.walk_tree():
+        assert '/' not in node.name
+        assert len(set(n.name for n in node)) == len(node._children)
+    def fmt_phandle(ph, context):
+        # some properties can contain multiple phandles...
+        # I should ideally make a type to label phandles rather than this hack
+        if isinstance(ph, int) and ph >> 32:
+            ph = ph.to_bytes(8, 'little')
+        if isinstance(ph, bytes) and len(ph) % 4 == 0:
+            return f"[{', '.join(fmt_phandle(int.from_bytes(ph[i:i+4], 'little'), context) for i in range(0, len(ph), 4))}]"
+        if isinstance(ph, int) and ph in phandles:
+            ph = phandles[ph]._path.split('/', 2)[-1]
+        return f"@{ph!r}"
+
+    print(adt.__str__(sort_keys=args.sort_keys, sort_nodes=args.sort_nodes, fmt_phandle=fmt_phandle))
     new_data = adt.build()
     if args.output is not None:
         args.output.write_bytes(new_data)
