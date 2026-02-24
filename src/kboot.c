@@ -31,6 +31,7 @@
 #include "libfdt/libfdt.h"
 
 #define MAX_CHOSEN_PARAMS 16
+#define MAX_UBOOT_CONFIGS 4
 
 #define MAX_ATC_DEVS 8
 #define MAX_CIO_DEVS 8
@@ -44,6 +45,7 @@ static int dt_bufsize = 0;
 static void *initrd_start = NULL;
 static size_t initrd_size = 0;
 static char *chosen_params[MAX_CHOSEN_PARAMS][2];
+static char *uboot_config[MAX_UBOOT_CONFIGS][2];
 
 extern const char *const m1n1_version;
 
@@ -313,6 +315,34 @@ static int dt_set_chosen(void)
 
     if (dt_set_rng_seed_sep(node))
         return dt_set_rng_seed_adt(node);
+
+    return 0;
+}
+
+static int dt_set_uboot_config(void)
+{
+    // return without modifying dt if no params are set
+    if (!uboot_config[0][0])
+        return 0;
+
+    int root = fdt_path_offset(dt, "/");
+    if (root < 0)
+        bail("FDT: root node not found in devtree\n");
+
+    int node = fdt_add_subnode(dt, root, "config");
+    if (node < 0)
+        bail("FDT: could not add /config node\n");
+
+    for (int i = 0; i < MAX_UBOOT_CONFIGS; i++) {
+        if (!uboot_config[i][0])
+            break;
+
+        const char *name = uboot_config[i][0];
+        const char *value = uboot_config[i][1];
+        if (fdt_setprop(dt, node, name, value, strlen(value) + 1) < 0)
+            bail("FDT: couldn't set config.%s property\n", name);
+        printf("FDT: /config/%s = '%s'\n", name, value);
+    }
 
     return 0;
 }
@@ -2548,6 +2578,38 @@ int kboot_set_chosen(const char *name, const char *value)
     return i;
 }
 
+int kboot_set_uboot(const char *name, const char *value)
+{
+    int i = 0;
+
+    if (!name)
+        return -1;
+
+    for (i = 0; i < MAX_UBOOT_CONFIGS; i++) {
+        if (!uboot_config[i][0]) {
+            uboot_config[i][0] = calloc(strlen(name) + 1, 1);
+            strcpy(uboot_config[i][0], name);
+            break;
+        }
+
+        if (!strcmp(name, uboot_config[i][0])) {
+            free(uboot_config[i][1]);
+            uboot_config[i][1] = NULL;
+            break;
+        }
+    }
+
+    if (i >= MAX_UBOOT_CONFIGS)
+        return -1;
+
+    if (value) {
+        uboot_config[i][1] = calloc(strlen(value) + 1, 1);
+        strcpy(uboot_config[i][1], value);
+    }
+
+    return i;
+}
+
 #define LOGBUF_SIZE SZ_16K
 
 struct {
@@ -2656,6 +2718,8 @@ int kboot_prepare_dt(void *fdt)
     dt_setup_mtd_phram();
 
     if (dt_set_chosen())
+        return -1;
+    if (dt_set_uboot_config())
         return -1;
     if (dt_set_serial_number())
         return -1;

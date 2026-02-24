@@ -22,6 +22,7 @@ struct kernel_header {
 
 void kboot_set_initrd(void *start, size_t size);
 int kboot_set_chosen(const char *name, const char *value);
+int kboot_set_uboot(const char *name, const char *value);
 int kboot_prepare_dt(void *fdt);
 int kboot_boot(void *kernel);
 
