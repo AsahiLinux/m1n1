@@ -87,46 +87,27 @@ if args.u_boot:
     uboot_addr = u.memalign(2*1024*1024, len(uboot))
     print("Loading u-boot to 0x%x..." % uboot_addr)
 
-    bootenv_start = uboot.find(b"bootcmd=bootflow scan -b")
-    bootenv_len = uboot[bootenv_start:].find(b"\x00\x00")
-    bootenv_old = uboot[bootenv_start:bootenv_start+bootenv_len]
-    bootenv = str(bootenv_old, "ascii").split("\x00")
-    bootenv = list(filter(lambda x: not (
-        x.startswith("baudrate") or
-        x.startswith("boot_") or
-        x.startswith("bootdelay=") or
-        x.startswith("preboot=") or
-        x.startswith("bootcmd")
-        ), bootenv))
-
-    if args.efi and initramfs is not None:
-        bootcmd = "bootcmd=bootefi 0x%x:0x%x 0x%x:0x%x $fdtcontroladdr" % (kernel_base, kernel_size, initramfs_base, initramfs_size)
-    elif initramfs is not None:
-        bootcmd = "bootcmd=booti 0x%x 0x%x:0x%x $fdtcontroladdr" % (kernel_base, initramfs_base, initramfs_size)
-    elif args.efi:
-        bootcmd = "bootcmd=bootefi 0x%x:0x%x $fdtcontroladdr" % (kernel_base, kernel_size)
-    else:
-        bootcmd = "bootcmd=booti 0x%x - $fdtcontroladdr" % (kernel_base)
-
-    if tty_dev is not None:
-        bootenv.append("baudrate=%d" % tty_dev.baudrate)
-    bootenv.append(bootcmd)
-    bootenv.append("bootdelay=0")
-    if args.bootargs is not None:
-        bootenv.append("bootargs=" + args.bootargs)
-
-    bootenv_new = b"\x00".join(map(lambda x: bytes(x, "ascii"), bootenv))
-    bootenv_new = bootenv_new.ljust(len(bootenv_old), b"\x00")
-
-    if len(bootenv_new) > len(bootenv_old):
-        raise Exception("New bootenv cannot be larger than original bootenv")
-    uboot[bootenv_start:bootenv_start+bootenv_len] = bootenv_new
-
     u.compressed_writemem(uboot_addr, uboot, True)
     p.dc_cvau(uboot_addr, uboot_size)
     p.ic_ivau(uboot_addr, uboot_size)
 
     boot_addr = uboot_addr
+
+    if args.efi and initramfs is not None:
+        bootcmd = "bootefi 0x%x:0x%x 0x%x:0x%x $fdtcontroladdr" % (kernel_base, kernel_size, initramfs_base, initramfs_size)
+    elif initramfs is not None:
+        bootcmd = "booti 0x%x 0x%x:0x%x $fdtcontroladdr" % (kernel_base, initramfs_base, initramfs_size)
+    elif args.efi:
+        bootcmd = "bootefi 0x%x:0x%x $fdtcontroladdr" % (kernel_base, kernel_size)
+    else:
+        bootcmd = "booti 0x%x - $fdtcontroladdr" % (kernel_base)
+
+    p.kboot_set_uboot("bootcmd", bootcmd)
+    p.kboot_set_uboot("bootdelay", "0")
+
+    if tty_dev is not None:
+        p.kboot_set_uboot("baudrate", "%d" % tty_dev.baudrate)
+
 
 p.cpufreq_init()
 p.smp_start_secondaries()
