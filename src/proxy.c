@@ -401,6 +401,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_KBOOT_PREPARE_DT:
             reply->retval = kboot_prepare_dt((void *)request->args[0]);
             break;
+        case P_KBOOT_SET_UBOOT:
+            reply->retval = kboot_set_uboot((void *)request->args[0], (void *)request->args[1]);
+            break;
 
         case P_PMGR_POWER_ENABLE:
             reply->retval = pmgr_power_enable(request->args[0]);
