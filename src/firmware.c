@@ -197,6 +197,7 @@ const struct fw_version_info fw_versions[NUM_FW_VERSIONS] = {
     [V26_2]      = {V26_2,      "26.2",        {26, 2, 0},     3, "iBoot-13822.61.10"},
     [V26_3B1]    = {V26_3B1,    "26.3 beta",   {26, 2, 98, 1}, 4, "iBoot-13822.80.393"},
     [V26_3B2]    = {V26_3B2,    "26.3 beta2",  {26, 2, 98, 2}, 4, "iBoot-13822.80.406"},
+    [V26_3]      = {V26_3,      "26.3",        {26, 3, 0},     3, "iBoot-13822.81.10"},
     // clang-format on
 };
 
