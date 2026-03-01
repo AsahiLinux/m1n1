@@ -3,6 +3,11 @@
 ## Building
 
 You need an `aarch64-linux-gnu-gcc` cross-compiler toolchain (or a native one, if running on ARM64).
+You will also need to install the `aarch64-unknown-none-softfloat` toolchain for rust.
+
+```shell
+$ rustup target add aarch64-unknown-none-softfloat
+```
 
 ```shell
 $ git clone --recursive https://github.com/AsahiLinux/m1n1.git
