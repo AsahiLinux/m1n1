@@ -778,7 +778,8 @@ class M1N1Proxy(Reloadable):
     def write64(self, addr, data):
         '''write 8 byte value to given address'''
         if addr & 7:
-            raise AlignmentError()
+            self.write32(addr, data & 0xFFFFFFFF)
+            self.write32(addr + 4, data >> 32)
         self.request(self.P_WRITE64, addr, data)
     def write32(self, addr, data):
         '''write 4 byte value to given address'''
