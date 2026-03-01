@@ -18,6 +18,8 @@ struct adt_node_hdr {
     u32 child_count;
 };
 
+#define ADT_PROP(adt, offset) ((const struct adt_property *)(((u8 *)(adt)) + (offset)))
+
 /* This API is designed to match libfdt's read-only API */
 
 /* Required for Rust until we move xnuboot across */
@@ -29,6 +31,8 @@ int adt_check_header(const void *adt);
 int adt_get_property_count(const void *adt, int offset);
 
 int adt_first_property_offset(const void *adt, int offset);
+
+int adt_next_property_offset(const void *adt, int offset);
 
 const struct adt_property *adt_get_property_by_offset(const void *adt, int offset);
 
@@ -62,6 +66,13 @@ bool adt_is_compatible_at(const void *adt, int nodeoffset, const char *compat, s
     for (int _child_count = adt_get_child_count(adt, node); _child_count; _child_count = 0)        \
         for (node = adt_first_child_offset(adt, node); _child_count--;                             \
              node = adt_next_sibling_offset(adt, node))
+
+#define ADT_FOREACH_PROPERTY(adt, node, prop)                                                      \
+    for (int _prop_count = adt_get_property_count(adt, node),                                      \
+             _poff = adt_first_property_offset(adt, node);                                         \
+         _prop_count; _prop_count = 0)                                                             \
+        for (const struct adt_property *prop = ADT_PROP(adt, _poff); _prop_count--;                \
+             prop = ADT_PROP(adt, _poff = adt_next_property_offset(adt, _poff)))
 
 /* Common ADT properties */
 struct adt_segment_ranges {
