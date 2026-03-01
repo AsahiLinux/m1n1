@@ -137,6 +137,7 @@ const struct fuse_bits pcie_fuse_bits_t8112[] = {
 enum apcie_type {
     APCIE_T81XX = 0,
     APCIE_T602X = 1,
+    APCIE_T8122 = 2,
 };
 
 struct reg_info {
@@ -177,6 +178,18 @@ static const struct reg_info regs_t602x = {
     .fuse_idx = 7,
 };
 
+static const struct reg_info regs_t8122 = {
+    .type = APCIE_T8122,
+    .shared_reg_count = 7,
+    .config_idx = 0,
+    .rc_idx = 1,
+    .phy_common_idx = -1,
+    .phy_idx = 2,
+    .phy_ip_idx = 3,
+    .axi_idx = 4,
+    .fuse_idx = 5,
+};
+
 static bool pcie_initialized = false;
 
 enum PCIE_CONTROLLERS {
@@ -191,6 +204,7 @@ enum PCIE_CONTROLLERS {
 struct state {
     int num_phys;
     u64 rc_base;
+    u64 axi_base;
     u64 phy_common_base;
     u64 phy_base[MAX_PHYS];
     u64 phy_ip_base[MAX_PHYS];
@@ -236,6 +250,10 @@ static int pcie_init_controller(int controller, const char *path)
         fuse_bits = pcie_fuse_bits_t8112;
         state->pcie_regs = &regs_t8xxx_t600x;
         printf("pcie: Initializing t8112 PCIe controller\n");
+    } else if (adt_is_compatible(adt, adt_offset, "apcie,t8122")) {
+        fuse_bits = NULL;
+        state->pcie_regs = &regs_t8122;
+        printf("pcie: Initializing t8122 PCIe controller\n");
     } else if (adt_is_compatible(adt, adt_offset, "apcie,t6020")) {
         fuse_bits = NULL;
         state->pcie_regs = &regs_t602x;
@@ -290,8 +308,8 @@ static int pcie_init_controller(int controller, const char *path)
     if (state->pcie_regs->phy_common_idx != -1) {
         if (adt_get_reg(adt, adt_path, "reg", state->pcie_regs->phy_common_idx,
                         &state->phy_common_base, NULL)) {
-            printf("pcie: Error getting reg with index %d for %s\n", state->pcie_regs->phy_idx,
-                   path);
+            printf("pcie: Error getting reg with index %d for %s\n",
+                   state->pcie_regs->phy_common_idx, path);
             return -1;
         }
     } else {
@@ -308,6 +326,17 @@ static int pcie_init_controller(int controller, const char *path)
         printf("pcie: Error getting reg with index %d for %s\n", state->pcie_regs->phy_ip_idx,
                path);
         return -1;
+    }
+
+    if (adt_get_reg(adt, adt_path, "reg", state->pcie_regs->config_idx, &state->axi_base, NULL)) {
+        printf("pcie: Error getting reg with index %d for %s\n", state->pcie_regs->axi_idx, path);
+        return -1;
+    }
+
+    if (state->pcie_regs->type == APCIE_T8122) {
+        // The T8122 init is very similar to the T602X, except with a different offset.
+        // (There is one write to +0x4000 which we handle by subtracting 0x4000, see below.)
+        state->phy_base[0] = state->phy_base[0] + 0x8000;
     }
 
     for (int phy = 1; phy < state->num_phys; phy++) {
@@ -399,7 +428,7 @@ static int pcie_init_controller(int controller, const char *path)
         if (state->pcie_regs->type == APCIE_T81XX) {
             set32(state->rc_base + APCIE_PHYIF_CTRL, APCIE_PHYIF_CTRL_RUN);
             udelay(1);
-        } else if (state->pcie_regs->type == APCIE_T602X) {
+        } else if (state->pcie_regs->type == APCIE_T602X || state->pcie_regs->type == APCIE_T8122) {
             set32(state->phy_base[phy] + 4, 0x01);
         }
 
@@ -433,14 +462,16 @@ static int pcie_init_controller(int controller, const char *path)
             return -1;
         }
 
-        if (state->pcie_regs->type == APCIE_T602X) {
+        if (state->pcie_regs->type == APCIE_T602X || state->pcie_regs->type == APCIE_T8122) {
             set32(state->phy_base[phy] + 4, 0x10);
         }
     }
 
-    if (state->pcie_regs->type == APCIE_T602X) {
-        mask32(state->phy_common_base + APCIE_PHYCMN_CLK, APCIE_PHYCMN_CLK_MODE,
-               FIELD_PREP(APCIE_PHYCMN_CLK_MODE, 1));
+    if (state->pcie_regs->type == APCIE_T602X || state->pcie_regs->type == APCIE_T8122) {
+        if (state->pcie_regs->type == APCIE_T602X) {
+            mask32(state->phy_common_base + APCIE_PHYCMN_CLK, APCIE_PHYCMN_CLK_MODE,
+                   FIELD_PREP(APCIE_PHYCMN_CLK_MODE, 1));
+        }
 
         // Why always PHY 1 in this case?
         u32 off = state->num_phys > 1 ? PHY_STRIDE : 0;
@@ -449,7 +480,12 @@ static int pcie_init_controller(int controller, const char *path)
             return -1;
         }
         for (int phy = 0; phy < state->num_phys; phy++) {
-            set32(state->phy_base[phy] + APCIE_PHY_CTRL, 0x300);
+            if (state->pcie_regs->type == APCIE_T602X) {
+                set32(state->phy_base[phy] + APCIE_PHY_CTRL, 0x300);
+            } else if (state->pcie_regs->type == APCIE_T8122) {
+                set32(state->phy_base[phy] - 0x4000, 0x1);
+                set32(state->phy_base[phy], 0x200);
+            }
         }
         write32(state->rc_base + 0x54, 0x140);
         write32(state->rc_base + 0x50, 0x1);
@@ -457,9 +493,15 @@ static int pcie_init_controller(int controller, const char *path)
             printf("pcie: Failed to initialize RC thing\n");
             return -1;
         }
-        if (controller == APCIE)
-            clear32(state->rc_base + 0x3c, 0x1);
-        pmgr_adt_power_disable_index(path, 1);
+        if (state->pcie_regs->type == APCIE_T602X) {
+            if (controller == APCIE)
+                clear32(state->rc_base + 0x3c, 0x1);
+        } else if (state->pcie_regs->type == APCIE_T8122) {
+            clear32(state->axi_base + 0x600, 0x10000);
+        }
+        if (state->pcie_regs->type == APCIE_T602X) {
+            pmgr_adt_power_disable_index(path, 1);
+        }
     }
 
     for (u32 port = 0; port < state->port_count; port++) {
@@ -529,22 +571,44 @@ static int pcie_init_controller(int controller, const char *path)
             // ??????
             if (controller == APCIE)
                 write32(state->port_base[port] + 0x10, 0x2);
+        }
+
+        if (state->pcie_regs->type == APCIE_T602X || state->pcie_regs->type == APCIE_T8122) {
             write32(state->port_base[port] + 0x88, 0x110);
             write32(state->port_base[port] + 0x100, 0xffffffff);
             write32(state->port_base[port] + 0x148, 0xffffffff);
             write32(state->port_base[port] + 0x210, 0xffffffff);
             write32(state->port_base[port] + 0x80, 0x0);
             write32(state->port_base[port] + 0x84, 0x0);
-            write32(state->port_base[port] + 0x104, 0x7fffffff);
+            if (state->pcie_regs->type == APCIE_T602X) {
+                write32(state->port_base[port] + 0x104, 0x7fffffff);
+            } else if (state->pcie_regs->type == APCIE_T8122) {
+                write32(state->port_base[port] + 0x104, 0xfffffff0);
+            }
             write32(state->port_base[port] + 0x124, 0x100);
             write32(state->port_base[port] + 0x16c, 0x0);
             write32(state->port_base[port] + 0x13c, 0x10);
             write32(state->port_base[port] + 0x800, 0x100100);
             write32(state->port_base[port] + 0x808, 0x1000ff);
             write32(state->port_base[port] + 0x82c, 0x0);
-            for (int i = 0; i < 512; i++)
-                write32(state->port_base[port] + APCIE_T602X_PORT_MSIMAP + 4 * i, 0);
-            write32(state->port_base[port] + 0x397c, 0x0);
+            if (state->pcie_regs->type == APCIE_T8122) {
+                for (int i = 0; i < 16; i++) {
+                    write32(state->port_base[port] + 0x3000 + 4 * i, 0);
+                }
+            }
+            if (state->pcie_regs->type == APCIE_T602X || state->pcie_regs->type == APCIE_T8122) {
+                int msimap_count = 512;
+                if (state->pcie_regs->type == APCIE_T8122) {
+                    // FIXME alyssa: can we just write the whole 512?
+                    msimap_count = 256;
+                }
+                for (int i = 0; i < 512; i++) {
+                    write32(state->port_base[port] + APCIE_T602X_PORT_MSIMAP + 4 * i, 0);
+                }
+            }
+            if (state->pcie_regs->type == APCIE_T602X) {
+                write32(state->port_base[port] + 0x397c, 0x0);
+            }
             if (controller == APCIE)
                 write32(state->port_base[port] + 0x130, 0x3000000);
             else
@@ -553,7 +617,7 @@ static int pcie_init_controller(int controller, const char *path)
             write32(state->port_base[port] + 0x144, 0x253770);
             write32(state->port_base[port] + 0x21c, 0x0);
             write32(state->port_base[port] + 0x834, 0x0);
-            if (controller != APCIE)
+            if (controller != APCIE || state->pcie_regs->type == APCIE_T8122)
                 write32(state->port_base[port] + 0x83c, 0x0);
         }
 
@@ -564,9 +628,11 @@ static int pcie_init_controller(int controller, const char *path)
 
         set32(state->port_base[port] + APCIE_PORT_APPCLK, APCIE_PORT_APPCLK_EN);
 
-        if (state->pcie_regs->type == APCIE_T602X) {
-            clear32(state->port_phy_base[port] + APCIE_PHY_CTRL,
-                    APCIE_PHY_CTRL_CLK0REQ | APCIE_PHY_CTRL_CLK1REQ);
+        if (state->pcie_regs->type == APCIE_T602X || state->pcie_regs->type == APCIE_T8122) {
+            if (state->pcie_regs->type == APCIE_T602X) {
+                clear32(state->port_phy_base[port] + APCIE_PHY_CTRL,
+                        APCIE_PHY_CTRL_CLK0REQ | APCIE_PHY_CTRL_CLK1REQ);
+            }
 
             set32(state->port_phy_base[port] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0REQ);
             if (poll32(state->port_phy_base[port] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0ACK,
@@ -582,7 +648,11 @@ static int pcie_init_controller(int controller, const char *path)
                 return -1;
             }
 
-            clear32(state->port_phy_base[port] + APCIE_PHY_CTRL, 0x4000);
+            if (state->pcie_regs->type == APCIE_T602X) {
+                clear32(state->port_phy_base[port] + APCIE_PHY_CTRL, 0x4000);
+            } else if (state->pcie_regs->type == APCIE_T8122) {
+                clear32(state->port_phy_base[port] + APCIE_PHY_CTRL, 0x10);
+            }
             set32(state->port_phy_base[port] + APCIE_PHY_CTRL, 0x200);
             set32(state->port_phy_base[port] + APCIE_PHY_CTRL, 0x400);
 
