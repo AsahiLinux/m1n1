@@ -111,6 +111,7 @@ OBJECTS := \
 	adt.o \
 	afk.o \
 	aic.o \
+	akf.o \
 	asc.o \
 	bootlogo_48.o bootlogo_128.o bootlogo_256.o \
 	chainload.o \
