@@ -4,14 +4,37 @@ set -e
 : ${TMPDIR:=$XDG_RUNTIME_DIR}
 : ${TMPDIR:=/tmp}
 
-if [ "$1" == "-k" ]; then
-    kernel="$(realpath "$2")"
-    shift 2
-fi
+show_usage() {
+    echo "Usage:"
+    echo "  $0 OPTIONS <kernel build root> [kernel commandline] [initramfs]"
+    echo
+    echo "    -k IMAGE             Use $IMAGE as kernel image name (full path)"
+    echo "    -e ESP_PART_UUID     Use $ESP_PART_UUID as EFI system partition for fw loading"
+    echo "    -h                   Print this usage information"
+}
+
+while [[ -n "${1}" ]]; do
+    case "${1}" in
+    -k|--kernel)
+        kernel="$(realpath "${2}")"
+        shift 2
+        ;;
+    -e|--efi)
+        esp="${2}"
+        shift 2
+        ;;
+    -h|--help)
+        show_usage
+        exit 1
+        ;;
+    *)
+        break
+        ;;
+    esac
+done
 
 if [ ! -d "$1" ]; then
-    echo "Usage:"
-    echo "  $0 <kernel build root> [kernel commandline] [initramfs]"
+    show_usage
     exit 1
 fi
 
@@ -21,7 +44,7 @@ initramfs=""
 shift 2
 
 if [ "$1" == "--" ]; then
-	shift
+    shift
 elif [ -n "$1" ]; then
     initramfs="$(realpath "$1")"
     shift
@@ -37,6 +60,9 @@ echo "Creating m1n1+kernel image"
 cp "$base"/../../build/m1n1.bin "$TMPDIR/m1n1-linux.bin"
 if [ -n "$args" ]; then
     echo "chosen.bootargs=$args" >>"$TMPDIR/m1n1-linux.bin"
+fi
+if [ -n "${esp}" ]; then
+    echo "chosen.asahi,efi-system-partition=${esp}" >>"$TMPDIR/m1n1-linux.bin"
 fi
 
 cat "$kernel_base"/arch/arm64/boot/dts/apple/*.dtb >>"$TMPDIR/m1n1-linux.bin"
