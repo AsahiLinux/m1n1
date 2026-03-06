@@ -444,16 +444,17 @@ class AlignmentError(Exception):
 
 class IODEV(IntEnum):
     UART = 0
-    FB = 1
-    USB_VUART = 2
-    USB0 = 3
-    USB1 = 4
-    USB2 = 5
-    USB3 = 6
-    USB4 = 7
-    USB5 = 8
-    USB6 = 9
-    USB7 = 10
+    DOCKCHANNEL_UART = 1
+    FB = 2
+    USB_VUART = 3
+    USB0 = 4
+    USB1 = 5
+    USB2 = 6
+    USB3 = 7
+    USB4 = 8
+    USB5 = 9
+    USB6 = 10
+    USB7 = 11
 
 class USAGE(IntFlag):
     CONSOLE = (1 << 0)
