@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
-import json, os, re
+import json, re
+import importlib.resources as resources
 from enum import Enum, IntEnum, IntFlag
 from .utils import Register, Register64, Register32
 
@@ -11,7 +12,8 @@ def _load_registers():
     sysreg_fwd = {}
     sysop_fwd = {}
     for fname in ["arm_regs.json", "apple_regs.json"]:
-        data = json.load(open(os.path.join(os.path.dirname(__file__), "..", "..", "tools", fname)))
+        data = json.loads(resources.read_text(__package__, fname, encoding="utf-8"))
+
         for reg in data:
             if "accessors" in reg:
                 for acc in reg["accessors"]:
