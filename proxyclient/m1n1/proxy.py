@@ -149,6 +149,15 @@ class UartInterface(Reloadable):
             self.devpath = device
             self.baudrate = baud
 
+            # wait for it to come back
+            if os.environ.get("M1N1WAIT", 0) and not os.path.exists(self.devpath):
+                print("Waiting for %s to appear.." % self.devpath)
+                for n in range(100): # 10s
+                    time.sleep(0.1)
+                    if os.path.exists(self.devpath):
+                        break
+                time.sleep(0.1) # wait for udev to settle (avoid permissions issues)
+
             device = Serial(self.devpath, baud)
 
         self.dev = device
