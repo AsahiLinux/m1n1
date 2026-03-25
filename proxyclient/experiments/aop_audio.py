@@ -20,8 +20,8 @@ from m1n1.fw.aop.ipc import *
 # see povik's commit #fc66046
 
 # aop nodes have no clocks described in adt for j293. it does it itself
-p.pmgr_adt_clocks_enable("/arm-io/aop")
-p.pmgr_adt_clocks_enable("/arm-io/dart-aop")
+p.pmgr_adt_power_enable("/arm-io/aop")
+p.pmgr_adt_power_enable("/arm-io/dart-aop")
 
 # Set up a secondary proxy channel so that we can stream
 # the microphone samples

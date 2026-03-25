@@ -19,8 +19,8 @@ from m1n1.gpiola import GPIOLogicAnalyzer
 
 analyzer_cpu = 1
 
-p.pmgr_adt_clocks_enable("/arm-io/gfx-asc")
-p.pmgr_adt_clocks_enable("/arm-io/sgx")
+p.pmgr_adt_power_enable("/arm-io/gfx-asc")
+p.pmgr_adt_power_enable("/arm-io/sgx")
 p.smp_start_secondaries()
 p.mmu_init_secondary(analyzer_cpu)
 iface.dev.timeout = 10

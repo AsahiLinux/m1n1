@@ -67,7 +67,7 @@ def wait_for_unplug():
         time.sleep(0.001)
 
 
-p.pmgr_adt_clocks_enable("/arm-io/i2c2")
+p.pmgr_adt_power_enable("/arm-io/i2c2")
 i2c2 = I2C(u, "/arm-io/i2c2")
 
 p.write32(0x2921f0010, 0x76a02) # invoke reset

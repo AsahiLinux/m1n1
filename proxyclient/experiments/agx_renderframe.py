@@ -17,8 +17,8 @@ from m1n1.agx.render import *
 
 from m1n1 import asm
 
-p.pmgr_adt_clocks_enable("/arm-io/gfx-asc")
-p.pmgr_adt_clocks_enable("/arm-io/sgx")
+p.pmgr_adt_power_enable("/arm-io/gfx-asc")
+p.pmgr_adt_power_enable("/arm-io/sgx")
 
 agx = AGX(u)
 mon = RegMonitor(u, ascii=True, bufsize=0x8000000)

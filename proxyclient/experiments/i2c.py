@@ -111,7 +111,7 @@ def tps6598x_exec_cmd(addr, cmd, data_in, out_len):
     return i2c_read_reg(addr, 0x09, out_len)
 
 
-print("make sure to run pmgr_adt_clocks_enable for /arm-io/i2c0 before this script.")
+print("make sure to run pmgr_adt_power_enable for /arm-io/i2c0 before this script.")
 
 # apple-specific command to bring the power state to zero
 # (or any other value specified as an argument)

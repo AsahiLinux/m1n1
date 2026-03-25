@@ -575,10 +575,10 @@ class M1N1Proxy(Reloadable):
     P_KBOOT_PREPARE_DT = 0x703
     P_KBOOT_SET_UBOOT = 0x704
 
-    P_PMGR_CLOCK_ENABLE = 0x800
-    P_PMGR_CLOCK_DISABLE = 0x801
-    P_PMGR_ADT_CLOCKS_ENABLE = 0x802
-    P_PMGR_ADT_CLOCKS_DISABLE = 0x803
+    P_PMGR_POWER_ENABLE = 0x800
+    P_PMGR_POWER_DISABLE = 0x801
+    P_PMGR_ADT_POWER_ENABLE = 0x802
+    P_PMGR_ADT_POWER_DISABLE = 0x803
     P_PMGR_RESET = 0x804
 
     P_IODEV_SET_USAGE = 0x900
@@ -1016,14 +1016,14 @@ class M1N1Proxy(Reloadable):
     def kboot_set_uboot(self, name, value):
         self.request(self.P_KBOOT_SET_UBOOT, name, value)
 
-    def pmgr_clock_enable(self, clkid):
-        return self.request(self.P_PMGR_CLOCK_ENABLE, clkid)
-    def pmgr_clock_disable(self, clkid):
-        return self.request(self.P_PMGR_CLOCK_DISABLE, clkid)
-    def pmgr_adt_clocks_enable(self, path):
-        return self.request(self.P_PMGR_ADT_CLOCKS_ENABLE, path)
-    def pmgr_adt_clocks_disable(self, path):
-        return self.request(self.P_PMGR_ADT_CLOCKS_DISABLE, path)
+    def pmgr_power_enable(self, clkid):
+        return self.request(self.P_PMGR_POWER_ENABLE, clkid)
+    def pmgr_power_disable(self, clkid):
+        return self.request(self.P_PMGR_POWER_DISABLE, clkid)
+    def pmgr_adt_power_enable(self, path):
+        return self.request(self.P_PMGR_ADT_POWER_ENABLE, path)
+    def pmgr_adt_power_disable(self, path):
+        return self.request(self.P_PMGR_ADT_POWER_DISABLE, path)
     def pmgr_reset(self, die, name):
         return self.request(self.P_PMGR_RESET, die, name)
 
