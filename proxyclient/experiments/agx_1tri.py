@@ -15,9 +15,9 @@ from m1n1.shell import run_shell
 from m1n1.agx import AGX
 from m1n1.agx.context import *
 
-p.pmgr_adt_clocks_enable("/arm-io/gfx-asc")
-p.pmgr_adt_clocks_enable("/arm-io/sgx")
-#p.pmgr_adt_clocks_enable("/arm-io/pmp")
+p.pmgr_adt_power_enable("/arm-io/gfx-asc")
+p.pmgr_adt_power_enable("/arm-io/sgx")
+#p.pmgr_adt_power_enable("/arm-io/pmp")
 
 # [cpu0] [0xfffffe00124bf5c0] MMIO: R.4   0x204d14000 (sgx, offset 0xd14000) = 0x0
 p.read32(0x204000000 + 0xd14000)

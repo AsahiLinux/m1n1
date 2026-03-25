@@ -113,7 +113,7 @@ def test_custom_key(key, keygen=0):
     aes.R_CONTROL.set(STOP=1)
 
 
-p.pmgr_adt_clocks_enable("/arm-io/aes")
+p.pmgr_adt_power_enable("/arm-io/aes")
 
 dart = DART.from_adt(u, "/arm-io/dart-sio")
 dart.initialize()

@@ -16,8 +16,8 @@ class ANE:
 		self.p = u.proxy
 
 		self.name = "ane"
-		self.p.pmgr_adt_clocks_enable(f'/arm-io/{self.name}')
-		self.p.pmgr_adt_clocks_enable(f'/arm-io/dart-{self.name}')
+		self.p.pmgr_adt_power_enable(f'/arm-io/{self.name}')
+		self.p.pmgr_adt_power_enable(f'/arm-io/dart-{self.name}')
 
 		self.base_addr = u.adt[f'arm-io/{self.name}'].get_reg(0)[0]
 		self.regs = ANERegs(self.u, self.base_addr)
@@ -64,8 +64,8 @@ class ANE:
 			self.p.write32(self.base_addr + offset, value)
 
 	def power_up(self):
-		self.p.pmgr_adt_clocks_enable(f'/arm-io/{self.name}')
-		self.p.pmgr_adt_clocks_enable(f'/arm-io/dart-{self.name}')
+		self.p.pmgr_adt_power_enable(f'/arm-io/{self.name}')
+		self.p.pmgr_adt_power_enable(f'/arm-io/dart-{self.name}')
 		self.power_down()
 		for offset in range(0x0, 0x30+0x8, 0x8):
 			self.p.write32(self.ps_base_addr + offset, 0xf)

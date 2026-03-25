@@ -33,10 +33,10 @@ args = argparser.parse_args()
 inputf = open(args.file, "rb") if args.file is not None \
             else sys.stdin.buffer 
 
-p.pmgr_adt_clocks_enable("/arm-io/i2c1")
-p.pmgr_adt_clocks_enable("/arm-io/admac-sio")
-p.pmgr_adt_clocks_enable("/arm-io/dart-sio")
-p.pmgr_adt_clocks_enable("/arm-io/mca-switch")
+p.pmgr_adt_power_enable("/arm-io/i2c1")
+p.pmgr_adt_power_enable("/arm-io/admac-sio")
+p.pmgr_adt_power_enable("/arm-io/dart-sio")
+p.pmgr_adt_power_enable("/arm-io/mca-switch")
 
 # reset AUDIO_P
 PS_AUDIO_P = PMGR(u).regs[0].PS4[5]

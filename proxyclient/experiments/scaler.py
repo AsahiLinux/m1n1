@@ -14,8 +14,8 @@ from PIL import Image, ImageDraw
 SCALER_ADT = '/arm-io/scaler0'
 DART_ADT = '/arm-io/dart-scaler0'
 
-p.pmgr_adt_clocks_enable(DART_ADT)
-p.pmgr_adt_clocks_enable(SCALER_ADT)
+p.pmgr_adt_power_enable(DART_ADT)
+p.pmgr_adt_power_enable(SCALER_ADT)
 
 dart = DART.from_adt(u, DART_ADT)
 dart.initialize()

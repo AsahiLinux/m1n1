@@ -215,8 +215,8 @@ class AVDTracer(Tracer):
         firmware = self.read_regs(self.base + 0x1080000, 0x10000)
         open(path, "wb").write(firmware)
 
-p.pmgr_adt_clocks_enable('/arm-io/dart-avd')
-p.pmgr_adt_clocks_enable('/arm-io/avd')
+p.pmgr_adt_power_enable('/arm-io/dart-avd')
+p.pmgr_adt_power_enable('/arm-io/avd')
 dart_tracer = DARTTracer(hv, "/arm-io/dart-avd", verbose=0)
 dart_tracer.start()
 dart = dart_tracer.dart

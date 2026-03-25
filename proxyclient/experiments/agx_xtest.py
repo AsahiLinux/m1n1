@@ -14,8 +14,8 @@ from construct import *
 from m1n1.setup import *
 from m1n1 import asm
 
-p.pmgr_adt_clocks_enable("/arm-io/gfx-asc")
-p.pmgr_adt_clocks_enable("/arm-io/sgx")
+p.pmgr_adt_power_enable("/arm-io/gfx-asc")
+p.pmgr_adt_power_enable("/arm-io/sgx")
 
 agx = AGX(u)
 agx.mon = mon

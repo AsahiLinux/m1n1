@@ -4,8 +4,8 @@ from m1n1.hw.prores import *
 from m1n1.utils import *
 import struct
 
-p.pmgr_adt_clocks_enable('/arm-io/dart-apr0')
-p.pmgr_adt_clocks_enable('/arm-io/dart-apr1')
+p.pmgr_adt_power_enable('/arm-io/dart-apr0')
+p.pmgr_adt_power_enable('/arm-io/dart-apr1')
 
 dart0_tracer = DART8110Tracer(hv, "/arm-io/dart-apr0", verbose=1)
 dart0_tracer.start()
@@ -77,8 +77,8 @@ class ProResTracer(ADTDevTracer):
 
 ProResTracer = ProResTracer._reloadcls()
 
-p.pmgr_adt_clocks_enable('/arm-io/apr0')
-p.pmgr_adt_clocks_enable('/arm-io/apr1')
+p.pmgr_adt_power_enable('/arm-io/apr0')
+p.pmgr_adt_power_enable('/arm-io/apr1')
 
 tracer0 = ProResTracer(hv, '/arm-io/apr0', dart0_tracer)
 tracer0.start()

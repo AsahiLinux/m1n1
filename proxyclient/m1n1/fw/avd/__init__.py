@@ -17,8 +17,8 @@ class AVDDevice:
         self.base = u.adt[dev_path].get_reg(0)[0] # 0x268000000
         self.node = u.adt[dev_path]
 
-        self.p.pmgr_adt_clocks_enable(dev_path)
-        self.p.pmgr_adt_clocks_enable(dart_path)
+        self.p.pmgr_adt_power_enable(dev_path)
+        self.p.pmgr_adt_power_enable(dart_path)
         dart = DART.from_adt(u, dart_path)
         dart.initialize()
         self.dart = dart

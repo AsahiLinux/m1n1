@@ -177,7 +177,7 @@ class ISPTracer(ADTDevTracer):
 
     def __init__(self, hv, dev_path, dart_dev_path, verbose):
         super().__init__(hv, dev_path, verbose)
-        hv.p.pmgr_adt_clocks_enable(dart_dev_path)
+        hv.p.pmgr_adt_power_enable(dart_dev_path)
         self.dart_tracer = DARTTracer(hv, dart_dev_path, verbose=0)
         self.dart_tracer.start()
         self.dart = self.dart_tracer.dart

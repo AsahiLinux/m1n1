@@ -337,8 +337,8 @@ else:
     print(f"Using size {output_mem_sz:08X} for output data")
 
 # Turn on the JPEG block
-p.pmgr_adt_clocks_enable(f'/arm-io/dart-{args.which_jpeg}')
-p.pmgr_adt_clocks_enable(f'/arm-io/{args.which_jpeg}')
+p.pmgr_adt_power_enable(f'/arm-io/dart-{args.which_jpeg}')
+p.pmgr_adt_power_enable(f'/arm-io/{args.which_jpeg}')
 
 dart = DART.from_adt(u, f'/arm-io/dart-{args.which_jpeg}')
 dart.initialize()

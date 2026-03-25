@@ -116,8 +116,8 @@ class ISP:
         self.PAGE_SIZE = 0x4000
         self.page_size = self.PAGE_SIZE
 
-        self.p.pmgr_adt_clocks_enable("/arm-io/isp")
-        self.p.pmgr_adt_clocks_enable("/arm-io/dart-isp")
+        self.p.pmgr_adt_power_enable("/arm-io/isp")
+        self.p.pmgr_adt_power_enable("/arm-io/dart-isp")
         self.dart = DART.from_adt(self.u, "/arm-io/dart-isp",
                 iova_range=(0x3a28000, 0x20000000))  # +0x4000 extra heap
         self.dart.initialize()
@@ -244,8 +244,8 @@ class ISP:
         self.p.write32(self.isp_dart2_base + 0x200, self.dart.dart.regs.TTBR[0, 0].val)
 
     def power_on(self):
-        self.p.pmgr_adt_clocks_enable("/arm-io/isp")
-        self.p.pmgr_adt_clocks_enable("/arm-io/dart-isp")
+        self.p.pmgr_adt_power_enable("/arm-io/isp")
+        self.p.pmgr_adt_power_enable("/arm-io/dart-isp")
 
         # power domains, low -> high
         self.ps.ISP_PS_00 = 0xf

@@ -14,8 +14,8 @@ from m1n1.shell import run_shell
 
 from m1n1.fw.agx import Agx
 
-p.pmgr_adt_clocks_enable("/arm-io/gfx-asc")
-p.pmgr_adt_clocks_enable("/arm-io/sgx")
+p.pmgr_adt_power_enable("/arm-io/gfx-asc")
+p.pmgr_adt_power_enable("/arm-io/sgx")
 
 agx = Agx(u)
 agx.verbose = 10

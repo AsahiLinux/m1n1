@@ -13,8 +13,8 @@ from m1n1.fw.aop.client import AOPClient
 from m1n1.fw.aop.ipc import *
 
 # aop nodes have no clocks described in adt for j293. it does it itself
-p.pmgr_adt_clocks_enable("/arm-io/aop")
-p.pmgr_adt_clocks_enable("/arm-io/dart-aop")
+p.pmgr_adt_power_enable("/arm-io/aop")
+p.pmgr_adt_power_enable("/arm-io/dart-aop")
 
 p.usb_iodev_vuart_setup(p.iodev_whoami())
 p.iodev_set_usage(IODEV.USB_VUART, USAGE.UARTPROXY)

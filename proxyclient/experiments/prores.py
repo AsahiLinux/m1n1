@@ -26,8 +26,8 @@ assert len(im_data) == (im_W*im_H) * 3
 image_data_luma = im_data[:im_W*im_H]
 image_data_chroma = im_data[im_W*im_H:]
 
-p.pmgr_adt_clocks_enable(f'/arm-io/dart-apr0')
-p.pmgr_adt_clocks_enable(f'/arm-io/apr0')
+p.pmgr_adt_power_enable(f'/arm-io/dart-apr0')
+p.pmgr_adt_power_enable(f'/arm-io/apr0')
 
 dart = DART8110.from_adt(u, f'/arm-io/dart-apr0')
 dart.initialize()
