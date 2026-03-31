@@ -76,6 +76,38 @@ CrashCrg8 = Struct(
     "unk_Z" / Int64ul,
 )
 
+CrtkEntry = Struct(
+    "id" / Int16ul,
+    "flags" / Int16ul,
+    "unk_4" / Int32ul,
+    "unk_8" / Int32ul,
+    "unk_c" / Int32ul,
+    "ptr" / Int64ul,
+    "unk_14" / Int32ul,
+    "unk_18" / Int32ul,
+    "unk_1c" / Int32ul,
+    "unk_20" / Int32ul,
+    "ptr_count" / Int32ul,
+    "name" / Bytes(0x1c),
+    "ptrs" / Array(this.ptr_count, Int64ul)
+)
+
+CrashCrtk = Struct(
+    "tasks" / GreedyRange(CrtkEntry),
+    "leftovers" / GreedyBytes,
+)
+
+CcdpEntry = Struct(
+    "va" / Int64ul,
+    "pa" / Int64ul,
+    "unk_10" / Int32ul,
+)
+
+CrashCcdp = Struct(
+    "entries" / GreedyRange(CcdpEntry),
+    "leftovers" / GreedyBytes,
+)
+
 CrashEntry = Struct(
     "type" / FourCC,
     Padding(4),
@@ -90,6 +122,8 @@ CrashEntry = Struct(
         "Crg8": CrashCrg8,
         "Ccst": CrashCcst,
         "CasC": CrashCasC,
+        "Crtk": CrashCrtk,
+        "Ccdp": CrashCcdp,
     }, default=GreedyBytes)),
 )
 
@@ -101,6 +135,7 @@ CrashLog = Struct(
 class CrashLogParser:
     def __init__(self, data=None, asc=None):
         self.asc = asc
+        self.task_id = None
         if data is not None:
             self.parse(data)
 
@@ -114,7 +149,8 @@ class CrashLogParser:
         print()
 
     def Ccst(self, entry):
-        print(f"Call stack (task {entry.payload.task}:")
+        self.task_id = entry.payload.task
+        print(f"Call stack (task {entry.payload.task}):")
         for i in entry.payload.stack:
             if not i:
                 break
@@ -156,6 +192,12 @@ class CrashLogParser:
             j = min(30, i + 3)
             print(f"  {f'x{i}-x{j}':>7} = {' '.join(f'{r:016x}' for r in ctx.regs[i:j + 1])}")
 
+        # print AGX objects where available
+        for i in range(31):
+            this_addr = addr(ctx.regs[i])
+            if "@" in this_addr:
+                print("  x%d: %s" % (i, this_addr))
+
         if elr_phys:
             v = self.asc.p.read32(elr_phys)
 
@@ -166,6 +208,12 @@ class CrashLogParser:
                 print("  == Faulting code ==")
                 dist = 16
                 self.asc.u.disassemble_at(elr_phys - dist * 4, (dist * 2 + 1) * 4, elr_phys)
+
+        if sp_phys:
+            for n in range(-4, 4):
+                sp_ptr = sp_phys+8*n
+                v = self.asc.p.read64(sp_ptr)
+                print(f"  stack @ 0x{sp_ptr:016x}: {v:016x}")
 
         print()
 
@@ -184,7 +232,39 @@ class CrashLogParser:
         print()
 
     def CLHE(self, entry):
+        # terminator?
         pass
+
+    def Crtk(self, entry):
+        print("Tasks:")
+        for task in entry.payload.tasks:
+            name = task.name.rstrip(b'\x00').decode()
+            if self.task_id == task.id:
+                print(f"* {task.id}: {name} (flags 0x{task.flags:x})")
+            else:
+                print(f"  {task.id}: {name} @ {task.ptr:08x} (flags 0x{task.flags:x})")
+                print(f"   Stack: ", end="")
+                for p in task.ptrs:
+                    print(f"0x{p:08x}", end=" ")
+                print("")
+            print(f"   Unknowns: {task.unk_4:08x} {task.unk_8:08x} {task.unk_c:08x} {task.unk_14:08x} {task.unk_18:08x} {task.unk_1c:08x} {task.unk_20:08x}")
+        if len(entry.payload.leftovers):
+            chexdump(entry.payload.leftovers)
+        print()
+
+    def Ccdp(self, entry):
+        print("Ccdp:")
+        for e in entry.payload.entries:
+            real_pa = self.asc.iotranslate(e.va, 1)[0][0]
+            name = self.asc.addr(e.va) if e.va else ""
+            name = "("+name+")" if ('@' in name) else ""
+            print(f" 0x{e.va:016x} -> 0x{e.pa:016x} {name} : {e.unk_10:08x}")
+            if real_pa != e.pa:
+                if real_pa != None:
+                    print(f"  (wrong PA; should be 0x{real_pa:16x})")
+                else:
+                    print(f"  (wrong PA; not mapped)")
+        print()
 
     def dump(self):
         print("### Crash dump:")
@@ -234,6 +314,7 @@ class ASCCrashLogEndpoint(ASCBaseEndpoint):
         size = 0x1000 * msg.SIZE
 
         self.log(f"Crashed!")
+        self.log(f" DVA @ 0x{msg.DVA:x}")
         crashdata = self.asc.ioread(msg.DVA, size)
         open("crash.bin", "wb").write(crashdata)
         clog = CrashLogParser(crashdata, self.asc)
