@@ -10,6 +10,7 @@
 
 import struct
 from ..fw.agx.handoff import GFXHandoff
+from m1n1.constructutils import Ver
 from ..utils import *
 from ..malloc import Heap
 from enum import IntEnum
@@ -239,16 +240,22 @@ class UatStream(Reloadable):
         return False
 
 
+if Ver.check("G >= G15"):
+    UAT_L0_OFF = 42
+else:
+    UAT_L0_OFF = 39
+
 class UAT(Reloadable):
     NUM_CONTEXTS = 64
 
     PAGE_BITS = 14
     PAGE_SIZE = 1 << PAGE_BITS
 
+    # "size" is the number of entries at that level
     L0_SIZE = 2
-    L0_OFF = 39
-    L1_SIZE = 8
+    L0_OFF = UAT_L0_OFF
     L1_OFF = 36
+    L1_SIZE = 1 << (L0_OFF - L1_OFF)
     L2_OFF = 25
     L3_OFF = 14
 
@@ -277,6 +284,8 @@ class UAT(Reloadable):
         self.shared_region = self.sgx_dev.gfx_shared_region_base
         self.gpu_region = self.sgx_dev.gpu_region_base
         self.ttbr0_base = self.u.memalign(self.PAGE_SIZE, self.PAGE_SIZE)
+        # We reuse the TTBR1 which the firmware is using, because it also has the FW-side mappings.
+        # The alternative would be to map self.sgx_dev.gfx_shared_l2_region_base into a new TTBR1.
         self.ttbr1_base = self.sgx_dev.gfx_shared_region_base
         self.handoff = GFXHandoff(self.u)
 
@@ -499,8 +508,8 @@ class UAT(Reloadable):
 
     def recurse_level(self, level, base, table, page_fn=None, table_fn=None):
         def extend(addr):
-            if addr >= 0x80_00000000:
-                addr |= 0xf00_00000000
+            if addr >= (1 << UAT_L0_OFF):
+                addr |= 0xffffffff_ffffffff ^ self.VA_MASK
             return addr
 
         offset, size, ptecls = self.LEVELS[level]
@@ -539,7 +548,11 @@ class UAT(Reloadable):
 
         print("[UAT] Initializing...")
 
+        #print(f"[UAT] TTBAT @ 0x{self.gpu_region:016x}")
+        #print(f"[UAT] ASC carveout region @ 0x{self.shared_region:016x}")
+
         # Clear out any stale kernel page tables
+        # (The third entry is the TTBR1 shared L2 table, which is fine to keep.)
         self.p.memset64(self.ttbr1_base + 0x10, 0, 0x3ff0)
         self.u.inst("tlbi vmalle1os")
 
