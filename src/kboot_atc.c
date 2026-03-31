@@ -100,6 +100,48 @@ static const struct adt_tunable_info atc_tunables[] = {
     {"tunable_CIO_LN1_AUSPMA_RX_EQ", "apple,tunable-lane1-cio", 0x11000, 0x1000, true},
 };
 
+static const struct adt_tunable_info atc_tunables_t8122[] = {
+    {"tunable_ATC0AXI2AF", "apple,tunable-axi2af", 0x0, 0x4000, true},
+    {"tunable_ATC_FABRIC", "apple,tunable-common-b", 0x44000, 0x4000, true},
+
+    {"tunable_CIO3PLL_CORE", "apple,tunable-common-b", 0x2a00, 0x200, true},
+    {"tunable_CIO3PLL_TOP", "apple,tunable-common-b", 0x2800, 0x200, true},
+    {"tunable_ACIOPHY_LANE_USBC0", "apple,tunable-common-b", 0x5000, 0x1000, true},
+    {"tunable_ACIOPHY_PLL_TOP", "apple,tunable-common-b", 0x1000, 0x4000, true},
+    {"tunable_ACIOPHY_TOP", "apple,tunable-common-b", 0x0, 0x4000, true},
+
+    {"tunable_AUSCMN_DIG", "apple,tunable-common-b", 0x800, 0x200, true},
+    {"tunable_AUSPLL_CORE", "apple,tunable-common-b", 0x2200, 0x4000, true},
+    //{"tunable_AUX_SHM", "apple,tunable-common-b", 0x0, 0x0, true}, // TODO: offset?
+    {"tunable_AUX_TOP", "apple,tunable-common-b", 0x16000, 0x4000, true},
+    {"tunable_AUSCMN_SHM", "apple,tunable-common-b", 0xa00, 0x200, true},
+    {"tunable_CLKMON_CFG", "apple,tunable-common-b", 0x2600, 0x100, false},
+
+    {"tunable_LN0_RX_TOP_USB_DFLT", "apple,tunable-lane0-usb", 0x9000, 0x1000, true},
+    //{"tunable_LN0_RX_TOP_USB_EQA", "apple,tunable-lane0-usb", 0x0, 0x1000, true}, // TODO: offset?
+    {"tunable_LN0_RX_EQ_USB_EQA", "apple,tunable-lane0-usb", 0xa000, 0x1000, true},
+    {"tunable_LN0_RX_SHM_USB_DFLT", "apple,tunable-lane0-usb", 0xb000, 0x1000, true},
+    {"tunable_LN0_TX_TOP_USB_DFLT", "apple,tunable-lane0-usb", 0xc000, 0x1000, true},
+    {"tunable_LN0_TX_SHM_USB_DFLT", "apple,tunable-lane0-usb", 0xd000, 0x1000, true},
+    {"tunable_LN0_RX_TOP_CIO_DFLT", "apple,tunable-lane0-cio", 0x9000, 0x1000, true},
+    {"tunable_LN0_RX_EQ_CIO_EQA", "apple,tunable-lane0-cio", 0xa000, 0x1000, true},
+    {"tunable_LN0_RX_SHM_CIO_DFLT", "apple,tunable-lane0-cio", 0xb000, 0x1000, true},
+    {"tunable_LN0_TX_TOP_CIO_DFLT", "apple,tunable-lane0-cio", 0xc000, 0x1000, true},
+    {"tunable_LN0_TX_SHM_CIO_DFLT", "apple,tunable-lane0-cio", 0xd000, 0x1000, true},
+
+    {"tunable_LN1_RX_TOP_USB_DFLT", "apple,tunable-lane1-usb", 0x10000, 0x1000, true},
+    //{"tunable_LN1_RX_TOP_USB_EQA", "apple,tunable-lane1-usb", 0x0, 0x1000, true}, // TODO: offset?
+    {"tunable_LN1_RX_EQ_USB_EQA", "apple,tunable-lane1-usb", 0x11000, 0x1000, true},
+    {"tunable_LN1_RX_SHM_USB_DFLT", "apple,tunable-lane1-usb", 0x12000, 0x1000, true},
+    {"tunable_LN1_TX_TOP_USB_DFLT", "apple,tunable-lane1-usb", 0x13000, 0x1000, true},
+    {"tunable_LN1_TX_SHM_USB_DFLT", "apple,tunable-lane1-usb", 0x14000, 0x1000, true},
+    {"tunable_LN1_RX_TOP_CIO_DFLT", "apple,tunable-lane1-cio", 0x10000, 0x1000, true},
+    {"tunable_LN1_RX_EQ_CIO_EQA", "apple,tunable-lane1-cio", 0x11000, 0x1000, true},
+    {"tunable_LN1_RX_SHM_CIO_DFLT", "apple,tunable-lane1-cio", 0x12000, 0x1000, true},
+    {"tunable_LN1_TX_TOP_CIO_DFLT", "apple,tunable-lane1-cio", 0x13000, 0x1000, true},
+    {"tunable_LN1_TX_SHM_CIO_DFLT", "apple,tunable-lane1-cio", 0x14000, 0x1000, true},
+};
+
 static const struct atc_fuse_info atc_fuses_t8103_port0[] = {
     {0x23d2bc434, 9, 6, CIO3PLL_DCO_NCTRL, CIO3PLL_DCO_COARSEBIN_EFUSE0},
     {0x23d2bc434, 15, 6, CIO3PLL_DCO_NCTRL, CIO3PLL_DCO_COARSEBIN_EFUSE1},
@@ -235,6 +277,7 @@ static const struct atc_fuse_info atc_fuses_t8112_port1[] = {
 // Order "atc-phy" compatibles in reverse chronologically order to deal with mutliple compatible
 // strings in ADT atc-phy nodes.
 static const struct atc_fuse_hw atc_fuses[] = {
+    {"atc-phy,t8122", -1, NULL, 0},
     {"atc-phy,t6020", -1, NULL, 0},
     {"atc-phy,t8112", 0, atc_fuses_t8112_port0, ARRAY_SIZE(atc_fuses_t8112_port0)},
     {"atc-phy,t8112", 1, atc_fuses_t8112_port1, ARRAY_SIZE(atc_fuses_t8112_port1)},
@@ -374,6 +417,8 @@ static int dt_append_atc_tunable(void *dt, int adt_node, int fdt_node,
 static void dt_copy_atc_tunables(void *dt, const char *adt_path, const char *dt_alias, int port)
 {
     int ret;
+    const struct adt_tunable_info *tunables;
+    size_t tunable_count;
 
     int adt_node = adt_path_offset(adt, adt_path);
     if (adt_node < 0)
@@ -398,8 +443,16 @@ static void dt_copy_atc_tunables(void *dt, const char *adt_path, const char *dt_
         goto cleanup;
     }
 
-    for (size_t i = 0; i < sizeof(atc_tunables) / sizeof(*atc_tunables); ++i) {
-        ret = dt_append_atc_tunable(dt, adt_node, fdt_node, &atc_tunables[i]);
+    if (adt_is_compatible_at(adt, adt_node, "atc-phy,t8122", 0)) {
+        tunables = &atc_tunables_t8122[0];
+        tunable_count = sizeof(atc_tunables_t8122) / sizeof(*atc_tunables_t8122);
+    } else {
+        tunables = &atc_tunables[0];
+        tunable_count = sizeof(atc_tunables) / sizeof(*atc_tunables);
+    }
+
+    for (size_t i = 0; i < tunable_count; ++i) {
+        ret = dt_append_atc_tunable(dt, adt_node, fdt_node, &tunables[i]);
         if (ret)
             goto cleanup;
     }
