@@ -74,14 +74,15 @@ endif
 # Required for no_std + alloc for now
 export RUSTC_BOOTSTRAP=1
 RUST_LIB := librust.a
-ifeq ($(CHAINLOADING),1)
-CFG += CHAINLOADING
-endif
-
 ifeq ($(BUILDSTD),1)
 CARGO_FLAGS := -Z build-std=alloc,core
 else
 CARGO_FLAGS :=
+endif
+
+ifeq ($(CHAINLOADING),1)
+CFG += CHAINLOADING
+CARGO_FLAGS += --features chainload
 endif
 
 LDFLAGS := -EL -maarch64elf --no-undefined -X -Bsymbolic \
@@ -208,7 +209,7 @@ rustfmt:
 rustfmt-check:
 	cd rust && cargo fmt --check
 
-build/$(RUST_LIB): rust/src/*.rs rust/src/gpu/*.rs rust/src/gpu/hw/*.rs rust/Cargo.toml rust/Cargo.lock
+build/$(RUST_LIB): src/../build/build_cfg.h rust/src/*.rs rust/src/gpu/*.rs rust/src/gpu/hw/*.rs rust/Cargo.toml rust/Cargo.lock
 	$(QUIET)echo "  RS    $@"
 	$(QUIET)mkdir -p $(DEPDIR)
 	$(QUIET)mkdir -p "$(dir $@)"

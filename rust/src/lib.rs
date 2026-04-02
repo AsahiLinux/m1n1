@@ -7,15 +7,19 @@
 #![feature(stmt_expr_attributes)]
 #![cfg_attr(all(version("1.82"), not(version("1.92"))), feature(new_zeroed_alloc))]
 
+#[allow(unused_imports)]
 #[macro_use]
 extern crate alloc;
 
 pub mod adt;
+#[cfg(feature = "chainload")]
 pub mod chainload;
 pub mod dlmalloc;
 pub mod float;
+#[cfg(feature = "chainload")]
 pub mod gpt;
 pub mod gpu;
+#[cfg(feature = "chainload")]
 pub mod nvme;
 pub mod print;
 
