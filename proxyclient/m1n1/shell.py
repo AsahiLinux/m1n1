@@ -25,7 +25,7 @@ class HistoryConsole(code.InteractiveConsole):
         if hasattr(readline, "read_history_file"):
             try:
                 readline.read_history_file(histfile)
-            except FileNotFoundError:
+            except (FileNotFoundError, PermissionError):
                 pass
 
     def save_history(self):
