@@ -572,6 +572,7 @@ class M1N1Proxy(Reloadable):
     P_SMP_CALL_SYNC_EL1 = 0x508
     P_SMP_CALL_EL0 = 0x509
     P_SMP_CALL_SYNC_EL0 = 0x50a
+    P_SMP_SWITCH_BOOT_CPU = 0x50b
 
     P_HEAPBLOCK_ALLOC = 0x600
     P_MALLOC = 0x601
@@ -1004,6 +1005,8 @@ class M1N1Proxy(Reloadable):
         if len(args) > 3:
             raise ValueError("Too many arguments")
         return self.request(self.P_SMP_CALL_SYNC_EL0, cpu, addr, *args)
+    def smp_switch_boot_cpu(self, cpu):
+        return self.request(self.P_SMP_SWITCH_BOOT_CPU, cpu)
 
     def heapblock_alloc(self, size):
         return self.request(self.P_HEAPBLOCK_ALLOC, size)
