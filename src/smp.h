@@ -19,6 +19,8 @@ void smp_secondary_prep_el3(void);
 void smp_start_secondaries(void);
 void smp_stop_secondaries(bool deep_sleep);
 
+int smp_switch_boot_cpu(int cpu_index);
+
 #define smp_call0(i, f)          smp_call4(i, f, 0, 0, 0, 0)
 #define smp_call1(i, f, a)       smp_call4(i, f, a, 0, 0, 0)
 #define smp_call2(i, f, a, b)    smp_call4(i, f, a, b, 0, 0)

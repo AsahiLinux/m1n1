@@ -374,6 +374,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
                       request->args[3], request->args[4]);
             reply->retval = smp_wait(request->args[0]);
             break;
+        case P_SMP_SWITCH_BOOT_CPU:
+            reply->retval = smp_switch_boot_cpu(request->args[0]);
+            break;
 
         case P_HEAPBLOCK_ALLOC:
             reply->retval = (u64)heapblock_alloc(request->args[0]);

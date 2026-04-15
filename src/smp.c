@@ -5,6 +5,8 @@
 #include "aic.h"
 #include "aic_regs.h"
 #include "cpu_regs.h"
+#include "exception.h"
+#include "fb.h"
 #include "malloc.h"
 #include "memory.h"
 #include "pmgr.h"
@@ -107,7 +109,6 @@ void smp_secondary_prep_el3(void)
     msr(TPIDR_EL3, target_cpu);
     return;
 }
-
 
 static void smp_prepare_cpu(int index)
 {
@@ -418,6 +419,93 @@ void smp_stop_secondaries(bool deep_sleep)
 
         smp_stop_cpu(i, die, cluster, core, cpu_impl_reg[0], pmgr_reg + cpu_start_off, deep_sleep);
     }
+}
+
+extern void cpu_reset(void) __attribute__((noreturn));
+extern void *smp_switch_boot_cpu_entry(int cpu_index);
+extern int smp_switch_boot_cpu_exit(void *prev_stack, u64 saved_sp);
+
+static u64 switch_boot_cpu_init_new(int cpu_index, int old_index, u64 saved_sp)
+{
+    int i;
+    void *prev_stack;
+
+    // wait for the previous previous boot CPU to be available as secondary
+    for (i = 0; i < 100; i++) {
+        sysop("dmb ld");
+        if (spin_table[old_index].flag)
+            break;
+        udelay(1000);
+    }
+
+    if (i >= 100)
+        printf("Previous boot CPU %d failed to start as secondary!\n", old_index);
+    else
+        printf("  Started.\n");
+
+    // restore _reset_stacks from secondary init of previous boot cpu
+    _reset_stack = dummy_stack + DUMMY_STACK_SIZE;
+    _reset_stack_el1 = dummy_stack_el1 + DUMMY_STACK_SIZE;
+
+    prev_stack = secondary_stacks[cpu_index];
+    secondary_stacks[cpu_index] = dummy_stack;
+
+    // setup current CPU as boot CPU
+    if (in_el2())
+        msr(TPIDR_EL2, boot_cpu_idx);
+    else
+        msr(TPIDR_EL1, boot_cpu_idx);
+
+    // clear spin table of new boot CPU
+    memset(&spin_table[boot_cpu_idx], 0, sizeof(struct spin_table));
+    spin_table[boot_cpu_idx].mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
+
+    exception_initialize();
+
+    mmu_init();
+    fb_set_active(true);
+
+    smp_switch_boot_cpu_exit(prev_stack, saved_sp);
+    __builtin_unreachable();
+    return -1;
+}
+
+void smp_do_switch_boot_cpu(int cpu_index, u64 saved_sp)
+{
+    int old_index = boot_cpu_idx;
+
+    printf("Switching boot CPU from %d to %d\n", old_index, cpu_index);
+
+    // disable frame buffer until the new CPU has called mmu_init()
+    fb_set_active(false);
+
+    smp_call3(cpu_index, switch_boot_cpu_init_new, cpu_index, old_index, saved_sp);
+
+    // switch the boot CPU so the old boot CPU resets as secondary
+    boot_cpu_idx = cpu_index;
+    boot_cpu_mpidr = spin_table[cpu_index].mpidr;
+    smp_prepare_cpu(old_index);
+
+    cpu_reset();
+    __builtin_unreachable();
+}
+
+int smp_switch_boot_cpu(int cpu_index)
+{
+    if (cpu_index == boot_cpu_idx)
+        return cpu_index;
+
+    if (!smp_is_alive(cpu_index)) {
+        printf("Trying to switch to offline CPU %d\n", cpu_index);
+        return -1;
+    }
+
+    // Call asm helper function to capture callee saved state and pass `sp` to the new boot CPU.
+    // This function will return on the new boot CPU.
+    void *old_stack = smp_switch_boot_cpu_entry(cpu_index);
+    free(old_stack);
+
+    return cpu_index;
 }
 
 void smp_send_ipi(int cpu)
