@@ -108,21 +108,9 @@ void smp_secondary_prep_el3(void)
     return;
 }
 
-static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u64 cpu_start_base)
+
+static void smp_prepare_cpu(int index)
 {
-    int i;
-
-    if (index >= MAX_CPUS)
-        return;
-
-    if (has_el3() && index >= MAX_EL3_CPUS)
-        return;
-
-    if (spin_table[index].flag)
-        return;
-
-    printf("Starting CPU %d (%d:%d:%d)... ", index, die, cluster, core);
-
     memset(&spin_table[index], 0, sizeof(struct spin_table));
 
     target_cpu = index;
@@ -139,6 +127,24 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
     dc_civac_range(&_reset_stack, sizeof(void *));
 
     sysop("dsb sy");
+}
+
+static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u64 cpu_start_base)
+{
+    int i;
+
+    if (index >= MAX_CPUS)
+        return;
+
+    if (has_el3() && index >= MAX_EL3_CPUS)
+        return;
+
+    if (spin_table[index].flag)
+        return;
+
+    printf("Starting CPU %d (%d:%d:%d)... ", index, die, cluster, core);
+
+    smp_prepare_cpu(index);
 
     write64(impl, (u64)_vectors_start);
 
