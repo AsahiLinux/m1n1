@@ -27,6 +27,11 @@ class HistoryConsole(code.InteractiveConsole):
                 readline.read_history_file(histfile)
             except FileNotFoundError:
                 pass
+            except PermissionError as e:
+                print(f"Failed reading history from {histfile}: {e}", file=sys.stderr)
+                if sys.platform == "darwin":
+                    print(f"  On macOS this may be caused by extended attributes. "
+                          f"Try: xattr -c {histfile}", file=sys.stderr)
 
     def save_history(self):
         readline.set_history_length(10000)
