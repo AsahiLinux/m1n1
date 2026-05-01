@@ -1786,7 +1786,16 @@ class HV(Reloadable):
                 continue
             addr, size = cpu.cpu_impl_reg
             print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
-            self.p.write64(addr, rvbar)
+
+            val = p.read64(addr)
+            locked = val & 1
+            do_write = val & 0xfffffffff000 != rvbar
+
+            if locked and do_write:
+                raise Exception("RVBAR is locked and does not already contain start address")
+
+            if do_write:
+                p.write64(addr, rvbar)
 
     def _load_macho_symbols(self):
         self.symbol_dict = self.macho.symbols
