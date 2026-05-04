@@ -1329,7 +1329,7 @@ class GPURenderer:
 
             #unswizzle(agx, obj._paddr, work.width, work.height, 4, "fb.bin", grid=False)
             #open("fb.bin", "wb").write(self.agx.u.iface.readmem(obj._paddr, work.width*work.height*4))
-            #os.system(f"convert -size {work.width}x{work.height} -depth 8 rgba:fb.bin -alpha off frame{self.frames}.png")
+            #os.system(f"magick -size {work.width}x{work.height} -depth 8 rgba:fb.bin -alpha off frame{self.frames}.png")
             self.agx.p.fb_blit(0, 0, work.width, work.height, obj._paddr, work.width, PIX_FMT.XBGR)
 
         if False: #work.depth is not None:
@@ -1342,7 +1342,7 @@ class GPURenderer:
             chexdump(obj.val)
 
             unswizzle(self.agx, obj._paddr, work.width, work.height, 4, "depth.bin", grid=False)
-            os.system(f"convert -size {work.width}x{work.height} -depth 8 rgba:depth.bin -alpha off depth.png")
+            os.system(f"magick -size {work.width}x{work.height} -depth 8 rgba:depth.bin -alpha off depth.png")
 
         for i in self.work:
             i.free()
