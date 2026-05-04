@@ -10,7 +10,7 @@ shift 5
 for ord in $(seq 32 126); do
     printf "\\x$(printf %x $ord)\\n"
 done
-) | convert \
+) | magick \
     -page ${width}x$((height*95)) \
     -background black \
     -fill white \
