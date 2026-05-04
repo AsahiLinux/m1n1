@@ -31,6 +31,8 @@
 #define STRING_DESCRIPTOR_PRODUCT      2
 #define STRING_DESCRIPTOR_SERIAL       3
 
+#define DWC3_EP0_MAX_DESC_LEN 62
+
 #define CDC_DEVICE_CLASS 0x02
 
 #define CDC_USB_VID 0x1209
@@ -576,6 +578,10 @@ static void usb_cdc_get_string_descriptor(u32 index, const void **descriptor, u1
             *descriptor = NULL;
             *descriptor_len = 0;
     }
+
+    // FIXME: handle descriptors larger than maxPacketSize for EP 0
+    // limit the descriptor length to stay below EP 0's maxPacketSize of 64
+    *descriptor_len = min(*descriptor_len, DWC3_EP0_MAX_DESC_LEN);
 }
 
 static int
