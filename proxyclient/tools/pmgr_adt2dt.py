@@ -45,8 +45,8 @@ for i, dev in enumerate(pmgr.devices):
     maxaddr[block[0]] = max(maxaddr.get(block[0], 0), offset)
 
 pmgr_compat = pmgr.compatible[0].split(",")[1]
-compatible = f'"apple,{pmgr_compat}-pmgr", "apple,pmgr", "syscon", "simple-mfd"'
-ps_compatible = f'"apple,{pmgr_compat}-pmgr-pwrstate", "apple,pmgr-pwrstate"'
+compatible = f'"apple,{pmgr_compat}-pmgr", "apple,t8103-pmgr", "syscon", "simple-mfd"'
+ps_compatible = f'"apple,{pmgr_compat}-pmgr-pwrstate", "apple,t8103-pmgr-pwrstate"'
 
 for i, ((base, size), devices) in enumerate(sorted(blocks.items())):
 
