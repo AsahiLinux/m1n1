@@ -7,6 +7,7 @@ sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))
 import argparse, pathlib
 
 from m1n1 import adt
+from m1n1.utils import align_up
 
 parser = argparse.ArgumentParser(description='Convert ADT PMGR nodes to Device Tree format')
 parser.add_argument("-m", "--multidie", action="store_true")
@@ -50,7 +51,7 @@ ps_compatible = f'"apple,{pmgr_compat}-pmgr-pwrstate", "apple,t8103-pmgr-pwrstat
 
 for i, ((base, size), devices) in enumerate(sorted(blocks.items())):
 
-    size = min(size, (maxaddr[base] + 0x3fff) & ~0x3fff)
+    size = min(size, align_up(maxaddr[base] + 4, 0x4000))
 
     print(f"pmgr{i}: power-management@{base:x} {{")
     print(f"\tcompatible = {compatible};")
