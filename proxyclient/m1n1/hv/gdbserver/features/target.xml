@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- SPDX-License-Identifier: MIT -->
 <!DOCTYPE target SYSTEM "gdb-target.dtd">
-<target version="1.0">
+<target version="1.0" xmlns:xi="http://www.w3.org/2001/XInclude">
   <architecture>aarch64</architecture>
   <xi:include href="aarch64-core.xml" />
   <xi:include href="aarch64-fpu.xml" />
