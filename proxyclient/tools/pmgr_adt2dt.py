@@ -34,7 +34,7 @@ def die_label(s):
     if args.multidie:
         return f"DIE_LABEL({s})"
     else:
-        return s
+        return f'"{s}"'
 
 for i, dev in enumerate(pmgr.devices):
     if dev.flags.no_ps:
