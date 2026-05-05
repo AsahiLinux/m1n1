@@ -36,9 +36,14 @@ struct pmgr_device {
     u8 unk3[2];
     u8 addr_offset;
     u8 psreg_idx;
-    u8 unk4[14];
+    u8 unk4[4];
+    struct {
+        u32 offset : 24;
+        u32 group : 8;
+    } group_and_offset;
+    u8 unk5[6];
     u16 id2;
-    u8 unk5[4];
+    u8 unk6[4];
     const char name[0x10];
 } PACKED;
 
@@ -55,6 +60,7 @@ static const struct pmgr_device *pmgr_devices = NULL;
 static u32 pmgr_devices_len = 0;
 
 static bool pmgr_u8id = false;
+static bool pmgr_use_group_and_offset = false;
 
 static uintptr_t pmgr_get_psreg(u8 idx)
 {
@@ -112,13 +118,21 @@ static int pmgr_find_device(u16 id, const struct pmgr_device **device)
 
 static uintptr_t pmgr_device_get_addr(u8 die, const struct pmgr_device *device)
 {
-    uintptr_t addr = pmgr_get_psreg(device->psreg_idx);
+    uintptr_t addr;
+    if (pmgr_use_group_and_offset)
+        addr = pmgr_get_psreg(device->group_and_offset.group);
+    else
+        addr = pmgr_get_psreg(device->psreg_idx);
     if (addr == 0)
         return 0;
 
     addr += PMGR_DIE_OFFSET * die;
 
-    addr += (device->addr_offset << 3);
+    if (pmgr_use_group_and_offset)
+        addr += device->group_and_offset.offset;
+    else
+        addr += (device->addr_offset << 3);
+
     return addr;
 }
 
@@ -381,8 +395,12 @@ int pmgr_init(void)
 
     pmgr_ps_regs = adt_getprop(adt, pmgr_offset, "ps-regs", &pmgr_ps_regs_len);
     if (pmgr_ps_regs == NULL || pmgr_ps_regs_len == 0) {
-        printf("pmgr: Error getting /arm-io/pmgr ps-regs\n.");
-        return -1;
+        pmgr_use_group_and_offset = true;
+        pmgr_ps_regs = adt_getprop(adt, pmgr_offset, "ps-groups", &pmgr_ps_regs_len);
+        if (pmgr_ps_regs == NULL || pmgr_ps_regs_len == 0) {
+            printf("pmgr: Error getting /arm-io/pmgr ps-regs\n.");
+            return -1;
+        }
     }
 
     pmgr_devices = adt_getprop(adt, pmgr_offset, "devices", &pmgr_devices_len);
