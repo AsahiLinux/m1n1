@@ -211,7 +211,11 @@ pub fn get_reg_container(
             }
         };
 
-        let ranges = node.named_prop("ranges")?;
+        let ranges = match node.named_prop("ranges") {
+            Ok(r) => r,
+            Err(AdtError::NotFound) => break,
+            Err(e) => return Err(e),
+        };
 
         let paddr_cells = parent.named_prop("#address-cells")?.u32()?;
 
