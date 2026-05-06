@@ -127,10 +127,10 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
     printf("Starting CPU %d (%d:%d:%d)... ", index, die, cluster, core);
 
     u64 rvbar_value = read64(impl);
-    bool write_rvbar = FIELD_GET(RVBAR_ADDR, rvbar_value) != (u64)_vectors_start;
+    bool write_rvbar = (rvbar_value & RVBAR_ADDR) != (u64)_vectors_start;
     if (FIELD_GET(RVBAR_LOCK, rvbar_value) && write_rvbar) {
         printf("Failed! \n    RVBAR (=0x%lx) is locked and differs from entry point (=0x%lx)\n",
-               rvbar_value, (u64)_vectors_start);
+               rvbar_value & RVBAR_ADDR, (u64)_vectors_start);
         return;
     }
 
