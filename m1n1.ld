@@ -204,6 +204,7 @@ SECTIONS {
         *(.gnu.version*)
         *(.note*)
         *(.comment*)
+        *(.ARM.attributes)
     }
 
     .empty (NOLOAD) : {
