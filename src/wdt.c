@@ -9,8 +9,6 @@
 #define WDT_ALARM 0x14
 #define WDT_CTL   0x1c
 
-#define WDT_2ND_OFFSET 0x8008
-
 static u64 wdt_base = 0;
 
 void wdt_disable(void)
@@ -28,19 +26,26 @@ void wdt_disable(void)
         return;
     }
 
-    u64 wdt_2nd = 0;
-    if (adt_get_reg(adt, path, "reg", 2, &wdt_2nd, NULL)) {
-        printf("Failed to get WDT reg[2] property!\n");
-    }
-
-    printf("WDT registers @ 0x%lx (0x%lx)\n", wdt_base, wdt_2nd);
-
+    printf("Primary WDT register @ 0x%lx\n", wdt_base);
     write32(wdt_base + WDT_CTL, 0);
-    // disable seconmdary watchdog enabled on M4 / A18 Pro with macOS 26
-    if ((wdt_2nd - wdt_base) == WDT_2ND_OFFSET)
-        write32(wdt_2nd, 0);
+    printf("Primary WDT disabled\n");
 
-    printf("WDT disabled\n");
+    // disable secondary watchdog if wdt-version is 2 or 3
+    u32 wdt_version;
+    if (ADT_GETPROP(adt, node, "wdt-version", &wdt_version) < 0)
+        return;
+
+    if (wdt_version == 2 || wdt_version == 3) {
+        u64 wdt_2nd = 0;
+        if (adt_get_reg(adt, path, "reg", 2, &wdt_2nd, NULL)) {
+            printf("Failed to get WDT reg[2] property!\n");
+            return;
+        }
+
+        printf("Secondary WDT register @ 0x%lx\n", wdt_2nd);
+        write32(wdt_2nd, 0);
+        printf("Secondary WDT disabled\n");
+    }
 }
 
 void wdt_reboot(void)
