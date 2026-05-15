@@ -39,10 +39,9 @@ def die_label(s):
 for i, dev in enumerate(pmgr.devices):
     if dev.flags.no_ps:
         continue
-    ps = pmgr.ps_regs[dev.psreg]
-    block = pmgr.get_reg(ps.reg)
+    block = dt.pmgr_dev_get_block(dev)
     blocks.setdefault(block, []).append(dev)
-    offset = ps.offset + dev.psidx * 8
+    offset = dt.pmgr_dev_get_offset(dev)
     maxaddr[block[0]] = max(maxaddr.get(block[0], 0), offset)
 
 pmgr_compat = pmgr.compatible[0].split(",")[1]
@@ -65,14 +64,12 @@ for i, ((base, size), devices) in enumerate(sorted(blocks.items())):
 for i, ((base, size), devices) in enumerate(sorted(blocks.items())):
     print(f"&pmgr{i} {{")
 
-    for dev in sorted(devices, key=lambda d: pmgr.ps_regs[d.psreg].offset + dev.psidx * 8):
+    for dev in sorted(devices, key=dt.pmgr_dev_get_addr):
         if dev.flags.no_ps:
             continue
 
-        ps = pmgr.ps_regs[dev.psreg]
-        offset = ps.offset + dev.psidx * 8
-        addr = pmgr.get_reg(ps.reg)[0] + offset
-        assert base <= addr <= (base + size)
+        offset = dt.pmgr_dev_get_offset(dev)
+        assert base <= (base + offset) <= (base + size)
 
         print()
         print(f"\t{die_node('ps_' + dev.name.lower())}: power-controller@{offset:x} {{")
