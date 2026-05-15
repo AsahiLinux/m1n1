@@ -52,8 +52,7 @@ for i, dev in enumerate(pmgr.devices):
     s += f" perf_reg: {dev.perf_block}:{dev.perf_idx:#04x} unk3: {dev.unk3:3d} {dev.unk2_0:2d} {dev.ps_cfg16:2d} {dev.unk2_3:3d}"
 
     if not dev.flags.no_ps:
-        ps = pmgr.ps_regs[dev.psreg]
-        addr = pmgr.get_reg(ps.reg)[0] + ps.offset + dev.psidx * 8
+        addr = dt.pmgr_dev_get_addr(dev)
         val = p.read32(addr)
         s += f" @ {addr:#x} = {val:#010x}"
     else:
