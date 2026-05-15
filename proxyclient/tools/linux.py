@@ -124,6 +124,10 @@ if args.tso:
             u.msr("ACTLR_EL1", actlr, call=lambda addr, *args: p.smp_call_sync(i, addr & ~REGION_RX_EL1, *args))
     p.kboot_set_chosen("apple,tso", "")
 
+if p.smp_switch_boot_cpu(0) != 0:
+    print("Switching primary CPU to core 0 failed")
+    sys.exit(1)
+
 if p.kboot_prepare_dt(dtb_addr):
     print("DT prepare failed")
     sys.exit(1)
