@@ -99,6 +99,8 @@ for cpu in u.adt["cpus"]:
     if cpu.state == "running":
         continue
     addr, size = cpu.cpu_impl_reg
+    if (p.read64(addr) & 0xffff_ffff_f000) == rvbar:
+        continue
     print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
     p.write64(addr, rvbar)
 
