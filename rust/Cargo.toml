@@ -11,8 +11,16 @@ crate-type = [ "staticlib" ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-fatfs = { path = "vendor/rust-fatfs", default-features = false, features = ["lfn", "alloc"], optional = true }
-uuid = { version = "1.7.0", default-features = false, optional = true }
+fatfs = { workspace = true, optional = true }
+uuid = { version = "1.23", default-features = false, optional = true }
+versions = { workspace = true }
+
+[workspace]
+resolver = "2"
+members = ["versions", "vendor/rust-fatfs"]
+
+[workspace.dependencies]
+fatfs = { path = "vendor/rust-fatfs", default-features = false, features = ["lfn", "alloc"] }
 versions = { path = "./versions" }
 
 [features]
