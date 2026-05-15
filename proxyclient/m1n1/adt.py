@@ -102,8 +102,8 @@ PMGRDevices = SafeGreedyRange(Struct(
     "unk2_0" / Int16ul,
     "pd" / Int8ul,
     "ps_cfg16" / Int8ul,
-    "group" / Int8ul,
     "offset" / Int24ul,
+    "group" / Int8ul,
     "unk2_2" / Int32ul,
     "unk2_3" / Int16ul,
     "id2" / Int16ul,
@@ -823,6 +823,7 @@ class ADTNode:
 
     def pmgr_init(self):
         self._pmgr_u8id = (self["/arm-io/pmgr"].devices[0].id1 != self["/arm-io/pmgr"].devices[1].id1)
+        self._pmgr_use_group_and_offset = not "ps-regs" in self["/arm-io/pmgr"]._properties
 
     def pmgr_dev_get_id(self, dev):
         if self._pmgr_u8id:
@@ -835,6 +836,22 @@ class ADTNode:
             return dev.parents_un.u8id.parents 
         else:
             return dev.parents_un.u16id.parents 
+
+    def pmgr_dev_get_block(self, dev):
+        if self._pmgr_use_group_and_offset:
+            reg = self["/arm-io/pmgr"].ps_groups[dev.group].reg
+        else:
+            reg = self["/arm-io/pmgr"].ps_regs[dev.psreg].reg
+        return self["/arm-io/pmgr"].get_reg(reg)
+
+    def pmgr_dev_get_offset(self, dev):
+        if self._pmgr_use_group_and_offset:
+            return dev.offset
+        else:
+            return self["/arm-io/pmgr"].ps_regs[dev.psreg].offset + dev.psidx * 8
+
+    def pmgr_dev_get_addr(self, dev):
+        return self.pmgr_dev_get_block(dev)[0] + self.pmgr_dev_get_offset(dev)
 
 def load_adt(data):
     node = ADTNode(ADTNodeStruct.parse(data))

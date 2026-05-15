@@ -52,8 +52,7 @@ for i, dev in enumerate(pmgr.devices):
     s += f" perf_reg: {dev.perf_block}:{dev.perf_idx:#04x} unk3: {dev.unk3:3d} {dev.unk2_0:2d} {dev.ps_cfg16:2d} {dev.unk2_3:3d}"
 
     if not dev.flags.no_ps:
-        ps = pmgr.ps_regs[dev.psreg]
-        addr = pmgr.get_reg(ps.reg)[0] + ps.offset + dev.psidx * 8
+        addr = dt.pmgr_dev_get_addr(dev)
         val = p.read32(addr)
         s += f" @ {addr:#x} = {val:#010x}"
     else:
@@ -108,7 +107,7 @@ for clk in range(256):
 
 print()
 
-if chip_id in (0x8960, 0x7000, 0x7001, 0x8000, 0x8001, 0x8003, 0x8010, 0x8012, 0x8015):
+if dt["/chosen"].chip_id in (0x8960, 0x7000, 0x7001, 0x8000, 0x8001, 0x8003, 0x8010, 0x8012, 0x8015):
     exit(0)
 
 print("=== Boot clocks ===")
