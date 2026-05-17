@@ -16,12 +16,12 @@
 
 set -e
 
-uudecode <<EOF_M1N1
-UUENCODED_DATA # replaced with uuencoded m1n1.bin by make build/kmutil
-EOF_M1N1
-
 boot_disk=$(bless --getboot)
 system_dir=$(diskutil info -plist ${boot_disk} | plutil -extract MountPoint raw -)
+
+"${system_dir}"/usr/bin/uudecode <<EOF_M1N1
+UUENCODED_DATA # replaced with uuencoded m1n1.bin by make build/kmutil
+EOF_M1N1
 
 # TODO: ensure this is booted into 1TR and check boot policy, see step2.sh from asahi-installer
 
