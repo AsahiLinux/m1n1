@@ -267,9 +267,9 @@ endif
 
 build/kmutil: build/$(NAME).bin tools/kmutil.sh
 	$(QUIET)echo "  PASTE $@"
-	$(QUIET)awk -v out=1 -e '/^UUENCODED_DATA/ {out=0; next}; { if(out == 1) { print $0} }' < tools/kmutil.sh > $@
-	$(QUIET)uuencode -m $(NAME).bin < $< >> $@
-	$(QUIET)awk -v out=0 -e '/^UUENCODED_DATA/ {out=1; next}; { if(out == 1) { print $0} }' < tools/kmutil.sh >> $@
+	$(QUIET)awk -v out=1 -e '/^BASE64_DATA/ {out=0; next}; { if(out == 1) { print $0} }' < tools/kmutil.sh > $@
+	$(QUIET)base64 -w 60 $< >> $@
+	$(QUIET)awk -v out=0 -e '/^BASE64_DATA/ {out=1; next}; { if(out == 1) { print $0} }' < tools/kmutil.sh >> $@
 
 .INTERMEDIATE: build-tag build-cfg
 build-tag src/../build/build_tag.h &:
