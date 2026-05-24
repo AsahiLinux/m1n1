@@ -406,7 +406,8 @@ int mcc_init_t8122(int *path, u32 reg_offset, u32 plane_count, u32 dcs_count,
 int mcc_init_m3(int node, int *path)
 {
     u32 reg_len;
-    u32 reg_offset = 3;
+    /* T6032 has in reg[3] the address of reg[2] with the second die's offset added. */
+    u32 reg_offset = 3 + (chip_id == T6032);
 
     if (!adt_getprop(adt, node, "reg", &reg_len)) {
         printf("MCC: Failed to get reg property!\n");
