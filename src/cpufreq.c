@@ -67,9 +67,7 @@ static u32 pstate_reg_to_pstate(u64 val)
         case T6020:
         case T6021:
         case T6022:
-        case T6030:
-        case T6031:
-        case T6034:
+        case T6030 ... T6034:
         case T8122:
             return FIELD_GET(CLUSTER_PSTATE_DESIRED1, val);
         default:
@@ -108,9 +106,7 @@ static int set_pstate(const struct cluster_t *cluster, uint32_t pstate)
             case T6020:
             case T6021:
             case T6022:
-            case T6030:
-            case T6031:
-            case T6034:
+            case T6030 ... T6034:
             case T8122:
                 val &= ~CLUSTER_PSTATE_DESIRED1;
                 val |= CLUSTER_PSTATE_SET | FIELD_PREP(CLUSTER_PSTATE_DESIRED1, pstate);
@@ -182,9 +178,7 @@ int cpufreq_init_cluster(const struct cluster_t *cluster, const struct feat_t *f
             /* APSC Snooze */
             set64(cluster->base + 0x200f8, BIT(40));
             break;
-        case T6030:
-        case T6031:
-        case T6034:
+        case T6030 ... T6034:
         case T8122:
             /* Unknown */
             write64(cluster->base + 0x440f8, 1);
@@ -344,6 +338,16 @@ static const struct cluster_t t6031_clusters[] = {
     {},
 };
 
+static const struct cluster_t t6032_clusters[] = {
+    {"ECPU0", 0x0210e00000, false, 1, 5},
+    {"PCPU0", 0x0211e00000, true, 1, 6},
+    {"PCPU1", 0x0212e00000, true, 1, 6},
+    {"ECPU1", 0x2210e00000, false, 1, 5},
+    {"PCPU2", 0x2211e00000, true, 1, 6},
+    {"PCPU3", 0x2212e00000, true, 1, 6},
+    {},
+};
+
 static const struct cluster_t t6030_clusters[] = {
     {"ECPU0", 0x210e00000, false, 1, 5},
     {"PCPU0", 0x211e00000, true, 1, 6},
@@ -390,6 +394,8 @@ const struct cluster_t *cpufreq_get_clusters(void)
         case T6031:
         case T6034:
             return t6031_clusters;
+        case T6032:
+            return t6032_clusters;
         default:
             printf("cpufreq: Chip 0x%x is unsupported\n", chip_id);
             return NULL;
@@ -501,9 +507,7 @@ const struct feat_t *cpufreq_get_features(void)
         case T6021:
         case T6022:
             return t6020_features;
-        case T6030:
-        case T6031:
-        case T6034:
+        case T6030 ... T6034:
             return t6030_features;
         default:
             printf("cpufreq: Chip 0x%x is unsupported\n", chip_id);
