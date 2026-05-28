@@ -83,7 +83,8 @@ static uintptr_t pmgr_get_psreg(u8 idx)
 
 int pmgr_set_mode(uintptr_t addr, u8 target_mode)
 {
-    mask32(addr, PMGR_PS_TARGET, FIELD_PREP(PMGR_PS_TARGET, target_mode));
+    mask32(addr, PMGR_AUTO_ENABLE | PMGR_WAS_CLKGATED | PMGR_WAS_PWRGATED | PMGR_PS_TARGET,
+           FIELD_PREP(PMGR_PS_TARGET, target_mode));
     if (poll32(addr, PMGR_PS_ACTUAL, FIELD_PREP(PMGR_PS_ACTUAL, target_mode), PMGR_POLL_TIMEOUT) <
         0) {
         printf("pmgr: timeout while trying to set mode %x for device at 0x%lx: %x\n", target_mode,
