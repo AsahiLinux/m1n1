@@ -33,6 +33,7 @@ from m1n1.proxy import *
 from m1n1.proxyutils import *
 from m1n1.utils import *
 from m1n1.shell import run_shell
+from m1n1.sysreg import *
 from m1n1.hv import HV
 from m1n1.hv.virtio import Virtio9PTransport
 from m1n1.hw.pmu import PMU
@@ -41,6 +42,13 @@ iface = UartInterface()
 p = M1N1Proxy(iface, debug=False)
 bootstrap_port(iface, p)
 u = ProxyUtils(p, heap_size = 128 * 1024 * 1024)
+
+# Setup counter redirect / AHCR_EL2 as expected by macOS for macho payloads
+if not args.raw:
+    chip_id = u.adt["/chosen"].chip_id
+    if chip_id in (0x6030, 0x6031, 0x6032, 0x6034, 0x8122):
+        u.msr(AGTCNTRDIR_EL1, 3)
+        u.msr(AGTCNTRDIR_EL12, 3)
 
 hv = HV(iface, p, u)
 
