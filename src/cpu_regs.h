@@ -741,6 +741,9 @@
 #define SYS_IMP_APL_APCTL_EL2  sys_reg(3, 6, 15, 12, 2)
 #define SYS_IMP_APL_APCTL_EL12 sys_reg(3, 6, 15, 15, 0)
 
+/* Hypervisor registers? */
+#define SYS_IMPL_APL_AHCR_EL2 sys_reg(3, 4, 15, 12, 1)
+
 /* VM registers */
 #define SYS_IMP_APL_VM_TMR_FIQ_ENA_EL2 sys_reg(3, 5, 15, 1, 3)
 #define VM_TMR_FIQ_ENA_ENA_V           BIT(0)
