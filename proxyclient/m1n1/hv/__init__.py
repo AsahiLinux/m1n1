@@ -1835,8 +1835,59 @@ class HV(Reloadable):
             print("Done.")
             return a.tobytes()
 
+        def load_hook_m3(data, segname, size, fileoff, dest):
+            if segname != "__TEXT_EXEC":
+                return data
+
+            inst = 0xd503201f # noop
+            print(f"Patching segment {segname}...")
+
+            a = array.array("I", data)
+
+            # search for msr instructons with following system regs:
+            # - AGTCNTRDIR_EL12 (s3_4_c15_c14_6)
+            # - AHCR_EL2 (s3_4_c15_c12_1)
+            p = 0
+            while (p := data.find(b"\x1c\xd5", p)) != -1:
+                if (p & 3) != 2:
+                    p += 1
+                    continue
+
+                # mask source register from msr opcode
+                opcode = a[p // 4] & ~0x1f
+                if opcode == 0xd51cfec0 or opcode == 0xd51cfc20:
+                    off = fileoff + (p & ~3)
+                    if off >= 0xbfcfc0:
+                        print(f"  0x{off:x}: 0x{opcode:04x} -> noop(0x{inst:x})")
+                        a[p // 4] = inst
+                p += 4
+
+            # search for mrs instructons with following system regs:
+            # - AHCR_EL2 (s3_4_c15_c12_1)
+            p = 0
+            while (p := data.find(b"\x3c\xd5", p)) != -1:
+                if (p & 3) != 2:
+                    p += 1
+                    continue
+
+                # mask source register from msr opcode
+                opcode = a[p // 4] & ~0x1f
+                if opcode == 0xd53cfc20:
+                    off = fileoff + (p & ~3)
+                    if off >= 0xbfcfc0:
+                        print(f"  0x{off:x}: 0x{opcode:04x} -> noop(0x{inst:x})")
+                        a[p // 4] = inst
+                p += 4
+
+            print("Done.")
+            return a.tobytes()
+
         #image = macho.prepare_image(load_hook)
-        image = macho.prepare_image()
+        chip_id = self.u.adt["/chosen"].chip_id
+        if chip_id in (0x8122, 0x6030, 0x6031, 0x6032, 0x6034):
+            image = macho.prepare_image(load_hook_m3)
+        else:
+            image = macho.prepare_image()
         self.load_raw(image, entryoffset=(macho.entry - macho.vmin), use_xnu_symbols=self.xnu_mode and symfile is not None, vmin=macho.vmin)
 
     def update_pac_mask(self):
