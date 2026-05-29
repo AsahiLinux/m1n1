@@ -47,6 +47,8 @@ struct hv_secondary_info_t {
     uint64_t cnthctl;
     uint64_t sprr_config;
     uint64_t gxf_config;
+    uint64_t agt_cnt_rdir_el1;
+    uint64_t agt_cnt_rdir_el12;
 };
 
 static struct hv_secondary_info_t hv_secondary_info;
@@ -145,6 +147,10 @@ void hv_start(void *entry, u64 regs[4])
     hv_secondary_info.cnthctl = mrs(CNTHCTL_EL2);
     hv_secondary_info.sprr_config = mrs(SYS_IMP_APL_SPRR_CONFIG_EL1);
     hv_secondary_info.gxf_config = mrs(SYS_IMP_APL_GXF_CONFIG_EL1);
+    if (cpu_features->counter_redirect) {
+        hv_secondary_info.agt_cnt_rdir_el1 = mrs(SYS_IMP_APL_AGTCNTRDIR_EL1);
+        hv_secondary_info.agt_cnt_rdir_el12 = mrs(SYS_IMP_APL_AGTCNTRDIR_EL12);
+    }
 
     hv_arm_tick(false);
     hv_pinned_cpu = -1;
@@ -209,6 +215,10 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
     msr(CNTHCTL_EL2, info->cnthctl);
     msr(SYS_IMP_APL_SPRR_CONFIG_EL1, info->sprr_config);
     msr(SYS_IMP_APL_GXF_CONFIG_EL1, info->gxf_config);
+    if (cpu_features->counter_redirect) {
+        msr(SYS_IMP_APL_AGTCNTRDIR_EL1, info->agt_cnt_rdir_el1);
+        msr(SYS_IMP_APL_AGTCNTRDIR_EL12, info->agt_cnt_rdir_el12);
+    }
 
     if (cpu_features->apple_sysregs_unlocked)
         reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
