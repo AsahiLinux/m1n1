@@ -271,6 +271,10 @@ static int pcie_init_controller(int controller, const char *path)
         fuse_bits = NULL;
         state->pcie_regs = &regs_t8122;
         printf("pcie: Initializing t8122 PCIe controller\n");
+    } else if (adt_is_compatible(adt, adt_offset, "apcie,t6030")) {
+        fuse_bits = NULL;
+        state->pcie_regs = &regs_t8122;
+        printf("pcie: Initializing t6030 PCIe controller\n");
     } else if (adt_is_compatible(adt, adt_offset, "apcie,t6020")) {
         fuse_bits = NULL;
         state->pcie_regs = &regs_t602x;
