@@ -24,6 +24,9 @@
 #define CPU_REG_CLUSTER GENMASK(10, 8)
 #define CPU_REG_DIE     GENMASK(14, 11)
 
+#define RVBAR_LOCK BIT(0)
+#define RVBAR_ADDR GENMASK(47, 12)
+
 struct spin_table {
     u64 mpidr;
     u64 flag;
@@ -121,6 +124,12 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
     if (spin_table[index].flag)
         return;
 
+    if (!cpu_features->apple_sysregs_unlocked &&
+        (read64(impl) & RVBAR_ADDR) != (u64)_vectors_start) {
+        printf("Failed! \n    RVBAR (=0x%lx) is locked and differs from entry point (=0x%lx)\n",
+               read64(impl) & RVBAR_ADDR, (u64)_vectors_start);
+    }
+
     printf("Starting CPU %d (%d:%d:%d)... ", index, die, cluster, core);
 
     memset(&spin_table[index], 0, sizeof(struct spin_table));
@@ -140,7 +149,10 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
 
     sysop("dsb sy");
 
-    write64(impl, (u64)_vectors_start);
+    if (cpu_features->apple_sysregs_unlocked) {
+        // This also clears RVBAR_LOCK, so that HV can set RVBAR later when the core is running
+        write64(impl, (u64)_vectors_start);
+    }
 
     cpu_start_base += die * PMGR_DIE_OFFSET;
 
@@ -359,7 +371,7 @@ void smp_start_secondaries(void)
 
         if (i == boot_cpu_idx) {
             // Check if already locked
-            if (read64(cpu_impl_reg[0]) & 1)
+            if (FIELD_GET(RVBAR_LOCK, read64(cpu_impl_reg[0])))
                 continue;
 
             // Unlocked, write _vectors_start into boot CPU's rvbar
