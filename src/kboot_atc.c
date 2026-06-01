@@ -101,7 +101,7 @@ static const struct adt_tunable_info atc_tunables[] = {
 };
 
 static const struct adt_tunable_info atc_tunables_t8122[] = {
-    {"tunable_ATC0AXI2AF", "apple,tunable-axi2af", 0x0, 0x4000, true},
+    {"tunable_ATC0AXI2AF", "apple,tunable-axi2af", 0x0, 0x8000, true},
     {"tunable_ATC_FABRIC", "apple,tunable-common-b", 0x44000, 0x4000, true},
 
     {"tunable_CIO3PLL_CORE", "apple,tunable-common-b", 0x2a00, 0x200, true},
