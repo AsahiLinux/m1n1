@@ -10,7 +10,16 @@ p.smp_start_secondaries()
 
 tfreq = u.mrs(CNTFRQ_EL0)
 
-TEST_CPUS = [1, 4]
+TEST_CPUS = []
+CLUSTER_TYPES = []
+for cpu in u.adt["/cpus"]:
+    if cpu.cpu_id == 0 or cpu.state == 'running':
+        continue
+    if cpu.cluster_type not in CLUSTER_TYPES:
+        TEST_CPUS.append(cpu.cpu_id)
+        CLUSTER_TYPES.append(cpu.cluster_type)
+
+print(f"testing CPU p-state latencies on cores: {TEST_CPUS}")
 
 CLUSTER_PSTATE = 0x20020
 CLUSTER_STATUS = 0x20050
