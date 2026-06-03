@@ -66,6 +66,7 @@ static u32 pstate_reg_to_pstate(u64 val)
         case T6020:
         case T6021:
         case T6022:
+        case T6030:
         case T6031:
         case T6034:
             return FIELD_GET(CLUSTER_PSTATE_DESIRED1, val);
@@ -105,6 +106,7 @@ static int set_pstate(const struct cluster_t *cluster, uint32_t pstate)
             case T6020:
             case T6021:
             case T6022:
+            case T6030:
             case T6031:
             case T6034:
                 val &= ~CLUSTER_PSTATE_DESIRED1;
@@ -200,6 +202,7 @@ int cpufreq_init_cluster(const struct cluster_t *cluster, const struct feat_t *f
             /* APSC Snooze */
             set64(cluster->base + 0x200f8, BIT(40));
             break;
+        case T6030:
         case T6031:
         case T6034:
             /* Unknown */
