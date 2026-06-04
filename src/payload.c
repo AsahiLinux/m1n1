@@ -342,6 +342,13 @@ int payload_run(void)
                 printf("Failed to kboot set %s='%s'\n", chosen[i], val);
         }
 
+        if (boot_cpu_idx != 0) {
+            int boot_cpu = boot_cpu_idx;
+            int index = smp_switch_boot_cpu(0);
+            if (boot_cpu != index)
+                printf("Switched boot CPU from %d to %d (%d)\n", boot_cpu, index, boot_cpu_idx);
+        }
+
         if (kboot_prepare_dt(fdt)) {
             printf("Failed to prepare FDT!\n");
             return -1;

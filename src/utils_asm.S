@@ -172,3 +172,36 @@ _deep_wfi_helper:
     ldp x30, x0, [sp], #16
 
     ret
+
+.extern smp_do_switch_boot_cpu
+
+.globl smp_switch_boot_cpu_entry
+.type smp_switch_boot_cpu_entry, @function
+smp_switch_boot_cpu_entry:
+    stp x29, x30, [sp, #-16]!
+    mov x29, sp
+    stp x27, x28, [sp, #-16]!
+    stp x25, x26, [sp, #-16]!
+    stp x23, x24, [sp, #-16]!
+    stp x21, x22, [sp, #-16]!
+    stp x19, x20, [sp, #-16]!
+    stp x17, x18, [sp, #-16]!
+
+    mov x1, sp
+    bl smp_do_switch_boot_cpu
+    // unreachable
+    b .
+
+.globl smp_switch_boot_cpu_exit
+.type smp_switch_boot_cpu_exit, @function
+smp_switch_boot_cpu_exit:
+    mov sp, x1
+    ldp x17, x18, [sp], #16
+    ldp x19, x20, [sp], #16
+    ldp x21, x22, [sp], #16
+    ldp x23, x24, [sp], #16
+    ldp x25, x26, [sp], #16
+    ldp x27, x28, [sp], #16
+    ldp x29, x30, [sp], #16
+    // passes argument in x0 as return value
+    ret // looks like a return from smp_switch_boot_cpu_entry on the new boot cpu
