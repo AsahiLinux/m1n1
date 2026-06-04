@@ -228,7 +228,9 @@ void print_regs(u64 *regs, int el12)
     printf("L2C_ERR_STS: 0x%lx\n", sts);
     printf("L2C_ERR_ADR: 0x%lx\n", mrs(SYS_IMP_APL_L2C_ERR_ADR));
     printf("L2C_ERR_INF: 0x%lx\n", mrs(SYS_IMP_APL_L2C_ERR_INF));
-    msr(SYS_IMP_APL_L2C_ERR_STS, sts);
+    if (cpu_features->apple_sysregs_unlocked) {
+        msr(SYS_IMP_APL_L2C_ERR_STS, sts);
+    }
 
     if (is_ecore()) {
         printf("E_LSU_ERR_STS: 0x%lx\n", mrs(SYS_IMP_APL_E_LSU_ERR_STS));
@@ -331,8 +333,10 @@ void exc_sync(u64 *regs)
     if (!(exc_guard & GUARD_SILENT))
         print_regs(regs, el12);
 
-    u64 l2c_err_sts = mrs(SYS_IMP_APL_L2C_ERR_STS);
-    msr(SYS_IMP_APL_L2C_ERR_STS, l2c_err_sts); // Clear the L2C_ERR flag bits
+    if (cpu_features->apple_sysregs_unlocked) {
+        u64 l2c_err_sts = mrs(SYS_IMP_APL_L2C_ERR_STS);
+        msr(SYS_IMP_APL_L2C_ERR_STS, l2c_err_sts); // Clear the L2C_ERR flag bits
+    }
 
     switch (exc_guard & GUARD_TYPE_MASK) {
         case GUARD_SKIP:
