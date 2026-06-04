@@ -96,7 +96,7 @@ void hv_init(void)
     }
 
     // Set deep WFI back to defaults
-    if (cpu_features->cyc_ovrd)
+    if (cpu_features->apple_sysregs_unlocked)
         reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
 
     sysop("dsb ishst");
@@ -210,7 +210,7 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
     msr(SYS_IMP_APL_SPRR_CONFIG_EL1, info->sprr_config);
     msr(SYS_IMP_APL_GXF_CONFIG_EL1, info->gxf_config);
 
-    if (cpu_features->cyc_ovrd)
+    if (cpu_features->apple_sysregs_unlocked)
         reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
 
     if (gxf_enabled())
