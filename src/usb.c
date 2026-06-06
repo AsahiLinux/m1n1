@@ -239,9 +239,9 @@ struct iodev iodev_usb_vuart = {
 
 static tps6598x_dev_t *hpm_init(i2c_dev_t *i2c, const char *hpm_path)
 {
-    tps6598x_dev_t *tps = tps6598x_init(hpm_path, i2c);
+    tps6598x_dev_t *tps = tps6598x_init_i2c(hpm_path, i2c);
     if (!tps) {
-        printf("usb: tps6598x_init failed for %s.\n", hpm_path);
+        printf("usb: tps6598x_init_i2c failed for %s.\n", hpm_path);
         return NULL;
     }
 
