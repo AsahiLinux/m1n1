@@ -8,7 +8,7 @@
 
 typedef struct tps6598x_dev tps6598x_dev_t;
 
-tps6598x_dev_t *tps6598x_init(const char *adt_path, i2c_dev_t *i2c);
+tps6598x_dev_t *tps6598x_init_i2c(const char *adt_path, i2c_dev_t *i2c);
 void tps6598x_shutdown(tps6598x_dev_t *dev);
 
 int tps6598x_command(tps6598x_dev_t *dev, const char *cmd, const u8 *data_in, size_t len_in,
