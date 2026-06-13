@@ -137,7 +137,7 @@ static int raw_command(spmi_dev_t *dev, u8 addr, u8 opc, u16 extra, const u8 *da
 
     if (FIELD_GET(SPMI_REPLY_FRAME_PARITY, reply) != MASK(len_out))
         return -SPMI_ERR_BUS_IO;
-    if (!len_in && !(reply & SPMI_REPLY_ACK))
+    if (!len_out && !(reply & SPMI_REPLY_ACK))
         return -SPMI_ERR_BUS_IO;
     return 0;
 }
