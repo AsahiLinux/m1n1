@@ -14,7 +14,7 @@
 #define TPS_REG_INT_MASK1   0x16
 #define TPS_REG_INT_CLEAR1  0x18
 #define TPS_REG_POWER_STATE 0x20
-#define TPS_CMD_INVALID     0x21434d44 // !CMD
+#define TPS_CMD_INVALID     0x444d4321 // !CMD as LE u32
 
 struct tps6598x_dev {
     i2c_dev_t *i2c;
