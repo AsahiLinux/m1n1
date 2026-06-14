@@ -23,6 +23,7 @@
 #include "sep.h"
 #include "smp.h"
 #include "string.h"
+#include "tps6598x.h"
 #include "uart.h"
 #include "uartproxy.h"
 #include "usb.h"
@@ -160,6 +161,9 @@ void m1n1_main(void)
     wdt_disable();
 #ifndef BRINGUP
     pmgr_init();
+#ifdef USE_DEBUG_USB
+    tps6598x_enable_debugusb();
+#endif
 #ifdef USE_FB
     display_init();
     // Kick DCP to sleep, so dodgy monitors which cause reconnect cycles don't cause us to lose the
