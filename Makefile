@@ -205,9 +205,9 @@ format:
 format-check:
 	$(CLANG_FORMAT) --dry-run --Werror src/*.c src/dcp/*.c src/math/*.c src/*.h src/dcp/*.h src/math/*.h sysinc/*.h
 rustfmt:
-	cd rust && cargo fmt
+	cd rust && cargo fmt -p rust -p versions
 rustfmt-check:
-	cd rust && cargo fmt --check
+	cd rust && cargo fmt --check -p rust -p versions
 
 build/$(RUST_LIB): src/../build/build_cfg.h rust/src/*.rs rust/src/gpu/*.rs rust/src/gpu/hw/*.rs rust/Cargo.toml rust/Cargo.lock
 	$(QUIET)echo "  RS    $@"
