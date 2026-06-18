@@ -193,7 +193,8 @@ void hv_start(void *entry, u64 regs[4])
 
 static void hv_init_secondary(struct hv_secondary_info_t *info)
 {
-    gxf_init();
+    if (cpu_features->apple_sysregs_unlocked)
+        gxf_init();
 
     msr(VBAR_EL1, _hv_vectors_start);
 
@@ -203,18 +204,23 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
     msr(VTTBR_EL2, info->vttbr);
     msr(MDCR_EL2, info->mdcr);
     msr(MDSCR_EL1, info->mdscr);
-    msr(SYS_IMP_APL_AMX_CTL_EL2, info->amx_ctl);
-    msr(SYS_IMP_APL_APVMKEYLO_EL2, info->apvmkeylo);
-    msr(SYS_IMP_APL_APVMKEYHI_EL2, info->apvmkeyhi);
-    msr(SYS_IMP_APL_APSTS_EL12, info->apsts);
+
+    if (cpu_features->apple_sysregs_unlocked) {
+        msr(SYS_IMP_APL_AMX_CTL_EL2, info->amx_ctl);
+        msr(SYS_IMP_APL_APVMKEYLO_EL2, info->apvmkeylo);
+        msr(SYS_IMP_APL_APVMKEYHI_EL2, info->apvmkeyhi);
+        msr(SYS_IMP_APL_APSTS_EL12, info->apsts);
+    }
     msr(ACTLR_EL2, info->actlr_el2);
     if (cpu_features->actlr_el2)
         msr(SYS_ACTLR_EL12, info->actlr_el1);
     else
         msr(SYS_IMP_APL_ACTLR_EL12, info->actlr_el1);
     msr(CNTHCTL_EL2, info->cnthctl);
-    msr(SYS_IMP_APL_SPRR_CONFIG_EL1, info->sprr_config);
-    msr(SYS_IMP_APL_GXF_CONFIG_EL1, info->gxf_config);
+    if (cpu_features->apple_sysregs_unlocked) {
+        msr(SYS_IMP_APL_SPRR_CONFIG_EL1, info->sprr_config);
+        msr(SYS_IMP_APL_GXF_CONFIG_EL1, info->gxf_config);
+    }
     if (cpu_features->counter_redirect) {
         msr(SYS_IMP_APL_AGTCNTRDIR_EL1, info->agt_cnt_rdir_el1);
         msr(SYS_IMP_APL_AGTCNTRDIR_EL12, info->agt_cnt_rdir_el12);
