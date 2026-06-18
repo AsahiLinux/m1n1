@@ -5,6 +5,7 @@ from enum import IntEnum, IntFlag
 from serial.tools.miniterm import Miniterm
 
 from .utils import *
+from .constructutils import bool_
 from .sysreg import *
 
 __all__ = ["REGION_RWX_EL0", "REGION_RW_EL0", "REGION_RX_EL1"]
@@ -480,6 +481,35 @@ REGION_RWX_EL0 = 0x80000000000
 REGION_RW_EL0 = 0xa0000000000
 REGION_RX_EL1 = 0xc0000000000
 
+SleepMode = "SleepMode" / Enum(Int32ul,
+    SLEEP_NONE = 0,
+    SLEEP_LEGACY = 1,
+    SLEEP_GLOBAL = 2,
+)
+
+UncoreVersion = "UncoreVersion" / Enum(Int32ul,
+    UNCORE_NONE = 0,
+    UNCORE_V1 = 1,
+    UNCORE_V2 = 2,
+)
+
+CPUFeatures = Struct(
+    "sleep_mode" / SleepMode,
+    "uncore_version" / UncoreVersion,
+    "disable_dc_mva" / bool_,
+    "acc_cfg" / bool_,
+    "apple_sysregs_unlocked" / bool_,
+    "workaround_cyclone_cache" / bool_,
+    "nex_powergating" / bool_,
+    "fast_ipi" / bool_,
+    "mmu_sprr" / bool_,
+    "siq_cfg" / bool_,
+    "amx" / bool_,
+    "actlr_el2" / bool_,
+    "counter_redirect" / bool_,
+    "padding" / Bytes(1),
+)
+
 # Uses UartInterface.proxyreq() to send requests to M1N1 and process
 # responses sent back.
 class M1N1Proxy(Reloadable):
@@ -506,6 +536,7 @@ class M1N1Proxy(Reloadable):
     P_SLEEP = 0x011
     P_EL3_CALL = 0x012
     P_GET_CHIPID = 0x013
+    P_GET_CPU_FEATURES = 0x014
 
     P_WRITE64 = 0x100
     P_WRITE32 = 0x101
@@ -740,6 +771,11 @@ class M1N1Proxy(Reloadable):
         return (ba_addr, rev)
     def get_base(self):
         return self.request(self.P_GET_BASE)
+    def get_cpu_features(self):
+        addr = self.request(self.P_GET_CPU_FEATURES, CPUFeatures.sizeof())
+        if not addr:
+            raise ValueError("Size mismatch (Outdated CPUFeatures struct definition?)")
+        return self.iface.readstruct(addr, CPUFeatures)
     def set_baud(self, baudrate):
         self.iface.tty_enable = False
         def change():
