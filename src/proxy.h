@@ -26,6 +26,7 @@ typedef enum {
     P_SLEEP,
     P_EL3_CALL,
     P_GET_CHIPID,
+    P_GET_CPU_FEATURES,
 
     P_WRITE64 = 0x100, // Generic register functions
     P_WRITE32,
