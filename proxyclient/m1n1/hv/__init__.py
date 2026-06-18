@@ -714,7 +714,10 @@ class HV(Reloadable):
                 sys.stdout.flush()
                 if enc in xlate:
                     value = self.p.hv_translate(value, True, False)
-                self.u.msr(enc2, value, call=self.p.gl2_call)
+                call=None
+                if self.u.cpu_features.apple_sysregs_unlocked:
+                    call=self.p.gl2_call
+                self.u.msr(enc2, value, call=call)
                 self.log(f"Pass: msr {name}, x{iss.Rt} = {value:x} (OK) ({sysreg_name(enc2)})")
 
         ctx.elr += 4
@@ -1429,15 +1432,16 @@ class HV(Reloadable):
         self.u.msr(MDCR_EL2, mdcr.value)
         self.u.msr(MDSCR_EL1, MDSCR(MDE=1).value)
 
-        # Enable AMX
-        amx_ctl = AMX_CONFIG(self.u.mrs(AMX_CONFIG_EL1))
-        amx_ctl.EN_EL1 = 1
-        self.u.msr(AMX_CONFIG_EL1, amx_ctl.value)
+        if self.u.cpu_features.apple_sysregs_unlocked:
+            # Enable AMX
+            amx_ctl = AMX_CONFIG(self.u.mrs(AMX_CONFIG_EL1))
+            amx_ctl.EN_EL1 = 1
+            self.u.msr(AMX_CONFIG_EL1, amx_ctl.value)
 
-        # Set guest AP keys
-        self.u.msr(VMKEYLO_EL2, 0x4E7672476F6E6147)
-        self.u.msr(VMKEYHI_EL2, 0x697665596F755570)
-        self.u.msr(APSTS_EL12, 1)
+            # Set guest AP keys
+            self.u.msr(VMKEYLO_EL2, 0x4E7672476F6E6147)
+            self.u.msr(VMKEYHI_EL2, 0x697665596F755570)
+            self.u.msr(APSTS_EL12, 1)
 
         self.map_vuart()
 
@@ -1968,11 +1972,12 @@ class HV(Reloadable):
         print("Shutting down framebuffer...")
         self.p.fb_shutdown(True)
 
-        print("Enabling SPRR...")
-        self.u.msr(SPRR_CONFIG_EL1, 1)
+        if self.u.cpu_features.apple_sysregs_unlocked:
+            print("Enabling SPRR...")
+            self.u.msr(SPRR_CONFIG_EL1, 1)
 
-        print("Enabling GXF...")
-        self.u.msr(GXF_CONFIG_EL1, 1)
+            print("Enabling GXF...")
+            self.u.msr(GXF_CONFIG_EL1, 1)
 
         print(f"Jumping to entrypoint at 0x{self.entry:x}")
 
