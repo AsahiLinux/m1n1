@@ -71,6 +71,8 @@ void init_t8122_everest(int rev)
             HID18_GEXIT_EL_SPECULATION_DISABLE | HID18_GENTER_SPECULATION_DISABLE);
     reg_clr(s3_0_c15_c2_4, BIT(0) | BIT(1) | BIT(16) | BIT(17) | BIT(18) | BIT(22));
     reg_set(SYS_IMP_APL_HID16, BIT(54));
+
+    reg_set(SYS_IMP_APL_HID4, HID4_ENABLE_LFSR_STALL_LOAD_PIPE2_ISSUE);
 }
 
 void init_t6030_everest(int rev)
