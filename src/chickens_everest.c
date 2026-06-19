@@ -8,6 +8,8 @@ static void init_common_everest(void)
 {
     reg_set(SYS_IMP_APL_HID9, BIT(17));
 
+    reg_set(SYS_IMP_APL_HID16, BIT(54));
+
     reg_set(SYS_IMP_APL_HID18,
             HID18_GEXIT_EL_SPECULATION_DISABLE | HID18_GENTER_SPECULATION_DISABLE);
 
@@ -45,7 +47,6 @@ void init_t8122_everest(int rev)
                                 (0x1 << 24)));
 
     reg_clr(s3_0_c15_c2_4, BIT(0) | BIT(1) | BIT(16) | BIT(17) | BIT(18) | BIT(22));
-    reg_set(SYS_IMP_APL_HID16, BIT(54));
 
     reg_set(SYS_IMP_APL_HID4, HID4_ENABLE_LFSR_STALL_LOAD_PIPE2_ISSUE);
 }
@@ -55,7 +56,6 @@ void init_t6030_everest(int rev)
     UNUSED(rev);
     init_common_everest();
 
-    reg_set(SYS_IMP_APL_HID16, BIT(54));
     reg_set(SYS_IMP_APL_HID3, HID3_DEV_PCIE_THROTTLE_ENABLE);
     reg_mask(SYS_IMP_APL_HID3, HID3_DEV_PCIE_THROTTLE_LIMIT_MASK, HID3_DEV_PCIE_THROTTLE_LIMIT(60));
     reg_clr(SYS_IMP_APL_HID3, BIT(4));
@@ -104,7 +104,6 @@ void init_t6031_everest(int rev)
                  HID13_GROUP0_FF1_DELAY(4) | HID13_GROUP0_FF2_DELAY(4) | HID13_GROUP0_FF3_DELAY(4) |
                  HID13_GROUP0_FF4_DELAY(4) | HID13_GROUP0_FF5_DELAY(4) | HID13_GROUP0_FF6_DELAY(4) |
                  HID13_GROUP0_FF7_DELAY(4) | HID13_RESET_CYCLES(0));
-    reg_set(SYS_IMP_APL_HID16, BIT(54));
 
     msr(SYS_IMP_APL_HID26, HID26_GROUP1_OFFSET(0xF88F65588LL) | HID26_GROUP2_OFFSET(0x3F28));
     /* This is new to M3 and i have no idea what it is yet */
