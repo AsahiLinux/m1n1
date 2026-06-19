@@ -6,6 +6,7 @@
 
 static void init_common_everest(void)
 {
+    reg_set(SYS_IMP_APL_HID9, BIT(17));
 }
 
 void init_t8122_everest(int rev)
@@ -15,7 +16,6 @@ void init_t8122_everest(int rev)
 
     reg_clr(SYS_IMP_APL_HID3, BIT(2));
     reg_mask(SYS_IMP_APL_HID3, GENMASK(62, 56), BIT(59));
-    reg_set(SYS_IMP_APL_HID9, BIT(17));
 
     reg_mask(SYS_IMP_APL_HID13,
              HID13_POST_OFF_CYCLES_MASK | HID13_POST_ON_CYCLES_MASK | HID13_GROUP0_FF1_DELAY_MASK |
@@ -57,7 +57,6 @@ void init_t6030_everest(int rev)
     reg_set(SYS_IMP_APL_HID3, HID3_DEV_PCIE_THROTTLE_ENABLE);
     reg_mask(SYS_IMP_APL_HID3, HID3_DEV_PCIE_THROTTLE_LIMIT_MASK, HID3_DEV_PCIE_THROTTLE_LIMIT(60));
     reg_clr(SYS_IMP_APL_HID3, BIT(4));
-    reg_set(SYS_IMP_APL_HID9, BIT(17));
     reg_mask(SYS_IMP_APL_HID13,
              HID13_POST_OFF_CYCLES_MASK | HID13_POST_ON_CYCLES_MASK | HID13_PRE_CYCLES_MASK |
                  HID13_GROUP0_FF0_DELAY_MASK | HID13_GROUP0_FF1_DELAY_MASK |
@@ -100,7 +99,6 @@ void init_t6031_everest(int rev)
     reg_set(SYS_IMP_APL_HID3, HID3_DEV_PCIE_THROTTLE_ENABLE);
     reg_mask(SYS_IMP_APL_HID3, GENMASK(ULONG(62), ULONG(56)), BIT(60) | BIT(59) | BIT(58));
     reg_clr(SYS_IMP_APL_HID3, BIT(4));
-    reg_set(SYS_IMP_APL_HID9, BIT(17));
     reg_mask(SYS_IMP_APL_HID13,
              HID13_POST_OFF_CYCLES_MASK | HID13_POST_ON_CYCLES_MASK | HID13_PRE_CYCLES_MASK |
                  HID13_GROUP0_FF1_DELAY_MASK | HID13_GROUP0_FF2_DELAY_MASK |
