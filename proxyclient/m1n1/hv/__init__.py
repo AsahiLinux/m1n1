@@ -1580,6 +1580,19 @@ class HV(Reloadable):
             self.map_hook(pmgr0_start + cpu_start, 0x20, write=cpustart_wh)
             self.add_tracer(zone, "CPU_START", TraceMode.RESERVED)
 
+        if not self.u.cpu_features.apple_sysregs_unlocked:
+
+            def rvbar_rh(base, off, width):
+                ret = self.entry & ~0xfff | 1
+                self.log(f"RVBAR R {base:x}+{off:x}:{width} -> 0x{ret:x}")
+                return ret
+
+            for cpu in self.adt["cpus"]:
+                addr, _ = cpu.cpu_impl_reg
+                zone = irange(addr, 4)
+                self.map_hook(addr, 4, read=rvbar_rh)
+                self.add_tracer(zone, "RVBAR", TraceMode.RESERVED)
+
     def start_secondary(self, die, cluster, cpu):
         self.log(f"Starting guest secondary {die}:{cluster}:{cpu}")
 
@@ -1590,7 +1603,10 @@ class HV(Reloadable):
             self.log("CPU not found!")
             return
 
-        entry = self.p.read64(node.cpu_impl_reg[0]) & 0xfffffffffff
+        if self.u.cpu_features.apple_sysregs_unlocked:
+            entry = self.p.read64(node.cpu_impl_reg[0]) & 0xfffffffffff
+        else:
+            entry = self.entry & ~0xfff
         index = node.cpu_id
         self.log(f" CPU #{index}: RVBAR = {entry:#x}")
 
@@ -1783,14 +1799,15 @@ class HV(Reloadable):
         elif self.tba.revision == 3:
             self.iface.writemem(guest_base + self.bootargs_off, BootArgs_r3.build(self.tba))
 
-        print("Setting secondary CPU RVBARs...")
-        rvbar = self.entry & ~0xfff
-        for cpu in self.adt["cpus"]:
-            if cpu.state == "running":
-                continue
-            addr, size = cpu.cpu_impl_reg
-            print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
-            self.p.write64(addr, rvbar)
+        if self.u.cpu_features.apple_sysregs_unlocked:
+            print("Setting secondary CPU RVBARs...")
+            rvbar = self.entry & ~0xfff
+            for cpu in self.adt["cpus"]:
+                if cpu.state == "running":
+                    continue
+                addr, size = cpu.cpu_impl_reg
+                print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
+                self.p.write64(addr, rvbar)
 
     def _load_macho_symbols(self):
         self.symbol_dict = self.macho.symbols
