@@ -19,6 +19,8 @@ static void init_common_everest(void)
                  GENMASK(7, 4) | GENMASK(3, 0),
              BIT(40) | BIT(36) | BIT(32) | BIT(28) | BIT(24) | BIT(20) | BIT(16) | 0x2b00uL |
                  BIT(4) | BIT(0));
+
+    reg_clr(s3_0_c15_c2_4, BIT(0) | BIT(1) | BIT(16) | BIT(17) | BIT(18) | BIT(22));
 }
 
 void init_t8122_everest(int rev)
@@ -45,8 +47,6 @@ void init_t8122_everest(int rev)
                             (0x2 << 24) | (0x2 << 28) | (0x2uL << 32)) |
             HID26_GROUP2_OFFSET(0x23 | (0x1 << 8) | (0x1 << 12) | (0x1 << 16) | (0x1 << 20) |
                                 (0x1 << 24)));
-
-    reg_clr(s3_0_c15_c2_4, BIT(0) | BIT(1) | BIT(16) | BIT(17) | BIT(18) | BIT(22));
 
     reg_set(SYS_IMP_APL_HID4, HID4_ENABLE_LFSR_STALL_LOAD_PIPE2_ISSUE);
 }
@@ -80,7 +80,6 @@ void init_t6030_everest(int rev)
     reg_set(SYS_IMP_APL_HID18, BIT(61));
 
     reg_set(s3_0_c15_c2_3, BIT(3));
-    reg_clr(s3_0_c15_c2_4, BIT(0) | BIT(1) | BIT(16) | BIT(17) | BIT(18) | BIT(22));
 
     reg_set(SYS_IMP_APL_HID4, HID4_ENABLE_LFSR_STALL_LOAD_PIPE2_ISSUE);
 }
@@ -108,7 +107,6 @@ void init_t6031_everest(int rev)
     msr(SYS_IMP_APL_HID26, HID26_GROUP1_OFFSET(0xF88F65588LL) | HID26_GROUP2_OFFSET(0x3F28));
     /* This is new to M3 and i have no idea what it is yet */
     reg_set(s3_0_c15_c2_3, BIT(3));
-    reg_clr(s3_0_c15_c2_4, BIT(0) | BIT(1) | BIT(16) | BIT(17) | BIT(18) | BIT(22));
 
     reg_set(SYS_IMP_APL_HID4, HID4_ENABLE_LFSR_STALL_LOAD_PIPE2_ISSUE);
 }
