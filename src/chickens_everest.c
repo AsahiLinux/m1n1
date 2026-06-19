@@ -7,6 +7,9 @@
 static void init_common_everest(void)
 {
     reg_set(SYS_IMP_APL_HID9, BIT(17));
+
+    reg_set(SYS_IMP_APL_HID18,
+            HID18_GEXIT_EL_SPECULATION_DISABLE | HID18_GENTER_SPECULATION_DISABLE);
 }
 
 void init_t8122_everest(int rev)
@@ -40,8 +43,7 @@ void init_t8122_everest(int rev)
                  GENMASK(7, 4) | GENMASK(3, 0),
              BIT(40) | BIT(36) | BIT(32) | BIT(28) | BIT(24) | BIT(20) | BIT(16) | 0x2b00uL |
                  BIT(4) | BIT(0));
-    reg_set(SYS_IMP_APL_HID18,
-            HID18_GEXIT_EL_SPECULATION_DISABLE | HID18_GENTER_SPECULATION_DISABLE);
+
     reg_clr(s3_0_c15_c2_4, BIT(0) | BIT(1) | BIT(16) | BIT(17) | BIT(18) | BIT(22));
     reg_set(SYS_IMP_APL_HID16, BIT(54));
 
@@ -81,8 +83,7 @@ void init_t6030_everest(int rev)
              BIT(40) | BIT(36) | BIT(32) | BIT(28) | BIT(24) | BIT(20) | BIT(16) | 0x2b00uL |
                  BIT(4) | BIT(0));
 
-    reg_set(SYS_IMP_APL_HID18,
-            BIT(61) | HID18_GENTER_SPECULATION_DISABLE | HID18_GEXIT_EL_SPECULATION_DISABLE);
+    reg_set(SYS_IMP_APL_HID18, BIT(61));
 
     reg_set(s3_0_c15_c2_3, BIT(3));
     reg_clr(s3_0_c15_c2_4, BIT(0) | BIT(1) | BIT(16) | BIT(17) | BIT(18) | BIT(22));
@@ -110,8 +111,6 @@ void init_t6031_everest(int rev)
                  HID13_GROUP0_FF4_DELAY(4) | HID13_GROUP0_FF5_DELAY(4) | HID13_GROUP0_FF6_DELAY(4) |
                  HID13_GROUP0_FF7_DELAY(4) | HID13_RESET_CYCLES(0));
     reg_set(SYS_IMP_APL_HID16, BIT(54));
-    reg_set(SYS_IMP_APL_HID18,
-            HID18_GEXIT_EL_SPECULATION_DISABLE | HID18_GENTER_SPECULATION_DISABLE);
 
     msr(SYS_IMP_APL_HID26, HID26_GROUP1_OFFSET(0xF88F65588LL) | HID26_GROUP2_OFFSET(0x3F28));
     reg_mask(SYS_IMP_APL_HID27,
