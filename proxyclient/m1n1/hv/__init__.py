@@ -1491,13 +1491,11 @@ class HV(Reloadable):
         pmgr_hooks = []
 
         def hook_pmgr_dev(dev):
-            ps = pmgr.ps_regs[dev.psreg]
-            if dev.psidx or dev.psreg:
-                addr = pmgr.get_reg(ps.reg)[0] + ps.offset + dev.psidx * 8
-                pmgr_hooks.append(addr)
-                for idx in self.adt.pmgr_dev_get_parents(dev):
-                    if idx in dev_by_id:
-                        hook_pmgr_dev(dev_by_id[idx])
+            addr = self.adt.pmgr_dev_get_addr(dev)
+            pmgr_hooks.append(addr)
+            for idx in self.adt.pmgr_dev_get_parents(dev):
+                if idx in dev_by_id:
+                    hook_pmgr_dev(dev_by_id[idx])
 
         for name in hook_devs:
             dev = dev_by_name[name]
