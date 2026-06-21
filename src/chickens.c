@@ -155,6 +155,8 @@ const struct midr_part_info midr_parts[] = {
     {MIDR_PART_T8132_DONAN_PCORE, "M4 Donan (P core)", NULL, &features_m4},
     {MIDR_PART_T6040_BRAVA_CHOP_ECORE, "M4 Pro Brava Chop (E core)", NULL, &features_m4},
     {MIDR_PART_T6040_BRAVA_CHOP_PCORE, "M4 Pro Brava Chop (P core)", NULL, &features_m4},
+    {MIDR_PART_T6041_BRAVA_ECORE, "M4 Max Brava (E core)", NULL, &features_m4},
+    {MIDR_PART_T6041_BRAVA_PCORE, "M4 Max Brava (P core)", NULL, &features_m4},
     {MIDR_PART_T8140_TAHITI_ECORE, "A18 Pro Tahiti (E core)", NULL, &features_m4},
     {MIDR_PART_T8140_TAHITI_PCORE, "A18 Pro Tahiti (P core)", NULL, &features_m4},
     {MIDR_PART_T8142_HIDRA_ECORE, "M5 Hidra (E core)", NULL, &features_m4},
