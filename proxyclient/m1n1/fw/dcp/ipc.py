@@ -7,7 +7,7 @@ from enum import IntEnum
 from ..common import *
 from m1n1.utils import *
 from construct import *
-from m1n1.constructutils import Ver
+from m1n1.constructutils import Ver, Bool, bool_
 
 @dataclass
 class ByRef:
