@@ -890,4 +890,9 @@ def show_struct_trace(log=print):
     for addr, desc in sorted(list(g_struct_trace)):
         log(f"{addr:>#18x}: {desc}")
 
-__all__ = ["ConstructClass", "ConstructValueClass", "Dec", "ROPointer", "show_struct_trace", "ZPadding", "Ver"]
+def Bool(c):
+    return ExprAdapter(c, lambda d, ctx: bool(d & 1), lambda d, ctx: int(d))
+
+bool_ = Bool(Int8ul)
+
+__all__ = ["ConstructClass", "ConstructValueClass", "Dec", "ROPointer", "show_struct_trace", "ZPadding", "Ver", "Bool", "bool_"]
