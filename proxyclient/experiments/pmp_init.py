@@ -169,18 +169,20 @@ class PMPEp(ASCBaseEndpoint):
     @msg_handler(0x10, PMPMessage)
     def GetIOVATable(self, msg):
         self.log(f'IovaTable: {msg}')
-        table, table_dva = self.asc.ioalloc(512)
-        self.asc.iowrite(table_dva, b'\0' * 512)
-        pio_base = u.adt["/arm-io/dart-pmp"].pio_vm_base
-        granularity = u.adt["/arm-io/dart-pmp"].pio_granularity
-        i = 0
-        for j in range(4, len(u.adt["/arm-io/pmp"].reg)):
-            host_addr, size = u.adt["/arm-io/pmp"].get_reg(j)
-            self.asc.dart.iomap_at(0, pio_base, host_addr, size)
-            self.asc.dart.invalidate_streams(1)
-            self.asc.iowrite(table_dva + 24 * i, struct.pack("<QQQ", host_addr, pio_base, size))
-            pio_base += granularity
-            i += 1
+        table_dva = 0
+        if u.adt['/arm-io'].compatible[0][:11] in ['arm-io,t600']:
+            table, table_dva = self.asc.ioalloc(512)
+            self.asc.iowrite(table_dva, b'\0' * 512)
+            pio_base = u.adt["/arm-io/dart-pmp"].pio_vm_base
+            granularity = u.adt["/arm-io/dart-pmp"].pio_granularity
+            i = 0
+            for j in range(4, len(u.adt["/arm-io/pmp"].reg)):
+                host_addr, size = u.adt["/arm-io/pmp"].get_reg(j)
+                self.asc.dart.iomap_at(0, pio_base, host_addr, size)
+                self.asc.dart.invalidate_streams(1)
+                self.asc.iowrite(table_dva + 24 * i, struct.pack("<QQQ", host_addr, pio_base, size))
+                pio_base += granularity
+                i += 1
         self.send(PMPMessage_IOVATableAck(IOVA=table_dva))
     @msg_handler(0x12, PMPMessage_Malloc)
     def Malloc(self, msg):
@@ -243,18 +245,44 @@ class PMPClient(StandardASC, AOPBase):
         super().__init__(u, asc_base, dart)
         self.dart = dart
 
+pmp_ptd_range = u.adt['/arm-io/pmp/iop-pmp-nub'].ptd_range
+pmp_ptd_range_map = {}
+for i in range(len(pmp_ptd_range) // 32):
+    id, offset, _, name = struct.unpack('<II8s16s', pmp_ptd_range[i*32:(i+1)*32])
+    pmp_ptd_range_map[name.strip(b'\x00')] = offset
+
+pmp_bits = {dev.name: dev.id1 - 1 for dev in u.adt['/arm-io/pmgr'].devices if dev.id1 != 0}
+
 if u.adt['/arm-io'].compatible[0].startswith('arm-io,t8103'):
     print("you have a pmp v1, this script is for v2 only")
     exit(1)
-elif u.adt['/arm-io'].compatible[0].startswith('arm-io,t600'):
-    p.write64(0x28e3d07c0, 0x1000)
-elif u.adt['/arm-io'].compatible[0].startswith('arm-io,t602'):
-    p.write64(0x28e3d1000, 0x2000)
+elif u.adt['/arm-io'].compatible[0].startswith(('arm-io,t600', 'arm-io,t602')):
+    pmp_base = 0x28e3c0000
+    enable_devices=['DISP0_FE']
 elif u.adt['/arm-io'].compatible[0].startswith('arm-io,t8112'):
-    p.write64(0x23b3d0500, 0x80)
+    pmp_base = 0x23b3c0000
+    enable_devices=['DISP0_SYS']
+elif u.adt['/arm-io'].compatible[0].startswith('arm-io,t8122'):
+    # untested
+    pmp_base = 0x2d03c0000
+    enable_devices=['DISP_SYS']
+elif u.adt['/arm-io'].compatible[0].startswith('arm-io,t6030'):
+    # untested
+    pmp_base = 0x3503c0000
+    enable_devices=['DISP_SYS']
+elif u.adt['/arm-io'].compatible[0].startswith(('arm-io,t6031', 'arm-io,t6034')):
+    pmp_base = 0x2903c0000
+    enable_devices=['DISP_FE']
 else:
-    print("FIXME: put the correct SOC-DEV-PS-REQ offset for your machine here")
+    print("FIXME: put the correct pmgr PMS_PTS_PTD reg for your machine here")
     exit(1)
+
+tgt_wr = pmp_ptd_range_map[b'SOC-DEV-PS-REQ'] * 8 + 0x10000
+enable_val = 0
+for dev in enable_devices:
+    enable_val |= 1 << pmp_bits[dev]
+p.write64(pmp_base + tgt_wr, enable_val)
+
 
 dart = DART.from_adt(u, "/arm-io/dart-pmp")
 dart.verbose = 1
@@ -262,11 +290,13 @@ dart.initialize()
 
 pmp = PMPClient(u, "/arm-io/pmp", dart)
 pmp.verbose = 4
-pmp.update_bootargs({
-     'BDID'[::-1]: u.adt['/chosen'].board_id,
-     'DCAP'[::-1]: u.adt["/arm-io/pmp/iop-pmp-nub"].dram_capacity,
-     'DVID'[::-1]: u.adt['/chosen'].dram_vendor_id,
-})
+bootargs = {
+    'BDID'[::-1]: u.adt['/chosen'].board_id,
+    'DVID'[::-1]: u.adt['/chosen'].dram_vendor_id,
+}
+if u.adt['/arm-io'].compatible[0][:11] in ['arm-io,t600']:
+    bootargs['DCAP'[::-1]] = u.adt["/arm-io/pmp/iop-pmp-nub"].dram_capacity
+pmp.update_bootargs(bootargs)
 p.dapf_init_all()
 
 pmp.start()
