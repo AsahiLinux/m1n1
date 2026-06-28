@@ -29,8 +29,10 @@ print("DEV_STATUS_ACT:", hex(pmp_ptd_range_map[b'SOC-DEV-PS-ACK'] * 16))
 print("PMP_STATUS:", hex(pmp_ptd_range_map[b'PMP-STATUS'] * 16))
 print()
 
-
-pmp_bits = [(dev.name, dev.id1 - 1) for dev in dt['/arm-io/pmgr'].devices if dev.flags.notify_pmp]
-pmp_bits.sort(key=lambda x: x[1])
-for n, b in pmp_bits:
-    print(n + ': ' + hex(b))
+for dev in sorted(dt['/arm-io/pmgr'].devices, key=lambda dev: dev.id1):
+    if dev.id1 == 0:
+        continue
+    s = f"\t{hex(dev.id1 - 1)}:\t{dev.name}"
+    if dev.flags.notify_pmp:
+        s += " (notify_pmp)"
+    print(s)

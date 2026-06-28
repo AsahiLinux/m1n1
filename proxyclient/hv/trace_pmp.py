@@ -140,7 +140,7 @@ for i in range(len(pmp_ptd_range) // 32):
 class R_PmpStatus(Register64):
     READY = 0
 
-pmp_bits = {dev.name:(dev.id1 - 1) for dev in u.adt['/arm-io/pmgr'].devices if dev.flags.notify_pmp}
+pmp_bits = {dev.name:(dev.id1 - 1) for dev in u.adt['/arm-io/pmgr'].devices if dev.id1 != 0}
 print(pmp_bits)
 
 R_StatusMap = type('R_StatusMap', (Register64,), pmp_bits)
