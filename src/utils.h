@@ -335,7 +335,8 @@ static inline bool has_ecores(void)
 
 static inline int is_ecore(void)
 {
-    return has_ecores() && !(mrs(MPIDR_EL1) & (1 << 16));
+    u32 mpidr_el1 = mrs(MPIDR_EL1);
+    return has_ecores() && !(mpidr_el1 & (1 << 16)) && !(mpidr_el1 & (4 << 16));
 }
 
 static inline int in_el2(void)
