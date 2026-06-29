@@ -54,8 +54,10 @@
 #define MIDR_PART_T6051_SOTRAC_MCORE     0x68
 #define MIDR_PART_T6051_SOTRAC_PCORE     0x69
 
-#define MIDR_REV_LOW  GENMASK(3, 0)
-#define MIDR_PART     GENMASK(15, 4)
-#define MIDR_REV_HIGH GENMASK(23, 20)
+#define MIDR_REV_LOW     GENMASK(3, 0)
+#define MIDR_PART        GENMASK(15, 4)
+#define MIDR_CORE_TYPE_P BIT(16)
+#define MIDR_CORE_TYPE_M BIT(18)
+#define MIDR_REV_HIGH    GENMASK(23, 20)
 
 #endif
