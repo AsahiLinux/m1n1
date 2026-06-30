@@ -1,6 +1,3 @@
 [submodule "artwork"]
 	path = artwork
 	url = https://github.com/AsahiLinux/artwork.git
-[submodule "rust/vendor/rust-fatfs"]
-	path = rust/vendor/rust-fatfs
-	url = https://github.com/rafalh/rust-fatfs
