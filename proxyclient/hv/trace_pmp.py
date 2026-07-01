@@ -59,6 +59,8 @@ class PMPEp(EP):
     @msg(0x11, DIR.TX, PMPMessage_IOVATableAck)
     def GetIOVATableAck(self, msg):
         ptr = msg.IOVA
+        if not ptr:
+            return
         lines = []
         self.tracer.dart.invalidate_cache()
         while 1:
@@ -140,7 +142,7 @@ for i in range(len(pmp_ptd_range) // 32):
 class R_PmpStatus(Register64):
     READY = 0
 
-pmp_bits = {dev.name:(dev.id1 - 1) for dev in u.adt['/arm-io/pmgr'].devices if dev.flags.notify_pmp}
+pmp_bits = {dev.name:(dev.id1 - 1) for dev in u.adt['/arm-io/pmgr'].devices if dev.id1 != 0}
 print(pmp_bits)
 
 R_StatusMap = type('R_StatusMap', (Register64,), pmp_bits)
@@ -155,12 +157,33 @@ class PMPRegs(RegMap):
     PMP_STATUS_UNK = (pmp_ptd_range_map[b'PMP-STATUS'] * 16 + 8), Register64
 
 
+if u.adt['/arm-io'].compatible[0].startswith(('arm-io,t600', 'arm-io,t602')):
+    pmp_base = 0x28e3c0000
+    pmp_len = 0x20000
+elif u.adt['/arm-io'].compatible[0].startswith('arm-io,t8112'):
+    pmp_base = 0x23b3c0000
+    pmp_len = 0x20000
+elif u.adt['/arm-io'].compatible[0].startswith('arm-io,t8122'):
+    # untested
+    pmp_base = 0x2d03c0000
+    pmp_len = 0x20000
+elif u.adt['/arm-io'].compatible[0].startswith('arm-io,t6030'):
+    # untested
+    pmp_base = 0x3503c0000
+    pmp_len = 0x24000
+elif u.adt['/arm-io'].compatible[0].startswith(('arm-io,t6031', 'arm-io,t6034')):
+    pmp_base = 0x2903c0000
+    pmp_len = 0x30000
+else:
+    print("FIXME: put the correct pmgr PMS_PTS_PTD reg for your machine here")
+    exit(1)
+
+
 class PMPRegTracer(Tracer):
 
     def start(self):
-        start, len = u.adt['/arm-io/pmgr'].get_reg(41)
         #self.trace(start, len, TraceMode.HOOK)
-        self.trace_regmap(start, len, PMPRegs, name="PMP", regmap_offset=0, mode=TraceMode.SYNC)
+        self.trace_regmap(pmp_base, pmp_len, PMPRegs, name="PMP", regmap_offset=0, mode=TraceMode.ASYNC)
     def hook_w(self, addr, val, width, **kwargs):
         self.hv.log(f"PMP: W {addr:#x} <- {val:#x}")
         super().hook_w(addr, val, width, **kwargs)
