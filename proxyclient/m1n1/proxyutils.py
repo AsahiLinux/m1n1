@@ -44,6 +44,12 @@ class ProxyUtils(Reloadable):
         self.iface = p.iface
         self.proxy = p
         self.base = p.get_base()
+
+        try:
+            self.cpu_features = p.get_cpu_features()
+        except ProxyRemoteError:
+            pass
+
         (self.ba_addr, self.ba_rev) = p.get_bootargs_rev()
 
         if self.ba_rev <= 1:

@@ -54,6 +54,15 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_GET_BOOTARGS:
             reply->retval = boot_args_addr;
             break;
+        case P_GET_CPU_FEATURES:
+            if (request->args[0] == sizeof(struct midr_part_features))
+                reply->retval = (u64)cpu_features;
+            else {
+                printf("size mismatch: sizeof(struct midr_part_features) = %ld != %ld\n",
+                       sizeof(struct midr_part_features), request->args[0]);
+                reply->retval = 0;
+            }
+            break;
         case P_GET_BASE:
             reply->retval = (u64)_base;
             break;
