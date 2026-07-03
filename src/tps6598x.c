@@ -5,6 +5,7 @@
 #include "i2c.h"
 #include "iodev.h"
 #include "malloc.h"
+#include "spmi.h"
 #include "string.h"
 #include "types.h"
 #include "utils.h"
@@ -19,8 +20,17 @@
 #define TPS_CMD_INVALID     0x444d4321 // !CMD as LE u32
 #define TPS_MODE_DBMA       ((u32)'D' | ((u32)'B' << 8) | ((u32)'M' << 16) | ((u32)'a' << 24))
 
+#define TPS_SPMI_REG_SELECT 0x00
+#define TPS_SPMI_REG_SIZE   0x1f
+#define TPS_SPMI_REG_DATA   0x20
+
+// Write to TPS_SPMI_REG_SELECT with MSB=1 will
+// trigger selection of register with the 7-bit address
+#define TPS_SPMI_REG_SELECT_TRIG BIT(7)
+
 struct tps6598x_dev {
     i2c_dev_t *i2c;
+    spmi_dev_t *spmi;
     u8 addr;
 };
 
@@ -54,15 +64,56 @@ tps6598x_dev_t *tps6598x_init_i2c(const char *adt_node, i2c_dev_t *i2c)
     return dev;
 }
 
+tps6598x_dev_t *tps6598x_init_spmi(const char *adt_node, spmi_dev_t *spmi)
+{
+    tps6598x_dev_t *dev = tps6598x_init(adt_node, "reg");
+    dev->spmi = spmi;
+
+    if (spmi_send_wakeup(dev->spmi, dev->addr) < 0)
+        return NULL;
+    mdelay(10);
+
+    return dev;
+}
+
 void tps6598x_shutdown(tps6598x_dev_t *dev)
 {
+    if (dev->spmi)
+        spmi_send_shutdown(dev->spmi, dev->addr);
     free(dev);
+}
+
+static int tps6598x_spmi_select_reg(tps6598x_dev_t *dev, const u8 reg)
+{
+    u8 val = ~reg;
+    if (spmi_reg0_write(dev->spmi, dev->addr, reg) < 0)
+        return -1;
+
+    while (val != reg) {
+        if (spmi_ext_read(dev->spmi, dev->addr, TPS_SPMI_REG_SELECT, &val, 1) < 0)
+            return -1;
+        if (val == reg)
+            break;
+        if (val != (reg | TPS_SPMI_REG_SELECT_TRIG)) // Selection in progress
+            return -1;
+        mdelay(1);
+    }
+    return 0;
 }
 
 static int tps6598x_write_reg(tps6598x_dev_t *dev, const u8 reg, const u8 *data, size_t len)
 {
     if (dev->i2c)
         return i2c_smbus_write(dev->i2c, dev->addr, reg, data, len);
+
+    if (dev->spmi) {
+        if (tps6598x_spmi_select_reg(dev, reg) < 0)
+            return -1;
+        if (spmi_ext_write(dev->spmi, dev->addr, TPS_SPMI_REG_DATA, data, len) < 0)
+            return -1;
+        return len;
+    }
+
     return -1;
 }
 
@@ -70,6 +121,15 @@ static int tps6598x_read_reg(tps6598x_dev_t *dev, const u8 reg, u8 *data, size_t
 {
     if (dev->i2c)
         return i2c_smbus_read(dev->i2c, dev->addr, reg, data, len);
+
+    if (dev->spmi) {
+        if (tps6598x_spmi_select_reg(dev, reg) < 0)
+            return -1;
+        if (spmi_ext_read(dev->spmi, dev->addr, TPS_SPMI_REG_DATA, data, len) < 0)
+            return -1;
+        return len;
+    }
+
     return -1;
 }
 
