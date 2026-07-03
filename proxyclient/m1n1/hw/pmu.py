@@ -16,7 +16,7 @@ class PMU:
 
         self.node = u.adt[adt_path]
         self.bus_type = bus_type
-        if bus_type == "spmi":
+        if bus_type.startswith("spmi"):
             self.spmi = SPMI(u, adt_path.rpartition('/')[0])
             self.primary = u.adt[adt_path].is_primary == 1
         elif bus_type == "i2c":
@@ -26,9 +26,13 @@ class PMU:
         self.reg = u.adt[adt_path].reg[0]
 
     def reset_panic_counter(self):
-        if self.primary and self.bus_type == "spmi":
-            leg_scrpad = self.node.info_leg__scrpad[0]
-            self.spmi.write8(self.reg, leg_scrpad + 2, 0) # error counts
+        if self.primary and self.bus_type.startswith("spmi"):
+            if self.bus_type == "spmi3":
+                leg_scrpad = self.node.info_leg__scrpad[0]
+                self.spmi.write8(self.reg, leg_scrpad + 2, 0) # error counts
+            else:
+                print("Reset panic unsupported")
+                return
         elif self.primary and self.bus_type == "i2c":
             if self.node.compatible[0] in ["pmu,d2255", "pmu,d2257", "pmu,d2333", "pmu,d2365", "pmu,d2400"]:
                 counter = 0x5002
@@ -45,11 +49,12 @@ class PMU:
     def find_primary_pmu(adt):
         for child in adt["/arm-io"]:
             if child.name.startswith("nub-spmi") or child.name.startswith("spmi"):
+                gen = getattr(child, "gen")
                 for pmu in child:
                     compat = getattr(pmu, "compatible")[0] if hasattr(pmu, "compatible") else "unset"
                     primary = (getattr(pmu, "is-primary") == 1) if hasattr(pmu, "is-primary")  else False
                     if compat in ("pmu,spmi", "pmu,d2422", "pmu,d2449") and primary:
-                        return (pmu._path.removeprefix('/device-tree'), "spmi")
+                        return (pmu._path.removeprefix('/device-tree'), f"spmi{gen}")
             elif child.name.startswith("i2c"):
                 for dev in child:
                     if dev.name == "pmu":
