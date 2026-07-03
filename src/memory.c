@@ -569,6 +569,31 @@ static void mmu_secondary_setup(void)
     u64 sctlr = SCTLR_LSMAOE | SCTLR_nTLSMD | SCTLR_TSCXT | SCTLR_ITD;
     // Configure translation
     sctlr |= SCTLR_I | SCTLR_C | SCTLR_M | SCTLR_SPAN;
+
+    /*
+     * m1n1 issues #463 and #480 show that we sometimes crash with an invalid LR restored from
+     * a previous stackframe when returning from this function. The invalid value comes from this
+     * same core which points to some caching or load/store ordering issue.
+     * Two possible causes:
+     * 1) Until this point, this core's stack was only ever accessed as Device-nGnRnE since
+     *    both MMU and caches were off. These are treated as outer sharable.
+     *    Once we switch SCTRL.{C,M} on, any subsequent load is now Normal-NB and goes through
+     *    the caches. Without any barries inbetween, these loads are specifically not ordered
+     *    against the previous stores which may not have completed all the way to DRAM and result
+     *    in stale loads. Adding a dsb sy ensures all these stores are completed before we turn
+     *    on the MMU.
+     * 2) Additionally, this core's stack is already mapped as Normal memory for at least the
+     *    primary core and while it's not accessed directly there might still be speculative loads
+     *    at just the wrong time resulting in a stale cache line with the previous stack frame.
+     *    Invalidate the cache for our stack before enabling the MMU to prevent this.
+     * It's not clear which of these two actually caused the issue because dsb sy already seems to
+     * prevent it and that barrier is required after the cache invalidation anyway. Let's just do
+     * both to be safe since this code only runs once after a core is started for the first time.
+     */
+    sysop("dsb sy"); // ensure all stores to RAM with Device-nGnRnE semantics are completed
+    dc_ivac_range(secondary_stacks[smp_id()], SECONDARY_STACK_SIZE);
+    sysop("dsb sy"); // ensure cache invalidation is completed
+
     write_sctlr(sctlr);
 }
 
