@@ -37,6 +37,17 @@ class ISPRegs(RegMap):
     ISP_GPIO_6 = 0x2104188, Register32
     ISP_GPIO_7 = 0x210418c, Register32
 
+
+    ISP_GPIO_0_T6031 = 0x24c41d0, Register32
+    ISP_GPIO_1_T6031 = 0x24c41d4, Register32
+    ISP_GPIO_2_T6031 = 0x24c41d8, Register32
+    ISP_GPIO_3_T6031 = 0x24c41dc, Register32
+    ISP_GPIO_4_T6031 = 0x24c41e0, Register32
+    ISP_GPIO_5_T6031 = 0x24c41e4, Register32
+    ISP_GPIO_6_T6031 = 0x24c41e8, Register32
+    ISP_GPIO_7_T6031 = 0x24c41ec, Register32
+
+
     ISP_GPIO_0_T8112 = 0x24c41b0, Register32
     ISP_GPIO_1_T8112 = 0x24c41b4, Register32
     ISP_GPIO_2_T8112 = 0x24c41b8, Register32
@@ -52,11 +63,14 @@ class ISPRegs(RegMap):
 
     ISP_IRQ_INTERRUPT   = 0x2104000, Register32
     ISP_IRQ_ENABLE      = 0x2104004, Register32
+    ISP_IRQ_ENABLE_T6031 = 0x2104008, Register32
     ISP_IRQ_DOORBELL    = 0x21043f0, Register32
     ISP_IRQ_ACK         = 0x21043fc, Register32
     ISP_IRQ_INTERRUPT_T8112 = 0x24c4000, Register32
     ISP_IRQ_DOORBELL_T8112 = 0x24c4430, Register32
+    ISP_IRQ_DOORBELL_T6031 = 0x24c4458, Register32
     ISP_IRQ_ACK_T8112   = 0x24c443c, Register32
+    ISP_IRQ_ACK_T6031 = 0x24c4464, Register32
 
     ISP_IRQ_INTERRUPT_1 = 0x2104008, Register32
     ISP_IRQ_INTERRUPT_2 = 0x2104010, Register32
