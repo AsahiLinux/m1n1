@@ -450,12 +450,10 @@ impl ADTNode {
     /// the node immediately following it. This could be a child node or a sibling.
     /// Use the relevant wrappers for additional safety.
     fn next_node(&self) -> Result<&'static ADTNode, AdtError> {
-        let mut p = self.first_property()?;
-
-        // We already have the first property
-        for _ in 0..self.property_count - 1 {
-            p = p.next_property()?;
-        }
+        let p = self.properties()
+            .last()
+            .unwrap() // There is always at least the first property, or an error
+            ?;
 
         // SAFETY: We will only ever reach this code when we can guarantee that
         // p is a reference to the very last property of the node, meaning that
@@ -484,13 +482,11 @@ impl ADTNode {
     /// Searches the node for a property with the given name, and returns it if
     /// found.
     pub fn named_prop(&self, name: &str) -> Result<&'static ADTProperty, AdtError> {
-        let mut p = self.first_property()?;
-
-        for _ in 0..self.property_count {
+        for p in self.properties() {
+            let p = p?;
             if p.name() == name {
                 return Ok(p);
             }
-            p = p.next_property()?;
         }
         Err(AdtError::NotFound)
     }
@@ -502,13 +498,11 @@ impl ADTNode {
     /// Searches the node for a property with the given name, and returns a mutable
     /// reference to it if found.
     pub fn named_prop_mut(&self, name: &str) -> Result<&'static mut ADTProperty, AdtError> {
-        let mut p = self.first_property_mut()?;
-
-        for _ in 0..self.property_count {
+        for p in self.properties_mut() {
+            let p = p?;
             if p.name() == name {
                 return Ok(p);
             }
-            p = p.next_property_mut()?;
         }
         Err(AdtError::NotFound)
     }
