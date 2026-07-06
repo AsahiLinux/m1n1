@@ -69,6 +69,76 @@ impl<'a> Iterator for ADTPropertyStringIterator<'a> {
     }
 }
 
+/// ADTPropertiesIterator
+#[derive(Debug)]
+pub struct ADTPropertiesIterator {
+    next_property_res: Option<Result<&'static ADTProperty, AdtError>>,
+    remaining: usize,
+}
+
+impl Iterator for ADTPropertiesIterator {
+    type Item = Result<&'static ADTProperty, AdtError>;
+
+    fn next(&mut self) -> Option<Result<&'static ADTProperty, AdtError>> {
+        let Some(property_res) = self.next_property_res.take() else {
+            return None;
+        };
+        let remaining = core::mem::take(&mut self.remaining);
+        let property = match property_res {
+            Err(e) => return Some(Err(e)),
+            Ok(v) => v,
+        };
+
+        if remaining > 1 {
+            self.next_property_res = Some(property.next_property());
+            self.remaining = remaining - 1;
+        }
+
+        Some(Ok(property))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.remaining, Some(self.remaining))
+    }
+}
+
+impl ExactSizeIterator for ADTPropertiesIterator {}
+
+/// ADTPropertiesIteratorMut
+#[derive(Debug)]
+pub struct ADTPropertiesIteratorMut {
+    next_property_res: Option<Result<&'static mut ADTProperty, AdtError>>,
+    remaining: usize,
+}
+
+impl Iterator for ADTPropertiesIteratorMut {
+    type Item = Result<&'static mut ADTProperty, AdtError>;
+
+    fn next(&mut self) -> Option<Result<&'static mut ADTProperty, AdtError>> {
+        let Some(property_res) = self.next_property_res.take() else {
+            return None;
+        };
+        let remaining = core::mem::take(&mut self.remaining);
+        let property = match property_res {
+            Err(e) => return Some(Err(e)),
+            Ok(v) => v,
+        };
+
+        if remaining > 1 {
+            self.next_property_res = Some(property.next_property_mut());
+            self.remaining = remaining - 1;
+        }
+
+        Some(Ok(property))
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.remaining, Some(self.remaining))
+    }
+}
+
+impl ExactSizeIterator for ADTPropertiesIteratorMut {}
+
 #[repr(C, packed(1))]
 pub struct ADTSegmentRanges {
     phys: u64,
@@ -360,6 +430,20 @@ impl ADTNode {
     pub fn first_property_mut(&self) -> Result<&'static mut ADTProperty, AdtError> {
         // SAFETY: We know we are a valid node, and our header never changes size
         unsafe { ADTProperty::from_ptr_mut(self.as_ptr().add(size_of::<ADTNode>()) as usize) }
+    }
+
+    pub fn properties(&self) -> ADTPropertiesIterator {
+        ADTPropertiesIterator {
+            next_property_res: Some(self.first_property()),
+            remaining: self.property_count as usize,
+        }
+    }
+
+    pub fn properties_mut(&self) -> ADTPropertiesIteratorMut {
+        ADTPropertiesIteratorMut {
+            next_property_res: Some(self.first_property_mut()),
+            remaining: self.property_count as usize,
+        }
     }
 
     /// Walk the properties at the top of the curret node's memory to arrive at
