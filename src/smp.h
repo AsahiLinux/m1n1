@@ -10,8 +10,8 @@
 #define MAX_EL3_CPUS 4
 
 #define SECONDARY_STACK_SIZE 0x10000
-extern u8 *secondary_stacks[MAX_CPUS];
-extern u8 *secondary_stacks_el3[MAX_EL3_CPUS];
+extern u8 secondary_stacks[MAX_CPUS][SECONDARY_STACK_SIZE];
+extern u8 secondary_stacks_el3[MAX_EL3_CPUS][SECONDARY_STACK_SIZE];
 
 void smp_secondary_entry(void);
 void smp_secondary_prep_el3(void);

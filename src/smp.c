@@ -5,7 +5,6 @@
 #include "aic.h"
 #include "aic_regs.h"
 #include "cpu_regs.h"
-#include "malloc.h"
 #include "memory.h"
 #include "pmgr.h"
 #include "soc.h"
@@ -42,8 +41,8 @@ void *_reset_stack_el1;
 u8 dummy_stack[DUMMY_STACK_SIZE];     // Highest EL
 u8 dummy_stack_el1[DUMMY_STACK_SIZE]; // EL1 stack if EL3 exists
 
-u8 *secondary_stacks[MAX_CPUS] = {dummy_stack};
-u8 *secondary_stacks_el3[MAX_EL3_CPUS];
+u8 secondary_stacks[MAX_CPUS][SECONDARY_STACK_SIZE] ALIGNED(0x4000);
+u8 secondary_stacks_el3[MAX_EL3_CPUS][SECONDARY_STACK_SIZE] ALIGNED(0x4000);
 
 static bool wfe_mode = false;
 
@@ -135,9 +134,7 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
     memset(&spin_table[index], 0, sizeof(struct spin_table));
 
     target_cpu = index;
-    secondary_stacks[index] = memalign(0x4000, SECONDARY_STACK_SIZE);
     if (has_el3()) {
-        secondary_stacks_el3[index] = memalign(0x4000, SECONDARY_STACK_SIZE);
         _reset_stack = secondary_stacks_el3[index] + SECONDARY_STACK_SIZE; // EL3
         _reset_stack_el1 = secondary_stacks[index] + SECONDARY_STACK_SIZE; // EL1
 
