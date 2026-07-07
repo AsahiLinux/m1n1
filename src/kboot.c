@@ -9,6 +9,7 @@
 #include "dapf.h"
 #include "devicetree.h"
 #include "display.h"
+#include "efi.h"
 #include "exception.h"
 #include "firmware.h"
 #include "iodev.h"
@@ -48,6 +49,8 @@ static char *chosen_params[MAX_CHOSEN_PARAMS][2];
 static char *uboot_config[MAX_UBOOT_CONFIGS][2];
 
 extern const char *const m1n1_version;
+
+static enum kboot_psci_mode psci_mode = PSCI_DEFAULT;
 
 int dt_set_gpu(void *dt);
 
@@ -347,6 +350,11 @@ static int dt_set_uboot_config(void)
     return 0;
 }
 
+void kboot_set_psci_mode(enum kboot_psci_mode mode)
+{
+    psci_mode = mode;
+}
+
 static int dt_set_memory(void)
 {
     int anode = adt_path_offset(adt, "/chosen");
@@ -586,11 +594,24 @@ static int dt_set_cpus(void)
         if (dt_mpidr != mpidr)
             bail_cleanup("FDT: DT CPU %d MPIDR mismatch: 0x%lx != 0x%lx\n", cpu, dt_mpidr, mpidr);
 
-        u64 release_addr = smp_get_release_addr(cpu);
-        if (fdt_setprop_inplace_u64(dt, node, "cpu-release-addr", release_addr))
-            bail_cleanup("FDT: couldn't set cpu-release-addr property\n");
+        if (psci_mode == PSCI_OFF) {
+            u64 release_addr = smp_get_release_addr(cpu);
+            if (fdt_setprop_u64(dt, node, "cpu-release-addr", release_addr))
+                bail_cleanup("FDT: couldn't set cpu-release-addr property\n");
 
-        printf("FDT: CPU %d MPIDR=0x%lx release-addr=0x%lx\n", cpu, mpidr, release_addr);
+            fdt_setprop_string(dt, node, "enable-method", "spin-table");
+            fdt_delprop(dt, node, "cpu-idle-states");
+
+            printf("FDT: CPU %d MPIDR=0x%lx release-addr=0x%lx\n", cpu, mpidr, release_addr);
+        } else {
+            fdt_delprop(dt, node, "cpu-release-addr");
+            fdt_setprop_string(dt, node, "enable-method", "psci");
+
+            if (!fdt_getprop(dt, node, "cpu-idle-states", NULL))
+                printf("FDT: WARNING: CPU %d has no cpu-idle-states\n", cpu);
+
+            printf("FDT: CPU %d MPIDR=0x%lx uses PSCI\n", cpu, mpidr);
+        }
 
     next_cpu:
         cpu++;
@@ -2738,6 +2759,26 @@ static int dt_setup_mtd_phram(void)
     return 0;
 }
 
+static void dt_setup_psci_mode(void)
+{
+    /*
+     * For now default to psci=off for all SoCs since older kernels do not support the EFI conduit
+     * yet. If PSCI-via-EFI lands before M4 is usable we probably want to default to on here then
+     * for M4+.
+     */
+    if (psci_mode == PSCI_DEFAULT)
+        psci_mode = PSCI_OFF;
+
+    if (psci_mode == PSCI_OFF)
+        return;
+
+    if (fdt_path_offset(dt, "/psci") < 0) {
+        printf("FDT: /psci node not found but PSCI requested; forcing psci=off instead\n");
+        psci_mode = PSCI_OFF;
+        return;
+    }
+}
+
 int kboot_prepare_dt(void *fdt)
 {
     if (dt) {
@@ -2765,6 +2806,9 @@ int kboot_prepare_dt(void *fdt)
 
     /* setup console log buffer early to capture as much log as possible */
     dt_setup_mtd_phram();
+
+    /* figure out if we can and want to use PSCI */
+    dt_setup_psci_mode();
 
     if (dt_set_chosen())
         return -1;
@@ -2838,6 +2882,23 @@ int kboot_prepare_dt(void *fdt)
      */
     if (dt_set_memory())
         return -1;
+
+    switch (psci_mode) {
+        case PSCI_DIRECT:
+            /*
+             * When installing the EFI stub to support PSCI-via-EFI we also need to setup
+             * the EFI memory map as a clone of the one in /memory since the kernel will
+             * ignore the latter in this case. dt_setup_efi will read it back and take care
+             * of this and thus has to be called after dt_set_memory().
+             */
+            if (dt_setup_efi(dt))
+                bail("FDT: couldn't set up EFI runtime services\n");
+            break;
+        case PSCI_OFF:
+            break;
+        case PSCI_DEFAULT:
+            bail("FDT: PSCI_DEFAULT should not be reachable in %s:%d\n", __FILE__, __LINE__);
+    }
 
     if (fdt_pack(dt))
         bail("FDT: fdt_pack() failed\n");
