@@ -157,6 +157,7 @@ void m1n1_main(void)
     mcc_init();
     mmu_init();
     aic_init();
+    smp_init();
 #endif
     wdt_disable();
 #ifndef BRINGUP

@@ -49,8 +49,18 @@ static bool wfe_mode = false;
 static int target_cpu;
 static int cpu_nodes[MAX_CPUS];
 static struct spin_table spin_table[MAX_CPUS];
-static u64 pmgr_reg;
-static u64 cpu_start_off;
+
+struct cpu_info {
+    bool valid;
+    u8 die;
+    u8 cluster;
+    u8 core;
+    u64 impl_reg;
+};
+
+static bool smp_initialized = false;
+static u64 cpu_start_base;
+static struct cpu_info cpu_info[MAX_CPUS];
 
 extern u8 _vectors_start[0];
 int boot_cpu_idx = -1;
@@ -224,34 +234,38 @@ static void smp_stop_cpu(int index, int die, int cluster, int core, u64 impl, u6
     }
 }
 
-void smp_start_secondaries(void)
+int smp_init(void)
 {
-    printf("Starting secondary CPUs...\n");
+    if (smp_initialized)
+        return 0;
 
     int pmgr_path[8];
+    u64 pmgr_reg;
+    u64 cpu_start_off;
 
     if (adt_path_offset_trace(adt, "/arm-io/pmgr", pmgr_path) < 0) {
         printf("Error getting /arm-io/pmgr node\n");
-        return;
+        return -1;
     }
     if (adt_get_reg(adt, pmgr_path, "reg", 0, &pmgr_reg, NULL) < 0) {
         printf("Error getting /arm-io/pmgr regs\n");
-        return;
+        return -1;
     }
 
     int arm_io_node;
     if ((arm_io_node = adt_path_offset(adt, "/arm-io")) < 0) {
         printf("Error getting /arm-io node\n");
-        return;
+        return -1;
     }
 
     int node = adt_path_offset(adt, "/cpus");
     if (node < 0) {
         printf("Error getting /cpus node\n");
-        return;
+        return -1;
     }
 
     memset(cpu_nodes, 0, sizeof(cpu_nodes));
+    memset(cpu_info, 0, sizeof(cpu_info));
 
     switch (chip_id) {
         case S5L8960X:
@@ -297,7 +311,7 @@ void smp_start_secondaries(void)
             break;
         default:
             printf("CPU start offset is unknown for this SoC!\n");
-            return;
+            return -1;
     }
 
     ADT_FOREACH_CHILD(adt, node)
@@ -343,7 +357,7 @@ void smp_start_secondaries(void)
     if (boot_cpu_idx == -1) {
         printf(
             "Could not find currently running CPU in cpu table, can't start other processors!\n");
-        return;
+        return -1;
     }
 
     spin_table[boot_cpu_idx].mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
@@ -369,62 +383,65 @@ void smp_start_secondaries(void)
             memcpy(cpu_impl_reg, &regs[index], 16);
         }
 
+        cpu_info[i].valid = true;
+        cpu_info[i].core = FIELD_GET(CPU_REG_CORE, reg);
+        cpu_info[i].cluster = FIELD_GET(CPU_REG_CLUSTER, reg);
+        cpu_info[i].die = FIELD_GET(CPU_REG_DIE, reg);
+        cpu_info[i].impl_reg = cpu_impl_reg[0];
+    }
+
+    cpu_start_base = pmgr_reg + cpu_start_off;
+    smp_initialized = true;
+
+    return 0;
+}
+
+void smp_start_secondaries(void)
+{
+    printf("Starting secondary CPUs...\n");
+
+    if (!smp_initialized)
+        return;
+
+    for (int i = 0; i < MAX_CPUS; i++) {
+        struct cpu_info *cpu = &cpu_info[i];
+
+        if (!cpu->valid)
+            continue;
+
         if (i == boot_cpu_idx) {
             // Check if already locked
-            if (FIELD_GET(RVBAR_LOCK, read64(cpu_impl_reg[0])))
+            if (FIELD_GET(RVBAR_LOCK, read64(cpu->impl_reg)))
                 continue;
 
             // Unlocked, write _vectors_start into boot CPU's rvbar
-            write64(cpu_impl_reg[0], (u64)_vectors_start);
+            write64(cpu->impl_reg, (u64)_vectors_start);
             sysop("dmb sy");
 
             continue;
         }
 
-        u8 core = FIELD_GET(CPU_REG_CORE, reg);
-        u8 cluster = FIELD_GET(CPU_REG_CLUSTER, reg);
-        u8 die = FIELD_GET(CPU_REG_DIE, reg);
-
-        smp_start_cpu(i, die, cluster, core, cpu_impl_reg[0], pmgr_reg + cpu_start_off);
+        smp_start_cpu(i, cpu->die, cpu->cluster, cpu->core, cpu->impl_reg, cpu_start_base);
     }
 }
 
 void smp_stop_secondaries(bool deep_sleep)
 {
     printf("Stopping secondary CPUs...\n");
-    int arm_io_node;
-    if ((arm_io_node = adt_path_offset(adt, "/arm-io")) < 0) {
-        printf("Error getting /arm-io node\n");
+
+    if (!smp_initialized)
         return;
-    }
+
     smp_set_wfe_mode(true);
 
     for (int i = 0; i < MAX_CPUS; i++) {
-        int node = cpu_nodes[i];
+        struct cpu_info *cpu = &cpu_info[i];
 
-        if (!node)
+        if (!cpu->valid || i == boot_cpu_idx)
             continue;
 
-        u32 reg;
-        u64 cpu_impl_reg[2];
-        if (ADT_GETPROP(adt, node, "reg", &reg) < 0)
-            continue;
-        if (ADT_GETPROP_ARRAY(adt, node, "cpu-impl-reg", cpu_impl_reg) < 0) {
-            u32 reg_len;
-            const u64 *regs = adt_getprop(adt, arm_io_node, "reg", &reg_len);
-            if (!regs)
-                continue;
-            u32 index = 2 * i + 2;
-            if (reg_len < index)
-                continue;
-            memcpy(cpu_impl_reg, &regs[index], 16);
-        }
-
-        u8 core = FIELD_GET(CPU_REG_CORE, reg);
-        u8 cluster = FIELD_GET(CPU_REG_CLUSTER, reg);
-        u8 die = FIELD_GET(CPU_REG_DIE, reg);
-
-        smp_stop_cpu(i, die, cluster, core, cpu_impl_reg[0], pmgr_reg + cpu_start_off, deep_sleep);
+        smp_stop_cpu(i, cpu->die, cpu->cluster, cpu->core, cpu->impl_reg, cpu_start_base,
+                     deep_sleep);
     }
 }
 
