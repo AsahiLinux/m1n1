@@ -99,7 +99,12 @@ if rvbar != u.base:
     for cpu in u.adt["cpus"]:
         if cpu.state == "running":
             continue
+
         addr, size = cpu.cpu_impl_reg
+        if p.read64(addr) & 1:
+            print(f"  {cpu.name}: [0x{addr:x}] RVBAR locked, skipping")
+            continue
+
         print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
         p.write64(addr, rvbar)
 
