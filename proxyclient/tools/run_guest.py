@@ -9,6 +9,26 @@ from io import BytesIO
 def volumespec(s):
     return tuple(s.split(":", 2))
 
+
+def sptm_hv_boot_args(extra=()):
+    def boot_arg_key(arg):
+        return arg.split("=", 1)[0]
+
+    words = list(extra)
+    defaults = [
+        "-nobsdmgroot",          # dodges a panic we otherwise hit on this boot path
+        "wdt=-1",                # disables some internal XNU watchdog
+        "sprr_tpro=0",           # disable XNU's TPRO boot policy; the commpage bit is patched separately
+        "sprr_tpro_pagers=0",    # ... same, for pager mappings
+        "-v",                    # Optional: verbose boot
+        f"msgbuf={1024 * 1024}", # Optional: enlarge the kernel msgbuf
+    ]
+    for arg in defaults:
+        key = boot_arg_key(arg)
+        if not any(boot_arg_key(w) == key for w in words):
+            words.append(arg)
+    return " ".join(words)
+
 parser = argparse.ArgumentParser(description='Run a Mach-O payload under the hypervisor')
 parser.add_argument('-s', '--symbols', type=pathlib.Path)
 parser.add_argument('-m', '--script', type=pathlib.Path, action='append', default=[])
@@ -78,7 +98,10 @@ if args.volume:
 if args.logfile:
     hv.set_logfile(args.logfile.open("w"))
 
-if len(args.boot_args) > 0:
+# macOS-under-HV needs a specific boot-arg set on the M4/macOS chip_ids
+if not args.raw and u.adt["/chosen"].chip_id in (0x8132, 0x8140, 0x6040, 0x6041):
+    hv.set_bootargs(sptm_hv_boot_args(args.boot_args))
+elif len(args.boot_args) > 0:
     boot_args = " ".join(args.boot_args)
     hv.set_bootargs(boot_args)
 
