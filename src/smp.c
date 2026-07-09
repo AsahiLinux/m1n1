@@ -62,25 +62,52 @@ static bool smp_initialized = false;
 static u64 cpu_start_base;
 static struct cpu_info cpu_info[MAX_CPUS];
 
+// Used from start.S to find the correct stack after the first entry
+struct smp_reset_stack {
+    u64 mpidr;
+    u64 stack;
+};
+
+struct smp_reset_stack smp_reset_stacks[MAX_CPUS] = {
+    [0 ... MAX_CPUS - 1] = {.mpidr = ~0ULL, .stack = 0},
+};
+
 extern u8 _vectors_start[0];
 int boot_cpu_idx = -1;
 u64 boot_cpu_mpidr = 0;
 
 void smp_secondary_entry(void)
 {
-    struct spin_table *me = &spin_table[target_cpu];
+    u64 mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
+    int index = target_cpu;
+
+    // target_cpu identifies us during the initial start handshake, but may
+    // be stale on an RVBAR re-entry after deep wfi
+    for (int i = 0; i < MAX_CPUS; i++) {
+        if (smp_reset_stacks[i].mpidr == mpidr) {
+            index = i;
+            break;
+        }
+    }
+
+    smp_reset_stacks[index].stack = (u64)secondary_stacks[index] + SECONDARY_STACK_SIZE;
+    smp_reset_stacks[index].mpidr = mpidr;
+    dc_civac_range(&smp_reset_stacks[index], sizeof(smp_reset_stacks[index]));
+    sysop("dsb sy");
+
+    struct spin_table *me = &spin_table[index];
 
     if (in_el2())
-        msr(TPIDR_EL2, target_cpu);
+        msr(TPIDR_EL2, index);
     else
-        msr(TPIDR_EL1, target_cpu);
+        msr(TPIDR_EL1, index);
 
-    printf("  Index: %d (table: %p)\n\n", target_cpu, me);
+    printf("  Index: %d (table: %p)\n\n", index, me);
 
-    me->mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
+    me->mpidr = mpidr;
 
     sysop("dmb sy");
-    me->flag = 1;
+    me->flag++;
     sysop("dmb sy");
     u64 target;
     if (!cpu_features->fast_ipi)

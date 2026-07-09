@@ -3,6 +3,7 @@
 #ifndef __SMP_H__
 #define __SMP_H__
 
+#include "smp_asm.h"
 #include "types.h"
 #include "utils.h"
 
