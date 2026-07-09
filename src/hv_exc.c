@@ -27,13 +27,96 @@ struct hv_pcpu_data {
     u32 pmc_pending;
     u64 pmc_irq_mode;
     u64 exc_entry_pmcr0_cnt;
+    u64 kernel_cntv_cval;
+    u64 kernel_cntv_ctl;
+    bool kernel_cntv_valid;
 } ALIGNED(64);
 
 struct hv_pcpu_data pcpu[MAX_CPUS];
 
+/*
+ * Track EL2/proxy time hidden from the guest. The architectural counter and
+ * Apple CNTVCT alias run in different clock domains, so each needs its own
+ * accumulator.
+ */
+static u64 stolen_time = 0;
+static u64 stolen_time_kernel_cntv = 0;
+
+/*
+ * M4-class SoCs schedule based off an Apple impdef timer that is locked in raw
+ * boot mode.  We soft-model it: keep the deadline in a per-CPU shadow, read
+ * "now" from a counter (KERNEL_CNTVCTSS == CNTVCT_ALIAS, readable and
+ * already passed through), and deliver the timer as a virtual FIQ from
+ * hv_update_fiq() once the soft deadline elapses.
+ */
+static inline u64 hv_kernel_cntv_now(void)
+{
+    /*
+     * CNTVOFF_EL2 only offsets the architectural virtual counter. XNU's Apple
+     * kernel deadline timer reads CNTVCT_ALIAS instead, so track stolen time for
+     * that timer separately in CNTVCT_ALIAS units and subtract it here.
+     */
+    return mrs(SYS_IMP_APL_CNTVCT_ALIAS_EL0) - stolen_time_kernel_cntv;
+}
+
+static inline s64 hv_kernel_cntv_delta(void)
+{
+    return (s64)(PERCPU(kernel_cntv_cval) - hv_kernel_cntv_now());
+}
+
+static void hv_kernel_cntv_init(void)
+{
+    if (PERCPU(kernel_cntv_valid))
+        return;
+
+    /* CTL/TVAL are readable at EL2; capture XNU's initial deadline once. */
+    u32 tval = (u32)mrs(SYS_IMP_APL_KERNEL_CNTV_TVAL_EL0);
+    PERCPU(kernel_cntv_ctl) =
+        mrs(SYS_IMP_APL_KERNEL_CNTV_CTL_EL0) & (CNTx_CTL_ENABLE | CNTx_CTL_IMASK);
+    PERCPU(kernel_cntv_cval) = hv_kernel_cntv_now() + (s64)(s32)tval;
+    PERCPU(kernel_cntv_valid) = true;
+}
+
+static u64 hv_kernel_cntv_read_ctl(void)
+{
+    hv_kernel_cntv_init();
+
+    u64 ctl = PERCPU(kernel_cntv_ctl) & (CNTx_CTL_ENABLE | CNTx_CTL_IMASK);
+    if ((ctl & CNTx_CTL_ENABLE) && hv_kernel_cntv_delta() <= 0)
+        ctl |= CNTx_CTL_ISTATUS;
+    return ctl;
+}
+
+static u64 hv_kernel_cntv_read_tval(void)
+{
+    hv_kernel_cntv_init();
+    return (u32)hv_kernel_cntv_delta();
+}
+
+static void hv_kernel_cntv_write_ctl(u64 val)
+{
+    hv_kernel_cntv_init();
+    PERCPU(kernel_cntv_ctl) = val & (CNTx_CTL_ENABLE | CNTx_CTL_IMASK);
+}
+
+static void hv_kernel_cntv_write_tval(u64 val)
+{
+    hv_kernel_cntv_init();
+    PERCPU(kernel_cntv_cval) = hv_kernel_cntv_now() + (s64)(s32)(u32)val;
+}
+
+static bool hv_kernel_cntv_pending(void)
+{
+    if (!PERCPU(kernel_cntv_valid))
+        return false;
+
+    u64 ctl = hv_kernel_cntv_read_ctl();
+    return (ctl & (CNTx_CTL_ISTATUS | CNTx_CTL_IMASK | CNTx_CTL_ENABLE)) ==
+           (CNTx_CTL_ISTATUS | CNTx_CTL_ENABLE);
+}
+
 void hv_exit_guest(void) __attribute__((noreturn));
 
-static u64 stolen_time = 0;
 static u64 exc_entry_time;
 
 extern u64 hv_cpus_in_guest;
@@ -57,6 +140,7 @@ static void _hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, 
         hv_rendezvous();
 
     u64 entry_time = mrs(CNTPCT_EL0);
+    u64 kernel_cntv_entry_time = mrs(SYS_IMP_APL_CNTVCT_ALIAS_EL0);
 
     ctx->elr_phys = hv_translate(ctx->elr, false, false, NULL);
     ctx->far_phys = hv_translate(ctx->far, false, false, NULL);
@@ -77,8 +161,9 @@ static void _hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, 
         case EXC_RET_HANDLED:
             hv_wdt_breadcrumb('p');
             if (time_stealing) {
-                u64 lost = mrs(CNTPCT_EL0) - entry_time;
-                stolen_time += lost;
+                stolen_time += mrs(CNTPCT_EL0) - entry_time;
+                stolen_time_kernel_cntv += mrs(SYS_IMP_APL_CNTVCT_ALIAS_EL0) -
+                                           kernel_cntv_entry_time;
             }
             break;
         case EXC_EXIT_GUEST:
@@ -142,8 +227,10 @@ void hv_exc_proxy(struct exc_info *ctx, uartproxy_boot_reason_t reason, u32 type
 void hv_set_time_stealing(bool enabled, bool reset)
 {
     time_stealing = enabled;
-    if (reset)
+    if (reset) {
         stolen_time = 0;
+        stolen_time_kernel_cntv = 0;
+    }
     hv_apply_time_stealing_offset();
 }
 
@@ -154,7 +241,14 @@ void hv_apply_time_stealing_offset(void)
 
 void hv_add_time(s64 time)
 {
+    u64 ticks = time < 0 ? (u64)-time : (u64)time;
+    u64 kernel_ticks = (u64)((__uint128_t)ticks * 24000000ULL / mrs(CNTFRQ_EL0));
+
     stolen_time -= (u64)time;
+    if (time < 0)
+        stolen_time_kernel_cntv += kernel_ticks;
+    else
+        stolen_time_kernel_cntv -= kernel_ticks;
 }
 
 static void hv_update_fiq(void)
@@ -177,6 +271,7 @@ static void hv_update_fiq(void)
     }
 
     fiq_pending |= PERCPU(ipi_pending) || PERCPU(pmc_pending);
+    fiq_pending |= hv_kernel_cntv_pending();
 
     sysop("isb");
 
@@ -239,6 +334,21 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         SYSREG_MAP(SYS_CNTP_CTL_EL0, SYS_CNTP_CTL_EL02)
         SYSREG_MAP(SYS_CNTP_CVAL_EL0, SYS_CNTP_CVAL_EL02)
         SYSREG_MAP(SYS_CNTP_TVAL_EL0, SYS_CNTP_TVAL_EL02)
+        /* Apple kernel deadline timer that we shadow soft-modeled, CTL/TVAL
+         * are write-locked at EL2; the counters read through. */
+        case SYSREG_ISS(SYS_IMP_APL_KERNEL_CNTV_CTL_EL0):
+            if (is_read)
+                regs[rt] = hv_kernel_cntv_read_ctl();
+            else
+                hv_kernel_cntv_write_ctl(regs[rt]);
+            return true;
+        case SYSREG_ISS(SYS_IMP_APL_KERNEL_CNTV_TVAL_EL0):
+            if (is_read)
+                regs[rt] = hv_kernel_cntv_read_tval();
+            else
+                hv_kernel_cntv_write_tval(regs[rt]);
+            return true;
+        SYSREG_PASS(SYS_IMP_APL_KERNEL_CNTVCT_EL0)
         /* Spammy stuff seen on t600x p-cores */
         /* These are PMU/PMC registers */
         SYSREG_PASS(sys_reg(3, 2, 15, 12, 0));

@@ -19,6 +19,11 @@
 #define AMX_CTL_EN_EL1 BIT(62)
 
 #define SYS_IMP_APL_CNTVCT_ALIAS_EL0 sys_reg(3, 4, 15, 10, 6)
+/* Apple kernel deadline timer (XNU's local scheduler timer on Apple Silicon).
+ * CNTVCTSS aliases CNTVCT_ALIAS above (same encoding). */
+#define SYS_IMP_APL_KERNEL_CNTV_CTL_EL0  sys_reg(3, 1, 15, 0, 5)
+#define SYS_IMP_APL_KERNEL_CNTV_TVAL_EL0 sys_reg(3, 1, 15, 15, 4)
+#define SYS_IMP_APL_KERNEL_CNTVCT_EL0    sys_reg(3, 4, 15, 11, 7)
 
 /* HID registers */
 #define SYS_IMP_APL_HID0                sys_reg(3, 0, 15, 0, 0)
