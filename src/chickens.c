@@ -235,9 +235,10 @@ void init_cpu(void)
     }
 
     if (cpu_features->apple_sysregs_unlocked) {
-        /* Unmask external IRQs, set WFI mode to up (2) */
+        /* Unmask external IRQs, set WFI mode to up (2), enable WFI retention */
         reg_mask(SYS_IMP_APL_CYC_OVRD,
-                 CYC_OVRD_FIQ_MODE_MASK | CYC_OVRD_IRQ_MODE_MASK | CYC_OVRD_WFI_MODE_MASK,
+                 CYC_OVRD_FIQ_MODE_MASK | CYC_OVRD_IRQ_MODE_MASK | CYC_OVRD_WFI_MODE_MASK |
+                     CYC_OVRD_DISABLE_WFI_RET,
                  CYC_OVRD_FIQ_MODE(0) | CYC_OVRD_IRQ_MODE(0) | CYC_OVRD_WFI_MODE(2));
     }
 
