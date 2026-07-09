@@ -21,7 +21,7 @@ struct dapf_t8020_config {
 
 static int dapf_init_t8020(const char *path, u64 base, int node)
 {
-    u32 length;
+    u32 length = 0;
     const char *prop = "filter-data-instance-0";
     const struct dapf_t8020_config *config = adt_getprop(adt, node, prop, &length);
 
@@ -101,12 +101,22 @@ static int dapf_init_t8110b(u64 base, struct dapf_t8110b_config *config, u32 len
 
 static int dapf_init_t8110(const char *path, u64 base, int node)
 {
-    u32 length;
-    const char *prop = "dapf-instance-0";
-    const void *config = adt_getprop(adt, node, prop, &length);
+    u32 length = 0;
+    char prop[32];
+    const void *config = NULL;
+
+    // The dapf config is not always under instance 0; find the first present
+    // dapf-instance-N.
+    for (int i = 0; i < 8; i++) {
+        snprintf(prop, sizeof(prop), "dapf-instance-%d", i);
+        length = 0;
+        config = adt_getprop(adt, node, prop, &length);
+        if (config && length)
+            break;
+    }
 
     if (!config || !length) {
-        printf("dapf: Error getting ADT node %s property %s.\n", path, prop);
+        printf("dapf: Error getting ADT node %s dapf-instance property.\n", path);
         return -1;
     }
 
@@ -171,8 +181,11 @@ struct entry {
 };
 
 struct entry dapf_entries[] = {
-    {"/arm-io/dart-aop", 1}, {"/arm-io/dart-mtp", 1},  {"/arm-io/dart-pmp", 1},
-    {"/arm-io/dart-isp", 5}, {"/arm-io/dart-isp0", 5}, {NULL, -1},
+    {"/arm-io/dart-aop", 1},     {"/arm-io/dart-mtp", 1},
+    {"/arm-io/dart-pmp", 1},     {"/arm-io/dart-dcp", 1},
+    {"/arm-io/dart-dcpext0", 1}, {"/arm-io/dart-isp", 5},
+    {"/arm-io/dart-isp0", 5},    {"/arm-io/dart-ane", 3},
+    {"/arm-io/dart-ave", 3},     {NULL, -1},
 };
 
 int dapf_init_all(void)

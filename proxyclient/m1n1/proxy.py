@@ -1189,8 +1189,8 @@ class M1N1Proxy(Reloadable):
 
     def dapf_init_all(self):
         return self.request(self.P_DAPF_INIT_ALL)
-    def dapf_init(self, path):
-        return self.request(self.P_DAPF_INIT, path)
+    def dapf_init(self, path, index=1):
+        return self.request(self.P_DAPF_INIT, path, index)
 
     def cpufreq_init(self):
         return self.request(self.P_CPUFREQ_INIT)
