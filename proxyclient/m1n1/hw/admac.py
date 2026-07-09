@@ -72,6 +72,8 @@ class ADMACRegs(RegMap):
     RX_EN_CLR = 0xc, Register32
 
     UNK_CTL = 0x10, Register32
+    UNK_CTL_28 = 0x28, Register32
+    UNK_CTL_2C = 0x2c, Register32
 
     # each of the four registers represents an internal interrupt line,
     # bits represent DMA channels which at the moment raise that particular line
@@ -388,6 +390,9 @@ class ADMAC(Reloadable):
             self.resmem_pos = 0
             self.dart.invalidate_streams(1 << dart_stream)
 
+        if u.adt[devpath].compatible[0].startswith(("admac,t603", "admac,t8122")):
+            self.regs.UNK_CTL_28.val = 0x200000
+            self.regs.UNK_CTL_2C.val = 0x200000
         self.chans = [ADMACChannel(self, no) for no in range(self.nchans)]
 
     def ioread(self, base, size):
@@ -399,7 +404,7 @@ class ADMAC(Reloadable):
         self.dart.iowrite(self.dart_stream, base, data)
 
     def fill_canary(self):
-        ranges = self.dart.iotranslate(self.dart_stream, 
+        ranges = self.dart.iotranslate(self.dart_stream,
                                 self.resmem_iova, self.resmem_size)
         assert len(ranges) == 1
         start, size = ranges[0]

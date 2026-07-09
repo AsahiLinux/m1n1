@@ -53,7 +53,7 @@ if "clock-gates" in u.adt[dart_path]._properties:
     p.pmgr_adt_power_enable(path)
 
 dart = DART.from_adt(u, dart_path)
-admac = ADMAC(u, admac_node.get_reg(0)[0], dart,
+admac = ADMAC(u, path, dart,
               dart_stream=dart_idx, debug=args.verbose)
 
 chan = admac.chans[args.chan]
