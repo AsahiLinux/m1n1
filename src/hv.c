@@ -130,13 +130,25 @@ void hv_init(void)
     hv_pt_init();
 
     // Configure hypervisor defaults
-    hv_write_hcr(HCR_API | // Allow PAuth instructions
-                 HCR_APK | // Allow PAuth key registers
-                 HCR_TEA | // Trap external aborts
-                 HCR_E2H | // VHE mode (forced)
-                 HCR_RW |  // AArch64 guest
-                 HCR_AMO | // Trap SError exceptions
-                 HCR_VM);  // Enable stage 2 translation
+    u64 hcr = HCR_API | // Allow PAuth instructions
+              HCR_APK | // Allow PAuth key registers
+              HCR_TEA | // Trap external aborts
+              HCR_E2H | // VHE mode (forced)
+              HCR_RW |  // AArch64 guest
+              HCR_AMO | // Trap SError exceptions
+              HCR_VM;   // Enable stage 2 translation
+
+    /*
+     * On guarded (M4-class) SoCs the Apple impdef sysregs are GL2-only and fault
+     * when executed from EL2, so trap the guest's EL1 accesses to us and soft-
+     * model/shadow them. Do NOT set TIDCP on unlocked SoCs: there the guest
+     * accesses these registers directly at EL1 and trapping them would regress
+     * existing (M1-M3) virtualization.
+     */
+    if (!cpu_features->apple_sysregs_unlocked)
+        hcr |= HCR_TIDCP;
+
+    hv_write_hcr(hcr);
     hv_config_sme(true);
 
     // No guest vectors initially
