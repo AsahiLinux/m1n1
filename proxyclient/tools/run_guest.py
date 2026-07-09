@@ -91,6 +91,24 @@ if args.cpus:
 if args.debug_xnu:
     hv.adt["chosen"].debug_enabled = 1
 
+# Exclaves are not yet supported
+if not args.raw and u.adt["/chosen"].chip_id in (0x8132, 0x8140, 0x6040, 0x6041):
+    for name in ("/arm-io/exdisplaypipe", "/arm-io/exdisplaypipe-s-proxy",
+                 "/arm-io/dcp-exclave-ioreporting", "/arm-io/dcp-exclave-mailbox"):
+        try:
+            del hv.adt[name]
+        except KeyError:
+            pass
+    # The internal DCP's iop-dcp-nub binds its RTKit transport to the (now-gone)
+    # dcp-exclave-mailbox via routes=206; clearing routes makes the DCP firmware
+    # fall back to the plain ASC mailbox like the routeless external dcpext.
+    try:
+        nub = hv.adt["/arm-io/dcp/iop-dcp-nub"]
+        if getattr(nub, "routes", None) is not None:
+            del nub.routes
+    except KeyError:
+        pass
+
 if args.volume:
     for path, tag in args.volume:
         hv.attach_virtio(Virtio9PTransport(root=path, tag=tag))
