@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "smp_asm.h"
 #include "soc.h"
 
 #define UTRSTAT 0x010
@@ -13,6 +14,7 @@
 .extern _v_sp0_serr
 .extern _reset_stack
 .extern _cpu_reset_c
+.extern smp_reset_stacks
 .extern wdt_reboot
 
 .section .init, "ax"
@@ -150,9 +152,38 @@ cpu_reset:
     mov w0, 'O'
     bl debug_putc
 
+    // for EL3 just keep the shared reset stack for now
+    mrs x8, CurrentEL
+    cmp x8, #0xc
+    beq 2f
+
+    // check if there's already an entry in the stack table for our MPIDR
+    mrs x3, mpidr_el1
+    and x3, x3, #0xffffff
+    adrp x4, smp_reset_stacks
+    add x4, x4, :lo12:smp_reset_stacks
+    ldr x5, =MAX_CPUS
+1:
+    cbz x5, 2f // end if table, MPIDR not found -> use shared reset stack
+    sub x5, x5, #1
+
+    // x6 = MPIDR, x7 = stack
+    ldp x6, x7, [x4], #16
+
+    // check if the current entry's MPIDR matches ours
+    cmp x6, x3
+    bne 1b
+
+    // entry is valid
+    cbz x7, 2f // entry has no stack -> use shared reset stack
+    mov x1, x7 // entry has a valid stack -> use it
+    b 3f
+
+2:
     adrp x1, _reset_stack
     add x1, x1, :lo12:_reset_stack
     ldr x1, [x1]
+3:
     mov sp, x1
 
     ldr x2, [sp, #-8]
