@@ -478,6 +478,23 @@
 #define SYS_IMP_APL_S3_6_C15_C0_5   sys_reg(3, 6, 15, 0, 5)
 #define SYS_IMP_APL_S3_4_C15_C12_0  sys_reg(3, 4, 15, 12, 0)
 
+/* T8140 CLPC sampler controls/counters. Live EL2 access faults in the SPTM path. */
+#define SYS_IMP_APL_CLPC_CORE_PERF0        sys_reg(3, 7, 15, 0, 3)
+#define SYS_IMP_APL_CLPC_CORE_PERF1        sys_reg(3, 7, 15, 2, 3)
+#define SYS_IMP_APL_CLPC_CORE_PERF2        sys_reg(3, 7, 15, 4, 3)
+#define SYS_IMP_APL_CLPC_CORE_PERF_ENABLE0 sys_reg(3, 7, 15, 1, 3)
+#define SYS_IMP_APL_CLPC_CORE_PERF_ENABLE1 sys_reg(3, 7, 15, 3, 3)
+#define SYS_IMP_APL_CLPC_CORE_PERF_ENABLE2 sys_reg(3, 7, 15, 5, 3)
+#define SYS_IMP_APL_CLPC_CORE_PERF_CTRL2   sys_reg(3, 7, 15, 5, 0)
+#define SYS_IMP_APL_CLPC_CORE_ACC0         sys_reg(3, 1, 15, 8, 3)
+#define SYS_IMP_APL_CLPC_CORE_ACC1         sys_reg(3, 1, 15, 9, 3)
+#define SYS_IMP_APL_CLPC_CORE_ACC2         sys_reg(3, 1, 15, 10, 3)
+#define SYS_IMP_APL_CLPC_CORE_ACC3         sys_reg(3, 1, 15, 11, 3)
+#define SYS_IMP_APL_CLPC_CORE_ACC4         sys_reg(3, 1, 15, 12, 3)
+#define SYS_IMP_APL_CLPC_MEM_STALL_CFG0    sys_reg(3, 1, 15, 0, 3)
+#define SYS_IMP_APL_CLPC_MEM_STALL_CFG1    sys_reg(3, 1, 15, 1, 3)
+#define SYS_IMP_APL_CLPC_MEM_STALL_CFG2    sys_reg(3, 1, 15, 2, 3)
+
 // Performance monitor registers
 #define SYS_IMP_APL_PMCR0 sys_reg(3, 1, 15, 0, 0)
 #define PMCR0_CNT_EN_MASK (MASK(8) | GENMASK(33, 32))

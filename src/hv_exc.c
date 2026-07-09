@@ -48,6 +48,10 @@ struct hv_pcpu_data {
 
 struct hv_pcpu_data pcpu[MAX_CPUS];
 
+static u64 hv_clpc_core_perf_ctrl2[MAX_CPUS];
+static u64 hv_clpc_mem_stall_cfg[MAX_CPUS][3];
+static s64 hv_clpc_counter_bias[MAX_CPUS][16];
+
 /*
  * SPRR permission-remap table, soft-cached on M4+ SoCs where the real register
  * faults at EL2. Values taken from Sven's blog post which appear to work.
@@ -361,6 +365,72 @@ static void hv_update_fiq(void)
             (store) = regs[rt];                                                                    \
         return true;
 
+static bool hv_handle_clpc_counter(struct exc_info *ctx, u64 rt, bool is_read, unsigned int counter)
+{
+    /*
+     * Apple's PMGR kext consumes these as perf/power deltas. Live EL2 access
+     * is unsafe in the current T8140/SPTM context, so provide coherent
+     * monotonic guest-visible counters.
+     */
+    if (counter >= 16)
+        return false;
+
+    u64 cpu = mrs(TPIDR_EL2);
+    u64 base = mrs(CNTPCT_EL0) + (counter * 0x1000000ULL);
+
+    if (is_read) {
+        if (rt < 31)
+            ctx->regs[rt] = (u64)((s64)base + hv_clpc_counter_bias[cpu][counter]);
+    } else {
+        u64 val = rt < 31 ? ctx->regs[rt] : 0;
+        hv_clpc_counter_bias[cpu][counter] = (s64)val - (s64)base;
+    }
+
+    return true;
+}
+
+static bool hv_handle_clpc_mem_stall_config(struct exc_info *ctx, u64 rt, bool is_read,
+                                            unsigned int regno)
+{
+    /*
+     * Apple's PMGR kext programs these CoreMemStallSampler controls with
+     * read/modify/write. Keep readback coherent, but do not touch live EL2
+     * hardware registers.
+     */
+    if (regno >= 3)
+        return false;
+
+    u64 cpu = mrs(TPIDR_EL2);
+    u64 *cache = &hv_clpc_mem_stall_cfg[cpu][regno];
+
+    if (is_read) {
+        if (rt < 31)
+            ctx->regs[rt] = *cache;
+    } else {
+        *cache = rt < 31 ? ctx->regs[rt] : 0;
+    }
+
+    return true;
+}
+
+static bool hv_handle_clpc_core_perf_ctrl2(struct exc_info *ctx, u64 rt, bool is_read)
+{
+    /*
+     * Another sysreg used by Apple's PMGR. XNU only needs coherent state here;
+     * live execution faults in this raw guest path.
+     */
+    u64 cpu = mrs(TPIDR_EL2);
+
+    if (is_read) {
+        if (rt < 31)
+            ctx->regs[rt] = hv_clpc_core_perf_ctrl2[cpu];
+    } else {
+        hv_clpc_core_perf_ctrl2[cpu] = rt < 31 ? ctx->regs[rt] : 0;
+    }
+
+    return true;
+}
+
 static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
 {
     u64 reg = iss & (ESR_ISS_MSR_OP0 | ESR_ISS_MSR_OP2 | ESR_ISS_MSR_OP1 | ESR_ISS_MSR_CRn |
@@ -461,6 +531,36 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         SYSREG_SHADOW(SYS_IMP_APL_S3_6_C15_C0_4, PERCPU(impdef_c15_c0_4))
         SYSREG_SHADOW(SYS_IMP_APL_S3_6_C15_C0_5, PERCPU(impdef_c15_c0_5))
         SYSREG_SHADOW(SYS_IMP_APL_S3_4_C15_C12_0, PERCPU(impdef_c12_0))
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_CORE_PERF0):
+            return hv_handle_clpc_counter(ctx, rt, is_read, 0);
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_CORE_PERF1):
+            return hv_handle_clpc_counter(ctx, rt, is_read, 1);
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_CORE_PERF2):
+            return hv_handle_clpc_counter(ctx, rt, is_read, 2);
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_CORE_ACC0):
+            return hv_handle_clpc_counter(ctx, rt, is_read, 0);
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_CORE_ACC1):
+            return hv_handle_clpc_counter(ctx, rt, is_read, 1);
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_CORE_ACC2):
+            return hv_handle_clpc_counter(ctx, rt, is_read, 2);
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_CORE_ACC3):
+            return hv_handle_clpc_counter(ctx, rt, is_read, 3);
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_CORE_ACC4):
+            return hv_handle_clpc_counter(ctx, rt, is_read, 4);
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_CORE_PERF_ENABLE0):
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_CORE_PERF_ENABLE1):
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_CORE_PERF_ENABLE2):
+            if (is_read)
+                regs[rt] = 0;
+            return true;
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_CORE_PERF_CTRL2):
+            return hv_handle_clpc_core_perf_ctrl2(ctx, rt, is_read);
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_MEM_STALL_CFG0):
+            return hv_handle_clpc_mem_stall_config(ctx, rt, is_read, 0);
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_MEM_STALL_CFG1):
+            return hv_handle_clpc_mem_stall_config(ctx, rt, is_read, 1);
+        case SYSREG_ISS(SYS_IMP_APL_CLPC_MEM_STALL_CFG2):
+            return hv_handle_clpc_mem_stall_config(ctx, rt, is_read, 2);
         SYSREG_MAP(SYS_IMP_APL_APCTL_EL1, SYS_IMP_APL_APCTL_EL12)
         /*
          * AMX. On M4 userspace uses SME, so AMX is inert, but XNU's per-CPU
