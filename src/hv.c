@@ -49,9 +49,52 @@ struct hv_secondary_info_t {
     uint64_t gxf_config;
     uint64_t agt_cnt_rdir_el1;
     uint64_t agt_cnt_rdir_el12;
+    uint64_t guest_ttbr0;
+    uint64_t guest_ttbr1;
+    uint64_t guest_tcr;
+    uint64_t guest_mair;
+    uint64_t guest_amair;
+    uint64_t guest_contextidr;
+    uint64_t guest_cpacr;
+    uint64_t guest_vbar;
+    uint64_t guest_sctlr;
 };
 
 static struct hv_secondary_info_t hv_secondary_info;
+
+static void hv_capture_guest_el12_state(struct hv_secondary_info_t *info)
+{
+    info->guest_ttbr0 = mrs(TTBR0_EL12);
+    info->guest_ttbr1 = mrs(TTBR1_EL12);
+    info->guest_tcr = mrs(TCR_EL12);
+    info->guest_mair = mrs(MAIR_EL12);
+    info->guest_amair = mrs(AMAIR_EL12);
+    info->guest_contextidr = mrs(CONTEXTIDR_EL12);
+    info->guest_cpacr = mrs(CPACR_EL12);
+    info->guest_vbar = mrs(VBAR_EL12);
+    info->guest_sctlr = mrs(SCTLR_EL12);
+}
+
+static void hv_restore_guest_el12_state(const struct hv_secondary_info_t *info)
+{
+    /*
+     * On SPTM-enabled SoCs XNU boots with the mmu already enabled and expect
+     * seeded state (previous SoCs would enable the mmu and create the state
+     * themselves). Leaving stale m1n1 EL2 state causes the secondaries to
+     * fault; program them with the running guest EL1 state instead.
+     */
+    msr(TTBR0_EL12, info->guest_ttbr0);
+    msr(TTBR1_EL12, info->guest_ttbr1);
+    msr(TCR_EL12, info->guest_tcr);
+    msr(MAIR_EL12, info->guest_mair);
+    msr(AMAIR_EL12, info->guest_amair);
+    msr(CONTEXTIDR_EL12, info->guest_contextidr);
+    msr(CPACR_EL12, info->guest_cpacr);
+    msr(VBAR_EL12, info->guest_vbar);
+    sysop("isb");
+    msr(SCTLR_EL12, info->guest_sctlr);
+    sysop("isb");
+}
 
 void hv_init(void)
 {
@@ -151,6 +194,8 @@ void hv_start(void *entry, u64 regs[4])
         hv_secondary_info.agt_cnt_rdir_el1 = mrs(SYS_IMP_APL_AGTCNTRDIR_EL1);
         hv_secondary_info.agt_cnt_rdir_el12 = mrs(SYS_IMP_APL_AGTCNTRDIR_EL12);
     }
+    if (!cpu_features->apple_sysregs_unlocked)
+        hv_capture_guest_el12_state(&hv_secondary_info);
 
     hv_arm_tick(false);
     hv_pinned_cpu = -1;
@@ -227,6 +272,9 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
         msr(SYS_IMP_APL_AGTCNTRDIR_EL12, info->agt_cnt_rdir_el12);
     }
 
+    if (!cpu_features->apple_sysregs_unlocked)
+        hv_restore_guest_el12_state(info);
+
     if (cpu_features->apple_sysregs_unlocked)
         reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
 
@@ -256,6 +304,8 @@ void hv_start_secondary(int cpu, void *entry, u64 regs[4])
     printf("HV: Initializing secondary %d\n", cpu);
     iodev_console_flush();
 
+    if (!cpu_features->apple_sysregs_unlocked)
+        hv_capture_guest_el12_state(&hv_secondary_info);
     mmu_init_secondary(cpu);
     iodev_console_flush();
     smp_call4(cpu, hv_init_secondary, (u64)&hv_secondary_info, 0, 0, 0);
