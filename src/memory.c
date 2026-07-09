@@ -429,11 +429,103 @@ void mmu_map_framebuffer(u64 addr, size_t size)
     mmu_add_mapping(addr, addr, size, MAIR_IDX_NORMAL_NC, PERM_RW_EL0);
 }
 
+int display_get_vram(u64 *paddr, u64 *size);
+
+static int mmu_get_iboot_handoff_range(u64 *start, u64 *size)
+{
+    u64 range[2];
+    int chosen = adt_path_offset(adt, "/chosen");
+
+    if (chosen >= 0 &&
+        ADT_GETPROP_ARRAY(adt, chosen, "iboot-handoff", range) == sizeof(range))
+        goto found;
+
+    int carveouts = adt_path_offset(adt, "/chosen/carveout-memory-map");
+    if (carveouts >= 0 &&
+        ADT_GETPROP_ARRAY(adt, carveouts, "region-id-1", range) == sizeof(range))
+        goto found;
+
+    return -1;
+
+found:
+    if (!range[0] || !range[1])
+        return -1;
+
+    *start = ALIGN_DOWN(range[0], PAGE_SIZE);
+    *size = ALIGN_UP(range[0] + range[1], PAGE_SIZE) - *start;
+    return 0;
+}
+
+static void mmu_add_ram_mapping_handoff_nc(u64 from, u64 to, size_t size,
+                                           u8 attribute_index, u64 perms,
+                                           u64 handoff_start,
+                                           u64 handoff_size)
+{
+    u64 end = to + size;
+    u64 handoff_end = handoff_start + handoff_size;
+
+    if (!handoff_start || !handoff_size || handoff_end <= to ||
+        handoff_start >= end) {
+        mmu_add_mapping(from, to, size, attribute_index, perms);
+        return;
+    }
+
+    u64 cur_to = to;
+    if (handoff_start > cur_to) {
+        u64 before_size = handoff_start - cur_to;
+        mmu_add_mapping(from, cur_to, before_size, attribute_index, perms);
+        from += before_size;
+        cur_to += before_size;
+    }
+
+    u64 nc_end = min(handoff_end, end);
+    u64 nc_size = nc_end - cur_to;
+    mmu_add_mapping(from, cur_to, nc_size, MAIR_IDX_NORMAL_NC, perms);
+    from += nc_size;
+    cur_to += nc_size;
+
+    if (cur_to < end)
+        mmu_add_mapping(from, cur_to, end - cur_to, attribute_index, perms);
+}
+
+static void mmu_map_nc_aliases(u64 addr, size_t size, const char *name)
+{
+    u64 start = ALIGN_DOWN(addr, PAGE_SIZE);
+    u64 end = ALIGN_UP(addr + size, PAGE_SIZE);
+    size_t map_size = end - start;
+
+    if (!addr || !size)
+        return;
+
+    printf("MMU: Adding Normal-NC mappings at 0x%lx..0x%lx for %s\n",
+           start, end, name);
+    mmu_add_mapping(start, start, map_size, MAIR_IDX_NORMAL_NC, PERM_RWX);
+    mmu_add_mapping(start | REGION_RWX_EL0, start, map_size,
+                    MAIR_IDX_NORMAL_NC, PERM_RWX_EL0);
+    mmu_add_mapping(start | REGION_RW_EL0, start, map_size,
+                    MAIR_IDX_NORMAL_NC, PERM_RW_EL0);
+    mmu_add_mapping(start | REGION_RX_EL1, start, map_size,
+                    MAIR_IDX_NORMAL_NC, PERM_RX_EL0);
+}
+
+static void mmu_map_iboot_handoff_nc(void)
+{
+    u64 start, size;
+
+    if (mmu_get_iboot_handoff_range(&start, &size) < 0)
+        return;
+
+    mmu_map_nc_aliases(start, size, "/chosen/iboot-handoff");
+
+}
+
 static void mmu_add_default_mappings(void)
 {
     ram_base = ALIGN_DOWN(cur_boot_args.phys_base, BIT(32));
     uint64_t ram_size = cur_boot_args.mem_size + cur_boot_args.phys_base - ram_base;
     ram_size = ALIGN_DOWN(ram_size, PAGE_SIZE);
+    u64 handoff_start = 0, handoff_size = 0;
+    mmu_get_iboot_handoff_range(&handoff_start, &handoff_size);
 
     printf("MMU: RAM base: 0x%lx\n", ram_base);
     printf("MMU: Top of normal RAM: 0x%lx\n", ram_base + ram_size);
@@ -445,10 +537,24 @@ static void mmu_add_default_mappings(void)
      * With SPRR enabled, this becomes RW.
      * This range includes all real RAM, including carveouts
      */
-    mmu_add_mapping(ram_base, ram_base, mem_size_actual, MAIR_IDX_NORMAL, PERM_RWX);
+    mmu_add_ram_mapping_handoff_nc(ram_base, ram_base, mem_size_actual,
+                                   MAIR_IDX_NORMAL, PERM_RWX,
+                                   handoff_start, handoff_size);
 
     /* Unmap carveout regions */
     mcc_unmap_carveouts();
+
+    /*
+     * Re-map the boot framebuffer (/vram) Normal-NC. The Normal-WB identity map
+     * lets m1n1/iBoot cacheable accesses allocate AMCC SLC directory tags
+     * for /vram; after handoff XNU's non-coherent framebuffer writes hit those
+     * stale tags and the AMCC raises UNEXP_RT_HIT_DIR -> PEH panic.
+     */
+    {
+        u64 fb_pa = 0, fb_size = 0;
+        if (display_get_vram(&fb_pa, &fb_size) == 0 && fb_pa && fb_size)
+            mmu_map_framebuffer(fb_pa, fb_size);
+    }
 
     /*
      * Remap m1n1 executable code as RX.
@@ -466,19 +572,32 @@ static void mmu_add_default_mappings(void)
      * read/writable/exec by EL0 (but not executable by EL1)
      * With SPRR enabled, this becomes RX_EL0.
      */
-    mmu_add_mapping(ram_base | REGION_RWX_EL0, ram_base, ram_size, MAIR_IDX_NORMAL, PERM_RWX_EL0);
+    mmu_add_ram_mapping_handoff_nc(ram_base | REGION_RWX_EL0, ram_base,
+                                   ram_size, MAIR_IDX_NORMAL, PERM_RWX_EL0,
+                                   handoff_start, handoff_size);
     /*
      * Create mapping for RAM from 0x98_0000_0000,
      * read/writable by EL0 (but not executable by EL1)
      * With SPRR enabled, this becomes RW_EL0.
      */
-    mmu_add_mapping(ram_base | REGION_RW_EL0, ram_base, ram_size, MAIR_IDX_NORMAL, PERM_RW_EL0);
+    mmu_add_ram_mapping_handoff_nc(ram_base | REGION_RW_EL0, ram_base,
+                                   ram_size, MAIR_IDX_NORMAL, PERM_RW_EL0,
+                                   handoff_start, handoff_size);
     /*
      * Create mapping for RAM from 0xa8_0000_0000,
      * read/executable by EL1
      * This allows executing from dynamic regions in EL1
      */
-    mmu_add_mapping(ram_base | REGION_RX_EL1, ram_base, ram_size, MAIR_IDX_NORMAL, PERM_RX_EL0);
+    mmu_add_ram_mapping_handoff_nc(ram_base | REGION_RX_EL1, ram_base,
+                                   ram_size, MAIR_IDX_NORMAL, PERM_RX_EL0,
+                                   handoff_start, handoff_size);
+
+    /*
+     * The iBoot handoff page is a protected low carveout on T8140
+     * (/chosen/iboot-handoff, region-id-1). Keep m1n1's aliases uncached so
+     * we do not add any new WB state for this page.
+     */
+    mmu_map_iboot_handoff_nc();
 
     /*
      * Create four separate full mappings of MMIO space, with different access types
