@@ -203,6 +203,21 @@ static void hv_update_fiq(void)
             _msr(sr_tkn(sr), regs[rt]);                                                            \
         return true;
 
+/*
+ * Soft-cache a guarded Apple impdef register: return the last value the guest
+ * wrote (or the seeded reset default on first read) and swallow the write.
+ * This drops the register's hardware side effect entirely.  `store` is any
+ * lvalue: PERCPU(field) for per-CPU state, or a static global seeded with the
+ * reset value the guest expects to read back.
+ */
+#define SYSREG_SHADOW(sr, store)                                                                   \
+    case SYSREG_ISS(sr):                                                                           \
+        if (is_read)                                                                               \
+            regs[rt] = (store);                                                                    \
+        else                                                                                       \
+            (store) = regs[rt];                                                                    \
+        return true;
+
 static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
 {
     u64 reg = iss & (ESR_ISS_MSR_OP0 | ESR_ISS_MSR_OP2 | ESR_ISS_MSR_OP1 | ESR_ISS_MSR_CRn |
