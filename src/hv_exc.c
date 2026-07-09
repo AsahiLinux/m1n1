@@ -48,6 +48,12 @@ struct hv_pcpu_data {
 
 struct hv_pcpu_data pcpu[MAX_CPUS];
 
+/*
+ * SPRR permission-remap table, soft-cached on M4+ SoCs where the real register
+ * faults at EL2. Values taken from Sven's blog post which appear to work.
+ */
+static u64 hv_sprr_perm_el0 = 0x2010002030100000;
+static u64 hv_sprr_perm_el1 = 0x2020a506f020f0e0;
 static u64 hv_sprr_umprr_el1;
 
 /*
@@ -414,7 +420,29 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         SYSREG_MAP(SYS_IMP_APL_ASPSR_GL1, SYS_IMP_APL_ASPSR_GL12)
         SYSREG_MAP(SYS_IMP_APL_ELR_GL1, SYS_IMP_APL_ELR_GL12)
         SYSREG_MAP(SYS_IMP_APL_ESR_GL1, SYS_IMP_APL_ESR_GL12)
-        SYSREG_MAP(SYS_IMP_APL_SPRR_PERM_EL1, SYS_IMP_APL_SPRR_PERM_EL12)
+        /*
+         * SPRR permission remapping. On unlocked SoCs, redirect to the EL12
+         * alias as before; on M4+ SoCs the register faults at EL2, so
+         * soft-cache it
+         */
+        case SYSREG_ISS(SYS_IMP_APL_SPRR_PERM_EL0):
+            if (is_read)
+                regs[rt] = hv_sprr_perm_el0;
+            else
+                hv_sprr_perm_el0 = regs[rt];
+            return true;
+        case SYSREG_ISS(SYS_IMP_APL_SPRR_PERM_EL1):
+            if (cpu_features->apple_sysregs_unlocked) {
+                if (is_read)
+                    regs[rt] = _mrs(sr_tkn(SYS_IMP_APL_SPRR_PERM_EL12));
+                else
+                    _msr(sr_tkn(SYS_IMP_APL_SPRR_PERM_EL12), regs[rt]);
+            } else if (is_read) {
+                regs[rt] = hv_sprr_perm_el1;
+            } else {
+                hv_sprr_perm_el1 = regs[rt];
+            }
+            return true;
         case SYSREG_ISS(SYS_IMP_APL_SPRR_UMPRR_EL1):
             if (is_read)
                 regs[rt] = hv_sprr_umprr_el1 & 0xffffffff;
