@@ -730,6 +730,7 @@
 #define SYS_IMP_APL_SPRR_PERM_EL1  sys_reg(3, 6, 15, 1, 6)
 #define SYS_IMP_APL_SPRR_PERM_EL02 sys_reg(3, 4, 15, 5, 2)
 #define SYS_IMP_APL_SPRR_PERM_EL12 sys_reg(3, 6, 15, 15, 7)
+#define SYS_IMP_APL_SPRR_UMPRR_EL1 sys_reg(3, 6, 15, 3, 0)
 
 #define SYS_IMP_APL_TPIDR_GL1 sys_reg(3, 6, 15, 10, 1)
 #define SYS_IMP_APL_VBAR_GL1  sys_reg(3, 6, 15, 10, 2)

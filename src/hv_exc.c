@@ -48,6 +48,8 @@ struct hv_pcpu_data {
 
 struct hv_pcpu_data pcpu[MAX_CPUS];
 
+static u64 hv_sprr_umprr_el1;
+
 /*
  * Track EL2/proxy time hidden from the guest. The architectural counter and
  * Apple CNTVCT alias run in different clock domains, so each needs its own
@@ -413,6 +415,12 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         SYSREG_MAP(SYS_IMP_APL_ELR_GL1, SYS_IMP_APL_ELR_GL12)
         SYSREG_MAP(SYS_IMP_APL_ESR_GL1, SYS_IMP_APL_ESR_GL12)
         SYSREG_MAP(SYS_IMP_APL_SPRR_PERM_EL1, SYS_IMP_APL_SPRR_PERM_EL12)
+        case SYSREG_ISS(SYS_IMP_APL_SPRR_UMPRR_EL1):
+            if (is_read)
+                regs[rt] = hv_sprr_umprr_el1 & 0xffffffff;
+            else
+                hv_sprr_umprr_el1 = regs[rt] & 0xffffffff;
+            return true;
         /*
          * Impdef sysregs locked on M4+ that are required by XNU
          */
