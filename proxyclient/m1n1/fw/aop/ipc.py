@@ -295,9 +295,10 @@ PDMConfig = Struct(
     "slowClockSpeed" / Int32ul,
     "fastClockSpeed" / Int32ul,
     "channelPolaritySelect" / Int32ul,
+    "unk0" / Int8ul,
     "channelPhaseSelect" / Int32ul,
-    "unk8" / Hex(Int32ul),
-    "unk9" / Hex(Int16ul),
+    "unk1" / Int8ul,
+    "latency" / Hex(Int32ul),
     "ratios" / Struct(
         "r1" / Int8ul,
         "r2" / Int8ul,
@@ -316,18 +317,12 @@ PDMConfig = Struct(
     #    - (this.ratios.r1 + this.ratios.r2 + this.ratios.r3) * 16
     #),
     "coefficients" / Int32sl[
-        (this.ratios.r1 + this.ratios.r2 + this.ratios.r3) * 4 + 12
+        120
     ],
-    "junk" / Padding(
-        lambda this: max(0,
-            this.coeff_bulk * 4 - 48 \
-            - (this.ratios.r1 + this.ratios.r2 + this.ratios.r3) * 16
-        )
-    ),
-    "unk10" / Int32ul, # maybe
+    "micTurnOnTimeValid" / Int32ul,
     "micTurnOnTimeMs" / Int32ul,
     "blank" / ZPadding(16),
-    "unk11" / Int32ul,
+    "micSettleTimeValid" / Int32ul,
     "micSettleTimeMs" / Int32ul,
     "blank2" / ZPadding(69),
 )
@@ -343,7 +338,7 @@ DecimatorConfig = Struct(
     "filterLengths" / Hex(Int32ul),
     "coeff_bulk" / Int32ul,
     "coefficients" / Int32sl[
-        (this.ratios.r1 + this.ratios.r2 + this.ratios.r3) * 4 + 12
+        120
     ],
     "junk" / Padding(
         lambda this: max(0,
@@ -352,6 +347,25 @@ DecimatorConfig = Struct(
         )
     ),
 )
+
+HFDecimatorConfig = Struct(
+    "latency" / Int32ul,
+    "ratios" / Struct(
+        "r1" / Int8ul,
+        "r2" / Int8ul,
+        "r3" / Int8ul,
+        "pad" / Default(Int8ul, 0),
+    ),
+    "filterLengths" / Hex(Int32ul),
+    "coeff_bulk" / Int32ul,
+    "coefficients" / Int64sl[
+        (this.coeff_bulk)
+    ],
+    "junk" / Padding(
+        lambda this: max(0, (1023 - this.coeff_bulk) * 8)
+    ),
+)
+
 
 PowerSetting = Struct(
     "devid" / FourCC,
@@ -370,6 +384,7 @@ DEVPROPS = {
     ('lpai', 200): FourCC,
     ('pdm0', 200): PDMConfig,
     ('pdm0', 210): DecimatorConfig,
+    ('pdm0', 212): HFDecimatorConfig,
     ('lpai', 301): Struct(
         "unk1" / Int32ul,
         "unk2" / Int32ul,

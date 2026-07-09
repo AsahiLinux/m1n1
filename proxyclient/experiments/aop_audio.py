@@ -29,32 +29,73 @@ p.usb_iodev_vuart_setup(p.iodev_whoami())
 p.iodev_set_usage(IODEV.USB_VUART, USAGE.UARTPROXY)
 
 pdm2 = u.adt["/arm-io/aop/iop-aop-nub/aop-audio/audio-pdm2"]
-decm = u.adt["/arm-io/aop/iop-aop-nub/aop-audio/dc-2400000"]
+base_decm = "/arm-io/aop/iop-aop-nub/aop-audio/dc-2400000"
+if base_decm in u.adt:
+    decm = u.adt["/arm-io/aop/iop-aop-nub/aop-audio/dc-2400000"]
 
-pdm_config = Container(
-    bytesPerSample=pdm2.bytesPerSample, # 2 ??
-    clockSource=pdm2.clockSource, # 'pll '
-    pdmFrequency=pdm2.pdmFrequency, # 2400000
-    pdmcFrequency=pdm2.pdmcFrequency, # 24000000
-    slowClockSpeed=pdm2.slowClockSpeed, # 24000000
-    fastClockSpeed=pdm2.fastClockSpeed, # 24000000
-    channelPolaritySelect=pdm2.channelPolaritySelect, # 256
-    channelPhaseSelect=pdm2.channelPhaseSelect, # traces say 99 but device tree says 0
-    unk8=0xf7600,
-    unk9=0, # this should be latency (thus 15, see below) but traces say 0
-    ratios=Container(
-        r1=decm.ratios.r0,
-        r2=decm.ratios.r1,
-        r3=decm.ratios.r2,
-    ),
-    filterLengths=decm.filterLengths,
-    coeff_bulk=120,
-    coefficients=GreedyRange(Int32sl).parse(decm.coefficients),
-    unk10=1,
-    micTurnOnTimeMs=pdm2.micTurnOnTimeMs, # 20
-    unk11=1,
-    micSettleTimeMs=pdm2.micSettleTimeMs, # 50
-)
+    pdm_config = Container(
+        bytesPerSample=pdm2.bytesPerSample, # 2 ??
+        clockSource=pdm2.clockSource, # 'pll '
+        pdmFrequency=pdm2.pdmFrequency, # 2400000
+        pdmcFrequency=pdm2.pdmcFrequency, # 24000000
+        slowClockSpeed=pdm2.slowClockSpeed, # 24000000
+        fastClockSpeed=pdm2.fastClockSpeed, # 24000000
+        channelPolaritySelect=pdm2.channelPolaritySelect, # 256
+        channelPhaseSelect=pdm2.channelPhaseSelect,
+        unk1=0,
+        unk0=0,
+        latency=decm.latency,
+        ratios=Container(
+            r1=decm.ratios.r0,
+            r2=decm.ratios.r1,
+            r3=decm.ratios.r2,
+        ),
+        filterLengths=decm.filterLengths,
+        coeff_bulk=120,
+        coefficients=GreedyRange(Int32sl).parse(decm.coefficients),
+        micSettleTimeValid=1,
+        micTurnOnTimeMs=pdm2.micTurnOnTimeMs, # 20
+        micTurnOnTimeValid=1,
+        micSettleTimeMs=pdm2.micSettleTimeMs, # 50
+    )
+    coef_len = 120
+
+    coefs = GreedyRange(Int32sl).parse(decm.coefficients)
+    hfdc = False
+else:
+    decm = u.adt["/arm-io/aop/iop-aop-nub/aop-audio/hfdc-2400000"]
+
+    pdm_config = Container(
+        bytesPerSample=pdm2.bytesPerSample, # 2 ??
+        clockSource=pdm2.clockSource, # 'pll '
+        pdmFrequency=pdm2.pdmFrequency, # 2400000
+        pdmcFrequency=pdm2.pdmcFrequency, # 24000000
+        slowClockSpeed=pdm2.slowClockSpeed, # 24000000
+        fastClockSpeed=pdm2.fastClockSpeed, # 24000000
+        unk1=0,
+        unk0=0,
+        channelPolaritySelect=pdm2.channelPolaritySelect, # 256
+        channelPhaseSelect=pdm2.channelPhaseSelect,
+        latency=0,
+        ratios=Container(
+            r1=0,
+            r2=0,
+            r3=0,
+        ),
+        filterLengths=0,
+        coeff_bulk=0,
+        coefficients=[0] * 120,
+        micSettleTimeValid=1,
+        micTurnOnTimeMs=pdm2.micTurnOnTimeMs, # 20
+        micTurnOnTimeValid=1,
+        micSettleTimeMs=pdm2.micSettleTimeMs, # 50
+    )
+    coef_len = 1023
+
+    coefs = GreedyRange(Int64sl).parse(decm.coefficients)
+    hfdc = True
+
+coefs.extend([0] * (coef_len - len(coefs)))
 
 decimator_config = Container(
     latency=decm.latency, # 15
@@ -64,20 +105,23 @@ decimator_config = Container(
         r3=decm.ratios.r2, # 2
     ),
     filterLengths=decm.filterLengths,
-    coeff_bulk=120,
-    coefficients=GreedyRange(Int32sl).parse(decm.coefficients),
+    coeff_bulk=coef_len,
+    coefficients=coefs,
 )
 
-dart = DART.from_adt(u, "/arm-io/dart-aop",
-                     iova_range=(u.adt["/arm-io/dart-aop"].vm_base, 0x1000000000))
+if hfdc:
+    kwargs = {}
+else:
+    kwargs = dict(iova_range=(u.adt["/arm-io/dart-aop"].vm_base, 0x1000000000))
+
+dart = DART.from_adt(u, "/arm-io/dart-aop", **kwargs)
 dart.initialize()
 
 aop = AOPClient(u, "/arm-io/aop", dart)
 aop.update_bootargs({
-    'p0CE': 0x20000,
+    'p0CE': 0x010000000000,
     'laCn': 0x0,
-    'tPOA': 0x1,
-    "gila": 0x80,
+    "gila": 0x40,
 })
 aop.verbose = 4
 
@@ -129,20 +173,22 @@ def aop_stop():
 
 def main():
     aop.start()
-    for epno in [0x20, 0x21, 0x22, 0x24, 0x25, 0x26, 0x27, 0x28]:
+    for epno in [0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b]:
         aop.start_ep(epno)
-    aop.work_for(0.3)
+    aop.work_for(1)
     audep = aop.audio
 
     audep.send_notify(AttachDevice(devid='hpai')) # high power audio input; actual mic
     audep.send_notify(AttachDevice(devid='lpai')) # low power audio input; voice trigger mic
     audep.send_notify(AttachDevice(devid='pdm0')) # leap: low-energy audio processor I think
     # [syslog] * [udioPDMNodeBase.cpp:554]PDMDev<pdm0> off ->xi0 , 0->2400000 AP state 1
+    if hfdc:
+        audep.send_notify(AttachDevice(devid='lilb')) # "leap internal loopback"
 
     # initChannelControl (<7, 7, 1, 7>)
     audep.send_notify(SetDeviceProp(devid='lpai', modifier=301, data=Container(unk1=7, unk2=7, unk3=1, unk4=7)))
     audep.send_notify(SetDeviceProp(devid='pdm0', modifier=200, data=pdm_config))
-    audep.send_notify(SetDeviceProp(devid='pdm0', modifier=210, data=decimator_config))
+    audep.send_notify(SetDeviceProp(devid='pdm0', modifier=212 if hfdc else 210, data=decimator_config))
     ret = audep.send_roundtrip(AudioPropertyState(devid="hpai"))
     print("hpai state: %s" % (ret.state)) # idle
 

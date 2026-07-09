@@ -139,3 +139,45 @@ class AOPVoiceTriggerEndpoint(EPICEndpoint):
 
     def send_notifycmd(self, type, data, chan="aop-voicetrigger", **kwargs):
         return super(AOPVoiceTriggerEndpoint, self).send_notifycmd(chan, type, data, **kwargs)
+
+
+class AOPUNK29Service(EPICService):
+    NAME = "unk29"
+    SHORT = "unk29"
+
+class AOPUNK29Endpoint(EPICEndpoint):
+    SHORT = "unk29"
+    SERVICES = [
+        AOPUNK29Service,
+    ]
+
+class AOPUNK2aService(EPICService):
+    NAME = "unk2a"
+    SHORT = "unk2a"
+
+class AOPUNK2aEndpoint(EPICEndpoint):
+    SHORT = "unk2a"
+    SERVICES = [
+        AOPUNK2aService,
+    ]
+
+class AOPUNK2bService(EPICService):
+    NAME = "unk2b"
+    SHORT = "unk2b"
+
+class AOPUNK2bEndpoint(EPICEndpoint):
+    SHORT = "unk2b"
+    SERVICES = [
+        AOPUNK2bService,
+    ]
+
+
+class AOPUNK23Service(EPICService):
+    NAME = "unk23"
+    SHORT = "unk23"
+
+class AOPUNK23Endpoint(EPICEndpoint):
+    SHORT = "unk23"
+    SERVICES = [
+        AOPUNK23Service,
+    ]
