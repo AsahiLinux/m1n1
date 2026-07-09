@@ -295,10 +295,12 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
         msr(SYS_IMP_APL_APSTS_EL12, info->apsts);
     }
     msr(ACTLR_EL2, info->actlr_el2);
-    if (cpu_features->actlr_el2)
-        msr(SYS_ACTLR_EL12, info->actlr_el1);
-    else
-        msr(SYS_IMP_APL_ACTLR_EL12, info->actlr_el1);
+    if (cpu_features->apple_sysregs_unlocked) {
+        if (cpu_features->actlr_el2)
+            msr(SYS_ACTLR_EL12, info->actlr_el1);
+        else
+            msr(SYS_IMP_APL_ACTLR_EL12, info->actlr_el1);
+    }
     msr(CNTHCTL_EL2, info->cnthctl);
     if (cpu_features->apple_sysregs_unlocked) {
         msr(SYS_IMP_APL_SPRR_CONFIG_EL1, info->sprr_config);
