@@ -41,6 +41,9 @@ struct hv_pcpu_data {
     u64 impdef_c15_c0_4;
     u64 impdef_c15_c0_5;
     u64 impdef_c12_0;
+    u64 amx_ctx_el1;
+    u64 amx_ctl_el1;
+    u64 amx_state_t;
 } ALIGNED(64);
 
 struct hv_pcpu_data pcpu[MAX_CPUS];
@@ -423,9 +426,47 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         SYSREG_SHADOW(SYS_IMP_APL_S3_6_C15_C0_5, PERCPU(impdef_c15_c0_5))
         SYSREG_SHADOW(SYS_IMP_APL_S3_4_C15_C12_0, PERCPU(impdef_c12_0))
         SYSREG_MAP(SYS_IMP_APL_APCTL_EL1, SYS_IMP_APL_APCTL_EL12)
-        SYSREG_MAP(SYS_IMP_APL_AMX_CTL_EL1, SYS_IMP_APL_AMX_CTL_EL12)
-        /* FIXME:Might be wrong */
-        SYSREG_PASS(SYS_IMP_APL_AMX_STATE_T)
+        /*
+         * AMX. On M4 userspace uses SME, so AMX is inert, but XNU's per-CPU
+         * init and context switch still touch these regs, which fault at EL2 on
+         * guarded SoCs. Advertise a valid version (AMXIDR/AIDR2, else boot
+         * panics) and soft-cache the control/state on guarded SoCs so XNU's
+         * read-after-write is coherent; the real AMX unit is never used. Unlocked
+         * SoCs keep the original map/pass behavior.
+         */
+        case SYSREG_ISS(SYS_IMP_APL_AMXIDR_EL1):
+            if (!is_read)
+                return false;
+            if (cpu_features->apple_sysregs_unlocked)
+                regs[rt] = _mrs(sr_tkn(SYS_IMP_APL_AMXIDR_EL1));
+            else
+                regs[rt] = BIT(5); /* AMX v6 */
+            return true;
+        SYSREG_SHADOW(SYS_IMP_APL_AMX_CTX_EL1, PERCPU(amx_ctx_el1))
+        case SYSREG_ISS(SYS_IMP_APL_AMX_CTL_EL1):
+            if (cpu_features->apple_sysregs_unlocked) {
+                if (is_read)
+                    regs[rt] = _mrs(sr_tkn(SYS_IMP_APL_AMX_CTL_EL12));
+                else
+                    _msr(sr_tkn(SYS_IMP_APL_AMX_CTL_EL12), regs[rt]);
+            } else if (is_read) {
+                regs[rt] = PERCPU(amx_ctl_el1);
+            } else {
+                PERCPU(amx_ctl_el1) = regs[rt];
+            }
+            return true;
+        case SYSREG_ISS(SYS_IMP_APL_AMX_STATE_T):
+            if (cpu_features->apple_sysregs_unlocked) {
+                if (is_read)
+                    regs[rt] = _mrs(sr_tkn(SYS_IMP_APL_AMX_STATE_T));
+                else
+                    _msr(sr_tkn(SYS_IMP_APL_AMX_STATE_T), regs[rt]);
+            } else if (is_read) {
+                regs[rt] = PERCPU(amx_state_t);
+            } else {
+                PERCPU(amx_state_t) = regs[rt];
+            }
+            return true;
         /* pass through PMU handling */
         SYSREG_PASS(SYS_IMP_APL_PMCR1)
         SYSREG_PASS(SYS_IMP_APL_PMCR2)

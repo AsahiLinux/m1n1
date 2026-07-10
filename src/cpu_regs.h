@@ -14,6 +14,8 @@
 #define SYS_IMP_APL_AMX_CTL_EL1  sys_reg(3, 4, 15, 1, 4)
 #define SYS_IMP_APL_AMX_CTL_EL2  sys_reg(3, 4, 15, 4, 7)
 #define SYS_IMP_APL_AMX_CTL_EL12 sys_reg(3, 4, 15, 4, 6)
+/* AMX/AIDR2 version-ID probe; XNU boot-panics if it reads an unknown value. */
+#define SYS_IMP_APL_AMXIDR_EL1   sys_reg(3, 6, 15, 2, 7)
 
 #define AMX_CTL_EN     BIT(63)
 #define AMX_CTL_EN_EL1 BIT(62)
