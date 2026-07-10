@@ -1915,10 +1915,84 @@ class HV(Reloadable):
             print("Done.")
             return a.tobytes()
 
-        #image = macho.prepare_image(load_hook)
+        def load_hook_m4(data, segname, size, fileoff, dest):
+            if segname not in ("__TEXT_EXEC", "__TEXT_BOOT_EXEC"):
+                return data
+
+            nop = 0xd503201f
+            print(f"Patching segment {segname}...")
+
+            a = array.array("I", data)
+            seg_vmaddr = macho.vmin + dest
+
+            # genter -> HVC to allow us to catch SPTM entry calls
+            p = 0
+            while (p := data.find(b"\x20\x00", p)) != -1:
+                if (p & 3) != 2:
+                    p += 1
+                    continue
+                opcode = a[p // 4]
+                if 0x00201420 <= opcode <= 0x00201424:  # genter #imm (imm 0..4)
+                    a[p // 4] = self.hvc(0)
+                p += 4
+
+            # sysreg neutralization: NOP writes to guarded impdef regs and
+            # SME control register
+            nop_msr = [
+                0xd51cf100,   # msr KERNKEYLO_EL1   (s3_4_c15_c1_0)
+                0xd51cf120,   # msr KERNKEYHI_EL1   (s3_4_c15_c1_1)
+                0xd51cfdc0,   # msr s3_4_c15_c13_6  (Apple PAC key)
+                0xd51cfde0,   # msr s3_4_c15_c13_7  (Apple PAC key)
+                0xd51c12a0,   # msr SMPRIMAP_EL2    (s3_4_c1_c2_5)
+            ]
+            p = 0
+            while (p := data.find(b"\x1c\xd5", p)) != -1:
+                if (p & 3) != 2:
+                    p += 1
+                    continue
+                opcode = a[p // 4] & ~0x1f
+                if opcode in nop_msr:
+                    if opcode == 0xd51c12a0:
+                        print(f"  0x{seg_vmaddr + (p & ~3):x}: SMPRIMAP_EL2 -> noop")
+                    a[p // 4] = nop
+                p += 4
+
+            # commpage: force XNU to publish VM-safe userspace feature policy
+            # bytes. The Apple timebase path and HW-TPRO/SPRR path use
+            # userspace-inaccessible Apple registers under this EL1 guest.
+            #
+            # hard coded kernelcache addresses is a hack we should find a way
+            # to avoid
+            off = 0xfffffe000b5a3330 - seg_vmaddr
+            if 0 <= off < size:
+                if a[off // 4] != 0x52800068:
+                    raise RuntimeError("_COMM_PAGE_USER_TIMEBASE patch target mismatch")
+                a[off // 4] = 0x52800008
+                print(f"  0xfffffe000b5a3330: _COMM_PAGE_USER_TIMEBASE=0")
+
+            off = 0xfffffe000b5a3388 - seg_vmaddr
+            if 0 <= off < size:
+                if a[off // 4] != 0x52800028:
+                    raise RuntimeError("_COMM_PAGE_CONT_HWCLOCK patch target mismatch")
+                a[off // 4] = 0x52800008
+                print(f"  0xfffffe000b5a3388: _COMM_PAGE_CONT_HWCLOCK=0")
+
+            off = 0xfffffe000b5a358c - seg_vmaddr
+            if 0 <= off < size:
+                if a[off // 4] != 0x39043128:
+                    raise RuntimeError("_COMM_PAGE_HW_TPRO patch target mismatch")
+                a[off // 4] = 0x3904313f
+                print(f"  0xfffffe000b5a358c: _COMM_PAGE_HW_TPRO=0")
+
+            print("Done.")
+            return a.tobytes()
+
         chip_id = self.u.adt["/chosen"].chip_id
         if chip_id in (0x8122, 0x6030, 0x6031, 0x6032, 0x6034):
             image = macho.prepare_image(load_hook_m3)
+        elif chip_id in (0x8132, 0x8140, 0x6040, 0x6041):
+            # M4 / A18 Pro class: T8132, T8140, T6040 (M4 Pro), T6041 (M4 Max)
+            image = macho.prepare_image(load_hook_m4)
         else:
             image = macho.prepare_image()
         self.load_raw(image, entryoffset=(macho.entry - macho.vmin), use_xnu_symbols=self.xnu_mode and symfile is not None, vmin=macho.vmin)
