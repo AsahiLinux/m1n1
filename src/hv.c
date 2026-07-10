@@ -156,6 +156,7 @@ void hv_start(void *entry, u64 regs[4])
     hv_pinned_cpu = -1;
     hv_want_cpu = -1;
     hv_cpus_in_guest = BIT(smp_id());
+    hv_apply_time_stealing_offset();
 
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
 
@@ -237,6 +238,7 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
 
 static void hv_enter_secondary(void *entry, u64 regs[4])
 {
+    hv_apply_time_stealing_offset();
     hv_enter_guest(regs[0], regs[1], regs[2], regs[3], entry);
 
     spin_lock(&bhl);

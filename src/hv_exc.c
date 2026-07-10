@@ -144,6 +144,12 @@ void hv_set_time_stealing(bool enabled, bool reset)
     time_stealing = enabled;
     if (reset)
         stolen_time = 0;
+    hv_apply_time_stealing_offset();
+}
+
+void hv_apply_time_stealing_offset(void)
+{
+    msr(CNTVOFF_EL2, stolen_time);
 }
 
 void hv_add_time(s64 time)
@@ -420,7 +426,7 @@ static void hv_exc_exit(struct exc_info *ctx)
     hv_update_fiq();
     /* reenable PMU counters */
     reg_set(SYS_IMP_APL_PMCR0, PERCPU(exc_entry_pmcr0_cnt));
-    msr(CNTVOFF_EL2, stolen_time);
+    hv_apply_time_stealing_offset();
     spin_unlock(&bhl);
     hv_maybe_exit();
     __atomic_or_fetch(&hv_cpus_in_guest, BIT(smp_id()), __ATOMIC_ACQUIRE);
