@@ -176,6 +176,48 @@ int mcc_enable_cache(void)
     return ret;
 }
 
+static void mcc_unmap_carveout(const char *name, u64 start, u64 size)
+{
+    if (!start || !size)
+        return;
+
+    if (mcc_carveout_count >= ARRAY_SIZE(mcc_carveouts) - 1) {
+        printf("MMU: carveout list full, cannot record %s at 0x%lx..0x%lx\n", name, start,
+               start + size);
+        return;
+    }
+
+    printf("MMU: Unmapping %s carveout at 0x%lx..0x%lx\n", name, start, start + size);
+    mmu_rm_mapping(start, size);
+    mmu_rm_mapping(start | REGION_RWX_EL0, size);
+    mmu_rm_mapping(start | REGION_RW_EL0, size);
+    mmu_rm_mapping(start | REGION_RX_EL1, size);
+    mcc_carveouts[mcc_carveout_count].base = start;
+    mcc_carveouts[mcc_carveout_count].size = size;
+    mcc_carveout_count++;
+}
+
+static void mcc_unmap_adt_carveout(int node, const char *name)
+{
+    u64 range[2];
+
+    if (ADT_GETPROP_ARRAY(adt, node, name, range) != sizeof(range))
+        return;
+
+    mcc_unmap_carveout(name, range[0], range[1]);
+}
+
+static void mcc_unmap_adt_tz_carveouts(void)
+{
+    int node = adt_path_offset(adt, "/chosen/carveout-memory-map");
+
+    if (node < 0)
+        return;
+
+    mcc_unmap_adt_carveout(node, "region-id-4");
+    mcc_unmap_adt_carveout(node, "region-id-2");
+}
+
 int mcc_unmap_carveouts(void)
 {
     if (!mcc_initialized)
@@ -184,38 +226,36 @@ int mcc_unmap_carveouts(void)
     mcc_carveout_count = 0;
     memset(mcc_carveouts, 0, sizeof mcc_carveouts);
 
-    // All MCCs and planes should have identical configs
-    // Note: For unhandled machines, the TZ regions can be found (on m1, m2, m3) by looking at
-    // region-id-2 and region-id-4 on a booted macos, in the /chosen/carveout-memory-map DT node.
-    // This can be used along with dumping the mcc reg space to find the correct start/end/enable
-    // above.
-    for (u32 i = 0; i < mcc_regs[0].tz->count; i++) {
-        uint64_t off = mcc_regs[0].tz->stride * i;
-        uint64_t start = plane_read32(0, 0, mcc_regs[0].tz->start + off);
-        uint64_t end = plane_read32(0, 0, mcc_regs[0].tz->end + off);
-        bool enabled = plane_read32(0, 0, mcc_regs[0].tz->enable + off);
+    if (mcc_regs[0].tz) {
+        // All MCCs and planes should have identical configs
+        // Note: For unhandled machines, the TZ regions can be found (on m1, m2, m3) by looking at
+        // region-id-2 and region-id-4 on a booted macos, in the /chosen/carveout-memory-map DT node.
+        // This can be used along with dumping the mcc reg space to find the correct start/end/enable
+        // above.
+        for (u32 i = 0; i < mcc_regs[0].tz->count; i++) {
+            uint64_t off = mcc_regs[0].tz->stride * i;
+            uint64_t start = plane_read32(0, 0, mcc_regs[0].tz->start + off);
+            uint64_t end = plane_read32(0, 0, mcc_regs[0].tz->end + off);
+            bool enabled = plane_read32(0, 0, mcc_regs[0].tz->enable + off);
 
-        if (enabled) {
-            if (!start || start == end) {
-                printf("MMU: TZ%d region has bad bounds 0x%lx..0x%lx (iBoot bug?)\n", i, start,
-                       end);
-                continue;
+            if (enabled) {
+                if (!start || start == end) {
+                    printf("MMU: TZ%d region has bad bounds 0x%lx..0x%lx (iBoot bug?)\n", i,
+                           start, end);
+                    continue;
+                }
+
+                start = start << 12;
+                end = (end + 1) << 12;
+                start |= ram_base;
+                end |= ram_base;
+                mcc_unmap_carveout("TZ", start, end - start);
             }
-
-            start = start << 12;
-            end = (end + 1) << 12;
-            start |= ram_base;
-            end |= ram_base;
-            printf("MMU: Unmapping TZ%d region at 0x%lx..0x%lx\n", i, start, end);
-            mmu_rm_mapping(start, end - start);
-            mmu_rm_mapping(start | REGION_RWX_EL0, end - start);
-            mmu_rm_mapping(start | REGION_RW_EL0, end - start);
-            mmu_rm_mapping(start | REGION_RX_EL1, end - start);
-            mcc_carveouts[mcc_carveout_count].base = start;
-            mcc_carveouts[mcc_carveout_count].size = end - start;
-            mcc_carveout_count++;
         }
     }
+
+    if (!mcc_carveout_count)
+        mcc_unmap_adt_tz_carveouts();
 
     return 0;
 }
