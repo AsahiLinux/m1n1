@@ -29,6 +29,8 @@ static bool mcc_initialized = false;
 #define T6031_DCS_OFFSET    0x400000
 #define T6031_DCS_STRIDE    0x200000
 
+#define T8140_PLANE_STRIDE 0x40000
+
 #define PLANE_TZ_MAX_REGS 4
 
 struct tz_regs {
@@ -124,6 +126,7 @@ struct mcc_regs {
     u32 cache_status_mask;
     u32 cache_status_val;
     u32 cache_disable;
+    bool has_cache_ctrl;
 
     struct tz_regs *tz;
 };
@@ -153,6 +156,11 @@ int mcc_enable_cache(void)
 
     if (!mcc_initialized)
         return -1;
+
+    if (!mcc_regs[0].has_cache_ctrl) {
+        printf("MCC: cache enable skipped (unsupported)\n");
+        return 0;
+    }
 
     /* The 6030 memory controller supports setting a waymask, but the desktop chips do not appear to
        use it */
@@ -296,6 +304,7 @@ int mcc_init_t8103(int node, int *path, bool t8112)
     mcc_regs[0].cache_status_mask = T8103_CACHE_STATUS_MASK;
     mcc_regs[0].cache_status_val = T8103_CACHE_STATUS_VAL;
     mcc_regs[0].cache_disable = t8112 ? T8112_CACHE_DISABLE : 0;
+    mcc_regs[0].has_cache_ctrl = true;
     mcc_regs[0].tz = &t8103_tz_regs;
 
     printf("MCC: Initialized T8103 MCC (%d channels)\n", val);
@@ -346,6 +355,7 @@ int mcc_init_t6000(int node, int *path, bool t602x)
         mcc_regs[i].cache_status_mask = T6000_CACHE_STATUS_MASK;
         mcc_regs[i].cache_status_val = T6000_CACHE_STATUS_VAL;
         mcc_regs[i].cache_disable = 0;
+        mcc_regs[i].has_cache_ctrl = true;
 
         mcc_regs[i].tz = t602x ? &t602x_tz_regs : &t8103_tz_regs;
     }
@@ -412,11 +422,72 @@ int mcc_init_t6031(int node, int *path)
         mcc_regs[i].cache_status_mask = T6031_CACHE_STATUS_MASK;
         mcc_regs[i].cache_status_val = T6031_CACHE_STATUS_VAL;
         mcc_regs[i].cache_disable = 0;
+        mcc_regs[i].has_cache_ctrl = true;
 
         mcc_regs[i].tz = &t603x_tz_regs;
     }
 
     printf("MCC: Initialized T6031 MCCs (%d instances, %d planes, %d channels)\n", mcc_count,
+           mcc_regs[0].plane_count, mcc_regs[0].dcs_count);
+
+    mcc_initialized = true;
+
+    return 0;
+}
+
+int mcc_init_t8140(int node, int *path)
+{
+    u32 amcc_count = 1;
+    u32 amcc_reg_idx = 0;
+    u32 dcs_count = 0;
+    u32 plane_count = 0;
+    u32 plane_stride = T8140_PLANE_STRIDE;
+    int lock_node;
+
+    printf("MCC: Initializing T8140 AMCCs...\n");
+
+    if (ADT_GETPROP(adt, node, "amcc-reg-idx", &amcc_reg_idx) < 0) {
+        printf("MCC: Failed to get amcc-reg-idx property!\n");
+        return -1;
+    }
+
+    ADT_GETPROP(adt, node, "amcc-count", &amcc_count);
+    ADT_GETPROP(adt, node, "dcs-count-per-amcc", &dcs_count);
+
+    lock_node = adt_path_offset(adt, "/chosen/lock-regs/amcc");
+    if (lock_node >= 0) {
+        ADT_GETPROP(adt, lock_node, "plane-count", &plane_count);
+        ADT_GETPROP(adt, lock_node, "plane-stride", &plane_stride);
+    }
+    if (!plane_count) {
+        u32 plane_mask = 0;
+
+        if (ADT_GETPROP(adt, node, "amcc-plane-enable-mask", &plane_mask) > 0)
+            plane_count = __builtin_popcount(plane_mask);
+    }
+    if (!plane_count)
+        plane_count = 4;
+
+    mcc_count = amcc_count;
+    if (mcc_count > MAX_MCC_INSTANCES) {
+        printf("MCC: Too many instances, increase MAX_MCC_INSTANCES!\n");
+        mcc_count = MAX_MCC_INSTANCES;
+    }
+
+    for (int i = 0; i < mcc_count; i++) {
+        if (adt_get_reg(adt, path, "reg", amcc_reg_idx + i, &mcc_regs[i].plane_base, NULL)) {
+            printf("MCC: Failed to get AMCC reg index %d!\n", amcc_reg_idx + i);
+            return -1;
+        }
+
+        mcc_regs[i].plane_stride = plane_stride;
+        mcc_regs[i].plane_count = plane_count;
+        mcc_regs[i].dcs_count = dcs_count;
+        mcc_regs[i].has_cache_ctrl = false;
+        mcc_regs[i].tz = NULL;
+    }
+
+    printf("MCC: Initialized T8140 AMCCs (%d instances, %d planes, %d channels)\n", mcc_count,
            mcc_regs[0].plane_count, mcc_regs[0].dcs_count);
 
     mcc_initialized = true;
@@ -444,6 +515,8 @@ int mcc_init(void)
         return mcc_init_t6000(node, path, true);
     } else if (adt_is_compatible(adt, node, "mcc,t6031")) {
         return mcc_init_t6031(node, path);
+    } else if (adt_is_compatible(adt, node, "mcc,t8140")) {
+        return mcc_init_t8140(node, path);
     } else {
         printf("MCC: Unsupported version:%s\n", adt_get_property(adt, node, "compatible")->value);
         return -1;
