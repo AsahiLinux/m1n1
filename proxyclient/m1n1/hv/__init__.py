@@ -109,6 +109,10 @@ class HV(Reloadable):
         self.hook_exceptions = False
         self.started_cpus = {}
         self.started = False
+        self.start_entry = None
+        self.start_args = None
+        self.secondary_start_entry = None
+        self.secondary_start_args = None
         self.ctx = None
         self.hvcall_handlers = {}
         self.switching_context = False
@@ -1603,7 +1607,12 @@ class HV(Reloadable):
             self.log("CPU not found!")
             return
 
-        if self.u.cpu_features.apple_sysregs_unlocked:
+        secondary_entry = self.secondary_start_entry
+        secondary_args = self.secondary_start_args
+
+        if secondary_entry is not None:
+            entry = secondary_entry
+        elif self.u.cpu_features.apple_sysregs_unlocked:
             entry = self.p.read64(node.cpu_impl_reg[0]) & 0xfffffffffff
         else:
             entry = self.entry & ~0xfff
@@ -1612,7 +1621,10 @@ class HV(Reloadable):
 
         self.sysreg[index] = {}
         self.started_cpus[index] = (die, cluster, cpu)
-        self.p.hv_start_secondary(index, entry)
+        if secondary_args is not None:
+            self.p.hv_start_secondary(index, entry, *secondary_args)
+        else:
+            self.p.hv_start_secondary(index, entry)
 
     def setup_adt(self):
         self.adt["product"].product_name += " on m1n1 hypervisor"
@@ -1996,7 +2008,12 @@ class HV(Reloadable):
             print("Enabling GXF...")
             self.u.msr(GXF_CONFIG_EL1, 1)
 
-        print(f"Jumping to entrypoint at 0x{self.entry:x}")
+        entry = self.start_entry if self.start_entry is not None else self.entry
+        args = self.start_args
+        if args is None:
+            args = (self.guest_base + self.bootargs_off,)
+
+        print(f"Jumping to entrypoint at 0x{entry:x}")
 
         self.iface.dev.timeout = None
         self.default_sigint = signal.signal(signal.SIGINT, self._handle_sigint)
@@ -2013,6 +2030,6 @@ class HV(Reloadable):
                 break
         self.started_cpus[cpu_node.cpu_id] = (getattr(cpu_node, "die_id", 0), cpu_node.cluster_id, cpu_node.cpu_id)
         self.sysreg[cpu_node.cpu_id] = {}
-        self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)
+        self.p.hv_start(entry, *args)
 
 from .. import trace
