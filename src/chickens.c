@@ -113,6 +113,7 @@ const struct midr_part_features features_m4 = {
     .sleep_mode = SLEEP_NONE, // XXX probably new mode required
     .fast_ipi = true,
     .actlr_el2 = true,
+    .sme_enabled = true,
 };
 
 /*

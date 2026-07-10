@@ -188,6 +188,21 @@
 #define ID_AA64MMFR0_TGran4_2  GENMASK(43, 40)
 #define ID_AA64MMFR0_TGran64_2 GENMASK(39, 36)
 #define ID_AA64MMFR0_TGran16_2 GENMASK(35, 32)
+
+#define SYS_CPTR_EL2 sys_reg(3, 4, 1, 1, 2)
+#define CPTR_EL2_SMEN GENMASK(25, 24)
+#define CPTR_EL2_SMEN_NONE (0x3UL << 24)
+#define CPTR_EL2_FPEN GENMASK(21, 20)
+#define CPTR_EL2_FPEN_NONE (0x3UL << 20)
+#define CPTR_EL2_ZEN GENMASK(17, 16)
+#define CPTR_EL2_ZEN_NONE (0x3UL << 16)
+
+#define SYS_HFGRTR_EL2 sys_reg(3, 4, 1, 1, 4)
+#define SYS_HFGWTR_EL2 sys_reg(3, 4, 1, 1, 5)
+#define HFGxTR_EL2_nTPIDR2_EL0 BIT(55)
+#define HFGxTR_EL2_nSMPRI_EL1  BIT(54)
+
+#define SYS_SMPRIMAP_EL2 sys_reg(3, 4, 1, 2, 5)
 #define ID_AA64MMFR0_TGran4    GENMASK(31, 28)
 #define ID_AA64MMFR0_TGran64   GENMASK(27, 24)
 #define ID_AA64MMFR0_TGran16   GENMASK(23, 20)

@@ -96,6 +96,25 @@ static void hv_restore_guest_el12_state(const struct hv_secondary_info_t *info)
     sysop("isb");
 }
 
+static void hv_config_sme(bool verbose)
+{
+    if (!cpu_features->sme_enabled)
+        return;
+
+    reg_mask(SYS_CPTR_EL2, CPTR_EL2_SMEN | CPTR_EL2_FPEN | CPTR_EL2_ZEN,
+             CPTR_EL2_SMEN_NONE | CPTR_EL2_FPEN_NONE | CPTR_EL2_ZEN_NONE);
+
+    if (FIELD_GET(ID_AA64MMFR0_FGT, mrs(ID_AA64MMFR0_EL1))) {
+        reg_set(SYS_HFGRTR_EL2, HFGxTR_EL2_nTPIDR2_EL0 | HFGxTR_EL2_nSMPRI_EL1);
+        reg_set(SYS_HFGWTR_EL2, HFGxTR_EL2_nTPIDR2_EL0 | HFGxTR_EL2_nSMPRI_EL1);
+    }
+
+    msr(SYS_SMPRIMAP_EL2, 0);
+
+    if (verbose)
+        printf("HV: SME enabled (CPTR_EL2=%lx)\n", mrs(SYS_CPTR_EL2));
+}
+
 void hv_init(void)
 {
     pcie_shutdown();
@@ -118,6 +137,7 @@ void hv_init(void)
                  HCR_RW |  // AArch64 guest
                  HCR_AMO | // Trap SError exceptions
                  HCR_VM);  // Enable stage 2 translation
+    hv_config_sme(true);
 
     // No guest vectors initially
     msr(VBAR_EL12, 0);
@@ -249,6 +269,7 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
     msr(VBAR_EL1, _hv_vectors_start);
 
     msr(HCR_EL2, info->hcr);
+    hv_config_sme(false);
     msr(HACR_EL2, info->hacr);
     msr(VTCR_EL2, info->vtcr);
     msr(VTTBR_EL2, info->vttbr);
