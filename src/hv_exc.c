@@ -29,6 +29,7 @@ struct hv_pcpu_data {
     u64 exc_entry_pmcr0_cnt;
     u64 kernel_cntv_cval;
     u64 kernel_cntv_ctl;
+    u64 kernel_cntkctl_el1;
     bool kernel_cntv_valid;
 } ALIGNED(64);
 
@@ -113,6 +114,32 @@ static bool hv_kernel_cntv_pending(void)
     u64 ctl = hv_kernel_cntv_read_ctl();
     return (ctl & (CNTx_CTL_ISTATUS | CNTx_CTL_IMASK | CNTx_CTL_ENABLE)) ==
            (CNTx_CTL_ISTATUS | CNTx_CTL_ENABLE);
+}
+
+#define KERNEL_CNTKCTL_CNTHCTL_MASK                                                               \
+    (CNTHCTL_EL0PCTEN | CNTHCTL_EL0VCTEN | CNTHCTL_EVNTI | CNTHCTL_EVNTDIR | CNTHCTL_EVNTEN)
+
+static bool hv_handle_kernel_cntkctl(struct exc_info *ctx, u64 rt, bool is_read)
+{
+    if (is_read) {
+        if (rt < 31)
+            ctx->regs[rt] = PERCPU(kernel_cntkctl_el1);
+        return true;
+    }
+
+    u64 val = rt < 31 ? ctx->regs[rt] : 0;
+    PERCPU(kernel_cntkctl_el1) = val;
+
+    /*
+     * XNU programs WFE timeout events and EL0 timebase access through this
+     * Apple alias. On guarded SoCs, direct EL2 writes to the Apple register can
+     * fault, so mirror only the architectural CNTHCTL_EL2 bits that correspond
+     * to the guest-visible Apple control state.
+     */
+    msr(SYS_CNTHCTL_EL2, (mrs(SYS_CNTHCTL_EL2) & ~KERNEL_CNTKCTL_CNTHCTL_MASK) |
+                             (val & KERNEL_CNTKCTL_CNTHCTL_MASK));
+    sysop("isb");
+    return true;
 }
 
 void hv_exit_guest(void) __attribute__((noreturn));
@@ -348,6 +375,8 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
             else
                 hv_kernel_cntv_write_tval(regs[rt]);
             return true;
+        case SYSREG_ISS(SYS_IMP_APL_KERNEL_CNTKCTL_EL1):
+            return hv_handle_kernel_cntkctl(ctx, rt, is_read);
         SYSREG_PASS(SYS_IMP_APL_KERNEL_CNTVCT_EL0)
         /* Spammy stuff seen on t600x p-cores */
         /* These are PMU/PMC registers */
