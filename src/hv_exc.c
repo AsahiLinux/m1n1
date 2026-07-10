@@ -31,6 +31,16 @@ struct hv_pcpu_data {
     u64 kernel_cntv_ctl;
     u64 kernel_cntkctl_el1;
     bool kernel_cntv_valid;
+    /* Soft-cached guarded impdef registers (see SYSREG_SHADOW users below). */
+    u64 agtcntrdir_el1;
+    u64 agtcntrdir_el12;
+    u64 siq_cfg_el1;
+    u64 jctl_el0;
+    u64 watchdogdiag0;
+    u64 impdef_c13_4;
+    u64 impdef_c15_c0_4;
+    u64 impdef_c15_c0_5;
+    u64 impdef_c12_0;
 } ALIGNED(64);
 
 struct hv_pcpu_data pcpu[MAX_CPUS];
@@ -400,6 +410,18 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         SYSREG_MAP(SYS_IMP_APL_ELR_GL1, SYS_IMP_APL_ELR_GL12)
         SYSREG_MAP(SYS_IMP_APL_ESR_GL1, SYS_IMP_APL_ESR_GL12)
         SYSREG_MAP(SYS_IMP_APL_SPRR_PERM_EL1, SYS_IMP_APL_SPRR_PERM_EL12)
+        /*
+         * Impdef sysregs locked on M4+ that are required by XNU
+         */
+        SYSREG_SHADOW(SYS_IMP_APL_AGTCNTRDIR_EL1, PERCPU(agtcntrdir_el1))
+        SYSREG_SHADOW(SYS_IMP_APL_AGTCNTRDIR_EL12, PERCPU(agtcntrdir_el12))
+        SYSREG_SHADOW(SYS_IMP_APL_SIQ_CFG_EL1, PERCPU(siq_cfg_el1))
+        SYSREG_SHADOW(SYS_IMP_APL_JCTL_EL0, PERCPU(jctl_el0))
+        SYSREG_SHADOW(SYS_IMP_APL_WATCHDOGDIAG0, PERCPU(watchdogdiag0))
+        SYSREG_SHADOW(SYS_IMP_APL_S3_1_C15_C13_4, PERCPU(impdef_c13_4))
+        SYSREG_SHADOW(SYS_IMP_APL_S3_6_C15_C0_4, PERCPU(impdef_c15_c0_4))
+        SYSREG_SHADOW(SYS_IMP_APL_S3_6_C15_C0_5, PERCPU(impdef_c15_c0_5))
+        SYSREG_SHADOW(SYS_IMP_APL_S3_4_C15_C12_0, PERCPU(impdef_c12_0))
         SYSREG_MAP(SYS_IMP_APL_APCTL_EL1, SYS_IMP_APL_APCTL_EL12)
         SYSREG_MAP(SYS_IMP_APL_AMX_CTL_EL1, SYS_IMP_APL_AMX_CTL_EL12)
         /* FIXME:Might be wrong */

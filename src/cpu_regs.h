@@ -25,6 +25,7 @@
 #define SYS_IMP_APL_KERNEL_CNTV_TVAL_EL0 sys_reg(3, 1, 15, 15, 4)
 #define SYS_IMP_APL_KERNEL_CNTVCT_EL0    sys_reg(3, 4, 15, 11, 7)
 #define SYS_IMP_APL_KERNEL_CNTKCTL_EL1   sys_reg(3, 4, 15, 9, 6)
+#define SYS_IMP_APL_JCTL_EL0             sys_reg(3, 4, 15, 15, 6)
 
 /* HID registers */
 #define SYS_IMP_APL_HID0                sys_reg(3, 0, 15, 0, 0)
@@ -467,6 +468,13 @@
 #define SYS_IMP_APL_AGTCNTRDIR_EL12 sys_reg(3, 4, 15, 14, 6)
 #define AGTCNTRDIR_DISABLE          BIT(1)
 #define AGTCNTRDIR_EL0_TRAP_CTL     BIT(0)
+
+/* Impdef state XNU round-trips, locked on M4+ */
+#define SYS_IMP_APL_WATCHDOGDIAG0   sys_reg(3, 5, 15, 2, 6)
+#define SYS_IMP_APL_S3_1_C15_C13_4  sys_reg(3, 1, 15, 13, 4)
+#define SYS_IMP_APL_S3_6_C15_C0_4   sys_reg(3, 6, 15, 0, 4)
+#define SYS_IMP_APL_S3_6_C15_C0_5   sys_reg(3, 6, 15, 0, 5)
+#define SYS_IMP_APL_S3_4_C15_C12_0  sys_reg(3, 4, 15, 12, 0)
 
 // Performance monitor registers
 #define SYS_IMP_APL_PMCR0 sys_reg(3, 1, 15, 0, 0)
