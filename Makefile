@@ -61,6 +61,7 @@ BASE_CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-P
 	-Wsign-compare -Wunused-parameter -Wno-multichar \
 	-ffreestanding -fpic -ffunction-sections -fdata-sections \
 	-nostdinc -isystem $(shell $(CC) -print-file-name=include) -isystem sysinc \
+	-Isrc \
 	-fno-stack-protector -mstrict-align -march=armv8.2-a \
 	$(EXTRA_CFLAGS)
 
@@ -101,6 +102,18 @@ LIBFDT_OBJECTS := $(patsubst %,libfdt/%, \
 	fdt_addresses.o fdt_empty_tree.o fdt_ro.o fdt_rw.o fdt_strerror.o fdt_sw.o \
 	fdt_wip.o fdt.o)
 
+CHICKENS_OBJECTS := $(patsubst %,chickens/%, \
+	avalanche.o \
+	blizzard.o \
+	cyclone_typhoon.o \
+	everest.o \
+	firestorm.o \
+	hurricane_zephyr.o \
+	icestorm.o \
+	monsoon_mistral.o \
+	sawtooth.o \
+	twister.o)
+
 DCP_OBJECTS := $(patsubst %,dcp/%, \
 	dpav_ep.o \
 	dptx_phy.o \
@@ -117,16 +130,6 @@ OBJECTS := \
 	chainload.o \
 	chainload_asm.o \
 	chickens.o \
-	chickens_avalanche.o \
-	chickens_blizzard.o \
-	chickens_cyclone_typhoon.o \
-	chickens_everest.o \
-	chickens_firestorm.o \
-	chickens_hurricane_zephyr.o \
-	chickens_monsoon_mistral.o \
-	chickens_icestorm.o \
-	chickens_sawtooth.o \
-	chickens_twister.o \
 	clk.o \
 	cpufreq.o \
 	dapf.o \
@@ -176,6 +179,7 @@ OBJECTS := \
 	utils.o utils_asm.o \
 	vsprintf.o \
 	wdt.o \
+	$(CHICKENS_OBJECTS) \
 	$(DCP_OBJECTS) \
 	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS)
 
@@ -201,9 +205,9 @@ all: build/$(TARGET) build/$(TARGET_RAW)
 clean:
 	rm -rf build/* build/.deps
 format:
-	$(CLANG_FORMAT) -i src/*.c src/dcp/*.c src/math/*.c src/*.h src/dcp/*.h src/math/*.h sysinc/*.h
+	$(CLANG_FORMAT) -i src/*.c src/chickens/*.c src/dcp/*.c src/math/*.c src/*.h src/dcp/*.h src/math/*.h sysinc/*.h
 format-check:
-	$(CLANG_FORMAT) --dry-run --Werror src/*.c src/dcp/*.c src/math/*.c src/*.h src/dcp/*.h src/math/*.h sysinc/*.h
+	$(CLANG_FORMAT) --dry-run --Werror src/*.c src/chickens/*.c src/dcp/*.c src/math/*.c src/*.h src/dcp/*.h src/math/*.h sysinc/*.h
 rustfmt:
 	cd rust && cargo fmt
 rustfmt-check:
