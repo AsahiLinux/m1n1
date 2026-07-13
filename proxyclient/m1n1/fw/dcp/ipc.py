@@ -446,6 +446,7 @@ IOMFBSwapRec = Struct(
     "unk_38" / Default(Int64ul, 0),
     "flags1" / Hex(Int64ul),
     "flags2" / Hex(Int64ul),
+    Ver("V >= V14_7", "unk_v14_7" / UnkBytes(0x48)),
     "swap_id" / Int32ul,
     "surf_ids" / Int32ul[SWAP_SURFACES],
     "src_rect" / Rect[SWAP_SURFACES],
@@ -460,15 +461,18 @@ IOMFBSwapRec = Struct(
     "active_regions" / Default(ActiveRegion[SWAP_SURFACES], [(0,0,0,0)] * SWAP_SURFACES),
     "unk_190" / UnkBytes(0x138),
     "unk_2c8" / Hex(Default(Int32ul, 0)),
-    "unk_2cc" / UnkBytes(0x14),
+    Ver("V < V14_7", "unk_2cc" / UnkBytes(0x14)),
+    Ver("V >= V14_7", "unk_2cc" / UnkBytes(0x40)),
     "unk_2e0" / Hex(Default(Int32ul, 0)),
     Ver("V < V13_5", "unk_2e2" / UnkBytes(0x2)),
     Ver("V >= V13_5", "unk_2e2" / UnkBytes(0x3)),
-    "bl_unk" / Hex(Int64ul), # seen: 0x0, 0x1, 0x101, 0x1_0000, 0x101_010101
+    Ver("V < V14_7", "bl_unk" / Hex(Int64ul)), # seen: 0x0, 0x1, 0x101, 0x1_0000, 0x101_010101
+    Ver("V >= V14_7", "bl_unk" / Hex(Int32ul)),
     "bl_val" / Hex(Int32ul), # range 0x10000000 - approximately 0x7fe07fc0 for 4 - 510 nits
     "bl_power" / Hex(Int8ul), # constant 0x40, 0x00: backlight off
     "unk_2f3" / UnkBytes(0x2d),
     Ver("V >= V13_5", "unk_320" / UnkBytes(0x147)),
+    Ver("V >= V14_7", "unk_467" / UnkBytes(0x30)),
 )
 
 MAX_PLANES = 3
@@ -617,8 +621,12 @@ class UnifiedPipeline2(IPCObject):
         A357 = set_create_DFB
         A358 = vi_set_temperature_hint
     else:
-        A373 = set_create_DFB
-        A374 = vi_set_temperature_hint
+        if Ver.check("V >= V14_7"):
+            A377 = set_create_DFB
+            A378 = vi_set_temperature_hint
+        else:
+            A373 = set_create_DFB
+            A374 = vi_set_temperature_hint
 
     A352 = Call(bool_, "applyProperty", uint, uint)
     A353 = Call(uint, "get_system_type")
@@ -676,15 +684,23 @@ class UnifiedPipeline2(IPCObject):
         D113 = cb_create_nvram_service
         D114 = Callback(bool_, "get_tiling_state", event=uint, para=uint, val=InOutPtr(uint))
         D115 = Callback(bool_, "set_tiling_state", event=uint, para=uint, val=InPtr(uint))
-        D116 = cb_set_idle_caching_state_ap
-        D120 = cb_start_hardware_boot
-        D121 = cb_is_dark_boot
         D122 = cb_is_waking_from_hibernate
-        D124 = cb_read_edt_data
-        D126 = cb_setDCPAVPropStart
-        D127 = cb_setDCPAVPropChunk
-        D128 = cb_setDCPAVPropEnd
-        D129 = cb_allocate_bandwidth
+        if Ver.check("V >= V14_7"):
+            D117 = cb_set_idle_caching_state_ap
+            D121 = cb_start_hardware_boot
+            D125 = cb_read_edt_data
+            D127 = cb_setDCPAVPropStart
+            D128 = cb_setDCPAVPropChunk
+            D129 = cb_setDCPAVPropEnd
+        else:
+            D116 = cb_set_idle_caching_state_ap
+            D120 = cb_start_hardware_boot
+            D121 = cb_is_dark_boot
+            D124 = cb_read_edt_data
+            D126 = cb_setDCPAVPropStart
+            D127 = cb_setDCPAVPropChunk
+            D128 = cb_setDCPAVPropEnd
+            D129 = cb_allocate_bandwidth
 
 class UPPipe2(IPCObject):
     A102 = Call(uint64_t, "test_control", cmd=uint64_t, arg=uint)
@@ -720,7 +736,24 @@ class PropRelay(IPCObject):
 
 class IOMobileFramebufferAP(IPCObject):
     # FW version dependent Calls
-    if Ver.check("V < V13_5"):
+    if Ver.check("V >= V14_7"):
+        swap_submit_dcp = Call(uint32_t, "swap_submit_dcp",
+                swap_rec=InPtr(IOMFBSwapRec),
+                surfaces=Array(SWAP_SURFACES, InPtr(IOSurface)),
+                surfAddr=Array(SWAP_SURFACES, Hex(ulong)),
+                unkU64Array=Array(SWAP_SURFACES, Hex(ulong)),
+                surfaces2=Array(5, InPtr(IOSurface)),
+                surfAddr2=Array(5, Hex(ulong)),
+                unkBool=bool_,
+                unkFloat=Float64l,
+                unkAddr=Hex(ulong),
+                unkBool2=bool_,
+                unkInt=uint,
+                unkOutBool=OutPtr(bool_),
+                unkCUintArray=InPtr(uint),
+                unkUintPtr=OutPtr(uint),
+                unkb=UnkBytes(0x232))
+    elif Ver.check("V < V13_5"):
         swap_submit_dcp = Call(uint32_t, "swap_submit_dcp",
                  swap_rec=InPtr(IOMFBSwapRec),
                  surfaces=Array(4, InPtr(IOSurface)),
@@ -747,19 +780,31 @@ class IOMobileFramebufferAP(IPCObject):
                 unkUintPtr=OutPtr(uint))
 
     A401 = Call(uint32_t, "start_signal")
-    A407 = Call(uint32_t, "swap_start", swap_id=InOutPtr(uint), client=InOutPtr(IOUserClient))
-    A408 = swap_submit_dcp
-    A410 = Call(uint32_t, "set_display_device", uint)
-    A411 = Call(bool_, "is_main_display")
 
-    A412 = Call(uint32_t, "set_digital_out_mode", uint, uint)
     A413 = Call(uint32_t, "get_digital_out_state", InOutPtr(uint))
     A414 = Call(uint32_t, "get_display_area", InOutPtr(ulong))
     A419 = Call(uint32_t, "get_gamma_table", InOutPtr(Bytes(0xc0c)))
-    A422 = Call(uint32_t, "set_matrix", uint, InPtr(Array(3, Array(3, ulong))))
     A423 = Call(uint32_t, "set_contrast", InOutPtr(Float32l))
-    A426 = Call(uint32_t, "get_color_remap_mode", InOutPtr(uint32_t))
-    A427 = Call(uint32_t, "setBrightnessCorrection", uint)
+
+    if Ver.check("V >= V14_7"):
+        A406 = Call(uint32_t, "swap_start", client=InOutPtr(IOUserClient))
+        A407 = swap_submit_dcp
+        A409 = Call(uint32_t, "set_display_device", uint)
+        A410 = Call(bool_, "is_main_display")
+        A411 = Call(uint32_t, "set_digital_out_mode", uint, uint)
+        A421 = Call(uint32_t, "set_matrix", uint, InPtr(Array(3, Array(3, ulong))))
+        A425 = Call(uint32_t, "get_color_remap_mode", InOutPtr(uint32_t))
+        A426 = Call(uint32_t, "setBrightnessCorrection", uint)
+        A429 = Call(UnkBytes(4), "some_thing_v14_7", UnkBytes(4))
+    else:
+        A407 = Call(uint32_t, "swap_start", swap_id=InOutPtr(uint), client=InOutPtr(IOUserClient))
+        A408 = swap_submit_dcp
+        A410 = Call(uint32_t, "set_display_device", uint)
+        A411 = Call(bool_, "is_main_display")
+        A412 = Call(uint32_t, "set_digital_out_mode", uint, uint)
+        A422 = Call(uint32_t, "set_matrix", uint, InPtr(Array(3, Array(3, ulong))))
+        A427 = Call(uint32_t, "setBrightnessCorrection", uint)
+        A426 = Call(uint32_t, "get_color_remap_mode", InOutPtr(uint32_t))
 
     # FW version dependent Call tags
     set_block_dcp = Call(uint32_t, "set_block_dcp", arg1=uint64_t, arg2=uint, arg3=uint, arg4=Array(8, ulong), arg5=uint, data=SizedBytes(0x1000, "length"), length=ulong, unknArry=Array(4, uint))
@@ -807,16 +852,9 @@ class IOMobileFramebufferAP(IPCObject):
         A468 = setPowerState
         A469 = isKeepOnScreen
     else:
-        A437 = set_block_dcp
-        A438 = get_block_dcp
-        A440 = swap_set_color_matrix
-        A441 = set_parameter_dcp
         A442 = display_width
         A443 = display_height
-        A444 = get_display_size
-        A445 = do_create_default_frame_buffer
         A446 = printRegs
-        A449 = enable_disable_video_power_savings
         A456 = first_client_open
         A457 = last_client_close_dcp
         A458 = writeDebugInfo
@@ -826,16 +864,38 @@ class IOMobileFramebufferAP(IPCObject):
         A466 = flush_supportsPower
         A467 = abort_swaps_dcp
         A468 = Call(uint, "remove_gain_maps", InOutPtr(IOMobileFramebufferUserClient))
-        A470 = update_dfb
         A472 = setPowerState
         A473 = isKeepOnScreen
+
+        if Ver.check("V >= V14_7"):
+            A436 = set_block_dcp
+            A437 = get_block_dcp
+            A439 = swap_set_color_matrix
+            A440 = set_parameter_dcp
+            A444 = do_create_default_frame_buffer
+            A448 = enable_disable_video_power_savings
+            A455 = first_client_open
+            A471 = update_dfb
+            A477 = Call(uint, "some_getter_v14_7")
+        else:
+            A437 = set_block_dcp
+            A438 = get_block_dcp
+            A440 = swap_set_color_matrix
+            A441 = set_parameter_dcp
+            A444 = get_display_size
+            A445 = do_create_default_frame_buffer
+            A449 = enable_disable_video_power_savings
+            A470 = update_dfb
 
     # FW version dependent callbacks
     if Ver.check("V < V13_5"):
         hotPlug_notify_gated = Callback(void, "hotPlug_notify_gated", ulong)
     else:
         # TODO: is this sensible?
-        hotPlug_notify_gated = Callback(void, "hotPlug_notify_gated", uint, InOutPtr(Bytes(0x4c)))
+        if Ver.check("V < V14_7"):
+            hotPlug_notify_gated = Callback(void, "hotPlug_notify_gated", uint, InOutPtr(Bytes(0x4c)))
+        else:
+            hotPlug_notify_gated = Callback(void, "hotPlug_notify_gated", uint, InOutPtr(Bytes(0x50)))
 
     D552 = Callback(bool_, "setProperty_dict", key=string(0x40), value=InPtr(Padded(0x1000, OSDictionary())))
     D561 = Callback(bool_, "setProperty_dict", key=string(0x40), value=InPtr(Padded(0x1000, OSDictionary())))
