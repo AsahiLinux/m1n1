@@ -16,6 +16,8 @@ from m1n1.fw.afk.epic import *
 
 Ver.set_version(hv.u)
 
+from m1n1.fw.dcp.ipc import *
+
 class DCPDevType(IntEnum):
     DCP = 0
     DART_DCP = 1
@@ -810,22 +812,8 @@ class DCPCallChannel(Reloadable):
         state.out_addr = self.buf + msg.OFF + 12 + in_len
         state.out_len = out_len
 
-        verb = self.dcpep.get_verbosity(tag)
-        if verb >= 1:
-            self.log(f"{dir}{self.name}.{msg.OFF:x} {tag}:{KNOWN_MSGS.get(tag, 'unk')} ({msg})")
-        if verb >= 2:
-            print(f"Message: {tag} ({KNOWN_MSGS.get(tag, 'unk')}): (in {in_len:#x}, out {out_len:#x})")
-            if data_in:
-                print(f"{dir} Input ({len(data_in):#x} bytes):")
-                chexdump(data_in[:self.state.max_len])
-
-        #if tag not in KNOWN_MSGS:
-            #hv.run_shell()
-
-        if self.state.dumpfile:
-            dump = f"CALL {dir} {msg.value:#018x} {self.name} {state.off:#x} {state.tag} {in_len:#x} {out_len:#x} {data_in.hex()}\n"
-            self.state.dumpfile.write(dump)
-            self.state.dumpfile.flush()
+        c = Call(dir, self.name, msg.OFF, tag, in_len, out_len, data_in)
+        c.print_req(logger = self.log)
 
         self.state.ch.setdefault(self.name, []).append(state)
 
