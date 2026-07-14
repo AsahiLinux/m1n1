@@ -191,7 +191,7 @@ class Method:
 
         return ", ".join(s)
 
-    def print_long_args(self, indent, in_vals, out_vals=None):
+    def print_long_args(self, indent, in_vals, out_vals=None, logger=print):
         for i, (name, field) in enumerate(self.args):
             if name == "ret":
                 continue
@@ -204,15 +204,15 @@ class Method:
             if self.is_long(val):
                 hdr = f"{indent}  {name} = "
                 if isinstance(val, (ListContainer, Container)):
-                    print(hdr + str(val).replace("\n", "\n" + indent))
+                    logger(hdr + str(val).replace("\n", "\n" + indent))
                 elif isinstance(val, bytes):
-                    print(hdr + f"({len(val):#x} bytes)")
+                    logger(hdr + f"({len(val):#x} bytes)")
                     chexdump(val, indent=indent + "    ")
                 else:
                     dindent = " " * len(hdr)
                     if isinstance(val, dict) and "_io" in val:
                         del val["_io"]
-                    print(hdr + pprint.pformat(val, sort_dicts=False).replace("\n", "\n" + dindent))
+                    logger(hdr + pprint.pformat(val, sort_dicts=False).replace("\n", "\n" + dindent))
 
     def is_long(self, arg):
         if isinstance(arg, (list, bytes)):
@@ -937,21 +937,21 @@ class Call:
         self.out_data = out_data
         self.complete = True
 
-    def print_req(self, indent=""):
+    def print_req(self, logger=print, indent=""):
         log = f"{indent}{self.dir}{SHORT_CHANNELS[self.chan]}[{self.off:#x}] {self.msg} "
 
         cls, method = ALL_METHODS.get(self.msg, (None, None))
         if cls is None:
-            print(log + f"unknown: {self.in_size:#x}/{self.out_size:#x}")
+            logger(log + f"unknown: {self.in_size:#x}/{self.out_size:#x}")
             return
 
         log += f"{cls.__name__}::{method.name}("
         in_size = method.in_struct.sizeof()
 
         if in_size != len(self.in_data):
-            print(f"{log} !! Expected {in_size:#x} bytes, got {len(self.in_data):#x} bytes (in)")
+            logger(f"{log} !! Expected {in_size:#x} bytes, got {len(self.in_data):#x} bytes (in)")
             dump_fields(method.in_fields)
-            chexdump(self.in_data)
+            chexdump(self.in_data, print_fn = logger)
             self.in_vals = {}
             return
 
@@ -959,9 +959,9 @@ class Call:
 
         log += f"{method.fmt_args(self.in_vals)})"
 
-        print(log)
+        logger(log)
 
-        method.print_long_args(indent, self.in_vals)
+        method.print_long_args(indent, self.in_vals, logger = logger)
         #if method.in_fields:
             #print(self.in_vals)
 
