@@ -94,6 +94,8 @@ class ProxyUtils(Reloadable):
         self.simd_type = None
         self.simd = None
 
+        self.glk_arg_buf = self.malloc(16)
+
         self.mmu_off = False
 
         self.inst_cache = {}
@@ -422,6 +424,14 @@ class ProxyUtils(Reloadable):
     @property
     def sfr_version(self):
         return self.get_version(self.adt["/chosen"].system_firmware_version)
+
+    def get_gigalocker(self):
+        self.proxy.nvme_init()
+        self.proxy.read_gigalocker(self.glk_arg_buf)
+        ptr, size = struct.unpack('QQ', self.iface.readmem(self.glk_arg_buf, 16))
+        data = self.iface.readmem(ptr, size)
+        self.proxy.free_gigalocker(self.glk_arg_buf)
+        return data
 
 class LazyADT:
     def __init__(self, utils):
