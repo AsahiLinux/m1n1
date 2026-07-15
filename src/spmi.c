@@ -4,25 +4,6 @@
 #include "adt.h"
 #include "malloc.h"
 
-#define SPMI_STATUS 0x00
-#define SPMI_CMD    0x04
-#define SPMI_REPLY  0x08
-
-#define SPMI_CMD_EXTRA  GENMASK(31, 16)
-#define SPMI_CMD_ACTIVE BIT(15)
-#define SPMI_CMD_ADDR   GENMASK(14, 8)
-#define SPMI_CMD_OPCODE GENMASK(7, 0)
-
-#define SPMI_REPLY_FRAME_PARITY GENMASK(31, 16)
-#define SPMI_REPLY_ACK          BIT(15)
-#define SPMI_REPLY_ADDR         GENMASK(14, 8)
-#define SPMI_REPLY_OPCODE       GENMASK(7, 0)
-
-#define SPMI_STATUS_RX_EMPTY BIT(24)
-#define SPMI_STATUS_RX_COUNT GENMASK(23, 16)
-#define SPMI_STATUS_TX_EMPTY BIT(8)
-#define SPMI_STATUS_TX_COUNT GENMASK(7, 0)
-
 #define SPMI_OPC_RESET    0x10
 #define SPMI_OPC_SLEEP    0x11
 #define SPMI_OPC_SHUTDOWN 0x12
@@ -38,8 +19,72 @@
 #define SPMI_OPC_READ       0x60
 #define SPMI_OPC_ZERO_WRITE 0x80
 
+struct spmi_regs {
+    size_t status_offset;
+    size_t cmd_offset;
+    size_t reply_offset;
+
+    u32 cmd_extra_mask;
+    u32 cmd_active_mask;
+    u32 cmd_addr_mask;
+    u32 cmd_opcode_mask;
+
+    u32 reply_frame_parity_mask;
+    u32 reply_ack_mask;
+    u32 reply_addr_mask;
+    u32 reply_opcode_mask;
+
+    u32 status_rx_empty_mask;
+    u32 status_rx_count_mask;
+    u32 status_tx_empty_mask;
+    u32 status_tx_count_mask;
+};
+
+static const struct spmi_regs regs_gen1 = {
+    .status_offset = 0x00,
+    .cmd_offset = 0x04,
+    .reply_offset = 0x08,
+
+    .cmd_extra_mask = GENMASK(31, 16),
+    .cmd_active_mask = BIT(15),
+    .cmd_addr_mask = GENMASK(14, 8),
+    .cmd_opcode_mask = GENMASK(7, 0),
+
+    .reply_frame_parity_mask = GENMASK(31, 16),
+    .reply_ack_mask = BIT(15),
+    .reply_addr_mask = GENMASK(14, 8),
+    .reply_opcode_mask = GENMASK(7, 0),
+
+    .status_rx_empty_mask = BIT(24),
+    .status_rx_count_mask = GENMASK(23, 16),
+    .status_tx_empty_mask = BIT(8),
+    .status_tx_count_mask = GENMASK(7, 0),
+};
+
+static const struct spmi_regs regs_gen4 = {
+    .status_offset = 0x200,
+    .cmd_offset = 0x210,
+    .reply_offset = 0x220,
+
+    .cmd_extra_mask = GENMASK(31, 16),
+    .cmd_active_mask = BIT(15),
+    .cmd_addr_mask = GENMASK(14, 8),
+    .cmd_opcode_mask = GENMASK(7, 0),
+
+    .reply_frame_parity_mask = GENMASK(31, 16),
+    .reply_ack_mask = BIT(15),
+    .reply_addr_mask = GENMASK(14, 8),
+    .reply_opcode_mask = GENMASK(7, 0),
+
+    .status_rx_empty_mask = BIT(30),
+    .status_rx_count_mask = GENMASK(23, 16),
+    .status_tx_empty_mask = BIT(14),
+    .status_tx_count_mask = GENMASK(7, 0),
+};
+
 struct spmi_dev {
     uintptr_t base;
+    const struct spmi_regs *regs;
 };
 
 spmi_dev_t *spmi_init(const char *adt_node)
@@ -58,9 +103,23 @@ spmi_dev_t *spmi_init(const char *adt_node)
         return NULL;
     }
 
+    s32 gen;
+    int ret = ADT_GETPROP(adt, adt_offset, "gen", &gen);
+    if (ret == -1) // NotFound
+        gen = -1;
+    else if (ret < 0) {
+        printf("spmi: Error getting %s gen\n", adt_node);
+        return NULL;
+    }
+
     spmi_dev_t *dev = calloc(1, sizeof(*dev));
     if (!dev)
         return NULL;
+
+    if (gen >= 4)
+        dev->regs = &regs_gen4;
+    else // Includes the error case (-1) as old adts don't have the gen property
+        dev->regs = &regs_gen1;
 
     dev->base = base;
     return dev;
@@ -74,7 +133,7 @@ void spmi_shutdown(spmi_dev_t *dev)
 static int wait_rx_fifo(spmi_dev_t *dev)
 {
     for (size_t i = 0; i < 1000; i++) {
-        if (!(read32(dev->base + SPMI_STATUS) & SPMI_STATUS_RX_EMPTY))
+        if (!(read32(dev->base + dev->regs->status_offset) & dev->regs->status_rx_empty_mask))
             return 0;
         udelay(10);
     }
@@ -95,49 +154,51 @@ static int raw_command(spmi_dev_t *dev, u8 addr, u8 opc, u16 extra, const u8 *da
     }
 
     // ensure FIFOs are in the correct state
-    if (!(read32(dev->base + SPMI_STATUS) & SPMI_STATUS_TX_EMPTY)) {
+    if (!(read32(dev->base + dev->regs->status_offset) & dev->regs->status_tx_empty_mask)) {
         printf("spmi: TX FIFO has unsent commands\n");
         return -SPMI_ERR_UNKNOWN;
     }
 
-    while (!(read32(dev->base + SPMI_STATUS) & SPMI_STATUS_RX_EMPTY))
-        printf("spmi: Leftover RX data: 0x%x\n", read32(dev->base + SPMI_REPLY));
+    while (!(read32(dev->base + dev->regs->status_offset) & dev->regs->status_rx_empty_mask))
+        printf("spmi: Leftover RX data: 0x%x\n", read32(dev->base + dev->regs->reply_offset));
 
     // write command
-    write32(dev->base + SPMI_CMD, FIELD_PREP(SPMI_CMD_EXTRA, extra) | SPMI_CMD_ACTIVE |
-                                      FIELD_PREP(SPMI_CMD_ADDR, addr) |
-                                      FIELD_PREP(SPMI_CMD_OPCODE, opc));
+    write32(dev->base + dev->regs->cmd_offset, FIELD_PREP(dev->regs->cmd_extra_mask, extra) |
+                                                   dev->regs->cmd_active_mask |
+                                                   FIELD_PREP(dev->regs->cmd_addr_mask, addr) |
+                                                   FIELD_PREP(dev->regs->cmd_opcode_mask, opc));
 
     for (size_t i = 0; i < len_in;) {
         u32 data = 0;
         for (size_t j = 0; (j < 4) && (i < len_in);)
             data |= data_in[i++] << (j++ * 8);
-        write32(dev->base + SPMI_CMD, data);
+        write32(dev->base + dev->regs->cmd_offset, data);
     }
 
     // read response
     if (wait_rx_fifo(dev) < 0)
         return -SPMI_ERR_UNKNOWN;
-    u32 reply = read32(dev->base + SPMI_REPLY);
+    u32 reply = read32(dev->base + dev->regs->reply_offset);
 
-    if (FIELD_GET(SPMI_REPLY_OPCODE, reply) != opc || FIELD_GET(SPMI_REPLY_ADDR, reply) != addr) {
+    if (FIELD_GET(dev->regs->reply_opcode_mask, reply) != opc ||
+        FIELD_GET(dev->regs->reply_addr_mask, reply) != addr) {
         printf("spmi: Unexpected SPMI response 0x%x, leftover RX data?\n", reply);
         return -SPMI_ERR_UNKNOWN;
     }
 
     for (size_t i = 0; i < len_out;) {
-        if (read32(dev->base + SPMI_STATUS) & SPMI_STATUS_RX_EMPTY) {
+        if (read32(dev->base + dev->regs->status_offset) & dev->regs->status_rx_empty_mask) {
             printf("spmi: Reply was shorter than expected\n");
             return -SPMI_ERR_UNKNOWN;
         }
-        u32 data = read32(dev->base + SPMI_REPLY);
+        u32 data = read32(dev->base + dev->regs->reply_offset);
         for (size_t j = 0; (j < 4) && (i < len_out);)
             data_out[i++] = data >> (j++ * 8);
     }
 
-    if (FIELD_GET(SPMI_REPLY_FRAME_PARITY, reply) != MASK(len_out))
+    if (FIELD_GET(dev->regs->reply_frame_parity_mask, reply) != MASK(len_out))
         return -SPMI_ERR_BUS_IO;
-    if (!len_out && !(reply & SPMI_REPLY_ACK))
+    if (!len_out && !(reply & dev->regs->reply_ack_mask))
         return -SPMI_ERR_BUS_IO;
     return 0;
 }
