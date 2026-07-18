@@ -1003,6 +1003,7 @@ class Call:
         cls, method = ALL_METHODS.get(self.msg, (None, None))
         if cls is None:
             logger(log + f"unknown: {self.in_size:#x}/{self.out_size:#x}")
+            chexdump(self.in_data, print_fn = logger)
             return
 
         log += f"{cls.__name__}::{method.name}("
