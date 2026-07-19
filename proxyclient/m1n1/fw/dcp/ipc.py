@@ -747,13 +747,18 @@ class IOMobileFramebufferAP(IPCObject):
                 surfAddr2=Array(5, Hex(ulong)),
                 unkBool=bool_,
                 unkFloat=Float64l,
-                unkAddr=Hex(ulong),
+                unkU64=ulong,
                 unkBool2=bool_,
-                unkInt=uint,
+                clear_surfs=Hex(uint),
+                unkAddr=Hex(uint),
+                swap_null=bool_,
+                surf_null=Array(SWAP_SURFACES, Bool(Int8ul)),
+                surf2_null=Array(5, Bool(Int8ul)),
                 unkOutBool=OutPtr(bool_),
-                unkCUintArray=InPtr(uint),
-                unkUintPtr=OutPtr(uint),
-                unkb=UnkBytes(0x232))
+                unkU32Ptr_null=Hex(Int8ul),
+                unk32out_null=Hex(Int8ul),
+                padding=Hex(Int8ul),
+                unkb=UnkBytes(0x228))
     elif Ver.check("V < V13_5"):
         swap_submit_dcp = Call(uint32_t, "swap_submit_dcp",
                  swap_rec=InPtr(IOMFBSwapRec),
