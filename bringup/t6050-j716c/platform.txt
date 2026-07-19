@@ -1,0 +1,7 @@
+SoC: T6050
+SoC ID: 0x6050
+Generation: M5 Max
+Codename: H17C / Sotra_C
+Target type: J716c
+ADT compatible: J716cAP, Mac17,6, AppleARM
+Model: Mac17,6
