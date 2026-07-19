@@ -53,7 +53,17 @@ static int cpu_nodes[MAX_CPUS];
 static struct spin_table spin_table[MAX_CPUS];
 static u64 pmgr_reg;
 static u64 cpu_start_off;
-static bool m5_core_function_present;
+static u32 m5_cpu_node_mask;
+static u32 m5_core_function_mask;
+
+struct smp_reset_stack {
+    u64 mpidr;
+    u64 stack;
+};
+
+struct smp_reset_stack smp_reset_stacks[MAX_CPUS] = {
+    [0 ... MAX_CPUS - 1] = {.mpidr = ~0ULL, .stack = 0},
+};
 
 extern u8 _vectors_start[0];
 int boot_cpu_idx = -1;
@@ -71,24 +81,40 @@ static bool adt_has_core_function(int node, u32 cpu_id, u32 pmgr_phandle)
     memcpy(&name, function + 4, sizeof(name));
     memcpy(&mask, function + 8, sizeof(mask));
 
-    return phandle == pmgr_phandle && name == PMGR_CORE_FUNCTION && mask == BIT(cpu_id);
+    return pmgr_phandle != 0 && phandle == pmgr_phandle && name == PMGR_CORE_FUNCTION &&
+           mask == BIT(cpu_id);
 }
 
 void smp_secondary_entry(void)
 {
-    struct spin_table *me = &spin_table[target_cpu];
+    u64 mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
+    int index = target_cpu;
+
+    for (int i = 0; i < MAX_CPUS; i++) {
+        if (smp_reset_stacks[i].mpidr == mpidr) {
+            index = i;
+            break;
+        }
+    }
+
+    smp_reset_stacks[index].mpidr = mpidr;
+    smp_reset_stacks[index].stack = (u64)secondary_stacks[index] + SECONDARY_STACK_SIZE;
+    dc_civac_range(&smp_reset_stacks[index], sizeof(smp_reset_stacks[index]));
+    sysop("dsb sy");
+
+    struct spin_table *me = &spin_table[index];
 
     if (in_el2())
-        msr(TPIDR_EL2, target_cpu);
+        msr(TPIDR_EL2, index);
     else
-        msr(TPIDR_EL1, target_cpu);
+        msr(TPIDR_EL1, index);
 
-    printf("  Index: %d (table: %p)\n\n", target_cpu, me);
+    printf("  Index: %d (table: %p)\n\n", index, me);
 
-    me->mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
+    me->mpidr = mpidr;
 
     sysop("dmb sy");
-    me->flag = 1;
+    me->flag++;
     sysop("dmb sy");
     u64 target;
     if (!cpu_features->fast_ipi)
@@ -146,8 +172,8 @@ static bool smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
         printf("Failed!\n    RVBAR (=0x%lx) is locked and differs from entry point (=0x%lx)\n",
                read64(impl) & RVBAR_ADDR, (u64)_vectors_start & RVBAR_ADDR);
         if (chip_id == T6050 || chip_id == T6051) {
-            printf("    M5 secondary entry requires PMGR Core platform function (%s)\n",
-                   m5_core_function_present ? "present" : "missing");
+            printf("    M5 Core function mask: 0x%08x (CPU %d: %s)\n", m5_core_function_mask, index,
+                   (m5_core_function_mask & BIT(index)) ? "valid" : "missing");
         }
         return false;
     }
@@ -197,8 +223,10 @@ static bool smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
     else
         printf("  Started.\n");
 
-    _reset_stack = dummy_stack + DUMMY_STACK_SIZE;
-    _reset_stack_el1 = dummy_stack_el1 + DUMMY_STACK_SIZE;
+    if (i < 100) {
+        _reset_stack = dummy_stack + DUMMY_STACK_SIZE;
+        _reset_stack_el1 = dummy_stack_el1 + DUMMY_STACK_SIZE;
+    }
 
     return i < 100;
 }
@@ -284,7 +312,8 @@ void smp_start_secondaries(void)
     }
 
     memset(cpu_nodes, 0, sizeof(cpu_nodes));
-    m5_core_function_present = false;
+    m5_cpu_node_mask = 0;
+    m5_core_function_mask = 0;
 
     switch (chip_id) {
         case S5L8960X:
@@ -347,11 +376,17 @@ void smp_start_secondaries(void)
         }
 
         cpu_nodes[cpu_id] = node;
+        if (chip_id == T6050 || chip_id == T6051)
+            m5_cpu_node_mask |= BIT(cpu_id);
 
         if ((chip_id == T6050 || chip_id == T6051) &&
             adt_has_core_function(node, cpu_id, pmgr_phandle))
-            m5_core_function_present = true;
+            m5_core_function_mask |= BIT(cpu_id);
     }
+
+    if (chip_id == T6050 || chip_id == T6051)
+        printf("M5 CPU nodes: 0x%08x, Core functions: 0x%08x\n", m5_cpu_node_mask,
+               m5_core_function_mask);
 
     /* The boot cpu id never changes once set */
     if (boot_cpu_idx == -1) {
@@ -386,6 +421,12 @@ void smp_start_secondaries(void)
     spin_table[boot_cpu_idx].mpidr = mrs(MPIDR_EL1) & 0xFFFFFF;
 
     int secondary_count = 0;
+    for (int i = 0; i < MAX_CPUS; i++) {
+        if (cpu_nodes[i] && i != boot_cpu_idx)
+            secondary_count++;
+    }
+
+    int attempted_count = 0;
     int started_count = 0;
 
     for (int i = 0; i < MAX_CPUS; i++) {
@@ -425,12 +466,17 @@ void smp_start_secondaries(void)
         u8 cluster = FIELD_GET(CPU_REG_CLUSTER, reg);
         u8 die = FIELD_GET(CPU_REG_DIE, reg);
 
-        secondary_count++;
-        if (smp_start_cpu(i, die, cluster, core, cpu_impl_reg[0], pmgr_reg + cpu_start_off))
+        attempted_count++;
+        if (smp_start_cpu(i, die, cluster, core, cpu_impl_reg[0], pmgr_reg + cpu_start_off)) {
             started_count++;
+        } else {
+            printf("Aborting secondary startup after CPU %d to preserve target state\n", i);
+            break;
+        }
     }
 
-    printf("Secondary CPUs: %d/%d started\n", started_count, secondary_count);
+    printf("Secondary CPUs: %d/%d started (%d attempted)\n", started_count, secondary_count,
+           attempted_count);
 }
 
 void smp_stop_secondaries(bool deep_sleep)

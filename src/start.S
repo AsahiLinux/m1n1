@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 
+#include "smp_asm.h"
 #include "soc.h"
 
 #define UTRSTAT 0x010
@@ -13,6 +14,7 @@
 .extern _v_sp0_serr
 .extern _reset_stack
 .extern _cpu_reset_c
+.extern smp_reset_stacks
 .extern wdt_reboot
 
 .section .init, "ax"
@@ -150,9 +152,32 @@ cpu_reset:
     mov w0, 'O'
     bl debug_putc
 
+    // EL3 still uses the shared reset stack.
+    mrs x8, CurrentEL
+    cmp x8, #0xc
+    beq 2f
+
+    // Reuse the private stack registered after this CPU's first entry.
+    mrs x3, mpidr_el1
+    and x3, x3, #0xffffff
+    adrp x4, smp_reset_stacks
+    add x4, x4, :lo12:smp_reset_stacks
+    ldr x5, =MAX_CPUS
+1:
+    cbz x5, 2f
+    sub x5, x5, #1
+    ldp x6, x7, [x4], #16
+    cmp x6, x3
+    bne 1b
+    cbz x7, 2f
+    mov x1, x7
+    b 3f
+
+2:
     adrp x1, _reset_stack
     add x1, x1, :lo12:_reset_stack
     ldr x1, [x1]
+3:
     mov sp, x1
 
     ldr x2, [sp, #-8]

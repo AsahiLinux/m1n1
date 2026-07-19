@@ -10,3 +10,6 @@
 - 系统 kernel collection 是 IMG4 容器，`kmutil inspect` 能给出嵌入 kext 的虚拟地址和文件偏移，但磁盘内容不能直接作为普通 Mach-O 反汇编。
 - `_vectors_start` 在当前链接布局为 `0x4000`，而 RVBAR 比较只保留 `[47:12]`；比较必须同时页对齐，否则合法入口会被误报为不匹配。
 - M5 的 `ApplePMGR::configMiscCores` 会从内部运行时结构和 ADT 映射构造多组 `writeReg32` 调用；`AppleT6050PMGR::writeReg32` 还经过虚函数/基类回调。现有证据不足以安全地把它简化为两个裸 `CPU_START` 写入。
+- 原 SMP 初次启动依赖全局 `target_cpu`：某核心超时后若继续启动下一核心，迟到核心会使用被覆盖的索引并写错 spin table。安全策略是在首次失败后中止批量启动并保留超时核心的目标状态。
+- `origin/psci-via-efi` 的 `d30913b` 已提供按 MPIDR 查找复位栈的实现依据；该机制可独立于 PSCI 移植，用于核心首次握手后的 RVBAR 重入。
+- M5 `function-enable_core` 不能用单一布尔值表示：需要分别记录 CPU 节点 mask 和校验通过的 Core function mask；J716c 的 18 个 CPU 预期两者均为 `0x0003ffff`。
