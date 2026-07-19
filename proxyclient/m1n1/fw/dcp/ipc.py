@@ -463,7 +463,8 @@ IOMFBSwapRec = Struct(
     "unk_2c8" / Hex(Default(Int32ul, 0)),
     Ver("V < V14_7", "unk_2cc" / UnkBytes(0x14)),
     Ver("V >= V14_7", "unk_2cc" / UnkBytes(0x40)),
-    "unk_2e0" / Hex(Default(Int32ul, 0)),
+    Ver("V < V14_7", "unk_2e0" / Hex(Default(Int32ul, 0))),
+    Ver("V >= V14_7", "bl_update" / Hex(Default(Int32ul, 0))),
     Ver("V < V13_5", "unk_2e2" / UnkBytes(0x2)),
     Ver("V >= V13_5", "unk_2e2" / UnkBytes(0x3)),
     Ver("V < V14_7", "bl_unk" / Hex(Int64ul)), # seen: 0x0, 0x1, 0x101, 0x1_0000, 0x101_010101
