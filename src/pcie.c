@@ -35,12 +35,13 @@
 
 /* PHY registers */
 
-#define APCIE_PHY_CTRL         0x000
-#define APCIE_PHY_CTRL_CLK0REQ BIT(0)
-#define APCIE_PHY_CTRL_CLK1REQ BIT(1)
-#define APCIE_PHY_CTRL_CLK0ACK BIT(2)
-#define APCIE_PHY_CTRL_CLK1ACK BIT(3)
-#define APCIE_PHY_CTRL_RESET   BIT(7)
+#define APCIE_PHY_CTRL             0x000
+#define APCIE_PHY_CTRL_CLK0REQ     BIT(0)
+#define APCIE_PHY_CTRL_CLK1REQ     BIT(1)
+#define APCIE_PHY_CTRL_CLK0ACK     BIT(2)
+#define APCIE_PHY_CTRL_CLK1ACK     BIT(3)
+#define APCIE_PHY_CTRL_RESET_T8103 BIT(7)
+#define APCIE_PHY_CTRL_RESET_T8132 BIT(4)
 
 #define APCIE_PHYIF_CTRL     0x024
 #define APCIE_PHYIF_CTRL_RUN BIT(0)
@@ -139,6 +140,7 @@ enum apcie_type {
     APCIE_T602X = 1,
     APCIE_T8122 = 2,
     APCIE_T6031 = 3,
+    APCIE_T8132 = 4,
 };
 
 struct reg_info {
@@ -149,6 +151,7 @@ struct reg_info {
     int rc_idx;
     int phy_common_idx;
     int phy_idx;
+    u32 phy_ctrl_reset;
     int phy_ip_idx;
     int axi_idx;
     int fuse_idx;
@@ -163,6 +166,7 @@ static const struct reg_info regs_t8xxx_t600x = {
     .rc_idx = 1,
     .phy_common_idx = -1,
     .phy_idx = 2,
+    .phy_ctrl_reset = APCIE_PHY_CTRL_RESET_T8103,
     .phy_ip_idx = 3,
     .axi_idx = 4,
     .fuse_idx = 5,
@@ -177,6 +181,7 @@ static const struct reg_info regs_t602x = {
     // 2 = phy unknown?
     .phy_common_idx = 3,
     .phy_idx = 4,
+    .phy_ctrl_reset = APCIE_PHY_CTRL_RESET_T8103,
     .phy_ip_idx = 5,
     .axi_idx = 6,
     .fuse_idx = 7,
@@ -190,6 +195,21 @@ static const struct reg_info regs_t8122 = {
     .rc_idx = 1,
     .phy_common_idx = 2,
     .phy_idx = 2,
+    .phy_ctrl_reset = APCIE_PHY_CTRL_RESET_T8103,
+    .phy_ip_idx = 3,
+    .axi_idx = 4,
+    .fuse_idx = 5,
+};
+
+static const struct reg_info regs_t8132 = {
+    .type = APCIE_T8132,
+    .compat = APCIE_T8122,
+    .shared_reg_count = 7,
+    .config_idx = 0,
+    .rc_idx = 1,
+    .phy_common_idx = 2,
+    .phy_idx = 2,
+    .phy_ctrl_reset = APCIE_PHY_CTRL_RESET_T8132,
     .phy_ip_idx = 3,
     .axi_idx = 4,
     .fuse_idx = 5,
@@ -203,6 +223,7 @@ static const struct reg_info regs_t6031 = {
     .rc_idx = 1,
     .phy_common_idx = 2,
     .phy_idx = 2,
+    .phy_ctrl_reset = APCIE_PHY_CTRL_RESET_T8103,
     .phy_ip_idx = 3,
     .axi_idx = 4,
 };
@@ -283,6 +304,14 @@ static int pcie_init_controller(int controller, const char *path)
         fuse_bits = NULL;
         state->pcie_regs = &regs_t6031;
         printf("pcie: Initializing t6031 PCIe controller\n");
+    } else if (adt_is_compatible(adt, adt_offset, "apcie,t8132")) {
+        fuse_bits = NULL;
+        state->pcie_regs = &regs_t8132;
+        printf("pcie: Initializing t8132 PCIe controller\n");
+    } else if (adt_is_compatible(adt, adt_offset, "apcie,t6040")) {
+        fuse_bits = NULL;
+        state->pcie_regs = &regs_t8132;
+        printf("pcie: Initializing t6040 PCIe controller\n");
     } else if (adt_is_compatible(adt, adt_offset, "apcie-ge,t6020")) {
         u32 lane_cfg;
         fuse_bits = NULL;
@@ -449,7 +478,7 @@ static int pcie_init_controller(int controller, const char *path)
             return -1;
         }
 
-        clear32(state->phy_base[phy] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_RESET);
+        clear32(state->phy_base[phy] + APCIE_PHY_CTRL, state->pcie_regs->phy_ctrl_reset);
         udelay(1);
 
         /* ??? */
@@ -848,7 +877,7 @@ int pcie_shutdown(void)
         }
 
         for (int phy = 0; phy < state->num_phys; phy++) {
-            clear32(state->phy_base[phy] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_RESET);
+            clear32(state->phy_base[phy] + APCIE_PHY_CTRL, state->pcie_regs->phy_ctrl_reset);
             clear32(state->phy_base[phy] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK1REQ);
             clear32(state->phy_base[phy] + APCIE_PHY_CTRL, APCIE_PHY_CTRL_CLK0REQ);
         }
