@@ -160,6 +160,7 @@ OBJECTS := \
 	pcie.o \
 	pmgr.o \
 	proxy.o \
+	psci.o \
 	ringbuffer.o \
 	rtkit.o \
 	sart.o \

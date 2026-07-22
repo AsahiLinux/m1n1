@@ -3,6 +3,7 @@
 #ifndef __SMP_H__
 #define __SMP_H__
 
+#include "smp_asm.h"
 #include "types.h"
 #include "utils.h"
 
@@ -10,12 +11,13 @@
 #define MAX_EL3_CPUS 4
 
 #define SECONDARY_STACK_SIZE 0x10000
-extern u8 *secondary_stacks[MAX_CPUS];
-extern u8 *secondary_stacks_el3[MAX_EL3_CPUS];
+extern u8 secondary_stacks[MAX_CPUS][SECONDARY_STACK_SIZE];
+extern u8 secondary_stacks_el3[MAX_EL3_CPUS][SECONDARY_STACK_SIZE];
 
 void smp_secondary_entry(void);
 void smp_secondary_prep_el3(void);
 
+int smp_init(void);
 void smp_start_secondaries(void);
 void smp_stop_secondaries(bool deep_sleep);
 

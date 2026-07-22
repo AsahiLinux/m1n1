@@ -157,6 +157,7 @@ void m1n1_main(void)
     mcc_init();
     mmu_init();
     aic_init();
+    smp_init();
 #endif
     wdt_disable();
 #ifndef BRINGUP
@@ -205,6 +206,12 @@ void m1n1_main(void)
 #endif
 
     printf("Vectoring to next stage...\n");
+
+    for (iodev_id_t id = 0; id < IODEV_NUM; id++) {
+        if (id == IODEV_UART || id == IODEV_DOCKCHANNEL_UART)
+            continue;
+        iodev_set_usage(id, 0);
+    }
 
     next_stage.entry(next_stage.args[0], next_stage.args[1], next_stage.args[2], next_stage.args[3],
                      next_stage.args[4]);
