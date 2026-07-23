@@ -6,7 +6,7 @@ use core::ffi::c_void;
 use fatfs::SeekFrom;
 
 extern "C" {
-    fn nvme_read(nsid: u32, lba: u64, buffer: *mut c_void) -> bool;
+    pub(crate) fn nvme_read(nsid: u32, lba: u64, buffer: *mut c_void) -> bool;
 }
 
 const SECTOR_SIZE: usize = 4096;
@@ -14,9 +14,9 @@ const SECTOR_SIZE: usize = 4096;
 pub type Error = ();
 
 #[repr(C, align(4096))]
-struct SectorBuffer([u8; SECTOR_SIZE]);
+pub(crate) struct SectorBuffer(pub(crate) [u8; SECTOR_SIZE]);
 
-fn alloc_sector_buf() -> Box<SectorBuffer> {
+pub(crate) fn alloc_sector_buf() -> Box<SectorBuffer> {
     let p: Box<SectorBuffer> = unsafe { Box::new_zeroed().assume_init() };
     debug_assert_eq!(0, p.0.as_ptr().align_offset(4096));
     p

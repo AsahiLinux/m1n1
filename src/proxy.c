@@ -31,6 +31,9 @@
 #include "minilzlib/minlzma.h"
 #include "tinf/tinf.h"
 
+void *rust_read_gigalocker(size_t *);
+void rust_free_gigalocker(void *, size_t);
+
 int proxy_process(ProxyRequest *request, ProxyReply *reply)
 {
     enum exc_guard_t guard_save = exc_guard;
@@ -620,6 +623,21 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_CPUFREQ_INIT:
             reply->retval = cpufreq_init();
             break;
+
+        case P_READ_GIGALOCKER: {
+            size_t size = 0;
+            void *data = rust_read_gigalocker(&size);
+            size_t *cmd_buf = (size_t *)request->args[0];
+            cmd_buf[0] = (size_t)data;
+            cmd_buf[1] = size;
+            reply->retval = size == 0 ? -1 : 0;
+            break;
+        }
+        case P_FREE_GIGALOCKER: {
+            size_t *cmd_buf = (size_t *)request->args[0];
+            rust_free_gigalocker((void *)cmd_buf[0], cmd_buf[1]);
+            break;
+        }
 
         default:
             reply->status = S_BADCMD;

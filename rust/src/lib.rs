@@ -12,6 +12,7 @@
 extern crate alloc;
 
 pub mod adt;
+pub mod apfs;
 #[cfg(feature = "chainload")]
 pub mod chainload;
 pub mod dlmalloc;
