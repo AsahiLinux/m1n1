@@ -15,6 +15,10 @@ int tps6598x_command(tps6598x_dev_t *dev, const char *cmd, const u8 *data_in, si
                      u8 *data_out, size_t len_out);
 int tps6598x_powerup(tps6598x_dev_t *dev);
 
+typedef bool(hpm_match_t)(char *hpm_path, void *data);
+typedef int(hpm_action_t)(char *hpm_path, tps6598x_dev_t *tps, void *data);
+int tps6598x_foreach_hpm(hpm_match_t *match, hpm_action_t *action, void *data);
+
 int tps6598x_enter_kis(tps6598x_dev_t *dev);
 int tps6598x_enable_debugusb(void);
 
