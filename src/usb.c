@@ -237,80 +237,38 @@ struct iodev iodev_usb_vuart = {
     .lock = SPINLOCK_INIT,
 };
 
-static tps6598x_dev_t *hpm_init(i2c_dev_t *i2c, const char *hpm_path)
+static int hpm_idx(char *hpm_path)
 {
-    tps6598x_dev_t *tps = tps6598x_init(hpm_path, i2c);
-    if (!tps) {
-        printf("usb: tps6598x_init failed for %s.\n", hpm_path);
-        return NULL;
-    }
+    size_t len = strlen(hpm_path);
+    if (len < 4)
+        return false;
+    if (memcmp(hpm_path + len - 4, "hpm", 3))
+        return -1; // unexpected hpm node name
+    u8 idx = hpm_path[len - 1] - '0';
+    if (idx > 9)
+        return -2; // unexpected hpm index
+    return idx;
+}
 
-    if (tps6598x_powerup(tps) < 0) {
+static bool usb_init_match(char *hpm_path, void *)
+{
+    int idx = hpm_idx(hpm_path);
+    if (idx < FIRST_USB_IODEV)
+        return false;
+    if (idx > USB_IODEV_COUNT)
+        return false;
+    return true;
+}
+
+static int usb_init_one(char *hpm_path, tps6598x_dev_t *tps, void *)
+{
+    int idx = hpm_idx(hpm_path);
+
+    if (tps6598x_powerup(tps) < 0)
         printf("usb: tps6598x_powerup failed for %s.\n", hpm_path);
-        tps6598x_shutdown(tps);
-        return NULL;
-    }
 
-    return tps;
-}
-
-void usb_spmi_init(void)
-{
-    for (int idx = 0; idx < USB_IODEV_COUNT; ++idx)
-        usb_phy_bringup(idx); /* Fails on missing devices, just continue */
-
-    usb_is_initialized = true;
-}
-
-static int usb_init_i2c(const char *i2c_path)
-{
-    char hpm_path[MAX_HPM_PATH_LEN];
-
-    int node = adt_path_offset(adt, i2c_path);
-    if (node < 0)
-        return 0;
-
-    node = adt_first_child_offset(adt, node);
-    if (node < 0)
-        return 0;
-
-    if (!adt_is_compatible(adt, node, "usbc,manager"))
-        return 0;
-
-    const char *hpm_mngr_name = adt_get_name(adt, node);
-    if (!hpm_mngr_name || strnlen(hpm_mngr_name, 16) >= 16)
-        return 0;
-
-    i2c_dev_t *i2c = i2c_init(i2c_path);
-    if (!i2c) {
-        printf("usb: i2c init failed for %s\n", i2c_path);
-        return -1;
-    }
-
-    ADT_FOREACH_CHILD(adt, node)
-    {
-        const char *name = adt_get_name(adt, node);
-        if (!name || memcmp(name, "hpm", 3) || name[4] != '\0')
-            continue; // unexpected hpm node name
-        u32 idx = name[3] - '0';
-        if (idx >= USB_IODEV_COUNT)
-            continue; // unexpected hpm index
-
-        snprintf(hpm_path, sizeof(hpm_path), "%s/%s/%s", i2c_path, hpm_mngr_name, name);
-
-        tps6598x_dev_t *tps = hpm_init(i2c, hpm_path);
-        if (!tps) {
-            printf("usb: failed to init %s\n", name);
-            continue;
-        }
-
-        if (tps6598x_disable_irqs(tps, &tps6598x_irq_state[idx]))
-            printf("usb: unable to disable IRQ masks for %s\n", name);
-
-        tps6598x_shutdown(tps);
-    }
-
-    i2c_shutdown(i2c);
+    if (tps6598x_disable_irqs(tps, &tps6598x_irq_state[idx]))
+        printf("usb: unable to disable IRQ masks for %s.\n", hpm_path);
 
     return 0;
 }
@@ -319,15 +277,6 @@ void usb_init(void)
 {
     if (usb_is_initialized)
         return;
-
-    /*
-     * M3/M4 models do not use i2c, but instead SPMI with a new controller.
-     * We can get USB going for now by just bringing up the phys.
-     */
-    if (adt_path_offset(adt, "/arm-io/nub-spmi-a0/hpm0") > 0) {
-        usb_spmi_init();
-        return;
-    }
 
     /*
      * A7-A11 uses a custom internal otg controller with the peripheral part
@@ -339,10 +288,7 @@ void usb_init(void)
         return;
     }
 
-    if (adt_is_compatible(adt, 0, "J180dAP") && usb_init_i2c("/arm-io/i2c3") < 0)
-        return;
-    if (usb_init_i2c("/arm-io/i2c0") < 0)
-        return;
+    tps6598x_foreach_hpm(usb_init_match, usb_init_one, NULL);
 
     for (int idx = 0; idx < USB_IODEV_COUNT; ++idx)
         usb_phy_bringup(idx); /* Fails on missing devices, just continue */
@@ -350,67 +296,34 @@ void usb_init(void)
     usb_is_initialized = true;
 }
 
-void usb_i2c_restore_irqs(const char *i2c_path, bool force)
+static bool usb_hpm_restore_irqs_match(char *hpm_path, void *state)
 {
-    char hpm_path[MAX_HPM_PATH_LEN];
+    int idx = hpm_idx(hpm_path);
+    if (idx < 0)
+        return false;
 
-    int node = adt_path_offset(adt, i2c_path);
-    if (node < 0)
-        return;
+    bool force = *(bool *)state;
+    if (iodev_get_usage(IODEV_USB0 + idx) && !force)
+        return false;
 
-    node = adt_first_child_offset(adt, node);
-    if (node < 0)
-        return;
+    if (!tps6598x_irq_state[idx].valid)
+        return false;
 
-    if (!adt_is_compatible(adt, node, "usbc,manager"))
-        return;
+    return true;
+}
 
-    const char *hpm_mngr_name = adt_get_name(adt, node);
-    if (!hpm_mngr_name || strnlen(hpm_mngr_name, 16) >= 16)
-        return;
+static int usb_hpm_restore_irqs_one(char *hpm_path, tps6598x_dev_t *tps, void *)
+{
+    int idx = hpm_idx(hpm_path);
 
-    i2c_dev_t *i2c = i2c_init(i2c_path);
-    if (!i2c) {
-        printf("usb: i2c init failed.\n");
-        return;
-    }
+    if (tps6598x_restore_irqs(tps, &tps6598x_irq_state[idx]))
+        printf("usb: unable to restore IRQ masks for %s\n", hpm_path);
 
-    ADT_FOREACH_CHILD(adt, node)
-    {
-        const char *name = adt_get_name(adt, node);
-        if (!name || memcmp(name, "hpm", 3) || name[4] != '\0')
-            continue; // unexpected hpm node name
-        u32 idx = name[3] - '0';
-        if (idx >= USB_IODEV_COUNT)
-            continue; // unexpected hpm index
-
-        if (iodev_get_usage(IODEV_USB0 + idx) && !force)
-            continue;
-
-        if (tps6598x_irq_state[idx].valid) {
-            snprintf(hpm_path, sizeof(hpm_path), "%s/%s/%s", i2c_path, hpm_mngr_name, name);
-            tps6598x_dev_t *tps = hpm_init(i2c, hpm_path);
-            if (!tps)
-                continue;
-
-            if (tps6598x_restore_irqs(tps, &tps6598x_irq_state[idx]))
-                printf("usb: unable to restore IRQ masks for %s\n", name);
-
-            tps6598x_shutdown(tps);
-        }
-    }
-
-    i2c_shutdown(i2c);
+    return 0;
 }
 
 void usb_hpm_restore_irqs(bool force)
 {
-    /*
-     * Do not try to restore irqs on M3/M4 which don't use i2c
-     */
-    if (adt_path_offset(adt, "/arm-io/nub-spmi-a0/hpm0") > 0)
-        return;
-
     /*
      * Do not try to restore irqs on A7-A11 which don't use i2c
      */
@@ -418,9 +331,7 @@ void usb_hpm_restore_irqs(bool force)
         adt_path_offset(adt, "/arm-io/usb-complex") > 0)
         return;
 
-    if (adt_is_compatible(adt, 0, "J180dAP"))
-        usb_i2c_restore_irqs("/arm-io/i2c3", force);
-    usb_i2c_restore_irqs("/arm-io/i2c0", force);
+    tps6598x_foreach_hpm(usb_hpm_restore_irqs_match, usb_hpm_restore_irqs_one, &force);
 }
 
 void usb_iodev_init(void)

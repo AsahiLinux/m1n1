@@ -251,13 +251,14 @@ int tps6598x_enter_kis(tps6598x_dev_t *dev)
     return ret;
 }
 
-int tps6598x_enable_debugusb(void)
+int tps6598x_foreach_hpm(hpm_match_t *match, hpm_action_t *action, void *data)
 {
     char hpm_path[64] = {0};
     char i2c_path[64] = {0};
-    bool found = false;
     int node;
     int ret;
+    bool stop = false;    // Whether we should stop iteration after a non-zero action return value
+    bool matched = false; // Whether we found any matching hpms at all; used for return value
 
     node = adt_path_offset(adt, "/arm-io");
     if (node < 0)
@@ -274,6 +275,12 @@ int tps6598x_enable_debugusb(void)
         if (mngr_node < 0 || !adt_is_compatible(adt, mngr_node, "usbc,manager"))
             continue;
 
+        ret = snprintf(i2c_path, sizeof(i2c_path), "/arm-io/%s", adt_get_name(adt, node));
+        if (ret < 0 || (size_t)ret >= sizeof(i2c_path))
+            continue;
+
+        i2c_dev_t *i2c = NULL;
+
         int it = mngr_node;
         ADT_FOREACH_CHILD(adt, it)
         {
@@ -281,40 +288,56 @@ int tps6598x_enable_debugusb(void)
                 continue;
 
             const char *name = adt_get_name(adt, it);
-            if (strcmp(name, "hpm0"))
-                continue;
 
-            ret = snprintf(i2c_path, sizeof(i2c_path), "/arm-io/%s", adt_get_name(adt, node));
-            if (ret < 0 || (size_t)ret >= sizeof(i2c_path))
-                continue;
             ret = snprintf(hpm_path, sizeof(hpm_path), "/arm-io/%s/%s/%s", adt_get_name(adt, node),
                            adt_get_name(adt, mngr_node), name);
             if (ret < 0 || (size_t)ret >= sizeof(hpm_path))
                 continue;
 
-            found = true;
+            if (!match(hpm_path, data))
+                continue;
+            matched = true;
+
+            if (!i2c) {
+                i2c = i2c_init(i2c_path);
+                if (!i2c) {
+                    printf("tps6598x: i2c_init failed for %s.\n", i2c_path);
+                    break; // skip to the next i2c bus
+                }
+            }
+
+            tps6598x_dev_t *tps = tps6598x_init(hpm_path, i2c);
+            if (!tps) {
+                printf("tps6598x: init failed for %s.\n", hpm_path);
+                continue; // try the next hpm on this bus
+            }
+
+            ret = action(hpm_path, tps, data);
+
+            tps6598x_shutdown(tps);
+
+            if (ret != 0) {
+                stop = true; // The action indicated end of iteration: Do not iterate another bus
+                break;
+            }
         }
-        if (found)
-            break;
+        if (i2c)
+            i2c_shutdown(i2c);
+        if (stop)
+            return ret;
     }
-    if (!found) {
-        printf("tps6598x_enable_debugusb: i2c / hpm node not found\n");
+
+    if (!matched) {
+        // No hpms matched: Indicate this as error through the return value
         return -1;
     }
 
+    return 0;
+}
+
+static int tps6598x_enable_debugusb_one(char *hpm_path, tps6598x_dev_t *tps, void *)
+{
     printf("tps6598x: enable debugusb for %s\n", hpm_path);
-
-    i2c_dev_t *i2c = i2c_init(i2c_path);
-    if (!i2c) {
-        printf("tps6598x_enable_debugusb: i2c_init failed for %s.\n", i2c_path);
-        return -1;
-    }
-
-    tps6598x_dev_t *tps = tps6598x_init(hpm_path, i2c);
-    if (!tps) {
-        printf("tps6598x_enable_debugusb: tps6598x_init failed for %s.\n", hpm_path);
-        return -1;
-    }
 
     if (tps6598x_powerup(tps) < 0) {
         printf("tps6598x_enable_debugusb: tps6598x_powerup failed for %s.\n", hpm_path);
@@ -324,9 +347,23 @@ int tps6598x_enable_debugusb(void)
 
     tps6598x_enter_kis(tps);
 
-    tps6598x_shutdown(tps);
+    return 1; // stop iterating
+}
 
-    i2c_shutdown(i2c);
+static bool tps6598x_is_dfu(char *hpm_path, void *)
+{
+    size_t len = strlen(hpm_path);
+    if (len < 4)
+        return false;
+    return !strcmp(hpm_path + len - 4, "hpm0");
+}
 
+int tps6598x_enable_debugusb(void)
+{
+    int ret = tps6598x_foreach_hpm(tps6598x_is_dfu, tps6598x_enable_debugusb_one, NULL);
+    if (ret < 0) {
+        printf("tps6598x_enable_debugusb failed (node not found?)\n");
+        return ret;
+    }
     return 0;
 }
