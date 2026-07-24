@@ -332,7 +332,7 @@ int tps6598x_enter_kis(tps6598x_dev_t *dev)
 int tps6598x_foreach_hpm(hpm_match_t *match, hpm_action_t *action, void *data)
 {
     char hpm_path[64] = {0};
-    char i2c_path[64] = {0};
+    char bus_path[64] = {0};
     int node;
     int ret;
     bool stop = false;    // Whether we should stop iteration after a non-zero action return value
@@ -346,61 +346,111 @@ int tps6598x_foreach_hpm(hpm_match_t *match, hpm_action_t *action, void *data)
     {
         int mngr_node;
 
-        if (!adt_is_compatible(adt, node, "i2c,s5l8940x"))
-            continue;
-
-        mngr_node = adt_first_child_offset(adt, node);
-        if (mngr_node < 0 || !adt_is_compatible(adt, mngr_node, "usbc,manager"))
-            continue;
-
-        ret = snprintf(i2c_path, sizeof(i2c_path), "/arm-io/%s", adt_get_name(adt, node));
-        if (ret < 0 || (size_t)ret >= sizeof(i2c_path))
-            continue;
-
-        i2c_dev_t *i2c = NULL;
-
-        int it = mngr_node;
-        ADT_FOREACH_CHILD(adt, it)
-        {
-            if (!adt_is_compatible(adt, it, "usbc,cd3217"))
+        if (adt_is_compatible(adt, node, "i2c,s5l8940x")) {
+            mngr_node = adt_first_child_offset(adt, node);
+            if (mngr_node < 0 || !adt_is_compatible(adt, mngr_node, "usbc,manager"))
                 continue;
 
-            const char *name = adt_get_name(adt, it);
-
-            ret = snprintf(hpm_path, sizeof(hpm_path), "/arm-io/%s/%s/%s", adt_get_name(adt, node),
-                           adt_get_name(adt, mngr_node), name);
-            if (ret < 0 || (size_t)ret >= sizeof(hpm_path))
+            ret = snprintf(bus_path, sizeof(bus_path), "/arm-io/%s", adt_get_name(adt, node));
+            if (ret < 0 || (size_t)ret >= sizeof(bus_path))
                 continue;
 
-            if (!match(hpm_path, data))
-                continue;
-            matched = true;
+            i2c_dev_t *i2c = NULL;
 
-            if (!i2c) {
-                i2c = i2c_init(i2c_path);
+            int it = mngr_node;
+            ADT_FOREACH_CHILD(adt, it)
+            {
+                if (!adt_is_compatible(adt, it, "usbc,cd3217"))
+                    continue;
+
+                const char *name = adt_get_name(adt, it);
+
+                ret = snprintf(hpm_path, sizeof(hpm_path), "/arm-io/%s/%s/%s",
+                               adt_get_name(adt, node), adt_get_name(adt, mngr_node), name);
+                if (ret < 0 || (size_t)ret >= sizeof(hpm_path))
+                    continue;
+
+                if (!match(hpm_path, data))
+                    continue;
+                matched = true;
+
                 if (!i2c) {
-                    printf("tps6598x: i2c_init failed for %s.\n", i2c_path);
-                    break; // skip to the next i2c bus
+                    i2c = i2c_init(bus_path);
+                    if (!i2c) {
+                        printf("tps6598x: i2c_init failed for %s.\n", bus_path);
+                        break; // skip to the next bus
+                    }
+                }
+
+                tps6598x_dev_t *tps = tps6598x_init_i2c(hpm_path, i2c);
+                if (!tps) {
+                    printf("tps6598x: init failed for %s.\n", hpm_path);
+                    continue; // try the next hpm on this bus
+                }
+
+                ret = action(hpm_path, tps, data);
+
+                tps6598x_shutdown(tps);
+
+                if (ret != 0) {
+                    stop = true; // action indicated end of iteration: Do not iterate another bus
+                    break;
                 }
             }
+            if (i2c)
+                i2c_shutdown(i2c);
+        } else if (adt_is_compatible(adt, node, "aapl,spmi") ||
+                   adt_is_compatible(adt, node, "spmi,gen3")) {
 
-            tps6598x_dev_t *tps = tps6598x_init_i2c(hpm_path, i2c);
-            if (!tps) {
-                printf("tps6598x: init failed for %s.\n", hpm_path);
-                continue; // try the next hpm on this bus
+            ret = snprintf(bus_path, sizeof(bus_path), "/arm-io/%s", adt_get_name(adt, node));
+            if (ret < 0 || (size_t)ret >= sizeof(bus_path))
+                continue;
+
+            spmi_dev_t *spmi = NULL;
+
+            int it = node;
+            ADT_FOREACH_CHILD(adt, it)
+            {
+                if (!adt_is_compatible(adt, it, "usbc,sn201202x,spmi"))
+                    continue;
+
+                const char *name = adt_get_name(adt, it);
+
+                ret = snprintf(hpm_path, sizeof(hpm_path), "/arm-io/%s/%s", adt_get_name(adt, node),
+                               name);
+                if (ret < 0 || (size_t)ret >= sizeof(hpm_path))
+                    continue;
+
+                if (!match(hpm_path, data))
+                    continue;
+                matched = true;
+
+                if (!spmi) {
+                    spmi = spmi_init(bus_path);
+                    if (!spmi) {
+                        printf("tps6598x: spmi_init failed for %s.\n", bus_path);
+                        break; // skip to the next bus
+                    }
+                }
+
+                tps6598x_dev_t *tps = tps6598x_init_spmi(hpm_path, spmi);
+                if (!tps) {
+                    printf("tps6598x: init failed for %s.\n", hpm_path);
+                    continue; // try the next hpm on this bus
+                }
+
+                ret = action(hpm_path, tps, data);
+
+                tps6598x_shutdown(tps);
+
+                if (ret != 0) {
+                    stop = true; // action indicated end of iteration: Do not iterate another bus
+                    break;
+                }
             }
-
-            ret = action(hpm_path, tps, data);
-
-            tps6598x_shutdown(tps);
-
-            if (ret != 0) {
-                stop = true; // The action indicated end of iteration: Do not iterate another bus
-                break;
-            }
+            if (spmi)
+                spmi_shutdown(spmi);
         }
-        if (i2c)
-            i2c_shutdown(i2c);
         if (stop)
             return ret;
     }
