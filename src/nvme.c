@@ -2,6 +2,7 @@
 
 #include "adt.h"
 #include "assert.h"
+#include "firmware.h"
 #include "malloc.h"
 #include "nvme.h"
 #include "pmgr.h"
@@ -347,9 +348,11 @@ bool nvme_init(void)
         goto out_shutdown;
     }
 
-    /* setup controller and NVMMU for linear submission queue */
-    set32(nvme_base + NVME_LINEAR_SQ_CTRL, NVME_LINEAR_SQ_CTRL_EN);
-    clear32(nvme_base + NVME_UNKNOWN_CTRL, NVME_UNKNOWN_CTRL_PRP_NULL_CHECK);
+    if (os_firmware.version < V15_0B1) {
+        /* setup controller and NVMMU for linear submission queue */
+        set32(nvme_base + NVME_LINEAR_SQ_CTRL, NVME_LINEAR_SQ_CTRL_EN);
+        clear32(nvme_base + NVME_UNKNOWN_CTRL, NVME_UNKNOWN_CTRL_PRP_NULL_CHECK);
+    }
     write32(nvme_base + NVME_MAX_PEND_CMDS_CTRL,
             ((NVME_QUEUE_SIZE - 1) << 16) | (NVME_QUEUE_SIZE - 1));
     write32(nvme_base + NVMMU_NUM, NVME_QUEUE_SIZE - 1);
