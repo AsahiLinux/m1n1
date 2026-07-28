@@ -109,6 +109,7 @@ extern bool hv_sprr_active;
 void hv_sprr_set_active(bool active);
 
 bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm);
+bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm);
 bool hv_sprr_handle_msr(struct exc_info *ctx, u64 reg, u32 rt, bool is_read);
 bool hv_sprr_traps_tlbi(void);
 bool hv_sprr_is_pt_page(u64 ipa);
