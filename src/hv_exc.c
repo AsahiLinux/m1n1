@@ -466,6 +466,13 @@ void hv_exc_sync(struct exc_info *ctx)
                     break;
             }
             break;
+        case ESR_EC_HVC:
+            hv_wdt_breadcrumb('h');
+            if (hv_hvc_dispatch_unlocked(ctx, FIELD_GET(ESR_ISS, ctx->esr))) {
+                hv_wdt_breadcrumb('s');
+                return;
+            }
+            break;
     }
 
     if (handled) {

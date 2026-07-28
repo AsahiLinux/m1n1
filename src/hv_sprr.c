@@ -848,7 +848,8 @@ static bool hv_gxf_gexit(struct exc_info *ctx)
     else                                                                                           \
         cpu->bank.field = wval;
 
-static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read, u32 rt)
+static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read, u32 rt,
+                                   bool locked)
 {
     struct hv_sprr_cpu *cpu = hv_sprr_this();
 
@@ -861,6 +862,8 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
             if (is_read) {
                 rval = cpu->sprr_config;
             } else {
+                if (!locked)
+                    return false;
                 bool en = wval & SPRR_CONFIG_EN;
                 bool was_en = cpu->sprr_en;
                 cpu->sprr_config = wval;
@@ -875,6 +878,8 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
             if (is_read)
                 rval = cpu->gxf_en ? GXF_CONFIG_EN : 0;
             else {
+                if (!locked)
+                    return false;
                 if ((wval & GXF_CONFIG_EN) && !cpu->gxf_en)
                     printf("hv_sprr[%d]: GXF on: enter 0x%lx abort 0x%lx vbar_gl1 0x%lx\n",
                            smp_id(), cpu->gxf_enter, cpu->gxf_abort, cpu->vbar_gl1);
@@ -903,6 +908,8 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
             if (is_read) {
                 rval = cpu->sprr_perm_el0;
             } else if (wval != cpu->sprr_perm_el0) {
+                if (!locked)
+                    return false;
                 printf("hv_sprr[%d]: SPRR_PERM_EL0 0x%lx -> 0x%lx\n", smp_id(), cpu->sprr_perm_el0,
                        wval);
                 cpu->sprr_perm_el0 = wval;
@@ -913,6 +920,8 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
             if (is_read) {
                 rval = cpu->sprr_perm_el1;
             } else if (wval != cpu->sprr_perm_el1) {
+                if (!locked)
+                    return false;
                 printf("hv_sprr[%d]: SPRR_PERM_EL1 0x%lx -> 0x%lx\n", smp_id(), cpu->sprr_perm_el1,
                        wval);
                 cpu->sprr_perm_el1 = wval;
@@ -968,23 +977,32 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
         case HV_VREG_TTBR0_EL1:
         case HV_VREG_TTBR1_EL1: {
             int ttbr_idx = vreg == HV_VREG_TTBR1_EL1;
-            if (is_read)
+            if (is_read) {
                 rval = sprr_read_ttbr(cpu, ttbr_idx);
-            else
+            } else {
+                if (!locked)
+                    return false;
                 sprr_write_ttbr(ctx, cpu, ttbr_idx, wval);
+            }
             break;
         }
         case HV_VREG_TCR_EL1:
-            if (is_read)
+            if (is_read) {
                 rval = mrs(SYS_TCR_EL12);
-            else
+            } else {
+                if (!locked)
+                    return false;
                 sprr_write_tcr(ctx, cpu, wval);
+            }
             break;
         case HV_VREG_SCTLR_EL1:
-            if (is_read)
+            if (is_read) {
                 rval = mrs(SYS_SCTLR_EL12);
-            else
+            } else {
+                if (!locked)
+                    return false;
                 sprr_write_sctlr(ctx, cpu, wval);
+            }
             break;
         case HV_VREG_ESR_GL1:
             GL1_BANKED(SYS_ESR_EL12, esr);
@@ -996,13 +1014,23 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
             GL1_BANKED(SYS_AFSR1_EL12, afsr1);
             break;
         default:
-            printf("hv_sprr: unknown vreg %d\n", vreg);
+            if (locked)
+                printf("hv_sprr: unknown vreg %d\n", vreg);
             return false;
     }
 
     if (is_read)
         ctx->regs[rt] = rval;
     return true;
+}
+
+bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm)
+{
+    if (!hv_sprr_active || !(imm & HV_HVC_SYSREG_FLAG))
+        return false;
+
+    return hv_sprr_emulate_sysreg(ctx, FIELD_GET(HV_HVC_SYSREG_VREG, imm), imm & HV_HVC_SYSREG_DIR,
+                                  FIELD_GET(HV_HVC_SYSREG_RT, imm), false);
 }
 
 bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm)
@@ -1012,7 +1040,8 @@ bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm)
 
     if (imm & HV_HVC_SYSREG_FLAG)
         return hv_sprr_emulate_sysreg(ctx, FIELD_GET(HV_HVC_SYSREG_VREG, imm),
-                                      imm & HV_HVC_SYSREG_DIR, FIELD_GET(HV_HVC_SYSREG_RT, imm));
+                                      imm & HV_HVC_SYSREG_DIR, FIELD_GET(HV_HVC_SYSREG_RT, imm),
+                                      true);
 
     if ((imm & HV_HVC_GENTER_MASK) == HV_HVC_GENTER_BASE)
         return hv_gxf_genter(ctx, FIELD_GET(HV_HVC_GENTER_IMM, imm));
