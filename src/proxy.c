@@ -10,6 +10,7 @@
 #include "gxf.h"
 #include "heapblock.h"
 #include "hv.h"
+#include "hv_sprr.h"
 #include "iodev.h"
 #include "kboot.h"
 #include "malloc.h"
@@ -542,6 +543,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_HV_ADD_TIME:
             hv_add_time(request->args[0]);
+            break;
+        case P_HV_SPRR_SET_ACTIVE:
+            hv_sprr_set_active(request->args[0]);
             break;
 
         case P_FB_INIT:
