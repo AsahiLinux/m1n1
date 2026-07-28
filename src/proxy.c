@@ -390,6 +390,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_HEAPBLOCK_ALLOC:
             reply->retval = (u64)heapblock_alloc(request->args[0]);
             break;
+        case P_HEAPBLOCK_SET_LIMIT:
+            heapblock_set_limit((void *)request->args[0]);
+            break;
         case P_MALLOC:
             reply->retval = (u64)malloc(request->args[0]);
             break;

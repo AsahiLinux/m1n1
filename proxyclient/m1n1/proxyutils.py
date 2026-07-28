@@ -40,7 +40,7 @@ VERSION_MAP = {
 
 class ProxyUtils(Reloadable):
     CODE_BUFFER_SIZE = 0x10000
-    def __init__(self, p, heap_size=1024 * 1024 * 1024):
+    def __init__(self, p, heap_size=1024 * 1024 * 1024, m1n1_heap=128 * 1024 * 1024):
         self.iface = p.iface
         self.proxy = p
         self.base = p.get_base()
@@ -76,7 +76,11 @@ class ProxyUtils(Reloadable):
         if os.environ.get("M1N1HEAP", ""):
             self.heap_base = int(os.environ.get("M1N1HEAP", ""), 16)
 
-        self.heap_base += 128 * 1024 * 1024 # We leave 128MB for m1n1 heap
+        self.heap_base += m1n1_heap
+        try:
+            p.heapblock_set_limit(self.heap_base)
+        except ProxyRemoteError:
+            pass
         self.heap_top = self.heap_base + self.heap_size
         self.heap = Heap(self.heap_base, self.heap_top)
         self.proxy.heap = self.heap

@@ -9,5 +9,6 @@ void heapblock_init(void);
 
 void *heapblock_alloc(size_t size);
 void *heapblock_alloc_aligned(size_t size, size_t align);
+void heapblock_set_limit(void *limit);
 
 #endif

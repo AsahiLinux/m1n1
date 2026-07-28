@@ -16,6 +16,7 @@
  */
 
 static void *heap_base;
+static void *heap_limit;
 
 void heapblock_init(void)
 {
@@ -25,6 +26,12 @@ void heapblock_init(void)
     heapblock_alloc(0); // align base
 
     printf("Heap base: %p\n", heap_base);
+}
+
+void heapblock_set_limit(void *limit)
+{
+    heap_limit = limit;
+    printf("Heap limit: %p (%ld MiB)\n", limit, ((u8 *)limit - (u8 *)heap_base) >> 20);
 }
 
 void *heapblock_alloc(size_t size)
@@ -38,6 +45,10 @@ void *heapblock_alloc_aligned(size_t size, size_t align)
     assert(heap_base);
 
     uintptr_t block = (((uintptr_t)heap_base) + align - 1) & ~(align - 1);
+
+    if (heap_limit && block + size > (uintptr_t)heap_limit)
+        panic("heapblock: out of memory (%zu bytes at 0x%lx, limit %p)\n", size, block, heap_limit);
+
     heap_base = (void *)(block + size);
 
     return (void *)block;
