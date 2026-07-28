@@ -325,6 +325,10 @@
 #define SPSR_M_EL3T 0b1100UL
 #define SPSR_M_EL3H 0b1101UL
 
+#define TTBR_ASID  GENMASK(63, 48)
+#define TTBR_BADDR GENMASK(47, 1)
+#define TTBR_CNP   BIT(0)
+
 #define SYS_TCR_EL1    sys_reg(3, 0, 2, 0, 2)
 #define TCR_DS         BIT(59)
 #define TCR_TCMA1      BIT(58)
