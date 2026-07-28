@@ -764,7 +764,7 @@ static void hv_gxf_undef(struct exc_info *ctx)
     ctx->spsr |= FIELD_PREP(SPSR_M, SPSR_M_EL1H);
 }
 
-static bool hv_gxf_genter(struct exc_info *ctx, u8 imm)
+static bool hv_gxf_genter(struct exc_info *ctx, u8 imm, bool locked)
 {
     struct hv_sprr_cpu *cpu = hv_sprr_this();
     u64 link_pstate = ctx->spsr;
@@ -774,6 +774,10 @@ static bool hv_gxf_genter(struct exc_info *ctx, u8 imm)
         hv_gxf_undef(ctx);
         return true;
     }
+
+    // the only thing here that is not per-CPU state is the first-time printf below.
+    if (!locked && !cpu->n_genter)
+        return false;
 
     // genter from GL is weird but allowed ¯\_(ツ)_/¯
     bool from_guarded = cpu->guarded;
@@ -808,11 +812,15 @@ static bool hv_gxf_genter(struct exc_info *ctx, u8 imm)
     return true;
 }
 
-static bool hv_gxf_gexit(struct exc_info *ctx)
+static bool hv_gxf_gexit(struct exc_info *ctx, bool locked)
 {
     struct hv_sprr_cpu *cpu = hv_sprr_this();
+    static bool warned_nested;
 
     if (!cpu->guarded)
+        return false;
+
+    if (!locked && (!cpu->n_gexit || ((cpu->aspsr_gl1 & ASPSR_GUARDED) && !warned_nested)))
         return false;
 
     u64 ret_pc = cpu->elr_gl1;
@@ -822,7 +830,6 @@ static bool hv_gxf_gexit(struct exc_info *ctx)
         printf("hv_sprr[%d]: first gexit -> 0x%lx (ASPSR 0x%lx)\n", smp_id(), ret_pc,
                cpu->aspsr_gl1);
 
-    static bool warned_nested;
     if ((cpu->aspsr_gl1 & ASPSR_GUARDED) && !warned_nested) {
         warned_nested = true;
         printf("hv_sprr[%d]: gexit #%ld keeps the world (ASPSR 0x%lx), SP_EL1 stays 0x%lx\n",
@@ -1026,11 +1033,28 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
 
 bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm)
 {
-    if (!hv_sprr_active || !(imm & HV_HVC_SYSREG_FLAG))
+    if (!hv_sprr_active)
         return false;
 
-    return hv_sprr_emulate_sysreg(ctx, FIELD_GET(HV_HVC_SYSREG_VREG, imm), imm & HV_HVC_SYSREG_DIR,
-                                  FIELD_GET(HV_HVC_SYSREG_RT, imm), false);
+    if (imm & HV_HVC_SYSREG_FLAG)
+        return hv_sprr_emulate_sysreg(ctx, FIELD_GET(HV_HVC_SYSREG_VREG, imm),
+                                      imm & HV_HVC_SYSREG_DIR, FIELD_GET(HV_HVC_SYSREG_RT, imm),
+                                      false);
+
+    if ((imm & HV_HVC_GENTER_MASK) == HV_HVC_GENTER_BASE) {
+        if (!hv_gxf_genter(ctx, FIELD_GET(HV_HVC_GENTER_IMM, imm), false))
+            return false;
+    } else if (imm == HV_HVC_GEXIT) {
+        if (!hv_gxf_gexit(ctx, false))
+            return false;
+    } else {
+        return false;
+    }
+
+    hv_set_spsr(ctx->spsr);
+    hv_set_elr(ctx->elr);
+    msr(SP_EL1, ctx->sp[1]);
+    return true;
 }
 
 bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm)
@@ -1044,10 +1068,10 @@ bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm)
                                       true);
 
     if ((imm & HV_HVC_GENTER_MASK) == HV_HVC_GENTER_BASE)
-        return hv_gxf_genter(ctx, FIELD_GET(HV_HVC_GENTER_IMM, imm));
+        return hv_gxf_genter(ctx, FIELD_GET(HV_HVC_GENTER_IMM, imm), true);
 
     if (imm == HV_HVC_GEXIT)
-        return hv_gxf_gexit(ctx);
+        return hv_gxf_gexit(ctx, true);
 
     return false;
 }
