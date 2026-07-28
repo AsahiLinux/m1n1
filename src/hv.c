@@ -218,7 +218,9 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
         msr(SYS_IMP_APL_ACTLR_EL12, info->actlr_el1);
     if (cpu_features->apple_sysregs_unlocked) {
         msr(SYS_IMP_APL_SPRR_CONFIG_EL1, info->sprr_config);
-        msr(SYS_IMP_APL_GXF_CONFIG_EL1, info->gxf_config);
+        /* GXF_CONFIG is UNDEF unless SPRR is enabled */
+        if (info->sprr_config & SPRR_CONFIG_EN)
+            msr(SYS_IMP_APL_GXF_CONFIG_EL1, info->gxf_config);
     }
     if (cpu_features->counter_redirect) {
         msr(SYS_IMP_APL_AGTCNTRDIR_EL1, info->agt_cnt_rdir_el1);
