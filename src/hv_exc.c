@@ -4,6 +4,7 @@
 #include "assert.h"
 #include "cpu_regs.h"
 #include "exception.h"
+#include "hv_sprr.h"
 #include "smp.h"
 #include "string.h"
 #include "uart.h"
@@ -203,6 +204,11 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
 
     regs[31] = 0;
 
+    /* Don't handle any TLB maintenance here if we're running in emulated SPRR mode */
+    if (!is_read && FIELD_GET(ESR_ISS_MSR_OP0, reg) == 1 && FIELD_GET(ESR_ISS_MSR_CRn, reg) == 8 &&
+        hv_sprr_traps_tlbi())
+        return false;
+
     switch (reg) {
         SYSREG_PASS(SYS_IMP_APL_CORE_NRG_ACC_DAT);
         SYSREG_PASS(SYS_IMP_APL_CORE_SRM_NRG_ACC_DAT);
@@ -388,7 +394,7 @@ static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
 #endif
     }
 
-    return false;
+    return hv_sprr_handle_msr(ctx, reg, rt, is_read);
 }
 
 static void hv_get_context(struct exc_info *ctx)
@@ -490,11 +496,17 @@ void hv_exc_sync(struct exc_info *ctx)
                     break;
             }
             break;
+        case ESR_EC_HVC:
+            hv_wdt_breadcrumb('H');
+            handled = hv_hvc_dispatch(ctx, FIELD_GET(ESR_ISS, ctx->esr));
+            break;
     }
 
     if (handled) {
         hv_wdt_breadcrumb('+');
-        ctx->elr += 4;
+        // HVC alread leaves ELR past the instruction
+        if (ec != ESR_EC_HVC)
+            ctx->elr += 4;
     } else {
         hv_wdt_breadcrumb('-');
         // VM code can forward a nested SError exception here
