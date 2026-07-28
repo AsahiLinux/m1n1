@@ -1358,6 +1358,7 @@ class HV(Reloadable):
 
     def set_logfile(self, fd):
         self.print_tracer.log_file = fd
+        self.iface.tty_log = fd
 
     def init(self):
         self.adt = load_adt(self.u.get_adt())

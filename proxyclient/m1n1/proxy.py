@@ -166,6 +166,7 @@ class UartInterface(Reloadable):
         self.dev.flushOutput()
         self.dev.flushInput()
         self.pted = False
+        self.tty_log = None
         #d = self.dev.read(1)
         #while d != "":
             #d = self.dev.read(1)
@@ -216,11 +217,16 @@ class UartInterface(Reloadable):
         for c in s:
             if not self.pted:
                 sys.stdout.write("TTY> ")
+                if self.tty_log:
+                    self.tty_log.write("TTY> ")
                 self.pted = True
             if c == 10:
                 self.pted = False
             sys.stdout.write(chr(c))
             sys.stdout.flush()
+            if self.tty_log:
+                self.tty_log.write(chr(c))
+                self.tty_log.flush()
 
     def ttymode(self, dev=None):
         if dev is None:
