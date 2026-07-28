@@ -118,6 +118,12 @@
 #define ESR_ISS_MSR_CRm_SHIFT 1
 #define ESR_ISS_MSR_DIR       BIT(0)
 
+#define _SYSREG_ISS(_1, _2, op0, op1, CRn, CRm, op2)                                               \
+    (((op0) << ESR_ISS_MSR_OP0_SHIFT) | ((op1) << ESR_ISS_MSR_OP1_SHIFT) |                         \
+     ((CRn) << ESR_ISS_MSR_CRn_SHIFT) | ((CRm) << ESR_ISS_MSR_CRm_SHIFT) |                         \
+     ((op2) << ESR_ISS_MSR_OP2_SHIFT))
+#define SYSREG_ISS(...) _SYSREG_ISS(__VA_ARGS__)
+
 #define SYS_HCR_EL2  sys_reg(3, 4, 1, 1, 0)
 #define HCR_TWEDEL   GENMASK(63, 60)
 #define HCR_TWEDEn   BIT(59)
@@ -260,6 +266,31 @@
 #define SYS_SPSR_EL1  sys_reg(3, 0, 4, 0, 0)
 #define SYS_SPSR_EL12 sys_reg(3, 5, 4, 0, 0)
 #define SYS_SPSR_EL2  sys_reg(3, 4, 4, 0, 0)
+
+#define SYS_ELR_EL12   sys_reg(3, 5, 4, 0, 1)
+#define SYS_ESR_EL12   sys_reg(3, 5, 5, 2, 0)
+#define SYS_FAR_EL12   sys_reg(3, 5, 6, 0, 0)
+#define SYS_VBAR_EL12  sys_reg(3, 5, 12, 0, 0)
+#define SYS_AFSR1_EL12 sys_reg(3, 5, 5, 1, 1)
+
+#define SYS_TTBR0_EL12 sys_reg(3, 5, 2, 0, 0)
+#define SYS_TTBR1_EL12 sys_reg(3, 5, 2, 0, 1)
+#define SYS_TCR_EL12   sys_reg(3, 5, 2, 0, 2)
+#define SYS_MAIR_EL12  sys_reg(3, 5, 10, 2, 0)
+
+#define SYS_TTBR0_EL1      sys_reg(3, 0, 2, 0, 0)
+#define SYS_TTBR1_EL1      sys_reg(3, 0, 2, 0, 1)
+#define SYS_ESR_EL1        sys_reg(3, 0, 5, 2, 0)
+#define SYS_FAR_EL1        sys_reg(3, 0, 6, 0, 0)
+#define SYS_AFSR0_EL1      sys_reg(3, 0, 5, 1, 0)
+#define SYS_AFSR1_EL1      sys_reg(3, 0, 5, 1, 1)
+#define SYS_MAIR_EL1       sys_reg(3, 0, 10, 2, 0)
+#define SYS_AMAIR_EL1      sys_reg(3, 0, 10, 3, 0)
+#define SYS_CONTEXTIDR_EL1 sys_reg(3, 0, 13, 0, 1)
+
+#define SYS_AFSR0_EL12      sys_reg(3, 5, 5, 1, 0)
+#define SYS_AMAIR_EL12      sys_reg(3, 5, 10, 3, 0)
+#define SYS_CONTEXTIDR_EL12 sys_reg(3, 5, 13, 0, 1)
 // exception taken from AArch64
 #define SPSR_N     BIT(31)
 #define SPSR_Z     BIT(30)

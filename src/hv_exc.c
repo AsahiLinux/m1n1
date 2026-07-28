@@ -13,12 +13,6 @@
 
 extern spinlock_t bhl;
 
-#define _SYSREG_ISS(_1, _2, op0, op1, CRn, CRm, op2)                                               \
-    (((op0) << ESR_ISS_MSR_OP0_SHIFT) | ((op1) << ESR_ISS_MSR_OP1_SHIFT) |                         \
-     ((CRn) << ESR_ISS_MSR_CRn_SHIFT) | ((CRm) << ESR_ISS_MSR_CRm_SHIFT) |                         \
-     ((op2) << ESR_ISS_MSR_OP2_SHIFT))
-#define SYSREG_ISS(...) _SYSREG_ISS(__VA_ARGS__)
-
 #define PERCPU(x) pcpu[mrs(TPIDR_EL2)].x
 
 struct hv_pcpu_data {
