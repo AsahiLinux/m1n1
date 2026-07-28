@@ -23,9 +23,11 @@ extern uint64_t ram_base;
 #define PTE_ACCESS            BIT(10)
 #define PTE_SH_NS             (0b11L << 8)
 #define PTE_S2AP_RW           (0b11L << 6)
+#define PTE_S2AP_RO           (0b01L << 6)
 #define PTE_MEMATTR_UNCHANGED (0b1111L << 2)
 
-#define PTE_ATTRIBUTES (PTE_ACCESS | PTE_SH_NS | PTE_S2AP_RW | PTE_MEMATTR_UNCHANGED)
+#define PTE_ATTRIBUTES    (PTE_ACCESS | PTE_SH_NS | PTE_S2AP_RW | PTE_MEMATTR_UNCHANGED)
+#define PTE_ATTRIBUTES_RO (PTE_ACCESS | PTE_SH_NS | PTE_S2AP_RO | PTE_MEMATTR_UNCHANGED)
 
 #define PTE_LOWER_ATTRIBUTES GENMASK(13, 2)
 
@@ -377,6 +379,11 @@ int hv_map_hw(u64 from, u64 to, u64 size)
     return hv_map(from, to | PTE_ATTRIBUTES | PTE_VALID, size, 1);
 }
 
+int hv_map_hw_ro(u64 from, u64 to, u64 size)
+{
+    return hv_map(from, to | PTE_ATTRIBUTES_RO | PTE_VALID, size, 1);
+}
+
 int hv_map_sw(u64 from, u64 to, u64 size)
 {
     return hv_map(from, to | FIELD_PREP(SPTE_TYPE, SPTE_MAP), size, 1);
@@ -385,6 +392,34 @@ int hv_map_sw(u64 from, u64 to, u64 size)
 int hv_map_hook(u64 from, hv_hook_t *hook, u64 size)
 {
     return hv_map(from, ((u64)hook) | FIELD_PREP(SPTE_TYPE, SPTE_HOOK), size, 0);
+}
+
+bool hv_pt_is_ram(u64 ipa)
+{
+    return ipa < BIT(vaddr_bits) && IS_HW(hv_pt_walk(ipa));
+}
+
+int hv_pt_set_writable(u64 ipa, bool writable)
+{
+    ipa &= ~MASK(VADDR_L3_OFFSET_BITS);
+
+    u64 pte = hv_pt_walk(ipa);
+    if (!IS_HW(pte)) {
+        printf("HV: cannot reprotect non-HW IPA 0x%lx (pte 0x%lx)\n", ipa, pte);
+        return -1;
+    }
+
+    // hv_pt_walk strips the lower attributes off HW leaves, so reapply the standard set; every
+    // HW mapping is made with those anyway (memattr comes from stage 1).
+    u64 attrs = (writable ? PTE_ATTRIBUTES : PTE_ATTRIBUTES_RO) | PTE_VALID;
+    if (hv_map(ipa, (pte & PTE_TARGET_MASK) | attrs, PAGE_SIZE, 1) < 0)
+        return -1;
+
+    sysop("dsb ishst");
+    sysop("tlbi vmalls12e1is");
+    sysop("dsb ish");
+    sysop("isb");
+    return 0;
 }
 
 u64 hv_translate(u64 addr, bool s1, bool w, u64 *par_out)
