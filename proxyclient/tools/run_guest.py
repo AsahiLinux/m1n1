@@ -18,6 +18,8 @@ parser.add_argument('-e', '--hook-exceptions', action="store_true")
 parser.add_argument('-d', '--debug-xnu', action="store_true")
 parser.add_argument('-l', '--logfile', type=pathlib.Path)
 parser.add_argument('-C', '--cpus', default=None)
+parser.add_argument('--strip-node', action="append", default=[], metavar='SUBSTR',
+                    help='Remove every ADT node whose name contains SUBSTR.')
 parser.add_argument('-r', '--raw', action="store_true")
 parser.add_argument('-E', '--entry-point', action="store", type=int, help="Entry point for the raw image", default=0x800)
 parser.add_argument('-a', '--append-payload', type=pathlib.Path, action="append", default=[])
@@ -67,6 +69,18 @@ if args.cpus:
             print(f"Disabled {cpu}")
         except KeyError:
             continue
+
+if args.strip_node:
+    def strip_nodes(node, path=""):
+        for child in list(node):
+            child_path = f"{path}/{child.name}"
+            if any(pat.lower() in child.name.lower() for pat in args.strip_node):
+                print(f"Removing ADT node {child_path}")
+                del node[child.name]
+            else:
+                strip_nodes(child, child_path)
+
+    strip_nodes(hv.adt)
 
 if args.debug_xnu:
     hv.adt["chosen"].debug_enabled = 1
