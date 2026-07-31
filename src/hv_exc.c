@@ -264,7 +264,13 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         SYSREG_PASS(sys_reg(1, 0, 8, 1, 0)) // TLBI VMALLE1OS
         SYSREG_PASS(sys_reg(1, 0, 8, 1, 1)) // TLBI VAE1OS
         SYSREG_PASS(sys_reg(1, 0, 8, 1, 2)) // TLBI ASIDE1OS
+        SYSREG_PASS(sys_reg(1, 0, 8, 1, 3)) // TLBI VAAE1OS
+        SYSREG_PASS(sys_reg(1, 0, 8, 1, 5)) // TLBI VALE1OS
+        SYSREG_PASS(sys_reg(1, 0, 8, 1, 7)) // TLBI VAALE1OS
         SYSREG_PASS(sys_reg(1, 0, 8, 5, 1)) // TLBI RVAE1OS
+        SYSREG_PASS(sys_reg(1, 0, 8, 5, 3)) // TLBI RVAAE1OS
+        SYSREG_PASS(sys_reg(1, 0, 8, 5, 5)) // TLBI RVALE1OS
+        SYSREG_PASS(sys_reg(1, 0, 8, 5, 7)) // TLBI RVAALE1OS
 
         case SYSREG_ISS(SYS_ACTLR_EL1):
             if (is_read) {
