@@ -655,7 +655,6 @@ class HV(Reloadable):
             VMSA_LOCK_EL1,
             #SPRR_UNK1_EL1,
             #SPRR_UNK2_EL1,
-            MDSCR_EL1,
         }
         ro = {
             ACC_CFG_EL1,

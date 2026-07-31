@@ -405,3 +405,5 @@
 #define VTCR_SL0   GENMASK(7, 6)
 #define VTCR_SL0   GENMASK(7, 6)
 #define VTCR_T0SZ  GENMASK(5, 0)
+
+#define SYS_MDSCR_EL1 sys_reg(2, 0, 0, 2, 2)

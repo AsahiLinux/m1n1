@@ -21,6 +21,7 @@ struct hv_pcpu_data {
     u32 pmc_pending;
     u64 pmc_irq_mode;
     u64 exc_entry_pmcr0_cnt;
+    u64 mdscr;
 } ALIGNED(64);
 
 struct hv_pcpu_data pcpu[MAX_CPUS];
@@ -284,6 +285,14 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
                 regs[rt] = PERCPU(ipi_pending) ? IPI_SR_PENDING : 0;
             else if (regs[rt] & IPI_SR_PENDING)
                 PERCPU(ipi_pending) = false;
+            return true;
+
+        /* the hypervisor needs this one for breakpoints and single-stepping */
+        case SYSREG_ISS(SYS_MDSCR_EL1):
+            if (is_read)
+                regs[rt] = PERCPU(mdscr);
+            else
+                PERCPU(mdscr) = regs[rt];
             return true;
 
         /* shadow the interrupt mode and state flag */
