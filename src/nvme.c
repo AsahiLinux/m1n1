@@ -223,7 +223,7 @@ static bool nvme_exec_command(struct nvme_queue *q, struct nvme_command *cmd, u6
     queue_cmd->tag = tag;
 
     memset(tcb, 0, sizeof(*tcb));
-    tcb->opcode = queue_cmd->opcode;
+    tcb->opcode = 0;
     if (!queue_cmd->prp1)
         tcb->dma_flags = 0;
     else if (queue_cmd->opcode & 1)
