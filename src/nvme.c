@@ -65,6 +65,9 @@
 #define NVME_CMD_WRITE 0x01
 #define NVME_CMD_READ  0x02
 
+#define NVMMU_TCB_DMA_FROM_DEVICE BIT(0)
+#define NVMMU_TCB_DMA_TO_DEVICE   BIT(1)
+
 struct nvme_command {
     u8 opcode;
     u8 flags;
@@ -221,7 +224,12 @@ static bool nvme_exec_command(struct nvme_queue *q, struct nvme_command *cmd, u6
 
     memset(tcb, 0, sizeof(*tcb));
     tcb->opcode = queue_cmd->opcode;
-    tcb->dma_flags = 3; // always allow read+write to the PRP pages
+    if (!queue_cmd->prp1)
+        tcb->dma_flags = 0;
+    else if (queue_cmd->opcode & 1)
+        tcb->dma_flags = NVMMU_TCB_DMA_TO_DEVICE;
+    else
+        tcb->dma_flags = NVMMU_TCB_DMA_FROM_DEVICE;
     tcb->slot_id = tag;
     tcb->len = queue_cmd->cdw12;
     tcb->prp1 = queue_cmd->prp1;
