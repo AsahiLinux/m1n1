@@ -18,6 +18,8 @@ class GDBServer:
         "q" / Array(32, BytesInteger(16, swapped=True)),
         "fpsr" / Int32ul,
         "fpcr" / Int32ul,
+        "ttbr1_el1" / Int64ul,
+        "elr_el1" / Int64ul,
     )
     __separator = re.compile("[,;:]")
 
@@ -129,6 +131,8 @@ class GDBServer:
             g.q = self.__hv.u.q
             g.fpsr = self.__hv.u.mrs(FPSR)
             g.fpcr = self.__hv.u.mrs(FPCR)
+            g.ttbr1_el1 = self.__hv.u.mrs(TTBR1_EL1)
+            g.elr_el1 = self.__hv.ctx.elr
 
             return bytes(GDBServer.__g.build(g).hex(), "utf-8")
 
@@ -206,6 +210,10 @@ class GDBServer:
                 reg = GDBServer.__g.fpsr.build(self.__hv.u.mrs(FPSR))
             elif number == 67:
                 reg = GDBServer.__g.fpcr.build(self.__hv.u.mrs(FPCR))
+            elif number == 68:
+                reg = GDBServer.__g.ttbr1_el1.build(self.__hv.u.mrs(TTBR1_EL1))
+            elif number == 69:
+                reg = GDBServer.__g.elr_el1.build(self.__hv.ctx.elr)
             else:
                 return b"E01"
 

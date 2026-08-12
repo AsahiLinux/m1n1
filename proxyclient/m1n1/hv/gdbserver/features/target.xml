@@ -5,4 +5,5 @@
   <architecture>aarch64</architecture>
   <xi:include href="aarch64-core.xml" />
   <xi:include href="aarch64-fpu.xml" />
+  <xi:include href="aarch64-sysreg.xml" />
 </target>

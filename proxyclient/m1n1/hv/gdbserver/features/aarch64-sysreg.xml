@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<!DOCTYPE feature SYSTEM "gdb-target.dtd">
+<feature name="org.gnu.gdb.aarch64.sysreg">
+  <reg name="ttbr1_el1" bitsize="64" type="uint64" regnum="68"/>
+  <reg name="elr_el1" bitsize="64" type="code_ptr" regnum="69"/>
+</feature>
