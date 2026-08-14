@@ -771,3 +771,8 @@
 #define AIDR_EL1_GXF            BIT(16)
 #define AIDR_EL1_APFLG          BIT(19)
 #define AIDR_EL1_PSRV           BIT(20)
+
+/* CTRR registers */
+#define CTRR_M4_LWR_EL2 sys_reg(3, 0, 11, 1, 0)
+#define CTRR_M4_UPR_EL2 sys_reg(3, 0, 11, 1, 1)
+#define CTRR_M4_CTL_EL2 sys_reg(3, 0, 11, 1, 4)

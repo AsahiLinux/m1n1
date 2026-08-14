@@ -1,4 +1,7 @@
 [
+    {"index": 0, "name": "CTRR_M4_LWR_EL2",              "fullname": "CTRR M4 Lower Address (EL2)",                                 "enc": [3, 0, 11, 1, 0 ], "width": 64},
+    {"index": 0, "name": "CTRR_M4_UPR_EL2",              "fullname": "CTRR M4 Upper Address (EL2)",                                 "enc": [3, 0, 11, 1, 1 ], "width": 64},
+    {"index": 0, "name": "CTRR_M4_CTL_EL2",              "fullname": "CTRR M4 Control (EL2)",                                       "enc": [3, 0, 11, 1, 4 ], "width": 64},
     {"index": 0, "name": "HID0_EL1",                    "fullname": "Hardware Implementation-Dependent Register 0",                 "enc": [3, 0, 15, 0, 0  ], "width": 64},
     {"index": 0, "name": "EHID0_EL1",                   "fullname": "Hardware Implementation-Dependent Register 0 (E-core)",        "enc": [3, 0, 15, 0, 1  ], "width": 64},
     {"index": 0, "name": "HID1_EL1",                    "fullname": "Hardware Implementation-Dependent Register 1",                 "enc": [3, 0, 15, 1, 0  ], "width": 64},
