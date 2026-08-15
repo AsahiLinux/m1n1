@@ -456,6 +456,56 @@ int mcc_init_m3(int node, int *path)
     return 0;
 }
 
+int mcc_init_m4(int node, int *path)
+{
+    u64 amcc_count;
+    if (ADT_GETPROP(adt, node, "amcc_aperture_count", &amcc_count) < 0 &&
+        ADT_GETPROP(adt, node, "amcc-count", &amcc_count) < 0) {
+        printf("MCC: Failed to get mcc count!\n");
+        return -1;
+    }
+
+    if (amcc_count > MAX_MCC_INSTANCES) {
+        printf("MCC: Too many instances, increase MAX_MCC_INSTANCES!\n");
+        mcc_count = MAX_MCC_INSTANCES;
+    } else {
+        mcc_count = amcc_count;
+    }
+
+    u32 plane_count = 0;
+    u32 dcs_count = 0;
+
+    if (!ADT_GETPROP(adt, node, "dcs-count-per-amcc", &dcs_count)) {
+        printf("MCC: Failed to get dcs count!\n");
+        return -1;
+    }
+
+    if (!ADT_GETPROP(adt, node, "plane-count-per-amcc", &plane_count)) {
+        printf("MCC: Failed to get plane count!\n");
+        return -1;
+    }
+
+    printf("MCC: Initializing T%x MCCs (%d instances)...\n", chip_id, mcc_count);
+
+    int ret = -1;
+    if (adt_is_compatible(adt, node, "mcc,t8132")) {
+        int reg_offset = 7;
+        ret = mcc_init_t8122(path, reg_offset, plane_count, dcs_count, &t6030_tz_regs);
+    } else {
+        printf("MCC: Unsupported version:%s\n", adt_get_property(adt, node, "compatible")->value);
+    }
+
+    if (ret)
+        return ret;
+
+    printf("MCC: Initialized T%x MCCs (%d instances, %d planes, %d channels)\n", chip_id, mcc_count,
+           mcc_regs[0].plane_count, mcc_regs[0].dcs_count);
+
+    mcc_initialized = true;
+
+    return 0;
+}
+
 int mcc_init(void)
 {
     int path[8];
@@ -476,6 +526,8 @@ int mcc_init(void)
         return mcc_init_t6000(node, path, true);
     } else if (adt_is_compatible(adt, node, "mcc,t8122")) {
         return mcc_init_m3(node, path);
+    } else if (adt_is_compatible(adt, node, "mcc,t8132")) {
+        return mcc_init_m4(node, path);
     } else if (adt_is_compatible(adt, node, "mcc,t6030")) {
         return mcc_init_m3(node, path);
     } else if (adt_is_compatible(adt, node, "mcc,t6031")) {
