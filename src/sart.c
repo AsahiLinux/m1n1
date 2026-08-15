@@ -54,6 +54,18 @@ struct sart_dev {
 
 #define APPLE_SART3_FLAGS_ALLOW 0xff
 
+/* SARTv4 registers */
+#define APPLE_SART4_CONFIG(idx) (0x00 + 4 * (idx))
+
+#define APPLE_SART4_PADDR(idx)  (0x60 + 4 * (idx))
+#define APPLE_SART4_PADDR_SHIFT 12
+
+#define APPLE_SART4_SIZE(idx)  (0xc0 + 4 * (idx))
+#define APPLE_SART4_SIZE_SHIFT 12
+#define APPLE_SART4_SIZE_MAX   GENMASK(29, 0)
+
+#define APPLE_SART4_FLAGS_ALLOW 0xff
+
 static void sart0_get_entry(sart_dev_t *sart, int index, u8 *flags, void **paddr, size_t *size)
 {
     u32 cfg = read32(sart->base + APPLE_SART0_CONFIG(index));
@@ -151,6 +163,35 @@ static bool sart3_set_entry(sart_dev_t *sart, int index, u8 flags, void *paddr_,
     return true;
 }
 
+static void sart4_get_entry(sart_dev_t *sart, int index, u8 *flags, void **paddr, size_t *size)
+{
+    *flags = read32(sart->base + APPLE_SART4_CONFIG(index));
+    *size = (size_t)read32(sart->base + APPLE_SART4_SIZE(index)) << APPLE_SART4_SIZE_SHIFT;
+    *paddr =
+        (void *)((u64)read32(sart->base + APPLE_SART4_PADDR(index)) << APPLE_SART4_PADDR_SHIFT);
+}
+
+static bool sart4_set_entry(sart_dev_t *sart, int index, u8 flags, void *paddr_, size_t size)
+{
+    u64 paddr = (u64)paddr_;
+    if (size & ((1 << APPLE_SART4_SIZE_SHIFT) - 1))
+        return false;
+    if (paddr & ((1 << APPLE_SART4_PADDR_SHIFT) - 1))
+        return false;
+
+    paddr >>= APPLE_SART4_PADDR_SHIFT;
+    size >>= APPLE_SART4_SIZE_SHIFT;
+
+    if (size > APPLE_SART4_SIZE_MAX)
+        return false;
+
+    write32(sart->base + APPLE_SART4_PADDR(index), paddr);
+    write32(sart->base + APPLE_SART4_SIZE(index), size);
+    write32(sart->base + APPLE_SART4_CONFIG(index), flags);
+
+    return true;
+}
+
 sart_dev_t *sart_init(const char *adt_path)
 {
     int sart_path[8];
@@ -198,6 +239,11 @@ sart_dev_t *sart_init(const char *adt_path)
             sart->get_entry = sart3_get_entry;
             sart->set_entry = sart3_set_entry;
             sart->flags_allow = APPLE_SART3_FLAGS_ALLOW;
+            break;
+        case 4:
+            sart->get_entry = sart4_get_entry;
+            sart->set_entry = sart4_set_entry;
+            sart->flags_allow = APPLE_SART4_FLAGS_ALLOW;
             break;
         default:
             printf("sart: SART %s has unknown version %d\n", adt_path, *sart_version);
