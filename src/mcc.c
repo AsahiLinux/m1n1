@@ -79,14 +79,28 @@ struct tz_regs t6031_tz_regs = {
     .enable = 0x6e4,
 };
 
+struct tz_regs t604x_tz_regs = {
+    .count = 4,
+    .stride = 0x4,
+    .start = 0xaf0,
+    .end = 0xb00,
+    .enable = 0xb20,
+};
+
 #define PLANE_CACHE_ENABLE 0x1c00
 #define PLANE_CACHE_STATUS 0x1c04
+
+#define T6041_PLANE_CACHE_ENABLE 0x2800
+#define T6041_PLANE_CACHE_STATUS 0x2804
 
 #define T8103_CACHE_STATUS_DATA_COUNT GENMASK(14, 10)
 #define T8103_CACHE_STATUS_TAG_COUNT  GENMASK(9, 5)
 
 #define T6000_CACHE_STATUS_DATA_COUNT GENMASK(13, 9)
 #define T6000_CACHE_STATUS_TAG_COUNT  GENMASK(8, 4)
+
+#define T6041_CACHE_STATUS_DATA_COUNT GENMASK(28, 24)
+#define T6041_CACHE_STATUS_TAG_COUNT  GENMASK(12, 8)
 
 #define T6000_CACHE_WAYS        12
 #define T6000_CACHE_STATUS_MASK (T6000_CACHE_STATUS_DATA_COUNT | T6000_CACHE_STATUS_TAG_COUNT)
@@ -99,6 +113,12 @@ struct tz_regs t6031_tz_regs = {
 #define T6031_CACHE_STATUS_VAL                                                                     \
     (FIELD_PREP(T6000_CACHE_STATUS_DATA_COUNT, T6031_CACHE_WAYS) |                                 \
      FIELD_PREP(T6000_CACHE_STATUS_TAG_COUNT, T6031_CACHE_WAYS))
+
+#define T6041_CACHE_WAYS        12
+#define T6041_CACHE_STATUS_MASK (T6041_CACHE_STATUS_DATA_COUNT | T6041_CACHE_STATUS_TAG_COUNT)
+#define T6041_CACHE_STATUS_VAL                                                                     \
+    (FIELD_PREP(T6041_CACHE_STATUS_DATA_COUNT, T6041_CACHE_WAYS) |                                 \
+     FIELD_PREP(T6041_CACHE_STATUS_TAG_COUNT, T6041_CACHE_WAYS))
 
 #define T8103_CACHE_WAYS        16
 #define T8103_CACHE_STATUS_MASK (T8103_CACHE_STATUS_DATA_COUNT | T8103_CACHE_STATUS_TAG_COUNT)
@@ -456,6 +476,37 @@ int mcc_init_m3(int node, int *path)
     return 0;
 }
 
+int mcc_init_t604x(int *path, u32 reg_offset, u32 plane_count, u32 dcs_count)
+{
+    for (int i = 0; i < mcc_count; i++) {
+        u64 base;
+        if (adt_get_reg(adt, path, "reg", i + reg_offset, &base, NULL)) {
+            printf("MCC: Failed to get reg index %d!\n", i + reg_offset);
+            return -1;
+        }
+
+        mcc_regs[i].plane_base = base + T6000_PLANE_OFFSET;
+        mcc_regs[i].plane_stride = T6000_PLANE_STRIDE;
+        mcc_regs[i].plane_count = plane_count;
+
+        mcc_regs[i].global_base = base + T6000_GLOBAL_OFFSET;
+
+        mcc_regs[i].dcs_base = base + T6000_DCS_OFFSET;
+        mcc_regs[i].dcs_stride = T6000_DCS_STRIDE;
+        mcc_regs[i].dcs_count = dcs_count;
+
+        mcc_regs[i].cache_enable_val = 0x8000000c;
+        mcc_regs[i].cache_ways = T6041_CACHE_WAYS;
+        mcc_regs[i].cache_status_mask = T6041_CACHE_STATUS_MASK;
+        mcc_regs[i].cache_status_val = T6041_CACHE_STATUS_VAL;
+        mcc_regs[i].cache_disable = 0;
+
+        mcc_regs[i].tz = &t604x_tz_regs;
+    }
+
+    return 0;
+}
+
 int mcc_init_m4(int node, int *path)
 {
     u64 amcc_count;
@@ -480,7 +531,9 @@ int mcc_init_m4(int node, int *path)
         return -1;
     }
 
-    if (!ADT_GETPROP(adt, node, "plane-count-per-amcc", &plane_count)) {
+    if (adt_is_compatible(adt, node, "mcc,t6041")) {
+        plane_count = 4;
+    } else if (!ADT_GETPROP(adt, node, "plane-count-per-amcc", &plane_count)) {
         printf("MCC: Failed to get plane count!\n");
         return -1;
     }
@@ -491,6 +544,9 @@ int mcc_init_m4(int node, int *path)
     if (adt_is_compatible(adt, node, "mcc,t8132")) {
         int reg_offset = 7;
         ret = mcc_init_t8122(path, reg_offset, plane_count, dcs_count, &t6030_tz_regs);
+    } else if (adt_is_compatible(adt, node, "mcc,t6041")) {
+        int reg_offset = 12;
+        ret = mcc_init_t604x(path, reg_offset, plane_count, dcs_count);
     } else {
         printf("MCC: Unsupported version:%s\n", adt_get_property(adt, node, "compatible")->value);
     }
@@ -532,6 +588,8 @@ int mcc_init(void)
         return mcc_init_m3(node, path);
     } else if (adt_is_compatible(adt, node, "mcc,t6031")) {
         return mcc_init_m3(node, path);
+    } else if (adt_is_compatible(adt, node, "mcc,t6041")) {
+        return mcc_init_m4(node, path);
     } else {
         printf("MCC: Unsupported version:%s\n", adt_get_property(adt, node, "compatible")->value);
         return -1;
