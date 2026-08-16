@@ -477,6 +477,37 @@ int mcc_init_m3(int node, int *path)
     return 0;
 }
 
+int mcc_init_t8140(int *path, u32 reg_offset, u32 plane_count, u32 dcs_count)
+{
+    for (int i = 0; i < mcc_count; i++) {
+        u64 base;
+        if (adt_get_reg(adt, path, "reg", i + reg_offset, &base, NULL)) {
+            printf("MCC: Failed to get reg index %d!\n", i + reg_offset);
+            return -1;
+        }
+
+        mcc_regs[i].plane_base = base + T6031_PLANE_OFFSET;
+        mcc_regs[i].plane_stride = T6031_PLANE_STRIDE;
+        mcc_regs[i].plane_count = plane_count;
+
+        mcc_regs[i].global_base = base + T6031_GLOBAL_OFFSET;
+
+        mcc_regs[i].dcs_base = base + T6031_DCS_OFFSET;
+        mcc_regs[i].dcs_stride = T6031_DCS_STRIDE;
+        mcc_regs[i].dcs_count = dcs_count;
+
+        mcc_regs[i].cache_enable_val = 0x8000000c;
+        mcc_regs[i].cache_ways = T6041_CACHE_WAYS;
+        mcc_regs[i].cache_status_mask = T6041_CACHE_STATUS_MASK;
+        mcc_regs[i].cache_status_val = T6041_CACHE_STATUS_VAL;
+        mcc_regs[i].cache_disable = 0;
+
+        mcc_regs[i].tz = &t604x_tz_regs;
+    }
+
+    return 0;
+}
+
 int mcc_init_t604x(int *path, u32 reg_offset, u32 plane_count, u32 dcs_count)
 {
     for (int i = 0; i < mcc_count; i++) {
@@ -532,7 +563,7 @@ int mcc_init_m4(int node, int *path)
         return -1;
     }
 
-    if (adt_is_compatible(adt, node, "mcc,t6041")) {
+    if (adt_is_compatible(adt, node, "mcc,t6041") || adt_is_compatible(adt, node, "mcc,t8140")) {
         plane_count = 4;
     } else if (!ADT_GETPROP(adt, node, "plane-count-per-amcc", &plane_count)) {
         printf("MCC: Failed to get plane count!\n");
@@ -545,6 +576,9 @@ int mcc_init_m4(int node, int *path)
     if (adt_is_compatible(adt, node, "mcc,t8132")) {
         int reg_offset = 7;
         ret = mcc_init_t8122(path, reg_offset, plane_count, dcs_count, &t6030_tz_regs);
+    } else if (adt_is_compatible(adt, node, "mcc,t8140")) {
+        int reg_offset = 2;
+        ret = mcc_init_t8140(path, reg_offset, plane_count, dcs_count);
     } else if (adt_is_compatible(adt, node, "mcc,t6041")) {
         int reg_offset = 12;
         ret = mcc_init_t604x(path, reg_offset, plane_count, dcs_count);
@@ -584,6 +618,8 @@ int mcc_init(void)
     } else if (adt_is_compatible(adt, node, "mcc,t8122")) {
         return mcc_init_m3(node, path);
     } else if (adt_is_compatible(adt, node, "mcc,t8132")) {
+        return mcc_init_m4(node, path);
+    } else if (adt_is_compatible(adt, node, "mcc,t8140")) {
         return mcc_init_m4(node, path);
     } else if (adt_is_compatible(adt, node, "mcc,t6030")) {
         return mcc_init_m3(node, path);
