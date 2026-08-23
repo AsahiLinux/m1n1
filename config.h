@@ -13,13 +13,13 @@
 // Minimal build for bring-up
 //#define BRINGUP
 // Disable display configuration / bringup on desktop devices
-//#define NO_DISPLAY
+#define NO_DISPLAY
 
 // Print RTKit logs to the console
 //#define RTKIT_SYSLOG
 
 // Target for device-specific debug builds
-//#define TARGET T8103
+#define TARGET T6041
 // Some devices like Apple TV HD use other uarts for debug console
 //#define TARGET_BOARD 0x34
 
