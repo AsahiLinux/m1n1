@@ -1271,26 +1271,22 @@ static int dt_set_acio_tunables(void)
         bail("ADT: unable to generate USB4 router UUID\n");
 
     for (int i = 0; i < MAX_CIO_DEVS; ++i) {
-        memset(adt_path, 0, sizeof(adt_path));
         snprintf(adt_path, sizeof(adt_path), "/arm-io/acio%d", i);
 
-        memset(fdt_alias, 0, sizeof(fdt_alias));
-        snprintf(fdt_alias, sizeof(fdt_alias), "usb4-%d-acio", i);
+        snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_rc", i);
         if (!fdt_get_alias(dt, fdt_alias))
-            snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_rc", i);
+            snprintf(fdt_alias, sizeof(fdt_alias), "usb4-%d-acio", i);
         dt_copy_acio_tunables(adt_path, fdt_alias, usb4_rc_tunables,
                               sizeof(usb4_rc_tunables) / sizeof(*usb4_rc_tunables));
 
-        memset(fdt_alias, 0, sizeof(fdt_alias));
         snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_pcie_adapter", i);
         dt_copy_acio_tunables(adt_path, fdt_alias, usb4_pcie_adapter_tunables,
                               sizeof(usb4_pcie_adapter_tunables) /
                                   sizeof(*usb4_pcie_adapter_tunables));
 
-        memset(fdt_alias, 0, sizeof(fdt_alias));
-        snprintf(fdt_alias, sizeof(fdt_alias), "usb4-%d-nhi", i);
+        snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_nhi", i);
         if (!fdt_get_alias(dt, fdt_alias))
-            snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_nhi", i);
+            snprintf(fdt_alias, sizeof(fdt_alias), "usb4-%d-nhi", i);
         dt_copy_acio_tunables(adt_path, fdt_alias, usb4_nhi_tunables,
                               sizeof(usb4_nhi_tunables) / sizeof(*usb4_nhi_tunables));
         dt_copy_usb4_drom(adt_path, fdt_alias, router_uuid | i);
