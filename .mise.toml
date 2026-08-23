@@ -1,0 +1,35 @@
+[tools]
+python = "3.13"
+rust = "1.85.0"
+
+[tasks.setup]
+description = "Install the Rust target and isolated proxyclient dependencies"
+run = '''
+rustup target add aarch64-unknown-none-softfloat
+python -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+'''
+
+[tasks.build]
+description = "Build the T6041 proxy-mode m1n1 images"
+depends = ["container"]
+run = '''
+docker compose run --rm \
+    -e "M1N1_VERSION_TAG=$(git describe --tags --always --dirty)" \
+    m1n1 make -j8
+'''
+
+[tasks.container]
+description = "Build the reproducible m1n1 cross-toolchain container"
+run = "docker compose build m1n1"
+
+[tasks.proxy]
+description = "Open the m1n1 proxy shell (set M1N1DEVICE first)"
+depends = ["setup"]
+run = '''
+if [ -z "${M1N1DEVICE:-}" ]; then
+    echo "Set M1N1DEVICE to the primary m1n1 USB CDC device" >&2
+    exit 2
+fi
+exec .venv/bin/python proxyclient/tools/shell.py
+'''
