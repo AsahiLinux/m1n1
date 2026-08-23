@@ -7,4 +7,5 @@ __pycache__
 *.orig
 *.rej
 /rust/target
+.venv/
 .idea
