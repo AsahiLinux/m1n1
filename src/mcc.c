@@ -20,7 +20,7 @@ static bool mcc_initialized = false;
 #define T6000_PLANE_STRIDE  0x40000
 #define T6000_GLOBAL_OFFSET 0x100000
 #define T6000_DCS_OFFSET    0x200000
-#define T6000_DCS_STRIDE    0x100000
+#define T6000_DCS_STRIDE    0x200000
 #define T6000_DCS_COUNT     4
 
 #define T6031_PLANE_OFFSET  0
