@@ -2069,7 +2069,7 @@ static int dt_set_pmp_v1(void)
     if (pmp_iop_anode < 0)
         bail("ADT: /arm-io/pmp/iop-pmp-nub not found \n");
     u32 dram_config_len = 0;
-    void *dram_config = adt_getprop(adt, pmp_iop_anode, "energy-model-dram-configs", &dram_config_len);
+    const uint8_t *dram_config = adt_getprop(adt, pmp_iop_anode, "energy-model-dram-configs", &dram_config_len);
     if (!dram_config)
         bail("ADT: failed to get dram config");
 

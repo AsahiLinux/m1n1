@@ -24,6 +24,10 @@ class PMP_Configure_Ack(PMPMessage):
     TYPE = 56, 44, Constant(0x20)
     UNK = 43, 0
 
+class PMP_InvalidConfigure(PMPMessage):
+    TYPE = 56, 44, Constant(0x110)
+    DVA = 43, 0
+
 class PMP_Init1(PMPMessage):
     TYPE = 56, 44, Constant(0x200)
     UNK1 = 43, 16
@@ -79,8 +83,6 @@ class PMP_ChangeState2_Ack(PMPMessage):
     TYPE = 56, 44, Constant(0x20b)
     DEV = 31, 16
     STATE = 15, 0
-
-
 
 class PMPEndpoint(ASCBaseEndpoint):
     BASE_MESSAGE = PMPMessage
