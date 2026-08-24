@@ -1,10 +1,16 @@
-# SPDX-License-Identifier: MIT
 import struct
 
-from ..utils import *
+from m1n1.utils import *
 
-from .asc import StandardASC
-from .asc.base import *
+from m1n1.fw.asc import StandardASC
+from m1n1.fw.asc.base import *
+
+from m1n1.shell import run_shell
+import struct
+
+from m1n1.hw.dart import DART
+
+from m1n1.hv
 
 class PMPMessage(Register64):
     TYPE = 56, 44
@@ -39,16 +45,6 @@ class PMP_Init2_Ack(PMPMessage):
     TYPE = 56, 44, Constant(0x203)
     UNK1 = 43, 16
     UNK2 = 15, 0
-    
-class PMP_Unk(PMPMessage):
-    TYPE = 56, 44, Constant(0x100)
-    UNK1 = 43, 16
-    UNK2 = 15, 0
-
-class PMP_Unk_Ack(PMPMessage):
-    TYPE = 56, 44, Constant(0x110)
-    UNK1 = 43, 16
-    UNK2 = 15, 0
 
 class PMP_DevPwr(PMPMessage):
     TYPE = 56, 44, Constant(0x20e)
@@ -65,6 +61,29 @@ class PMP_DevPwr_Ack(PMPMessage):
     DEV = 31, 16
     STATE = 15, 0
 
+# presumed change state
+class PMP_ChangeState1(PMPMessage):
+    TYPE = 56, 44, Constant(0x20c)
+    DEV = 31, 16
+    STATE = 15, 0
+
+class PMP_ChangeState1_Ack(PMPMessage):
+    TYPE = 56, 44, Constant(0x20d)
+    DEV = 31, 16
+    STATE = 15, 0
+
+class PMP_ChangeState2(PMPMessage):
+    TYPE = 56, 44, Constant(0x20a)
+    DEV = 31, 16
+    STATE = 15, 0
+
+class PMP_ChangeState2_Ack(PMPMessage):
+    TYPE = 56, 44, Constant(0x20b)
+    DEV = 31, 16
+    STATE = 15, 0
+
+
+
 class PMPEndpoint(ASCBaseEndpoint):
     BASE_MESSAGE = PMPMessage
     SHORT = "pmpep"
@@ -76,37 +95,83 @@ class PMPEndpoint(ASCBaseEndpoint):
         self.init1_acked = False
         self.init2_acked = False
         self.unk_acked = False
+        self.devpwr_acked = False
+        self.unk2_acked = False
+
+        self.unk3_acked = False
 
     @msg_handler(0x00, PMP_Startup)
     def Startup(self, msg):
         self.log("Starting up")
-
         self.shmem, self.shmem_dva = self.asc.ioalloc(0x10000)
-        
+        self.asc.p.memset32(self.shmem, 0, 0x10000)
+
         self.send_init_config()
         return True
 
     def send_init_config(self):
-        self.asc.p.memset32(self.shmem, 0, 0x10000)
         dram_config = self.asc.u.adt["arm-io/pmp/iop-pmp-nub"].energy_model_dram_configs
         self.asc.iface.writemem(self.shmem + 0x2000, dram_config)
-        
+
         node = self.asc.u.adt["arm-io/pmp"]
-        
         maps = []
         dva = 0xc0000000
-        for i in range(3, len(node.reg)):
-            addr, size = node.get_reg(i)
-            if size == 0:
-                maps.append(struct.pack("<QQ", 0, 0))
-                continue
 
-            self.asc.dart.iomap_at(0, dva, addr, size)
-            self.log(f"map {addr:#x} -> {dva:#x} [{size:#x}]")
-            maps.append(struct.pack("<QQ", dva, size))
-            dva += align(size, 0x4000)
+        def map_addresses(reg_indx_start, reg_indx_end):
+            nonlocal dva
+            for i in range(reg_indx_start, reg_indx_end):
+                addr, size = node.get_reg(i)
 
-        chexdump(b"".join(maps))
+                if size == 0:
+                    maps.append(struct.pack("<QQ", 0, 0))
+                    continue
+
+                self.asc.dart.iomap_at(0, dva, addr, size)
+                self.log(f"map {addr:#x} -> {dva:#x} [{size:#x}]")
+                maps.append(struct.pack("<QQ", dva, size))
+
+                dva += align(size, 0x4000)
+
+        # 1st region
+        map_addresses(3, 17)
+
+        # 2nd region
+        dva = 0xc1000000
+        map_addresses(17, 18)
+
+        # 3rd region
+        dva = 0xc2000000
+        map_addresses(18, 24)
+
+        # so on...
+        dva = 0xc3000000
+        map_addresses(24, 30)
+
+        dva = 0xc4000000
+        map_addresses(30, 33)
+
+        dva = 0xc5000000
+        map_addresses(33, 35)
+
+        dva = 0xc0024000
+        map_addresses(35, 37)
+
+        dva = 0xc6000000
+        map_addresses(37, 38)
+
+        dva = 0xc1004000
+        map_addresses(38, 39)
+
+        dva = 0xc3074000
+        map_addresses(39, 42)
+
+        dva = 0xc2074000
+        map_addresses(42, 43)
+
+        dva = 0xc1008000
+        map_addresses(43, 44)
+
+        chexdump32(b"".join(maps), st=0xe000)
 
         self.asc.iface.writemem(self.shmem + 0xe000, b"".join(maps))
         self.send(PMP_Configure(DVA=self.shmem_dva))
@@ -124,11 +189,11 @@ class PMPEndpoint(ASCBaseEndpoint):
         status = self.asc.iface.readmem(self.shmem + 0xc000, 0x100)
 
         print("PMP Props:")
-        chexdump(props)
+        chexdump32(props)
         print("PMP Device Info:")
-        chexdump(devinfo)
+        chexdump32(devinfo)
         print("PMP Status:")
-        chexdump(status)
+        chexdump32(status)
 
         self.send(PMP_Init1(UNK1=1, UNK2=3))
         while not self.init1_acked:
@@ -138,9 +203,29 @@ class PMPEndpoint(ASCBaseEndpoint):
         while not self.init2_acked:
             self.asc.work()
 
-        self.send(PMP_Unk(UNK1=0x3bc, UNK2=2))
-        while not self.unk_acked:
-            self.asc.work()
+        self.send(PMP_DevPwr(DEV=0x63, STATE=1))
+        self.send(PMP_DevPwr(DEV=0x68, STATE=0))
+        # self.send(PMP_DevPwr(DEV=0x68, STATE=1))
+        # self.send(PMP_DevPwr(DEV=0x66, STATE=0))
+
+        # for i in range(36):
+        #     self.send(0x20400000020000)
+        #     while not self.unk3_acked:
+        #         self.asc.work()
+        #     self.unk3_acked = False
+        #     self.send(0x20400000000000)
+        #     while not self.unk3_acked:
+        #         self.asc.work()
+        #     self.unk3_acked = False
+
+
+        # self.send(PMP_DevPwr(DEV=0x65, STATE=1))
+
+        # self.send(PMP_DevPwr(DEV=0x64, STATE=1))
+
+        # self.send(PMP_DevPwr(DEV=0x5c, STATE=0))
+        # self.send(PMP_DevPwr(DEV=0x5c, STATE=1))
+        # self.send(PMP_DevPwr(DEV=0x5c, STATE=0))
 
         return True
 
@@ -154,15 +239,32 @@ class PMPEndpoint(ASCBaseEndpoint):
         self.init2_acked = True
         return True
 
-    @msg_handler(0x110, PMP_Unk_Ack)
-    def Unk_Ack(self, msg):
-        self.unk_acked = True
+    @msg_handler(0x205)
+    def Unk(self, msg):
+        self.unk3_acked = True
         return True
 
-
 class PMPClient(StandardASC):
-    pass
+    ENDPOINTS = {0x20: PMPEndpoint}
 
-    ENDPOINTS = {
-        0x20: PMPEndpoint,
-    }
+    def __init__(self, u, dev_path, dart=None):
+        node = u.adt[dev_path]
+        asc_base = node.get_reg(0)[0]
+        super().__init__(u, asc_base, dart)
+        self.dart = dart
+
+
+dart = DART.from_adt(u, "/arm-io/dart-pmp")
+dart.verbose = 4
+dart.initialize()
+
+pmp = PMPClient(u, "/arm-io/pmp", dart)
+pmp.verbose = 4
+
+pmp.start()
+pmp.start_ep(0x20)
+pmp.work_for(10)
+
+ep = pmp.epmap[0x20]
+
+run_shell(locals(), poll_func=pmp.work)

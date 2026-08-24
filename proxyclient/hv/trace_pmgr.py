@@ -8,7 +8,6 @@ from m1n1.sysreg import *
 from m1n1.proxyutils import RegMonitor
 from m1n1.trace.dart import DARTTracer
 from m1n1.trace.asc import ASCTracer, EP, msg, msg_log, DIR
-from m1n1.fw.pmp import *
 
 #trace_device("/arm-io/pmgr", False)
 #trace_device("/arm-io/jpeg0")
@@ -37,47 +36,6 @@ def readmem_iova(addr, size):
         return None
 
 iomon.readmem = readmem_iova
-
-class PMPEpTracer(EP):
-    BASE_MESSAGE = PMPMessage
-
-    def __init__(self, tracer, epid):
-        super().__init__(tracer, epid)
-        self.state.shmem_iova = None
-        self.state.verbose = 1
-
-    def start(self):
-        self.add_mon()
-
-    def add_mon(self):
-        if self.state.shmem_iova:
-            iomon.add(self.state.shmem_iova, 0x10000,
-                      name=f"{self.name}.shmem@{self.state.shmem_iova:08x}", offset=0)
-
-    @msg(1, DIR.TX, PMP_Configure)
-    def Configure(self, msg):
-        self.state.shmem_iova = msg.DVA
-        self.add_mon()
-
-class PMPTracer(ASCTracer):
-    ENDPOINTS = {
-        0x20: PMPEpTracer
-    }
-
-    def handle_msg(self, direction, r0, r1):
-        super().handle_msg(direction, r0, r1)
-        iomon.poll()
-
-    def start(self, dart=None):
-        super().start()
-        # noisy doorbell
-        self.trace(0x23bc34000, 4, TraceMode.OFF)
-
-#dart_tracer = DARTTracer(hv, "/arm-io/dart-pmp", verbose=2)
-#dart_tracer.start()
-
-#pmp_tracer = PMPTracer(hv, "/arm-io/pmp", verbose=1)
-#pmp_tracer.start(dart_tracer.dart)
 
 class PMGRTracer(Tracer):
     IGNORED = set(["SPI1", "I2C2"])
