@@ -10,8 +10,6 @@ import struct
 
 from m1n1.hw.dart import DART
 
-from m1n1.hv
-
 class PMPMessage(Register64):
     TYPE = 56, 44
 
@@ -20,11 +18,11 @@ class PMP_Startup(PMPMessage):
 
 class PMP_Configure(PMPMessage):
     TYPE = 56, 44, Constant(0x10)
-    DVA = 47, 0
+    DVA = 43, 0
 
 class PMP_Configure_Ack(PMPMessage):
     TYPE = 56, 44, Constant(0x20)
-    UNK = 47, 0
+    UNK = 43, 0
 
 class PMP_Init1(PMPMessage):
     TYPE = 56, 44, Constant(0x200)
@@ -254,17 +252,18 @@ class PMPClient(StandardASC):
         self.dart = dart
 
 
-dart = DART.from_adt(u, "/arm-io/dart-pmp")
-dart.verbose = 4
-dart.initialize()
+if __name__ == "__main__":
+    dart = DART.from_adt(u, "/arm-io/dart-pmp")
+    dart.verbose = 4
+    dart.initialize()
 
-pmp = PMPClient(u, "/arm-io/pmp", dart)
-pmp.verbose = 4
+    pmp = PMPClient(u, "/arm-io/pmp", dart)
+    pmp.verbose = 4
 
-pmp.start()
-pmp.start_ep(0x20)
-pmp.work_for(10)
+    pmp.start()
+    pmp.start_ep(0x20)
+    pmp.work_for(10)
 
-ep = pmp.epmap[0x20]
+    ep = pmp.epmap[0x20]
 
-run_shell(locals(), poll_func=pmp.work)
+    run_shell(locals(), poll_func=pmp.work)

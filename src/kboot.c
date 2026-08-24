@@ -2044,7 +2044,9 @@ static int dt_set_display(void)
 static const char *excluded_pmp_props[] = {
     "compatible",    "AAPL,phandle",    "region-base", "region-size",
     "segment-names", "segment-ranges",  "pre-loaded",  "firmware-name",
-    "dram-capacity", "coredump-enable", "name",        NULL,
+    "dram-capacity", "coredump-enable", "name",        "interrupt-parent",
+    "iommu-parent",  "interrupts",      "clock-gets",  "clock-ids",
+    NULL,
 };
 
 static bool skip_pmp_prop(const char *prop_name)
@@ -2053,6 +2055,28 @@ static bool skip_pmp_prop(const char *prop_name)
         if (!strcmp(prop_name, excluded_pmp_props[i]))
             return true;
     return false;
+}
+
+static int dt_set_pmp_v1(void)
+{
+    int pmp_node = fdt_path_offset(dt, "pmp");
+    if (pmp_node < 0) {
+        printf("FDT: pmp not found in devtree\n");
+        return 0;
+    }
+
+    int pmp_iop_anode = adt_path_offset(adt, "/arm-io/pmp/iop-pmp-nub");
+    if (pmp_iop_anode < 0)
+        bail("ADT: /arm-io/pmp/iop-pmp-nub not found \n");
+    u32 dram_config_len = 0;
+    void *dram_config = adt_getprop(adt, pmp_iop_anode, "energy-model-dram-configs", &dram_config_len);
+    if (!dram_config)
+        bail("ADT: failed to get dram config");
+
+    if (fdt_setprop(dt, pmp_node, "apple,energy-model-dram-configs", dram_config, dram_config_len) < 0)
+        bail("ADT: failed to set dram config");
+
+    return 0;
 }
 
 static int dt_set_pmp(void)
@@ -2837,6 +2861,8 @@ int kboot_prepare_dt(void *fdt)
     if (dt_set_sep())
         return -1;
     if (dt_set_pmp())
+        return -1;
+    if (dt_set_pmp_v1())
         return -1;
     if (dt_set_nvram())
         return -1;
