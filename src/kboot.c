@@ -316,6 +316,27 @@ static int dt_set_chosen(void)
     if (dt_set_rng_seed_sep(node))
         return dt_set_rng_seed_adt(node);
 
+    if (wfi_loses_state()) {
+        char *to_append = " idle=nop arm64.nowfxt";
+
+        /*
+         * fdt_appendprop_string would create a nother property values:
+         * "a", "b". But we want "ab", so manually create or grow the prop,
+         * then overwrite the \0 of the existing string.
+         */
+        int oldlen, newlen;
+        void *prop_data;
+
+        if (!fdt_get_property(dt, node, "bootargs", &oldlen) || oldlen < 1)
+            oldlen = 1;
+        newlen = oldlen + strlen(to_append);
+
+        if (fdt_setprop_placeholder(dt, node, "bootargs", newlen, &prop_data))
+            bail("FDT: failed to append to 'bootargs' property\n");
+
+        memcpy(prop_data + oldlen - 1, to_append, strlen(to_append) + 1);
+    }
+
     return 0;
 }
 
