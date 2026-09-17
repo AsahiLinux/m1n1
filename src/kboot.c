@@ -2037,7 +2037,8 @@ static int dt_set_display(void)
      * Ignore errors for dcpext firmware reservation, nodes should be disabled
      * if the reservation fails allowing basic operation with just dcp.
      */
-    if (!fdt_node_check_compatible(dt, 0, "apple,t8112") ||
+    if (!fdt_node_check_compatible(dt, 0, "apple,t8103") ||
+        !fdt_node_check_compatible(dt, 0, "apple,t8112") ||
         !fdt_node_check_compatible(dt, 0, "apple,t6020") ||
         !fdt_node_check_compatible(dt, 0, "apple,t6021") ||
         !fdt_node_check_compatible(dt, 0, "apple,t6022"))
