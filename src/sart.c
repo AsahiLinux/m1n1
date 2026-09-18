@@ -12,67 +12,35 @@ struct sart_dev {
     /* This is probably a bitfield but the exact meaning of each bit is unknown. */
     u32 flags_allow;
 
+    u64 config_offset;
+    u64 config_stride;
+    u64 config_size_max;
+    u64 paddr_offset;
+    u64 paddr_stride;
+    u64 paddr_shift;
+    u64 size_shift;
+
+    /* unused for v3/v4 */
+    u64 config_flags_mask;
+    u64 config_size_mask;
+
+    /* unused for v0/v2 */
+    u64 size_offset;
+    u64 size_stride;
+
     void (*get_entry)(sart_dev_t *sart, int index, u8 *flags, void **paddr, size_t *size);
     bool (*set_entry)(sart_dev_t *sart, int index, u8 flags, void *paddr, size_t size);
 };
 
 #define APPLE_SART_MAX_ENTRIES 16
 
-/* SARTv0 registers */
-#define APPLE_SART0_CONFIG(idx)       (0x00 + 4 * (idx))
-#define APPLE_SART0_CONFIG_FLAGS      GENMASK(28, 24)
-#define APPLE_SART0_CONFIG_SIZE       GENMASK(18, 0)
-#define APPLE_SART0_CONFIG_SIZE_SHIFT 12
-#define APPLE_SART0_CONFIG_SIZE_MAX   GENMASK(18, 0)
-
-#define APPLE_SART0_PADDR(idx)  (0x40 + 4 * (idx))
-#define APPLE_SART0_PADDR_SHIFT 12
-
-#define APPLE_SART0_FLAGS_ALLOW 0xf
-
-/* SARTv2 registers */
-#define APPLE_SART2_CONFIG(idx)       (0x00 + 4 * (idx))
-#define APPLE_SART2_CONFIG_FLAGS      GENMASK(31, 24)
-#define APPLE_SART2_CONFIG_SIZE       GENMASK(23, 0)
-#define APPLE_SART2_CONFIG_SIZE_SHIFT 12
-#define APPLE_SART2_CONFIG_SIZE_MAX   GENMASK(23, 0)
-
-#define APPLE_SART2_PADDR(idx)  (0x40 + 4 * (idx))
-#define APPLE_SART2_PADDR_SHIFT 12
-
-#define APPLE_SART2_FLAGS_ALLOW 0xff
-
-/* SARTv3 registers */
-#define APPLE_SART3_CONFIG(idx) (0x00 + 4 * (idx))
-
-#define APPLE_SART3_PADDR(idx)  (0x40 + 4 * (idx))
-#define APPLE_SART3_PADDR_SHIFT 12
-
-#define APPLE_SART3_SIZE(idx)  (0x80 + 4 * (idx))
-#define APPLE_SART3_SIZE_SHIFT 12
-#define APPLE_SART3_SIZE_MAX   GENMASK(29, 0)
-
-#define APPLE_SART3_FLAGS_ALLOW 0xff
-
-/* SARTv4 registers */
-#define APPLE_SART4_CONFIG(idx) (0x00 + 4 * (idx))
-
-#define APPLE_SART4_PADDR(idx)  (0x60 + 4 * (idx))
-#define APPLE_SART4_PADDR_SHIFT 12
-
-#define APPLE_SART4_SIZE(idx)  (0xc0 + 4 * (idx))
-#define APPLE_SART4_SIZE_SHIFT 12
-#define APPLE_SART4_SIZE_MAX   GENMASK(29, 0)
-
-#define APPLE_SART4_FLAGS_ALLOW 0xff
-
 static void sart0_get_entry(sart_dev_t *sart, int index, u8 *flags, void **paddr, size_t *size)
 {
-    u32 cfg = read32(sart->base + APPLE_SART0_CONFIG(index));
-    *flags = FIELD_GET(APPLE_SART0_CONFIG_FLAGS, cfg);
-    *size = (size_t)FIELD_GET(APPLE_SART0_CONFIG_SIZE, cfg) << APPLE_SART0_CONFIG_SIZE_SHIFT;
-    *paddr =
-        (void *)((u64)read32(sart->base + APPLE_SART0_PADDR(index)) << APPLE_SART0_PADDR_SHIFT);
+    u32 cfg = read32(sart->base + sart->config_offset + index * sart->config_stride);
+    *flags = FIELD_GET(sart->config_flags_mask, cfg);
+    *size = (size_t)FIELD_GET(sart->config_size_mask, cfg) << sart->size_shift;
+    *paddr = (void *)((u64)read32(sart->base + sart->paddr_offset + index * sart->paddr_stride)
+                      << sart->paddr_shift);
 }
 
 static bool sart0_set_entry(sart_dev_t *sart, int index, u8 flags, void *paddr_, size_t size)
@@ -80,114 +48,53 @@ static bool sart0_set_entry(sart_dev_t *sart, int index, u8 flags, void *paddr_,
     u32 cfg;
     u64 paddr = (u64)paddr_;
 
-    if (size & ((1 << APPLE_SART0_CONFIG_SIZE_SHIFT) - 1))
+    if (size & ((1 << sart->size_shift) - 1))
         return false;
-    if (paddr & ((1 << APPLE_SART0_PADDR_SHIFT) - 1))
-        return false;
-
-    size >>= APPLE_SART0_CONFIG_SIZE_SHIFT;
-    paddr >>= APPLE_SART0_PADDR_SHIFT;
-
-    if (size > APPLE_SART0_CONFIG_SIZE_MAX)
+    if (paddr & ((1 << sart->paddr_shift) - 1))
         return false;
 
-    cfg = FIELD_PREP(APPLE_SART0_CONFIG_FLAGS, flags);
-    cfg |= FIELD_PREP(APPLE_SART0_CONFIG_SIZE, size);
+    size >>= sart->size_shift;
+    paddr >>= sart->paddr_shift;
 
-    write32(sart->base + APPLE_SART0_PADDR(index), paddr);
-    write32(sart->base + APPLE_SART0_CONFIG(index), cfg);
-
-    return true;
-}
-
-static void sart2_get_entry(sart_dev_t *sart, int index, u8 *flags, void **paddr, size_t *size)
-{
-    u32 cfg = read32(sart->base + APPLE_SART2_CONFIG(index));
-    *flags = FIELD_GET(APPLE_SART2_CONFIG_FLAGS, cfg);
-    *size = (size_t)FIELD_GET(APPLE_SART2_CONFIG_SIZE, cfg) << APPLE_SART2_CONFIG_SIZE_SHIFT;
-    *paddr =
-        (void *)((u64)read32(sart->base + APPLE_SART2_PADDR(index)) << APPLE_SART2_PADDR_SHIFT);
-}
-
-static bool sart2_set_entry(sart_dev_t *sart, int index, u8 flags, void *paddr_, size_t size)
-{
-    u32 cfg;
-    u64 paddr = (u64)paddr_;
-
-    if (size & ((1 << APPLE_SART2_CONFIG_SIZE_SHIFT) - 1))
-        return false;
-    if (paddr & ((1 << APPLE_SART2_PADDR_SHIFT) - 1))
+    if (size > sart->config_size_max)
         return false;
 
-    size >>= APPLE_SART2_CONFIG_SIZE_SHIFT;
-    paddr >>= APPLE_SART2_PADDR_SHIFT;
+    cfg = FIELD_PREP(sart->config_flags_mask, flags);
+    cfg |= FIELD_PREP(sart->config_size_mask, size);
 
-    if (size > APPLE_SART2_CONFIG_SIZE_MAX)
-        return false;
-
-    cfg = FIELD_PREP(APPLE_SART2_CONFIG_FLAGS, flags);
-    cfg |= FIELD_PREP(APPLE_SART2_CONFIG_SIZE, size);
-
-    write32(sart->base + APPLE_SART2_PADDR(index), paddr);
-    write32(sart->base + APPLE_SART2_CONFIG(index), cfg);
+    write32(sart->base + sart->paddr_offset + index * sart->paddr_stride, paddr);
+    write32(sart->base + sart->config_offset + index * sart->config_stride, cfg);
 
     return true;
 }
 
 static void sart3_get_entry(sart_dev_t *sart, int index, u8 *flags, void **paddr, size_t *size)
 {
-    *flags = read32(sart->base + APPLE_SART3_CONFIG(index));
-    *size = (size_t)read32(sart->base + APPLE_SART3_SIZE(index)) << APPLE_SART3_SIZE_SHIFT;
-    *paddr =
-        (void *)((u64)read32(sart->base + APPLE_SART3_PADDR(index)) << APPLE_SART3_PADDR_SHIFT);
+    *flags = read32(sart->base + sart->config_offset + index * sart->config_stride);
+    *size = (size_t)read32(sart->base + sart->size_offset + index * sart->size_stride)
+            << sart->size_shift;
+    *paddr = (void *)((u64)read32(sart->base + sart->paddr_offset + index * sart->paddr_stride)
+                      << sart->paddr_shift);
 }
 
 static bool sart3_set_entry(sart_dev_t *sart, int index, u8 flags, void *paddr_, size_t size)
 {
     u64 paddr = (u64)paddr_;
-    if (size & ((1 << APPLE_SART3_SIZE_SHIFT) - 1))
-        return false;
-    if (paddr & ((1 << APPLE_SART3_PADDR_SHIFT) - 1))
-        return false;
 
-    paddr >>= APPLE_SART3_PADDR_SHIFT;
-    size >>= APPLE_SART3_SIZE_SHIFT;
-
-    if (size > APPLE_SART3_SIZE_MAX)
+    if (size & ((1 << sart->size_shift) - 1))
+        return false;
+    if (paddr & ((1 << sart->paddr_shift) - 1))
         return false;
 
-    write32(sart->base + APPLE_SART3_PADDR(index), paddr);
-    write32(sart->base + APPLE_SART3_SIZE(index), size);
-    write32(sart->base + APPLE_SART3_CONFIG(index), flags);
+    size >>= sart->size_shift;
+    paddr >>= sart->paddr_shift;
 
-    return true;
-}
-
-static void sart4_get_entry(sart_dev_t *sart, int index, u8 *flags, void **paddr, size_t *size)
-{
-    *flags = read32(sart->base + APPLE_SART4_CONFIG(index));
-    *size = (size_t)read32(sart->base + APPLE_SART4_SIZE(index)) << APPLE_SART4_SIZE_SHIFT;
-    *paddr =
-        (void *)((u64)read32(sart->base + APPLE_SART4_PADDR(index)) << APPLE_SART4_PADDR_SHIFT);
-}
-
-static bool sart4_set_entry(sart_dev_t *sart, int index, u8 flags, void *paddr_, size_t size)
-{
-    u64 paddr = (u64)paddr_;
-    if (size & ((1 << APPLE_SART4_SIZE_SHIFT) - 1))
-        return false;
-    if (paddr & ((1 << APPLE_SART4_PADDR_SHIFT) - 1))
+    if (size > sart->config_size_max)
         return false;
 
-    paddr >>= APPLE_SART4_PADDR_SHIFT;
-    size >>= APPLE_SART4_SIZE_SHIFT;
-
-    if (size > APPLE_SART4_SIZE_MAX)
-        return false;
-
-    write32(sart->base + APPLE_SART4_PADDR(index), paddr);
-    write32(sart->base + APPLE_SART4_SIZE(index), size);
-    write32(sart->base + APPLE_SART4_CONFIG(index), flags);
+    write32(sart->base + sart->paddr_offset + index * sart->paddr_stride, paddr);
+    write32(sart->base + sart->size_offset + index * sart->size_stride, size);
+    write32(sart->base + sart->config_offset + index * sart->config_stride, flags);
 
     return true;
 }
@@ -228,22 +135,58 @@ sart_dev_t *sart_init(const char *adt_path)
         case 0:
             sart->get_entry = sart0_get_entry;
             sart->set_entry = sart0_set_entry;
-            sart->flags_allow = APPLE_SART0_FLAGS_ALLOW;
+            sart->flags_allow = 0xf;
+            sart->config_offset = 0;
+            sart->config_stride = 4;
+            sart->config_flags_mask = GENMASK(28, 24);
+            sart->config_size_mask = GENMASK(18, 0);
+            sart->config_size_max = GENMASK(18, 0);
+            sart->paddr_offset = 0x40;
+            sart->paddr_stride = 4;
+            sart->paddr_shift = 12;
+            sart->size_shift = 12;
             break;
         case 2:
-            sart->get_entry = sart2_get_entry;
-            sart->set_entry = sart2_set_entry;
-            sart->flags_allow = APPLE_SART2_FLAGS_ALLOW;
+            sart->get_entry = sart0_get_entry;
+            sart->set_entry = sart0_set_entry;
+            sart->flags_allow = 0xff;
+            sart->config_offset = 0;
+            sart->config_stride = 4;
+            sart->config_flags_mask = GENMASK(31, 24);
+            sart->config_size_mask = GENMASK(23, 0);
+            sart->config_size_max = GENMASK(23, 0);
+            sart->paddr_offset = 0x40;
+            sart->paddr_stride = 4;
+            sart->paddr_shift = 12;
+            sart->size_shift = 12;
             break;
         case 3:
             sart->get_entry = sart3_get_entry;
             sart->set_entry = sart3_set_entry;
-            sart->flags_allow = APPLE_SART3_FLAGS_ALLOW;
+            sart->flags_allow = 0xff;
+            sart->config_offset = 0;
+            sart->config_stride = 4;
+            sart->config_size_max = GENMASK(29, 0);
+            sart->paddr_offset = 0x40;
+            sart->paddr_stride = 4;
+            sart->paddr_shift = 12;
+            sart->size_offset = 0x80;
+            sart->size_stride = 4;
+            sart->size_shift = 12;
             break;
         case 4:
-            sart->get_entry = sart4_get_entry;
-            sart->set_entry = sart4_set_entry;
-            sart->flags_allow = APPLE_SART4_FLAGS_ALLOW;
+            sart->get_entry = sart3_get_entry;
+            sart->set_entry = sart3_set_entry;
+            sart->flags_allow = 0xff;
+            sart->config_offset = 0;
+            sart->config_stride = 4;
+            sart->config_size_max = GENMASK(29, 0);
+            sart->paddr_offset = 0x60;
+            sart->paddr_stride = 4;
+            sart->paddr_shift = 12;
+            sart->size_offset = 0xc0;
+            sart->size_stride = 4;
+            sart->size_shift = 12;
             break;
         default:
             printf("sart: SART %s has unknown version %d\n", adt_path, *sart_version);
