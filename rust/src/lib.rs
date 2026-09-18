@@ -17,6 +17,7 @@ pub mod apfs;
 #[cfg(feature = "chainload")]
 pub mod chainload;
 pub mod dlmalloc;
+pub mod efi;
 pub mod float;
 #[cfg(feature = "chainload")]
 pub mod gpt;

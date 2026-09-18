@@ -707,6 +707,12 @@ impl ADTProperty {
 
         Ok(u64::from_ne_bytes(self.value[..8].try_into().unwrap()))
     }
+
+    pub fn bytes(&self) -> &[u8] {
+        // SAFETY: The value is self.size bytes long and we never reach this code if we
+        // aren't already certain that we are a valid property
+        unsafe { core::slice::from_raw_parts(self.value.as_ptr(), self.size as usize) }
+    }
 }
 
 extern "C" {

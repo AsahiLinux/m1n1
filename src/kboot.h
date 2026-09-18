@@ -20,9 +20,16 @@ struct kernel_header {
     u32 res5;        /* reserved (used for PE COFF offset) */
 };
 
+enum kboot_psci_mode {
+    PSCI_DEFAULT,
+    PSCI_OFF,
+    PSCI_DIRECT,
+};
+
 void kboot_set_initrd(void *start, size_t size);
 int kboot_set_chosen(const char *name, const char *value);
 int kboot_set_uboot(const char *name, const char *value);
+void kboot_set_psci_mode(enum kboot_psci_mode mode);
 int kboot_prepare_dt(void *fdt);
 int kboot_boot(void *kernel);
 

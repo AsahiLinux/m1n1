@@ -205,6 +205,13 @@ static bool check_var(u8 **p)
         mitigations_configure(val);
     } else if (IS_VAR("tso=")) {
         enable_tso = val[0] == '1';
+    } else if (IS_VAR("psci=")) {
+        if (!strcmp(val, "off"))
+            kboot_set_psci_mode(PSCI_OFF);
+        else if (!strcmp(val, "direct"))
+            kboot_set_psci_mode(PSCI_DIRECT);
+        else
+            printf("Unknown configuration option: psci=%s\n", val);
     } else {
         printf("Unknown variable %s\n", *p);
     }
