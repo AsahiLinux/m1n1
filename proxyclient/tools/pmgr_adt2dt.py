@@ -54,10 +54,9 @@ for i, ((base, size), devices) in enumerate(sorted(blocks.items())):
 
     print(f"pmgr{i}: power-management@{base:x} {{")
     print(f"\tcompatible = {compatible};")
+    print(f"\treg = <{base >> 32:#x} {base & 0xffffffff:#x} 0 {size:#x}>;")
     print( "\t#address-cells = <1>;")
     print( "\t#size-cells = <1>;")
-    print()
-    print(f"\treg = <{base >> 32:#x} {base & 0xffffffff:#x} 0 {size:#x}>;")
     print( "};")
     print()
 
@@ -75,15 +74,17 @@ for i, ((base, size), devices) in enumerate(sorted(blocks.items())):
         print(f"\t{die_node('ps_' + dev.name.lower())}: power-controller@{offset:x} {{")
         print(f"\t\tcompatible = {ps_compatible};")
         print(f"\t\treg = <{offset:#x} 4>;")
-        print( "\t\t#power-domain-cells = <0>;")
-        print( "\t\t#reset-cells = <0>;")
         print(f'\t\tlabel = {die_label(dev.name.lower())};')
-        if dev.flags.critical:
-            print("\t\tapple,always-on;")
+        print( "\t\t#power-domain-cells = <0>;")
 
         if any(dt.pmgr_dev_get_parents(dev)):
             domains = [f"<&{die_node('ps_'+dev_by_id[idx].name.lower())}>" for idx in dt.pmgr_dev_get_parents(dev) if idx]
             print(f"\t\tpower-domains = {', '.join(domains)};")
+
+        print( "\t\t#reset-cells = <0>;")
+
+        if dev.flags.critical:
+            print("\t\tapple,always-on;")
 
         print( "\t};")
     print( "};")
