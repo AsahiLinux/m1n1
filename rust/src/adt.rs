@@ -759,7 +759,11 @@ pub unsafe extern "C" fn adt_next_property_offset(_dt: *const c_void, offset: c_
 pub unsafe extern "C" fn adt_first_child_offset(_dt: *const c_void, offset: c_int) -> c_int {
     let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
     let n = ADTNode::from_ptr(ptr).unwrap();
-    unsafe { n.first_child().unwrap().as_ptr().sub(adt as usize) as c_int }
+    let child = match n.first_child() {
+        Ok(c) => c,
+        Err(e) => return e as c_int,
+    };
+    unsafe { child.as_ptr().sub(adt as usize) as c_int }
 }
 
 #[no_mangle]
