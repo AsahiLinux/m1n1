@@ -383,6 +383,13 @@ static inline size_t get_page_size(void)
     return is_16k() ? 16384 : 4096;
 }
 
+static inline bool wfi_loses_state(void)
+{
+    if (FIELD_GET(CYC_OVRD_WFI_MODE_MASK, mrs(SYS_IMP_APL_CYC_OVRD)) == 2)
+        return true;
+    return true;
+}
+
 extern char _base[];
 extern char _rodata_end[];
 extern char _end[];
