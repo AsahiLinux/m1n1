@@ -719,6 +719,7 @@
 #define SYS_IMP_APL_VBAR_GL1  sys_reg(3, 6, 15, 10, 2)
 #define SYS_IMP_APL_SPSR_GL1  sys_reg(3, 6, 15, 10, 3)
 #define SYS_IMP_APL_ASPSR_GL1 sys_reg(3, 6, 15, 10, 4)
+#define ASPSR_GUARDED         BIT(0)
 #define SYS_IMP_APL_ESR_GL1   sys_reg(3, 6, 15, 10, 5)
 #define SYS_IMP_APL_ELR_GL1   sys_reg(3, 6, 15, 10, 6)
 #define SYS_IMP_APL_FAR_GL1   sys_reg(3, 6, 15, 10, 7)

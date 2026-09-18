@@ -6,6 +6,7 @@
 #include "assert.h"
 #include "cpu_regs.h"
 #include "exception.h"
+#include "hv_sprr.h"
 #include "iodev.h"
 #include "malloc.h"
 #include "smp.h"
@@ -1156,6 +1157,89 @@ static bool hv_emulate_rw(struct exc_info *ctx, u64 pte, u64 vaddr, u64 ipa, u8 
     return true;
 }
 
+// CAS/CASA/CASL/CASAL, 32- and 64-bit (L and o0 masked out, CASP excluded by size >= 2).
+#define PT_CAS_MASK 0x3fa07c00
+#define PT_CAS_VAL  0x08a07c00
+
+// Replayed as a real CAS on the PA rather than a read/compare/write, so it stays atomic against
+// the guest's other cores.
+static void hv_emulate_pt_cas(struct exc_info *ctx, u32 insn, u64 pa)
+{
+    u32 rs = FIELD_GET(GENMASK(20, 16), insn), rt = FIELD_GET(GENMASK(4, 0), insn);
+    u64 old;
+
+    ctx->regs[31] = 0;
+
+    if ((insn >> 30) == 3) {
+        old = ctx->regs[rs];
+        __asm__ volatile("casal %0, %2, [%1]" : "+r"(old) : "r"(pa), "r"(ctx->regs[rt]) : "memory");
+    } else {
+        u32 old32 = ctx->regs[rs];
+        __asm__ volatile("casal %w0, %w2, [%1]"
+                         : "+r"(old32)
+                         : "r"(pa), "r"((u32)ctx->regs[rt])
+                         : "memory");
+        old = old32;
+    }
+
+    if (rs != 31)
+        ctx->regs[rs] = old;
+}
+
+// Guest stage-1 table pages are read-only in stage 2, so the guest's own PTE
+// stores land here as permission aborts: commit the store to the pristine table, then let
+// hv_sprr re-derive the shadow leaves it feeds.
+bool hv_emulate_pt_store(struct exc_info *ctx, u64 far, u64 ipa, u64 *bytes)
+{
+    u64 elr_pa = hv_translate(ctx->elr, false, false, NULL);
+    if (!elr_pa) {
+        printf("HV: Failed to fetch instruction for PT store at 0x%lx\n", ctx->elr);
+        return false;
+    }
+
+    u32 insn = read32(elr_pa);
+    u64 width, vaddr = far;
+    u8 val[HV_MAX_RW_SIZE] ALIGNED(HV_MAX_RW_SIZE);
+    memset(val, 0, sizeof(val));
+
+    bool cas = (insn & PT_CAS_MASK) == PT_CAS_VAL && (insn >> 30) >= 2;
+
+    if (cas) {
+        width = (insn >> 30) == 3 ? 3 : 2;
+    } else {
+        if (!emulate_store(ctx, insn, (u64 *)val, &width, &vaddr)) {
+            printf("HV: PT store not emulated: 0x%08x at 0x%lx (IPA 0x%lx)\n", insn, ctx->elr, ipa);
+            return false;
+        }
+
+        if (vaddr != far) {
+            printf("HV: PT store faulted at 0x%lx, but expecting 0x%lx\n", far, vaddr);
+            return false;
+        }
+    }
+
+    *bytes = 1UL << width;
+    if ((ipa & MASK(VADDR_L3_OFFSET_BITS)) + *bytes > PAGE_SIZE) {
+        printf("HV: PT store at IPA 0x%lx straddles a page (%ld bytes)\n", ipa, *bytes);
+        return false;
+    }
+
+    u64 pte = hv_pt_walk(ipa);
+    if (!IS_HW(pte)) {
+        printf("HV: PT store to non-HW IPA 0x%lx (pte 0x%lx)\n", ipa, pte);
+        return false;
+    }
+
+    u64 pa = (pte & PTE_TARGET_MASK) | (ipa & MASK(VADDR_L3_OFFSET_BITS));
+
+    if (cas)
+        hv_emulate_pt_cas(ctx, insn, pa);
+    else if (!hv_pa_write(ctx, pa, (u64 *)val, width))
+        return false;
+
+    return true;
+}
+
 bool hv_handle_dabort(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('0');
@@ -1175,6 +1259,28 @@ bool hv_handle_dabort(struct exc_info *ctx)
 
     if (ipa >= BIT(vaddr_bits)) {
         printf("hv_handle_abort(): IPA out of bounds: 0x%0lx -> 0x%lx\n", far, ipa);
+        return false;
+    }
+
+    // Must come before the IS_HW() race-retry below: a write-protected guest table page is
+    // still a valid HW mapping, so that path would spin on the store forever.
+    if (is_write && hv_sprr_is_pt_page(ipa)) {
+        hv_wdt_breadcrumb('P');
+        hv_sprr_pt_writer_check(ctx, ipa, far);
+
+        u64 bytes;
+        if (!hv_emulate_pt_store(ctx, far, ipa, &bytes))
+            return false;
+
+        hv_sprr_pt_updated(ctx, ipa, bytes);
+        return true;
+    }
+
+    // The shadow is mapped read-only, so this is the guest holding a shadow root it should never
+    // have seen. Bail to the proxy rather than letting the IS_HW() retry below spin on it.
+    if (is_write && hv_sprr_is_shadow_page(ipa)) {
+        printf("HV: guest wrote shadow page: VA 0x%lx -> IPA 0x%lx at ELR 0x%lx\n", far, ipa,
+               ctx->elr);
         return false;
     }
 

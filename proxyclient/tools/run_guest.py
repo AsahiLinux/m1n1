@@ -23,6 +23,8 @@ parser.add_argument('--strip-node', action="append", default=[], metavar='SUBSTR
 parser.add_argument('-r', '--raw', action="store_true")
 parser.add_argument('-E', '--entry-point', action="store", type=int, help="Entry point for the raw image", default=0x800)
 parser.add_argument('-a', '--append-payload', type=pathlib.Path, action="append", default=[])
+parser.add_argument('-P', '--emulate-sprr', action="store_true",
+                    help='Force the EL2 SPRR/GXF emulation on.')
 parser.add_argument('-v', '--volume', type=volumespec, action='append',
                     help='Attach a 9P virtio device for file export to the guest. The argument is a host path to the '
                          'exported tree, joined by colon (\':\') with a tag under which the tree will be advertised '
@@ -43,7 +45,13 @@ from m1n1.hw.pmu import PMU
 iface = UartInterface()
 p = M1N1Proxy(iface, debug=False)
 bootstrap_port(iface, p)
-u = ProxyUtils(p, heap_size = 128 * 1024 * 1024)
+
+if args.emulate_sprr or not p.get_cpu_features().apple_sysregs_unlocked:
+    m1n1_heap_mb = 1024
+else:
+    m1n1_heap_mb = 128
+u = ProxyUtils(p, heap_size = 128 * 1024 * 1024,
+               m1n1_heap = m1n1_heap_mb * 1024 * 1024)
 
 # Setup counter redirect / AHCR_EL2 as expected by macOS for macho payloads
 if not args.raw:
@@ -55,6 +63,9 @@ if not args.raw:
 hv = HV(iface, p, u)
 
 hv.hook_exceptions = args.hook_exceptions
+
+if args.emulate_sprr:
+    hv.emulate_sprr = True
 
 hv.init()
 
