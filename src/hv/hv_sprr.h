@@ -49,6 +49,12 @@ enum hv_vreg {
     HV_VREG_SPRR_UPERM_SH1_EL1,
     HV_VREG_SPRR_UPERM_SH2_EL1,
     HV_VREG_SPRR_UPERM_SH3_EL1,
+    HV_VREG_VBAR_EL1,
+    HV_VREG_ELR_EL1,
+    HV_VREG_SPSR_EL1,
+    HV_VREG_ESR_EL1,
+    HV_VREG_FAR_EL1,
+    HV_VREG_AFSR1_EL1,
     HV_VREG_MAX,
 };
 
@@ -90,7 +96,7 @@ struct hv_sprr_cpu {
     bool guarded;
 
     u64 gxf_enter, gxf_abort;
-    u64 vbar_gl1;
+    u64 vbar_gl1, vbar_el1;
     u64 sprr_config;
     u64 sprr_perm_el0, sprr_perm_el1;
     u64 sprr_umprr;
@@ -106,7 +112,6 @@ struct hv_sprr_cpu {
     // patch all msr/mrs with hvc like for the rest
     struct hv_world_regs {
         u64 sp_el1;
-        u64 vbar;
         u64 spsr, elr, esr, far, afsr1;
     } bank;
 

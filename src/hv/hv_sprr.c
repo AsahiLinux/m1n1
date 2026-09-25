@@ -745,7 +745,6 @@ static void hv_sprr_world_swap(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
     ctx->sp[1] = cpu->bank.sp_el1;
     cpu->bank.sp_el1 = sp;
 
-    SWAP_HW(cpu, SYS_VBAR_EL12, vbar);
     SWAP_HW(cpu, SYS_SPSR_EL12, spsr);
     SWAP_HW(cpu, SYS_ELR_EL12, elr);
     SWAP_HW(cpu, SYS_ESR_EL12, esr);
@@ -838,6 +837,7 @@ static bool hv_gxf_gexit(struct exc_info *ctx, bool locked)
 
     if (!(cpu->aspsr_gl1 & ASPSR_GUARDED)) {
         hv_sprr_world_swap(ctx, cpu);
+        msr(SYS_VBAR_EL12, cpu->vbar_el1);
         cpu->guarded = false;
         hv_sprr_switch_tables(cpu);
     }
@@ -947,14 +947,61 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
             break;
         case HV_VREG_VBAR_GL1:
             if (is_read) {
-                rval = cpu->guarded ? mrs(SYS_VBAR_EL12) : cpu->bank.vbar;
+                rval = cpu->vbar_gl1;
             } else {
                 cpu->vbar_gl1 = wval;
                 if (cpu->guarded)
                     msr(SYS_VBAR_EL12, wval);
-                else
-                    cpu->bank.vbar = wval;
             }
+            break;
+        case HV_VREG_VBAR_EL1:
+            if (is_read) {
+                rval = cpu->vbar_el1;
+            } else {
+                cpu->vbar_el1 = wval;
+                if (!cpu->guarded)
+                    msr(SYS_VBAR_EL12, wval);
+            }
+            break;
+        case HV_VREG_ELR_EL1:
+            if (is_read)
+                rval = cpu->guarded ? cpu->bank.elr : mrs(SYS_ELR_EL12);
+            else if (cpu->guarded)
+                cpu->bank.elr = wval;
+            else
+                msr(SYS_ELR_EL12, wval);
+            break;
+        case HV_VREG_SPSR_EL1:
+            if (is_read)
+                rval = cpu->guarded ? cpu->bank.spsr : mrs(SYS_SPSR_EL12);
+            else if (cpu->guarded)
+                cpu->bank.spsr = wval;
+            else
+                msr(SYS_SPSR_EL12, wval);
+            break;
+        case HV_VREG_ESR_EL1:
+            if (is_read)
+                rval = cpu->guarded ? cpu->bank.esr : mrs(SYS_ESR_EL12);
+            else if (cpu->guarded)
+                cpu->bank.esr = wval;
+            else
+                msr(SYS_ESR_EL12, wval);
+            break;
+        case HV_VREG_FAR_EL1:
+            if (is_read)
+                rval = cpu->guarded ? cpu->bank.far : mrs(SYS_FAR_EL12);
+            else if (cpu->guarded)
+                cpu->bank.far = wval;
+            else
+                msr(SYS_FAR_EL12, wval);
+            break;
+        case HV_VREG_AFSR1_EL1:
+            if (is_read)
+                rval = cpu->guarded ? cpu->bank.afsr1 : mrs(SYS_AFSR1_EL12);
+            else if (cpu->guarded)
+                cpu->bank.afsr1 = wval;
+            else
+                msr(SYS_AFSR1_EL12, wval);
             break;
         case HV_VREG_SPSR_GL1:
             GL1_BANKED(SYS_SPSR_EL12, spsr);
