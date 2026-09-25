@@ -41,6 +41,14 @@ enum hv_vreg {
     HV_VREG_TTBR1_EL1,
     HV_VREG_TCR_EL1,
     HV_VREG_SCTLR_EL1,
+    HV_VREG_SPRR_PMPRR_EL1,
+    HV_VREG_SPRR_AMRANGE_EL1,
+    HV_VREG_SPRR_PPERM_SH1_EL1,
+    HV_VREG_SPRR_PPERM_SH2_EL1,
+    HV_VREG_SPRR_PPERM_SH3_EL1,
+    HV_VREG_SPRR_UPERM_SH1_EL1,
+    HV_VREG_SPRR_UPERM_SH2_EL1,
+    HV_VREG_SPRR_UPERM_SH3_EL1,
     HV_VREG_MAX,
 };
 
@@ -86,6 +94,9 @@ struct hv_sprr_cpu {
     u64 sprr_config;
     u64 sprr_perm_el0, sprr_perm_el1;
     u64 sprr_umprr;
+    u64 sprr_pmprr, sprr_amrange;
+    u64 sprr_pperm_sh1, sprr_pperm_sh2, sprr_pperm_sh3;
+    u64 sprr_uperm_sh1, sprr_uperm_sh2, sprr_uperm_sh3;
     u64 tpidr_gl1;
     u64 elr_gl1, spsr_gl1;
     u64 aspsr_el1, aspsr_gl1;

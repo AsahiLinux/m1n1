@@ -28,6 +28,14 @@ HV_VREGS = [
     sysreg.TTBR1_EL1,
     sysreg.TCR_EL1,
     sysreg.SCTLR_EL1,
+    sysreg.SPRR_PMPRR_EL1,
+    sysreg.SPRR_AMRANGE_EL1,
+    sysreg.SPRR_PPERM_SH1_EL1,
+    sysreg.SPRR_PPERM_SH2_EL1,
+    sysreg.SPRR_PPERM_SH3_EL1,
+    sysreg.SPRR_UPERM_SH1_EL1,
+    sysreg.SPRR_UPERM_SH2_EL1,
+    sysreg.SPRR_UPERM_SH3_EL1,
 ]
 
 GENTER = 0x00201420
