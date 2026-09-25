@@ -855,6 +855,14 @@ static bool hv_gxf_gexit(struct exc_info *ctx, bool locked)
     else                                                                                           \
         cpu->bank.field = wval;
 
+#define VREG_STORED(vreg_id, field)                                                                \
+    case vreg_id:                                                                                  \
+        if (is_read)                                                                               \
+            rval = cpu->field;                                                                     \
+        else                                                                                       \
+            cpu->field = wval;                                                                     \
+        break
+
 static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read, u32 rt,
                                    bool locked)
 {
@@ -865,6 +873,11 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
     u64 rval = 0;
 
     switch (vreg) {
+        VREG_STORED(HV_VREG_GXF_ENTER_EL1, gxf_enter);
+        VREG_STORED(HV_VREG_GXF_ABORT_EL1, gxf_abort);
+        VREG_STORED(HV_VREG_TPIDR_GL1, tpidr_gl1);
+        VREG_STORED(HV_VREG_ASPSR_GL1, aspsr_gl1);
+        VREG_STORED(HV_VREG_ASPSR_EL1, aspsr_el1);
         case HV_VREG_SPRR_CONFIG_EL1:
             if (is_read) {
                 rval = cpu->sprr_config;
@@ -897,18 +910,6 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
             if (is_read)
                 rval = cpu->guarded ? GXF_STATUS_GUARDED : 0;
             break;
-        case HV_VREG_GXF_ENTER_EL1:
-            if (is_read)
-                rval = cpu->gxf_enter;
-            else
-                cpu->gxf_enter = wval;
-            break;
-        case HV_VREG_GXF_ABORT_EL1:
-            if (is_read)
-                rval = cpu->gxf_abort;
-            else
-                cpu->gxf_abort = wval;
-            break;
         // XNU rewrites these with the value they already hold on all the time but we only care
         // if it writes a new value which would change the way we need to shadow perms
         case HV_VREG_SPRR_PERM_EL0:
@@ -935,12 +936,6 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
                 hv_sprr_rebuild(ctx, cpu);
             }
             break;
-        case HV_VREG_TPIDR_GL1:
-            if (is_read)
-                rval = cpu->tpidr_gl1;
-            else
-                cpu->tpidr_gl1 = wval;
-            break;
         case HV_VREG_VBAR_GL1:
             if (is_read) {
                 rval = cpu->guarded ? mrs(SYS_VBAR_EL12) : cpu->bank.vbar;
@@ -951,18 +946,6 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
                 else
                     cpu->bank.vbar = wval;
             }
-            break;
-        case HV_VREG_ASPSR_GL1:
-            if (is_read)
-                rval = cpu->aspsr_gl1;
-            else
-                cpu->aspsr_gl1 = wval;
-            break;
-        case HV_VREG_ASPSR_EL1:
-            if (is_read)
-                rval = cpu->aspsr_el1;
-            else
-                cpu->aspsr_el1 = wval;
             break;
         // no idea what this is, so just replay any stored value back
         case HV_VREG_SPRR_UMPRR_EL1:
