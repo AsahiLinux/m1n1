@@ -6,6 +6,8 @@
 #include "cpu_regs.h"
 #include "display.h"
 #include "gxf.h"
+#include "hv_sprr.h"
+#include "hv_sptm.h"
 #include "memory.h"
 #include "pcie.h"
 #include "smp.h"
@@ -136,6 +138,7 @@ void hv_init(void)
     hv_wdt_init();
 
     hv_pt_init();
+    hv_sptm_init();
 
     // Configure hypervisor defaults
     hv_write_hcr(HCR_API | // Allow PAuth instructions
@@ -339,6 +342,9 @@ void hv_start_secondary(int cpu, void *entry, u64 regs[4])
 {
     printf("HV: Initializing secondary %d\n", cpu);
     iodev_console_flush();
+
+    if (hv_sprr_active)
+        hv_sptm_init_secondary(cpu);
 
     mmu_init_secondary(cpu);
     iodev_console_flush();
