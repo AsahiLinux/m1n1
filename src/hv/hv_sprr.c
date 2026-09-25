@@ -878,6 +878,15 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
         VREG_STORED(HV_VREG_TPIDR_GL1, tpidr_gl1);
         VREG_STORED(HV_VREG_ASPSR_GL1, aspsr_gl1);
         VREG_STORED(HV_VREG_ASPSR_EL1, aspsr_el1);
+        VREG_STORED(HV_VREG_SPRR_AMRANGE_EL1, sprr_amrange);
+        VREG_STORED(HV_VREG_SPRR_UMPRR_EL1, sprr_umprr);
+        VREG_STORED(HV_VREG_SPRR_PMPRR_EL1, sprr_pmprr);
+        VREG_STORED(HV_VREG_SPRR_PPERM_SH1_EL1, sprr_pperm_sh1);
+        VREG_STORED(HV_VREG_SPRR_PPERM_SH2_EL1, sprr_pperm_sh2);
+        VREG_STORED(HV_VREG_SPRR_PPERM_SH3_EL1, sprr_pperm_sh3);
+        VREG_STORED(HV_VREG_SPRR_UPERM_SH1_EL1, sprr_uperm_sh1);
+        VREG_STORED(HV_VREG_SPRR_UPERM_SH2_EL1, sprr_uperm_sh2);
+        VREG_STORED(HV_VREG_SPRR_UPERM_SH3_EL1, sprr_uperm_sh3);
         case HV_VREG_SPRR_CONFIG_EL1:
             if (is_read) {
                 rval = cpu->sprr_config;
@@ -946,13 +955,6 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
                 else
                     cpu->bank.vbar = wval;
             }
-            break;
-        // no idea what this is, so just replay any stored value back
-        case HV_VREG_SPRR_UMPRR_EL1:
-            if (is_read)
-                rval = cpu->sprr_umprr;
-            else
-                cpu->sprr_umprr = wval;
             break;
         case HV_VREG_SPSR_GL1:
             GL1_BANKED(SYS_SPSR_EL12, spsr);
