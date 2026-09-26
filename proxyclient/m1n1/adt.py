@@ -279,6 +279,13 @@ DEV_PROPERTIES = {
             "mtr-polynom-fuse-agx": MTRPolynomFuseAGX,
         }
     },
+    "pmgr-child": {
+        "*": {
+            "clusters": SafeGreedyRange(Int32ul),
+            "devices": PMGRDevices,
+            "ps-groups": PMGRPSRegs,
+        }
+    },
     "clpc": {
         "*": {
             "events": SafeGreedyRange(Int32ul),
@@ -822,8 +829,9 @@ class ADTNode:
         return node
 
     def pmgr_init(self):
-        self._pmgr_u8id = (self["/arm-io/pmgr"].devices[0].id1 != self["/arm-io/pmgr"].devices[1].id1)
-        self._pmgr_use_group_and_offset = not "ps-regs" in self["/arm-io/pmgr"]._properties
+        self._pmgr_path = "/arm-io/pmgr-child" if self["/arm-io/pmgr"].compatible[0] in ["pmgr2,arch"] else "/arm-io/pmgr"
+        self._pmgr_u8id = (self[self._pmgr_path].devices[0].id1 != self[self._pmgr_path].devices[1].id1)
+        self._pmgr_use_group_and_offset = not "ps-regs" in self[self._pmgr_path]._properties
 
     def pmgr_dev_get_id(self, dev):
         if self._pmgr_u8id:
@@ -839,10 +847,10 @@ class ADTNode:
 
     def pmgr_dev_get_block(self, dev):
         if self._pmgr_use_group_and_offset:
-            reg = self["/arm-io/pmgr"].ps_groups[dev.group].reg
+            reg = self[self._pmgr_path].ps_groups[dev.group].reg
         else:
-            reg = self["/arm-io/pmgr"].ps_regs[dev.psreg].reg
-        return self["/arm-io/pmgr"].get_reg(reg)
+            reg = self[self._pmgr_path].ps_regs[dev.psreg].reg
+        return self[self._pmgr_path].get_reg(reg)
 
     def pmgr_dev_get_offset(self, dev):
         if self._pmgr_use_group_and_offset:
