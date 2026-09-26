@@ -52,6 +52,9 @@ static int pmgr_initialized = 0;
 static int pmgr_path[8];
 static int pmgr_offset;
 static int pmgr_dies;
+static const char pmgr_name_t8103[] = "/arm-io/pmgr";
+static const char pmgr_name_t8152[] = "/arm-io/pmgr-child";
+const char *pmgr_name = pmgr_name_t8103;
 
 static const u32 *pmgr_ps_regs = NULL;
 static u32 pmgr_ps_regs_len = 0;
@@ -74,7 +77,7 @@ static uintptr_t pmgr_get_psreg(u8 idx)
 
     u64 pmgr_reg;
     if (adt_get_reg(adt, pmgr_path, "reg", reg_idx, &pmgr_reg, NULL) < 0) {
-        printf("pmgr: Error getting /arm-io/pmgr regs\n");
+        printf("pmgr: Error getting %s regs\n", pmgr_name);
         return 0;
     }
 
@@ -378,6 +381,22 @@ int pmgr_power_on(int die, const char *name)
     return pmgr_set_mode(addr, PMGR_PS_ACTIVE);
 }
 
+int pmgr_adt_path_offset_trace(const void *adt_ptr, int *path)
+{
+    int offset = adt_path_offset_trace(adt_ptr, pmgr_name, path);
+    if (offset < 0)
+        return offset;
+
+    /* M6 and hopefully later SoC moved the used pmgr functionality to "/arm-io/pmgr-child"
+     * and have a generic looking "pmgr2,arch" as compatible in "/arm-io/pmgr".
+     */
+    if (!adt_is_compatible(adt, offset, "pmgr2,arch"))
+        return offset;
+    pmgr_name = pmgr_name_t8152;
+
+    return adt_path_offset_trace(adt, pmgr_name, path);
+}
+
 int pmgr_init(void)
 {
     int node = adt_path_offset(adt, "/arm-io");
@@ -388,9 +407,9 @@ int pmgr_init(void)
     if (ADT_GETPROP(adt, node, "die-count", &pmgr_dies) < 0)
         pmgr_dies = 1;
 
-    pmgr_offset = adt_path_offset_trace(adt, "/arm-io/pmgr", pmgr_path);
+    pmgr_offset = pmgr_adt_path_offset_trace(adt, pmgr_path);
     if (pmgr_offset < 0) {
-        printf("pmgr: Error getting /arm-io/pmgr node\n");
+        printf("pmgr: Error getting %s node\n", pmgr_name);
         return -1;
     }
 
@@ -399,14 +418,14 @@ int pmgr_init(void)
         pmgr_use_group_and_offset = true;
         pmgr_ps_regs = adt_getprop(adt, pmgr_offset, "ps-groups", &pmgr_ps_regs_len);
         if (pmgr_ps_regs == NULL || pmgr_ps_regs_len == 0) {
-            printf("pmgr: Error getting /arm-io/pmgr ps-regs\n.");
+            printf("pmgr: Error getting %s ps-regs\n.", pmgr_name);
             return -1;
         }
     }
 
     pmgr_devices = adt_getprop(adt, pmgr_offset, "devices", &pmgr_devices_len);
     if (pmgr_devices == NULL || pmgr_devices_len == 0) {
-        printf("pmgr: Error getting /arm-io/pmgr devices.\n");
+        printf("pmgr: Error getting %s devices.\n", pmgr_name);
         return -1;
     }
 

@@ -14,10 +14,14 @@
 #define PMGR_PS_CLKGATE 0x4
 #define PMGR_PS_PWRGATE 0x0
 
+extern const char *pmgr_name;
+
 int pmgr_init(void);
 
 int pmgr_power_enable(u32 id);
 int pmgr_power_disable(u32 id);
+
+int pmgr_adt_path_offset_trace(const void *adt_ptr, int *path);
 
 int pmgr_adt_power_enable(const char *path);
 int pmgr_adt_power_disable(const char *path);

@@ -233,12 +233,12 @@ void smp_start_secondaries(void)
 
     int pmgr_path[8];
 
-    if (adt_path_offset_trace(adt, "/arm-io/pmgr", pmgr_path) < 0) {
-        printf("Error getting /arm-io/pmgr node\n");
+    if (pmgr_adt_path_offset_trace(adt, pmgr_path) < 0) {
+        printf("Error getting %s node\n", pmgr_name);
         return;
     }
     if (adt_get_reg(adt, pmgr_path, "reg", 0, &pmgr_reg, NULL) < 0) {
-        printf("Error getting /arm-io/pmgr regs\n");
+        printf("Error getting %s regs\n", pmgr_name);
         return;
     }
 
