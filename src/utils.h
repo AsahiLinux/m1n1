@@ -339,9 +339,9 @@ static inline int is_ecore(void)
     if (!is_heterogeneous())
         return false;
     u32 mpidr_el1 = mrs(MPIDR_EL1);
-    if (mpidr_el1 & MIDR_CORE_TYPE_P)
+    if (mpidr_el1 & MPIDR_CORE_TYPE_P)
         return false;
-    if (mpidr_el1 & MIDR_CORE_TYPE_M)
+    if (mpidr_el1 & MPIDR_CORE_TYPE_M)
         return false;
     return true;
 }
