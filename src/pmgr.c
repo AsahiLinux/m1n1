@@ -484,3 +484,22 @@ u32 pmgr_get_feature(const char *name)
 
     return val;
 }
+
+int pmgr_set_voltage_ctl(uint32_t offset)
+{
+    u64 pmgr_reg;
+
+    if (!pmgr_initialized) {
+        printf("pmgr: pmgr_set_voltage_ctl() called before successful pmgr_init()\n");
+        return -1;
+    }
+
+    if (adt_get_reg(adt, pmgr_path, "reg", 0, &pmgr_reg, NULL) < 0) {
+        printf("Error getting /arm-io/pmgr regs\n");
+        return -1;
+    }
+
+    write32(pmgr_reg + offset, 1);
+
+    return 0;
+}
