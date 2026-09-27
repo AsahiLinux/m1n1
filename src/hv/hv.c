@@ -124,6 +124,7 @@ void hv_start(void *entry, u64 regs[4])
 
     hv_started_cpus[boot_cpu_idx] = true;
 
+    msr(VMPIDR_EL2, mrs(MPIDR_EL1));
     msr(VBAR_EL1, _hv_vectors_start);
 
     if (gxf_enabled())
@@ -196,6 +197,7 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
     if (cpu_features->apple_sysregs_unlocked)
         gxf_init();
 
+    msr(VMPIDR_EL2, mrs(MPIDR_EL1));
     msr(VBAR_EL1, _hv_vectors_start);
 
     msr(HCR_EL2, info->hcr);
