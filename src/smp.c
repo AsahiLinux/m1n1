@@ -23,6 +23,8 @@
 #define CPU_REG_CLUSTER GENMASK(10, 8)
 #define CPU_REG_DIE     GENMASK(14, 11)
 
+#define SMP_SHARED __attribute__((section(".data.smp_shared")))
+
 #define RVBAR_LOCK BIT(0)
 #define RVBAR_ADDR GENMASK(47, 12)
 
@@ -34,8 +36,8 @@ struct spin_table {
     u64 retval;
 };
 
-void *_reset_stack;
-void *_reset_stack_el1;
+void *_reset_stack SMP_SHARED;
+void *_reset_stack_el1 SMP_SHARED;
 
 #define DUMMY_STACK_SIZE 0x1000
 u8 dummy_stack[DUMMY_STACK_SIZE];     // Highest EL
@@ -44,11 +46,11 @@ u8 dummy_stack_el1[DUMMY_STACK_SIZE]; // EL1 stack if EL3 exists
 u8 secondary_stacks[MAX_CPUS][SECONDARY_STACK_SIZE] ALIGNED(0x4000);
 u8 secondary_stacks_el3[MAX_EL3_CPUS][SECONDARY_STACK_SIZE] ALIGNED(0x4000);
 
-static bool wfe_mode = false;
+static bool wfe_mode SMP_SHARED = false;
 
-static int target_cpu;
+static int target_cpu SMP_SHARED;
 static int cpu_nodes[MAX_CPUS];
-static struct spin_table spin_table[MAX_CPUS];
+static struct spin_table spin_table[MAX_CPUS] SMP_SHARED;
 
 struct cpu_info {
     bool valid;
@@ -68,14 +70,14 @@ struct smp_reset_stack {
     u64 stack;
 };
 
-struct smp_reset_stack smp_reset_stacks[MAX_CPUS] = {
+struct smp_reset_stack smp_reset_stacks[MAX_CPUS] SMP_SHARED = {
     [0 ... MAX_CPUS - 1] = {.mpidr = ~0ULL, .stack = 0},
 };
 
 extern u8 _vectors_start[0];
 extern u8 _stack_bot[0];
-int boot_cpu_idx = -1;
-u64 boot_cpu_mpidr = 0;
+int boot_cpu_idx SMP_SHARED = -1;
+u64 boot_cpu_mpidr SMP_SHARED = 0;
 
 void smp_secondary_entry(void)
 {
@@ -93,7 +95,6 @@ void smp_secondary_entry(void)
 
     smp_reset_stacks[index].stack = (u64)secondary_stacks[index] + SECONDARY_STACK_SIZE;
     smp_reset_stacks[index].mpidr = mpidr;
-    dc_civac_range(&smp_reset_stacks[index], sizeof(smp_reset_stacks[index]));
     sysop("dsb sy");
 
     struct spin_table *me = &spin_table[index];
@@ -175,12 +176,8 @@ static void smp_start_cpu(int index, int die, int cluster, int core, u64 impl, u
     if (has_el3()) {
         _reset_stack = secondary_stacks_el3[index] + SECONDARY_STACK_SIZE; // EL3
         _reset_stack_el1 = secondary_stacks[index] + SECONDARY_STACK_SIZE; // EL1
-
-        dc_civac_range(&_reset_stack_el1, sizeof(void *));
     } else
         _reset_stack = secondary_stacks[index] + SECONDARY_STACK_SIZE;
-
-    dc_civac_range(&_reset_stack, sizeof(void *));
 
     sysop("dsb sy");
 

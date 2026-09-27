@@ -160,6 +160,10 @@ SECTIONS {
     _rodata_end = .;
     _data_start = .;
     .data : ALIGN(0x10000) {
+        _smp_shared_start = .;
+        *(.data.smp_shared)
+        . = ALIGN(0x10000);
+        _smp_shared_end = .;
         *(.data)
         *(.data.*)
         . = ALIGN(8);
