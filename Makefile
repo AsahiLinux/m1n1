@@ -61,7 +61,7 @@ BASE_CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-P
 	-Wsign-compare -Wunused-parameter -Wno-multichar \
 	-ffreestanding -fpic -ffunction-sections -fdata-sections \
 	-nostdinc -isystem $(shell $(CC) -print-file-name=include) -isystem sysinc \
-	-Isrc \
+	-Isrc -Isrc/hv \
 	-fno-stack-protector -mstrict-align -march=armv8.2-a \
 	$(EXTRA_CFLAGS)
 
@@ -121,6 +121,17 @@ DCP_OBJECTS := $(patsubst %,dcp/%, \
 	parser.o \
 	system_ep.o)
 
+HV_OBJECTS := $(patsubst %,hv/%, \
+	hv.o \
+	hv_aic.o \
+	hv_asm.o \
+	hv_exc.o \
+	hv_sprr.o \
+	hv_virtio.o \
+	hv_vm.o \
+	hv_vuart.o \
+	hv_wdt.o)
+
 OBJECTS := \
 	adt.o \
 	afk.o \
@@ -144,7 +155,6 @@ OBJECTS := \
 	firmware.o \
 	gxf.o gxf_asm.o \
 	heapblock.o \
-	hv.o hv_vm.o hv_exc.o hv_sprr.o hv_vuart.o hv_wdt.o hv_asm.o hv_aic.o hv_virtio.o \
 	i2c.o \
 	iodev.o \
 	iova.o \
@@ -181,6 +191,7 @@ OBJECTS := \
 	wdt.o \
 	$(CHICKENS_OBJECTS) \
 	$(DCP_OBJECTS) \
+	$(HV_OBJECTS) \
 	$(MINILZLIB_OBJECTS) $(TINF_OBJECTS) $(DLMALLOC_OBJECTS) $(LIBFDT_OBJECTS)
 
 FP_OBJECTS := \
@@ -205,9 +216,9 @@ all: build/$(TARGET) build/$(TARGET_RAW)
 clean:
 	rm -rf build/* build/.deps
 format:
-	$(CLANG_FORMAT) -i src/*.c src/chickens/*.c src/dcp/*.c src/math/*.c src/*.h src/dcp/*.h src/math/*.h sysinc/*.h
+	$(CLANG_FORMAT) -i src/*.c src/chickens/*.c src/dcp/*.c src/hv/*.c src/math/*.c src/*.h src/dcp/*.h src/hv/*.h src/math/*.h sysinc/*.h
 format-check:
-	$(CLANG_FORMAT) --dry-run --Werror src/*.c src/chickens/*.c src/dcp/*.c src/math/*.c src/*.h src/dcp/*.h src/math/*.h sysinc/*.h
+	$(CLANG_FORMAT) --dry-run --Werror src/*.c src/chickens/*.c src/dcp/*.c src/hv/*.c src/math/*.c src/*.h src/dcp/*.h src/hv/*.h src/math/*.h sysinc/*.h
 rustfmt:
 	cd rust && cargo fmt
 rustfmt-check:
@@ -240,7 +251,7 @@ build/%.o: src/%.c build-tag build-cfg
 
 # special target for usage by m1n1.loadobjs
 invoke_cc:
-	$(QUIET)$(CC) -c $(CFLAGS) -Isrc -o $(OBJFILE) $(CFILE)
+	$(QUIET)$(CC) -c $(CFLAGS) -Isrc -Isrc/hv -o $(OBJFILE) $(CFILE)
 
 build/$(NAME).elf: $(BUILD_ALL_OBJS) m1n1.ld
 	$(QUIET)echo "  LD    $@"

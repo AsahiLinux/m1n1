@@ -5,7 +5,7 @@ from .. import sysreg
 
 __all__ = ["patch_text_sprr_emu", "HV_VREGS"]
 
-# Must be kept in sync with enum hv_vreg in src/hv_sprr.h (vreg_id = index).
+# Must be kept in sync with enum hv_vreg in src/hv/hv_sprr.h (vreg_id = index).
 HV_VREGS = [
     sysreg.SPRR_CONFIG_EL1,
     sysreg.GXF_CONFIG_EL1,
