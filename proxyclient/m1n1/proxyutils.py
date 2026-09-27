@@ -313,7 +313,8 @@ class ProxyUtils(Reloadable):
         print(f"  L2C_ERR_ADR: {self.mrs(L2C_ERR_ADR_EL1):#x}");
         print(f"  L2C_ERR_INF: {self.mrs(L2C_ERR_INF_EL1):#x}");
 
-        self.msr(L2C_ERR_STS_EL1, l2c_err_sts) # Clear the flag bits
+        if self.cpu_features.apple_sysregs_unlocked:
+            self.msr(L2C_ERR_STS_EL1, l2c_err_sts) # Clear the flag bits
         self.msr(DAIF, self.mrs(DAIF) | 0x100) # Re-enable SError exceptions
 
     def print_context(self, ctx, is_fault=True, addr=lambda a: f"0x{a:x}", sym=None, num_ctx=9):
