@@ -210,6 +210,7 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         return false;
 
     switch (reg) {
+        SYSREG_PASS(SYS_TPIDR2_EL0)
         SYSREG_PASS(SYS_IMP_APL_CORE_NRG_ACC_DAT);
         SYSREG_PASS(SYS_IMP_APL_CORE_SRM_NRG_ACC_DAT);
         /* Architectural timer, for ECV */
