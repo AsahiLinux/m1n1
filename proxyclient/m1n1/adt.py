@@ -263,6 +263,12 @@ AOPRatios = Struct(
 )
 
 DEV_PROPERTIES = {
+    "display-crossbar*": {
+        "*": {
+            "dfp-endpoints": ADTStringList,
+            "ufp-endpoints": ADTStringList,
+        }
+    },
     "pmgr": {
         "*": {
             "clusters": SafeGreedyRange(Int32ul),
