@@ -1660,6 +1660,15 @@ class HV(Reloadable):
                 except KeyError:
                     pass
 
+            target = f"atc{idx}"
+            for node in self.adt["/arm-io"]:
+                if not node.name.startswith("display-crossbar"):
+                    continue
+                endpoints = node.getprop("dfp-endpoints", [])
+                if target in endpoints:
+                    node.dfp_endpoints = [name for name in endpoints if name != target]
+                    print(f"Removing display endpoint {target} from {node._path}")
+
         if self.wdt_cpu is not None:
             name = f"/cpus/cpu{self.wdt_cpu}"
             print(f"Removing ADT node {name}")
