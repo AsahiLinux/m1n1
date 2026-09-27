@@ -32,4 +32,6 @@ int pmgr_set_mode(uintptr_t addr, u8 target_mode);
 
 u32 pmgr_get_feature(const char *name);
 
+int pmgr_set_voltage_ctl(uint32_t offset);
+
 #endif

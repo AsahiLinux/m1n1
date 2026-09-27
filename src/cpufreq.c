@@ -33,6 +33,7 @@ struct cluster_t {
     bool pcluster;
     uint32_t apsc_pstate;
     uint32_t default_pstate;
+    uint32_t voltage_ctl;
 };
 
 struct feat_t {
@@ -156,39 +157,16 @@ int cpufreq_init_cluster(const struct cluster_t *cluster, const struct feat_t *f
         }
     }
 
-    int pmgr_path[8];
-    u64 pmgr_reg;
-
-    if (adt_path_offset_trace(adt, "/arm-io/pmgr", pmgr_path) < 0) {
-        printf("Error getting /arm-io/pmgr node\n");
-        return -1;
-    }
-
-    if (adt_get_reg(adt, pmgr_path, "reg", 0, &pmgr_reg, NULL) < 0) {
-        printf("Error getting /arm-io/pmgr regs\n");
-        return -1;
-    }
+    /* Pre M1 voltage control handling in pmgr.reg[0]. */
+    if (cluster->voltage_ctl)
+        pmgr_set_voltage_ctl(cluster->voltage_ctl);
 
     switch (chip_id) {
         case S5L8960X:
-            write32(pmgr_reg + PMGR_VOLTAGE_CTL_OFF_S5L8960X, 1);
-            break;
-        case T7000:
-        case T7001:
-            write32(pmgr_reg + PMGR_VOLTAGE_CTL_OFF_T7000, 1);
-            break;
-        case S8000:
-        case S8001:
-        case S8003:
-        case T8010:
-        case T8011:
-        case T8012:
-        case T8015:
-            /*
-             * On T8015 this will result in the register being written
-             * two times (for two clusters). However, this is fine.
-             */
-            write32(pmgr_reg + PMGR_VOLTAGE_CTL_OFF_S8000, 1);
+        case T7000 ... T7001:
+        case S8000 ... S8003:
+        case T8010 ... T8015: /* This covers a gap but T8013 and T8014 will not randomly appear. */
+            /* Do nothing */
             break;
         case T8103:
         case T6000:
@@ -276,40 +254,40 @@ void cpufreq_fixup_cluster(const struct cluster_t *cluster)
 }
 
 static const struct cluster_t s5l8960x_clusters[] = {
-    {"CPU", 0x202200000, false, 2, 6},
+    {"CPU", 0x202200000, false, 2, 6, PMGR_VOLTAGE_CTL_OFF_S5L8960X},
     {},
 };
 
 static const struct cluster_t t7000_clusters[] = {
-    {"CPU", 0x202200000, false, 2, 5},
+    {"CPU", 0x202200000, false, 2, 5, PMGR_VOLTAGE_CTL_OFF_T7000},
     {},
 };
 
 static const struct cluster_t t7001_clusters[] = {
-    {"CPU", 0x202200000, false, 2, 7},
+    {"CPU", 0x202200000, false, 2, 7, PMGR_VOLTAGE_CTL_OFF_T7000},
     {},
 };
 
 static const struct cluster_t s8000_clusters[] = {
-    {"CPU", 0x202200000, false, 2, 7},
+    {"CPU", 0x202200000, false, 2, 7, PMGR_VOLTAGE_CTL_OFF_S8000},
     {},
 };
 
 static const struct cluster_t t8010_clusters[] = {
     /* Fused cluster, kernel expects E-core entry */
-    {"CPU", 0x202f00000, false, 2, 4},
+    {"CPU", 0x202f00000, false, 2, 4, PMGR_VOLTAGE_CTL_OFF_S8000},
     {},
 };
 
 static const struct cluster_t t8012_clusters[] = {
     /* Fused cluster, kernel expects P-core entry */
-    {"CPU", 0x202f00000, false, 6, 10},
+    {"CPU", 0x202f00000, false, 6, 10, PMGR_VOLTAGE_CTL_OFF_S8000},
     {},
 };
 
 static const struct cluster_t t8015_clusters[] = {
-    {"ECPU", 0x208e00000, false, 2, 6},
-    {"PCPU", 0x208e80000, true, 2, 7},
+    {"ECPU", 0x208e00000, false, 2, 6, PMGR_VOLTAGE_CTL_OFF_S8000},
+    {"PCPU", 0x208e80000, true, 2, 7, 0 /* already written for the first cluster */},
     {},
 };
 
