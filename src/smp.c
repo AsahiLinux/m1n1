@@ -211,8 +211,7 @@ static void smp_start_cpu(int index, const struct cpu_info *cpu)
     _reset_stack_el1 = dummy_stack_el1 + DUMMY_STACK_SIZE;
 }
 
-static void smp_stop_cpu(int index, int die, int cluster, int core, u64 impl, u64 cpu_start_base,
-                         bool deep_sleep)
+static void smp_stop_cpu(int index, const struct cpu_info *cpu, bool deep_sleep)
 {
     int i;
 
@@ -222,12 +221,12 @@ static void smp_stop_cpu(int index, int die, int cluster, int core, u64 impl, u6
     if (!spin_table[index].flag)
         return;
 
-    printf("Stopping CPU %d (%d:%d:%d)... ", index, die, cluster, core);
+    printf("Stopping CPU %d (%d:%d:%d)... ", index, cpu->die, cpu->cluster, cpu->core);
 
-    cpu_start_base += die * PMGR_DIE_OFFSET;
+    u64 start_base = cpu_start_base + cpu->die * PMGR_DIE_OFFSET;
 
     // Request CPU stop
-    write32(cpu_start_base + 0x0, 1 << (4 * cluster + core));
+    write32(start_base + 0x0, 1 << (4 * cpu->cluster + cpu->core));
 
     u64 dsleep = deep_sleep;
     // Put the CPU to sleep
@@ -245,7 +244,7 @@ static void smp_stop_cpu(int index, int die, int cluster, int core, u64 impl, u6
     // Check that it actually shut down
     for (i = 0; i < 50; i++) {
         sysop("dmb ld");
-        if (!(read64(impl + 0x100) & 0xff))
+        if (!(read64(cpu->impl_reg + 0x100) & 0xff))
             break;
         udelay(1000);
     }
@@ -471,8 +470,7 @@ void smp_stop_secondaries(bool deep_sleep)
         if (!cpu->valid || i == boot_cpu_idx)
             continue;
 
-        smp_stop_cpu(i, cpu->die, cpu->cluster, cpu->core, cpu->impl_reg, cpu_start_base,
-                     deep_sleep);
+        smp_stop_cpu(i, cpu, deep_sleep);
     }
 }
 
