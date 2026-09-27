@@ -165,6 +165,8 @@ const struct midr_part_info midr_parts[] = {
     {MIDR_PART_T6050_SOTRA_PCORE, "M5 Pro Sotra (P core)", NULL, &features_m4},
     {MIDR_PART_T6051_SOTRAC_MCORE, "M5 Max Sotra C (M core)", NULL, &features_m4},
     {MIDR_PART_T6051_SOTRAC_PCORE, "M5 Max Sotra C (P core)", NULL, &features_m4},
+    {MIDR_PART_T8152_KOMODO_ECORE, "M6 Komodo (E core)", NULL, &features_m4},
+    {MIDR_PART_T8152_KOMODO_PCORE, "M6 Komodo (P core)", NULL, &features_m4},
 };
 
 const struct midr_part_features features_unknown = {
