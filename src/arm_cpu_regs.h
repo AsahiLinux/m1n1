@@ -187,6 +187,13 @@
 #define HCR_SWIO     BIT(1)
 #define HCR_VM       BIT(0)
 
+#define SYS_ID_AA64PFR1_EL1 sys_reg(3, 0, 0, 4, 1)
+#define ID_AA64PFR1_SME     GENMASK(27, 24)
+#define ID_AA64PFR1_SME2    2
+
+#define SYS_SMCR_EL2 sys_reg(3, 4, 1, 2, 6)
+#define SMCR_EZT0    BIT(30)
+
 #define SYS_ID_AA64MMFR0_EL1   sys_reg(3, 0, 0, 7, 0)
 #define ID_AA64MMFR0_ECV       GENMASK(63, 60)
 #define ID_AA64MMFR0_FGT       GENMASK(59, 56)
