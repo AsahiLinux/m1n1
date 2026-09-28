@@ -86,13 +86,16 @@ class ESR_EC(IntEnum):
     MSR            = 0b011000
     SVE            = 0b011001
     PAUTH_FAIL     = 0b011100
+    SME            = 0b011101
     IABORT_LOWER   = 0b100000
     IABORT         = 0b100001
     PC_ALIGN       = 0b100010
     DABORT_LOWER   = 0b100100
     DABORT         = 0b100101
     SP_ALIGN       = 0b100110
+    MOPS           = 0b100111
     FP_EXC         = 0b101100
+    GCS            = 0b101101
     SERROR         = 0b101111
     BKPT_LOWER     = 0b110000
     BKPT           = 0b110001
