@@ -20,6 +20,8 @@ from m1n1.setup import *
 from m1n1.tgtypes import BootArgs_r1, BootArgs_r2, BootArgs_r3
 from m1n1.macho import MachO
 from m1n1 import asm
+from m1n1.bootmem import BOOT_BLOBS, find_boot_blobs, copy_boot_blobs
+from construct import Array, Int64ul
 
 new_base = u.base
 
@@ -38,19 +40,11 @@ else:
 if args.quiet:
     p.iodev_set_usage(IODEV.FB, 0)
 
-sepfw_start, sepfw_length = 0, 0
-preoslog_start, preoslog_size = 0, 0
-
-if not args.no_sepfw:
-    sepfw_start, sepfw_length = u.adt["chosen"]["memory-map"].SEPFW
-    if hasattr(u.adt["chosen"]["memory-map"], "preoslog"):
-        preoslog_start, preoslog_size = u.adt["chosen"]["memory-map"].preoslog
-
-image_size = align(len(image))
-sepfw_off = image_size
-image_size += align(sepfw_length)
-preoslog_off = image_size
-image_size += align(preoslog_size)
+if args.no_sepfw:
+    blob_names = tuple(name for name in BOOT_BLOBS if name != "SEPFW")
+else:
+    blob_names = BOOT_BLOBS
+blobs, image_size = find_boot_blobs(u.adt["chosen"]["memory-map"]._properties, blob_names, align(len(image)))
 bootargs_off = image_size
 bootargs_size = 0x4000
 image_size += bootargs_size
@@ -58,19 +52,18 @@ image_size += bootargs_size
 print(f"Total region size: 0x{image_size:x} bytes")
 image_addr = u.malloc(image_size)
 
+copy_boot_blobs(p, [(name, src, size, image_addr + off) for name, src, size, off in blobs])
+
 print(f"Loading kernel image (0x{len(image):x} bytes)...")
 u.compressed_writemem(image_addr, image, True)
 p.dc_cvau(image_addr, len(image))
 
-if not args.no_sepfw:
-    print(f"Copying SEPFW (0x{sepfw_length:x} bytes)...")
-    p.memcpy8(image_addr + sepfw_off, sepfw_start, sepfw_length)
-    print(f"Adjusting addresses in ADT...")
-    u.adt["chosen"]["memory-map"].SEPFW = (new_base + sepfw_off, sepfw_length)
-    u.adt["chosen"]["memory-map"].BootArgs = (new_base + bootargs_off, bootargs_size)
-    if hasattr(u.adt["chosen"]["memory-map"], "preoslog"):
-        p.memcpy8(image_addr + preoslog_off, preoslog_start, preoslog_size)
-        u.adt["chosen"]["memory-map"].preoslog = (new_base + preoslog_off, preoslog_size)
+print("Adjusting addresses in ADT...")
+for name, src, size, off in blobs:
+    mm = u.adt["chosen"]["memory-map"]
+    mm._properties[name] = (new_base + off, size)
+    mm._types[name] = (Array(2, Int64ul), False)
+u.adt["chosen"]["memory-map"].BootArgs = (new_base + bootargs_off, bootargs_size)
 
 if args.xnu:
     def remove_oslog(node):
