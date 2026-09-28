@@ -53,6 +53,16 @@ struct hv_secondary_info_t {
 
 static struct hv_secondary_info_t hv_secondary_info;
 
+static void hv_enable_sme_zt0(void)
+{
+    u64 sme = FIELD_GET(ID_AA64PFR1_SME, mrs(SYS_ID_AA64PFR1_EL1));
+    if (sme != ID_AA64PFR1_SME2)
+        return;
+
+    /* Don't trap SME instructions to EL2 */
+    reg_set(SYS_SMCR_EL2, SMCR_EZT0);
+}
+
 void hv_init(void)
 {
     pcie_shutdown();
@@ -100,6 +110,8 @@ void hv_init(void)
     // Set deep WFI back to defaults
     if (cpu_features->apple_sysregs_unlocked)
         reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
+
+    hv_enable_sme_zt0();
 
     sysop("dsb ishst");
     sysop("tlbi alle1is");
@@ -231,6 +243,8 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
 
     if (cpu_features->apple_sysregs_unlocked)
         reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
+
+    hv_enable_sme_zt0();
 
     // For M3 and up, CNTHCTL_EL2 must be written after the counter redirection
     sysop("isb");
