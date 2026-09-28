@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 
 #include "hv.h"
+#include "adt.h"
 #include "assert.h"
 #include "cpu_regs.h"
 #include "display.h"
@@ -33,6 +34,65 @@ static bool hv_should_exit[MAX_CPUS];
 bool hv_started_cpus[MAX_CPUS];
 u64 hv_cpus_in_guest;
 u64 hv_saved_sp[MAX_CPUS];
+
+static u64 hv_cpu_state_regs[MAX_CPUS];
+
+static bool hv_cpu_state_access(struct exc_info *ctx, u64 ipa, u64 *val, bool write, int width)
+{
+    if (1 << width != 4)
+        return false;
+    if (write)
+        return hv_pa_rw(ctx, ipa, val, write, width);
+
+    for (int cpu = 0; cpu < MAX_CPUS; cpu++) {
+        u64 base = hv_cpu_state_regs[cpu];
+        if (!base)
+            continue;
+        if (ipa != base)
+            continue;
+
+        /* Clear out the lower byte when the core hasn't been started by the guest yet */
+        if (!hv_pa_rw(ctx, ipa, val, write, width))
+            return false;
+        if (!hv_started_cpus[cpu])
+            *val &= ~0xffUL;
+        return true;
+    }
+
+    return false;
+}
+
+static bool hv_cpu_state_setup_hook(void)
+{
+    int node;
+
+    memset(hv_cpu_state_regs, 0, sizeof(hv_cpu_state_regs));
+
+    node = adt_path_offset(adt, "/cpus");
+    if (node < 0)
+        return false;
+
+    ADT_FOREACH_CHILD(adt, node)
+    {
+        u32 cpu;
+        u64 reg[2];
+
+        if (ADT_GETPROP(adt, node, "cpu-id", &cpu) != sizeof(cpu))
+            return false;
+        if (ADT_GETPROP_ARRAY(adt, node, "cpu-impl-reg", reg) != sizeof(reg))
+            return false;
+
+        hv_cpu_state_regs[cpu] = reg[0] + 0x100;
+        if (hv_map_hook(hv_cpu_state_regs[cpu], hv_cpu_state_access, 8) < 0)
+            return false;
+    }
+
+    sysop("dsb ishst");
+    sysop("tlbi vmalls12e1is");
+    sysop("dsb ish");
+    sysop("isb");
+    return true;
+}
 
 struct hv_secondary_info_t {
     uint64_t hcr;
@@ -128,6 +188,11 @@ void hv_start(void *entry, u64 regs[4])
 {
     if (boot_cpu_idx == -1) {
         printf("Boot CPU has not been found, can't start hypervisor\n");
+        return;
+    }
+
+    if (!hv_cpu_state_setup_hook()) {
+        printf("CPU state hook setup failed, can't start the hypervisor\n");
         return;
     }
 
