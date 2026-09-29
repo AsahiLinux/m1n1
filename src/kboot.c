@@ -2837,8 +2837,8 @@ int kboot_prepare_dt(void *fdt)
         // on the secondary (non-boot) cores. Add a reserved-memory region to
         // prevent Linux from crashing when allocating this memory and writing
         // to it from a secondary core.
-        u64 ro_start = mrs(CTRR_M4_LWR_EL2);
-        u64 ro_end = ALIGN_UP(mrs(CTRR_M4_UPR_EL2), SZ_4K);
+        u64 ro_start = mrs(SYS_IMP_APL_CTRR_C_LWR_EL2);
+        u64 ro_end = ALIGN_UP(mrs(SYS_IMP_APL_CTRR_C_UPR_EL2), SZ_4K);
         if (ro_end - ro_start > 12 * SZ_4K)
             printf("WARNING: M4+ SMP-RO is large (48KB)");
         if (fdt_add_mem_rsv(dt, ro_start, ro_end - ro_start))
