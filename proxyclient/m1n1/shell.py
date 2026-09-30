@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 import atexit, serial, os, struct, code, traceback, readline, rlcompleter, sys
 import __main__
 import builtins

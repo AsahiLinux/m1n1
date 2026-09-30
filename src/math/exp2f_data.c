@@ -2,7 +2,7 @@
  * Shared data between expf, exp2f and powf.
  *
  * Copyright (c) 2017-2018, Arm Limited.
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "exp2f_data.h"

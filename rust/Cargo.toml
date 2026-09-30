@@ -3,7 +3,7 @@ name = "rust"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/AsahiLinux/m1n1"
-license = "MIT"
+license = "GPL-2.0-or-later"
 publish = false
 
 [lib]

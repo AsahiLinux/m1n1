@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 from ..utils import *
 from .spmi1 import R_CMD, R_REPLY
 

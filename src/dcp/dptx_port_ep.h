@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-License-Identifier: GPL-2.0-or-later
 /* Copyright 2022 Sven Peter <sven@svenpeter.dev> */
 
 #ifndef __APPLE_DCP_DPTX_PORT_EP_H__

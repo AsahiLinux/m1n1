@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 """Tests for proxyclient/m1n1/toolchain.py"""
 
 import os

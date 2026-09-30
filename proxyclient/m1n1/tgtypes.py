@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 from construct import *
 
 __all__ = ["BootArgs_r1", "BootArgs_r2", "BootArgs_r3"]

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 import io, sys, traceback, struct, array, bisect, os, plistlib, signal, runpy
 from construct import *
 

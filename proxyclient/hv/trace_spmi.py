@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 from m1n1.utils import *
 from m1n1.trace.spmi import SPMITracer, SPMIDevTracer, ACE3SPMIDevTracer

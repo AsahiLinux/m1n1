@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 from ..common import *
 from ...utils import align
 from ...hw.dart import DART

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-License-Identifier: GPL-2.0-or-later
 /* Copyright 2023 Janne Grunau <j@jannau.net> */
 
 #ifndef __APPLE_DCP_DPAV_EP_H__

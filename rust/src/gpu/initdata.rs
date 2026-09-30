@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-License-Identifier: GPL-2.0-or-later
 #![allow(clippy::unusual_byte_groupings)]
 
 use versions::versions;

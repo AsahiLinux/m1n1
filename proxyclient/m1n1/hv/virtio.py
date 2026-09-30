@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 from construct import Struct, Int8ul, Int16ul, Int32sl, Int32ul, Int64ul
 from subprocess import Popen, PIPE
 import pathlib

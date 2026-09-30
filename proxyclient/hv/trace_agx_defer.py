@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 import datetime
 
 from m1n1.constructutils import show_struct_trace, Ver

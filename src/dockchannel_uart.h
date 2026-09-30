@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 
 #ifndef DOCKCHANNEL_UART_H
 #define DOCKCHANNEL_UART_H

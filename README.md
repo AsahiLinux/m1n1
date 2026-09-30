@@ -84,7 +84,8 @@ Supported compression formats:
 
 ## License
 
-m1n1 is licensed under the MIT license, as included in the [LICENSE](LICENSE) file.
+m1n1 is licensed under the GNU General Public License version 2 (or later),
+as included in the [LICENSE](LICENSE) file.
 
 * Copyright The Asahi Linux Contributors
 

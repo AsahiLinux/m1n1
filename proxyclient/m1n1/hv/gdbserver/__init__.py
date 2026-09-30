@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 import errno, io, os, pkgutil, re, selectors, socketserver, threading, traceback
 from construct import Array, BytesInteger, Container, Int32ul, Int64ul, Struct
 

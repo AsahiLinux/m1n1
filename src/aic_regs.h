@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 
 #define AIC_REG_SIZE     0x8000
 #define AIC_INFO         0x0004

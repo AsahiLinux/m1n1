@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-2.0-or-later
 #![deny(unsafe_op_in_unsafe_fn)]
 
 use crate::c_size_t;

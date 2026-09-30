@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 from contextlib import contextmanager, ExitStack
 import sys, pathlib, os
 import subprocess

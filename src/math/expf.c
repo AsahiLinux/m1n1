@@ -2,7 +2,7 @@
  * Single-precision e^x function.
  *
  * Copyright (c) 2017-2018, Arm Limited.
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include <math.h>

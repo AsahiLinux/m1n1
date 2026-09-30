@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 from m1n1.utils import align_up
 
 def collect_aic_irqs_in_use(adt):

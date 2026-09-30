@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 import struct
 from collections import defaultdict, deque
 from enum import IntEnum

@@ -1,5 +1,5 @@
 
-// SPDX-License-Identifier: GPL-2.0-only OR MIT
+// SPDX-License-Identifier: GPL-2.0-or-later
 /* Copyright 2022 Sven Peter <sven@svenpeter.dev> */
 
 #include <stdbool.h>

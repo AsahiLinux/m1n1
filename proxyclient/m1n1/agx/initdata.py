@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 from ..fw.agx.initdata import *
 from ..fw.agx.channels import ChannelInfo
 from ..hw.uat import MemoryAttr

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 """
 Things to note:
     The command buffer is encrypted after the poweron sequence, and I

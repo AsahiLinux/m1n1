@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2018, Arm Limited.
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 #ifndef _EXP2F_DATA_H
 #define _EXP2F_DATA_H

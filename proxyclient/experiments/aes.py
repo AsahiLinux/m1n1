@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 import sys, pathlib
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))

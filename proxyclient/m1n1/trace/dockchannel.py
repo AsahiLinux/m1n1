@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 import struct
 
 from ..hw.dockchannel import DockChannelIRQRegs, DockChannelConfigRegs, DockChannelDataRegs

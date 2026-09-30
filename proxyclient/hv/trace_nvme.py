@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 from construct import *
 from construct.core import Int16ul, Int32ul, Int64ul, Int8ul

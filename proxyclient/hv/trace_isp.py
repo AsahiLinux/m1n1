@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 from m1n1.trace.isp import ISPTracer
 
 # bootargs += camLogging=0xfffffffffffff

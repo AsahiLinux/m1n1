@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-2.0-or-later
 
 use crate::adt::{ADTNode, AdtError};
 // use crate::println;

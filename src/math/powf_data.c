@@ -2,7 +2,7 @@
  * Data definition for powf.
  *
  * Copyright (c) 2017-2018, Arm Limited.
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "powf_data.h"

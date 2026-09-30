@@ -1,4 +1,4 @@
-/* spDx-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "exception.h"
 

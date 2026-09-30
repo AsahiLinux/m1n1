@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 import json, re
 import importlib.resources as resources
 from enum import Enum, IntEnum, IntFlag

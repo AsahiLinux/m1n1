@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 # Extension for ipython to handle monitor polling
 # and simd context after each executed line
 

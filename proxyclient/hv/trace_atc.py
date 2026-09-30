@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-or-later
 
 from m1n1.hv import TraceMode
 from m1n1.hw.dwc3 import XhciRegs, Dwc3CoreRegs, PipehandlerRegs
