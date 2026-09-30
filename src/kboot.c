@@ -318,7 +318,7 @@ static int dt_set_chosen(void)
             bail("FDT: couldn't set random seed");
     }
 
-    if (cpu_features->apple_sysregs_unlocked) {
+    if (!cpu_features->apple_sysregs_unlocked) {
         /*
          * M4 and later lose architectural state in WFI and WFIT. Add the
          * bootargs to prevent Linux from crashing in the idle loop and delay
