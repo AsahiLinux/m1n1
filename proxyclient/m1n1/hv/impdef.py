@@ -2,6 +2,7 @@
 import array
 
 from .. import sysreg
+from ..sysreg import sysreg_encode
 from .sprr import HV_VREGS, HVC_SYSREG_FLAG
 
 __all__ = ["patch_impdef_to_hvc", "SHADOW_REGS", "HVC_SPTM_SYSREG"]
@@ -234,12 +235,6 @@ SHADOW_REGS = [
 ]
 
 
-def _msr(enc, read):
-    op0, op1, crn, crm, op2 = enc
-    return (0xd5000000 | (read << 21) | (1 << 20) | ((op0 & 1) << 19) | (op1 << 16) |
-            (crn << 12) | (crm << 8) | (op2 << 5))
-
-
 def _hvc(imm):
     return 0xd4000002 | (imm << 5)
 
@@ -253,11 +248,11 @@ def _enc(name):
 RENAME_OPCODES = {}
 for _src, _dst in RENAME.items():
     for _rd in (0, 1):
-        RENAME_OPCODES[_msr(_enc(_src), _rd)] = _msr(_enc(_dst), _rd)
+        RENAME_OPCODES[sysreg_encode(_enc(_src), _rd)] = sysreg_encode(_enc(_dst), _rd)
 
-SHADOW_OPCODES = {_msr(enc, rd): (i, rd) for i, enc in enumerate(SHADOW_REGS) for rd in (0, 1)}
+SHADOW_OPCODES = {sysreg_encode(enc, rd): (i, rd) for i, enc in enumerate(SHADOW_REGS) for rd in (0, 1)}
 
-VREG_OPCODES = {_msr(_enc(src), rd): (HV_VREGS.index(_enc(dst)), rd) for src, dst in VREG_MAP.items() for rd in (0, 1)}
+VREG_OPCODES = {sysreg_encode(_enc(src), rd): (HV_VREGS.index(_enc(dst)), rd) for src, dst in VREG_MAP.items() for rd in (0, 1)}
 
 
 def patch_impdef_to_hvc(data, log=None):
