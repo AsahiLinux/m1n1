@@ -6,6 +6,7 @@
 #include "cpu_regs.h"
 #include "display.h"
 #include "gxf.h"
+#include "hv_sprr.h"
 #include "hv_sptm.h"
 #include "memory.h"
 #include "pcie.h"
@@ -341,6 +342,9 @@ void hv_start_secondary(int cpu, void *entry, u64 regs[4])
 {
     printf("HV: Initializing secondary %d\n", cpu);
     iodev_console_flush();
+
+    if (hv_sprr_active)
+        hv_sptm_init_secondary(cpu);
 
     mmu_init_secondary(cpu);
     iodev_console_flush();

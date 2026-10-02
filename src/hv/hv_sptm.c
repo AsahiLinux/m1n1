@@ -15,6 +15,19 @@ struct hv_sptm_cpu {
 
 static struct hv_sptm_cpu sptm_cpus[MAX_CPUS];
 
+static const u8 sptm_protection_regs[] = {
+    HV_SPTM_CTRR_C_LWR_EL1,     HV_SPTM_CTRR_C_UPR_EL1,     HV_SPTM_CTRR_C_CTL_EL1,
+    HV_SPTM_CTRR_D_LWR_EL1,     HV_SPTM_CTRR_D_UPR_EL1,     HV_SPTM_CTRR_D_CTL_EL1,
+    HV_SPTM_CTXR_A_LWR_EL1,     HV_SPTM_CTXR_A_UPR_EL1,     HV_SPTM_CTXR_A_CTL_EL1,
+    HV_SPTM_CTXR_B_LWR_EL1,     HV_SPTM_CTXR_B_UPR_EL1,     HV_SPTM_CTXR_B_CTL_EL1,
+    HV_SPTM_CTXR_C_LWR_EL1,     HV_SPTM_CTXR_C_UPR_EL1,     HV_SPTM_CTXR_C_CTL_EL1,
+    HV_SPTM_CTXR_D_LWR_EL1,     HV_SPTM_CTXR_D_UPR_EL1,     HV_SPTM_CTXR_D_CTL_EL1,
+    HV_SPTM_CTRR_A_CTL_EL1,     HV_SPTM_CTRR_B_CTL_EL1,     HV_SPTM_ACC_CTRR_A_CTL_EL2,
+    HV_SPTM_ACC_CTRR_B_CTL_EL2, HV_SPTM_ACC_CTRR_C_CTL_EL2, HV_SPTM_ACC_CTRR_D_CTL_EL2,
+    HV_SPTM_ACC_CTXR_A_CTL_EL2, HV_SPTM_ACC_CTXR_B_CTL_EL2, HV_SPTM_ACC_CTXR_C_CTL_EL2,
+    HV_SPTM_ACC_CTXR_D_CTL_EL2,
+};
+
 static void sptm_init_cpu(int i)
 {
     memset(&sptm_cpus[i], 0, sizeof(sptm_cpus[i]));
@@ -48,6 +61,13 @@ void hv_sptm_init(void)
     for (int i = 0; i < MAX_CPUS; i++)
         sptm_init_cpu(i);
     hv_sptm_active = true;
+}
+
+void hv_sptm_init_secondary(int cpu)
+{
+    for (u32 i = 0; i < ARRAY_SIZE(sptm_protection_regs); i++)
+        sptm_cpus[cpu].shadow[sptm_protection_regs[i]] =
+            sptm_cpus[boot_cpu_idx].shadow[sptm_protection_regs[i]];
 }
 
 #define VREG_MASKED_ALIAS(vreg_id, shadow_id, mask)                                                \
