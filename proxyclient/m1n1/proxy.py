@@ -135,7 +135,13 @@ class UartInterface(Reloadable):
     DEFAULT_UART_DEV="/dev/m1n1"
     DEFAULT_BAUD_RATE=115200
     if platform.system() == 'Darwin':
-        DEFAULT_UART_DEV="/dev/cu.usbmodemP_01"
+        # Latest versions of macOS include the serial number
+        for fn in os.listdir("/dev"):
+            prefix="tty.usbmodem"
+            # 13 = len(mac serial number) (= 12) + 1
+            if fn.startswith(prefix) and len(fn[len(prefix):]) == 13 and fn[-1] == '1':
+                DEFAULT_UART_DEV=f"/dev/{fn}"
+                break
 
     def __init__(self, device=None, debug=False):
         self.debug = debug
