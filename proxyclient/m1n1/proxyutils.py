@@ -177,19 +177,13 @@ class ProxyUtils(Reloadable):
 
     def mrs(self, reg, *, silent=False, call=None):
         '''read system register reg'''
-        op0, op1, CRn, CRm, op2 = sysreg_parse(reg)
-
-        op =  ((op0 << 19) | (op1 << 16) | (CRn << 12) |
-               (CRm << 8) | (op2 << 5) | 0xd5200000)
+        op = sysreg_encode(reg, read=True)
 
         return self.exec(op, call=call, silent=silent)
 
     def msr(self, reg, val, *, silent=False, call=None):
         '''Write val to system register reg'''
-        op0, op1, CRn, CRm, op2 = sysreg_parse(reg)
-
-        op =  ((op0 << 19) | (op1 << 16) | (CRn << 12) |
-               (CRm << 8) | (op2 << 5) | 0xd5000000)
+        op = sysreg_encode(reg, read=False)
 
         self.exec(op, val, call=call, silent=silent)
 

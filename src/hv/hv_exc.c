@@ -5,6 +5,7 @@
 #include "cpu_regs.h"
 #include "exception.h"
 #include "hv_sprr.h"
+#include "hv_sptm.h"
 #include "iodev.h"
 #include "smp.h"
 #include "string.h"
@@ -505,6 +506,10 @@ void hv_exc_sync(struct exc_info *ctx)
             break;
         case ESR_EC_HVC:
             hv_wdt_breadcrumb('h');
+            if (hv_sptm_dispatch(ctx, FIELD_GET(ESR_ISS, ctx->esr))) {
+                hv_wdt_breadcrumb('s');
+                return;
+            }
             if (hv_hvc_dispatch_unlocked(ctx, FIELD_GET(ESR_ISS, ctx->esr))) {
                 hv_wdt_breadcrumb('s');
                 return;

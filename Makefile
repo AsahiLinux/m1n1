@@ -127,6 +127,7 @@ HV_OBJECTS := $(patsubst %,hv/%, \
 	hv_asm.o \
 	hv_exc.o \
 	hv_sprr.o \
+	hv_sptm.o \
 	hv_virtio.o \
 	hv_vm.o \
 	hv_vuart.o \
