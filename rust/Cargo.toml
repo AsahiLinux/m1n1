@@ -13,7 +13,7 @@ crate-type = [ "staticlib" ]
 [dependencies]
 fatfs = { git = "https://github.com/rafalh/rust-fatfs", rev = "4eccb50d011146fbed20e133d33b22f3c27292e7", default-features = false, features = ["lfn", "alloc"], optional = true }
 sha1_smol = { version = "1.0.1" }
-uuid = {  version = "1.23", default-features = false, optional = true }
+uuid = { version = "1.23", default-features = false, optional = true }
 versions = { path = "./versions" }
 
 [features]
