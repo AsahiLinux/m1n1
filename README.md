@@ -83,9 +83,11 @@ Supported compression formats:
 * xz
 
 ## License
-
-m1n1 is licensed under the GNU General Public License version 2 (or later),
-as included in the [LICENSE](LICENSE) file.
+m1n1 was made available under the terms of the [MIT licence](LICENCE.MIT)
+until version 1.9.9. Code present in those releases continues to be available
+under that same licence. Starting from version 2.0.0, m1n1 is licenced
+under the terms of the [GNU General Public License version 2](LICENSE); any
+code checked in thereafter is available under the terms of the GPL exclusively.
 
 * Copyright The Asahi Linux Contributors
 
