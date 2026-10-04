@@ -143,7 +143,7 @@ void m1n1_main(void)
 {
     printf("\n\nm1n1 %s\n", m1n1_version);
     printf("Copyright The Asahi Linux Contributors\n");
-    printf("Licensed under the MIT license\n\n");
+    printf("Licensed under the GNU General Public License v2 or later\n\n");
 
     printf("Running in EL%lu\n\n", mrs(CurrentEL) >> 2);
 
