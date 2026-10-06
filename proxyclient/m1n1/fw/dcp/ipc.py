@@ -408,6 +408,21 @@ frame_sync_props_t = Struct(
     "unk1" / UnkBytes(28),
 )
 
+frame_sync_props_t_14 = Struct(
+    "IOMFBTestBacklightDimValue" / Int32ul,
+    "IOMFBBrightnessLevel" / Int32ul,
+    "APTPDCBrightness" / Int32ul,
+    "Brightness_Scale" / Int32ul,
+    "BLNitsCap" / Int32ul,
+    "RTPLCBLNitsScaler" / Int32ul,
+    "twilightStrength" / Int32ul,
+    "ammoliteStrength" / Int32ul,
+    "IOMFBIndicatorBrightnessNits" / Int32ul,
+    "IOMFBSecureContentFactor" / Int32ul,
+    "IOMFBSecureIndicatorFactor" / Int32ul,
+    "unk" / UnkBytes(12),
+)
+
 IOUserClient = Struct(
     "addr" / Hex(Int64ul),
     "unk" / Int32ul,
@@ -609,7 +624,9 @@ class UPPipeAP_H13P(IPCObject):
     D001 = Callback(bool_, "did_power_on_signal")
     D002 = Callback(void, "will_power_off_signal")
     D003 = Callback(void, "rt_bandwidth_setup_ap", config=OutPtr(rt_bw_config_t))
-    D006 = Callback(void, "set_frame_sync_props", props=InOutPtr(frame_sync_props_t))
+    D006 = Callback(void, "set_frame_sync_props",
+                    props=InOutPtr(frame_sync_props_t if Ver.check("V < V14_7")
+                                   else frame_sync_props_t_14))
 
 IdleCachingState = uint32_t
 
@@ -619,18 +636,21 @@ class UnifiedPipeline2(IPCObject):
     vi_set_temperature_hint = Call(IOMFBStatus, "vi_set_temperature_hint")
 
     if Ver.check("V < V13_5"):
+        A353 = Call(uint, "get_system_type")
         A357 = set_create_DFB
         A358 = vi_set_temperature_hint
     else:
         if Ver.check("V >= V14_7"):
+            A361 = Call(UnkBytes(4), "getVideoDataForIDs", UnkBytes(0x7c)) # (IOAVVideoTimingData*, IOAVVideoColorData*, unsigned int, unsigned int, bool*)"
+            A373 = Call(uint, "get_system_type")
             A377 = set_create_DFB
             A378 = vi_set_temperature_hint
         else:
+            A353 = Call(uint, "get_system_type")
             A373 = set_create_DFB
             A374 = vi_set_temperature_hint
 
     A352 = Call(bool_, "applyProperty", uint, uint)
-    A353 = Call(uint, "get_system_type")
 
     D100 = Callback(void, "match_pmu_service")
     D101 = Callback(uint32_t, "UNK_get_some_field")
@@ -687,12 +707,13 @@ class UnifiedPipeline2(IPCObject):
         D115 = Callback(bool_, "set_tiling_state", event=uint, para=uint, val=InPtr(uint))
         D122 = cb_is_waking_from_hibernate
         if Ver.check("V >= V14_7"):
-            D117 = cb_set_idle_caching_state_ap
+            D117 = Callback(void, "set_idle_caching_state_ap", IdleCachingState, uint, bool_)
             D121 = cb_start_hardware_boot
             D125 = cb_read_edt_data
             D127 = cb_setDCPAVPropStart
             D128 = cb_setDCPAVPropChunk
             D129 = cb_setDCPAVPropEnd
+            D130 = cb_allocate_bandwidth
         else:
             D116 = cb_set_idle_caching_state_ap
             D120 = cb_start_hardware_boot
@@ -708,6 +729,7 @@ class UPPipe2(IPCObject):
     A103 = Call(void, "get_config_frame_size", width=InOutPtr(uint), height=InOutPtr(uint))
     A104 = Call(void, "set_config_frame_size", width=uint, height=uint)
     A105 = Call(void, "program_config_frame_size")
+    A115 = Call(uint, "aot_enabled")
     A130 = Call(bool_, "init_ca_pmu")
     A131 = Call(bool_, "pmu_service_matched")
     A132 = Call(bool_, "backlight_service_matched")
@@ -787,30 +809,34 @@ class IOMobileFramebufferAP(IPCObject):
 
     A401 = Call(uint32_t, "start_signal")
 
-    A413 = Call(uint32_t, "get_digital_out_state", InOutPtr(uint))
-    A414 = Call(uint32_t, "get_display_area", InOutPtr(ulong))
-    A419 = Call(uint32_t, "get_gamma_table", InOutPtr(Bytes(0xc0c)))
-    A423 = Call(uint32_t, "set_contrast", InOutPtr(Float32l))
-
     if Ver.check("V >= V14_7"):
-        A406 = Call(uint32_t, "swap_start", client=InOutPtr(IOUserClient))
+        A406 = Call(uint32_t, "swap_start_dcp", client=InOutPtr(IOUserClient), unk=uint) # signature is 'unsigned int*, unsigned long' ??
         A407 = swap_submit_dcp
         A409 = Call(uint32_t, "set_display_device", uint)
         A410 = Call(bool_, "is_main_display")
         A411 = Call(uint32_t, "set_digital_out_mode", uint, uint)
+        A412 = Call(uint32_t, "get_digital_out_state", InOutPtr(uint))
+        A413 = Call(uint32_t, "get_display_area", InOutPtr(ulong))
+        A418 = Call(uint32_t, "get_gamma_table", InOutPtr(Bytes(0xc0c)))
+        A419 = Call(uint32_t, "set_gamma_table", InOutPtr(Bytes(0xc0c)))
         A421 = Call(uint32_t, "set_matrix", uint, InPtr(Array(3, Array(3, ulong))))
+        A422 = Call(uint32_t, "set_contrast", InOutPtr(Float32l))
         A425 = Call(uint32_t, "get_color_remap_mode", InOutPtr(uint32_t))
         A426 = Call(uint32_t, "setBrightnessCorrection", uint)
-        A429 = Call(UnkBytes(4), "some_thing_v14_7", UnkBytes(4))
+        A429 = Call(UnkBytes(4), "temp_queue_swap_cancel", swap_id=uint)
     else:
         A407 = Call(uint32_t, "swap_start", swap_id=InOutPtr(uint), client=InOutPtr(IOUserClient))
         A408 = swap_submit_dcp
         A410 = Call(uint32_t, "set_display_device", uint)
         A411 = Call(bool_, "is_main_display")
         A412 = Call(uint32_t, "set_digital_out_mode", uint, uint)
+        A413 = Call(uint32_t, "get_digital_out_state", InOutPtr(uint))
+        A414 = Call(uint32_t, "get_display_area", InOutPtr(ulong))
+        A419 = Call(uint32_t, "get_gamma_table", InOutPtr(Bytes(0xc0c)))
         A422 = Call(uint32_t, "set_matrix", uint, InPtr(Array(3, Array(3, ulong))))
-        A427 = Call(uint32_t, "setBrightnessCorrection", uint)
+        A423 = Call(uint32_t, "set_contrast", InOutPtr(Float32l))
         A426 = Call(uint32_t, "get_color_remap_mode", InOutPtr(uint32_t))
+        A427 = Call(uint32_t, "setBrightnessCorrection", uint)
 
     # FW version dependent Call tags
     set_block_dcp = Call(uint32_t, "set_block_dcp", arg1=uint64_t, arg2=uint, arg3=uint, arg4=Array(8, ulong), arg5=uint, data=SizedBytes(0x1000, "length"), length=ulong, unknArry=Array(4, uint))
@@ -858,40 +884,55 @@ class IOMobileFramebufferAP(IPCObject):
         A468 = setPowerState
         A469 = isKeepOnScreen
     else:
-        A442 = display_width
-        A443 = display_height
-        A446 = printRegs
-        A456 = first_client_open
-        A457 = last_client_close_dcp
-        A458 = writeDebugInfo
-        A459 = flush_debug_flags
-        A460 = io_fence_notify
         A463 = setDisplayRefreshProperties
-        A466 = flush_supportsPower
-        A467 = abort_swaps_dcp
-        A468 = Call(uint, "remove_gain_maps", InOutPtr(IOMobileFramebufferUserClient))
-        A472 = setPowerState
-        A473 = isKeepOnScreen
 
         if Ver.check("V >= V14_7"):
             A436 = set_block_dcp
             A437 = get_block_dcp
             A439 = swap_set_color_matrix
             A440 = set_parameter_dcp
+            A441 = display_width
+            A442 = display_height
+            A443 = get_display_size
             A444 = do_create_default_frame_buffer
+            A445 = printRegs
             A448 = enable_disable_video_power_savings
             A455 = first_client_open
+            A456 = last_client_close_dcp
+            A458 = flush_debug_flags
+            A459 = io_fence_notify
+            A466 = flush_supportsPower
+            A467 = abort_swaps_dcp
+            A468 = Call(uint, "remove_gain_maps", InOutPtr(IOMobileFramebufferUserClient))
+            A470 = Call(UnkBytes(4), "update_dfb", InPtr(IOSurface), uint, uint, ulong)
             A471 = update_dfb
-            A477 = Call(uint, "some_getter_v14_7")
+            A472 = Call(uint32_t, "setPowerState", ulong, bool_, bool_, OutPtr(uint), bool_)
+            A473 = isKeepOnScreen
+            A475 = Call(UnkBytes(4), "set_dcp_clamshellstate", uint)
+            A476 = Call(UnkBytes(4), "send_clamshell_state_to_controller")
+            A477 = Call(uint, "get_shared_disp_state")
         else:
             A437 = set_block_dcp
             A438 = get_block_dcp
             A440 = swap_set_color_matrix
             A441 = set_parameter_dcp
+            A442 = display_width
+            A443 = display_height
             A444 = get_display_size
             A445 = do_create_default_frame_buffer
+            A446 = printRegs
             A449 = enable_disable_video_power_savings
+            A456 = first_client_open
+            A457 = last_client_close_dcp
+            A458 = writeDebugInfo
+            A459 = flush_debug_flags
+            A460 = io_fence_notify
+            A466 = flush_supportsPower
+            A467 = abort_swaps_dcp
+            A468 = Call(uint, "remove_gain_maps", InOutPtr(IOMobileFramebufferUserClient))
             A470 = update_dfb
+            A472 = setPowerState
+            A473 = isKeepOnScreen
 
     # FW version dependent callbacks
     if Ver.check("V < V13_5"):
