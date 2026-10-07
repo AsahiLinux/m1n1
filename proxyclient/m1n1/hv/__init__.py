@@ -1365,6 +1365,8 @@ class HV(Reloadable):
     def init(self):
         if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
             print("SPTM/SPRR/GXF: emulating in EL2 (guest image will be patched)")
+        elif self.sptm_mode == SPTM_MODE.SPTM_NESTED_VIRT:
+            print("SPTM: running with nested virtualization (not supported on M1)")
 
         self.adt = load_adt(self.u.get_adt())
         self.iodev = self.p.iodev_whoami()
@@ -2163,7 +2165,7 @@ class HV(Reloadable):
         print("Shutting down framebuffer...")
         self.p.fb_shutdown(True)
 
-        if self.sptm_mode == SPTM_MODE.SPTM_NONE and self.u.cpu_features.apple_sysregs_unlocked:
+        if self.sptm_mode != SPTM_MODE.SPTM_EMULATION and self.u.cpu_features.apple_sysregs_unlocked:
             print("Enabling SPRR...")
             self.u.msr(SPRR_CONFIG_EL1, 1)
 
