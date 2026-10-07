@@ -357,6 +357,7 @@ DEV_PROPERTIES = {
         "*": {
             "speaker-config": SafeGreedyRange(SpeakerConfig),
             "amp-dcblocker-config": DCBlockerConfig,
+            "amp-tx-zd-config": SafeGreedyRange(Hex(Int32ul)),
         },
     },
     "*aop-audio*": {
