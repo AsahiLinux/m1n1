@@ -4,8 +4,10 @@
 #include "types.h"
 
 /* ARM extensions */
-#define ESR_EC_IMPDEF      0b111111
-#define ESR_ISS_IMPDEF_MSR 0x20
+#define ESR_EC_IMPDEF         0b111111
+#define ESR_ISS_IMPDEF_MSR    0x20
+#define ESR_ISS_IMPDEF_GEXIT  0x22
+#define ESR_ISS_IMPDEF_GENTER 0x23
 
 #define SYS_IMP_APL_ACTLR_EL12 sys_reg(3, 6, 15, 14, 6)
 
@@ -716,6 +718,7 @@
 #define SYS_IMP_APL_SPRR_PERM_EL12 sys_reg(3, 6, 15, 15, 7)
 
 #define SYS_IMP_APL_TPIDR_GL1 sys_reg(3, 6, 15, 10, 1)
+#define SYS_IMP_APL_TPIDR_GL2 sys_reg(3, 6, 15, 11, 1)
 #define SYS_IMP_APL_VBAR_GL1  sys_reg(3, 6, 15, 10, 2)
 #define SYS_IMP_APL_SPSR_GL1  sys_reg(3, 6, 15, 10, 3)
 #define SYS_IMP_APL_ASPSR_GL1 sys_reg(3, 6, 15, 10, 4)
@@ -840,3 +843,6 @@
 #define SYS_IMP_APL_ACC_CTXR_D_CTL_EL2 sys_reg(3, 0, 11, 8, 7)
 #define SYS_IMP_APL_ACC_CTRR_A_CTL_EL2 sys_reg(3, 4, 15, 11, 4)
 #define SYS_IMP_APL_ACC_CTRR_B_CTL_EL2 sys_reg(3, 4, 15, 11, 5)
+
+/* Other registers */
+#define SYS_IMP_APL_AVNCR_EL2 sys_reg(3, 4, 15, 10, 7)

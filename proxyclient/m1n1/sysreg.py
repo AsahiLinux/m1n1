@@ -85,6 +85,7 @@ class ESR_EC(IntEnum):
     SMC            = 0b010111
     MSR            = 0b011000
     SVE            = 0b011001
+    NESTED_ERET    = 0b011010
     PAUTH_FAIL     = 0b011100
     SME            = 0b011101
     IABORT_LOWER   = 0b100000

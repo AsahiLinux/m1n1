@@ -4,6 +4,7 @@
 #include "assert.h"
 #include "cpu_regs.h"
 #include "exception.h"
+#include "gxf.h"
 #include "hv_sprr.h"
 #include "iodev.h"
 #include "smp.h"
@@ -29,6 +30,7 @@ struct hv_pcpu_data {
 struct hv_pcpu_data pcpu[MAX_CPUS];
 
 void hv_exit_guest(void) __attribute__((noreturn));
+void hv_gexit(void);
 
 static u64 stolen_time = 0;
 static u64 exc_entry_time;
@@ -211,7 +213,8 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         return false;
 
     switch (reg) {
-        SYSREG_PASS(SYS_TPIDR2_EL0)
+        SYSREG_PASS(SYS_TPIDR2_EL0);
+        SYSREG_PASS(SYS_IMP_APL_TPIDR_GL2);
         SYSREG_PASS(SYS_IMP_APL_CORE_NRG_ACC_DAT);
         SYSREG_PASS(SYS_IMP_APL_CORE_SRM_NRG_ACC_DAT);
         /* Architectural timer, for ECV */
@@ -346,6 +349,43 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
             return true;
     }
     return false;
+}
+
+static bool hv_handle_nested_eret(struct exc_info *ctx, bool is_gexit)
+{
+    if (ctx->esr != 0x6a000000 /* Nested eret */ && !is_gexit) return false;
+
+    const char* operation = is_gexit ? "GEXIT" : "ERET";
+
+    if (!hv_is_nested()) hv_panic("Tried to handle nested %s while not in nested mode\n", operation);
+
+    // Restore SPSR
+    u64 spsr = in_gl12() ? mrs(SYS_IMP_APL_SPSR_GL12) : mrs(SPSR_EL12);
+    if ((spsr & SPSR_M_EL2x) == SPSR_M_EL2x)
+    {
+        spsr &= ~SPSR_M_EL2x;
+        spsr |= SPSR_M_EL1x;
+    }
+    ctx->spsr = spsr;
+
+    if (is_gexit)
+    {
+        msr(SYS_IMP_APL_ASPSR_GL1, mrs(SYS_IMP_APL_ASPSR_GL12));
+        // TODO: This is not needed to get macOS/SPTM running, but may be helpful for additional instrumentation
+        // hv_enable_genter_trap();
+    }
+
+    // Return to where the guest wanted to return to
+    ctx->elr = in_gl12() ? mrs(SYS_IMP_APL_ELR_GL12) : mrs(ELR_EL12);
+
+    return true;
+}
+
+static bool hv_handle_genter(struct exc_info *ctx, bool *protect_elr)
+{
+    hv_disable_genter_trap();
+    *protect_elr = true;
+    return true;
 }
 
 static bool hv_handle_msr(struct exc_info *ctx, u64 iss)
@@ -483,12 +523,14 @@ static void hv_dump_serror(struct exc_info *ctx)
     iodev_console_flush();
 }
 
-void hv_exc_sync(struct exc_info *ctx)
+bool hv_exc_sync(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('S');
     hv_get_context(ctx);
     bool handled = false;
     u32 ec = FIELD_GET(ESR_EC, ctx->esr);
+
+    bool do_gexit = false;
 
     switch (ec) {
         case ESR_EC_MSR:
@@ -507,7 +549,7 @@ void hv_exc_sync(struct exc_info *ctx)
             hv_wdt_breadcrumb('h');
             if (hv_hvc_dispatch_unlocked(ctx, FIELD_GET(ESR_ISS, ctx->esr))) {
                 hv_wdt_breadcrumb('s');
-                return;
+                return do_gexit;
             }
             break;
     }
@@ -518,10 +560,12 @@ void hv_exc_sync(struct exc_info *ctx)
         hv_set_elr(ctx->elr);
         hv_update_fiq();
         hv_wdt_breadcrumb('s');
-        return;
+        return do_gexit;
     }
 
     hv_exc_entry();
+
+    bool protect_elr = false;
 
     switch (ec) {
         case ESR_EC_DABORT_LOWER:
@@ -532,24 +576,34 @@ void hv_exc_sync(struct exc_info *ctx)
             hv_wdt_breadcrumb('M');
             handled = hv_handle_msr(ctx, FIELD_GET(ESR_ISS, ctx->esr));
             break;
+        case ESR_EC_NESTED_ERET:
+            hv_wdt_breadcrumb('N');
+            handled = protect_elr = hv_handle_nested_eret(ctx, false);
+            break;
         case ESR_EC_IMPDEF:
             hv_wdt_breadcrumb('A');
             switch (FIELD_GET(ESR_ISS, ctx->esr)) {
                 case ESR_ISS_IMPDEF_MSR:
                     handled = hv_handle_msr(ctx, ctx->afsr1);
                     break;
+                case ESR_ISS_IMPDEF_GEXIT:
+                    handled = do_gexit = protect_elr = hv_handle_nested_eret(ctx, true);
+                    break;
+                case ESR_ISS_IMPDEF_GENTER:
+                    handled = hv_handle_genter(ctx, &protect_elr);
+                    break;
             }
             break;
         case ESR_EC_HVC:
             hv_wdt_breadcrumb('H');
             handled = hv_hvc_dispatch(ctx, FIELD_GET(ESR_ISS, ctx->esr));
+            protect_elr = true; // HVC alread leaves ELR past the instruction
             break;
     }
 
     if (handled) {
         hv_wdt_breadcrumb('+');
-        // HVC alread leaves ELR past the instruction
-        if (ec != ESR_EC_HVC)
+        if (!protect_elr)
             ctx->elr += 4;
     } else {
         hv_wdt_breadcrumb('-');
@@ -563,6 +617,8 @@ void hv_exc_sync(struct exc_info *ctx)
 
     hv_exc_exit(ctx);
     hv_wdt_breadcrumb('s');
+
+    return do_gexit;
 }
 
 void hv_exc_irq(struct exc_info *ctx)
