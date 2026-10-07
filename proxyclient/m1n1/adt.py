@@ -525,7 +525,7 @@ def build_prop(path, name, v, t=None):
     elif isinstance(v, float):
         t = Float32l
     elif isinstance(v, tuple) and all(isinstance(i, int) for i in v):
-        t = Array(len(v), Int32ul)
+        t = Array(len(v), Int64ul)
 
     return t.build(v)
 
@@ -847,9 +847,9 @@ class ADTNode:
 
     def pmgr_dev_get_parents(self, dev):
         if self._pmgr_u8id:
-            return dev.parents_un.u8id.parents 
+            return dev.parents_un.u8id.parents
         else:
-            return dev.parents_un.u16id.parents 
+            return dev.parents_un.u16id.parents
 
     def pmgr_dev_get_block(self, dev):
         if self._pmgr_use_group_and_offset:

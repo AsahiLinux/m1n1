@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-import io, sys, traceback, struct, array, bisect, os, plistlib, signal, runpy
+import io, sys, traceback, struct, array, bisect, os, plistlib, signal, runpy, secrets
 from construct import *
+from dataclasses import dataclass
 
 from ..asm import ARMAsm
 from ..tgtypes import *
@@ -344,7 +345,7 @@ class HV(Reloadable):
                         pa |= self.SPTE_TRACE_WRITE
                     self.map_sw(mzone.start, pa, mzone.stop - mzone.start)
                 elif mode == TraceMode.OFF:
-                    self.map_hw(mzone.start, mzone.start, mzone.stop - mzone.start)
+                    self.map_hw(mzone.start, kwargs["pa_start"] if "pa_start" in kwargs else mzone.start, mzone.stop - mzone.start)
                     self.log(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> HW:{ident}")
                     continue
 
@@ -609,7 +610,7 @@ class HV(Reloadable):
 
     def addr(self, addr):
         unslid_addr = addr + self.sym_offset
-        if self.xnu_mode and (addr < self.tba.virt_base or unslid_addr < self.macho.vmin):
+        if self.xnu_mode and (addr < self.tba.virt_base or unslid_addr < self.xnu_macho.vmin):
             return f"0x{addr:x}"
 
         saddr, name = self.sym(addr)
@@ -625,7 +626,7 @@ class HV(Reloadable):
     def sym(self, addr):
         unslid_addr = addr + self.sym_offset
 
-        if self.xnu_mode and (addr < self.tba.virt_base or unslid_addr < self.macho.vmin):
+        if self.xnu_mode and (addr < self.tba.virt_base or unslid_addr < self.xnu_macho.vmin):
             return None, None
 
         idx = bisect.bisect_left(self.symbols, (unslid_addr + 1, "")) - 1
@@ -1704,73 +1705,28 @@ class HV(Reloadable):
         self.p.hv_set_time_stealing(False)
 
 
-    def load_raw(self, image, entryoffset=0x800, use_xnu_symbols=False, vmin=0):
-        sepfw_start, sepfw_length = self.u.adt["chosen"]["memory-map"].SEPFW
-        tc_start, tc_size = self.u.adt["chosen"]["memory-map"].TrustCache
-        if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
-            preoslog_start, preoslog_size = self.u.adt["chosen"]["memory-map"].preoslog
-        else:
-            preoslog_size = 0
-
-        image_size = align(len(image))
-        sepfw_off = image_size
-        image_size += align(sepfw_length)
-        preoslog_off = image_size
-        image_size += preoslog_size
-        self.bootargs_off = image_size
-        bootargs_size = 0x4000
-        image_size += bootargs_size
-
-        print(f"Total region size: 0x{image_size:x} bytes")
-
-        self.phys_base = phys_base = guest_base = self.u.heap_top
+    def _prepare_load(self):
+        self.phys_base = guest_base = self.u.heap_top
         self.ram_base = self.phys_base & ~0xffffffff
         self.ram_size = self.u.ba.mem_size_actual
-        guest_base += 16 << 20 # ensure guest starts within a 16MB aligned region of mapped RAM
-        self.adt_base = guest_base
-        guest_base += align(self.u.ba.devtree_size)
-        tc_base = guest_base
-        guest_base += align(tc_size)
+        guest_base += 32 << 20 # ensure guest starts 32MB above the start of mapped RAM to ensure that all mappings work
         self.guest_base = guest_base
-        mem_top = self.u.ba.phys_base + self.u.ba.mem_size
-        mem_size = mem_top - phys_base
-
-        print(f"Physical memory: 0x{phys_base:x} .. 0x{mem_top:x}")
-        print(f"Guest region start: 0x{guest_base:x}")
-        
-        self.entry = guest_base + entryoffset
+        self.mem_top = self.u.ba.phys_base + self.u.ba.mem_size
+        self.mem_size = self.mem_top - self.phys_base
 
         print(f"Mapping guest physical memory...")
         self.add_tracer(irange(self.ram_base, self.u.ba.phys_base - self.ram_base), "RAM-LOW", TraceMode.OFF)
-        self.add_tracer(irange(phys_base, self.u.ba.mem_size_actual - phys_base + self.ram_base), "RAM-HIGH", TraceMode.OFF)
+        self.add_tracer(irange(self.phys_base, self.u.ba.mem_size_actual - self.phys_base + self.ram_base), "RAM-HIGH", TraceMode.OFF)
         self.unmap_carveouts()
 
-        print(f"Loading kernel image (0x{len(image):x} bytes)...")
-        self.u.compressed_writemem(guest_base, image, True)
-        self.p.dc_cvau(guest_base, len(image))
-        self.p.ic_ivau(guest_base, len(image))
+    def _load_executable_raw(self, image, base, label):
+        print(f"Loading {label} image (0x{len(image):x} bytes)...")
+        self.u.compressed_writemem(base, image, True)
+        self.p.dc_cvau(base, len(image))
+        self.p.ic_ivau(base, len(image))
 
-        print(f"Copying SEPFW (0x{sepfw_length:x} bytes)...")
-        self.p.memcpy8(guest_base + sepfw_off, sepfw_start, sepfw_length)
-
-        print(f"Copying TrustCache (0x{tc_size:x} bytes)...")
-        self.p.memcpy8(tc_base, tc_start, tc_size)
-
-        if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
-            print(f"Copying preoslog (0x{preoslog_size:x} bytes)...")
-            self.p.memcpy8(guest_base + preoslog_off, preoslog_start, preoslog_size)
-
-        print(f"Adjusting addresses in ADT...")
-        self.adt["chosen"]["memory-map"].SEPFW = (guest_base + sepfw_off, sepfw_length)
-        self.adt["chosen"]["memory-map"].TrustCache = (tc_base, tc_size)
-        self.adt["chosen"]["memory-map"].DeviceTree = (self.adt_base, align(self.u.ba.devtree_size))
-        self.adt["chosen"]["memory-map"].BootArgs = (guest_base + self.bootargs_off, bootargs_size)
-        if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
-            self.adt["chosen"]["memory-map"].preoslog = (guest_base + preoslog_off, preoslog_size)
-        if hasattr(self.u.adt["chosen"]["memory-map"], "Kernel_mach__header"):
-            self.adt["chosen"]["memory-map"].Kernel_mach__header = (guest_base, 0)
-
-        def remove_oslog(node):
+    def _remove_oslog(self):
+        def _inner_remove_oslog(node):
             names = node.segment_names.split(";")
             try:
                 idx = names.index("__OS_LOG")
@@ -1783,51 +1739,118 @@ class HV(Reloadable):
 
         for node in self.adt["/arm-io"]:
             if hasattr(node, "segment_names"):
-                remove_oslog(node)
+                _inner_remove_oslog(node)
             for nub in node:
                 if hasattr(nub, "segment_names"):
-                    remove_oslog(nub)
+                    _inner_remove_oslog(nub)
 
-        print(f"Setting up bootargs at 0x{guest_base + self.bootargs_off:x}...")
+    def _write_boot_args(self, top_of_kernel_data):
+        print(f"Setting up bootargs at 0x{self.guest_base + self.bootargs_off:x}...")
 
-        self.tba.mem_size = mem_size
-        self.tba.phys_base = phys_base
-        self.tba.virt_base = 0xfffffe0010000000 + (phys_base & (32 * 1024 * 1024 - 1))
-        self.tba.devtree = self.adt_base - phys_base + self.tba.virt_base
-        self.tba.top_of_kernel_data = guest_base + image_size
-
-        if use_xnu_symbols == True:
-            self.sym_offset = vmin - guest_base + self.tba.phys_base - self.tba.virt_base
+        self.tba.mem_size = self.mem_size
+        self.tba.phys_base = self.phys_base
+        self.tba.virt_base = 0xfffffe0010000000 + (self.phys_base & (32 * 1024 * 1024 - 1))
+        self.tba.devtree = self.adt_base - self.phys_base + self.tba.virt_base
+        self.tba.top_of_kernel_data = top_of_kernel_data
 
         if self.tba.revision <= 1:
-            self.iface.writemem(guest_base + self.bootargs_off, BootArgs_r1.build(self.tba))
+            self.iface.writemem(self.guest_base + self.bootargs_off, BootArgs_r1.build(self.tba))
         elif self.tba.revision == 2:
-            self.iface.writemem(guest_base + self.bootargs_off, BootArgs_r2.build(self.tba))
+            self.iface.writemem(self.guest_base + self.bootargs_off, BootArgs_r2.build(self.tba))
         elif self.tba.revision == 3:
-            self.iface.writemem(guest_base + self.bootargs_off, BootArgs_r3.build(self.tba))
+            self.iface.writemem(self.guest_base + self.bootargs_off, BootArgs_r3.build(self.tba))
+
+    def _set_rvbars(self):
+        print("Setting secondary CPU RVBARs...")
+        rvbar = self.entry & ~0xfff
+        for cpu in self.adt["cpus"]:
+            if cpu.state == "running":
+                continue
+            addr, size = cpu.cpu_impl_reg
+            print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
+            self.p.write64(addr, rvbar)
+
+    def load_raw(self, image, entryoffset=0x800, use_xnu_symbols=False, vmin=0):
+        sepfw_start, sepfw_length = self.u.adt["chosen"]["memory-map"].SEPFW
+        tc_start, tc_size = self.u.adt["chosen"]["memory-map"].TrustCache
+        if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
+            preoslog_start, preoslog_size = self.u.adt["chosen"]["memory-map"].preoslog
+        else:
+            preoslog_size = 0
+
+        image_size = align(len(image))
+
+        sepfw_off = image_size
+        image_size += align(sepfw_length)
+
+        preoslog_off = None
+        if preoslog_size > 0:
+            preoslog_off = image_size
+            image_size += preoslog_size
+
+        self.bootargs_off = image_size
+        bootargs_size = 0x4000
+        image_size += bootargs_size
+
+        print(f"Total region size: 0x{image_size:x} bytes")
+
+        self._prepare_load()
+
+        self.adt_base = self.guest_base
+        self.guest_base += align(self.u.ba.devtree_size)
+        tc_base = self.guest_base
+        self.guest_base += align(tc_size)
+
+        print(f"Physical memory: 0x{self.phys_base:x} .. 0x{self.mem_top:x}")
+        print(f"Guest region start: 0x{self.guest_base:x}")
+
+        self.entry = self.guest_base + entryoffset
+
+        self._load_executable_raw(image, self.guest_base, "kernel")
+
+        print(f"Copying SEPFW (0x{sepfw_length:x} bytes)...")
+        self.p.memcpy8(self.guest_base + sepfw_off, sepfw_start, sepfw_length)
+
+        print(f"Copying TrustCache (0x{tc_size:x} bytes)...")
+        self.p.memcpy8(tc_base, tc_start, tc_size)
+
+        if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
+            print(f"Copying preoslog (0x{preoslog_size:x} bytes)...")
+            self.p.memcpy8(self.guest_base + preoslog_off, preoslog_start, preoslog_size)
+
+        print(f"Adjusting addresses in ADT...")
+        self.adt["chosen"]["memory-map"].SEPFW = (self.guest_base + sepfw_off, sepfw_length)
+        self.adt["chosen"]["memory-map"].TrustCache = (tc_base, tc_size)
+        self.adt["chosen"]["memory-map"].DeviceTree = (self.adt_base, align(self.u.ba.devtree_size))
+        self.adt["chosen"]["memory-map"].BootArgs = (self.guest_base + self.bootargs_off, bootargs_size)
+        if hasattr(self.u.adt["chosen"]["memory-map"], "preoslog"):
+            self.adt["chosen"]["memory-map"].preoslog = (self.guest_base + preoslog_off, preoslog_size)
+        if hasattr(self.u.adt["chosen"]["memory-map"], "Kernel_mach__header"):
+            self.adt["chosen"]["memory-map"].Kernel_mach__header = (self.guest_base, 0)
+
+        self._remove_oslog()
+
+        self._write_boot_args(self.guest_base + image_size)
+
+        if use_xnu_symbols:
+            self.sym_offset = vmin - self.guest_base + self.tba.phys_base - self.tba.virt_base
 
         if self.u.cpu_features.apple_sysregs_unlocked:
-            print("Setting secondary CPU RVBARs...")
-            rvbar = self.entry & ~0xfff
-            for cpu in self.adt["cpus"]:
-                if cpu.state == "running":
-                    continue
-                addr, size = cpu.cpu_impl_reg
-                print(f"  {cpu.name}: [0x{addr:x}] = 0x{rvbar:x}")
-                self.p.write64(addr, rvbar)
+            self._set_rvbars()
 
     def _load_macho_symbols(self):
-        self.symbol_dict = self.macho.symbols
-        self.symbols = [(v, k) for k, v in self.macho.symbols.items()]
+        self.symbol_dict = self.xnu_macho.symbols
+        self.symbols = [(v, k) for k, v in self.xnu_macho.symbols.items()]
         self.symbols.sort()
 
-    def load_macho(self, data, symfile=None):
+    # TODO: Integrate the patches for emulated SPRR/GXF into new sptm loader code
+    def load_macho(self, data, symfile=None, label="kernel"):
         if isinstance(data, str):
             data = open(data, "rb")
 
         self.xnu_mode = True
 
-        self.macho = macho = MachO(data)
+        self.xnu_macho = macho = MachO(data)
         if symfile is not None:
             if isinstance(symfile, str):
                 symfile = open(symfile, "rb")
@@ -1897,7 +1920,147 @@ class HV(Reloadable):
             image = macho.prepare_image(load_hook)
         else:
             image = macho.prepare_image()
-        self.load_raw(image, entryoffset=(macho.entry - macho.vmin), use_xnu_symbols=self.xnu_mode and symfile is not None, vmin=macho.vmin)
+        self.load_raw(image, entryoffset=(macho.entry - macho.vmin), use_xnu_symbols=self.xnu_mode and symfile is not None, vmin=macho.vmin, label=label)
+
+    def load_macos_sptm(self, xnu_path, sptm_path, txm_path, symfile=None):
+        self.xnu_mode = True
+
+        self.xnu_macho = xnu_macho = MachO(open(xnu_path, "rb"))
+        if symfile is not None:
+            if isinstance(symfile, str):
+                symfile = open(symfile, "rb")
+            syms = MachO(symfile)
+            self.xnu_macho.add_symbols("com.apple.kernel", syms)
+
+        self._load_macho_symbols()
+
+        xnu_image, xnu_segments = self.xnu_macho.prepare_image()
+        xnu_map = {
+            "ro": xnu_image[:xnu_segments["__DATA_SPTM"][0]],
+            "rs": xnu_image[xnu_segments["__DATA_SPTM"][0]:xnu_segments["__DATA_SPTM"][1]],
+            "rx": xnu_image[xnu_segments["__TEXT_EXEC"][0]:xnu_segments["__TEXT_EXEC"][1]],
+            "bx": xnu_image[xnu_segments["__TEXT_BOOT_EXEC"][0]:xnu_segments["__TEXT_BOOT_EXEC"][1]],
+            "rw": xnu_image[xnu_segments["__PRELINK_INFO"][0]:xnu_segments["__DATA"][1]],
+            "le": xnu_image[xnu_segments["__LINKEDIT"][0]:],
+        }
+        xnu_entry = xnu_macho.entry - xnu_macho.vmin
+
+        sptm_macho = MachO(open(sptm_path, "rb"))
+        sptm_image, sptm_segments = sptm_macho.prepare_image()
+        sptm_map = {
+            "ro": sptm_image[:sptm_segments["__TEXT_EXEC"][0]],
+            "rx": sptm_image[sptm_segments["__TEXT_EXEC"][0]:sptm_segments["__TEXT_EXEC"][1]],
+            "rw": sptm_image[sptm_segments["__TEXT_EXEC"][1]:sptm_segments["__LINKEDIT"][0]],
+            "le": sptm_image[sptm_segments["__LINKEDIT"][0]:],
+        }
+        sptm_entry = sptm_macho.entry - sptm_macho.vmin
+
+        txm_macho = MachO(open(txm_path, "rb"))
+        txm_image, txm_segments = txm_macho.prepare_image()
+        txm_map = {
+            "ro": txm_image[:txm_segments["__TEXT_EXEC"][0]],
+            "rx": txm_image[txm_segments["__TEXT_EXEC"][0]:txm_segments["__TEXT_EXEC"][1]],
+            "bx": txm_image[txm_segments["__TEXT_BOOT_EXEC"][0]:txm_segments["__TEXT_BOOT_EXEC"][1]],
+            "rw": txm_image[txm_segments["__TEXT_BOOT_EXEC"][1]:txm_segments["__LINKEDIT"][0]],
+            "le": txm_image[txm_segments["__LINKEDIT"][0]:],
+        }
+        txm_entry = txm_macho.entry - txm_macho.vmin
+
+        self._prepare_load()
+
+        @dataclass
+        class MemoryMapEntry:
+            name: str
+            data: bytes | None
+
+        memory_map = [
+            # Required by SPTM in this order
+            MemoryMapEntry("TXM-ro", txm_map["ro"]),
+            MemoryMapEntry("TXM-rx", txm_map["rx"]),
+            MemoryMapEntry("TXM-bx", txm_map["bx"]),
+
+            MemoryMapEntry("TrustCache", None),
+
+            MemoryMapEntry("BootKC-rx", xnu_map["rx"]),
+            MemoryMapEntry("BootKC-bx", xnu_map["bx"]),
+            MemoryMapEntry("BootKC-ro", xnu_map["ro"]),
+            MemoryMapEntry("BootKC-rs", xnu_map["rs"]),
+
+            MemoryMapEntry("DeviceTree", None),
+
+            MemoryMapEntry("SPTM-ro", sptm_map["ro"]),
+            MemoryMapEntry("SPTM-rx", sptm_map["rx"]),
+            MemoryMapEntry("SPTM-rw", sptm_map["rw"]),
+
+            # Required by SPTM, no further checks
+            MemoryMapEntry("SPTM-le", sptm_map["le"]),
+
+            MemoryMapEntry("TXM-rw", txm_map["rw"]),
+            MemoryMapEntry("TXM-le", txm_map["le"]),
+
+            MemoryMapEntry("BootKC-rw", xnu_map["rw"]),
+            MemoryMapEntry("BootKC-le", xnu_map["le"]),
+
+            MemoryMapEntry("RTBuddySeg", None),
+            MemoryMapEntry("SEPFW", None),
+            MemoryMapEntry("preoslog", None),
+            MemoryMapEntry("BootArgs", None),
+        ]
+
+        image_size = 0
+
+        for entry in memory_map:
+            base = self.guest_base + image_size
+            if entry.data:
+                length = len(entry.data)
+                self._load_executable_raw(entry.data, base, entry.name)
+            elif entry.name == "DeviceTree":
+                length = align(self.u.ba.devtree_size)
+            elif entry.name == "BootArgs":
+                length = 0x4000
+            else:
+                start, length = getattr(self.u.adt["chosen"]["memory-map"], entry.name)
+                print(f"Copying {entry.name} (0x{length:x} bytes)...")
+                self.p.memcpy8(base, start, length)
+
+            image_size += length
+            setattr(self.adt["chosen"]["memory-map"], entry.name, (base, length))
+
+        self.adt["chosen"]["memory-map"].slide = (self.phys_base, self.guest_base - self.phys_base)
+        self.adt["chosen"]["memory-map"].TXM_entry = (txm_entry, 0x0)
+        self.adt["chosen"]["memory-map"].TXM_virt = (0x0, 0x0)
+
+        self.adt["chosen"]["memory-map"].BootKC_entry = (xnu_entry, 0x0)
+        self.adt["chosen"]["memory-map"].BootKC_virt = (0x0, 0x0)
+
+        self.adt["chosen"]["memory-map"].SPTM_rm = (self.adt["chosen"]["memory-map"].SPTM_ro[0], (
+            self.adt["chosen"]["memory-map"].SPTM_ro[1] +
+            self.adt["chosen"]["memory-map"].SPTM_rx[1] +
+            self.adt["chosen"]["memory-map"].SPTM_rw[1] +
+            self.adt["chosen"]["memory-map"].SPTM_le[1]
+        ))
+
+        self.entry = self.adt["chosen"]["memory-map"].SPTM_ro[0] + sptm_entry
+        self.adt_base = self.adt["chosen"]["memory-map"].DeviceTree[0]
+        self.bootargs_off = self.adt["chosen"]["memory-map"].BootArgs[0] - self.guest_base
+
+        hib = self.adt.create_node("/chosen/hibernation")
+        hib.key_sptm_ctrr = secrets.token_bytes(0x30)
+        hib.key_xnu_ctrr = secrets.token_bytes(0x30)
+
+        if not hasattr(self.adt["chosen"]["asmb"], "lp-sip0"):
+            self.adt["chosen"]["asmb"].lp_sip0 = b'\x7f\x00\x00\x00\x00\x00\x00\x00'
+
+        if not hasattr(self.adt["chosen"]["manifest-properties"], "love"):
+            self.adt["chosen"]["manifest-properties"].love = b"26.1.388.5.7,0"
+
+        self._remove_oslog()
+        self._write_boot_args(self.guest_base + image_size)
+        if symfile is not None:
+            self.sym_offset = xnu_macho.vmin - self.adt["chosen"]["memory-map"].BootKC_ro[0] + self.tba.phys_base - self.tba.virt_base
+        if self.u.cpu_features.apple_sysregs_unlocked:
+            self._set_rvbars()
+
 
     def update_pac_mask(self):
         tcr = TCR(self.u.mrs(TCR_EL12))
@@ -1931,7 +2094,7 @@ class HV(Reloadable):
         identifier = info_plist["CFBundleIdentifier"]
         name = info_plist["CFBundleName"]
         macho = MachO(open(f"{kext}/Contents/MacOS/{name}", "rb"))
-        self.macho.add_symbols(identifier, macho, demangle=demangle)
+        self.xnu_macho.add_symbols(identifier, macho, demangle=demangle)
         self._load_macho_symbols()
 
     def _handle_sigint(self, signal=None, stack=None):
@@ -1953,7 +2116,7 @@ class HV(Reloadable):
     def run_code(self, code):
         exec(code, self.shell_locals)
 
-    def start(self):
+    def start(self, load_adt=True):
         print("Disabling other iodevs...")
         for iodev in IODEV:
             if iodev != self.iodev:
@@ -1966,10 +2129,11 @@ class HV(Reloadable):
         print("Updating page tables...")
         self.pt_update()
 
-        adt_blob = self.adt.build()
-        print(f"Uploading ADT (0x{len(adt_blob):x} bytes)...")
-        assert len(adt_blob) <= align(self.u.ba.devtree_size)
-        self.iface.writemem(self.adt_base, adt_blob)
+        if load_adt:
+            adt_blob = self.adt.build()
+            print(f"Uploading ADT (0x{len(adt_blob):x} bytes)...")
+            assert len(adt_blob) <= align(self.u.ba.devtree_size)
+            self.iface.writemem(self.adt_base, adt_blob)
 
         print("Improving logo...")
         self.p.fb_improve_logo()
