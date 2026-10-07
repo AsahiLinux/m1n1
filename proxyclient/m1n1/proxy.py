@@ -71,6 +71,7 @@ class EXC_RET(IntEnum):
 class SPTM_MODE(IntEnum):
     SPTM_NONE = 0
     SPTM_EMULATION = 1
+    SPTM_NESTED_VIRT = 2
 
 class DCP_SHUTDOWN_MODE(IntEnum):
     QUIESCED = 0

@@ -23,7 +23,7 @@ parser.add_argument('--strip-node', action="append", default=[], metavar='SUBSTR
 parser.add_argument('-r', '--raw', action="store_true")
 parser.add_argument('-E', '--entry-point', action="store", type=int, help="Entry point for the raw image", default=0x800)
 parser.add_argument('-a', '--append-payload', type=pathlib.Path, action="append", default=[])
-parser.add_argument('--sptm-mode', choices=("none", "emulation"), default="none",
+parser.add_argument('--sptm-mode', choices=("none", "emulation", "nested"), default="none",
                     help='SPTM mode: none when no SPTM guest is used, emulation for SPRR/GXF emulation.')
 parser.add_argument('-v', '--volume', type=volumespec, action='append',
                     help='Attach a 9P virtio device for file export to the guest. The argument is a host path to the '
@@ -55,6 +55,8 @@ def sptm_mode_arg(val):
         return SPTM_MODE.SPTM_NONE
     elif val == "emulation":
         return SPTM_MODE.SPTM_EMULATION
+    elif val == "nested":
+        return SPTM_MODE.SPTM_NESTED_VIRT
     raise ValueError()
 args.sptm_mode = sptm_mode_arg(args.sptm_mode)
 

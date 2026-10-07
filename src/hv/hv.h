@@ -11,6 +11,7 @@
 enum hv_sptm_mode {
     SPTM_NONE = 0,
     SPTM_EMULATION = 1,
+    SPTM_NESTED_VIRT = 2,
 };
 
 extern enum hv_sptm_mode hv_sptm_mode;
@@ -112,6 +113,7 @@ void hv_do_panic(void);
 /* Utilities */
 void hv_update_fiq(void);
 void hv_write_hcr(u64 val);
+void hv_write_hacr(u64 val);
 u64 hv_get_spsr(void);
 void hv_set_spsr(u64 val);
 u64 hv_get_esr(void);
@@ -119,6 +121,8 @@ u64 hv_get_far(void);
 u64 hv_get_elr(void);
 u64 hv_get_afsr1(void);
 void hv_set_elr(u64 val);
+
+bool hv_is_nested(void);
 
 /* HV main */
 void hv_init(void);
