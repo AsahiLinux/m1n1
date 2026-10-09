@@ -81,6 +81,9 @@ else
 CARGO_FLAGS :=
 endif
 
+# workaround https://github.com/rust-lang/rust/issues/163614 LLVM 23 regression in rust 1.99.0
+CARGO_RUSTFLAGS := --config 'build.rustflags = ["-C", "llvm-args=-disable-loop-idiom-wcslen"]'
+
 ifeq ($(CHAINLOADING),1)
 CFG += CHAINLOADING
 CARGO_FLAGS += --features chainload
@@ -228,7 +231,7 @@ build/$(RUST_LIB): src/../build/build_cfg.h rust/src/*.rs rust/src/gpu/*.rs rust
 	$(QUIET)echo "  RS    $@"
 	$(QUIET)mkdir -p $(DEPDIR)
 	$(QUIET)mkdir -p "$(dir $@)"
-	$(QUIET)cargo build $(CARGO_FLAGS) --target $(RUSTARCH) --lib --release --manifest-path rust/Cargo.toml --target-dir build
+	$(QUIET)cargo build $(CARGO_RUSTFLAGS) $(CARGO_FLAGS) --target $(RUSTARCH) --lib --release --manifest-path rust/Cargo.toml --target-dir build
 	$(QUIET)cp "build/$(RUSTARCH)/release/${RUST_LIB}" "$@"
 
 build/%.o: src/%.S
