@@ -27,7 +27,7 @@ struct i2c_dev {
     uintptr_t base;
 };
 
-i2c_dev_t *i2c_init(const char *adt_node)
+i2c_dev_t *i2c_init(const char *adt_node, bool enable_power)
 {
     int adt_path[8];
     int adt_offset;
@@ -43,7 +43,7 @@ i2c_dev_t *i2c_init(const char *adt_node)
         return NULL;
     }
 
-    if (pmgr_adt_power_enable(adt_node)) {
+    if (enable_power && pmgr_adt_power_enable(adt_node)) {
         printf("i2c: Error enabling power for %s\n", adt_node);
         return NULL;
     }

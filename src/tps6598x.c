@@ -329,7 +329,7 @@ int tps6598x_enter_kis(tps6598x_dev_t *dev)
     return ret;
 }
 
-int tps6598x_foreach_hpm(hpm_match_t *match, hpm_action_t *action, void *data)
+int tps6598x_foreach_hpm(hpm_match_t *match, hpm_action_t *action, void *data, bool enable_power)
 {
     char hpm_path[64] = {0};
     char bus_path[64] = {0};
@@ -375,7 +375,7 @@ int tps6598x_foreach_hpm(hpm_match_t *match, hpm_action_t *action, void *data)
                 matched = HPM_FOREACH_MATCH;
 
                 if (!i2c) {
-                    i2c = i2c_init(bus_path);
+                    i2c = i2c_init(bus_path, enable_power);
                     if (!i2c) {
                         printf("tps6598x: i2c_init failed for %s.\n", bus_path);
                         break; // skip to the next bus
@@ -483,7 +483,7 @@ static bool tps6598x_is_dfu(char *hpm_path, void *)
 
 int tps6598x_enable_debugusb(void)
 {
-    int ret = tps6598x_foreach_hpm(tps6598x_is_dfu, tps6598x_enable_debugusb_one, NULL);
+    int ret = tps6598x_foreach_hpm(tps6598x_is_dfu, tps6598x_enable_debugusb_one, NULL, false);
     if (ret < 0) {
         printf("tps6598x_enable_debugusb failed (node not found?)\n");
         return ret;

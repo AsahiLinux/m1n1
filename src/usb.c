@@ -313,7 +313,7 @@ void usb_init(void)
         return;
     }
 
-    tps6598x_foreach_hpm(usb_init_match, usb_init_one, NULL);
+    tps6598x_foreach_hpm(usb_init_match, usb_init_one, NULL, true);
 
     for (int idx = 0; idx < USB_IODEV_COUNT; ++idx)
         usb_phy_bringup(idx); /* Fails on missing devices, just continue */
@@ -357,7 +357,7 @@ void usb_hpm_restore_irqs(bool force)
         adt_path_offset(adt, "/arm-io/usb-complex") > 0)
         return;
 
-    tps6598x_foreach_hpm(usb_hpm_restore_irqs_match, usb_hpm_restore_irqs_one, &force);
+    tps6598x_foreach_hpm(usb_hpm_restore_irqs_match, usb_hpm_restore_irqs_one, &force, true);
 }
 
 void usb_iodev_init(void)
