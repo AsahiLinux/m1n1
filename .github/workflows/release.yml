@@ -53,6 +53,7 @@ jobs:
 
       - name: Install aarch64-unknown-none-softfloat rust target
         run: |
+          rustup update 1.98.1
           rustup target install aarch64-unknown-none-softfloat
 
       # env vars to include date and kernel tag in artifact name
