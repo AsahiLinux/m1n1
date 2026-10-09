@@ -26,7 +26,7 @@ typedef int(hpm_action_t)(char *hpm_path, tps6598x_dev_t *tps, void *data);
 // Return codes for tps6598x_foreach_hpm
 #define HPM_FOREACH_MATCH    0
 #define HPM_FOREACH_NO_MATCH -1
-int tps6598x_foreach_hpm(hpm_match_t *match, hpm_action_t *action, void *data);
+int tps6598x_foreach_hpm(hpm_match_t *match, hpm_action_t *action, void *data, bool enable_power);
 
 int tps6598x_enter_kis(tps6598x_dev_t *dev);
 int tps6598x_enable_debugusb(void);
