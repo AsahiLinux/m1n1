@@ -413,5 +413,8 @@ int usb_enable_debugusb(void)
     printf("usb: waiting 1000ms after enabling debugusb\n");
     mdelay(1000);
 
+    // reset console read pointer to replay the console log
+    iodev_reset_rp(IODEV_DOCKCHANNEL_UART);
+
     return 0;
 }
