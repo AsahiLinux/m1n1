@@ -25,11 +25,7 @@ struct usb_drd_regs {
 #error "USB_IODEV_COUNT is limited to 100 to prevent overflow in ADT path names"
 #endif
 
-#ifdef USE_DEBUG_USB
-#define FIRST_USB_IODEV 1
-#else
-#define FIRST_USB_IODEV 0
-#endif
+static int first_usb_iodev = !!USE_DEBUG_USB;
 
 // length of the format string is is used as buffer size
 // limits the USB instance numbers to reasonable 2 digits
@@ -278,7 +274,7 @@ static bool usb_init_match(char *hpm_path, void *)
 {
     int idx = hpm_idx(hpm_path);
     // skip hpm0 depending on whether DEBUG_USB is in use or not
-    if (idx < FIRST_USB_IODEV)
+    if (idx < first_usb_iodev)
         return false;
     if (idx > USB_IODEV_COUNT)
         return false;
@@ -325,7 +321,7 @@ static bool usb_hpm_restore_irqs_match(char *hpm_path, void *state)
 {
     int idx = hpm_idx(hpm_path);
     // skip hpm0 depending on whether DEBUG_USB is in use or not
-    if (idx < FIRST_USB_IODEV)
+    if (idx < first_usb_iodev)
         return false;
 
     bool force = *(bool *)state;
@@ -362,7 +358,7 @@ void usb_hpm_restore_irqs(bool force)
 
 void usb_iodev_init(void)
 {
-    for (int i = FIRST_USB_IODEV; i < USB_IODEV_COUNT; i++) {
+    for (int i = first_usb_iodev; i < USB_IODEV_COUNT; i++) {
         dwc3_dev_t *opaque;
         struct iodev *usb_iodev;
 
@@ -386,7 +382,7 @@ void usb_iodev_init(void)
 
 void usb_iodev_shutdown(void)
 {
-    for (int i = FIRST_USB_IODEV; i < USB_IODEV_COUNT; i++) {
+    for (int i = first_usb_iodev; i < USB_IODEV_COUNT; i++) {
         struct iodev *usb_iodev = iodev_unregister_device(IODEV_USB0 + i);
         if (!usb_iodev)
             continue;
@@ -403,4 +399,19 @@ void usb_iodev_vuart_setup(iodev_id_t iodev)
         return;
 
     iodev_usb_vuart.opaque = iodev_get_opaque(iodev);
+}
+
+int usb_enable_debugusb(void)
+{
+    if (usb_is_initialized) {
+        printf("usb: debugusb can not be enabled after USB is initialized\n");
+        return -1;
+    }
+
+    first_usb_iodev = 1;
+    tps6598x_enable_debugusb();
+    printf("usb: waiting 1000ms after enabling debugusb\n");
+    mdelay(1000);
+
+    return 0;
 }
