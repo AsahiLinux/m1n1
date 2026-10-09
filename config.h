@@ -23,8 +23,8 @@
 // Some devices like Apple TV HD use other uarts for debug console
 //#define TARGET_BOARD 0x34
 
-// Switch the DFU USB-C port to debugusb
-// #define USE_DEBUG_USB
+// define to '1' to switch the DFU USB-C port to debugusb
+#define USE_DEBUG_USB 0
 
 #ifdef RELEASE
 # define FB_SILENT_MODE
