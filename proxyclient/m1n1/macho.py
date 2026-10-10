@@ -151,7 +151,10 @@ class MachO:
 
         image = bytearray(memory_size)
 
+        segments = {}
+
         for cmd in self.get_cmds(MachOLoadCmdType.SEGMENT_64):
+            segments[cmd.args.segname] = (cmd.args.fileoff, cmd.args.fileoff + cmd.args.filesize)
             dest = cmd.args.vmaddr - self.vmin
             end = min(self.size, cmd.args.fileoff + cmd.args.filesize)
             size = end - cmd.args.fileoff
@@ -171,7 +174,7 @@ class MachO:
                     print("ZERO: %d bytes from 0x%x to 0x%x" % (clearsize, dest + size, dest + size + clearsize))
                     image[dest + size:dest + cmd.args.vmsize] = bytes(clearsize)
 
-        return image
+        return image, segments
 
     def get_cmds(self, cmdtype):
         for cmd in self.obj.cmds:

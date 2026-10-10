@@ -113,6 +113,9 @@ struct hv_secondary_info_t {
 
 static struct hv_secondary_info_t hv_secondary_info;
 
+u64 nvMem[MAX_CPUS][0x800] __attribute__((aligned(0x4000)));
+u64 anvMem[MAX_CPUS][0x800] __attribute__((aligned(0x4000)));
+
 static void hv_enable_sme_zt0(void)
 {
     u64 sme = FIELD_GET(ID_AA64PFR1_SME, mrs(SYS_ID_AA64PFR1_EL1));
@@ -138,13 +141,20 @@ void hv_init(void)
     hv_pt_init();
 
     // Configure hypervisor defaults
-    hv_write_hcr(HCR_API | // Allow PAuth instructions
-                 HCR_APK | // Allow PAuth key registers
-                 HCR_TEA | // Trap external aborts
-                 HCR_E2H | // VHE mode (forced)
-                 HCR_RW |  // AArch64 guest
-                 HCR_AMO | // Trap SError exceptions
-                 HCR_VM);  // Enable stage 2 translation
+    // TODO: Only activate NV if SPTM support is needed AND M2 or higher (M1 does not have NV)
+    hv_write_hcr(HCR_NV2 | HCR_NV | // Nested virtualization
+                 HCR_API |          // Allow PAuth instructions
+                 HCR_APK |          // Allow PAuth key registers
+                 HCR_TEA |          // Trap external aborts
+                 HCR_E2H |          // VHE mode (forced)
+                 HCR_RW |           // AArch64 guest
+                 HCR_AMO |          // Trap SError exceptions
+                 HCR_VM);           // Enable stage 2 translation
+
+    // Set nvMem address
+    // TODO: Only do this if SPTM support is needed AND M2 or higher (M1 does not have NV)
+    msr(VNCR_EL2, &nvMem[0]);
+    msr(SYS_IMP_APL_AVNCR_EL2, &anvMem[0]);
 
     // No guest vectors initially
     msr(VBAR_EL12, 0);
@@ -269,7 +279,7 @@ void hv_start(void *entry, u64 regs[4])
     spin_unlock(&bhl);
 }
 
-static void hv_init_secondary(struct hv_secondary_info_t *info)
+static void hv_init_secondary(int cpu, struct hv_secondary_info_t *info)
 {
     if (cpu_features->apple_sysregs_unlocked)
         gxf_init();
@@ -305,6 +315,10 @@ static void hv_init_secondary(struct hv_secondary_info_t *info)
         msr(SYS_IMP_APL_AGTCNTRDIR_EL1, info->agt_cnt_rdir_el1);
         msr(SYS_IMP_APL_AGTCNTRDIR_EL12, info->agt_cnt_rdir_el12);
     }
+
+    // TODO: Only do this if SPTM support is needed AND M2 or higher (M1 does not have NV)
+    msr(VNCR_EL2, &nvMem[cpu]);
+    msr(SYS_IMP_APL_AVNCR_EL2, &anvMem[cpu]);
 
     if (cpu_features->apple_sysregs_unlocked)
         reg_mask(SYS_IMP_APL_CYC_OVRD, CYC_OVRD_WFI_MODE_MASK, CYC_OVRD_WFI_MODE(0));
@@ -342,7 +356,7 @@ void hv_start_secondary(int cpu, void *entry, u64 regs[4])
 
     mmu_init_secondary(cpu);
     iodev_console_flush();
-    smp_call4(cpu, hv_init_secondary, (u64)&hv_secondary_info, 0, 0, 0);
+    smp_call4(cpu, hv_init_secondary, cpu, (u64)&hv_secondary_info, 0, 0);
     smp_wait(cpu);
     iodev_console_flush();
 
@@ -409,6 +423,14 @@ void hv_write_hcr(u64 val)
         gl2_call(hv_write_hcr, val, 0, 0, 0);
     else
         msr(HCR_EL2, val);
+}
+
+void hv_write_hacr(u64 val)
+{
+    if (gxf_enabled() && !in_gl12())
+        gl2_call(hv_write_hacr, val, 0, 0, 0);
+    else
+        msr(HACR_EL2, val);
 }
 
 u64 hv_get_spsr(void)
@@ -494,4 +516,20 @@ void hv_tick(struct exc_info *ctx)
             hv_exc_proxy(ctx, START_HV, HV_USER_INTERRUPT, NULL);
     }
     hv_vuart_poll();
+}
+
+bool hv_is_nested(void)
+{
+    u64 hcr = mrs(HCR_EL2);
+    return (hcr | HCR_NV2 | HCR_NV) == hcr;
+}
+
+void hv_enable_genter_trap()
+{
+    hv_write_hacr(mrs(HACR_EL2) | BIT(29));
+}
+
+void hv_disable_genter_trap()
+{
+    hv_write_hacr(mrs(HACR_EL2) & ~BIT(29));
 }

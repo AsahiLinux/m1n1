@@ -67,6 +67,7 @@
 #define ESR_EC_SMC          0b010111
 #define ESR_EC_MSR          0b011000
 #define ESR_EC_SVE          0b011001
+#define ESR_EC_NESTED_ERET  0b011010
 #define ESR_EC_PAUTH_FAIL   0b011100
 #define ESR_EC_IABORT_LOWER 0b100000
 #define ESR_EC_IABORT       0b100001
@@ -322,12 +323,14 @@
 #define SPSR_M_EL0  0b0000UL
 #define SPSR_M_EL1T 0b0100UL
 #define SPSR_M_EL1H 0b0101UL
+#define SPSR_M_EL1x 0b0100UL
 // only for SPSR_EL1
 #define SPSR_M_EL1T_NV 0b1000UL
 #define SPSR_M_EL1H_NV 0b1001UL
 // only for SPSR_EL2 and SPSR_EL3
 #define SPSR_M_EL2T 0b1000UL
 #define SPSR_M_EL2H 0b1001UL
+#define SPSR_M_EL2x 0b1000UL
 // only for SPSR_EL3
 #define SPSR_M_EL3T 0b1100UL
 #define SPSR_M_EL3H 0b1101UL

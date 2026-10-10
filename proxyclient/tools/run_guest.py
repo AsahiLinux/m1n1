@@ -29,9 +29,13 @@ parser.add_argument('-v', '--volume', type=volumespec, action='append',
                     help='Attach a 9P virtio device for file export to the guest. The argument is a host path to the '
                          'exported tree, joined by colon (\':\') with a tag under which the tree will be advertised '
                          'on the guest side.')
+parser.add_argument('-p', '--sptm', type=pathlib.Path)
+parser.add_argument('-t', '--txm', type=pathlib.Path)
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
+if (args.sptm or args.txm) and not (args.sptm and args.txm):
+    parser.error("--sptm and --txm must be used in conjunction")
 
 from m1n1.proxy import *
 from m1n1.proxyutils import *
@@ -122,7 +126,9 @@ if args.append_payload:
     payload = concat
 
 if args.raw:
-    hv.load_raw(payload.read(), args.entry_point)
+    hv.load_raw(payload.read(), entryoffset=args.entry_point)
+elif args.sptm:
+    hv.load_macos_sptm(args.payload, args.sptm, args.txm, symfile=symfile)
 else:
     hv.load_macho(payload, symfile=symfile)
 

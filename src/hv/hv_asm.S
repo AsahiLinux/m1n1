@@ -2,6 +2,8 @@
 
 #include "exception.h"
 
+#define gexit .long 0x00201400
+
 .align 11
 .globl _hv_vectors_start
 _hv_vectors_start:
@@ -103,6 +105,30 @@ _hv_return:
 
     eret
 
+.globl _hv_gexit
+.type _hv_gexit, @function
+_hv_gexit:
+    ldp x0, x1, [sp], #16
+    ldp x2, x3, [sp], #16
+    ldp x4, x5, [sp], #16
+    ldp x6, x7, [sp], #16
+    ldp x8, x9, [sp], #16
+    ldp x10, x11, [sp], #16
+    ldp x12, x13, [sp], #16
+    ldp x14, x15, [sp], #16
+    ldp x16, x17, [sp], #16
+    ldp x18, x19, [sp], #16
+    ldp x20, x21, [sp], #16
+    ldp x22, x23, [sp], #16
+    ldp x24, x25, [sp], #16
+    ldp x26, x27, [sp], #16
+    ldp x28, x29, [sp], #16
+    ldr x30, [sp], #16
+
+    add sp, sp, #(SIZEOF_EXC_INFO - 32 * 8)
+
+    gexit
+
 .globl _v_hv_sync
 .type _v_hv_sync, @function
 _v_hv_sync:
@@ -111,7 +137,9 @@ _v_hv_sync:
     str x30, [sp, #-16]!
     bl _hv_entry
     bl hv_exc_sync
-
+    cbz x0, 1f
+    b _hv_gexit
+1:
     b _hv_return
 
 .globl _v_hv_irq

@@ -56,6 +56,8 @@ QUIET :=
 endif
 endif
 
+# TODO: We have to target armv8.6-a for use of nested virtualization registers
+# However, the binary should still build for M1
 BASE_CFLAGS := -O2 -Wall -g -Wundef -Werror=strict-prototypes -fno-common -fno-PIE \
 	-Werror=implicit-function-declaration -Werror=implicit-int \
 	-Wsign-compare -Wunused-parameter -Wno-multichar \
