@@ -331,3 +331,9 @@ void *iodev_get_opaque(iodev_id_t id)
 
     return iodevs[id]->opaque;
 }
+
+void iodev_reset_rp(iodev_id_t id)
+{
+    if (id < IODEV_MAX)
+        con_rp[id] = 0;
+}

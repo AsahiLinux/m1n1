@@ -15,4 +15,6 @@ void usb_iodev_init(void);
 void usb_iodev_shutdown(void);
 void usb_iodev_vuart_setup(iodev_id_t iodev);
 
+int usb_enable_debugusb(void);
+
 #endif

@@ -64,4 +64,6 @@ iodev_usage_t iodev_get_usage(iodev_id_t id);
 void iodev_set_usage(iodev_id_t id, iodev_usage_t usage);
 void *iodev_get_opaque(iodev_id_t id);
 
+void iodev_reset_rp(iodev_id_t id);
+
 #endif
