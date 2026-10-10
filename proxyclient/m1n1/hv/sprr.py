@@ -2,6 +2,7 @@
 import array
 
 from .. import sysreg
+from ..sysreg import sysreg_encode
 
 __all__ = ["patch_text_sprr_emu", "HV_VREGS"]
 
@@ -28,6 +29,20 @@ HV_VREGS = [
     sysreg.TTBR1_EL1,
     sysreg.TCR_EL1,
     sysreg.SCTLR_EL1,
+    sysreg.SPRR_PMPRR_EL1,
+    sysreg.SPRR_AMRANGE_EL1,
+    sysreg.SPRR_PPERM_SH1_EL1,
+    sysreg.SPRR_PPERM_SH2_EL1,
+    sysreg.SPRR_PPERM_SH3_EL1,
+    sysreg.SPRR_UPERM_SH1_EL1,
+    sysreg.SPRR_UPERM_SH2_EL1,
+    sysreg.SPRR_UPERM_SH3_EL1,
+    sysreg.VBAR_EL1,
+    sysreg.ELR_EL1,
+    sysreg.SPSR_EL1,
+    sysreg.ESR_EL1,
+    sysreg.FAR_EL1,
+    sysreg.AFSR1_EL1,
 ]
 
 GENTER = 0x00201420
@@ -36,18 +51,12 @@ GEXIT = 0x00201400
 HVC_SYSREG_FLAG = 0x8000
 
 
-def _msr(enc, read):
-    op0, op1, crn, crm, op2 = enc
-    return (0xd5000000 | (read << 21) | ((op0 & 3) << 19) | (op1 << 16) | (crn << 12) |
-            (crm << 8) | (op2 << 5))
-
-
 def _hvc(imm):
     return 0xd4000002 | (imm << 5)
 
 
 # MSR/MRS opcode (Rt masked) -> (vreg_id, read)
-_SYSREG = {_msr(enc, rd): (i, rd) for i, enc in enumerate(HV_VREGS) for rd in (0, 1)}
+_SYSREG = {sysreg_encode(enc, rd): (i, rd) for i, enc in enumerate(HV_VREGS) for rd in (0, 1)}
 
 
 def patch_text_sprr_emu(data, log=None):
