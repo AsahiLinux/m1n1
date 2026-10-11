@@ -2735,16 +2735,13 @@ struct {
     size_t wp;
 } logbuf;
 
-static bool log_console_iodev_can_write(void *opaque)
+static bool log_console_iodev_can_write(__always_unused void *opaque)
 {
-    UNUSED(opaque);
     return !!logbuf.buffer;
 }
 
-static ssize_t log_console_iodev_write(void *opaque, const void *buf, size_t len)
+static ssize_t log_console_iodev_write(__always_unused void *opaque, const void *buf, size_t len)
 {
-    UNUSED(opaque);
-
     if (!logbuf.buffer)
         return 0;
 

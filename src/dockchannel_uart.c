@@ -111,35 +111,30 @@ int dockchannel_uart_printf(const char *fmt, ...)
     return i;
 }
 
-static bool dockchannel_uart_iodev_can_write(void *opaque)
+static bool dockchannel_uart_iodev_can_write(__always_unused void *opaque)
 {
-    UNUSED(opaque);
-
     if (!uart_base)
         return false;
 
     return read32(uart_base + DATA_TX_FREE) > 0;
 }
 
-static ssize_t dockchannel_uart_iodev_can_read(void *opaque)
+static ssize_t dockchannel_uart_iodev_can_read(__always_unused void *opaque)
 {
-    UNUSED(opaque);
-
     if (!uart_base)
         return 0;
 
     return read32(uart_base + DATA_RX_COUNT);
 }
 
-static ssize_t dockchannel_uart_iodev_read(void *opaque, void *buf, size_t len)
+static ssize_t dockchannel_uart_iodev_read(__always_unused void *opaque, void *buf, size_t len)
 {
-    UNUSED(opaque);
     return dockchannel_uart_read(buf, len);
 }
 
-static ssize_t dockchannel_uart_iodev_write(void *opaque, const void *buf, size_t len)
+static ssize_t dockchannel_uart_iodev_write(__always_unused void *opaque, const void *buf,
+                                            size_t len)
 {
-    UNUSED(opaque);
     dockchannel_uart_write(buf, len);
     return len;
 }

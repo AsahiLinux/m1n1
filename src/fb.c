@@ -360,15 +360,13 @@ ssize_t fb_console_write(const char *bfr, size_t len)
     return wrote;
 }
 
-static bool fb_console_iodev_can_write(void *opaque)
+static bool fb_console_iodev_can_write(__always_unused void *opaque)
 {
-    UNUSED(opaque);
     return console.initialized && console.active;
 }
 
-static ssize_t fb_console_iodev_write(void *opaque, const void *buf, size_t len)
+static ssize_t fb_console_iodev_write(__always_unused void *opaque, const void *buf, size_t len)
 {
-    UNUSED(opaque);
     return fb_console_write(buf, len);
 }
 
