@@ -144,31 +144,26 @@ int uart_printf(const char *fmt, ...)
     return i;
 }
 
-static bool uart_iodev_can_write(void *opaque)
+static bool uart_iodev_can_write(__always_unused void *opaque)
 {
-    UNUSED(opaque);
     return true;
 }
 
-static ssize_t uart_iodev_can_read(void *opaque)
+static ssize_t uart_iodev_can_read(__always_unused void *opaque)
 {
-    UNUSED(opaque);
-
     if (!uart_base)
         return 0;
 
     return (read32(uart_base + UTRSTAT) & UTRSTAT_RXD) ? 1 : 0;
 }
 
-static ssize_t uart_iodev_read(void *opaque, void *buf, size_t len)
+static ssize_t uart_iodev_read(__always_unused void *opaque, void *buf, size_t len)
 {
-    UNUSED(opaque);
     return uart_read(buf, len);
 }
 
-static ssize_t uart_iodev_write(void *opaque, const void *buf, size_t len)
+static ssize_t uart_iodev_write(__always_unused void *opaque, const void *buf, size_t len)
 {
-    UNUSED(opaque);
     uart_write(buf, len);
     return len;
 }
