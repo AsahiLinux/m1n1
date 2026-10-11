@@ -27,6 +27,20 @@ typedef s64 ssize_t;
 
 #endif
 
+// clang-format off
+/*
+ *   gcc: https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#index-unused-function-attribute
+ *   gcc: https://gcc.gnu.org/onlinedocs/gcc/Common-Type-Attributes.html#index-unused-type-attribute
+ *   gcc: https://gcc.gnu.org/onlinedocs/gcc/Common-Variable-Attributes.html#index-unused-variable-attribute
+ *   gcc: https://gcc.gnu.org/onlinedocs/gcc/Label-Attributes.html#index-unused-label-attribute
+ * clang: https://clang.llvm.org/docs/AttributeReference.html#maybe-unused-unused
+ *
+ * Copied from Linux' include/linux/compiler_attributes.h
+ */
+// clang-format on
+#define __always_unused __attribute__((__unused__))
+#define __maybe_unused  __attribute__((__unused__))
+
 #define UNUSED(x)  (void)(x)
 #define ALIGNED(x) __attribute__((aligned(x)))
 #define PACKED     __attribute__((packed))

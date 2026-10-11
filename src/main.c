@@ -71,7 +71,7 @@ void get_device_info(void)
     printf("\n");
 }
 
-void run_actions(__attribute__((unused)) u64 lp_sip0)
+void run_actions(__maybe_unused u64 lp_sip0)
 {
     bool usb_up = false;
 
