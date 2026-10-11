@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "cpu_regs.h"
+#include "types.h"
 #include "utils.h"
 
 static void init_common_icestorm(void)
@@ -18,10 +19,8 @@ static void init_common_icestorm(void)
     reg_clr(SYS_IMP_APL_EHID20, EHID20_TRAP_SMC);
 }
 
-void init_m1_icestorm(int rev)
+void init_m1_icestorm(__always_unused int rev)
 {
-    UNUSED(rev);
-
     init_common_icestorm();
 
     reg_set(SYS_IMP_APL_EHID20, EHID20_FORCE_NONSPEC_IF_OLDEST_REDIR_VALID_AND_OLDER |

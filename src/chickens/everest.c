@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "cpu_regs.h"
+#include "types.h"
 #include "uart.h"
 #include "utils.h"
 
@@ -25,9 +26,8 @@ static void init_common_everest(void)
     reg_set(SYS_IMP_APL_HID4, HID4_ENABLE_LFSR_STALL_LOAD_PIPE2_ISSUE);
 }
 
-void init_t8122_everest(int rev)
+void init_t8122_everest(__always_unused int rev)
 {
-    UNUSED(rev);
     init_common_everest();
 
     reg_clr(SYS_IMP_APL_HID3, BIT(2));
@@ -51,9 +51,8 @@ void init_t8122_everest(int rev)
                                 (0x1 << 24)));
 }
 
-void init_t6030_everest(int rev)
+void init_t6030_everest(__always_unused int rev)
 {
-    UNUSED(rev);
     init_common_everest();
 
     reg_set(SYS_IMP_APL_HID3, HID3_DEV_PCIE_THROTTLE_ENABLE);
@@ -82,9 +81,8 @@ void init_t6030_everest(int rev)
     reg_set(s3_0_c15_c2_3, BIT(3));
 }
 
-void init_t6031_everest(int rev)
+void init_t6031_everest(__always_unused int rev)
 {
-    UNUSED(rev);
     init_common_everest();
 
     reg_set(SYS_IMP_APL_HID12, BIT(46));
