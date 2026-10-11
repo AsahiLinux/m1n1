@@ -2551,7 +2551,7 @@ err:
     return ret;
 }
 
-__attribute__((unused)) static int dt_transfer_virtios(void)
+__maybe_unused static int dt_transfer_virtios(void)
 {
     int path[3];
     path[0] = adt_path_offset(adt, "/arm-io/");
