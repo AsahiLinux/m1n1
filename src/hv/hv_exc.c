@@ -207,7 +207,9 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
     regs[31] = 0;
 
     /* Don't handle any TLB maintenance here if we're running in emulated SPRR mode */
-    if (!is_read && FIELD_GET(ESR_ISS_MSR_OP0, reg) == 1 && FIELD_GET(ESR_ISS_MSR_CRn, reg) == 8 &&
+    u64 crn = FIELD_GET(ESR_ISS_MSR_CRn, reg);
+    if (!is_read && FIELD_GET(ESR_ISS_MSR_OP0, reg) == 1 &&
+        (crn == 8 || crn == 9) && /* 8 = standard , 9 = nXS */
         hv_sprr_traps_tlbi())
         return false;
 
@@ -280,6 +282,18 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         SYSREG_PASS(sys_reg(1, 0, 8, 5, 3)) // TLBI RVAAE1OS
         SYSREG_PASS(sys_reg(1, 0, 8, 5, 5)) // TLBI RVALE1OS
         SYSREG_PASS(sys_reg(1, 0, 8, 5, 7)) // TLBI RVAALE1OS
+
+        /* Outer Shareable nXS TLB maintenance instructions */
+        SYSREG_PASS(sys_reg(1, 0, 9, 1, 0)) // TLBI VMALLE1OSNXS
+        SYSREG_PASS(sys_reg(1, 0, 9, 1, 1)) // TLBI VAE1OSNXS
+        SYSREG_PASS(sys_reg(1, 0, 9, 1, 2)) // TLBI ASIDE1OSNXS
+        SYSREG_PASS(sys_reg(1, 0, 9, 1, 3)) // TLBI VAAE1OSNXS
+        SYSREG_PASS(sys_reg(1, 0, 9, 1, 5)) // TLBI VALE1OSNXS
+        SYSREG_PASS(sys_reg(1, 0, 9, 1, 7)) // TLBI VAALE1OSNXS
+        SYSREG_PASS(sys_reg(1, 0, 9, 5, 1)) // TLBI RVAE1OSNXS
+        SYSREG_PASS(sys_reg(1, 0, 9, 5, 3)) // TLBI RVAAE1OSNXS
+        SYSREG_PASS(sys_reg(1, 0, 9, 5, 5)) // TLBI RVALE1OSNXS
+        SYSREG_PASS(sys_reg(1, 0, 9, 5, 7)) // TLBI RVAALE1OSNX
 
         case SYSREG_ISS(SYS_ACTLR_EL1):
             if (is_read) {

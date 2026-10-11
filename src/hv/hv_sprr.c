@@ -655,6 +655,9 @@ static void sprr_drop_asid(u64 asid)
 #define TLBI(crm, op2)                                                                             \
     case SYSREG_ISS(sys_reg(1, 0, 8, crm, op2)):                                                   \
         __asm__ volatile("sys #0, c8, c" #crm ", #" #op2 ", %0" ::"r"(wval) : "memory");           \
+        break;                                                                                     \
+    case SYSREG_ISS(sys_reg(1, 0, 9, crm, op2)): /* FEAT_XS nXS variant */                         \
+        __asm__ volatile("sys #0, c9, c" #crm ", #" #op2 ", %0" ::"r"(wval) : "memory");           \
         break;
 
 static bool hv_sprr_handle_tlbi(u64 reg, u64 wval)
@@ -693,7 +696,8 @@ static bool hv_sprr_handle_tlbi(u64 reg, u64 wval)
         TLBI(7, 7) // VAALE1
 
         default:
-            printf("hv_sprr: unhandled TLBI op0=1 op1=0 CRn=8 CRm=%ld op2=%ld\n",
+            printf("hv_sprr: unhandled TLBI op0=1 op1=%ld CRn=%ld CRm=%ld op2=%ld\n",
+                   FIELD_GET(ESR_ISS_MSR_OP1, reg), FIELD_GET(ESR_ISS_MSR_CRn, reg),
                    FIELD_GET(ESR_ISS_MSR_CRm, reg), FIELD_GET(ESR_ISS_MSR_OP2, reg));
             return false;
     }
@@ -704,6 +708,9 @@ static bool hv_sprr_handle_tlbi(u64 reg, u64 wval)
         case SYSREG_ISS(sys_reg(1, 0, 8, 1, 2)): // ASIDE1OS
         case SYSREG_ISS(sys_reg(1, 0, 8, 3, 2)): // ASIDE1IS
         case SYSREG_ISS(sys_reg(1, 0, 8, 7, 2)): // ASIDE1
+        case SYSREG_ISS(sys_reg(1, 0, 9, 1, 2)): // ASIDE1OSNXS
+        case SYSREG_ISS(sys_reg(1, 0, 9, 3, 2)): // ASIDE1ISNXS
+        case SYSREG_ISS(sys_reg(1, 0, 9, 7, 2)): // ASIDE1NXS
             sprr_drop_asid(FIELD_GET(TTBR_ASID, wval));
             break;
     }
@@ -726,7 +733,9 @@ bool hv_sprr_handle_msr(struct exc_info *ctx, u64 reg, u32 rt, bool is_read)
 
     ctx->regs[31] = 0;
 
-    if (!is_read && FIELD_GET(ESR_ISS_MSR_OP0, reg) == 1 && FIELD_GET(ESR_ISS_MSR_CRn, reg) == 8)
+    u64 crn = FIELD_GET(ESR_ISS_MSR_CRn, reg);
+    if (!is_read && FIELD_GET(ESR_ISS_MSR_OP0, reg) == 1 &&
+        (crn == 8 || crn == 9)) /* 8 = standard , 9 = nXS */
         return hv_sprr_handle_tlbi(reg, ctx->regs[rt]);
 
     return false;
