@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "cpu_regs.h"
+#include "types.h"
 #include "utils.h"
 
 static void init_t8015_common(void)
@@ -13,19 +14,15 @@ static void init_t8015_common(void)
     reg_set(SYS_IMP_APL_HID8, WKE_FORCE_STRICT_ORDER);
 }
 
-void init_t8015_mistral(int rev)
+void init_t8015_mistral(__always_unused int rev)
 {
-    UNUSED(rev);
-
     init_t8015_common();
 
     // "Atomic launch eligibility is erroneously taken away when a store at SMB gets invalidated"
     reg_clr(SYS_IMP_APL_EHID11, EHID11_SMB_DRAIN_THRESH_MASK);
 }
 
-void init_t8015_monsoon(int rev)
+void init_t8015_monsoon(__always_unused int rev)
 {
-    UNUSED(rev);
-
     init_t8015_common();
 }

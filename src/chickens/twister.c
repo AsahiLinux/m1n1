@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "cpu_regs.h"
+#include "types.h"
 #include "utils.h"
 
 static void init_twister_common(void)
@@ -27,9 +28,7 @@ void init_samsung_twister(int rev)
     init_twister_common();
 }
 
-void init_tsmc_twister(int rev)
+void init_tsmc_twister(__always_unused int rev)
 {
-    UNUSED(rev);
-
     init_twister_common();
 }

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "cpu_regs.h"
+#include "types.h"
 #include "utils.h"
 
 static void init_common_avalanche(void)
@@ -32,10 +33,8 @@ static void init_common_avalanche(void)
     reg_mask(SYS_IMP_APL_HID27, HID27_GROUP3_OFFSET_MASK, HID27_GROUP3_OFFSET(31));
 }
 
-void init_t8112_avalanche(int rev)
+void init_t8112_avalanche(__always_unused int rev)
 {
-    UNUSED(rev);
-
     init_common_avalanche();
 
     reg_mask(SYS_IMP_APL_HID3, HID3_DEV_PCIE_THROTTLE_LIMIT_MASK, HID3_DEV_PCIE_THROTTLE_LIMIT(60));
@@ -52,10 +51,8 @@ void init_t8112_avalanche(int rev)
     }
 }
 
-void init_t6020_avalanche(int rev)
+void init_t6020_avalanche(__always_unused int rev)
 {
-    UNUSED(rev);
-
     init_common_avalanche();
 
     reg_mask(SYS_IMP_APL_HID3, HID3_DEV_PCIE_THROTTLE_LIMIT_MASK, HID3_DEV_PCIE_THROTTLE_LIMIT(62));
@@ -67,10 +64,8 @@ void init_t6020_avalanche(int rev)
     reg_mask(SYS_IMP_APL_HID5, HID5_BLZ_UNK_19_18_MASK, HID5_BLZ_UNK18);
 }
 
-void init_t6021_avalanche(int rev)
+void init_t6021_avalanche(__always_unused int rev)
 {
-    UNUSED(rev);
-
     init_common_avalanche();
 
     reg_mask(SYS_IMP_APL_HID3, HID3_DEV_PCIE_THROTTLE_LIMIT_MASK, HID3_DEV_PCIE_THROTTLE_LIMIT(62));

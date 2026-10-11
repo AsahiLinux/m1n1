@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "cpu_regs.h"
+#include "types.h"
 #include "utils.h"
 
 // This file name has both the codenames of E-core and P-core because to software
@@ -25,17 +26,13 @@ static void init_common_hurricane_zephyr(void)
     reg_set(SYS_IMP_APL_HID1, HID1_CONSERVATIVE_SIQ);
 }
 
-void init_t8010_2_hurricane_zephyr(int rev)
+void init_t8010_2_hurricane_zephyr(__always_unused int rev)
 {
-    UNUSED(rev);
-
     init_common_hurricane_zephyr();
 }
 
-void init_t8011_hurricane_zephyr(int rev)
+void init_t8011_hurricane_zephyr(__always_unused int rev)
 {
-    UNUSED(rev);
-
     init_common_hurricane_zephyr();
 
     reg_clr(SYS_IMP_APL_HID3, HID3_DISABLE_DC_ZVA_CMD_ONLY);
