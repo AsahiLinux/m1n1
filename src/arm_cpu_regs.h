@@ -416,3 +416,5 @@
 #define SYS_MDSCR_EL1 sys_reg(2, 0, 0, 2, 2)
 
 #define SYS_TPIDR2_EL0 sys_reg(3, 3, 13, 0, 5)
+
+#define SYS_VNCR_EL2 sys_reg(3, 4, 2, 2, 0)

@@ -151,6 +151,7 @@ void hv_init(void)
 
     // No guest vectors initially
     msr(VBAR_EL12, 0);
+    msr(SYS_VNCR_EL2, 0);
 
     // Compute tick interval
     hv_tick_interval = mrs(CNTFRQ_EL0) / HV_TICK_RATE;
