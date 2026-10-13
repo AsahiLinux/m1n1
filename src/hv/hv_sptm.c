@@ -7,8 +7,6 @@
 #include "string.h"
 #include "utils.h"
 
-bool hv_sptm_active = false;
-
 struct hv_sptm_cpu {
     u64 shadow[HV_SPTM_MAX];
 };
@@ -60,7 +58,6 @@ void hv_sptm_init(void)
 {
     for (int i = 0; i < MAX_CPUS; i++)
         sptm_init_cpu(i);
-    hv_sptm_active = true;
 }
 
 void hv_sptm_init_secondary(int cpu)
@@ -82,7 +79,7 @@ void hv_sptm_init_secondary(int cpu)
 
 bool hv_sptm_dispatch(struct exc_info *ctx, u16 imm)
 {
-    if (!hv_sptm_active)
+    if (hv_sptm_mode != SPTM_EMULATION)
         return false;
     if (imm < HV_HVC_SPTM_SYSREG)
         return false;

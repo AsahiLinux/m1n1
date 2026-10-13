@@ -31,6 +31,8 @@ u64 hv_secondary_tick_interval;
 int hv_pinned_cpu;
 int hv_want_cpu;
 
+enum hv_sptm_mode hv_sptm_mode = SPTM_NONE;
+
 static bool hv_has_ecv;
 static bool hv_should_exit[MAX_CPUS];
 bool hv_started_cpus[MAX_CPUS];
@@ -123,6 +125,13 @@ static void hv_enable_sme_zt0(void)
 
     /* Don't trap SME instructions to EL2 */
     reg_set(SYS_SMCR_EL2, SMCR_EZT0);
+}
+
+/* must be called before hv_init */
+void hv_sptm_set_mode(enum hv_sptm_mode mode)
+{
+    printf("HV: SPTM mode %d\n", mode);
+    hv_sptm_mode = mode;
 }
 
 void hv_init(void)
@@ -343,7 +352,7 @@ void hv_start_secondary(int cpu, void *entry, u64 regs[4])
     printf("HV: Initializing secondary %d\n", cpu);
     iodev_console_flush();
 
-    if (hv_sprr_active)
+    if (hv_sptm_mode == SPTM_EMULATION)
         hv_sptm_init_secondary(cpu);
 
     mmu_init_secondary(cpu);

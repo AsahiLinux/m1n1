@@ -8,6 +8,14 @@
 #include "types.h"
 #include "uartproxy.h"
 
+enum hv_sptm_mode {
+    SPTM_NONE = 0,
+    SPTM_EMULATION = 1,
+};
+
+extern enum hv_sptm_mode hv_sptm_mode;
+void hv_sptm_set_mode(enum hv_sptm_mode mode);
+
 typedef bool(hv_hook_t)(struct exc_info *ctx, u64 addr, u64 *val, bool write, int width);
 
 #define MMIO_EVT_ATTR  GENMASK(31, 24)

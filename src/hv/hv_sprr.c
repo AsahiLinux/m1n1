@@ -30,14 +30,6 @@ static u8 sprr_perm_nibble(u64 perm, u32 index)
 #define SPRR_WP_N_BUCKETS     4096
 #define SPRR_N_CACHED_SHADOWS 256
 
-bool hv_sprr_active = false;
-
-void hv_sprr_set_active(bool active)
-{
-    printf("HV: emulated SPRR/GXF %s\n", active ? "enabled" : "disabled");
-    hv_sprr_active = active;
-}
-
 static struct hv_sprr_cpu hv_sprr_cpus[MAX_CPUS];
 static struct hv_sprr_shadow sprr_shadows[SPRR_N_CACHED_SHADOWS];
 static u32 sprr_lru_clock;
@@ -721,14 +713,14 @@ static bool hv_sprr_handle_tlbi(u64 reg, u64 wval)
 // called from hv_handle_msr which also tries to handle some TLBIs and used to skip those if true
 bool hv_sprr_traps_tlbi(void)
 {
-    return hv_sprr_active && hv_sprr_this()->sprr_en;
+    return hv_sptm_mode == SPTM_EMULATION && hv_sprr_this()->sprr_en;
 }
 
 bool hv_sprr_handle_msr(struct exc_info *ctx, u64 reg, u32 rt, bool is_read)
 {
     struct hv_sprr_cpu *cpu = hv_sprr_this();
 
-    if (!hv_sprr_active || !cpu->sprr_en)
+    if (hv_sptm_mode != SPTM_EMULATION || !cpu->sprr_en)
         return false;
 
     ctx->regs[31] = 0;
@@ -1074,7 +1066,7 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
 
 bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm)
 {
-    if (!hv_sprr_active)
+    if (hv_sptm_mode != SPTM_EMULATION)
         return false;
 
     if (imm & HV_HVC_SYSREG_FLAG)
@@ -1100,7 +1092,7 @@ bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm)
 
 bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm)
 {
-    if (!hv_sprr_active)
+    if (hv_sptm_mode != SPTM_EMULATION)
         return false;
 
     if (imm & HV_HVC_SYSREG_FLAG)

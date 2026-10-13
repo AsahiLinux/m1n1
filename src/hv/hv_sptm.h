@@ -217,7 +217,6 @@ enum hv_sptm_reg {
     HV_SPTM_MAX,
 };
 
-extern bool hv_sptm_active;
 void hv_sptm_init(void);
 bool hv_sptm_dispatch(struct exc_info *ctx, u16 imm);
 void hv_sptm_init_secondary(int cpu);
