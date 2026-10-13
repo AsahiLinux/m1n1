@@ -41,7 +41,7 @@ static u64 hv_cpu_state_regs[MAX_CPUS];
 
 static bool hv_cpu_state_access(struct exc_info *ctx, u64 ipa, u64 *val, bool write, int width)
 {
-    if (1 << width != 4)
+    if (width != 2 && width != 3)
         return false;
     if (write)
         return hv_pa_rw(ctx, ipa, val, write, width);
