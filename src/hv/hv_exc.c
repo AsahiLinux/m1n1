@@ -149,7 +149,7 @@ void hv_add_time(s64 time)
     stolen_time -= (u64)time;
 }
 
-static void hv_update_fiq(void)
+void hv_update_fiq(void)
 {
     u64 hcr = mrs(HCR_EL2);
     bool fiq_pending = false;
@@ -169,6 +169,7 @@ static void hv_update_fiq(void)
     }
 
     fiq_pending |= PERCPU(ipi_pending) || PERCPU(pmc_pending);
+    fiq_pending |= hv_sptm_timer_pending();
 
     sysop("isb");
 
@@ -450,6 +451,7 @@ static void hv_exc_exit(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('x');
     hv_update_fiq();
+    hv_sptm_timer_arm();
     /* reenable PMU counters */
     reg_set(SYS_IMP_APL_PMCR0, PERCPU(exc_entry_pmcr0_cnt));
     msr(CNTVOFF_EL2, stolen_time);

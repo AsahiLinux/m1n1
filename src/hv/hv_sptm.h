@@ -50,6 +50,8 @@ enum hv_sptm_reg {
     HV_SPTM_ICH_VMCR_EL2,
     HV_SPTM_CNTVOFF_EL2,
     HV_SPTM_CNTKCTL_EL12,
+    HV_SPTM_APL_CNTV_CTL_EL0,
+    HV_SPTM_APL_CNTV_TVAL_EL0,
     HV_SPTM_VM_TMR_FIQ_ENA_EL2,
     HV_SPTM_AGTCNTRDIR_EL1,
     HV_SPTM_AGTCNTRDIR_EL12,
@@ -164,7 +166,6 @@ enum hv_sptm_reg {
     HV_SPTM_S2_1_C9_C8_0,
     HV_SPTM_S2_4_C6_C1_6,
     HV_SPTM_S3_1_C15_C0_3,
-    HV_SPTM_S3_1_C15_C0_5,
     HV_SPTM_S3_1_C15_C1_3,
     HV_SPTM_S3_1_C15_C1_6,
     HV_SPTM_S3_1_C15_C2_3,
@@ -172,7 +173,6 @@ enum hv_sptm_reg {
     HV_SPTM_S3_1_C15_C7_4,
     HV_SPTM_S3_1_C15_C9_4,
     HV_SPTM_S3_1_C15_C13_4,
-    HV_SPTM_S3_1_C15_C15_4,
     HV_SPTM_S3_2_C13_C8_2,
     HV_SPTM_S3_4_C1_C2_5,
     HV_SPTM_S3_4_C15_C0_1,
@@ -220,5 +220,7 @@ enum hv_sptm_reg {
 void hv_sptm_init(void);
 bool hv_sptm_dispatch(struct exc_info *ctx, u16 imm);
 void hv_sptm_init_secondary(int cpu);
+bool hv_sptm_timer_pending(void);
+void hv_sptm_timer_arm(void);
 
 #endif
