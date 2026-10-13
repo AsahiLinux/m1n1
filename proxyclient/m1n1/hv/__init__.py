@@ -4,7 +4,7 @@ from construct import *
 
 from ..asm import ARMAsm
 from ..tgtypes import *
-from ..proxy import IODEV, START, EVENT, EXC, EXC_RET, ExcInfo
+from ..proxy import IODEV, START, EVENT, EXC, EXC_RET, ExcInfo, SPTM_MODE
 from ..utils import *
 from ..sysreg import *
 from ..macho import MachO
@@ -108,7 +108,7 @@ class HV(Reloadable):
         self.wdt_cpu = None
         self.smp = True
         self.hook_exceptions = False
-        self.emulate_sprr = False
+        self.sptm_mode = SPTM_MODE.SPTM_NONE
         self.started_cpus = {}
         self.started = False
         self.ctx = None
@@ -1362,8 +1362,8 @@ class HV(Reloadable):
         self.iface.tty_log = fd
 
     def init(self):
-        if self.emulate_sprr:
-            print("SPRR/GXF: emulating in EL2 (guest image will be patched)")
+        if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
+            print("SPTM/SPRR/GXF: emulating in EL2 (guest image will be patched)")
 
         self.adt = load_adt(self.u.get_adt())
         self.iodev = self.p.iodev_whoami()
@@ -1378,6 +1378,7 @@ class HV(Reloadable):
                 self.p.iodev_set_usage(iodev, 0)
 
         print("Initializing hypervisor over iodev %s" % self.iodev)
+        self.p.hv_sptm_set_mode(self.sptm_mode)
         self.p.hv_init()
 
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.SYNC, self.handle_exception)
@@ -1610,7 +1611,7 @@ class HV(Reloadable):
     def setup_adt(self):
         self.adt["product"].product_name += " on m1n1 hypervisor"
         self.adt["product"].product_description += " on m1n1 hypervisor"
-        if self.emulate_sprr:
+        if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
             soc_name = "Virtual " + self.adt["product"].product_soc_name + " on cursed m1n1 hypervisor"
         else:
             soc_name = "Virtual " + self.adt["product"].product_soc_name + " on m1n1 hypervisor"
@@ -1884,14 +1885,14 @@ class HV(Reloadable):
                 return data
 
             print(f"Patching segment {segname}...")
-            if self.emulate_sprr:
+            if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
                 data = patch_text_sprr_emu(data, log=print)
             if do_patch_m3_regs:
                 data = patch_m3_regs(data, fileoff)
             print("Done.")
             return data
 
-        if self.emulate_sprr or do_patch_m3_regs:
+        if self.sptm_mode == SPTM_MODE.SPTM_EMULATION or do_patch_m3_regs:
             image = macho.prepare_image(load_hook)
         else:
             image = macho.prepare_image()
@@ -1975,10 +1976,7 @@ class HV(Reloadable):
         print("Shutting down framebuffer...")
         self.p.fb_shutdown(True)
 
-        if self.emulate_sprr:
-            print("Enabling emulated SPRR/GXF...")
-            self.p.hv_sprr_set_active(True)
-        elif self.u.cpu_features.apple_sysregs_unlocked:
+        if self.sptm_mode == SPTM_MODE.SPTM_NONE and self.u.cpu_features.apple_sysregs_unlocked:
             print("Enabling SPRR...")
             self.u.msr(SPRR_CONFIG_EL1, 1)
 

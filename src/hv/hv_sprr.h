@@ -121,9 +121,6 @@ struct hv_sprr_cpu {
     u64 n_genter, n_gexit;
 };
 
-extern bool hv_sprr_active;
-void hv_sprr_set_active(bool active);
-
 bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm);
 bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm);
 bool hv_sprr_handle_msr(struct exc_info *ctx, u64 reg, u32 rt, bool is_read);
