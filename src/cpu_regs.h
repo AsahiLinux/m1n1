@@ -18,6 +18,7 @@
 #define AMX_CTL_EN     BIT(63)
 #define AMX_CTL_EN_EL1 BIT(62)
 
+#define SYS_IMP_APL_CNTFRQ_EL0       sys_reg(3, 1, 15, 8, 4)
 #define SYS_IMP_APL_CNTVCT_ALIAS_EL0 sys_reg(3, 4, 15, 10, 6)
 
 /* HID registers */

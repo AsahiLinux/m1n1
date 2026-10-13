@@ -8,10 +8,62 @@
 #include "utils.h"
 
 struct hv_sptm_cpu {
+    u64 timer_deadline;
     u64 shadow[HV_SPTM_MAX];
 };
 
 static struct hv_sptm_cpu sptm_cpus[MAX_CPUS];
+
+static u64 apple_timer_now(void)
+{
+    return mrs(SYS_IMP_APL_CNTVCT_ALIAS_EL0);
+}
+
+bool hv_sptm_timer_pending(void)
+{
+    struct hv_sptm_cpu *cpu = &sptm_cpus[smp_id()];
+
+    if (hv_sptm_mode != SPTM_EMULATION)
+        return false;
+    if (!(cpu->shadow[HV_SPTM_APL_CNTV_CTL_EL0] & CNTx_CTL_ENABLE))
+        return false;
+    if (cpu->shadow[HV_SPTM_APL_CNTV_CTL_EL0] & CNTx_CTL_IMASK)
+        return false;
+
+    return (s64)(cpu->timer_deadline - apple_timer_now()) <= 0;
+}
+
+void hv_sptm_timer_arm(void)
+{
+    struct hv_sptm_cpu *cpu = &sptm_cpus[smp_id()];
+
+    if (hv_sptm_mode != SPTM_EMULATION)
+        return;
+    if (!(cpu->shadow[HV_SPTM_APL_CNTV_CTL_EL0] & CNTx_CTL_ENABLE))
+        return;
+    if (cpu->shadow[HV_SPTM_APL_CNTV_CTL_EL0] & CNTx_CTL_IMASK)
+        return;
+
+    /* Check if the guest's timer has already expired */
+    s64 apple_delta = cpu->timer_deadline - apple_timer_now();
+    if (apple_delta <= 0) {
+        hv_update_fiq();
+        return;
+    }
+
+    /* Scale the guest's Apple timer (24 MHz on M4 Pro) to host timer ticks (1GHz on M4 Pro) */
+    u64 host_ticks = DIV_ROUND_UP(apple_delta * mrs(CNTFRQ_EL0), mrs(SYS_IMP_APL_CNTFRQ_EL0));
+    u64 host_now = mrs(CNTPCT_EL0);
+    s64 host_remaining = mrs(CNTP_CVAL_EL0) - host_now;
+
+    /* Make sure we don't postpone m1n1's timer */
+    if (host_remaining <= 0)
+        return;
+    if (host_ticks >= (u64)host_remaining)
+        return;
+    msr(CNTP_CVAL_EL0, host_now + host_ticks);
+    sysop("isb");
+}
 
 static const u8 sptm_protection_regs[] = {
     HV_SPTM_CTRR_C_LWR_EL1,     HV_SPTM_CTRR_C_UPR_EL1,     HV_SPTM_CTRR_C_CTL_EL1,
@@ -147,6 +199,26 @@ bool hv_sptm_dispatch(struct exc_info *ctx, u16 imm)
         VREG_MASKED_ALIAS(HV_SPTM_ACC_CTXR_D_LWR_EL2, HV_SPTM_CTXR_D_LWR_EL1, ~0xfffULL);
         VREG_MASKED_ALIAS(HV_SPTM_ACC_CTXR_D_UPR_EL2, HV_SPTM_CTXR_D_UPR_EL1, ~0xfffULL);
 
+        case HV_SPTM_APL_CNTV_CTL_EL0:
+            if (is_read) {
+                rval = cpu->shadow[HV_SPTM_APL_CNTV_CTL_EL0];
+                if ((rval & CNTx_CTL_ENABLE) && (s64)(cpu->timer_deadline - apple_timer_now()) <= 0)
+                    rval |= CNTx_CTL_ISTATUS;
+            } else {
+                cpu->shadow[reg] = wval & (CNTx_CTL_ENABLE | CNTx_CTL_IMASK);
+                hv_update_fiq();
+                hv_sptm_timer_arm();
+            }
+            break;
+        case HV_SPTM_APL_CNTV_TVAL_EL0:
+            if (is_read) {
+                rval = (u32)(cpu->timer_deadline - apple_timer_now());
+            } else {
+                cpu->timer_deadline = apple_timer_now() + (s32)wval;
+                hv_update_fiq();
+                hv_sptm_timer_arm();
+            }
+            break;
         default:
             if (is_read)
                 rval = cpu->shadow[reg];

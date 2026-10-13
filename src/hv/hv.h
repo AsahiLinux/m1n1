@@ -110,6 +110,7 @@ void hv_do_panic(void);
     } while (0)
 
 /* Utilities */
+void hv_update_fiq(void);
 void hv_write_hcr(u64 val);
 u64 hv_get_spsr(void);
 void hv_set_spsr(u64 val);
