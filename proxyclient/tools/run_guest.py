@@ -24,7 +24,7 @@ parser.add_argument('-r', '--raw', action="store_true")
 parser.add_argument('-E', '--entry-point', action="store", type=int, help="Entry point for the raw image", default=0x800)
 parser.add_argument('-a', '--append-payload', type=pathlib.Path, action="append", default=[])
 parser.add_argument('-P', '--emulate-sprr', action="store_true",
-                    help='Force the EL2 SPRR/GXF emulation on.')
+                    help='Enable the EL2 SPRR/GXF emulation.')
 parser.add_argument('-v', '--volume', type=volumespec, action='append',
                     help='Attach a 9P virtio device for file export to the guest. The argument is a host path to the '
                          'exported tree, joined by colon (\':\') with a tag under which the tree will be advertised '
@@ -46,7 +46,7 @@ iface = UartInterface()
 p = M1N1Proxy(iface, debug=False)
 bootstrap_port(iface, p)
 
-if args.emulate_sprr or not p.get_cpu_features().apple_sysregs_unlocked:
+if args.emulate_sprr:
     m1n1_heap_mb = 1024
 else:
     m1n1_heap_mb = 128
@@ -64,8 +64,7 @@ hv = HV(iface, p, u)
 
 hv.hook_exceptions = args.hook_exceptions
 
-if args.emulate_sprr:
-    hv.emulate_sprr = True
+hv.emulate_sprr = args.emulate_sprr
 
 hv.init()
 

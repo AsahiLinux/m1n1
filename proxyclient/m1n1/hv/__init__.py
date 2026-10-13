@@ -108,7 +108,7 @@ class HV(Reloadable):
         self.wdt_cpu = None
         self.smp = True
         self.hook_exceptions = False
-        self.emulate_sprr = None
+        self.emulate_sprr = False
         self.started_cpus = {}
         self.started = False
         self.ctx = None
@@ -1362,8 +1362,6 @@ class HV(Reloadable):
         self.iface.tty_log = fd
 
     def init(self):
-        if self.emulate_sprr is None:
-            self.emulate_sprr = not self.u.cpu_features.apple_sysregs_unlocked
         if self.emulate_sprr:
             print("SPRR/GXF: emulating in EL2 (guest image will be patched)")
 
