@@ -181,6 +181,8 @@ typedef enum {
 
     P_READ_GIGALOCKER = 0x1400,
     P_FREE_GIGALOCKER,
+
+    P_HV_GET_BUFFER_ADDR = 0x1500,
 } ProxyOp;
 
 #define S_OK     0

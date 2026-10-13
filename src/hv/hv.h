@@ -49,6 +49,16 @@ struct hv_vm_proxy_hook_data {
     u64 data[HV_MAX_RW_WORDS];
 };
 
+#define HV_MAX_BUFFERED_HOOKS 15000
+
+struct hv_vm_proxy_buffered_hook_collection {
+    u32 count;
+    u32 _pad;
+    struct hv_vm_proxy_hook_data hooks[HV_MAX_BUFFERED_HOOKS];
+};
+u64 hv_get_buffered_hook_buffer_addr(void);
+extern struct hv_vm_proxy_buffered_hook_collection hv_vm_proxy_buffered_hook_buffer;
+
 typedef enum _hv_entry_type {
     HV_HOOK_VM = 1,
     HV_VTIMER,
@@ -57,6 +67,7 @@ typedef enum _hv_entry_type {
     HV_CPU_SWITCH,
     HV_VIRTIO,
     HV_PANIC,
+    HV_HOOK_VM_BUFFERED,
 } hv_entry_type;
 
 /* VM */
@@ -76,6 +87,7 @@ bool hv_handle_dabort(struct exc_info *ctx);
 bool hv_pa_write(struct exc_info *ctx, u64 addr, u64 *val, int width);
 bool hv_pa_read(struct exc_info *ctx, u64 addr, u64 *val, int width);
 bool hv_pa_rw(struct exc_info *ctx, u64 addr, u64 *val, bool write, int width);
+void hv_vm_flush_buffered_hooks(struct exc_info *ctx);
 
 /* AIC events through tracing the MMIO event address */
 bool hv_trace_irq(u32 type, u32 num, u32 count, u32 flags);
