@@ -847,9 +847,9 @@ class ADTNode:
 
     def pmgr_dev_get_parents(self, dev):
         if self._pmgr_u8id:
-            return dev.parents_un.u8id.parents 
+            return dev.parents_un.u8id.parents
         else:
-            return dev.parents_un.u16id.parents 
+            return dev.parents_un.u16id.parents
 
     def pmgr_dev_get_block(self, dev):
         if self._pmgr_use_group_and_offset:
