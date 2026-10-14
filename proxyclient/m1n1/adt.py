@@ -525,7 +525,7 @@ def build_prop(path, name, v, t=None):
     elif isinstance(v, float):
         t = Float32l
     elif isinstance(v, tuple) and all(isinstance(i, int) for i in v):
-        t = Array(len(v), Int32ul)
+        t = Array(len(v), Int64ul)
 
     return t.build(v)
 
