@@ -541,6 +541,9 @@ bool hv_exc_sync(struct exc_info *ctx)
     bool do_gexit = false;
 
     switch (ec) {
+        case ESR_EC_ERET:
+            handled = hv_sprr_handle_eret(ctx);
+            break;
         case ESR_EC_MSR:
             hv_wdt_breadcrumb('m');
             handled = hv_handle_msr_unlocked(ctx, FIELD_GET(ESR_ISS, ctx->esr));
@@ -568,8 +571,13 @@ bool hv_exc_sync(struct exc_info *ctx)
 
     if (handled) {
         hv_wdt_breadcrumb('#');
-        ctx->elr += 4;
-        hv_set_elr(ctx->elr);
+
+        /* A trapped ERET already contains the right target address in ELR */
+        if (ec != ESR_EC_ERET) {
+            ctx->elr += 4;
+            hv_set_elr(ctx->elr);
+        }
+
         hv_update_fiq();
         hv_wdt_breadcrumb('s');
         return do_gexit;

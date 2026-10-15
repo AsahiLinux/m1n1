@@ -66,6 +66,7 @@
 #define ESR_EC_HVC          0b010110
 #define ESR_EC_SMC          0b010111
 #define ESR_EC_MSR          0b011000
+#define ESR_EC_ERET         0b011010
 #define ESR_EC_SVE          0b011001
 #define ESR_EC_NESTED_ERET  0b011010
 #define ESR_EC_PAUTH_FAIL   0b011100
@@ -419,3 +420,6 @@
 #define SYS_MDSCR_EL1 sys_reg(2, 0, 0, 2, 2)
 
 #define SYS_TPIDR2_EL0 sys_reg(3, 3, 13, 0, 5)
+
+#define SYS_HFGITR_EL2 sys_reg(3, 4, 1, 1, 6)
+#define HFGITR_ERET    BIT(51)
