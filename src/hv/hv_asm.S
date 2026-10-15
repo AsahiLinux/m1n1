@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "exception.h"
+#include "hv_sprr.h"
 
 #define gexit .long 0x00201400
 
@@ -222,3 +223,52 @@ hv_exit_guest:
     ldp x29, x30, [sp], #16
 
     ret
+
+.section .text.hv_sprr_vectors, "ax", %progbits
+.align 14
+.global hv_sprr_vectors
+.type hv_sprr_vectors, %object
+hv_sprr_vectors:
+
+    /* EL1 with SP_EL0 */
+    hvc #(HV_HVC_VECTOR_BASE | 0)
+    .align 7
+    hvc #(HV_HVC_VECTOR_BASE | 1)
+    .align 7
+    hvc #(HV_HVC_VECTOR_BASE | 2)
+    .align 7
+    hvc #(HV_HVC_VECTOR_BASE | 3)
+    .align 7
+
+    /* EL1 with SP_EL1 */
+    hvc #(HV_HVC_VECTOR_BASE | 4)
+    .align 7
+    hvc #(HV_HVC_VECTOR_BASE | 5)
+    .align 7
+    hvc #(HV_HVC_VECTOR_BASE | 6)
+    .align 7
+    hvc #(HV_HVC_VECTOR_BASE | 7)
+    .align 7
+
+    /* EL0 64-bit */
+    hvc #(HV_HVC_VECTOR_BASE | 8)
+    .align 7
+    hvc #(HV_HVC_VECTOR_BASE | 9)
+    .align 7
+    hvc #(HV_HVC_VECTOR_BASE | 10)
+    .align 7
+    hvc #(HV_HVC_VECTOR_BASE | 11)
+    .align 7
+
+    /* EL0 32-bit */
+    hvc #(HV_HVC_VECTOR_BASE | 12)
+    .align 7
+    hvc #(HV_HVC_VECTOR_BASE | 13)
+    .align 7
+    hvc #(HV_HVC_VECTOR_BASE | 14)
+    .align 7
+    hvc #(HV_HVC_VECTOR_BASE | 15)
+    .align 7
+
+    .align 14
+.size hv_sprr_vectors, . - hv_sprr_vectors

@@ -3,12 +3,12 @@
 #ifndef HV_SPRR_H
 #define HV_SPRR_H
 
-#include "exception.h"
-#include "types.h"
-
 #define HV_HVC_GENTER_BASE 0x1420
 #define HV_HVC_GENTER_MASK GENMASK(15, 4)
 #define HV_HVC_GENTER_IMM  GENMASK(3, 0)
+#define HV_HVC_VECTOR_BASE 0x1500
+#define HV_HVC_VECTOR_MASK 0xfff0
+#define HV_HVC_VECTOR_SLOT GENMASK(3, 0)
 #define HV_HVC_GEXIT       0x1400
 
 #define HV_HVC_SYSREG_FLAG BIT(15)
@@ -17,6 +17,11 @@
 #define HV_HVC_SYSREG_RT   GENMASK(4, 0)
 
 #define SPRR_N_INDICES 16
+
+#ifndef __ASSEMBLER__
+
+#include "exception.h"
+#include "types.h"
 
 /* Must be kept in sync with HV_VREGS in proxyclient/m1n1/hv/sprr.py. */
 enum hv_vreg {
@@ -82,6 +87,7 @@ struct sprr_wp_page {
 
 struct hv_sprr_shadow {
     u64 guest_ttbr;
+    u64 *vector_tables[4]; /* pagetables used to map our exception vectors to the guest*/
     struct sprr_mirror *top;
     u64 perm_el0, perm_el1;
     u64 leaf[2][SPRR_N_INDICES]; // [guarded][guest PTE perm index] -> shadow leaf bits
@@ -129,5 +135,8 @@ bool hv_sprr_is_pt_page(u64 ipa);
 bool hv_sprr_is_shadow_page(u64 ipa);
 void hv_sprr_pt_updated(struct exc_info *ctx, u64 ipa, u64 bytes);
 void hv_sprr_pt_writer_check(struct exc_info *ctx, u64 ipa, u64 far);
+void hv_sprr_init(void);
+
+#endif
 
 #endif

@@ -30,6 +30,9 @@ static u8 sprr_perm_nibble(u64 perm, u32 index)
 #define SPRR_WP_N_BUCKETS     4096
 #define SPRR_N_CACHED_SHADOWS 256
 
+#define SPRR_VECTOR_VA 0xffffffffffffc000UL
+extern const u8 hv_sprr_vectors[SZ_16K];
+
 static struct hv_sprr_cpu hv_sprr_cpus[MAX_CPUS];
 static struct hv_sprr_shadow sprr_shadows[SPRR_N_CACHED_SHADOWS];
 static u32 sprr_lru_clock;
@@ -205,6 +208,17 @@ static void sprr_mirror_free(struct sprr_mirror *mirror)
     free(mirror);
 }
 
+static void sprr_shadow_free(struct hv_sprr_shadow *sh)
+{
+    sprr_mirror_free(sh->top);
+
+    for (int i = 0; i < 4; i++)
+        if (sh->vector_tables[i])
+            sprr_pool_release(sh->vector_tables[i]);
+
+    memset(sh, 0, sizeof(*sh));
+}
+
 static void sprr_drop_child(struct sprr_mirror *mirror, u32 i)
 {
     for (struct sprr_mirror **p = &mirror->children; *p; p = &(*p)->sibling) {
@@ -277,23 +291,71 @@ static void sprr_leaf_init(struct hv_sprr_shadow *sh)
     }
 }
 
+static bool pte_contains_vector_page(struct sprr_mirror *mirror, u64 va)
+{
+    struct hv_sprr_shadow *sh = mirror->owner;
+
+    /* We only need the vector page for TTBR1 / the kernel's address space */
+    if (sh->ttbr_idx != 1)
+        return false;
+
+    /* Check if this entry (which may a table) covers the target address for our vector page */
+    if (va != ALIGN_DOWN(SPRR_VECTOR_VA, BIT(sprr_lvl_off[mirror->level])))
+        return false;
+
+    return true;
+}
+
+static u64 sprr_vector_entry(struct hv_sprr_shadow *sh, u8 level)
+{
+    if (level < 3) {
+        u64 **table = &sh->vector_tables[level + 1];
+        if (!*table)
+            *table = sprr_alloc_table();
+        u32 index = (SPRR_VECTOR_VA >> sprr_lvl_off[level + 1]) & (SPRR_PT_ENTRIES - 1);
+        (*table)[index] = sprr_vector_entry(sh, level + 1);
+        return (u64)*table | PTE_VALID | PTE_TYPE;
+    }
+
+    u64 mair = mrs(SYS_MAIR_EL12);
+    for (int attr = 0; attr < 8; attr++) {
+        u8 value = mair >> (8 * attr);
+        if (value == 0xff) /* Normal Memory, Write-back, XS=0, usually at attr = 0 */
+            return (u64)hv_sprr_vectors | PTE_VALID | PTE_TYPE | PTE_ACCESS | PTE_AP_RO | PTE_UXN |
+                   PTE_SH_IS | PTE_MAIR_IDX(attr);
+    }
+
+    panic("hv_sprr: no normal-memory MAIR slot for vector page");
+}
+
 static void sprr_mirror_entry(struct exc_info *ctx, struct sprr_mirror *mirror, u32 i, u64 pa)
 {
     struct hv_sprr_shadow *sh = mirror->owner;
     u64 d = read64(pa + i * sizeof(u64));
+    u64 va = mirror->va_base + ((u64)i << sprr_lvl_off[mirror->level]);
+
+    if (pte_contains_vector_page(mirror, va) && (d & PTE_VALID) && mirror->level == 3)
+        panic("hv_sprr: guest mapping collides with exception vector VA 0x%lx", SPRR_VECTOR_VA);
 
     if (mirror->level < 3 && (mirror->el[i] & PTE_VALID) &&
         FIELD_GET(PTE_TYPE, mirror->el[i]) == PTE_TABLE)
         sprr_drop_child(mirror, i);
 
     if (!(d & PTE_VALID)) {
-        mirror->el[i] = mirror->gl[i] = 0;
+        u64 entry = 0;
+
+        /*
+         * Inject a page with custom exception vectors if this entry covers the target address.
+         * sprr_vector_entry will build the required tables if we're not already at the last level.
+         */
+        if (pte_contains_vector_page(mirror, va))
+            entry = sprr_vector_entry(sh, mirror->level);
+
+        mirror->el[i] = mirror->gl[i] = entry;
         return;
     }
 
     if (mirror->level < 3 && FIELD_GET(PTE_TYPE, d) == PTE_TABLE) {
-        u64 va = mirror->va_base + ((u64)i << sprr_lvl_off[mirror->level]);
-
         // without SPRR these restrict everything below the entry, with SPRR we have no idea what
         // they do. XNU does set them, so ignoring them potentially over-grants.
         if (d & PTE_TABLE_PERM)
@@ -470,7 +532,7 @@ static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sp
     }
 
     if (slot->guest_ttbr)
-        sprr_mirror_free(slot->top);
+        sprr_shadow_free(slot);
 
     int start = sprr_start_level(va_bits);
     slot->guest_ttbr = guest_ttbr;
@@ -639,8 +701,7 @@ static void sprr_drop_asid(u64 asid)
         if (FIELD_GET(TTBR_ASID, sh->guest_ttbr) != asid)
             continue;
 
-        sprr_mirror_free(sh->top);
-        memset(sh, 0, sizeof(*sh));
+        sprr_shadow_free(sh);
     }
 }
 
@@ -1107,4 +1168,12 @@ bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm)
         return hv_gxf_gexit(ctx, true);
 
     return false;
+}
+
+void hv_sprr_init(void)
+{
+    if (hv_sptm_mode != SPTM_EMULATION)
+        return;
+    if (hv_map_hw_ro((u64)hv_sprr_vectors, (u64)hv_sprr_vectors, SZ_16K) < 0)
+        panic("hv_sprr: cannot map vector page");
 }
