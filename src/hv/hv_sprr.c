@@ -30,7 +30,13 @@ static u8 sprr_perm_nibble(u64 perm, u32 index)
 #define SPRR_WP_N_BUCKETS     4096
 #define SPRR_N_CACHED_SHADOWS 256
 
-#define SPRR_VECTOR_VA 0xffffffffffffc000UL
+#define SPRR_VECTOR_VA          0xffffffffffffc000UL
+#define SPRR_VECTOR_STRIDE      0x80
+#define SPRR_VECTOR_TYPE        GENMASK(1, 0)
+#define SPRR_VECTOR_TYPE_SYNC   0
+#define SPRR_VECTOR_TYPE_IRQ    1
+#define SPRR_VECTOR_TYPE_FIQ    2
+#define SPRR_VECTOR_TYPE_SERROR 3
 extern const u8 hv_sprr_vectors[SZ_16K];
 
 static struct hv_sprr_cpu hv_sprr_cpus[MAX_CPUS];
@@ -554,6 +560,22 @@ static bool sprr_mmu_on(void)
     return mrs(SYS_SCTLR_EL12) & SCTLR_M;
 }
 
+static void sprr_update_vbar(struct hv_sprr_cpu *cpu)
+{
+    u64 vbar;
+
+    if (cpu->sprr_en) {
+        if (sprr_mmu_on())
+            vbar = SPRR_VECTOR_VA;
+        else
+            vbar = (u64)hv_sprr_vectors;
+    } else {
+        /* We can't easily inject a page if we don't own the guest's pagetables */
+        vbar = cpu->vbar_el1;
+    }
+    msr(SYS_VBAR_EL12, vbar);
+}
+
 static void sprr_load_shadow(struct exc_info *ctx, struct hv_sprr_cpu *cpu, int ttbr_idx)
 {
     u64 tcr = mrs(SYS_TCR_EL12);
@@ -606,6 +628,21 @@ static void hv_sprr_activate(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
 
     if (sprr_mmu_on())
         hv_sprr_build(ctx, cpu);
+
+    /*
+     * Start trapping all exception entries and returns now that SPRR is on and we're now
+     * able to inject a page to the guest to forward all exceptions to EL2. We need to update
+     * our shadows of the exception register here since these will now be used instead of the
+     * real hardware ones.
+     */
+    cpu->el1.spsr = mrs(SYS_SPSR_EL12);
+    cpu->el1.elr = mrs(SYS_ELR_EL12);
+    cpu->el1.esr = mrs(SYS_ESR_EL12);
+    cpu->el1.far = mrs(SYS_FAR_EL12);
+    cpu->el1.afsr1 = mrs(SYS_AFSR1_EL12);
+    sprr_update_vbar(cpu);
+    msr(SYS_HFGITR_EL2, mrs(SYS_HFGITR_EL2) | HFGITR_ERET);
+    sysop("isb");
 }
 
 static void sprr_release_shadows(struct hv_sprr_cpu *cpu)
@@ -626,14 +663,29 @@ static void hv_sprr_deactivate(struct hv_sprr_cpu *cpu)
     sysop("tlbi vmalle1");
     sysop("dsb nsh");
     sysop("isb");
+
+    /*
+     * After SPRR is disabled we no longer trap exception entry/return and the guest starts
+     * using the real hardware registers again
+     */
+    msr(SYS_SPSR_EL12, cpu->el1.spsr);
+    msr(SYS_ELR_EL12, cpu->el1.elr);
+    msr(SYS_ESR_EL12, cpu->el1.esr);
+    msr(SYS_FAR_EL12, cpu->el1.far);
+    msr(SYS_AFSR1_EL12, cpu->el1.afsr1);
+    sprr_update_vbar(cpu);
+    msr(SYS_HFGITR_EL2, mrs(SYS_HFGITR_EL2) & ~HFGITR_ERET);
+    sysop("isb");
 }
 
 static void hv_sprr_rebuild(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
 {
     if (!cpu->sprr_en)
         return;
-    if (sprr_mmu_on())
+    if (sprr_mmu_on()) {
         hv_sprr_build(ctx, cpu);
+        sprr_update_vbar(cpu);
+    }
 }
 
 static bool sprr_shadows_active(struct hv_sprr_cpu *cpu)
@@ -660,6 +712,7 @@ static void sprr_write_ttbr(struct exc_info *ctx, struct hv_sprr_cpu *cpu, int t
 
     sprr_load_shadow(ctx, cpu, ttbr_idx);
     hv_sprr_switch_tables(cpu);
+    sprr_update_vbar(cpu);
 }
 
 static void sprr_write_tcr(struct exc_info *ctx, struct hv_sprr_cpu *cpu, u64 val)
@@ -689,6 +742,7 @@ static void sprr_write_sctlr(struct exc_info *ctx, struct hv_sprr_cpu *cpu, u64 
         hv_sprr_build(ctx, cpu);
     }
     msr(SYS_SCTLR_EL12, val);
+    sprr_update_vbar(cpu);
 }
 
 static void sprr_drop_asid(u64 asid)
@@ -794,24 +848,16 @@ bool hv_sprr_handle_msr(struct exc_info *ctx, u64 reg, u32 rt, bool is_read)
     return false;
 }
 
-#define SWAP_HW(cpu, reg, field)                                                                   \
-    do {                                                                                           \
-        u64 _t = _mrs(sr_tkn(reg));                                                                \
-        _msr(sr_tkn(reg), (cpu)->bank.field);                                                      \
-        (cpu)->bank.field = _t;                                                                    \
-    } while (0)
-
-static void hv_sprr_world_swap(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
+static void hv_sprr_switch_world(struct exc_info *ctx, struct hv_sprr_cpu *cpu, bool guarded)
 {
-    u64 sp = ctx->sp[1];
-    ctx->sp[1] = cpu->bank.sp_el1;
-    cpu->bank.sp_el1 = sp;
+    struct hv_sprr_exc_regs *from = cpu->guarded ? &cpu->gl1 : &cpu->el1;
+    struct hv_sprr_exc_regs *to = guarded ? &cpu->gl1 : &cpu->el1;
 
-    SWAP_HW(cpu, SYS_SPSR_EL12, spsr);
-    SWAP_HW(cpu, SYS_ELR_EL12, elr);
-    SWAP_HW(cpu, SYS_ESR_EL12, esr);
-    SWAP_HW(cpu, SYS_FAR_EL12, far);
-    SWAP_HW(cpu, SYS_AFSR1_EL12, afsr1);
+    from->sp = ctx->sp[1];
+    ctx->sp[1] = to->sp;
+    cpu->guarded = guarded;
+
+    hv_sprr_switch_tables(cpu);
 }
 
 static bool hv_gxf_genter(struct exc_info *ctx, u8 imm, bool locked)
@@ -827,15 +873,9 @@ static bool hv_gxf_genter(struct exc_info *ctx, u8 imm, bool locked)
     // genter from GL is weird but allowed ¯\_(ツ)_/¯
     bool from_guarded = cpu->guarded;
 
-    if (!from_guarded)
-        hv_sprr_world_swap(ctx, cpu);
-
-    msr(SYS_VBAR_EL12, cpu->vbar_gl1);
-    msr(SYS_SPSR_EL12, link_pstate);
-    msr(SYS_ELR_EL12, link_pc);
-    msr(SYS_ESR_EL12, HV_GXF_ESR_GENTER | FIELD_PREP(HV_HVC_GENTER_IMM, imm));
-    cpu->elr_gl1 = link_pc;
-    cpu->spsr_gl1 = link_pstate;
+    cpu->gl1.spsr = link_pstate;
+    cpu->gl1.elr = link_pc;
+    cpu->gl1.esr = HV_GXF_ESR_GENTER | FIELD_PREP(HV_HVC_GENTER_IMM, imm);
     if (from_guarded)
         cpu->aspsr_gl1 |= ASPSR_GUARDED;
     else
@@ -845,10 +885,8 @@ static bool hv_gxf_genter(struct exc_info *ctx, u8 imm, bool locked)
         printf("hv_sprr[%d]: first genter #%d from 0x%lx -> 0x%lx\n", smp_id(), imm, link_pc,
                cpu->gxf_enter);
 
-    if (!from_guarded) {
-        cpu->guarded = true;
-        hv_sprr_switch_tables(cpu);
-    }
+    if (!from_guarded)
+        hv_sprr_switch_world(ctx, cpu, true);
 
     ctx->elr = cpu->gxf_enter;
     ctx->spsr = (link_pstate | SPSR_D | SPSR_A | SPSR_I | SPSR_F) & ~SPSR_M;
@@ -868,8 +906,8 @@ static bool hv_gxf_gexit(struct exc_info *ctx, bool locked)
     if (!locked && (!cpu->n_gexit || ((cpu->aspsr_gl1 & ASPSR_GUARDED) && !warned_nested)))
         return false;
 
-    u64 ret_pc = cpu->elr_gl1;
-    u64 ret_pstate = cpu->spsr_gl1;
+    u64 ret_pc = cpu->gl1.elr;
+    u64 ret_pstate = cpu->gl1.spsr;
 
     if (!cpu->n_gexit++)
         printf("hv_sprr[%d]: first gexit -> 0x%lx (ASPSR 0x%lx)\n", smp_id(), ret_pc,
@@ -881,25 +919,30 @@ static bool hv_gxf_gexit(struct exc_info *ctx, bool locked)
                smp_id(), cpu->n_gexit, cpu->aspsr_gl1, ctx->sp[1]);
     }
 
-    if (!(cpu->aspsr_gl1 & ASPSR_GUARDED)) {
-        hv_sprr_world_swap(ctx, cpu);
-        msr(SYS_VBAR_EL12, cpu->vbar_el1);
-        cpu->guarded = false;
-        hv_sprr_switch_tables(cpu);
-    }
+    if (!(cpu->aspsr_gl1 & ASPSR_GUARDED))
+        hv_sprr_switch_world(ctx, cpu, false);
 
     ctx->elr = ret_pc;
     ctx->spsr = ret_pstate;
     return true;
 }
 
-#define GL1_BANKED(hwreg, field)                                                                   \
-    if (is_read)                                                                                   \
-        rval = cpu->guarded ? _mrs(sr_tkn(hwreg)) : cpu->bank.field;                               \
-    else if (cpu->guarded)                                                                         \
-        _msr(sr_tkn(hwreg), wval);                                                                 \
-    else                                                                                           \
-        cpu->bank.field = wval;
+/*
+ * When SPRR is disabled we use the real hardware registers because we can't easily inject the
+ * page redirecting all exceptions via hvc to EL2.
+ */
+#define VREG_EL1_BANKED(vreg_id, hwreg, field)                                                     \
+    case vreg_id:                                                                                  \
+        if (cpu->sprr_en) {                                                                        \
+            if (is_read)                                                                           \
+                rval = cpu->el1.field;                                                             \
+            else                                                                                   \
+                cpu->el1.field = wval;                                                             \
+        } else if (is_read)                                                                        \
+            rval = _mrs(sr_tkn(hwreg));                                                            \
+        else                                                                                       \
+            _msr(sr_tkn(hwreg), wval);                                                             \
+        break
 
 #define VREG_STORED(vreg_id, field)                                                                \
     case vreg_id:                                                                                  \
@@ -933,6 +976,19 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
         VREG_STORED(HV_VREG_SPRR_UPERM_SH1_EL1, sprr_uperm_sh1);
         VREG_STORED(HV_VREG_SPRR_UPERM_SH2_EL1, sprr_uperm_sh2);
         VREG_STORED(HV_VREG_SPRR_UPERM_SH3_EL1, sprr_uperm_sh3);
+
+        VREG_STORED(HV_VREG_VBAR_GL1, vbar_gl1);
+        VREG_STORED(HV_VREG_ELR_GL1, gl1.elr);
+        VREG_STORED(HV_VREG_SPSR_GL1, gl1.spsr);
+        VREG_STORED(HV_VREG_ESR_GL1, gl1.esr);
+        VREG_STORED(HV_VREG_FAR_GL1, gl1.far);
+        VREG_STORED(HV_VREG_AFSR1_GL1, gl1.afsr1);
+        VREG_EL1_BANKED(HV_VREG_ELR_EL1, SYS_ELR_EL12, elr);
+        VREG_EL1_BANKED(HV_VREG_SPSR_EL1, SYS_SPSR_EL12, spsr);
+        VREG_EL1_BANKED(HV_VREG_ESR_EL1, SYS_ESR_EL12, esr);
+        VREG_EL1_BANKED(HV_VREG_FAR_EL1, SYS_FAR_EL12, far);
+        VREG_EL1_BANKED(HV_VREG_AFSR1_EL1, SYS_AFSR1_EL12, afsr1);
+
         case HV_VREG_SPRR_CONFIG_EL1:
             if (is_read) {
                 rval = cpu->sprr_config;
@@ -991,73 +1047,14 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
                 hv_sprr_rebuild(ctx, cpu);
             }
             break;
-        case HV_VREG_VBAR_GL1:
-            if (is_read) {
-                rval = cpu->vbar_gl1;
-            } else {
-                cpu->vbar_gl1 = wval;
-                if (cpu->guarded)
-                    msr(SYS_VBAR_EL12, wval);
-            }
-            break;
         case HV_VREG_VBAR_EL1:
             if (is_read) {
                 rval = cpu->vbar_el1;
             } else {
                 cpu->vbar_el1 = wval;
-                if (!cpu->guarded)
-                    msr(SYS_VBAR_EL12, wval);
+                if (!cpu->sprr_en)
+                    sprr_update_vbar(cpu);
             }
-            break;
-        case HV_VREG_ELR_EL1:
-            if (is_read)
-                rval = cpu->guarded ? cpu->bank.elr : mrs(SYS_ELR_EL12);
-            else if (cpu->guarded)
-                cpu->bank.elr = wval;
-            else
-                msr(SYS_ELR_EL12, wval);
-            break;
-        case HV_VREG_SPSR_EL1:
-            if (is_read)
-                rval = cpu->guarded ? cpu->bank.spsr : mrs(SYS_SPSR_EL12);
-            else if (cpu->guarded)
-                cpu->bank.spsr = wval;
-            else
-                msr(SYS_SPSR_EL12, wval);
-            break;
-        case HV_VREG_ESR_EL1:
-            if (is_read)
-                rval = cpu->guarded ? cpu->bank.esr : mrs(SYS_ESR_EL12);
-            else if (cpu->guarded)
-                cpu->bank.esr = wval;
-            else
-                msr(SYS_ESR_EL12, wval);
-            break;
-        case HV_VREG_FAR_EL1:
-            if (is_read)
-                rval = cpu->guarded ? cpu->bank.far : mrs(SYS_FAR_EL12);
-            else if (cpu->guarded)
-                cpu->bank.far = wval;
-            else
-                msr(SYS_FAR_EL12, wval);
-            break;
-        case HV_VREG_AFSR1_EL1:
-            if (is_read)
-                rval = cpu->guarded ? cpu->bank.afsr1 : mrs(SYS_AFSR1_EL12);
-            else if (cpu->guarded)
-                cpu->bank.afsr1 = wval;
-            else
-                msr(SYS_AFSR1_EL12, wval);
-            break;
-        case HV_VREG_SPSR_GL1:
-            GL1_BANKED(SYS_SPSR_EL12, spsr);
-            if (!is_read && cpu->guarded)
-                cpu->spsr_gl1 = wval;
-            break;
-        case HV_VREG_ELR_GL1:
-            GL1_BANKED(SYS_ELR_EL12, elr);
-            if (!is_read && cpu->guarded)
-                cpu->elr_gl1 = wval;
             break;
         case HV_VREG_TTBR0_EL1:
         case HV_VREG_TTBR1_EL1: {
@@ -1089,15 +1086,6 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
                 sprr_write_sctlr(ctx, cpu, wval);
             }
             break;
-        case HV_VREG_ESR_GL1:
-            GL1_BANKED(SYS_ESR_EL12, esr);
-            break;
-        case HV_VREG_FAR_GL1:
-            GL1_BANKED(SYS_FAR_EL12, far);
-            break;
-        case HV_VREG_AFSR1_GL1:
-            GL1_BANKED(SYS_AFSR1_EL12, afsr1);
-            break;
         default:
             if (locked)
                 printf("hv_sprr: unknown vreg %d\n", vreg);
@@ -1109,10 +1097,85 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
     return true;
 }
 
+bool hv_sprr_handle_eret(struct exc_info *ctx)
+{
+    struct hv_sprr_cpu *cpu = hv_sprr_this();
+    struct hv_sprr_exc_regs *regs = cpu->guarded ? &cpu->gl1 : &cpu->el1;
+
+    if (hv_sptm_mode != SPTM_EMULATION)
+        return false;
+    if (!cpu->sprr_en)
+        return false;
+    if (FIELD_GET(ESR_ISS, ctx->esr) != 0)
+        return false;
+
+    ctx->elr = regs->elr;
+    hv_set_elr(ctx->elr);
+
+    ctx->spsr = regs->spsr;
+    hv_set_spsr(ctx->spsr);
+
+    return true;
+}
+
+static void hv_sprr_vector_enter(struct exc_info *ctx, u16 imm)
+{
+    struct hv_sprr_cpu *cpu = hv_sprr_this();
+    struct hv_sprr_exc_regs *regs = cpu->guarded ? &cpu->gl1 : &cpu->el1;
+    unsigned slot = FIELD_GET(HV_HVC_VECTOR_SLOT, imm);
+    unsigned type = FIELD_GET(SPRR_VECTOR_TYPE, slot);
+    u64 offset = slot * SPRR_VECTOR_STRIDE;
+
+    regs->elr = mrs(SYS_ELR_EL12);
+    regs->spsr = mrs(SYS_SPSR_EL12);
+    switch (type) {
+        case SPRR_VECTOR_TYPE_SERROR:
+            regs->esr = mrs(SYS_ESR_EL12);
+            break;
+        case SPRR_VECTOR_TYPE_SYNC:
+            regs->esr = mrs(SYS_ESR_EL12);
+            switch (FIELD_GET(ESR_EC, regs->esr)) {
+                case ESR_EC_IABORT_LOWER:
+                case ESR_EC_IABORT:
+                case ESR_EC_DABORT_LOWER:
+                case ESR_EC_DABORT:
+                case ESR_EC_PC_ALIGN:
+                case ESR_EC_WATCH_LOWER:
+                case ESR_EC_WATCH:
+                    regs->far = mrs(SYS_FAR_EL12);
+                    break;
+                case ESR_EC_IMPDEF:
+                    regs->far = mrs(SYS_FAR_EL12);
+                    regs->afsr1 = mrs(SYS_AFSR1_EL12);
+                    break;
+            }
+            break;
+        case SPRR_VECTOR_TYPE_IRQ:
+        case SPRR_VECTOR_TYPE_FIQ:
+            /* These don't have ESR or anything, just forward them */
+            break;
+    }
+
+    if (cpu->guarded) {
+        cpu->aspsr_gl1 |= ASPSR_GUARDED;
+        ctx->elr = cpu->vbar_gl1 + offset;
+    } else {
+        /* ASPSR doesn't exist in EL so no need to update anything here */
+        ctx->elr = cpu->vbar_el1 + offset;
+    }
+
+    hv_set_elr(ctx->elr);
+}
+
 bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm)
 {
     if (hv_sptm_mode != SPTM_EMULATION)
         return false;
+
+    if ((imm & HV_HVC_VECTOR_MASK) == HV_HVC_VECTOR_BASE) {
+        hv_sprr_vector_enter(ctx, imm);
+        return true;
+    }
 
     if (imm & HV_HVC_SYSREG_FLAG)
         return hv_sprr_emulate_sysreg(ctx, FIELD_GET(HV_HVC_SYSREG_VREG, imm),

@@ -110,16 +110,11 @@ struct hv_sprr_cpu {
     u64 sprr_pperm_sh1, sprr_pperm_sh2, sprr_pperm_sh3;
     u64 sprr_uperm_sh1, sprr_uperm_sh2, sprr_uperm_sh3;
     u64 tpidr_gl1;
-    u64 elr_gl1, spsr_gl1;
     u64 aspsr_el1, aspsr_gl1;
 
-    // inactive world's banked regs: genter/gexit swap these with the real _EL1 ones.
-    // required since these are updated by hardware on any exception so we can't just
-    // patch all msr/mrs with hvc like for the rest
-    struct hv_world_regs {
-        u64 sp_el1;
-        u64 spsr, elr, esr, far, afsr1;
-    } bank;
+    struct hv_sprr_exc_regs {
+        u64 spsr, elr, esr, far, afsr1, sp;
+    } el1, gl1;
 
     u64 guest_ttbr[2];
     struct hv_sprr_shadow *cur[2];
@@ -128,6 +123,7 @@ struct hv_sprr_cpu {
 };
 
 bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm);
+bool hv_sprr_handle_eret(struct exc_info *ctx);
 bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm);
 bool hv_sprr_handle_msr(struct exc_info *ctx, u64 reg, u32 rt, bool is_read);
 bool hv_sprr_traps_tlbi(void);
