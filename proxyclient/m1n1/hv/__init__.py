@@ -17,6 +17,7 @@ from .types import *
 from .virtutils import *
 from .virtio import *
 from .sprr import patch_text_sprr_emu
+from .impdef import patch_impdef_to_hvc
 
 __all__ = ["HV"]
 
@@ -1934,7 +1935,15 @@ class HV(Reloadable):
 
         self._load_macho_symbols()
 
-        xnu_image, xnu_segments = self.xnu_macho.prepare_image()
+        def load_hook(data, segname, size, fileoff, dest):
+            if self.sptm_mode != SPTM_MODE.SPTM_EMULATION:
+                return data
+            if segname in ("__TEXT_EXEC", "__TEXT_BOOT_EXEC"):
+                data = patch_impdef_to_hvc(data)
+                data = patch_text_sprr_emu(data)
+            return data
+
+        xnu_image, xnu_segments = self.xnu_macho.prepare_image(load_hook)
         xnu_map = {
             "ro": xnu_image[:xnu_segments["__DATA_SPTM"][0]],
             "rs": xnu_image[xnu_segments["__DATA_SPTM"][0]:xnu_segments["__DATA_SPTM"][1]],
@@ -1946,7 +1955,7 @@ class HV(Reloadable):
         xnu_entry = xnu_macho.entry - xnu_macho.vmin
 
         sptm_macho = MachO(open(sptm_path, "rb"))
-        sptm_image, sptm_segments = sptm_macho.prepare_image()
+        sptm_image, sptm_segments = sptm_macho.prepare_image(load_hook)
         sptm_map = {
             "ro": sptm_image[:sptm_segments["__TEXT_EXEC"][0]],
             "rx": sptm_image[sptm_segments["__TEXT_EXEC"][0]:sptm_segments["__TEXT_EXEC"][1]],
@@ -1956,7 +1965,7 @@ class HV(Reloadable):
         sptm_entry = sptm_macho.entry - sptm_macho.vmin
 
         txm_macho = MachO(open(txm_path, "rb"))
-        txm_image, txm_segments = txm_macho.prepare_image()
+        txm_image, txm_segments = txm_macho.prepare_image(load_hook)
         txm_map = {
             "ro": txm_image[:txm_segments["__TEXT_EXEC"][0]],
             "rx": txm_image[txm_segments["__TEXT_EXEC"][0]:txm_segments["__TEXT_EXEC"][1]],
