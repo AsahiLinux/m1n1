@@ -814,27 +814,11 @@ static void hv_sprr_world_swap(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
     SWAP_HW(cpu, SYS_AFSR1_EL12, afsr1);
 }
 
-static void hv_gxf_undef(struct exc_info *ctx)
-{
-    msr(SYS_ESR_EL12, 0x02000000UL);
-    msr(SYS_SPSR_EL12, ctx->spsr);
-    msr(SYS_ELR_EL12, ctx->elr - 4);
-
-    ctx->elr = mrs(SYS_VBAR_EL12) + 0x400;
-    ctx->spsr = (ctx->spsr | SPSR_D | SPSR_A | SPSR_I | SPSR_F) & ~SPSR_M;
-    ctx->spsr |= FIELD_PREP(SPSR_M, SPSR_M_EL1H);
-}
-
 static bool hv_gxf_genter(struct exc_info *ctx, u8 imm, bool locked)
 {
     struct hv_sprr_cpu *cpu = hv_sprr_this();
     u64 link_pstate = ctx->spsr;
     u64 link_pc = ctx->elr;
-
-    if (FIELD_GET(SPSR_M, link_pstate) == SPSR_M_EL0) {
-        hv_gxf_undef(ctx);
-        return true;
-    }
 
     // the only thing here that is not per-CPU state is the first-time printf below.
     if (!locked && !cpu->n_genter)
