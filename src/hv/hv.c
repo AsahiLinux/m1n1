@@ -150,6 +150,7 @@ void hv_init(void)
     hv_wdt_init();
 
     hv_pt_init();
+    hv_sprr_init();
     hv_sptm_init();
 
     // Configure hypervisor defaults
