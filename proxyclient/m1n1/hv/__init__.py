@@ -2004,6 +2004,9 @@ class HV(Reloadable):
             # Required by SPTM, no further checks
             MemoryMapEntry("SPTM-le", sptm_map["le"]),
 
+            # Empty page required by SPTM on M4 when no Secure Kernel is present
+            MemoryMapEntry("CL4-dummypage", bytes(0x4000)),
+
             MemoryMapEntry("TXM-rw", txm_map["rw"]),
             MemoryMapEntry("TXM-le", txm_map["le"]),
 
