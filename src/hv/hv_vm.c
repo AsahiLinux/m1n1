@@ -1276,6 +1276,14 @@ bool hv_handle_dabort(struct exc_info *ctx)
         return true;
     }
 
+    if (is_write && hv_sprr_is_commpage(ipa)) {
+        u64 bytes;
+        if (!hv_emulate_pt_store(ctx, far, ipa, &bytes))
+            return false;
+        hv_sprr_commpage_updated(ipa, bytes);
+        return true;
+    }
+
     // The shadow is mapped read-only, so this is the guest holding a shadow root it should never
     // have seen. Bail to the proxy rather than letting the IS_HW() retry below spin on it.
     if (is_write && hv_sprr_is_shadow_page(ipa)) {

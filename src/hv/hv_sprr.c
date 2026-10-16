@@ -197,6 +197,91 @@ static u64 *sprr_alloc_table(void)
     return t;
 }
 
+#define SPRR_COMMPAGE_VA            0x0000000fffffc000UL
+#define SPRR_COMMPAGE_USER_TIMEBASE 0x90
+#define SPRR_COMMPAGE_CONT_HWCLOCK  0x91
+#define SPRR_COMMPAGE_xPRR_MODE     0x10c
+static struct {
+    u64 ipa;
+    u8 *data;
+} sprr_commpage;
+
+bool hv_sprr_is_commpage(u64 ipa)
+{
+    if (hv_sptm_mode != SPTM_EMULATION)
+        return false;
+    if (!sprr_commpage.data)
+        return false;
+    if (sprr_commpage.ipa != ALIGN_DOWN(ipa, SZ_16K))
+        return false;
+    return true;
+}
+
+void hv_sprr_commpage_updated(u64 ipa, u64 bytes)
+{
+    u64 off = ipa - sprr_commpage.ipa;
+    u64 end = off + bytes;
+    u64 value[4] = {0};
+
+    if (bytes > sizeof(value))
+        panic("hv_sprr: unsupported commpage store size");
+    memcpy(value, (void *)(sprr_ipa_to_pa(sprr_commpage.ipa) + off), bytes);
+
+    if (off <= SPRR_COMMPAGE_USER_TIMEBASE && SPRR_COMMPAGE_USER_TIMEBASE < end)
+        ((u8 *)value)[SPRR_COMMPAGE_USER_TIMEBASE - off] = 0;
+    if (off <= SPRR_COMMPAGE_CONT_HWCLOCK && SPRR_COMMPAGE_CONT_HWCLOCK < end)
+        ((u8 *)value)[SPRR_COMMPAGE_CONT_HWCLOCK - off] = 0;
+    if (off <= SPRR_COMMPAGE_xPRR_MODE && SPRR_COMMPAGE_xPRR_MODE < end)
+        ((u8 *)value)[SPRR_COMMPAGE_xPRR_MODE - off] = 0;
+
+    u64 dst = (u64)sprr_commpage.data + off;
+    switch (bytes) {
+        case 1:
+            write8(dst, (u8)value[0]);
+            break;
+        case 2:
+            write16(dst, (u16)value[0]);
+            break;
+        case 4:
+            write32(dst, (u32)value[0]);
+            break;
+        case 8:
+            write64(dst, value[0]);
+            break;
+        default:
+            memcpy((void *)dst, value, bytes);
+            break;
+    }
+}
+
+static u64 sprr_commpage_map(u8 level, u64 descriptor)
+{
+    u64 ipa = descriptor & SPRR_OA_MASK;
+
+    if (level != 3)
+        panic("hv_sprr: commpage not at level 3");
+    if (sprr_commpage.data && sprr_commpage.ipa != ipa)
+        panic("hv_sprr: commpage IPA changed from 0x%lx to 0x%lx", sprr_commpage.ipa, ipa);
+
+    if (!sprr_commpage.data) {
+        sprr_commpage.ipa = ipa;
+        u8 *data = (u8 *)sprr_alloc_table(); /* not actually a table but just a SZ_16K page */
+        if (hv_pt_set_writable(ipa, false) < 0)
+            panic("hv_sprr: can't protect commpage");
+
+        memcpy(data, (void *)sprr_ipa_to_pa(ipa), SZ_16K);
+        data[SPRR_COMMPAGE_USER_TIMEBASE] = 0;
+        data[SPRR_COMMPAGE_CONT_HWCLOCK] = 0;
+        data[SPRR_COMMPAGE_xPRR_MODE] = 0;
+
+        sprr_commpage.data = data;
+        printf("hv_sprr: commpage VA 0x%lx IPA 0x%lx -> shadow 0x%lx\n", SPRR_COMMPAGE_VA, ipa,
+               (u64)sprr_commpage.data);
+    }
+
+    return (descriptor & ~SPRR_OA_MASK) | (u64)sprr_commpage.data;
+}
+
 static struct sprr_mirror *sprr_mirror_table(struct exc_info *ctx, struct hv_sprr_shadow *sh,
                                              u64 ipa, u8 level, u64 va_base, u32 nents);
 static void sprr_mirror_entry(struct exc_info *ctx, struct sprr_mirror *mirror, u32 i, u64 pa);
@@ -391,8 +476,13 @@ static void sprr_mirror_entry(struct exc_info *ctx, struct sprr_mirror *mirror, 
     u64 pgl = sh->leaf[1][index];
     if (pel == HV_SPRR_NO_ACCESS)
         mirror->el[i] = 0;
-    else
-        mirror->el[i] = base | pel;
+    else {
+        u64 descriptor = base | pel;
+        if (sh->ttbr_idx == 0 &&
+            va == ALIGN_DOWN(SPRR_COMMPAGE_VA, BIT(sprr_lvl_off[mirror->level])))
+            descriptor = sprr_commpage_map(mirror->level, descriptor);
+        mirror->el[i] = descriptor;
+    }
 
     if (pgl == HV_SPRR_NO_ACCESS)
         mirror->gl[i] = 0;
