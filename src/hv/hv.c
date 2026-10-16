@@ -31,6 +31,7 @@ int hv_pinned_cpu;
 int hv_want_cpu;
 
 enum hv_sptm_mode hv_sptm_mode = SPTM_NONE;
+bool hv_genter_trap_enabled = false;
 
 static bool hv_has_ecv;
 static bool hv_should_exit[MAX_CPUS];
@@ -557,4 +558,19 @@ bool hv_is_nested(void)
 {
     u64 hcr = mrs(HCR_EL2);
     return (hcr | HCR_NV2 | HCR_NV) == hcr;
+}
+
+void hv_enable_genter_trap()
+{
+    hv_write_hacr(mrs(HACR_EL2) | BIT(29));
+}
+
+void hv_disable_genter_trap()
+{
+    hv_write_hacr(mrs(HACR_EL2) & ~BIT(29));
+}
+
+void hv_set_genter_trap(bool enabled)
+{
+    hv_genter_trap_enabled = enabled;
 }
