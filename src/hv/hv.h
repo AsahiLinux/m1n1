@@ -123,6 +123,10 @@ u64 hv_get_afsr1(void);
 void hv_set_elr(u64 val);
 
 bool hv_is_nested(void);
+extern bool hv_genter_trap_enabled;
+void hv_set_genter_trap(bool enabled);
+void hv_enable_genter_trap(void);
+void hv_disable_genter_trap(void);
 
 /* HV main */
 void hv_init(void);
