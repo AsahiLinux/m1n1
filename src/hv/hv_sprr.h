@@ -129,6 +129,8 @@ bool hv_sprr_handle_msr(struct exc_info *ctx, u64 reg, u32 rt, bool is_read);
 bool hv_sprr_traps_tlbi(void);
 bool hv_sprr_is_pt_page(u64 ipa);
 bool hv_sprr_is_shadow_page(u64 ipa);
+bool hv_sprr_is_commpage(u64 ipa);
+void hv_sprr_commpage_updated(u64 ipa, u64 bytes);
 void hv_sprr_pt_updated(struct exc_info *ctx, u64 ipa, u64 bytes);
 void hv_sprr_pt_writer_check(struct exc_info *ctx, u64 ipa, u64 far);
 void hv_sprr_init(void);
