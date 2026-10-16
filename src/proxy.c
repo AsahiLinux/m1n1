@@ -546,6 +546,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_HV_SPTM_SET_MODE:
             hv_sptm_set_mode(request->args[0]);
             break;
+        case P_HV_SET_GENTER_TRAP:
+            hv_set_genter_trap(request->args[0]);
+            break;
 
         case P_FB_INIT:
             fb_init(request->args[0]);

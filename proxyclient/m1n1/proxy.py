@@ -668,6 +668,7 @@ class M1N1Proxy(Reloadable):
     P_HV_EXIT_CPU = 0xc0f
     P_HV_ADD_TIME = 0xc10
     P_HV_SPTM_SET_MODE = 0xc11
+    P_HV_SET_GENTER_TRAP = 0xc12
 
     P_FB_INIT = 0xd00
     P_FB_SHUTDOWN = 0xd01
@@ -1160,6 +1161,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_HV_ADD_TIME, time)
     def hv_sptm_set_mode(self, mode):
         return self.request(self.P_HV_SPTM_SET_MODE, SPTM_MODE(mode))
+    def hv_set_genter_trap(self, enabled):
+        return self.request(self.P_HV_SET_GENTER_TRAP, enabled)
 
     def fb_init(self):
         return self.request(self.P_FB_INIT)

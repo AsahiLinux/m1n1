@@ -387,6 +387,7 @@ static bool hv_handle_nested_eret(struct exc_info *ctx, bool is_gexit)
     if (is_gexit)
     {
         msr(SYS_IMP_APL_ASPSR_GL1, mrs(SYS_IMP_APL_ASPSR_GL12));
+        hv_enable_genter_trap();
     }
 
     // Return to where the guest wanted to return to
@@ -601,6 +602,9 @@ bool hv_exc_sync(struct exc_info *ctx)
                 case ESR_ISS_IMPDEF_GEXIT:
                     handled = do_gexit = protect_elr = hv_handle_nested_eret(ctx, true);
                     break;
+                case ESR_ISS_IMPDEF_GENTER:
+                    if (!hv_genter_trap_enabled)
+                        handled = protect_elr = true;
             }
             break;
         case ESR_EC_HVC:
@@ -623,6 +627,13 @@ bool hv_exc_sync(struct exc_info *ctx)
         } else
             hv_exc_proxy(ctx, START_EXCEPTION_LOWER, EXC_SYNC, NULL);
     }
+
+    // We handle trapped GENTER instructions by just disabling the trap and executing the
+    // instruction again (not advancing elr by one word). This is easier than issuing the GENTER
+    // from the HV, since this would switch to GL2 instead of GL1. Due to nested virt, we have to
+    // handle every GEXIT anyways, so we can always enable the trap again for the next GENTER.
+    if (ec == ESR_EC_IMPDEF && FIELD_GET(ESR_ISS, ctx->esr) == ESR_ISS_IMPDEF_GENTER)
+        hv_disable_genter_trap();
 
     hv_exc_exit(ctx);
     hv_wdt_breadcrumb('s');
