@@ -2089,7 +2089,18 @@ class HV(Reloadable):
             self.adt["chosen"]["manifest-properties"].love = love
 
         self._remove_oslog()
+
+        if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
+            # Disable SPRR sysreg access in userspace (which additionally requires the commpage
+            # patches m1n1 applies) and prevent XNU from powering down cores or clusters since
+            # that's not supported in the HV and would panic XNU or get all cores stuck in an
+            # infinite wfi loop instead. Not sure if these are all required since I just ran
+            # strings on the kernel and added anything that sounded related and that stopped
+            # the panics and hangs I saw
+            self.tba.cmdline += " aprr_jit=0 sprr_tpro=0 sprr_tpro_pagers=0 processor_exit=0 cluster_power=0"
+            self.tba.cmdline.strip()
         self._write_boot_args(self.guest_base + image_size)
+
         if symfile is not None:
             self.sym_offset = xnu_macho.vmin - self.adt["chosen"]["memory-map"].BootKC_ro[0] + self.tba.phys_base - self.tba.virt_base
         if self.u.cpu_features.apple_sysregs_unlocked:
