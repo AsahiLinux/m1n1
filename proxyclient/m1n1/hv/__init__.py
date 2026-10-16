@@ -10,6 +10,7 @@ from ..utils import *
 from ..sysreg import *
 from ..macho import MachO
 from ..adt import load_adt
+from ..bootmem import BOOT_BLOBS
 from .. import xnutools, shell
 
 from .gdbserver import *
@@ -2016,8 +2017,21 @@ class HV(Reloadable):
             MemoryMapEntry("RTBuddySeg", None),
             MemoryMapEntry("SEPFW", None),
             MemoryMapEntry("preoslog", None),
-            MemoryMapEntry("BootArgs", None),
         ]
+
+        done = {entry.name for entry in memory_map}
+        for name in BOOT_BLOBS:
+            if name in done:
+                continue
+            value = self.u.adt["chosen"]["memory-map"].getprop(name)
+            if value is None:
+                continue
+            start, length = value
+            if (start, length) == (0xffffffffffffffff, 0xffffffffffffffff) or not length:
+                continue
+            memory_map.append(MemoryMapEntry(name, None))
+
+        memory_map.append(MemoryMapEntry("BootArgs", None))
 
         image_size = 0
 
@@ -2035,7 +2049,7 @@ class HV(Reloadable):
                 print(f"Copying {entry.name} (0x{length:x} bytes)...")
                 self.p.memcpy8(base, start, length)
 
-            image_size += length
+            image_size += align(length)
             setattr(self.adt["chosen"]["memory-map"], entry.name, (base, length))
 
         self.adt["chosen"]["memory-map"].slide = (self.phys_base, self.guest_base - self.phys_base)
