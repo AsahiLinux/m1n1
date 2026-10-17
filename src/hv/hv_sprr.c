@@ -307,8 +307,6 @@ static u64 sprr_commpage_map(u8 level, u64 descriptor)
         data[SPRR_COMMPAGE_xPRR_MODE] = 0;
 
         sprr_commpage.data = data;
-        printf("hv_sprr: commpage VA 0x%lx IPA 0x%lx -> shadow 0x%lx\n", SPRR_COMMPAGE_VA, ipa,
-               (u64)sprr_commpage.data);
     }
 
     return (descriptor & ~SPRR_OA_MASK) | (u64)sprr_commpage.data;
@@ -744,10 +742,6 @@ static void hv_sprr_activate(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
 
     hv_write_hcr(mrs(HCR_EL2) | HCR_TTLB);
 
-    printf("hv_sprr[%d]: SPRR on: PERM_EL0 0x%lx PERM_EL1 0x%lx TTBR 0x%lx/0x%lx MMU %s\n",
-           smp_id(), cpu->sprr_perm_el0, cpu->sprr_perm_el1, cpu->guest_ttbr[0], cpu->guest_ttbr[1],
-           sprr_mmu_on() ? "on" : "off");
-
     if (sprr_mmu_on())
         hv_sprr_build(ctx, cpu);
 
@@ -857,12 +851,8 @@ static void sprr_write_sctlr(struct exc_info *ctx, struct hv_sprr_cpu *cpu, u64 
 
     // The shadow has to be installed before the guest's MMU goes live. hv_sprr_build is a
     // no-op with SPRR still off, in which case hv_sprr_activate builds instead.
-    if ((val & SCTLR_M) && !sprr_mmu_on()) {
-        printf("hv_sprr[%d]: guest MMU on: TCR 0x%lx TTBR 0x%lx/0x%lx SPRR %s\n", smp_id(),
-               mrs(SYS_TCR_EL12), cpu->guest_ttbr[0], cpu->guest_ttbr[1],
-               cpu->sprr_en ? "on" : "off");
+    if ((val & SCTLR_M) && !sprr_mmu_on())
         hv_sprr_build(ctx, cpu);
-    }
 
     cpu->sctlr_pac = val & SCTRL_PAC_BITS;
     sprr_update_pac(ctx->spsr);
@@ -986,15 +976,11 @@ static void hv_sprr_switch_world(struct exc_info *ctx, struct hv_sprr_cpu *cpu, 
     hv_sprr_switch_tables(cpu);
 }
 
-static bool hv_gxf_genter(struct exc_info *ctx, u8 imm, bool locked)
+static void hv_gxf_genter(struct exc_info *ctx, u8 imm)
 {
     struct hv_sprr_cpu *cpu = hv_sprr_this();
     u64 link_pstate = ctx->spsr;
     u64 link_pc = ctx->elr;
-
-    // the only thing here that is not per-CPU state is the first-time printf below.
-    if (!locked && !cpu->n_genter)
-        return false;
 
     // genter from GL is weird but allowed ¯\_(ツ)_/¯
     bool from_guarded = cpu->guarded;
@@ -1007,10 +993,6 @@ static bool hv_gxf_genter(struct exc_info *ctx, u8 imm, bool locked)
     else
         cpu->aspsr_gl1 &= ~ASPSR_GUARDED;
 
-    if (!cpu->n_genter++)
-        printf("hv_sprr[%d]: first genter #%d from 0x%lx -> 0x%lx\n", smp_id(), imm, link_pc,
-               cpu->gxf_enter);
-
     if (!from_guarded)
         hv_sprr_switch_world(ctx, cpu, true);
 
@@ -1019,32 +1001,17 @@ static bool hv_gxf_genter(struct exc_info *ctx, u8 imm, bool locked)
     // genter automatically sets SPSel = 1
     ctx->spsr |= FIELD_PREP(SPSR_M, SPSR_M_EL1H);
     sprr_update_pac(ctx->spsr);
-    return true;
 }
 
-static bool hv_gxf_gexit(struct exc_info *ctx, bool locked)
+static bool hv_gxf_gexit(struct exc_info *ctx)
 {
     struct hv_sprr_cpu *cpu = hv_sprr_this();
-    static bool warned_nested;
 
     if (!cpu->guarded)
         return false;
 
-    if (!locked && (!cpu->n_gexit || ((cpu->aspsr_gl1 & ASPSR_GUARDED) && !warned_nested)))
-        return false;
-
     u64 ret_pc = cpu->gl1.elr;
     u64 ret_pstate = cpu->gl1.spsr;
-
-    if (!cpu->n_gexit++)
-        printf("hv_sprr[%d]: first gexit -> 0x%lx (ASPSR 0x%lx)\n", smp_id(), ret_pc,
-               cpu->aspsr_gl1);
-
-    if ((cpu->aspsr_gl1 & ASPSR_GUARDED) && !warned_nested) {
-        warned_nested = true;
-        printf("hv_sprr[%d]: gexit #%ld keeps the world (ASPSR 0x%lx), SP_EL1 stays 0x%lx\n",
-               smp_id(), cpu->n_gexit, cpu->aspsr_gl1, ctx->sp[1]);
-    }
 
     if (!(cpu->aspsr_gl1 & ASPSR_GUARDED))
         hv_sprr_switch_world(ctx, cpu, false);
@@ -1138,14 +1105,8 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
         case HV_VREG_GXF_CONFIG_EL1:
             if (is_read)
                 rval = cpu->gxf_en ? GXF_CONFIG_EN : 0;
-            else {
-                if (!locked)
-                    return false;
-                if ((wval & GXF_CONFIG_EN) && !cpu->gxf_en)
-                    printf("hv_sprr[%d]: GXF on: enter 0x%lx abort 0x%lx vbar_gl1 0x%lx\n",
-                           smp_id(), cpu->gxf_enter, cpu->gxf_abort, cpu->vbar_gl1);
+            else
                 cpu->gxf_en = wval & GXF_CONFIG_EN;
-            }
             break;
         case HV_VREG_GXF_STATUS_EL1:
             if (is_read)
@@ -1159,8 +1120,6 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
             } else if (wval != cpu->sprr_perm_el0) {
                 if (!locked)
                     return false;
-                printf("hv_sprr[%d]: SPRR_PERM_EL0 0x%lx -> 0x%lx\n", smp_id(), cpu->sprr_perm_el0,
-                       wval);
                 cpu->sprr_perm_el0 = wval;
                 hv_sprr_rebuild(ctx, cpu);
             }
@@ -1171,8 +1130,6 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
             } else if (wval != cpu->sprr_perm_el1) {
                 if (!locked)
                     return false;
-                printf("hv_sprr[%d]: SPRR_PERM_EL1 0x%lx -> 0x%lx\n", smp_id(), cpu->sprr_perm_el1,
-                       wval);
                 cpu->sprr_perm_el1 = wval;
                 hv_sprr_rebuild(ctx, cpu);
             }
@@ -1229,9 +1186,7 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
             break;
 
         default:
-            if (locked)
-                printf("hv_sprr: unknown vreg %d\n", vreg);
-            return false;
+            panic("hv_sprr: unknown vreg %d", vreg);
     }
 
     if (is_read)
@@ -1327,10 +1282,9 @@ bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm)
                                       false);
 
     if ((imm & HV_HVC_GENTER_MASK) == HV_HVC_GENTER_BASE) {
-        if (!hv_gxf_genter(ctx, FIELD_GET(HV_HVC_GENTER_IMM, imm), false))
-            return false;
+        hv_gxf_genter(ctx, FIELD_GET(HV_HVC_GENTER_IMM, imm));
     } else if (imm == HV_HVC_GEXIT) {
-        if (!hv_gxf_gexit(ctx, false))
+        if (!hv_gxf_gexit(ctx))
             return false;
     } else {
         return false;
@@ -1351,12 +1305,6 @@ bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm)
         return hv_sprr_emulate_sysreg(ctx, FIELD_GET(HV_HVC_SYSREG_VREG, imm),
                                       imm & HV_HVC_SYSREG_DIR, FIELD_GET(HV_HVC_SYSREG_RT, imm),
                                       true);
-
-    if ((imm & HV_HVC_GENTER_MASK) == HV_HVC_GENTER_BASE)
-        return hv_gxf_genter(ctx, FIELD_GET(HV_HVC_GENTER_IMM, imm), true);
-
-    if (imm == HV_HVC_GEXIT)
-        return hv_gxf_gexit(ctx, true);
 
     return false;
 }
