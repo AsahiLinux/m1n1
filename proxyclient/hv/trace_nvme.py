@@ -267,6 +267,15 @@ class NVMETracer(ASCTracer):
         self.state.cmd_cache = {}
         super().start()
 
+        if len(self.dev.reg) >= 10:
+            # M4 and later have 10+ regs. reg[9] mostly mirrors reg[3], but
+            # some operations only work through reg[9]. m1n1 and Linux use
+            # reg[9] for everything. The reg[9] size according to adt is too
+            # small to capture some of the NVMMU related writes.
+            base, _ = self.dev.get_reg(9)
+            _, size = self.dev.get_reg(3)
+            self.trace_regmap(base, size, NVMERegs, name="nvme_secure")
+
 
 NVMETracer = NVMETracer._reloadcls()
 nvme_tracer = NVMETracer(hv, "/arm-io/ans", verbose=1)
