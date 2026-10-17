@@ -111,6 +111,7 @@ class HV(Reloadable):
         self.smp = True
         self.hook_exceptions = False
         self.sptm_mode = SPTM_MODE.SPTM_NONE
+        self.sprr_pool_size = 2048 * 1024 * 1024
         self.started_cpus = {}
         self.started = False
         self.ctx = None
@@ -1385,6 +1386,14 @@ class HV(Reloadable):
         self.p.hv_sptm_set_mode(self.sptm_mode)
         self.p.hv_init()
 
+        self.mem_top = self.u.ba.phys_base + self.u.ba.mem_size
+        if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
+            old_top = self.mem_top
+            self.mem_top = self.p.hv_sprr_reserve_pool(self.sprr_pool_size)
+            self.unmap(self.mem_top, old_top - self.mem_top)
+            self.add_tracer(irange(self.mem_top, old_top - self.mem_top),
+                            "SPRR POOL", TraceMode.RESERVED)
+
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.SYNC, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.IRQ, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.FIQ, self.handle_exception)
@@ -1713,7 +1722,6 @@ class HV(Reloadable):
         self.ram_size = self.u.ba.mem_size_actual
         guest_base += 32 << 20 # ensure guest starts 32MB above the start of mapped RAM to ensure that all mappings work
         self.guest_base = guest_base
-        self.mem_top = self.u.ba.phys_base + self.u.ba.mem_size
         self.mem_size = self.mem_top - self.phys_base
 
         print(f"Mapping guest physical memory...")
