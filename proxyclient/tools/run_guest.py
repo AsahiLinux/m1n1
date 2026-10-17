@@ -25,6 +25,8 @@ parser.add_argument('-E', '--entry-point', action="store", type=int, help="Entry
 parser.add_argument('-a', '--append-payload', type=pathlib.Path, action="append", default=[])
 parser.add_argument('--sptm-mode', choices=("none", "emulation", "nested"), default="none",
                     help='SPTM mode: none when no SPTM guest is used, emulation for SPRR/GXF emulation.')
+parser.add_argument('--sprr-pool-size', type=int, default=2048, metavar='MiB',
+                    help='pool reservation at the top of RAM for SPRR pagetables (default: 2048 MiB).')
 parser.add_argument('-v', '--volume', type=volumespec, action='append',
                     help='Attach a 9P virtio device for file export to the guest. The argument is a host path to the '
                          'exported tree, joined by colon (\':\') with a tag under which the tree will be advertised '
@@ -64,12 +66,8 @@ def sptm_mode_arg(val):
     raise ValueError()
 args.sptm_mode = sptm_mode_arg(args.sptm_mode)
 
-if args.sptm_mode == SPTM_MODE.SPTM_EMULATION:
-    m1n1_heap_mb = 1024
-else:
-    m1n1_heap_mb = 128
 u = ProxyUtils(p, heap_size = 128 * 1024 * 1024,
-               m1n1_heap = m1n1_heap_mb * 1024 * 1024)
+               m1n1_heap = 128 * 1024 * 1024)
 
 # Setup counter redirect / AHCR_EL2 as expected by macOS for macho payloads
 if not args.raw:
@@ -82,6 +80,7 @@ hv = HV(iface, p, u)
 
 hv.hook_exceptions = args.hook_exceptions
 hv.sptm_mode = args.sptm_mode
+hv.sprr_pool_size = args.sprr_pool_size * 1024 * 1024
 
 hv.init()
 

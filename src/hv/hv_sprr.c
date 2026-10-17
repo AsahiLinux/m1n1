@@ -2,13 +2,13 @@
 
 #include "hv_sprr.h"
 #include "cpu_regs.h"
-#include "heapblock.h"
 #include "hv.h"
 #include "malloc.h"
 #include "memory.h"
 #include "smp.h"
 #include "string.h"
 #include "utils.h"
+#include "xnuboot.h"
 
 #define HV_SPRR_NO_ACCESS (~0ULL)
 
@@ -221,12 +221,24 @@ struct sprr_chunk {
 
 static struct sprr_chunk *sprr_chunks;
 static void *sprr_free_tables;
+static u64 sprr_pool_base, sprr_pool_top;
+
+u64 hv_sprr_reserve_pool(u64 size)
+{
+    size = ALIGN_UP(size, SPRR_CHUNK_TABLES * SPRR_TABLE_SIZE);
+    sprr_pool_base = top_of_memory_alloc(size);
+    sprr_pool_top = sprr_pool_base + size;
+    return cur_boot_args.phys_base + cur_boot_args.mem_size;
+}
 
 static u64 *sprr_pool_alloc(void)
 {
     if (!sprr_free_tables) {
         u64 size = SPRR_CHUNK_TABLES * SPRR_TABLE_SIZE;
-        u8 *mem = heapblock_alloc_aligned(size, SZ_16K);
+        if (sprr_pool_top - sprr_pool_base < size)
+            panic("hv_sprr: shadow pool exhausted");
+        sprr_pool_top -= size;
+        u8 *mem = (u8 *)sprr_pool_top;
         struct sprr_chunk *chunk = malloc(sizeof(*chunk));
 
         chunk->base = (u64)mem;
