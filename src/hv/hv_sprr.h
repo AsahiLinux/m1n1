@@ -122,8 +122,6 @@ struct hv_sprr_cpu {
 
     u64 guest_ttbr[2];
     struct hv_sprr_shadow *cur[2];
-
-    u64 n_genter, n_gexit;
 };
 
 bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm);
