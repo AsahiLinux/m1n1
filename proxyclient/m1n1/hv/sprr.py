@@ -287,6 +287,9 @@ REMAP = {
 
 GENTER = 0x00201420
 GEXIT = 0x00201400
+GXF_TLBI_ALL = 0x00201401
+GXF_TLBI_WITH_ARG = 0x00201300
+GXF_TLBI_WITH_ARG_MASK = 0xffffffc0
 
 HVC_SYSREG_FLAG = 0x8000
 
@@ -311,6 +314,8 @@ def patch_text_sprr_emu(data):
 
     for i, w in enumerate(a):
         if w & 0xfffffff0 == GENTER:
+            a[i] = _hvc(w & 0xffff)
+        elif w == GXF_TLBI_ALL or w & GXF_TLBI_WITH_ARG_MASK == GXF_TLBI_WITH_ARG:
             a[i] = _hvc(w & 0xffff)
         elif w == GEXIT:
             a[i] = _hvc(GEXIT & 0xffff)

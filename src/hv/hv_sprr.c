@@ -976,6 +976,16 @@ static void sprr_drop_asid(u64 asid)
     }
 }
 
+static bool hv_sprr_gxf_tlbi(void)
+{
+    sysop("dsb sy");
+    sysop("tlbi vmalls12e1os");
+    sysop("dsb sy");
+    sysop("isb");
+
+    return true;
+}
+
 #define TLBI(crm, op2)                                                                             \
     case SYSREG_ISS(sys_reg(1, 0, 8, crm, op2)):                                                   \
         __asm__ volatile("sys #0, c8, c" #crm ", #" #op2 ", %0" ::"r"(wval) : "memory");           \
@@ -1488,6 +1498,9 @@ bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm)
 {
     if (hv_sptm_mode != SPTM_EMULATION)
         return false;
+
+    if (imm == HV_HVC_GXF_TLBI_ALL || (imm & HV_HVC_GXF_TLBI_MASK) == HV_HVC_GXF_TLBI_ARG)
+        return hv_sprr_gxf_tlbi();
 
     if (imm & HV_HVC_SYSREG_FLAG)
         return hv_sprr_emulate_sysreg(ctx, FIELD_GET(HV_HVC_SYSREG_VREG, imm),
