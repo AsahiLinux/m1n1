@@ -18,7 +18,6 @@ from .types import *
 from .virtutils import *
 from .virtio import *
 from .sprr import patch_text_sprr_emu
-from .impdef import patch_impdef_to_hvc
 
 __all__ = ["HV"]
 
@@ -1911,8 +1910,6 @@ class HV(Reloadable):
                 return data
 
             print(f"Patching segment {segname}...")
-            if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
-                data = patch_text_sprr_emu(data, log=print)
             if do_patch_m3_regs:
                 data = patch_m3_regs(data, fileoff)
             print("Done.")
@@ -1940,7 +1937,6 @@ class HV(Reloadable):
             if self.sptm_mode != SPTM_MODE.SPTM_EMULATION:
                 return data
             if segname in ("__TEXT_EXEC", "__TEXT_BOOT_EXEC"):
-                data = patch_impdef_to_hvc(data)
                 data = patch_text_sprr_emu(data)
             return data
 
