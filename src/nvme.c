@@ -135,7 +135,6 @@ static rtkit_dev_t *nvme_rtkit = NULL;
 static sart_dev_t *nvme_sart = NULL;
 
 static u64 nvme_base;
-static u64 nvmmu_base;
 
 static struct nvme_queue adminq, ioq;
 
@@ -269,8 +268,8 @@ static bool nvme_exec_command(struct nvme_queue *q, struct nvme_command *cmd, u6
             printf("nvme: invalid tag in CQ: expected %d but got %d\n", tag, cqe.tag);
         }
 
-        write32(nvmmu_base + NVMMU_TCB_INVAL, cqe.tag);
-        if (read32(nvmmu_base + NVMMU_TCB_STAT))
+        write32(nvme_base + NVMMU_TCB_INVAL, cqe.tag);
+        if (read32(nvme_base + NVMMU_TCB_STAT))
             printf("nvme: NVMMU invalidation for tag %d failed\n", cqe.tag);
 
         /* increment head and switch phase once the end of the queue has been reached */
@@ -317,24 +316,18 @@ bool nvme_init(void)
 
     if (adt_get_property(adt, node, "nvme-secure-bar"))
         // M4+ generations have the nvme-secure-bar property and 10+ regs.
-        // They use reg[3] for NVMMU registers and reg[9] for NVMe registers,
-        // and require extra writes to set up the IO queues.
+        // reg[9] mostly mirrors reg[3] but some things only work through reg[9].
+        // macOS uses both, but using reg[9] for everything works too.
+        // T8132 variants also require extra writes to set up the IO queues.
         nvme_type = NVME_T8132;
     else
-        // M1-M3 generations use reg[3] for both NVMMU and NVMe registers.
+        // M1-M3 generations use reg[3] for everything.
         nvme_type = NVME_T8103;
 
-    if (adt_get_reg(adt, adt_path, "reg", 3, &nvmmu_base, NULL) < 0) {
-        printf("nvme: Error getting NVMMU base address.\n");
+    int nvme_reg = nvme_type == NVME_T8132 ? 9 : 3;
+    if (adt_get_reg(adt, adt_path, "reg", nvme_reg, &nvme_base, NULL) < 0) {
+        printf("nvme: Error getting NVMe base address.\n");
         return NULL;
-    }
-    if (nvme_type == NVME_T8132) {
-        if (adt_get_reg(adt, adt_path, "reg", 9, &nvme_base, NULL) < 0) {
-            printf("nvme: Error getting NVMe base address.\n");
-            return NULL;
-        }
-    } else {
-        nvme_base = nvmmu_base;
     }
 
     u32 cg;
@@ -382,9 +375,9 @@ bool nvme_init(void)
     set32(nvme_base + NVME_LINEAR_SQ_CTRL, NVME_LINEAR_SQ_CTRL_EN);
     write32(nvme_base + NVME_MAX_PEND_CMDS_CTRL,
             ((NVME_QUEUE_SIZE - 1) << 16) | (NVME_QUEUE_SIZE - 1));
-    write32(nvmmu_base + NVMMU_NUM, NVME_QUEUE_SIZE - 1);
-    write64_lo_hi(nvmmu_base + NVMMU_ASQ_BASE, (u64)adminq.tcbs);
-    write64_lo_hi(nvmmu_base + NVMMU_IOSQ_BASE, (u64)ioq.tcbs);
+    write32(nvme_base + NVMMU_NUM, NVME_QUEUE_SIZE - 1);
+    write64_lo_hi(nvme_base + NVMMU_ASQ_BASE, (u64)adminq.tcbs);
+    write64_lo_hi(nvme_base + NVMMU_IOSQ_BASE, (u64)ioq.tcbs);
 
     /* setup admin queue */
     if (!nvme_ctrl_disable()) {
