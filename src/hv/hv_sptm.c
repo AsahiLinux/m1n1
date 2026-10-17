@@ -85,7 +85,6 @@ static void sptm_init_cpu(int i)
     /* SPTM either panics or gets stuck in a polling loop if any bit here isn't set */
     sptm_cpus[i].shadow[HV_SPTM_HCR_EL2] = HCR_RW | HCR_E2H | HCR_APK | HCR_API;
     sptm_cpus[i].shadow[HV_SPTM_APSTS_EL1] = 1;
-    sptm_cpus[i].shadow[HV_SPTM_APCTL_EL1] = BIT(3);
 
     /* SPTM expects CTRR to be enabled and locked */
     sptm_cpus[i].shadow[HV_SPTM_CTRR_A_CTL_EL1] = 0x8000000000000001;

@@ -48,6 +48,38 @@ static struct hv_sprr_cpu *hv_sprr_this(void)
     return &hv_sprr_cpus[smp_id()];
 }
 
+#define SCTRL_PAC_BITS (SCTLR_EnIA | SCTLR_EnIB | SCTLR_EnDA | SCTLR_EnDB)
+
+static void sprr_update_pac(u64 pstate)
+{
+    struct hv_sprr_cpu *cpu = hv_sprr_this();
+
+    if (hv_sptm_mode != SPTM_EMULATION)
+        return;
+
+    u64 enable = 0;
+    if ((pstate & SPSR_M) == SPSR_M_EL0)
+        enable = APCTL_ENABLE_EL0;
+    else
+        enable = APCTL_ENABLE_EL1;
+
+    /*
+     * On real hardware, APCTL enables an additional key for the selected exception level.
+     * Since we can't emulate that we just enable all keys in SCTRL which looks the same
+     * to the guest since the keys are opaque anyway and all that matters is that some key
+     * is used and that PAC is enabled.
+     */
+    u64 pac = cpu->sctlr_pac;
+    if ((cpu->apctl_el1 & APCTL_APPLE_MODE) && (cpu->apctl_el1 & enable))
+        pac |= SCTRL_PAC_BITS;
+
+    u64 sctlr = mrs(SYS_SCTLR_EL12);
+    sctlr &= ~SCTRL_PAC_BITS;
+    sctlr |= pac;
+    msr(SYS_SCTLR_EL12, sctlr);
+    sysop("isb");
+}
+
 static const u8 sprr_lvl_off[4] = {47, 36, 25, 14};
 
 static int sprr_start_level(u32 va_bits)
@@ -831,6 +863,10 @@ static void sprr_write_sctlr(struct exc_info *ctx, struct hv_sprr_cpu *cpu, u64 
                cpu->sprr_en ? "on" : "off");
         hv_sprr_build(ctx, cpu);
     }
+
+    cpu->sctlr_pac = val & SCTRL_PAC_BITS;
+    sprr_update_pac(ctx->spsr);
+
     msr(SYS_SCTLR_EL12, val);
     sprr_update_vbar(cpu);
 }
@@ -982,6 +1018,7 @@ static bool hv_gxf_genter(struct exc_info *ctx, u8 imm, bool locked)
     ctx->spsr = (link_pstate | SPSR_D | SPSR_A | SPSR_I | SPSR_F) & ~SPSR_M;
     // genter automatically sets SPSel = 1
     ctx->spsr |= FIELD_PREP(SPSR_M, SPSR_M_EL1H);
+    sprr_update_pac(ctx->spsr);
     return true;
 }
 
@@ -1014,6 +1051,7 @@ static bool hv_gxf_gexit(struct exc_info *ctx, bool locked)
 
     ctx->elr = ret_pc;
     ctx->spsr = ret_pstate;
+    sprr_update_pac(ctx->spsr);
     return true;
 }
 
@@ -1052,6 +1090,8 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
     u64 rval = 0;
 
     switch (vreg) {
+        VREG_STORED(HV_VREG_APCTL_EL12, apctl_el12);
+
         VREG_STORED(HV_VREG_GXF_ENTER_EL1, gxf_enter);
         VREG_STORED(HV_VREG_GXF_ABORT_EL1, gxf_abort);
         VREG_STORED(HV_VREG_TPIDR_GL1, tpidr_gl1);
@@ -1170,12 +1210,24 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
         case HV_VREG_SCTLR_EL1:
             if (is_read) {
                 rval = mrs(SYS_SCTLR_EL12);
+                rval &= ~SCTRL_PAC_BITS;
+                rval |= cpu->sctlr_pac;
             } else {
                 if (!locked)
                     return false;
                 sprr_write_sctlr(ctx, cpu, wval);
             }
             break;
+
+        case HV_VREG_APCTL_EL1:
+            if (is_read) {
+                rval = cpu->apctl_el1;
+            } else {
+                cpu->apctl_el1 = wval;
+                sprr_update_pac(ctx->spsr);
+            }
+            break;
+
         default:
             if (locked)
                 printf("hv_sprr: unknown vreg %d\n", vreg);
@@ -1204,6 +1256,7 @@ bool hv_sprr_handle_eret(struct exc_info *ctx)
 
     ctx->spsr = regs->spsr;
     hv_set_spsr(ctx->spsr);
+    sprr_update_pac(ctx->spsr);
 
     return true;
 }
@@ -1254,6 +1307,7 @@ static void hv_sprr_vector_enter(struct exc_info *ctx, u16 imm)
         ctx->elr = cpu->vbar_el1 + offset;
     }
 
+    sprr_update_pac(ctx->spsr);
     hv_set_elr(ctx->elr);
 }
 
@@ -1311,6 +1365,8 @@ void hv_sprr_init(void)
 {
     if (hv_sptm_mode != SPTM_EMULATION)
         return;
+    for (int i = 0; i < MAX_CPUS; i++)
+        hv_sprr_cpus[i].apctl_el1 = APCTL_ENABLE_EL1;
     if (hv_map_hw_ro((u64)hv_sprr_vectors, (u64)hv_sprr_vectors, SZ_16K) < 0)
         panic("hv_sprr: cannot map vector page");
 }

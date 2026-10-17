@@ -746,6 +746,10 @@
 #define SYS_IMP_APL_APCTL_EL2  sys_reg(3, 6, 15, 12, 2)
 #define SYS_IMP_APL_APCTL_EL12 sys_reg(3, 6, 15, 15, 0)
 
+#define APCTL_APPLE_MODE BIT(0)
+#define APCTL_ENABLE_EL0 BIT(2)
+#define APCTL_ENABLE_EL1 BIT(3)
+
 /* Hypervisor registers? */
 #define SYS_IMPL_APL_AHCR_EL2 sys_reg(3, 4, 15, 12, 1)
 
