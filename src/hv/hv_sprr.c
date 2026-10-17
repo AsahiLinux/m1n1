@@ -855,9 +855,8 @@ static void sprr_write_sctlr(struct exc_info *ctx, struct hv_sprr_cpu *cpu, u64 
         hv_sprr_build(ctx, cpu);
 
     cpu->sctlr_pac = val & SCTRL_PAC_BITS;
-    sprr_update_pac(ctx->spsr);
-
     msr(SYS_SCTLR_EL12, val);
+    sprr_update_pac(ctx->spsr);
     sprr_update_vbar(cpu);
 }
 
