@@ -60,6 +60,8 @@ enum hv_vreg {
     HV_VREG_ESR_EL1,
     HV_VREG_FAR_EL1,
     HV_VREG_AFSR1_EL1,
+    HV_VREG_APCTL_EL1,
+    HV_VREG_APCTL_EL12,
     HV_VREG_MAX,
 };
 
@@ -100,6 +102,8 @@ struct hv_sprr_shadow {
 struct hv_sprr_cpu {
     bool sprr_en, gxf_en;
     bool guarded;
+    u64 apctl_el1, apctl_el12;
+    u64 sctlr_pac;
 
     u64 gxf_enter, gxf_abort;
     u64 vbar_gl1, vbar_el1;

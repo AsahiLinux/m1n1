@@ -43,6 +43,8 @@ HV_VREGS = [
     sysreg.ESR_EL1,
     sysreg.FAR_EL1,
     sysreg.AFSR1_EL1,
+    sysreg.APCTL_EL1,
+    sysreg.APCTL_EL12,
 ]
 
 GENTER = 0x00201420
