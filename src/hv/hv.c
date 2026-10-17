@@ -7,7 +7,6 @@
 #include "display.h"
 #include "gxf.h"
 #include "hv_sprr.h"
-#include "hv_sptm.h"
 #include "memory.h"
 #include "pcie.h"
 #include "smp.h"
@@ -151,7 +150,6 @@ void hv_init(void)
 
     hv_pt_init();
     hv_sprr_init();
-    hv_sptm_init();
 
     // Configure hypervisor defaults
     hv_write_hcr(HCR_API | // Allow PAuth instructions
@@ -370,7 +368,7 @@ void hv_start_secondary(int cpu, void *entry, u64 regs[4])
     iodev_console_flush();
 
     if (hv_sptm_mode == SPTM_EMULATION)
-        hv_sptm_init_secondary(cpu);
+        hv_sprr_init_secondary(cpu);
 
     mmu_init_secondary(cpu);
     iodev_console_flush();
@@ -514,7 +512,7 @@ void hv_arm_tick(bool secondary)
     else
         msr(CNTP_TVAL_EL0, hv_tick_interval);
     msr(CNTP_CTL_EL0, CNTx_CTL_ENABLE);
-    hv_sptm_timer_arm();
+    hv_sprr_timer_arm();
 }
 
 void hv_maybe_exit(void)

@@ -6,7 +6,6 @@
 #include "exception.h"
 #include "gxf.h"
 #include "hv_sprr.h"
-#include "hv_sptm.h"
 #include "iodev.h"
 #include "smp.h"
 #include "string.h"
@@ -171,7 +170,7 @@ void hv_update_fiq(void)
     }
 
     fiq_pending |= PERCPU(ipi_pending) || PERCPU(pmc_pending);
-    fiq_pending |= hv_sptm_timer_pending();
+    fiq_pending |= hv_sprr_timer_pending();
 
     sysop("isb");
 
@@ -482,7 +481,7 @@ static void hv_exc_exit(struct exc_info *ctx)
 {
     hv_wdt_breadcrumb('x');
     hv_update_fiq();
-    hv_sptm_timer_arm();
+    hv_sprr_timer_arm();
     /* reenable PMU counters */
     reg_set(SYS_IMP_APL_PMCR0, PERCPU(exc_entry_pmcr0_cnt));
     msr(CNTVOFF_EL2, stolen_time);
@@ -558,10 +557,6 @@ bool hv_exc_sync(struct exc_info *ctx)
             break;
         case ESR_EC_HVC:
             hv_wdt_breadcrumb('h');
-            if (hv_sptm_dispatch(ctx, FIELD_GET(ESR_ISS, ctx->esr))) {
-                hv_wdt_breadcrumb('s');
-                return do_gexit;
-            }
             if (hv_hvc_dispatch_unlocked(ctx, FIELD_GET(ESR_ISS, ctx->esr))) {
                 hv_wdt_breadcrumb('s');
                 return do_gexit;
