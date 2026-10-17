@@ -10,6 +10,7 @@
 #include "gxf.h"
 #include "heapblock.h"
 #include "hv.h"
+#include "hv_sprr.h"
 #include "iodev.h"
 #include "kboot.h"
 #include "malloc.h"
@@ -545,6 +546,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_HV_SPTM_SET_MODE:
             hv_sptm_set_mode(request->args[0]);
+            break;
+        case P_HV_SPRR_RESERVE_POOL:
+            reply->retval = hv_sprr_reserve_pool(request->args[0]);
             break;
 
         case P_FB_INIT:
