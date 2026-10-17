@@ -36,6 +36,10 @@ parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
 if (args.sptm or args.txm) and not (args.sptm and args.txm):
     parser.error("--sptm and --txm must be used in conjunction")
+if args.sptm_mode == "none" and (args.sptm and args.txm):
+    parser.error("--sptm/--txm must be used together with --sptm-mode other than none")
+if args.sptm_mode != "none" and not (args.sptm and args.txm):
+    parser.error("--sptm-mode other than none must be used together with --sptm/--txm")
 
 from m1n1.proxy import *
 from m1n1.proxyutils import *
