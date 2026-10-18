@@ -18,6 +18,7 @@ from .types import *
 from .virtutils import *
 from .virtio import *
 from .sprr import patch_text_sprr_emu
+from .amcc import VirtualAMCC
 
 __all__ = ["HV"]
 
@@ -2069,6 +2070,17 @@ class HV(Reloadable):
             self.adt["chosen"]["memory-map"].SPTM_rw[1] +
             self.adt["chosen"]["memory-map"].SPTM_le[1]
         ))
+
+        if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
+            mm = self.adt["chosen"]["memory-map"]
+            ranges = {
+                "c": (mm.DeviceTree[0], mm.SPTM_rx[0] + mm.SPTM_rx[1] - 1),
+                "d": (mm.TXM_ro[0], mm.BootKC_rs[0] + mm.BootKC_rs[1] - 1),
+            }
+            self.sptm_amcc = VirtualAMCC(self, ranges)
+            for addr in self.sptm_amcc.registers:
+                self.add_tracer(irange(addr, 4), "SPTM AMCC", TraceMode.HOOK,
+                                read=self.sptm_amcc.read, write=self.sptm_amcc.write)
 
         self.entry = self.adt["chosen"]["memory-map"].SPTM_ro[0] + sptm_entry
         self.adt_base = self.adt["chosen"]["memory-map"].DeviceTree[0]
