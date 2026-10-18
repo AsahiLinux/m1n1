@@ -127,6 +127,7 @@ DCP_OBJECTS := $(patsubst %,dcp/%, \
 HV_OBJECTS := $(patsubst %,hv/%, \
 	hv.o \
 	hv_aic.o \
+	hv_cpu_power.o \
 	hv_asm.o \
 	hv_exc.o \
 	hv_sprr.o \

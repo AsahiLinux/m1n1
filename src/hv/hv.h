@@ -126,6 +126,7 @@ bool hv_is_nested(void);
 
 /* HV main */
 void hv_init(void);
+bool hv_cpu_power_init(void);
 void hv_start(void *entry, u64 regs[4]);
 void hv_start_secondary(int cpu, void *entry, u64 regs[4]);
 void hv_exit_cpu(int cpu);
