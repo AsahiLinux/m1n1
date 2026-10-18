@@ -10,6 +10,12 @@
 #define IRQTRACE_IRQ BIT(0)
 
 static u32 trace_hw_num[AIC_MAX_DIES][AIC_MAX_HW_NUM / 32];
+static bool hooked;
+
+void hv_aic_init(void)
+{
+    hooked = false;
+}
 
 static void emit_irqtrace(u16 die, u16 type, u16 num)
 {
@@ -45,10 +51,32 @@ static bool trace_aic_event(struct exc_info *ctx, u64 addr, u64 *val, bool write
             if (trace_hw_num[die][num / 32] & BIT(num & 31)) {
                 emit_irqtrace(die, type, num);
             }
+            if (hv_amcc_handle_irq(die * aic->max_irq + num)) {
+                /* Ack the interrupt if we consumed it */
+                write32(aic->base + aic->regs.mask_clr + die * aic->intmaskclear_stride +
+                            4 * (num / 32),
+                        BIT(num & 31));
+                sysop("dsb sy");
+                *val = 0;
+            }
             break;
         default:
             // ignore
             break;
+    }
+
+    return true;
+}
+
+bool hv_aic_hook(void)
+{
+    if (!aic)
+        return false;
+
+    if (!hooked) {
+        if (hv_map_hook(aic->base, trace_aic_event, aic->regs.reg_size) < 0)
+            return false;
+        hooked = true;
     }
 
     return true;
@@ -84,12 +112,5 @@ bool hv_trace_irq(u32 type, u32 num, u32 count, u32 flags)
         return false;
     }
 
-    static bool hooked = false;
-
-    if (aic && !hooked) {
-        hv_map_hook(aic->base, trace_aic_event, aic->regs.reg_size);
-        hooked = true;
-    }
-
-    return true;
+    return hv_aic_hook();
 }

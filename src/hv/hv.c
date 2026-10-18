@@ -150,6 +150,7 @@ void hv_init(void)
 
     hv_pt_init();
     hv_sprr_init();
+    hv_aic_init();
 
     // Configure hypervisor defaults
     hv_write_hcr(HCR_API | // Allow PAuth instructions
@@ -215,6 +216,11 @@ void hv_start(void *entry, u64 regs[4])
 
     if (!hv_cpu_power_init()) {
         printf("HV: CPU power protection hooks failed; can't start the hypervisor\n");
+        return;
+    }
+
+    if (!hv_amcc_init()) {
+        printf("HV: AMCC interrupt hook failed; can't start the hypervisor\n");
         return;
     }
 
