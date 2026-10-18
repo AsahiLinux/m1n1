@@ -263,6 +263,11 @@ AOPRatios = Struct(
 )
 
 DEV_PROPERTIES = {
+    "*/chosen/lock-regs/amcc": {
+        "*": {
+            "aperture-phys-addr": SafeGreedyRange(Hex(Int64ul)),
+        }
+    },
     "display-crossbar*": {
         "*": {
             "dfp-endpoints": ADTStringList,
