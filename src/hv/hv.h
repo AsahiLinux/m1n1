@@ -80,6 +80,12 @@ bool hv_pa_rw(struct exc_info *ctx, u64 addr, u64 *val, bool write, int width);
 
 /* AIC events through tracing the MMIO event address */
 bool hv_trace_irq(u32 type, u32 num, u32 count, u32 flags);
+void hv_aic_init(void);
+bool hv_aic_hook(void);
+
+/* AMCC interrupt filtering */
+bool hv_amcc_init(void);
+bool hv_amcc_handle_irq(u32 irq);
 
 /* Virtual peripherals */
 void hv_vuart_poll(void);
