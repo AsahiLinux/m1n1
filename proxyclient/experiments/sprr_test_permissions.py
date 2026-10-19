@@ -32,16 +32,16 @@ class ARMPageTable:
 
     def map_page(self, vaddr, paddr, access_bits):
         ap = (access_bits & 0b1100) >> 2
-        pxn = (access_bits & 0b0010) >> 1
-        uxn = (access_bits & 0b0001)
+        uxn = (access_bits & 0b0010) >> 1
+        pxn = (access_bits & 0b0001)
 
         # block mapping, access bit set
         pte = paddr | 0b01 | (1 << 10)
 
         # move access bits in place
         pte |= ap << 6
-        pte |= pxn << 54
-        pte |= uxn << 53
+        pte |= uxn << 54
+        pte |= pxn << 53
 
         l0_idx = (vaddr >> (25+11+11)) & 1
         l1_idx = (vaddr >> (25+11)) & 0x7ff
