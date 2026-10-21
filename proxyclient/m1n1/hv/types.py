@@ -67,6 +67,6 @@ Different types of Tracing '''
     WSYNC = 4
     SYNC = 5
     HOOK = 6
-    RESERVED = 7
-    SYNC_BUFFERED = 8
-    SYNC_ON_READ_CHANGE = 9
+    SYNC_BUFFERED = 7
+    SYNC_ON_READ_CHANGE = 8
+    RESERVED = 9
