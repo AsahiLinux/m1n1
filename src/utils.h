@@ -309,7 +309,7 @@ static inline void write64_lo_hi(u64 addr, u64 val)
         sysop("isb");                                                                              \
     })
 
-#define sysop(op) __asm__ volatile(op ::: "memory")
+#define sysop(op) __asm__ volatile(".arch armv9.4-a\n" op ::: "memory")
 
 #define cacheop(op, val) ({ __asm__ volatile(op ", %0" : : "r"(val) : "memory"); })
 
