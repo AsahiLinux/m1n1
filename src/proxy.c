@@ -549,6 +549,8 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             break;
         case P_HV_SPRR_RESERVE_POOL:
             reply->retval = hv_sprr_reserve_pool(request->args[0]);
+        case P_HV_SET_GENTER_TRAP:
+            hv_set_genter_trap(request->args[0]);
             break;
 
         case P_FB_INIT:
