@@ -14,6 +14,55 @@ PCIeDevTracer = PCIeDevTracer._reloadcls()
 
 mon = RegMonitor(hv.u)
 
+MSG_TYPES = {
+    0x01: "GEN_STATUS",
+    0x02: "RING_STATUS",
+    0x03: "FLOW_RING_CREATE",
+    0x04: "FLOW_RING_CREATE_CMPLT",
+    0x05: "FLOW_RING_DELETE",
+    0x06: "FLOW_RING_DELETE_CMPLT",
+    0x07: "FLOW_RING_FLUSH",                        # apparently not used in msgbuf.c
+    0x08: "FLOW_RING_FLUSH_CMPLT",                  # apparently not used in msgbuf.c
+    0x09: "IOCTLPTR_REQ",
+    0x0A: "IOCTLPTR_REQ_ACK",
+    0x0B: "IOCTLRESP_BUF_POST",
+    0x0C: "IOCTL_CMPLT",
+    0x0D: "EVENT_BUF_POST",
+    0x0E: "WL_EVENT",
+    0x0F: "TX_POST",
+    0x10: "TX_STATUS",
+    0x11: "RXBUF_POST",
+    0x12: "RX_CMPLT",
+    0x13: "MSGBUF_TYPE_LPBK_DMAXFER",
+    0x14: "MSGBUF_TYPE_LPBK_DMAXFER_CMPLT",
+    0x15: "FLOW_RING_RESUME",
+    0x16: "FLOW_RING_RESUME_CMPLT",
+    0x17: "FLOW_RING_SUSPEND",
+    0x18: "FLOW_RING_SUSPEND_CMPLT",
+    0x19: "INFO_BUF_POST",
+    0x1A: "INFO_BUF_CMPLT",
+    0x1B: "H2D_RING_CREATE",
+    0x1C: "D2H_RING_CREATE",
+    0x1D: "H2D_RING_CREATE_CMPLT",
+    0x1E: "D2H_RING_CREATE_CMPLT",
+    0x1F: "H2D_RING_CONFIG",
+    0x20: "D2H_RING_CONFIG",
+    0x21: "MSGBUF_TYPE_H2D_RING_CONFIG_CMPLT",
+    0x22: "MSGBUF_TYPE_D2H_RING_CONFIG_CMPLT",
+    0x23: "H2D_MAILBOX_DATA",
+    0x24: "D2H_MAILBOX_DATA",
+    0x25: "MSGBUF_TYPE_TIMSTAMP_BUFPOST",
+    0x26: "MSGBUF_TYPE_HOSTTIMSTAMP",
+    0x27: "MSGBUF_TYPE_HOSTTIMSTAMP_CMPLT",
+    0x28: "MSGBUF_TYPE_FIRMWARE_TIMESTAMP",
+    0x29: "MSGBUF_TYPE_SNAPSHOT_UPLOAD",
+    0x2A: "MSGBUF_TYPE_SNAPSHOT_CMPLT",
+    0x2B: "H2D_RING_DELETE",
+    0x2C: "D2H_RING_DELETE",
+    0x2D: "MSGBUF_TYPE_H2D_RING_DELETE_CMPLT",
+    0x2E: "MSGBUF_TYPE_D2H_RING_DELETE_CMPLT"
+}
+
 class WLANCfgSpace(PCICfgSpace):
     PM_CSR              = 0x4c, Register32
 
@@ -122,6 +171,52 @@ class IOCtlResp(ConstructClass):
         "cmd" / Int32ul,
     )
 
+class BufAddr(ConstructClass):
+    subcon = Struct(
+        "low_addr"  / Int32ul,
+        "high_addr" / Int32ul,
+    )
+
+class FlowRingCreateReq(ConstructClass):
+    subcon = Struct(
+        "da"            / Bytes(6),
+        "sa"            / Bytes(6),
+        "tid"           / Int8ul,
+        "if_flags"      / Int8ul,
+        "flow_ring_id"  / Int16ul,
+        "tc"            / Int8ul,
+        "priority"      / Int8ul,
+        "int_vector"    / Int16ul,
+        "max_items"     / Int16ul,
+        "len_item"      / Int16ul,
+        "flow_ring_addr"/ BufAddr,
+    )
+
+class FlowRingCreateResp(ConstructClass):
+    subcon = Struct(
+        "compl" / ComplHeader,
+        "rsvd0" / Array(3, Int32ul),
+    )
+
+class FlowRingDeleteReq(ConstructClass):
+    subcon = Struct(
+        "flow_ring_id" / Int16ul,
+        "reason"       / Int16ul,
+        "rsvd0"        / Array(7, Int32ul),
+    )
+
+class FlowRingDeleteResp(ConstructClass):
+    subcon = Struct(
+        "compl" / ComplHeader,
+        "rsvd0" / Array(3, Int32ul),
+    )
+
+class FlowRingFlushResp(ConstructClass):
+    subcon = Struct(
+        "compl" / ComplHeader,
+        "rsvd0" / Array(3, Int32ul),
+    )
+
 class H2DMailboxData(ConstructClass):
     subcon = Struct(
         "data" / Int32ul
@@ -137,6 +232,12 @@ class RingMessage(ConstructClass):
     subcon = Struct(
         "hdr" / MsgHeader,
         "payload" / Switch(this.hdr.msg_type, {
+            0x03: FlowRingCreateReq,
+            0x04: FlowRingCreateResp,
+            0x05: FlowRingDeleteReq,
+            0x06: FlowRingDeleteResp,
+            # flush ring flush is not used in msgbuf
+            # 0x08: FlowRingFlushResp,
             0x09: IOCtlPtrReq,
             0x0c: IOCtlResp,
             0x23: H2DMailboxData,
@@ -155,21 +256,33 @@ class WLANRingTracer(PCIeDevTracer):
         self.p = wlan.hv.p
         self.u = wlan.hv.u
         self.ringid = self.RX, self.PTR_IDX
-        if self.ringid in wlan.state.rings:
-            self.state = wlan.state.rings[self.ringid]
-        else:
+        is_new_ring = self.ringid not in wlan.state.rings
+        if is_new_ring:
             self.state = wlan.state.rings[self.ringid] = RingState()
             self.state.rptr = 0
+        else:
+            self.state = wlan.state.rings[self.ringid]
 
         self.info = info
         assert info.item_size == self.ITEM_SIZE
         self.base_addr = info.base_addr
         self.count = info.count
 
+        if is_new_ring:
+            r_idx_ha = wlan.state.d2h_r_idx_ha if self.RX else wlan.state.h2d_r_idx_ha
+            if r_idx_ha:
+                try:
+                    raw = self.wlan.ioread(r_idx_ha + 4 * self.PTR_IDX, 4)
+                    self.state.rptr = struct.unpack("<I", raw)[0] % self.count
+                except Exception as e:
+                    self.log(f"unable to derive rptr from r_idx ({e}). Starting at 0.")
+            self.log(f"ring slots={self.count} item_size={self.ITEM_SIZE} "
+                     f"base={self.base_addr:#x} rptr={self.state.rptr}")
+
         if self.RX:
             d2h_paddr = self.wlan.iotranslate(self.wlan.state.d2h_w_idx_ha + 4 * self.PTR_IDX, 4)[0][0]
             assert d2h_paddr is not None
-            self.hv.add_tracer(irange(d2h_paddr, 4), self.wlan.ident, TraceMode.SYNC,
+            self.hv.add_tracer(irange(d2h_paddr, 4), self.wlan.ident, TraceMode.SYNC_ON_READ_CHANGE,
                                read=self.d2h_w_idx_readhook)
 
     def d2h_w_idx_readhook(self, evt):
@@ -195,8 +308,20 @@ class WLANRingTracer(PCIeDevTracer):
         self.log("Got packet:")
         pkt = RingMessage.parse(data)
         self.log(pkt)
+        if pkt.hdr.msg_type == 0x03:
+            self.wlan.flowring_create_req(pkt)
+        if pkt.hdr.msg_type == 0x04:
+            self.wlan.flowring_create_resp(pkt)
+        if pkt.hdr.msg_type == 0x05:
+            self.wlan.flowring_delete_req(pkt)
+        if pkt.hdr.msg_type == 0x06:
+            self.wlan.flowring_delete_resp(pkt)
         if pkt.hdr.msg_type == 0x09:
             self.wlan.ioctlptr_req(pkt)
+        if pkt.hdr.msg_type == 0x1B:
+            self.wlan.log(f"[{self.NAME} H2D_RING_CREATE]")
+        if pkt.hdr.msg_type == 0x1C:
+            self.wlan.log(f"[{self.NAME} D2H_RING_CREATE]")
         if pkt.hdr.msg_type == 0x0c:
             self.wlan.ioctlresp(pkt)
 
@@ -482,7 +607,9 @@ class WLANBackplane4388(WLANBackplane):
     ]
 
 class WLANTracer(PCIeDevTracer):
-    DEFAULT_MODE = TraceMode.SYNC
+    DEFAULT_MODE = TraceMode.SYNC_BUFFERED
+
+    H2D_MAILBOX_0_OFFSET = 0x2140 # h2d doorbell offset relative to BAR0
 
     BARMAPS = [None, None, None]
     CFGMAP = WLANCfgSpace
@@ -639,7 +766,7 @@ class WLANTracer(PCIeDevTracer):
         if idx in self.rings:
             return
 
-        if idx > len(self.RINGS):
+        if idx >= len(self.RINGS):
             return
 
         ringcls = self.RINGS[idx]
@@ -648,6 +775,36 @@ class WLANTracer(PCIeDevTracer):
             return
 
         self.rings[idx] = ringcls(self, info)
+
+    def flowring_create_req(self, pkt):
+        addr = (pkt.payload.flow_ring_addr.high_addr << 32) | pkt.payload.flow_ring_addr.low_addr
+        da = ":".join(f"{b:02x}" for b in pkt.payload.da)
+        sa = ":".join(f"{b:02x}" for b in pkt.payload.sa)
+        self.log(f"flowring create id={pkt.payload.flow_ring_id}\n"
+                 f"ifidx={pkt.hdr.if_id}\n"
+                 f"da={da}\n"
+                 f"sa={sa}\n"
+                 f"tid={pkt.payload.tid}\n"
+                 f"if_flags={pkt.payload.if_flags:#x}\n"
+                 f"tc={pkt.payload.tc}\n"
+                 f"priority={pkt.payload.priority}\n"
+                 f"int_vector={pkt.payload.int_vector}\n"
+                 f"max_items={pkt.payload.max_items}\n"
+                 f"len_items={pkt.payload.len_item} (total bytes: {pkt.payload.max_items * pkt.payload.len_item})\n"
+                 f"flow_ring_addr={addr:#x}")
+
+    def flowring_create_resp(self, pkt):
+        fid = pkt.payload.compl.ring_id
+        status = pkt.payload.compl.status
+        self.log(f"flowring create cmplt id={fid}\nstatus={'OK' if status == 0 else f'FAILED({status})'}")
+
+    def flowring_delete_req(self, pkt):
+        self.log(f"flowring delete id={pkt.payload.flow_ring_id}\n"
+                     f"reason={pkt.payload.reason}")
+
+    def flowring_delete_resp(self, pkt):
+        self.log(f"flowring delete cmplt id={pkt.payload.compl.ring_id}\n"
+                     f"status={pkt.payload.compl.status}")
 
     def ioctlptr_req(self, pkt):
         data = self.ioread(pkt.payload.host_input_buf_addr, pkt.payload.input_buf_len)
@@ -696,9 +853,17 @@ class WLANTracer(PCIeDevTracer):
         if self.state.bar0_base is None:
             return
 
-        zone = irange(self.state.bar0_base, self.state.bar0_size)
-        self.hv.add_tracer(zone, self.ident, self.DEFAULT_MODE, self.bar0_rw,
-                           self.bar0_rw)
+        # trace writes to doorbell with WSYNC and the rest of BAR0 with SYNC_BUFFERED
+        doorbell_address = self.state.bar0_base + self.H2D_MAILBOX_0_OFFSET
+
+        self.hv.add_tracer(irange(self.state.bar0_base, self.H2D_MAILBOX_0_OFFSET),
+                           self.ident, self.DEFAULT_MODE,
+                           read=self.bar0_rw, write=self.bar0_rw)
+        self.hv.add_tracer(irange(doorbell_address + 4, self.state.bar0_size - self.H2D_MAILBOX_0_OFFSET - 4),
+                           self.ident, self.DEFAULT_MODE,
+                           read=self.bar0_rw, write=self.bar0_rw)
+        self.hv.add_tracer(irange(doorbell_address, 4), self.ident + ":doorbell",
+                           TraceMode.WSYNC, write=self.bar0_rw)
 
     def update_shared(self):
         base = self.state.shared_base
@@ -743,8 +908,8 @@ class WLANTracer(PCIeDevTracer):
         for i in range(len(self.RINGS)):
             self.update_ring(i)
 
-devno = 2 if hv.xnu_mode else 1
-
+# devno = 2 if hv.xnu_mode else 1
+devno = 3 # on Mac mini M2 (Mac14,3)
 wlan_tracer = WLANTracer(hv, "/arm-io/apcie",
                          devno, 0, 0, "/arm-io/dart-apcie0")
 
