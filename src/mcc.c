@@ -544,8 +544,14 @@ int mcc_init_m4(int node, int *path)
     u64 amcc_count;
     if (ADT_GETPROP(adt, node, "amcc_aperture_count", &amcc_count) < 0 &&
         ADT_GETPROP(adt, node, "amcc-count", &amcc_count) < 0) {
-        printf("MCC: Failed to get mcc count!\n");
-        return -1;
+        u32 amcc_count32;
+        if (ADT_GETPROP(adt, node, "amcc_aperture_count", &amcc_count32) < 0 &&
+            ADT_GETPROP(adt, node, "amcc-count", &amcc_count32) < 0) {
+            printf("MCC: Failed to get mcc count!\n");
+            return -1;
+        }
+
+        amcc_count = amcc_count32;
     }
 
     if (amcc_count > MAX_MCC_INSTANCES) {
