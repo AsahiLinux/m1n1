@@ -29,6 +29,8 @@ static bool mcc_initialized = false;
 #define T6031_DCS_OFFSET    0x400000
 #define T6031_DCS_STRIDE    0x200000
 
+#define T8142_DCS_OFFSET 0x1000000
+
 #define PLANE_TZ_MAX_REGS 4
 
 struct tz_regs {
@@ -93,6 +95,10 @@ struct tz_regs t604x_tz_regs = {
 #define T6041_PLANE_CACHE_ENABLE 0x2800
 #define T6041_PLANE_CACHE_STATUS 0x2804
 
+#define T8142_CACHE_DISABLE           0x82c
+#define T8142_CACHE_STATUS_DATA_COUNT GENMASK(30, 24)
+#define T8142_CACHE_STATUS_TAG_COUNT  GENMASK(14, 8)
+
 #define T8103_CACHE_STATUS_DATA_COUNT GENMASK(14, 10)
 #define T8103_CACHE_STATUS_TAG_COUNT  GENMASK(9, 5)
 
@@ -119,6 +125,12 @@ struct tz_regs t604x_tz_regs = {
 #define T6041_CACHE_STATUS_VAL                                                                     \
     (FIELD_PREP(T6041_CACHE_STATUS_DATA_COUNT, T6041_CACHE_WAYS) |                                 \
      FIELD_PREP(T6041_CACHE_STATUS_TAG_COUNT, T6041_CACHE_WAYS))
+
+#define T8142_CACHE_WAYS        16
+#define T8142_CACHE_STATUS_MASK (T8142_CACHE_STATUS_DATA_COUNT | T8142_CACHE_STATUS_TAG_COUNT)
+#define T8142_CACHE_STATUS_VAL                                                                     \
+    (FIELD_PREP(T8142_CACHE_STATUS_DATA_COUNT, T8142_CACHE_WAYS) |                                 \
+     FIELD_PREP(T8142_CACHE_STATUS_TAG_COUNT, T8142_CACHE_WAYS))
 
 #define T8103_CACHE_WAYS        16
 #define T8103_CACHE_STATUS_MASK (T8103_CACHE_STATUS_DATA_COUNT | T8103_CACHE_STATUS_TAG_COUNT)
@@ -161,6 +173,8 @@ struct mcc_regs {
     u64 dcs_stride;
     int dcs_count;
 
+    u32 cache_enable;
+    u32 cache_status;
     u32 cache_enable_val;
     int cache_ways;
     u32 cache_status_mask;
@@ -200,11 +214,12 @@ int mcc_enable_cache(void)
        use it */
     for (int mcc = 0; mcc < mcc_count; mcc++) {
         for (int plane = 0; plane < mcc_regs[mcc].plane_count; plane++) {
-            plane_write32(mcc, plane, PLANE_CACHE_ENABLE, mcc_regs[mcc].cache_enable_val);
-            if (plane_poll32(mcc, plane, PLANE_CACHE_STATUS, mcc_regs[mcc].cache_status_mask,
-                             mcc_regs[mcc].cache_status_val, CACHE_ENABLE_TIMEOUT)) {
+            plane_write32(mcc, plane, mcc_regs[mcc].cache_enable, mcc_regs[mcc].cache_enable_val);
+            if (plane_poll32(mcc, plane, mcc_regs[mcc].cache_status,
+                             mcc_regs[mcc].cache_status_mask, mcc_regs[mcc].cache_status_val,
+                             CACHE_ENABLE_TIMEOUT)) {
                 printf("MCC: timeout while enabling cache for MCC %d plane %d: 0x%x\n", mcc, plane,
-                       plane_read32(mcc, plane, PLANE_CACHE_STATUS));
+                       plane_read32(mcc, plane, mcc_regs[mcc].cache_status));
                 ret = -1;
             } else if (mcc_regs[mcc].cache_disable) {
                 plane_write32(mcc, plane, mcc_regs[mcc].cache_disable, 0);
@@ -293,6 +308,8 @@ int mcc_init_t8103(int node, int *path, bool t8112)
     }
 
     mcc_regs[0].dcs_count = val;
+    mcc_regs[0].cache_enable = PLANE_CACHE_ENABLE;
+    mcc_regs[0].cache_status = PLANE_CACHE_STATUS;
     mcc_regs[0].cache_enable_val = T8103_CACHE_WAYS;
     mcc_regs[0].cache_ways = T8103_CACHE_WAYS;
     mcc_regs[0].cache_status_mask = T8103_CACHE_STATUS_MASK;
@@ -343,6 +360,8 @@ int mcc_init_t6000(int node, int *path, bool t602x)
         mcc_regs[i].dcs_stride = T6000_DCS_STRIDE;
         mcc_regs[i].dcs_count = T6000_DCS_COUNT;
 
+        mcc_regs[i].cache_enable = PLANE_CACHE_ENABLE;
+        mcc_regs[i].cache_status = PLANE_CACHE_STATUS;
         mcc_regs[i].cache_enable_val = t602x ? 1 : T6000_CACHE_WAYS;
         mcc_regs[i].cache_ways = T6000_CACHE_WAYS;
         mcc_regs[i].cache_status_mask = T6000_CACHE_STATUS_MASK;
@@ -379,6 +398,8 @@ int mcc_init_t6031(int *path, u32 reg_offset, u32 plane_count, u32 dcs_count)
         mcc_regs[i].dcs_stride = T6031_DCS_STRIDE;
         mcc_regs[i].dcs_count = dcs_count;
 
+        mcc_regs[i].cache_enable = PLANE_CACHE_ENABLE;
+        mcc_regs[i].cache_status = PLANE_CACHE_STATUS;
         mcc_regs[i].cache_enable_val = 1;
         mcc_regs[i].cache_ways = T6031_CACHE_WAYS;
         mcc_regs[i].cache_status_mask = T6031_CACHE_STATUS_MASK;
@@ -411,6 +432,8 @@ int mcc_init_t8122(int *path, u32 reg_offset, u32 plane_count, u32 dcs_count,
         mcc_regs[i].dcs_stride = T6031_DCS_STRIDE;
         mcc_regs[i].dcs_count = dcs_count;
 
+        mcc_regs[i].cache_enable = PLANE_CACHE_ENABLE;
+        mcc_regs[i].cache_status = PLANE_CACHE_STATUS;
         mcc_regs[i].cache_enable_val = 1;
         mcc_regs[i].cache_ways = T8122_CACHE_WAYS;
         mcc_regs[i].cache_status_mask = T8122_CACHE_STATUS_MASK;
@@ -496,6 +519,8 @@ int mcc_init_t8140(int *path, u32 reg_offset, u32 plane_count, u32 dcs_count)
         mcc_regs[i].dcs_stride = T6031_DCS_STRIDE;
         mcc_regs[i].dcs_count = dcs_count;
 
+        mcc_regs[i].cache_enable = PLANE_CACHE_ENABLE;
+        mcc_regs[i].cache_status = PLANE_CACHE_STATUS;
         mcc_regs[i].cache_enable_val = 0x8000000c;
         mcc_regs[i].cache_ways = T6041_CACHE_WAYS;
         mcc_regs[i].cache_status_mask = T6041_CACHE_STATUS_MASK;
@@ -527,6 +552,8 @@ int mcc_init_t604x(int *path, u32 reg_offset, u32 plane_count, u32 dcs_count)
         mcc_regs[i].dcs_stride = T6000_DCS_STRIDE;
         mcc_regs[i].dcs_count = dcs_count;
 
+        mcc_regs[i].cache_enable = PLANE_CACHE_ENABLE;
+        mcc_regs[i].cache_status = PLANE_CACHE_STATUS;
         mcc_regs[i].cache_enable_val = 0x8000000c;
         mcc_regs[i].cache_ways = T6041_CACHE_WAYS;
         mcc_regs[i].cache_status_mask = T6041_CACHE_STATUS_MASK;
@@ -597,6 +624,79 @@ int mcc_init_m4(int node, int *path)
     return 0;
 }
 
+int mcc_init_t8142(int *path, u32 reg_offset, u32 plane_count, u32 dcs_count)
+{
+    for (int i = 0; i < mcc_count; i++) {
+        u64 base;
+        if (adt_get_reg(adt, path, "reg", i + reg_offset, &base, NULL)) {
+            printf("MCC: Failed to get reg index %d!\n", i + reg_offset);
+            return -1;
+        }
+
+        mcc_regs[i].plane_base = base;
+        mcc_regs[i].plane_stride = T6031_PLANE_STRIDE;
+        mcc_regs[i].plane_count = plane_count;
+
+        mcc_regs[i].global_base = base + T6031_GLOBAL_OFFSET;
+
+        mcc_regs[i].dcs_base = base + T8142_DCS_OFFSET;
+        mcc_regs[i].dcs_stride = T6031_DCS_STRIDE;
+        mcc_regs[i].dcs_count = dcs_count;
+
+        mcc_regs[i].cache_enable = T6041_PLANE_CACHE_ENABLE;
+        mcc_regs[i].cache_status = T6041_PLANE_CACHE_STATUS;
+        mcc_regs[i].cache_enable_val = T8142_CACHE_WAYS;
+        mcc_regs[i].cache_ways = T8142_CACHE_WAYS;
+        mcc_regs[i].cache_status_mask = T8142_CACHE_STATUS_MASK;
+        mcc_regs[i].cache_status_val = T8142_CACHE_STATUS_VAL;
+        mcc_regs[i].cache_disable = T8142_CACHE_DISABLE;
+
+        mcc_regs[i].tz = &t604x_tz_regs;
+    }
+
+    return 0;
+}
+
+int mcc_init_m5(int node, int *path)
+{
+    u32 amcc_count;
+    if (ADT_GETPROP(adt, node, "amcc-count", &amcc_count) < 0) {
+        printf("MCC: Failed to get mcc count\n");
+        return -1;
+    }
+
+    if (amcc_count > MAX_MCC_INSTANCES) {
+        printf("MCC: Too many instances, increase MAX_MCC_INSTANCES!\n");
+        mcc_count = MAX_MCC_INSTANCES;
+    } else {
+        mcc_count = amcc_count;
+    }
+
+    u32 dcs_count = 0;
+    if (ADT_GETPROP(adt, node, "dcs-count-per-amcc", &dcs_count) < 0) {
+        printf("MCC: Failed to get dcs count!\n");
+        return -1;
+    }
+
+    printf("MCC: Initializing T%x MCCs (%d instances)...\n", chip_id, mcc_count);
+
+    int ret = -1;
+    if (adt_is_compatible(adt, node, "mcc,t8142")) {
+        ret = mcc_init_t8142(path, 1, 4, dcs_count);
+    } else {
+        printf("MCC: Unsupported version: %s\n", adt_get_property(adt, node, "compatible")->value);
+    }
+
+    if (ret)
+        return ret;
+
+    printf("MCC: Initialized T%x MCCs (%d instances, %d planes, %d channels)\n", chip_id, mcc_count,
+           mcc_regs[0].plane_count, mcc_regs[0].dcs_count);
+    mcc_initialized = true;
+
+    return 0;
+}
+
 int mcc_init(void)
 {
     int path[8];
@@ -621,6 +721,8 @@ int mcc_init(void)
         return mcc_init_m4(node, path);
     } else if (adt_is_compatible(adt, node, "mcc,t8140")) {
         return mcc_init_m4(node, path);
+    } else if (adt_is_compatible(adt, node, "mcc,t8142")) {
+        return mcc_init_m5(node, path);
     } else if (adt_is_compatible(adt, node, "mcc,t6030")) {
         return mcc_init_m3(node, path);
     } else if (adt_is_compatible(adt, node, "mcc,t6031")) {
