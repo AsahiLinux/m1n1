@@ -1511,8 +1511,14 @@ bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm)
     if (hv_sptm_mode != SPTM_EMULATION)
         return false;
 
-    if (imm == HV_HVC_GXF_TLBI_ALL || (imm & HV_HVC_GXF_TLBI_MASK) == HV_HVC_GXF_TLBI_ARG)
+    if (imm == HV_HVC_GXF_TLBI_ALL || (imm & HV_HVC_GXF_TLBI_MASK) == HV_HVC_GXF_TLBI_ARG ||
+        (imm & HV_HVC_GXF_TLBI_ARG2_MASK) == HV_HVC_GXF_TLBI_ARG2)
         return hv_sprr_gxf_tlbi();
+
+    if (imm == HV_HVC_TLBI_ALLE1OSNXS) {
+        sysop("tlbi alle1osnxs");
+        return true;
+    }
 
     if (imm & HV_HVC_SYSREG_FLAG)
         return hv_sprr_emulate_sysreg(ctx, FIELD_GET(HV_HVC_SYSREG_VREG, imm),

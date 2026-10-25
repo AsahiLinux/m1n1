@@ -290,6 +290,11 @@ GEXIT = 0x00201400
 GXF_TLBI_ALL = 0x00201401
 GXF_TLBI_WITH_ARG = 0x00201300
 GXF_TLBI_WITH_ARG_MASK = 0xffffffc0
+GXF_TLBI_WITH_ARG2 = 0x00201340
+GXF_TLBI_WITH_ARG2_MASK = 0xffffffe0
+
+TLBI_ALLE1OSNXS = 0xd50c919f
+HVC_TLBI_ALLE1OSNXS = 0x1402
 
 HVC_SYSREG_FLAG = 0x8000
 
@@ -315,10 +320,13 @@ def patch_text_sprr_emu(data):
     for i, w in enumerate(a):
         if w & 0xfffffff0 == GENTER:
             a[i] = _hvc(w & 0xffff)
-        elif w == GXF_TLBI_ALL or w & GXF_TLBI_WITH_ARG_MASK == GXF_TLBI_WITH_ARG:
+        elif (w == GXF_TLBI_ALL or w & GXF_TLBI_WITH_ARG_MASK == GXF_TLBI_WITH_ARG or
+              w & GXF_TLBI_WITH_ARG2_MASK == GXF_TLBI_WITH_ARG2):
             a[i] = _hvc(w & 0xffff)
         elif w == GEXIT:
             a[i] = _hvc(GEXIT & 0xffff)
+        elif w == TLBI_ALLE1OSNXS:
+            a[i] = _hvc(HVC_TLBI_ALLE1OSNXS)
         else:
             hit = _SYSREG.get(w & ~0x1f)
             if hit is None:
