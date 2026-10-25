@@ -11,9 +11,13 @@
 #define HV_HVC_VECTOR_SLOT GENMASK(3, 0)
 #define HV_HVC_GEXIT       0x1400
 
-#define HV_HVC_GXF_TLBI_ALL  0x1401
-#define HV_HVC_GXF_TLBI_ARG  0x1300
-#define HV_HVC_GXF_TLBI_MASK 0xffc0
+#define HV_HVC_GXF_TLBI_ALL       0x1401
+#define HV_HVC_GXF_TLBI_ARG       0x1300
+#define HV_HVC_GXF_TLBI_MASK      0xffc0
+#define HV_HVC_GXF_TLBI_ARG2      0x1340
+#define HV_HVC_GXF_TLBI_ARG2_MASK 0xffe0
+
+#define HV_HVC_TLBI_ALLE1OSNXS 0x1402
 
 #define HV_HVC_SYSREG_FLAG BIT(15)
 #define HV_HVC_SYSREG_VREG GENMASK(13, 6) /* enum hv_vreg */
