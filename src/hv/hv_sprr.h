@@ -234,6 +234,7 @@ enum hv_vreg {
     HV_VREG_AMX_STATE_EL12,
 
     /* Misc */
+    HV_VREG_AWL_SCRATCH_EL1,
     HV_VREG_JCTL_EL0,
     HV_VREG_PMCR1_GL1,
 
