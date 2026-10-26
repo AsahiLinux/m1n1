@@ -223,12 +223,10 @@ static struct sprr_chunk *sprr_chunks;
 static void *sprr_free_tables;
 static u64 sprr_pool_base, sprr_pool_top;
 
-u64 hv_sprr_reserve_pool(u64 size)
+void hv_sprr_set_pool(u64 base, u64 size)
 {
-    size = ALIGN_UP(size, SPRR_CHUNK_TABLES * SPRR_TABLE_SIZE);
-    sprr_pool_base = top_of_memory_alloc(size);
-    sprr_pool_top = sprr_pool_base + size;
-    return cur_boot_args.phys_base + cur_boot_args.mem_size;
+    sprr_pool_base = base;
+    sprr_pool_top = base + size;
 }
 
 static u64 *sprr_pool_alloc(void)

@@ -366,7 +366,7 @@ void hv_sprr_commpage_updated(u64 ipa, u64 bytes);
 void hv_sprr_pt_updated(struct exc_info *ctx, u64 ipa, u64 bytes);
 void hv_sprr_pt_writer_check(struct exc_info *ctx, u64 ipa, u64 far);
 void hv_sprr_init(void);
-u64 hv_sprr_reserve_pool(u64 size);
+void hv_sprr_set_pool(u64 base, u64 size);
 void hv_sprr_init_secondary(int cpu);
 bool hv_sprr_timer_pending(void);
 void hv_sprr_timer_arm(void);

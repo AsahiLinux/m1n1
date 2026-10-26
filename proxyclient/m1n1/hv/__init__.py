@@ -1388,12 +1388,6 @@ class HV(Reloadable):
         self.p.hv_init()
 
         self.mem_top = self.u.ba.phys_base + self.u.ba.mem_size
-        if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
-            old_top = self.mem_top
-            self.mem_top = self.p.hv_sprr_reserve_pool(self.sprr_pool_size)
-            self.unmap(self.mem_top, old_top - self.mem_top)
-            self.add_tracer(irange(self.mem_top, old_top - self.mem_top),
-                            "SPRR POOL", TraceMode.RESERVED)
 
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.SYNC, self.handle_exception)
         self.iface.set_handler(START.EXCEPTION_LOWER, EXC.IRQ, self.handle_exception)
@@ -1730,6 +1724,26 @@ class HV(Reloadable):
         self.add_tracer(irange(self.phys_base, self.u.ba.mem_size_actual - self.phys_base + self.ram_base), "RAM-HIGH", TraceMode.OFF)
         self.unmap_carveouts()
 
+    def _reserve_sprr_pool(self, base):
+        # align to SPRR_TABLE_SIZE (0x4000) * SPRR_CHUNK_TABLES (128)
+        size = align(self.sprr_pool_size, 0x200000)
+
+        # the fist 16K page is used by SPTM
+        pool_base = base + 0x4000
+
+        # HACK: We need to create a memory hole for our SPRR shadow pagetables somewhere
+        # that SPTM never uses. We can't do that at the beginning of RAM (SPTM will panic)
+        # or at the end of RAM on M5 (MTE Tag RAM is there) so instead we just use create
+        # a SPTMDebug region here which is supposed to be 16 KiB and extend it by whatever we
+        # need for the SPRR pool. We also overwrite it if it already happens to present in
+        # the memory regions provided by iBoot.
+        self.p.memset8(base, 0, 0x4000)
+        self.adt["chosen"]["memory-map"].SPTMDebug = (base, 0x4000 + size)
+        self.unmap(pool_base, size)
+        self.add_tracer(irange(pool_base, size), "SPRR POOL", TraceMode.RESERVED)
+        self.p.hv_sprr_set_pool(pool_base, size)
+        return size + 0x4000
+
     def _load_executable_raw(self, image, base, label):
         print(f"Loading {label} image (0x{len(image):x} bytes)...")
         self.u.compressed_writemem(base, image, True)
@@ -2025,6 +2039,8 @@ class HV(Reloadable):
         ]
 
         done = {entry.name for entry in memory_map}
+        if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
+            done.add("SPTMDebug")
         for name in BOOT_BLOBS:
             if name in done:
                 continue
@@ -2056,6 +2072,9 @@ class HV(Reloadable):
 
             image_size += align(length)
             setattr(self.adt["chosen"]["memory-map"], entry.name, (base, length))
+
+        if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
+            image_size += self._reserve_sprr_pool(self.guest_base + image_size)
 
         self.adt["chosen"]["memory-map"].slide = (self.phys_base, self.guest_base - self.phys_base)
         self.adt["chosen"]["memory-map"].TXM_entry = (txm_entry, 0x0)
