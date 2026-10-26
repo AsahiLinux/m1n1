@@ -181,6 +181,19 @@ void hv_update_fiq(void)
     }
 }
 
+u64 hv_pmcr0_read(void)
+{
+    u64 val = (mrs(SYS_IMP_APL_PMCR0) & ~PMCR0_IMODE_MASK) | PERCPU(pmc_irq_mode);
+    return val | (PERCPU(pmc_pending) ? PMCR0_IACT : 0);
+}
+
+void hv_pmcr0_write(u64 val)
+{
+    PERCPU(pmc_pending) = !!(val & PMCR0_IACT);
+    PERCPU(pmc_irq_mode) = val & PMCR0_IMODE_MASK;
+    msr(SYS_IMP_APL_PMCR0, val);
+}
+
 #define SYSREG_MAP(sr, to)                                                                         \
     case SYSREG_ISS(sr):                                                                           \
         if (is_read)                                                                               \
@@ -329,14 +342,10 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
 
         /* shadow the interrupt mode and state flag */
         case SYSREG_ISS(SYS_IMP_APL_PMCR0):
-            if (is_read) {
-                u64 val = (mrs(SYS_IMP_APL_PMCR0) & ~PMCR0_IMODE_MASK) | PERCPU(pmc_irq_mode);
-                regs[rt] = val | (PERCPU(pmc_pending) ? PMCR0_IACT : 0);
-            } else {
-                PERCPU(pmc_pending) = !!(regs[rt] & PMCR0_IACT);
-                PERCPU(pmc_irq_mode) = regs[rt] & PMCR0_IMODE_MASK;
-                msr(SYS_IMP_APL_PMCR0, regs[rt]);
-            }
+            if (is_read)
+                regs[rt] = hv_pmcr0_read();
+            else
+                hv_pmcr0_write(regs[rt]);
             return true;
 
         /*
