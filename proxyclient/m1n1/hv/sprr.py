@@ -268,6 +268,9 @@ HV_VREGS = [
     (3, 7, 15, 7, 3),
     (3, 7, 15, 9, 3),
     (3, 7, 3, 14, 1),
+
+    # Route PMU interrupt state through the HV when HACR.TRAP_PM is unavailable.
+    sysreg.PMCR0_EL1,
 ]
 
 # remap to register that can either be read from EL1 or is emulated

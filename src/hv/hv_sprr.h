@@ -294,6 +294,9 @@ enum hv_vreg {
     HV_VREG_S3_7_C15_C9_3,
     HV_VREG_S3_7_C3_C14_1,
 
+    /* HACR.TRAP_PM is unavailable on locked-down systems. */
+    HV_VREG_PMCR0_EL1,
+
     HV_VREG_MAX,
 };
 
