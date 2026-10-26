@@ -568,12 +568,17 @@ int mcc_init_t604x(int *path, u32 reg_offset, u32 plane_count, u32 dcs_count)
 
 int mcc_init_m4(int node, int *path)
 {
-    u64 amcc_count;
-    if (ADT_GETPROP(adt, node, "amcc_aperture_count", &amcc_count) < 0 &&
-        ADT_GETPROP(adt, node, "amcc-count", &amcc_count) < 0) {
+    u64 amcc_count = 0;
+    u32 count_len;
+    const void *count = adt_getprop(adt, node, "amcc_aperture_count", &count_len);
+    if (!count)
+        count = adt_getprop(adt, node, "amcc-count", &count_len);
+    if (!count || (count_len != sizeof(u32) && count_len != sizeof(u64))) {
         printf("MCC: Failed to get mcc count!\n");
         return -1;
     }
+    /* T8132 uses a 32-bit aperture count; other M4 ADTs use a 64-bit count. */
+    memcpy(&amcc_count, count, count_len);
 
     if (amcc_count > MAX_MCC_INSTANCES) {
         printf("MCC: Too many instances, increase MAX_MCC_INSTANCES!\n");
@@ -585,14 +590,15 @@ int mcc_init_m4(int node, int *path)
     u32 plane_count = 0;
     u32 dcs_count = 0;
 
-    if (!ADT_GETPROP(adt, node, "dcs-count-per-amcc", &dcs_count)) {
+    if (ADT_GETPROP(adt, node, "dcs-count-per-amcc", &dcs_count) != sizeof(dcs_count)) {
         printf("MCC: Failed to get dcs count!\n");
         return -1;
     }
 
     if (adt_is_compatible(adt, node, "mcc,t6041") || adt_is_compatible(adt, node, "mcc,t8140")) {
         plane_count = 4;
-    } else if (!ADT_GETPROP(adt, node, "plane-count-per-amcc", &plane_count)) {
+    } else if (ADT_GETPROP(adt, node, "plane-count-per-amcc", &plane_count) !=
+               sizeof(plane_count)) {
         printf("MCC: Failed to get plane count!\n");
         return -1;
     }
