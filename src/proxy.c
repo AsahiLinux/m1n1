@@ -547,8 +547,8 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_HV_SPTM_SET_MODE:
             hv_sptm_set_mode(request->args[0]);
             break;
-        case P_HV_SPRR_RESERVE_POOL:
-            reply->retval = hv_sprr_reserve_pool(request->args[0]);
+        case P_HV_SPRR_SET_POOL:
+            hv_sprr_set_pool(request->args[0], request->args[1]);
             break;
 
         case P_FB_INIT:
