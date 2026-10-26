@@ -209,6 +209,7 @@ HV_VREGS = [
     sysreg.AMX_STATE_EL12,
 
     # Misc
+    sysreg.AWL_SCRATCH_EL1,
     sysreg.JCTL_EL0,
     sysreg.PMCR1_GL1,
 
