@@ -190,6 +190,8 @@
 #define HCR_VM       BIT(0)
 
 #define SYS_ID_AA64PFR1_EL1 sys_reg(3, 0, 0, 4, 1)
+#define ID_AA64PFR1_MTE     GENMASK(11, 8)
+#define ID_AA64PFR1_MTE2    2
 #define ID_AA64PFR1_SME     GENMASK(27, 24)
 #define ID_AA64PFR1_SME2    2
 

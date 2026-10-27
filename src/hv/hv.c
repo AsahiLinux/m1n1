@@ -162,6 +162,13 @@ void hv_init(void)
                  HCR_VM);  // Enable stage 2 translation
     sysop("isb");
 
+    if (hv_sptm_mode == SPTM_EMULATION) {
+        if (FIELD_GET(ID_AA64PFR1_MTE, mrs(SYS_ID_AA64PFR1_EL1)) >= ID_AA64PFR1_MTE2) {
+            hv_write_hcr(mrs(HCR_EL2) | HCR_ATA);
+            sysop("isb");
+        }
+    }
+
     if (hv_sptm_mode == SPTM_NESTED_VIRT) {
         printf("Enabling NV\n");
         hv_write_hcr(mrs(SYS_HCR_EL2) | HCR_NV2 | HCR_NV);

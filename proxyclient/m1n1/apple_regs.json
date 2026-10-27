@@ -57,6 +57,7 @@
     {"index": 0, "name": "ACC_CTXR_B_CTL_EL2",            "fullname": "ACC CTXR B Control (EL2)",                                      "enc": [3, 0, 11, 8, 5    ], "width": 64},
     {"index": 0, "name": "ACC_CTXR_C_CTL_EL2",            "fullname": "ACC CTXR C Control (EL2)",                                      "enc": [3, 0, 11, 8, 6    ], "width": 64},
     {"index": 0, "name": "ACC_CTXR_D_CTL_EL2",            "fullname": "ACC CTXR D Control (EL2)",                                      "enc": [3, 0, 11, 8, 7    ], "width": 64},
+    {"index": 0, "name": "TAGOFFSET_EL2",                 "fullname": "MTE Tag RAM Offset Control (EL2)",                              "enc": [3, 0, 11, 9, 0    ], "width": 64},
     {"index": 0, "name": "CTRR_B_CTL_EL1",                "fullname": "CTRR B Control (EL1)",                                          "enc": [3, 4, 15, 2, 2    ], "width": 64},
     {"index": 0, "name": "CTRR_A_CTL_EL1",                "fullname": "CTRR A Control (EL1)",                                          "enc": [3, 4, 15, 2, 5    ], "width": 64},
     {"index": 0, "name": "ACC_CTRR_A_CTL_EL2",            "fullname": "ACC CTRR A Control (EL2)",                                      "enc": [3, 4, 15, 11, 4   ], "width": 64},

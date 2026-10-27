@@ -850,4 +850,5 @@
 #define SYS_IMP_APL_ACC_CTRR_B_CTL_EL2 sys_reg(3, 4, 15, 11, 5)
 
 /* Other registers */
-#define SYS_IMP_APL_AVNCR_EL2 sys_reg(3, 4, 15, 10, 7)
+#define SYS_IMP_APL_TAGOFFSET_EL2 sys_reg(3, 0, 11, 9, 0)
+#define SYS_IMP_APL_AVNCR_EL2     sys_reg(3, 4, 15, 10, 7)

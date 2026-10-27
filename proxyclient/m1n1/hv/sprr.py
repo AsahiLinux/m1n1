@@ -87,6 +87,7 @@ HV_VREGS = [
     sysreg.SCTLR_EL12,
     sysreg.SCXTNUM_EL0,
     sysreg.SCXTNUM_EL12,
+    sysreg.TAGOFFSET_EL2,
     sysreg.TCR_EL1,
     sysreg.TCR_EL12,
     sysreg.TTBR0_EL1,
