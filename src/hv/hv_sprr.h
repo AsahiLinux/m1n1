@@ -237,6 +237,7 @@ enum hv_vreg {
     HV_VREG_AWL_SCRATCH_EL1,
     HV_VREG_JCTL_EL0,
     HV_VREG_PMCR1_GL1,
+    HV_VREG_PMCR0_EL1,
 
     /* Unknown */
     HV_VREG_S2_1_C9_C8_0,
@@ -277,7 +278,6 @@ enum hv_vreg {
     HV_VREG_S3_4_C1_C2_5,
     HV_VREG_S3_5_C15_C11_2,
     HV_VREG_S3_5_C15_C1_6,
-    HV_VREG_S3_5_C15_C2_6,
     HV_VREG_S3_5_C15_C3_6,
     HV_VREG_S3_5_C15_C3_7,
     HV_VREG_S3_5_C15_C6_2,
@@ -293,9 +293,6 @@ enum hv_vreg {
     HV_VREG_S3_7_C15_C7_3,
     HV_VREG_S3_7_C15_C9_3,
     HV_VREG_S3_7_C3_C14_1,
-
-    /* HACR.TRAP_PM is unavailable on locked-down systems. */
-    HV_VREG_PMCR0_EL1,
 
     HV_VREG_MAX,
 };
