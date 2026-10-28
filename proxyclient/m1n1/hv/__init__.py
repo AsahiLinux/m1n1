@@ -36,11 +36,15 @@ class HV(Reloadable):
     SPTE_TRACE_READ         = 1 << 63
     SPTE_TRACE_WRITE        = 1 << 62
     SPTE_TRACE_UNBUF        = 1 << 61
+    SPTE_SYNC_ON_READ_CHANGE = 1 << 60
     SPTE_MAP                = 0 << 50
     SPTE_HOOK               = 1 << 50
     SPTE_PROXY_HOOK_R       = 2 << 50
     SPTE_PROXY_HOOK_W       = 3 << 50
     SPTE_PROXY_HOOK_RW      = 4 << 50
+    SPTE_PROXY_HOOK_R_BUFFERED  = 5 << 50
+    SPTE_PROXY_HOOK_W_BUFFERED  = 6 << 50
+    SPTE_PROXY_HOOK_RW_BUFFERED = 7 << 50
 
     MSR_REDIRECTS = {
         SCTLR_EL1: SCTLR_EL12,
@@ -204,6 +208,19 @@ class HV(Reloadable):
 
         assert self.p.hv_map(ipa, (index << 2) | flags | t, size, 0) >= 0
 
+    def map_hook_idx_buffered(self, ipa, size, index, read=False, write=False, flags=0):
+        if read:
+            if write:
+                t = self.SPTE_PROXY_HOOK_RW_BUFFERED
+            else:
+                t = self.SPTE_PROXY_HOOK_R_BUFFERED
+        elif write:
+            t = self.SPTE_PROXY_HOOK_W_BUFFERED
+        else:
+            assert False
+
+        assert self.p.hv_map(ipa, (index << 2) | flags | t, size, 0) >= 0
+
     def readmem(self, va, size):
         '''read from virtual memory'''
         with io.BytesIO() as buffer:
@@ -327,6 +344,12 @@ class HV(Reloadable):
                 if mode == TraceMode.RESERVED:
                     self.log(f"PT[{mzone.start:09x}:{mzone.stop:09x}] -> RESERVED {ident}")
                     continue
+                elif mode == TraceMode.SYNC_BUFFERED:
+                    self.map_hook_idx_buffered(mzone.start, mzone.stop - mzone.start, 0,
+                                      need_read, need_write)
+                elif mode == TraceMode.SYNC_ON_READ_CHANGE:
+                    self.map_hook_idx(mzone.start, mzone.stop - mzone.start, 0,
+                                      need_read, need_write, flags=self.SPTE_SYNC_ON_READ_CHANGE)
                 elif mode in (TraceMode.HOOK, TraceMode.SYNC):
                     self.map_hook_idx(mzone.start, mzone.stop - mzone.start, 0,
                                       need_read, need_write)
@@ -497,7 +520,7 @@ class HV(Reloadable):
 
         val = data.data
 
-        if mode not in (TraceMode.HOOK, TraceMode.SYNC, TraceMode.WSYNC):
+        if mode not in (TraceMode.HOOK, TraceMode.SYNC, TraceMode.WSYNC, TraceMode.SYNC_ON_READ_CHANGE):
             raise Exception(f"VM hook with unexpected mapping at {data.addr:#x}: {maps[0][0].name}")
 
         if not data.flags.WRITE:
@@ -512,7 +535,7 @@ class HV(Reloadable):
                 if not isinstance(val, list) and not isinstance(val, tuple):
                     val = [val]
                 first += 1
-            elif mode == TraceMode.SYNC:
+            elif mode in (TraceMode.SYNC, TraceMode.SYNC_ON_READ_CHANGE):
                 try:
                     val = self.u.read(data.addr, 8 << data.flags.WIDTH)
                 except:
@@ -570,7 +593,7 @@ class HV(Reloadable):
             if mode == TraceMode.HOOK:
                 self.shellwrap(lambda: write(data.addr, wval, 8 << data.flags.WIDTH, **kwargs),
                             f"Tracer {ident}:write (HOOK)", update=do_update)
-            elif mode in (TraceMode.SYNC, TraceMode.WSYNC):
+            elif mode in (TraceMode.SYNC, TraceMode.WSYNC, TraceMode.SYNC_ON_READ_CHANGE):
                 try:
                     self.u.write(data.addr, wval, 8 << data.flags.WIDTH)
                 except:
@@ -579,6 +602,80 @@ class HV(Reloadable):
                     self.log(f"MMIO write failed: {data.addr:#x} = {wval} (w={data.flags.WIDTH})")
                     raise
 
+        return True
+
+    def _process_buffered_hook_collection(self, collection):
+        for hook in collection.hooks[:collection.count]:
+            assert hook.id == 0, "Custom hooks through rfunc/wfunc and the vm_hooks array are not yet supported. Index must be 0 for now."
+
+            maps = sorted(self.mmio_maps[hook.addr].values(), reverse=True)
+
+            if not maps:
+                raise Exception(f"VM hook without a mapping at {hook.addr:#x}")
+
+            mode, ident, read, write, kwargs = maps[0]
+
+            val = hook.data
+
+            if mode != TraceMode.SYNC_BUFFERED:
+                raise Exception(f"VM hook with unexpected mapping at {hook.addr:#x}: {maps[0][0].name}")
+
+            addr = hook.addr
+            def do_update():
+                nonlocal mode, ident, read, write, kwargs
+                read = lambda *args, **kwargs: None
+                write = lambda *args, **kwargs: None
+
+                m = self.mmio_maps[addr].get(ident, None)
+                if not m:
+                    return
+
+                mode, ident, read_, write_, kwargs = m
+                read = read_ or read
+                write = write_ or write
+
+            flags = hook.flags.copy()
+
+            flags.CPU = self.ctx.cpu_id
+            width = hook.flags.WIDTH
+
+            if width > 3:
+                flags.WIDTH = 3
+                flags.MULTI = 1
+
+            for i in range(1 << max(0, width - 3)):
+                evt = Container(
+                    flags = flags,
+                    reserved = 0,
+                    pc = self.ctx.elr,
+                    addr = hook.addr + 8 * i,
+                    data = val[i]
+                )
+
+                for mode, ident, read, write, kwargs in maps:
+                    if flags.WRITE:
+                        if write:
+                            self.shellwrap(lambda: write(evt, **kwargs),
+                                        f"Tracer {ident}:write ({mode.name})", update=do_update)
+                    else:
+                        if read:
+                            self.shellwrap(lambda: read(evt, **kwargs),
+                                            f"Tracer {ident}:read ({mode.name})", update=do_update)
+
+    def handle_vm_hook_buffered(self, ctx):
+        count = self.p.read32(ctx.data)
+
+        if count == 0:
+            return True
+
+        if count > HV_MAX_BUFFERED_HOOKS:
+            raise Exception(f"buffered hook count {count} > {HV_MAX_BUFFERED_HOOKS}")
+
+        collection_hooks_array_offset = 8
+        data = self.iface.readmem(ctx.data + collection_hooks_array_offset, count * VMProxyHookData.sizeof())
+        collection = Container(count=count, hooks=Array(count, VMProxyHookData).parse(data))
+
+        self._process_buffered_hook_collection(collection)
         return True
 
     def handle_vm_hook(self, ctx):
@@ -975,7 +1072,9 @@ class HV(Reloadable):
                     handled = True
             elif reason == START.HV:
                 code = HV_EVENT(code)
-                if code == HV_EVENT.HOOK_VM:
+                if code == HV_EVENT.HOOK_VM_BUFFERED:
+                    handled = self.handle_vm_hook_buffered(ctx)
+                elif code == HV_EVENT.HOOK_VM:
                     handled = self.handle_vm_hook(ctx)
                 elif code == HV_EVENT.USER_INTERRUPT:
                     handled = True
@@ -1254,6 +1353,13 @@ class HV(Reloadable):
         self.p.reboot()
         sys.exit(0)
 
+    def flush(self):
+        collection = self.iface.readstruct(self._buffered_hook_buffer_addr, VMProxyBufferedHookCollection)
+        print(f"Received {collection.count} buffered hooks.")
+        self._process_buffered_hook_collection(collection)
+        print(f"Setting C-side hook count to zero.")
+        self.p.write32(self._buffered_hook_buffer_addr, 0)
+
     def hvc(self, arg):
         assert 0 <= arg <= 0xffff
         return 0xd4000002 | (arg << 5)
@@ -1396,6 +1502,7 @@ class HV(Reloadable):
         self.iface.set_handler(START.EXCEPTION, EXC.FIQ, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.USER_INTERRUPT, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.HOOK_VM, self.handle_exception)
+        self.iface.set_handler(START.HV, HV_EVENT.HOOK_VM_BUFFERED, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.VTIMER, self.handle_exception)
         self.iface.set_handler(START.HV, HV_EVENT.WDT_BARK, self.handle_bark)
         self.iface.set_handler(START.HV, HV_EVENT.CPU_SWITCH, self.handle_exception)
@@ -2261,6 +2368,7 @@ class HV(Reloadable):
                 break
         self.started_cpus[cpu_node.cpu_id] = (getattr(cpu_node, "die_id", 0), cpu_node.cluster_id, cpu_node.cpu_id)
         self.sysreg[cpu_node.cpu_id] = {}
+        self._buffered_hook_buffer_addr = self.p.hv_get_buffer_addr()
         self.p.hv_start(self.entry, self.guest_base + self.bootargs_off)
 
 from .. import trace

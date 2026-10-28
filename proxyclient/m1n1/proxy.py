@@ -704,6 +704,8 @@ class M1N1Proxy(Reloadable):
     P_READ_GIGALOCKER = 0x1400
     P_FREE_GIGALOCKER = 0x1401
 
+    P_HV_GET_BUFFER_ADDR = 0x1500
+
     def __init__(self, iface, debug=False):
         self.debug = debug
         self.iface = iface
@@ -1161,6 +1163,8 @@ class M1N1Proxy(Reloadable):
         return self.request(self.P_HV_ADD_TIME, time)
     def hv_sptm_set_mode(self, mode):
         return self.request(self.P_HV_SPTM_SET_MODE, SPTM_MODE(mode))
+    def hv_get_buffer_addr(self):
+        return self.request(self.P_HV_GET_BUFFER_ADDR)
 
     def hv_sprr_set_pool(self, base, size):
         return self.request(self.P_HV_SPRR_SET_POOL, base, size)
