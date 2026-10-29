@@ -1831,9 +1831,28 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_al
     seg = adt_getprop(adt, node, "segment-ranges", &segments_len);
     unsigned int num_maps = segments_len / sizeof(*seg);
 
+    int carveout_node = adt_path_offset(adt, "/chosen/carveout-memory-map");
+
     for (unsigned i = 0; i < num_maps; i++) {
         u64 iova = (remap ? seg->remap : seg->iova) | base;
 
+        char seg_name[32];
+        const char *name = NULL;
+
+        ret = adt_get_segment_name(adt, node, i, seg_name, sizeof(seg_name));
+        if (ret == 0) {
+            // ignore __OS_LOG
+            if (strncmp(seg_name, "__OS_LOG", sizeof(seg_name)) == 0)
+                continue;
+
+            // look up "unknown" segments in "carveout-memory-map"
+            if (strncmp(seg_name, "unknown", sizeof(seg_name)) == 0 && carveout_node >= 0) {
+                int id = adt_find_carveout_region(adt, carveout_node, seg->phys, seg->size);
+                if (id >= 0)
+                    snprintf(seg_name, sizeof(seg_name), "region%d", id);
+            }
+            name = (seg_name[0] == '_' && seg_name[1] == '_') ? seg_name + 2 : seg_name;
+        }
         char node_name[64];
         snprintf(node_name, sizeof(node_name), "asc-firmware@%lx", seg->phys);
 
@@ -1853,7 +1872,7 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_al
         if (ret < 0)
             return ret;
 
-        ret = dt_device_add_mem_region(fdt_path, mem_phandle, NULL);
+        ret = dt_device_add_mem_region(fdt_path, mem_phandle, name);
         if (ret < 0)
             return ret;
 
