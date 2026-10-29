@@ -1922,6 +1922,14 @@ static int dt_reserve_dcpext_firmware(void)
         if (dcpext_node < 0)
             continue;
 
+        /*
+         * While t600x and t8103 dcpext node still have their special handling
+         * skip over them here.
+         */
+        if (fdt_node_check_compatible(dt, dcpext_node, "apple,t6000-dcpext") ||
+            fdt_node_check_compatible(dt, dcpext_node, "apple,t8103-dcpext"))
+            return 0;
+
         int ret = dt_reserve_asc_firmware(adt_path, NULL, dcpext_alias, true, 0, 0);
         if (ret < 0)
             bail("FDT: reserving ASC firmware for %s failed!\n", dcpext_alias);
@@ -2243,11 +2251,7 @@ static int dt_set_display(void)
      * Ignore errors for dcpext firmware reservation, nodes should be disabled
      * if the reservation fails allowing basic operation with just dcp.
      */
-    if (!fdt_node_check_compatible(dt, 0, "apple,t8112") ||
-        !fdt_node_check_compatible(dt, 0, "apple,t6020") ||
-        !fdt_node_check_compatible(dt, 0, "apple,t6021") ||
-        !fdt_node_check_compatible(dt, 0, "apple,t6022"))
-        dt_reserve_dcpext_firmware();
+    dt_reserve_dcpext_firmware();
 
     const display_config_t *disp_cfg = display_get_config();
 
