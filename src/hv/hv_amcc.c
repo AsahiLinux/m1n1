@@ -91,11 +91,20 @@ bool hv_amcc_init(void)
         ADT_GETPROP(adt, amcc_node, "plane-stride", &stride) != sizeof(stride))
         return false;
 
-    /* T8132 lists all controllers and has no enable-mask property. */
     enabled = ~0U;
-    if (!amcc_shared_irqs &&
-        ADT_GETPROP(adt, error_handler_node, "amcc-enable-mask", &enabled) != sizeof(enabled))
+    if (chip_id == T8140) {
+        int mcc_node = adt_path_offset(adt, "/arm-io/mcc");
+        if (mcc_node < 0)
+            return false;
+
+        if (ADT_GETPROP(adt, mcc_node, "amcc-enable-mask", &enabled) != sizeof(enabled))
+            return false;
+    }
+    /* T8132 lists all controllers and has no enable-mask property. */
+    else if (!amcc_shared_irqs && ADT_GETPROP(adt, error_handler_node, "amcc-enable-mask",
+                                              &enabled) != sizeof(enabled)) {
         return false;
+    }
 
     u32 irq_len;
     const u32 *irqs = adt_getprop(adt, error_handler_node, "interrupts", &irq_len);
