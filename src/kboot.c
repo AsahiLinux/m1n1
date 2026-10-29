@@ -1810,7 +1810,7 @@ static int dt_vram_reserved_region(const char *dcp_alias, const char *disp_alias
 }
 
 static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_alt,
-                                   const char *fdt_path, bool remap, u64 base)
+                                   const char *fdt_path, bool remap, u64 base, u64 skip)
 {
     int ret = 0;
 
@@ -1845,6 +1845,11 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_al
 
     for (unsigned i = 0; i < num_maps; i++) {
         u64 iova = (remap ? seg->remap : seg->iova) | base;
+
+        if (seg->phys == skip) {
+            seg++;
+            continue;
+        }
 
         char seg_name[32];
         const char *name = NULL;
@@ -1915,7 +1920,7 @@ static int dt_reserve_dcpext_firmware(void)
         if (dcpext_node < 0)
             continue;
 
-        int ret = dt_reserve_asc_firmware(adt_path, NULL, dcpext_alias, true, 0);
+        int ret = dt_reserve_asc_firmware(adt_path, NULL, dcpext_alias, true, 0, 0);
         if (ret < 0)
             bail("FDT: reserving ASC firmware for %s failed!\n", dcpext_alias);
 
@@ -2286,7 +2291,7 @@ static int dt_setup_sio(void)
         char adt_path[16];
         snprintf(adt_path, sizeof(adt_path), "/arm-io/%s", sio_names[i]);
 
-        if (dt_reserve_asc_firmware(adt_path, NULL, sio_names[i], true, 0))
+        if (dt_reserve_asc_firmware(adt_path, NULL, sio_names[i], true, 0, 0))
             continue;
         if (dt_set_sio_fwdata(adt_path, sio_names[i]))
             continue;
@@ -2912,7 +2917,7 @@ int kboot_prepare_dt(void *fdt)
         return -1;
     if (dt_setup_sio())
         return -1;
-    if (dt_reserve_asc_firmware("/arm-io/isp", "/arm-io/isp0", "isp", false, isp_iova_base()))
+    if (dt_reserve_asc_firmware("/arm-io/isp", "/arm-io/isp0", "isp", false, isp_iova_base(), 0))
         return -1;
     if (dt_set_isp_fwdata())
         return -1;
