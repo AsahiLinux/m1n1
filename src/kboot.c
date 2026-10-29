@@ -1771,16 +1771,10 @@ static struct disp_mapping disp_reserved_regions_vram[] = {
     {"vram", "framebuffer", true, true, false},
 };
 
-static int dt_vram_reserved_region(const char *dcp_alias, const char *disp_alias)
+static int adt_get_vram_region(struct mem_region *region)
 {
-    int ret = 0;
+    int ret;
     int adt_path[4];
-    struct mem_region region;
-
-    // return early if dcp_alias does not exists
-    if (!fdt_get_alias(dt, dcp_alias))
-        return 0;
-
     int node = adt_path_offset_trace(adt, "/vram", adt_path);
 
     if (node < 0)
@@ -1791,9 +1785,25 @@ static int dt_vram_reserved_region(const char *dcp_alias, const char *disp_alias
         pp++;
     adt_path[pp + 1] = 0;
 
-    ret = adt_get_reg(adt, adt_path, "reg", 0, &region.paddr, &region.size);
+    ret = adt_get_reg(adt, adt_path, "reg", 0, &region->paddr, &region->size);
     if (ret < 0)
         bail("ADT: failed to read /vram/reg\n");
+
+    return ret;
+}
+
+static int dt_vram_reserved_region(const char *dcp_alias, const char *disp_alias)
+{
+    int ret = 0;
+    struct mem_region region;
+
+    // return early if dcp_alias does not exists
+    if (!fdt_get_alias(dt, dcp_alias))
+        return 0;
+
+    ret = adt_get_vram_region(&region);
+    if (ret < 0)
+        return ret;
 
     return dt_add_reserved_regions(dcp_alias, disp_alias, NULL, "framebuffer",
                                    disp_reserved_regions_vram, &region, 1);
