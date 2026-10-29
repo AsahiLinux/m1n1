@@ -2269,14 +2269,6 @@ static int dt_setup_sio(void)
     return 0;
 }
 
-struct isp_segment_ranges {
-    u64 phys;
-    u64 iova;
-    u64 remap;
-    u32 size;
-    u32 unk;
-} PACKED;
-
 static int dt_set_isp_fwdata(void)
 {
     const char *fdt_path = "isp";
