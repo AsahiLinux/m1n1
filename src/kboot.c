@@ -1857,8 +1857,10 @@ static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_al
         ret = adt_get_segment_name(adt, node, i, seg_name, sizeof(seg_name));
         if (ret == 0) {
             // ignore __OS_LOG
-            if (strncmp(seg_name, "__OS_LOG", sizeof(seg_name)) == 0)
+            if (strncmp(seg_name, "__OS_LOG", sizeof(seg_name)) == 0) {
+                seg++;
                 continue;
+            }
 
             // look up "unknown" segments in "carveout-memory-map"
             if (strncmp(seg_name, "unknown", sizeof(seg_name)) == 0 && carveout_node >= 0) {
@@ -1933,6 +1935,153 @@ static int dt_reserve_dcpext_firmware(void)
         if ((dcpext_node < 0) || (fdt_setprop_string(dt, dcpext_node, "status", "okay") < 0))
             printf("FDT: failed to enable '%s'\n", dcpext_alias);
     }
+
+    return 0;
+}
+
+static int dt_reserve_dcp_mappings(const char *dcp_alias, const char *disp0_alias,
+                                   const char *piodma_alias)
+{
+    int ret = 0;
+    u32 mem_region[MAX_DISP_MAPPINGS];
+    struct mem_region vram;
+
+    ret = adt_get_vram_region(&vram);
+    if (ret < 0)
+        return ret;
+
+    ret = dt_reserve_asc_firmware("/arm-io/dcp/iop-dcp-nub", "/arm-io/dcp0/iop-dcp0-nub", dcp_alias,
+                                  true, 0, vram.paddr);
+    if (ret < 0)
+        bail("FDT: reserving ASC firmware for dcp failed!\n");
+
+    // handle disp0 and disp0-piodma mappings
+    int node = fdt_path_offset(dt, dcp_alias);
+    if (node < 0) // impossible
+        bail("FDT: alias %s not found\n", dcp_alias);
+
+    // get all phandles of dcp_alias memory-region once
+    int num = 0;
+    const fdt32_t *regions = fdt_getprop(dt, node, "memory-region", &num);
+    if (!regions || num == 0 || (num % 4))
+        bail("FDT: missing or invalid memory-region property in %s: len:%d\n", dcp_alias, num);
+    num /= 4;
+    for (int i = 0; i < num; i++)
+        mem_region[i] = fdt32_to_cpu(regions[i]);
+
+    int num_mem_names = fdt_stringlist_count(dt, node, "memory-region-names");
+    if (num != num_mem_names)
+        bail("FDT: %s has non equal length \"memory-region\" (%d) and \"memory-region-names\" (%d) "
+             "lists\n",
+             dcp_alias, num, num_mem_names);
+
+    dart_dev_t *dart_disp0 = NULL, *dart_piodma = NULL;
+    u32 disp0_phandle, piodma_phandle;
+
+    // open dart for display node and kept its phandle
+    int disp_node = fdt_path_offset(dt, disp0_alias);
+    if (disp_node < 0)
+        bail("FDT: could not resolve '%s' alias\n", disp0_alias);
+    dart_disp0 = dt_init_dart_by_node(disp_node, 0);
+    if (!dart_disp0)
+        bail("FDT: failed to init DART for '%s'\n", disp0_alias);
+    disp0_phandle = fdt_get_phandle(dt, disp_node);
+
+    // open dart for piodma node and kept its phandle
+    int piodma_node = fdt_path_offset(dt, piodma_alias);
+    if (piodma_node < 0)
+        bail_cleanup("FDT: could not resolve '%s' alias\n", piodma_alias);
+    dart_piodma = dt_init_dart_by_node(piodma_node, 0);
+    if (!dart_piodma)
+        bail_cleanup("FDT: failed to init DART for '%s'\n", piodma_alias);
+    piodma_phandle = fdt_get_phandle(dt, piodma_node);
+
+    for (int i = 0; i < num; i++) {
+        u64 paddr, size, iova;
+        int resv_mem = fdt_path_offset(dt, "/reserved-memory");
+        if (resv_mem < 0) // impossible
+            bail_cleanup("FDT: /reserved-memory not found\n");
+
+        bool found = false;
+        u32 mem_phandle = mem_region[i];
+        int mem_node;
+        fdt_for_each_subnode(mem_node, dt, resv_mem)
+        {
+            if (mem_phandle == fdt_get_phandle(dt, mem_node)) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) // impossible
+            bail_cleanup("FDT: corrupted tree while looking for reserved-memory with phandle %u\n",
+                         mem_region[i]);
+
+        int reg_len = 0;
+        const fdt64_t *reg = fdt_getprop(dt, mem_node, "reg", &reg_len);
+        if (!reg || reg_len != 16)
+            bail_cleanup("FDT: invalid or missing reg property in %s\n",
+                         fdt_get_name(dt, mem_node, NULL));
+        paddr = fdt64_to_cpu(reg[0]);
+        size = fdt64_to_cpu(reg[1]);
+
+        char name[16];
+        int name_len = 0;
+        node = fdt_path_offset(dt, dcp_alias);
+        const char *ptr = fdt_stringlist_get(dt, node, "memory-region-names", i, &name_len);
+        if (!ptr || name_len <= 0 || name_len > 15)
+            bail_cleanup("FDT: failed to get memory-region-names[%d]: err:%d\n", i, name_len);
+        snprintf(name, sizeof(name), "%s", ptr);
+
+        iova = dart_search(dart_disp0, (void *)paddr);
+        if (!DART_IS_ERR(iova)) {
+            ret = dt_device_set_reserved_mem(mem_node, name, disp0_phandle, iova, size);
+            if (ret < 0)
+                bail_cleanup("FDT: Failed to add disp0 iommu-addresses for %s\n", name);
+            ret = dt_device_add_mem_region(disp0_alias, mem_phandle, name);
+            if (ret < 0)
+                bail_cleanup("FDT: Failed to disp0 memory-region %s\n", name);
+        }
+
+        iova = dart_search(dart_piodma, (void *)paddr);
+        if (!DART_IS_ERR(iova)) {
+            ret = dt_device_set_reserved_mem(mem_node, name, piodma_phandle, iova, size);
+            if (ret < 0)
+                bail_cleanup("FDT: Failed to add piodma iommu-addresses for %s\n", name);
+            ret = dt_device_add_mem_region(piodma_alias, mem_phandle, name);
+            if (ret < 0)
+                bail_cleanup("FDT: Failed to piodma memory-region %s\n", name);
+        }
+    }
+
+    /* enable dart-disp0, it is disabled in device tree to avoid resetting
+     * it and breaking display scanout when booting with old m1n1 which
+     * does not lock dart-disp0.
+     */
+    if (disp0_alias) {
+        int disp_node = fdt_path_offset(dt, disp0_alias);
+
+        int dart_disp0_node = dt_get_iommu_node(disp_node, 0);
+        if (dart_disp0_node < 0)
+            bail_cleanup("FDT: failed to find 'dart-disp0'\n");
+
+        if (fdt_setprop_string(dt, dart_disp0_node, "status", "okay") < 0)
+            bail_cleanup("FDT: failed to enable 'dart-disp0'\n");
+    }
+
+    /* set firmware version and enable dcp* */
+    ret = dt_set_dcp_firmware(dcp_alias);
+    if (ret)
+        goto err;
+
+    int dcp_node = fdt_path_offset(dt, dcp_alias);
+    if (dcp_node < 0 || fdt_setprop_string(dt, dcp_node, "status", "okay") < 0)
+        bail_cleanup("FDT: failed to enable '%s'\n", dcp_alias);
+
+err:
+    if (dart_disp0)
+        dart_shutdown(dart_disp0);
+    if (dart_piodma)
+        dart_shutdown(dart_piodma);
 
     return 0;
 }
@@ -2081,6 +2230,8 @@ static int dt_set_display(void)
             return ret;
     } else if (!fdt_node_check_compatible(dt, 0, "apple,t6022")) {
         /* noop */
+    } else if (!!fdt_get_alias(dt, "dcp")) {
+        ret = dt_reserve_dcp_mappings("dcp", "disp0", disp0_piodma_alias);
     } else {
         printf("FDT: unknown compatible, skip display reserved-memory setup\n");
         return 0;
