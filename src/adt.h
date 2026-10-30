@@ -65,6 +65,8 @@ bool adt_is_compatible_at(const void *adt, int nodeoffset, const char *compat, s
 int adt_get_segment_name(const void *adt, int nodeoffset, unsigned int index, void *out,
                          size_t len);
 
+int adt_find_carveout_region(const void *adt, int nodeoffset, u64 paddr, u64 size);
+
 #define ADT_FOREACH_CHILD(adt, node)                                                               \
     for (int _child_count = adt_get_child_count(adt, node); _child_count; _child_count = 0)        \
         for (node = adt_first_child_offset(adt, node); _child_count--;                             \

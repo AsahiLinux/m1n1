@@ -1076,6 +1076,58 @@ pub unsafe extern "C" fn adt_get_reg(
     }
 }
 
+fn find_carveout_region(
+    node: &ADTNode,
+    paddr: u64,
+    size: u64,
+) -> Result<&'static ADTProperty, AdtError> {
+    for prop in node.properties() {
+        let prop = prop?;
+        if prop.name().starts_with("region-id-") {
+            if prop.size != 16 {
+                return Err(AdtError::BadLength);
+            }
+
+            if paddr == u64::from_ne_bytes(prop.value[..8].try_into().unwrap())
+                && size == u64::from_ne_bytes(prop.value[8..16].try_into().unwrap())
+            {
+                return Ok(prop);
+            }
+        }
+    }
+    Err(AdtError::NotFound)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_find_carveout_region(
+    _dt: *const c_void,
+    offset: c_int,
+    paddr: u64,
+    size: u64,
+) -> c_int {
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+
+    let node = match ADTNode::from_ptr(ptr) {
+        Ok(n) => n,
+        Err(e) => return e as c_int,
+    };
+
+    let prop = match find_carveout_region(node, paddr, size) {
+        Ok(p) => p,
+        Err(e) => return e as _,
+    };
+
+    let region = match prop.name().strip_prefix("region-id-") {
+        Some(s) => s,
+        None => return AdtError::BadValue as _,
+    };
+
+    match u32::from_str_radix(region, 10) {
+        Ok(id) => id as _,
+        Err(_) => AdtError::BadValue as _,
+    }
+}
+
 fn str_to_buf_with_nul(string: &str, buf: *mut c_void, buf_size: usize) -> c_int {
     if string.len() >= buf_size {
         return AdtError::BadLength as _;
