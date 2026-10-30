@@ -599,8 +599,17 @@ static int dt_set_cpus(void)
         if (dt_mpidr == (mrs(MPIDR_EL1) & 0xFFFFFF))
             goto next_cpu;
 
-        if (!smp_is_alive(cpu)) {
-            printf("FDT: CPU %d is not alive, disabling...\n", cpu);
+        /* Match DT CPU nodes to running CPUs by MPIDR, so the DT order doesn't matter */
+        int idx = -1;
+        for (int i = 0; i < MAX_CPUS; i++) {
+            if (smp_is_alive(i) && smp_get_mpidr(i) == dt_mpidr) {
+                idx = i;
+                break;
+            }
+        }
+
+        if (idx < 0) {
+            printf("FDT: CPU %d (MPIDR 0x%lx) is not alive, disabling...\n", cpu, dt_mpidr);
             pruned_phandles[pruned++] = fdt_get_phandle(dt, node);
 
             int next = fdt_next_subnode(dt, node);
@@ -610,16 +619,11 @@ static int dt_set_cpus(void)
             continue;
         }
 
-        u64 mpidr = smp_get_mpidr(cpu);
-
-        if (dt_mpidr != mpidr)
-            bail_cleanup("FDT: DT CPU %d MPIDR mismatch: 0x%lx != 0x%lx\n", cpu, dt_mpidr, mpidr);
-
-        u64 release_addr = smp_get_release_addr(cpu);
+        u64 release_addr = smp_get_release_addr(idx);
         if (fdt_setprop_inplace_u64(dt, node, "cpu-release-addr", release_addr))
             bail_cleanup("FDT: couldn't set cpu-release-addr property\n");
 
-        printf("FDT: CPU %d MPIDR=0x%lx release-addr=0x%lx\n", cpu, mpidr, release_addr);
+        printf("FDT: CPU %d MPIDR=0x%lx release-addr=0x%lx\n", idx, dt_mpidr, release_addr);
 
     next_cpu:
         cpu++;
