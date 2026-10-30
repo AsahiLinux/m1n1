@@ -9,6 +9,7 @@
 
 typedef struct smc_dev smc_dev_t;
 
+int smc_read_u32(smc_dev_t *smc, u32 key, u32 *value);
 int smc_write_u32(smc_dev_t *smc, u32 key, u32 value);
 
 smc_dev_t *smc_init(void);

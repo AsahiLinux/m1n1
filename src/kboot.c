@@ -18,6 +18,7 @@
 #include "mcc.h"
 #include "memory.h"
 #include "pcie.h"
+#include "smc.h"
 #include "pmgr.h"
 #include "sep.h"
 #include "sio.h"
@@ -2948,6 +2949,31 @@ int kboot_prepare_dt(void *fdt)
     return 0;
 }
 
+#ifdef J704_WLAN_PWR
+/*
+ * j704: WLAN_REG_ON is SMC GPIO 0x13 (ADT /arm-io/amfm function-reg_on = pKW4('gP13', ...)). Linux has no
+ * SMC driver for t8142 yet, so raise it here, before pcie_init/Linux release PERST#. The value is what
+ * Asahi's macsmc-gpio writes to set an output pin (CMD_OUTPUT | 1).
+ */
+static void j704_wlan_power_on(void)
+{
+    smc_dev_t *smc = smc_init();
+    if (!smc) {
+        printf("j704: SMC init failed, Wi-Fi stays off\n");
+        return;
+    }
+    u32 old = 0;
+    int ret = smc_read_u32(smc, 0x67503133 /* 'gP13' */, &old);
+    printf("j704: gP13 = 0x%x (read: %d)\n", old, ret);
+    if (!ret) {
+        ret = smc_write_u32(smc, 0x67503133, 0x01000001);
+        printf("j704: gP13 <- 0x01000001 (WLAN_REG_ON): %d\n", ret);
+    }
+    smc_shutdown(smc);
+    mdelay(10);
+}
+#endif
+
 int kboot_boot(void *kernel)
 {
     mcc_enable_cache();
@@ -2955,6 +2981,9 @@ int kboot_boot(void *kernel)
     clk_init();
 
     usb_init();
+#ifdef J704_WLAN_PWR
+    j704_wlan_power_on();
+#endif
     pcie_init();
     dapf_init_all();
 
