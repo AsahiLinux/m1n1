@@ -5,6 +5,7 @@
 #include "aic.h"
 #include "aic_regs.h"
 #include "cpu_regs.h"
+#include "iodev.h"
 #include "memory.h"
 #include "pmgr.h"
 #include "soc.h"
@@ -512,8 +513,19 @@ void smp_call4(int cpu, void *func, u64 arg0, u64 arg1, u64 arg2, u64 arg3)
     else
         smp_send_ipi(cpu);
 
-    while (target->flag == flag)
+    // Debug instrument for the J704 first-secondary wedge (a target that never takes the call
+    // hangs the caller here silently); say so once after 1 s, then keep waiting exactly as before.
+    u64 start = get_ticks();
+    bool reported = false;
+    while (target->flag == flag) {
         sysop("dmb sy");
+        if (!reported && ticks_to_msecs(get_ticks() - start) >= 1000) {
+            reported = true;
+            printf("smp: CPU %d has not taken call %p after 1 s (flag %ld, target %lx, mpidr %lx)\n", cpu,
+                   func, target->flag, target->target, target->mpidr);
+            iodev_console_flush();
+        }
+    }
 }
 
 u64 smp_wait(int cpu)
