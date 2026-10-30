@@ -1449,6 +1449,12 @@ static int dt_device_set_reserved_mem(int node, const char *name, uint32_t phand
 {
     int ret;
 
+    // j704: phandle 0 matches no device, so Linux would map nothing and wipe a locked DART's boot tables
+    if (!phandle) {
+        printf("FDT: '%s': device has no phandle, skipping iommu-addresses\n", name);
+        return 0;
+    }
+
     ret = fdt_appendprop_u32(dt, node, "iommu-addresses", phandle);
     if (ret != 0)
         bail("FDT: could not append phandle to '%s.iommu-addresses' property: %d\n", name, ret);
@@ -1468,12 +1474,41 @@ static int dt_device_set_reserved_mem_from_dart(int node, dart_dev_t *dart, cons
                                                 uint32_t phandle, u64 paddr, u64 size)
 {
     u64 iova = dart_get_mapping(dart, name, paddr, size);
-    if (DART_IS_ERR(iova)) {
-        printf("ADT: no mapping found for '%s' (0x%012lx iova:0x%08lx)\n", name, paddr, iova);
-        return 0;
-    }
+    if (!DART_IS_ERR(iova))
+        return dt_device_set_reserved_mem(node, name, phandle, iova, size);
 
-    return dt_device_set_reserved_mem(node, name, phandle, iova, size);
+    /*
+     * j704: iBoot maps some regions in several IOVA runs (t8142 dcp_data). Describe each run, since
+     * Linux replaces a locked DART's tables with what iommu-addresses lists.
+     */
+    for (u64 done = 0; done < size;) {
+        iova = dart_search(dart, (void *)(paddr + done));
+        if (DART_IS_ERR(iova)) {
+            /*
+             * With nothing described yet, keep the historical behaviour: the region stays in
+             * /reserved-memory without an iommu-addresses entry and the boot continues. Once a
+             * run has been appended, stopping here would leave Linux a truncated list and it
+             * would drop the rest of a locked DART's mappings, so fail instead.
+             */
+            if (done)
+                bail("FDT: '%s' is mapped only up to +0x%lx of 0x%lx, refusing to describe a "
+                     "partial region\n",
+                     name, done, size);
+            printf("ADT: no mapping found for '%s' (0x%012lx)\n", name, paddr);
+            return 0;
+        }
+        u64 len = SZ_16K;
+        while (done + len < size &&
+               (u64)dart_translate_silent(dart, iova + len) == paddr + done + len)
+            len += SZ_16K;
+        printf("ADT: %s run 0x%lx..0x%lx at iova 0x%lx\n", name, paddr + done, paddr + done + len,
+               iova);
+        int ret = dt_device_set_reserved_mem(node, name, phandle, iova, len);
+        if (ret)
+            return ret;
+        done += len;
+    }
+    return 0;
 }
 
 static int dt_get_or_add_reserved_mem(const char *node_name, const char *compat, bool nomap,
@@ -1804,6 +1839,87 @@ static int dt_vram_reserved_region(const char *dcp_alias, const char *disp_alias
                                    disp_reserved_regions_vram, &region, 1);
 }
 
+/*
+ * j704: reserve the iBoot DCP mappings that no carveout in the table covers (on 26.6.2: 0x20000 at
+ * 0x103df7f0000, the DCP crashlog/coredump area just below dcp_data, iova 0x8cd4000). Linux replaces the
+ * locked dart-dcp L1 with its own table, so anything not in iommu-addresses vanishes under the running DCP.
+ */
+static int dt_reserve_dcp_unlisted(const char *dcp_alias, struct disp_mapping *maps, u32 num_maps)
+{
+    struct mem_region known[MAX_DISP_MAPPINGS + 1];
+    u32 num_known = 0;
+    int adt_path[4];
+
+    int node = adt_path_offset(adt, "/chosen/carveout-memory-map");
+    if (node < 0)
+        return 0;
+    for (u32 i = 0; i < num_maps; i++) {
+        u64 phys_map[2];
+        if (ADT_GETPROP_ARRAY(adt, node, maps[i].region_adt, phys_map) == sizeof(phys_map)) {
+            known[num_known].paddr = phys_map[0];
+            known[num_known++].size = phys_map[1];
+        }
+    }
+    node = adt_path_offset_trace(adt, "/vram", adt_path);
+    if (node >= 0) {
+        int pp = 0;
+        while (adt_path[pp])
+            pp++;
+        adt_path[pp + 1] = 0;
+        if (adt_get_reg(adt, adt_path, "reg", 0, &known[num_known].paddr,
+                        &known[num_known].size) >= 0)
+            num_known++;
+    }
+
+    int dcp_node = fdt_path_offset(dt, dcp_alias);
+    if (dcp_node < 0)
+        return 0;
+    uint32_t dcp_phandle = fdt_get_phandle(dt, dcp_node);
+    dart_dev_t *dart = dt_init_dart_by_node(dcp_node, 0);
+    if (!dart)
+        bail("FDT: failed to init DART for '%s'\n", dcp_alias);
+
+    int ret = 0;
+    // iBoot maps the DCP below 0x9000000 on 26.6.2; scan 256 MiB, widen if that grows
+    for (u64 iova = 0; iova < 0x10000000;) {
+        u64 pa = (u64)dart_translate_silent(dart, iova);
+        if (!pa) {
+            iova += SZ_16K;
+            continue;
+        }
+        u64 len = SZ_16K;
+        while ((u64)dart_translate_silent(dart, iova + len) == pa + len)
+            len += SZ_16K;
+
+        bool covered = false;
+        for (u32 i = 0; i < num_known; i++)
+            if (pa >= known[i].paddr && pa + len <= known[i].paddr + known[i].size)
+                covered = true;
+
+        if (!covered) {
+            char name[64];
+            snprintf(name, sizeof(name), "dcp-iboot@%lx", pa);
+            int mem_node = dt_get_or_add_reserved_mem(name, "apple,asc-mem", true, pa, len);
+            if (mem_node < 0) {
+                ret = -1;
+                break;
+            }
+            uint32_t mem_phandle = fdt_get_phandle(dt, mem_node);
+            ret = dt_device_set_reserved_mem(mem_node, name, dcp_phandle, iova, len);
+            if (!ret)
+                ret = dt_device_add_mem_region(dcp_alias, mem_phandle, "dcp-iboot");
+            if (ret < 0)
+                break;
+            printf("FDT: %s: kept unlisted iBoot mapping 0x%lx (0x%lx) at iova 0x%lx\n", dcp_alias,
+                   pa, len, iova);
+        }
+        iova += len;
+    }
+
+    dart_shutdown(dart);
+    return ret;
+}
+
 static int dt_reserve_asc_firmware(const char *adt_path, const char *adt_path_alt,
                                    const char *fdt_path, bool remap, u64 base)
 {
@@ -2059,7 +2175,11 @@ static int dt_set_display(void)
                                            ARRAY_SIZE(disp_reserved_regions_t8112));
         if (ret)
             return ret;
-        return dt_vram_reserved_region("dcp", NULL);
+        ret = dt_vram_reserved_region("dcp", NULL);
+        if (ret || !fdt_get_alias(dt, "dcp"))
+            return ret;
+        return dt_reserve_dcp_unlisted("dcp", disp_reserved_regions_t8112,
+                                       ARRAY_SIZE(disp_reserved_regions_t8112));
     } else if (!fdt_node_check_compatible(dt, 0, "apple,t6022")) {
         /* noop */
     } else {
