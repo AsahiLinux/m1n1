@@ -77,8 +77,20 @@ for i, ((base, size), devices) in enumerate(sorted(blocks.items())):
         print(f'\t\tlabel = {die_label(dev.name.lower())};')
         print( "\t\t#power-domain-cells = <0>;")
 
-        if any(dt.pmgr_dev_get_parents(dev)):
-            domains = [f"<&{die_node('ps_'+dev_by_id[idx].name.lower())}>" for idx in dt.pmgr_dev_get_parents(dev) if idx]
+        # no_ps parents (fabric nodes like SIO/AFISOCNI0 on t8142) have no node; use their parents
+        def ps_parents(d):
+            for idx in dt.pmgr_dev_get_parents(d):
+                if not idx:
+                    continue
+                p = dev_by_id[idx]
+                if p.flags.no_ps:
+                    yield from ps_parents(p)
+                else:
+                    yield p
+
+        parents = list(dict.fromkeys(p.name for p in ps_parents(dev)))
+        if parents:
+            domains = [f"<&{die_node('ps_'+name.lower())}>" for name in parents]
             print(f"\t\tpower-domains = {', '.join(domains)};")
 
         print( "\t\t#reset-cells = <0>;")
