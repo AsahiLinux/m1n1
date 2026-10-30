@@ -4,6 +4,9 @@ use core::mem::size_of;
 
 use crate::c_size_t;
 
+#[allow(unused)]
+pub use crate::println;
+
 #[derive(Debug)]
 pub enum AdtError {
     NotFound = -1,
@@ -1071,4 +1074,58 @@ pub unsafe extern "C" fn adt_get_reg(
             return e as c_int;
         }
     }
+}
+
+fn str_to_buf_with_nul(string: &str, buf: *mut c_void, buf_size: usize) -> c_int {
+    if string.len() >= buf_size {
+        return AdtError::BadLength as _;
+    }
+
+    unsafe {
+        core::ptr::copy_nonoverlapping(string.as_ptr(), buf as *mut u8, string.len());
+        *((buf as *mut u8).add(string.len())) = b'\0';
+    }
+
+    0
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn adt_get_segment_name(
+    _dt: *const c_void,
+    offset: c_int,
+    index: c_uint,
+    out: *mut c_void,
+    len: c_size_t,
+) -> c_int {
+    let ptr: *const ADTNode = unsafe { adt.add(offset as usize) as *const ADTNode };
+
+    let node = match ADTNode::from_ptr(ptr) {
+        Ok(n) => n,
+        Err(e) => return e as _,
+    };
+
+    let prop = match node.named_prop("segment-names") {
+        Ok(p) => p,
+        Err(e) => return e as _,
+    };
+
+    let slice = unsafe { core::slice::from_raw_parts(prop.value.as_ptr(), prop.size as _) };
+
+    let segment_names = match str::from_utf8(slice) {
+        Ok(s) => s,
+        Err(_) => return AdtError::BadValue as _,
+    };
+
+    let name = match segment_names.split(";").nth(index as usize) {
+        Some(n) => n,
+        None => {
+            println!(
+                "ADT: Failed to split segment-names: \"{}\" and take {}-nth value",
+                segment_names, index
+            );
+            return AdtError::BadValue as _;
+        }
+    };
+
+    str_to_buf_with_nul(name, out, len)
 }
