@@ -2838,12 +2838,24 @@ int kboot_prepare_dt(void *fdt)
         // on the secondary (non-boot) cores. Add a reserved-memory region to
         // prevent Linux from crashing when allocating this memory and writing
         // to it from a secondary core.
+        // UPR holds the base of the last protected page, so the region ends one page above it.
         u64 ro_start = mrs(SYS_IMP_APL_CTRR_C_LWR_EL1);
-        u64 ro_end = ALIGN_UP(mrs(SYS_IMP_APL_CTRR_C_UPR_EL1), SZ_4K);
+        u64 ro_end = ALIGN_DOWN(mrs(SYS_IMP_APL_CTRR_C_UPR_EL1), SZ_4K) + SZ_4K;
         if (ro_end - ro_start > 12 * SZ_4K)
             printf("WARNING: M4+ SMP-RO is large (48KB)");
         if (fdt_add_mem_rsv(dt, ro_start, ro_end - ro_start))
             bail("FDT: couldn't add reservation for M4+ SMP-RO CTRR area\n");
+        printf("FDT: reserved M4+ SMP-RO CTRR C area 0x%lx..0x%lx\n", ro_start, ro_end);
+
+        // On M5 (t8142) the D instance also covers the DeviceTree/TrustCache area below m1n1.
+        u64 d_start = mrs(SYS_IMP_APL_CTRR_D_LWR_EL1);
+        u64 d_upr = mrs(SYS_IMP_APL_CTRR_D_UPR_EL1);
+        if (d_start && d_upr >= d_start) {
+            u64 d_end = ALIGN_DOWN(d_upr, SZ_4K) + SZ_4K;
+            if (fdt_add_mem_rsv(dt, d_start, d_end - d_start))
+                bail("FDT: couldn't add reservation for M4+ CTRR D area\n");
+            printf("FDT: reserved M4+ CTRR D area 0x%lx..0x%lx\n", d_start, d_end);
+        }
     }
 
     /* setup console log buffer early to capture as much log as possible */
