@@ -2050,6 +2050,16 @@ static int dt_set_display(void)
                                            ARRAY_SIZE(disp_reserved_regions_t602x));
         if (ret)
             return ret;
+    } else if (!fdt_node_check_compatible(dt, 0, "apple,t8142")) {
+        /*
+         * j704: same carveout ids as t8112 (49/50/57/94/95 + vram), all mapped in dart-dcp stream 23
+         * (proxy dump 2026-10-19). DCP only for now: no disp0 / piodma nodes in the DT yet.
+         */
+        ret = dt_carveout_reserved_regions("dcp", NULL, NULL, disp_reserved_regions_t8112,
+                                           ARRAY_SIZE(disp_reserved_regions_t8112));
+        if (ret)
+            return ret;
+        return dt_vram_reserved_region("dcp", NULL);
     } else if (!fdt_node_check_compatible(dt, 0, "apple,t6022")) {
         /* noop */
     } else {
