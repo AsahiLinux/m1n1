@@ -6,6 +6,7 @@
 #include "malloc.h"
 #include "memory.h"
 #include "pmgr.h"
+#include "soc.h"
 #include "string.h"
 #include "utils.h"
 
@@ -175,6 +176,29 @@ struct entry dapf_entries[] = {
     {"/arm-io/dart-isp", 5}, {"/arm-io/dart-isp0", 5}, {NULL, -1},
 };
 
+/*
+ * T8142: the DAPF reg index differs per DART (dart-mtp: reg[1]; dart-aop/pmp have none, their reg[1] is a
+ * shared PSWRDIS page that SErrors on write). The ADT "instance" list names each reg in order as
+ * {fourcc, index, name[8]}, so find the entry named DAPF; -1 if there is none.
+ */
+static int dapf_reg_index(const char *path)
+{
+    const struct {
+        u32 type;
+        u32 idx;
+        char name[8];
+    } PACKED *inst;
+    u32 len;
+    int node = adt_path_offset(adt, path);
+
+    if (node < 0 || !(inst = adt_getprop(adt, node, "instance", &len)))
+        return -1;
+    for (u32 i = 0; i < len / sizeof(*inst); i++)
+        if (!strncmp(inst[i].name, "DAPF", sizeof(inst[i].name)))
+            return i;
+    return -1;
+}
+
 int dapf_init_all(void)
 {
     int ret = 0;
@@ -186,7 +210,13 @@ int dapf_init_all(void)
             entry++;
             continue;
         }
-        if (dapf_init(entry->path, entry->index) < 0) {
+        int index = chip_id == T8142 ? dapf_reg_index(entry->path) : entry->index;
+        if (index < 0) {
+            printf("dapf: %s has no DAPF instance, skipping\n", entry->path);
+            entry++;
+            continue;
+        }
+        if (dapf_init(entry->path, index) < 0) {
             ret = -1;
         }
         entry++;
