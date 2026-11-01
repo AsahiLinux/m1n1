@@ -5,6 +5,7 @@ from enum import IntEnum, IntFlag
 from serial.tools.miniterm import Miniterm
 
 from .utils import *
+from .utils import ProgressBar
 from .constructutils import bool_
 from .sysreg import *
 
@@ -407,13 +408,14 @@ class UartInterface(Reloadable):
         if self.debug:
             print("<< DATA:")
             chexdump(data)
+        if progress:
+            pbar = ProgressBar()
         for i in range(0, len(data), 8192):
             self.dev.write(data[i:i + 8192])
             if progress:
-                sys.stdout.write(".")
-                sys.stdout.flush()
+                pbar.update(min(i + 8192, size) * 100 // size)
         if progress:
-            print()
+            pbar.finish()
         if self.enabled_features & Feature.DISABLE_DATA_CSUMS:
             # Extra sentinel after the data to make sure no data is lost
             self.dev.write(struct.pack("<I", self.DATA_END_SENTINEL))

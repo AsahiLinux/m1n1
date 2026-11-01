@@ -5,6 +5,23 @@ from construct import Adapter, Int64ul, Int32ul, Int16ul, Int8ul, ExprAdapter, G
 
 __all__ = ["FourCC"]
 
+class ProgressBar:
+    def __init__(self):
+        self.cur = 0
+        print("[0%", end="", flush=True)
+
+    def update(self, percent):
+        while self.cur < percent:
+            self.cur += 1
+            if self.cur % 10 == 0:
+                print(f"{self.cur}%", end="", flush=True)
+            elif self.cur % 2 == 0:
+                print(".", end="", flush=True)
+
+    def finish(self):
+        self.update(100)
+        print("]")
+
 def align_up(v, a=16384):
     return (v + a - 1) & ~(a - 1)
 
