@@ -20,7 +20,7 @@
 #define HV_HVC_TLBI_ALLE1OSNXS 0x1402
 
 #define HV_HVC_SYSREG_FLAG BIT(15)
-#define HV_HVC_SYSREG_VREG GENMASK(13, 6) /* enum hv_vreg */
+#define HV_HVC_SYSREG_VREG GENMASK(14, 6) /* enum hv_vreg */
 #define HV_HVC_SYSREG_DIR  BIT(5)         /* 1 = MRS */
 #define HV_HVC_SYSREG_RT   GENMASK(4, 0)
 
@@ -39,6 +39,7 @@ enum hv_vreg {
     HV_VREG_SPRR_CONFIG_EL1,
     HV_VREG_SPRR_CONFIG_EL12,
     HV_VREG_SPRR_PERM_EL0,
+    HV_VREG_SPRR_UPERM_EL02,
     HV_VREG_SPRR_PERM_EL1,
     HV_VREG_SPRR_PMPRR_EL1,
     HV_VREG_SPRR_PMPRR_EL12,
@@ -73,24 +74,34 @@ enum hv_vreg {
     HV_VREG_AFSR1_EL12,
     HV_VREG_AFSR1_EL2,
     HV_VREG_AFSR1_GL1,
+    HV_VREG_AFSR1_GL2,
     HV_VREG_ASPSR_EL1,
     HV_VREG_ASPSR_GL1,
+    HV_VREG_ASPSR_GL12,
+    HV_VREG_CURRENTEL,
     HV_VREG_ELR_EL1,
     HV_VREG_ELR_EL12,
+    HV_VREG_ELR_EL2,
     HV_VREG_ELR_GL1,
+    HV_VREG_ELR_GL12,
     HV_VREG_ESR_EL1,
     HV_VREG_ESR_EL12,
+    HV_VREG_ESR_EL2,
     HV_VREG_ESR_GL1,
+    HV_VREG_ESR_GL12,
     HV_VREG_FAR_EL1,
     HV_VREG_FAR_EL12,
+    HV_VREG_FAR_EL2,
     HV_VREG_FAR_GL1,
     HV_VREG_HPFAR_EL2,
     HV_VREG_SPSR_EL1,
     HV_VREG_SPSR_EL12,
+    HV_VREG_SPSR_EL2,
     HV_VREG_SPSR_GL1,
+    HV_VREG_SPSR_GL12,
+    HV_VREG_SP_EL1,
     HV_VREG_SP_GL12,
     HV_VREG_TPIDR_GL1,
-    HV_VREG_TPIDR_GL2,
     HV_VREG_VBAR_EL1,
     HV_VREG_VBAR_EL12,
     HV_VREG_VBAR_GL1,
@@ -100,12 +111,15 @@ enum hv_vreg {
     HV_VREG_ACTLR_EL12_PRE,
     HV_VREG_AMAIR_EL12,
     HV_VREG_CONTEXTIDR_EL12,
+    HV_VREG_CPACR_EL1,
     HV_VREG_CPACR_EL12,
+    HV_VREG_CPTR_EL2,
     HV_VREG_HACR_EL2,
     HV_VREG_HCRX_EL2,
     HV_VREG_HCR_EL2,
     HV_VREG_ICH_HCR_EL2,
     HV_VREG_ICH_VMCR_EL2,
+    HV_VREG_MAIR_EL1,
     HV_VREG_MAIR_EL12,
     HV_VREG_MDCR_EL2,
     HV_VREG_SCTLR_EL1,
@@ -129,6 +143,7 @@ enum hv_vreg {
     HV_VREG_AGTCNTRDIR_EL12,
     HV_VREG_APL_CNTV_CTL_EL0,
     HV_VREG_APL_CNTV_TVAL_EL0,
+    HV_VREG_CNTKCTL_EL1,
     HV_VREG_CNTKCTL_EL12,
     HV_VREG_CNTVOFF_EL2,
     HV_VREG_VM_TMR_FIQ_ENA_EL2,
@@ -344,8 +359,12 @@ struct hv_sprr_exc_regs {
 };
 
 struct hv_sprr_mmu {
-    bool sprr_en, gxf_en;
-    u64 apctl, sctlr_pac;
+    bool sprr_en;
+    u64 gxf_config;
+    u64 apctl;
+    u64 sctlr, tcr, mair, cntkctl, mdscr;
+    u64 cpacr; /* EL2&0 VHE CPTR or EL1&0 CPACR. */
+    u64 pac_keys[10];
     u64 sprr_config;
     u64 sprr_perm_el0, sprr_perm_el1;
     u64 sprr_umprr, sprr_pmprr, sprr_amrange;
@@ -356,18 +375,20 @@ struct hv_sprr_mmu {
 
 struct hv_sprr_cpu {
     enum hv_sprr_context context;
+    bool initialized;
     struct hv_sprr_mmu mmu_el20, mmu_el10;
     struct hv_sprr_mmu *mmu;
     struct hv_sprr_shadow *cur[2];
     struct hv_sprr_exc_regs exc[3];
     u64 gxf_enter, gxf_abort;
     u64 tpidr_gl1;
+    u64 tpidr_el1, tpidr_el2, sp_el1;
     u64 timer_deadline;
     u64 shadow[HV_VREG_MAX];
 };
 
 bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm);
-bool hv_sprr_handle_eret(struct exc_info *ctx);
+bool hv_sprr_handle_eret(struct exc_info *ctx, bool locked);
 bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm);
 bool hv_sprr_handle_msr(struct exc_info *ctx, u64 reg, u32 rt, bool is_read);
 bool hv_sprr_traps_tlbi(void);
@@ -382,6 +403,7 @@ void hv_sprr_set_pool(u64 base, u64 size);
 void hv_sprr_init_secondary(int cpu);
 bool hv_sprr_timer_pending(void);
 void hv_sprr_timer_arm(void);
+u64 *hv_sprr_mdscr(void);
 
 #endif
 

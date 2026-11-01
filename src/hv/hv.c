@@ -164,6 +164,7 @@ void hv_init(void)
     sysop("isb");
 
     if (hv_sptm_mode == SPTM_EMULATION) {
+        hv_write_hcr(mrs(HCR_EL2) | HCR_EnSCXT);
         if (FIELD_GET(ID_AA64PFR1_MTE, mrs(SYS_ID_AA64PFR1_EL1)) >= ID_AA64PFR1_MTE2) {
             hv_write_hcr(mrs(HCR_EL2) | HCR_ATA);
             sysop("isb");
