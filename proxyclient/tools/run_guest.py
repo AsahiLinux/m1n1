@@ -33,11 +33,23 @@ parser.add_argument('-v', '--volume', type=volumespec, action='append',
                          'on the guest side.')
 parser.add_argument('-p', '--sptm', type=pathlib.Path)
 parser.add_argument('-t', '--txm', type=pathlib.Path)
+parser.add_argument('--exclave-bundle', type=pathlib.Path,
+                    help='Raw ExclaveCore bundle.')
+parser.add_argument('--exclave-trustcache', type=pathlib.Path,
+                    help='Raw ExclaveOS trust cache payload.')
+parser.add_argument('--exclave-integrity-catalog', type=pathlib.Path,
+                    help='Raw ExclaveOS integrity catalog payload.')
 parser.add_argument('payload', type=pathlib.Path)
 parser.add_argument('boot_args', default=[], nargs="*")
 args = parser.parse_args()
+
 if (args.sptm or args.txm) and not (args.sptm and args.txm):
     parser.error("--sptm and --txm must be used in conjunction")
+if args.exclave_bundle and not args.sptm:
+    parser.error("--exclave-bundle requires --sptm/--txm")
+if any((args.exclave_bundle, args.exclave_trustcache, args.exclave_integrity_catalog)) and not all(
+        (args.exclave_bundle, args.exclave_trustcache, args.exclave_integrity_catalog)):
+    parser.error("--exclave-bundle, --exclave-trustcache and --exclave-integrity-catalog must be used together")
 if args.sptm_mode == "none" and (args.sptm and args.txm):
     parser.error("--sptm/--txm must be used together with --sptm-mode other than none")
 if args.sptm_mode != "none" and not (args.sptm and args.txm):
@@ -139,7 +151,10 @@ if args.append_payload:
 if args.raw:
     hv.load_raw(payload.read(), entryoffset=args.entry_point)
 elif args.sptm:
-    hv.load_macos_sptm(args.payload, args.sptm, args.txm, symfile=symfile)
+    hv.load_macos_sptm(args.payload, args.sptm, args.txm, symfile=symfile,
+                      exclave_bundle_path=args.exclave_bundle,
+                      exclave_trustcache_path=args.exclave_trustcache,
+                      exclave_integrity_catalog_path=args.exclave_integrity_catalog)
 else:
     hv.load_macho(payload, symfile=symfile)
 
