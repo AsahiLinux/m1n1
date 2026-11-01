@@ -98,6 +98,7 @@ static void sprr_prepare_cpu(struct hv_sprr_cpu *cpu)
     mmu->tcr = mrs(SYS_TCR_EL12);
     mmu->mair = mrs(SYS_MAIR_EL12);
     mmu->cpacr = mrs(CPACR_EL12);
+    mmu->smcr = mrs(SYS_SMCR_EL12);
     mmu->cntkctl = mrs(CNTKCTL_EL12);
     mmu->guest_ttbr[0] = mrs(SYS_TTBR0_EL12);
     mmu->guest_ttbr[1] = mrs(SYS_TTBR1_EL12);
@@ -1192,6 +1193,7 @@ static void sprr_switch_mmu(struct exc_info *ctx, struct hv_sprr_cpu *cpu, struc
     msr(SYS_TCR_EL12, mmu->tcr);
     msr(SYS_MAIR_EL12, mmu->mair);
     msr(CPACR_EL12, mmu->cpacr);
+    msr(SYS_SMCR_EL12, mmu->smcr);
     msr(CNTKCTL_EL12, mmu->cntkctl);
     sprr_restore_keys(mmu);
 
@@ -1362,6 +1364,7 @@ static enum mmu_sysreg_result hv_sprr_emulate_mmu_sysreg(struct exc_info *ctx,
         MMU_REG(SCTLR_EL1, SCTLR_EL12, sctlr);
         MMU_REG(MAIR_EL1, MAIR_EL12, mair);
         MMU_REG(CPACR_EL1, CPACR_EL12, cpacr);
+        MMU_REG(SMCR_EL1, SMCR_EL12, smcr);
         MMU_REG(CNTKCTL_EL1, CNTKCTL_EL12, cntkctl);
         MMU_REG(APCTL_EL1, APCTL_EL12, apctl);
         MMU_REG(SPRR_CONFIG_EL1, SPRR_CONFIG_EL12, sprr_config);
@@ -1377,6 +1380,10 @@ static enum mmu_sysreg_result hv_sprr_emulate_mmu_sysreg(struct exc_info *ctx,
         MMU_REG(SPRR_UPERM_SH1_EL1, SPRR_UPERM_SH1_EL12, sprr_uperm_sh1);
         MMU_REG(SPRR_UPERM_SH2_EL1, SPRR_UPERM_SH2_EL12, sprr_uperm_sh2);
         MMU_REG(SPRR_UPERM_SH3_EL1, SPRR_UPERM_SH3_EL12, sprr_uperm_sh3);
+        case HV_VREG_SMCR_EL2:
+            mmu = &cpu->mmu_el20;
+            reg = &mmu->smcr;
+            break;
         case HV_VREG_CPTR_EL2:
             mmu = &cpu->mmu_el20;
             reg = &mmu->cpacr;
@@ -1433,6 +1440,11 @@ static enum mmu_sysreg_result hv_sprr_emulate_mmu_sysreg(struct exc_info *ctx,
         case HV_VREG_CPACR_EL12:
         case HV_VREG_CPTR_EL2:
             msr(CPACR_EL12, val);
+            break;
+        case HV_VREG_SMCR_EL1:
+        case HV_VREG_SMCR_EL12:
+        case HV_VREG_SMCR_EL2:
+            msr(SYS_SMCR_EL12, val);
             break;
         case HV_VREG_CNTKCTL_EL1:
         case HV_VREG_CNTKCTL_EL12:

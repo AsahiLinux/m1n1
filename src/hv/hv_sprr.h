@@ -132,6 +132,9 @@ enum hv_vreg {
     HV_VREG_SCTLR_EL12,
     HV_VREG_SCXTNUM_EL0,
     HV_VREG_SCXTNUM_EL12,
+    HV_VREG_SMCR_EL1,
+    HV_VREG_SMCR_EL12,
+    HV_VREG_SMCR_EL2,
     HV_VREG_TAGOFFSET_EL2,
     HV_VREG_TCR_EL1,
     HV_VREG_TCR_EL12,
@@ -372,6 +375,7 @@ struct hv_sprr_mmu {
     u64 apctl;
     u64 sctlr, tcr, mair, cntkctl, mdscr;
     u64 cpacr; /* EL2&0 VHE CPTR or EL1&0 CPACR. */
+    u64 smcr;
     u64 pac_keys[10];
     u64 sprr_config;
     u64 sprr_perm_el0, sprr_perm_el1;
