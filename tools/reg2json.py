@@ -72,6 +72,10 @@ def parse_one(regs, xml):
 
         for fields_elem, layout in zip(reg.findall('reg_fieldsets/fields'),
                                        reg.findall('reg_fieldsets/reg_fieldset')):
+            condition = fields_elem.findtext('fields_condition', '')
+            instance = fields_elem.findtext('fields_instance', '')
+            if "EffectiveHCR_EL2_E2H() == '0'" in condition + instance:
+                continue
 
             fieldset = {}
 
