@@ -324,6 +324,7 @@ struct hv_sprr_shadow {
     u64 *vector_tables[4]; /* pagetables used to map our exception vectors to the guest*/
     struct sprr_mirror *top;
     u64 perm_el0, perm_el1;
+    bool el10;
     u64 leaf[2][SPRR_N_INDICES]; // [guarded][guest PTE perm index] -> shadow leaf bits
     u64 active;                  // CPUs holding this shadow in cur[]
     u32 va_bits;
@@ -342,25 +343,25 @@ struct hv_sprr_exc_regs {
     u64 vbar, aspsr;
 };
 
-struct hv_sprr_cpu {
+struct hv_sprr_mmu {
     bool sprr_en, gxf_en;
-    enum hv_sprr_context context;
-    u64 apctl_el1, apctl_el12;
-    u64 sctlr_pac;
-
-    u64 gxf_enter, gxf_abort;
+    u64 apctl, sctlr_pac;
     u64 sprr_config;
     u64 sprr_perm_el0, sprr_perm_el1;
-    u64 sprr_umprr;
-    u64 sprr_pmprr, sprr_amrange;
+    u64 sprr_umprr, sprr_pmprr, sprr_amrange;
     u64 sprr_pperm_sh1, sprr_pperm_sh2, sprr_pperm_sh3;
     u64 sprr_uperm_sh1, sprr_uperm_sh2, sprr_uperm_sh3;
-    u64 tpidr_gl1;
-    struct hv_sprr_exc_regs exc[3];
-
     u64 guest_ttbr[2];
-    struct hv_sprr_shadow *cur[2];
+};
 
+struct hv_sprr_cpu {
+    enum hv_sprr_context context;
+    struct hv_sprr_mmu mmu_el20, mmu_el10;
+    struct hv_sprr_mmu *mmu;
+    struct hv_sprr_shadow *cur[2];
+    struct hv_sprr_exc_regs exc[3];
+    u64 gxf_enter, gxf_abort;
+    u64 tpidr_gl1;
     u64 timer_deadline;
     u64 shadow[HV_VREG_MAX];
 };
