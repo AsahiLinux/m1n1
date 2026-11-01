@@ -22,6 +22,57 @@ from .amcc import VirtualAMCC
 
 __all__ = ["HV"]
 
+class ExclaveBundleLoader:
+    def load_bundle(self, data, patch_hook=None):
+        entry, magic, version = struct.unpack_from("<I4x4s2xH", data)
+
+        assert magic == b"DNUB"
+        assert (entry & 0xfc000000) == 0x14000000
+
+        if version == 3:
+            regions = self._load_bundle_v3(data)
+        elif version == 4:
+            regions = self._load_bundle_v4(data)
+        else:
+            raise ValueError(f"Unsupported Exclave bundle version: {version}")
+
+        if patch_hook is not None:
+            regions["rx"] = patch_hook(regions["rx"])
+        return regions
+
+    def _load_bundle_v3(self, data):
+        offset, size = struct.unpack_from("<QQ", data, 0x70)
+        rx_region = data[offset:offset+size]
+
+        offset, size = struct.unpack_from("<QQ", data, 0xe0)
+        rw_region = data[offset:offset+size]
+        return {"rx": rx_region, "ro": b"", "rw": rw_region, "le": b""}
+
+    def _load_bundle_v4(self, data):
+        BLOB_TABLE_OFFSET = 0x270
+        BLOB_ENTRY = struct.Struct("<QQI4s")
+
+        FLAGS_W = 1
+        FLAGS_X = 2
+
+        regions = {"rx": bytearray(), "ro": bytearray(), "rw": bytearray(), "le": bytearray()}
+
+        n_blobs, = struct.unpack_from("<I", data, 0x14)
+        for i in range(n_blobs):
+            pos = BLOB_TABLE_OFFSET + i * BLOB_ENTRY.size
+            offset, size, flags, name = BLOB_ENTRY.unpack_from(data, pos)
+
+            blob = data[offset:offset+size]
+            if flags & FLAGS_X:
+                regions["rx"].extend(blob)
+            elif flags & FLAGS_W:
+                regions["rw"].extend(blob)
+            else:
+                raise ValueError(f"Unexpected blob: {offset}, {size}, {flags}, {name}")
+
+        return regions
+
+
 class HV(Reloadable):
     PAC_MASK = 0xfffff00000000000
 
@@ -1944,7 +1995,9 @@ class HV(Reloadable):
             image, _ = macho.prepare_image()
         self.load_raw(image, entryoffset=(macho.entry - macho.vmin), use_xnu_symbols=self.xnu_mode and symfile is not None, vmin=macho.vmin)
 
-    def load_macos_sptm(self, xnu_path, sptm_path, txm_path, symfile=None):
+    def load_macos_sptm(self, xnu_path, sptm_path, txm_path, symfile=None,
+                       exclave_bundle_path=None, exclave_trustcache_path=None,
+                       exclave_integrity_catalog_path=None):
         self.xnu_mode = True
 
         self.xnu_macho = xnu_macho = MachO(open(xnu_path, "rb"))
@@ -1995,6 +2048,14 @@ class HV(Reloadable):
         }
         txm_entry = txm_macho.entry - txm_macho.vmin
 
+        cl4_map = None
+        if exclave_bundle_path is not None:
+            patch_text = None
+            if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
+                patch_text = patch_text_sprr_emu
+            with open(exclave_bundle_path, "rb") as f:
+                cl4_map = ExclaveBundleLoader().load_bundle(f.read(), patch_text)
+
         self._prepare_load()
 
         @dataclass
@@ -2014,7 +2075,15 @@ class HV(Reloadable):
             MemoryMapEntry("BootKC-bx", xnu_map["bx"]),
             MemoryMapEntry("BootKC-ro", xnu_map["ro"]),
             MemoryMapEntry("BootKC-rs", xnu_map["rs"]),
+        ]
 
+        if cl4_map is not None:
+            memory_map.extend([
+                MemoryMapEntry("CL4-rx", cl4_map["rx"]),
+                MemoryMapEntry("CL4-ro", cl4_map["ro"]),
+            ])
+
+        memory_map.extend([
             MemoryMapEntry("DeviceTree", None),
 
             MemoryMapEntry("SPTM-ro", sptm_map["ro"]),
@@ -2023,10 +2092,17 @@ class HV(Reloadable):
 
             # Required by SPTM, no further checks
             MemoryMapEntry("SPTM-le", sptm_map["le"]),
+        ])
 
-            # Empty page required by SPTM on M4 when no Secure Kernel is present
-            MemoryMapEntry("CL4-dummypage", bytes(0x4000)),
+        if cl4_map is None:
+            memory_map.append(MemoryMapEntry("CL4-dummypage", bytes(0x4000)))
+        else:
+            memory_map.extend([
+                MemoryMapEntry("CL4-rw", cl4_map["rw"]),
+                MemoryMapEntry("CL4-le", cl4_map["le"]),
+            ])
 
+        memory_map.extend([
             MemoryMapEntry("TXM-rw", txm_map["rw"]),
             MemoryMapEntry("TXM-le", txm_map["le"]),
 
@@ -2036,7 +2112,15 @@ class HV(Reloadable):
             MemoryMapEntry("RTBuddySeg", None),
             MemoryMapEntry("SEPFW", None),
             MemoryMapEntry("preoslog", None),
-        ]
+        ])
+
+        if exclave_trustcache_path is not None:
+            with open(exclave_trustcache_path, "rb") as f:
+                memory_map.append(MemoryMapEntry("ExclaveOSTrustCache", f.read()))
+
+        if exclave_integrity_catalog_path is not None:
+            with open(exclave_integrity_catalog_path, "rb") as f:
+                memory_map.append(MemoryMapEntry("ExclaveOSIntegrityCatalog", f.read()))
 
         done = {entry.name for entry in memory_map}
         if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
@@ -2058,7 +2142,7 @@ class HV(Reloadable):
 
         for entry in memory_map:
             base = self.guest_base + image_size
-            if entry.data:
+            if entry.data is not None:
                 length = len(entry.data)
                 self._load_executable_raw(entry.data, base, entry.name)
             elif entry.name == "DeviceTree":
@@ -2083,6 +2167,19 @@ class HV(Reloadable):
         self.adt["chosen"]["memory-map"].BootKC_entry = (xnu_entry, 0x0)
         self.adt["chosen"]["memory-map"].BootKC_virt = (0x0, 0x0)
 
+        if cl4_map is not None:
+            mm = self.adt["chosen"]["memory-map"]
+            exclave_memory = self.adt.create_node("/chosen/exclave-memory-map")
+            for entry in memory_map:
+                if entry.name in ("ExclaveOSTrustCache", "ExclaveOSIntegrityCatalog"):
+                    node = exclave_memory.create_node(entry.name)
+                    node.range = struct.pack("<QQ", *mm.getprop(entry.name))
+            mm.CL4_entry = (0, 0)
+            mm.CL4_virt = (0, 0)
+            mm.CL4_dummypage = (0, 0)
+            self.adt["chosen"].cl4_entropy = secrets.token_bytes(0xc0)
+            self.adt["product"].exclaves_enabled = 1
+
         self.adt["chosen"]["memory-map"].SPTM_rm = (self.adt["chosen"]["memory-map"].SPTM_ro[0], (
             self.adt["chosen"]["memory-map"].SPTM_ro[1] +
             self.adt["chosen"]["memory-map"].SPTM_rx[1] +
@@ -2092,8 +2189,9 @@ class HV(Reloadable):
 
         if self.sptm_mode == SPTM_MODE.SPTM_EMULATION:
             mm = self.adt["chosen"]["memory-map"]
+            ctrr_c_start = mm.CL4_rx[0] if cl4_map is not None else mm.DeviceTree[0]
             ranges = {
-                "c": (mm.DeviceTree[0], mm.SPTM_rx[0] + mm.SPTM_rx[1] - 1),
+                "c": (ctrr_c_start, mm.SPTM_rx[0] + mm.SPTM_rx[1] - 1),
                 "d": (mm.TXM_ro[0], mm.BootKC_rs[0] + mm.BootKC_rs[1] - 1),
             }
             self.sptm_amcc = VirtualAMCC(self, ranges)
