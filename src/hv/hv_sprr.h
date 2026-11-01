@@ -323,7 +323,7 @@ struct hv_sprr_shadow {
     u64 guest_ttbr;
     u64 *vector_tables[4]; /* pagetables used to map our exception vectors to the guest*/
     struct sprr_mirror *top;
-    u64 perm_el0, perm_el1;
+    u64 perm_el0, perm_el1, mair;
     bool el10;
     u64 leaf[2][SPRR_N_INDICES]; // [guarded][guest PTE perm index] -> shadow leaf bits
     u64 active;                  // CPUs holding this shadow in cur[]
