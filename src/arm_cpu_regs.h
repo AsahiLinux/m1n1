@@ -195,6 +195,8 @@
 #define ID_AA64PFR1_SME     GENMASK(27, 24)
 #define ID_AA64PFR1_SME2    2
 
+#define SYS_SMPRI_EL1 sys_reg(3, 0, 1, 2, 4)
+
 #define SYS_SMCR_EL2 sys_reg(3, 4, 1, 2, 6)
 #define SMCR_EZT0    BIT(30)
 
@@ -420,6 +422,7 @@
 #define VTCR_T0SZ  GENMASK(5, 0)
 
 #define SYS_MDSCR_EL1 sys_reg(2, 0, 0, 2, 2)
+#define SYS_OSLAR_EL1 sys_reg(2, 0, 1, 0, 4)
 
 #define SYS_TPIDR2_EL0 sys_reg(3, 3, 13, 0, 5)
 

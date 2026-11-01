@@ -253,6 +253,8 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
         /* Noisy traps */
         SYSREG_PASS(SYS_IMP_APL_HID4)
         SYSREG_PASS(SYS_IMP_APL_EHID4)
+        SYSREG_PASS(SYS_OSLAR_EL1);
+        SYSREG_PASS(SYS_SMPRI_EL1);
         /* We don't normally trap these, but if we do, they're noisy */
         SYSREG_PASS(SYS_IMP_APL_GXF_STATUS_EL1)
         SYSREG_PASS(SYS_IMP_APL_CNTVCT_ALIAS_EL0)
