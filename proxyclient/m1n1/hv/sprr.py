@@ -3,6 +3,7 @@ import array
 
 from .. import sysreg
 from ..sysreg import sysreg_encode
+from ..utils import ProgressBar
 
 __all__ = ["patch_text_sprr_emu", "HV_VREGS"]
 
@@ -322,8 +323,11 @@ for src, dst in REMAP.items():
 
 def patch_text_sprr_emu(data):
     a = array.array("I", data)
+    progress = ProgressBar()
 
     for i, w in enumerate(a):
+        if i % 0x4000 == 0:
+            progress.update(i * 100 // len(a))
         if w & 0xfffffff0 == GENTER:
             a[i] = _hvc(w & 0xffff)
         elif (w == GXF_TLBI_ALL or w & GXF_TLBI_WITH_ARG_MASK == GXF_TLBI_WITH_ARG or
@@ -340,4 +344,5 @@ def patch_text_sprr_emu(data):
             opcode, rt_shift = hit
             a[i] = opcode | ((w & 0x1f) << rt_shift)
 
+    progress.finish()
     return a.tobytes()
