@@ -81,30 +81,28 @@ bool hv_amcc_init(void)
     if (amcc_node < 0)
         return false;
 
+    int mcc_node = adt_path_offset(adt, "/arm-io/mcc");
+    if (mcc_node < 0)
+        return false;
+
     struct {
         u32 tag, reg_start, count, irq_start, irq_count, unk;
     } metadata;
     u32 enabled, planes, stride;
+    u32 enabled_planes = ~0U;
 
     if (ADT_GETPROP(adt, error_handler_node, "amcc-metadata", &metadata) != sizeof(metadata) ||
         ADT_GETPROP(adt, amcc_node, "plane-count", &planes) != sizeof(planes) ||
         ADT_GETPROP(adt, amcc_node, "plane-stride", &stride) != sizeof(stride))
         return false;
 
-    enabled = ~0U;
-    if (chip_id == T8140) {
-        int mcc_node = adt_path_offset(adt, "/arm-io/mcc");
-        if (mcc_node < 0)
-            return false;
-
-        if (ADT_GETPROP(adt, mcc_node, "amcc-enable-mask", &enabled) != sizeof(enabled))
-            return false;
-    }
     /* T8132 lists all controllers and has no enable-mask property. */
-    else if (!amcc_shared_irqs && ADT_GETPROP(adt, error_handler_node, "amcc-enable-mask",
-                                              &enabled) != sizeof(enabled)) {
+    enabled = ~0U;
+    if (!amcc_shared_irqs &&
+        ADT_GETPROP(adt, mcc_node, "amcc-enable-mask", &enabled) != sizeof(enabled))
         return false;
-    }
+
+    ADT_GETPROP(adt, mcc_node, "amcc-plane-enable-mask", &enabled_planes);
 
     u32 irq_len;
     const u32 *irqs = adt_getprop(adt, error_handler_node, "interrupts", &irq_len);
@@ -122,6 +120,8 @@ bool hv_amcc_init(void)
             return false;
 
         for (u32 plane = 0; plane < planes; plane++) {
+            if (!(enabled_planes & BIT(plane)))
+                continue;
             if (amcc_plane_count == ARRAY_SIZE(amcc_planes))
                 return false;
             u32 irq_index = amcc_shared_irqs ? instance : instance * planes + plane;
