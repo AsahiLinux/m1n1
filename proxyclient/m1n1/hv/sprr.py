@@ -84,6 +84,7 @@ HV_VREGS = [
     sysreg.VBAR_GL12,
 
     # MMU and Virtualization
+    sysreg.ACTLR_EL12,
     sysreg.ACTLR_EL12_PRE,
     sysreg.AMAIR_EL12,
     sysreg.CONTEXTIDR_EL12,
@@ -93,6 +94,11 @@ HV_VREGS = [
     sysreg.HACR_EL2,
     sysreg.HCRX_EL2,
     sysreg.HCR_EL2,
+    sysreg.HDFGRTR_EL2,
+    sysreg.HDFGWTR_EL2,
+    sysreg.HFGITR_EL2,
+    sysreg.HFGRTR_EL2,
+    sysreg.HFGWTR_EL2,
     sysreg.ICH_HCR_EL2,
     sysreg.ICH_VMCR_EL2,
     sysreg.MAIR_EL1,
@@ -110,6 +116,7 @@ HV_VREGS = [
     sysreg.TTBR1_EL1,
     sysreg.TTBR1_EL12,
     sysreg.VMPIDR_EL2,
+    sysreg.VNCR_EL2,
     sysreg.VPIDR_EL2,
     sysreg.VTCR_EL2,
     sysreg.VTTBR_EL2,
@@ -225,6 +232,7 @@ HV_VREGS = [
     sysreg.AMX_STATE_EL12,
 
     # Misc
+    sysreg.AFPCR_EL0,
     sysreg.AWL_SCRATCH_EL1,
     sysreg.JCTL_EL0,
     sysreg.PMCR1_GL1,
