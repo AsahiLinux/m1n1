@@ -1494,6 +1494,7 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
     }
 
     switch (vreg) {
+        VREG_MASKED_ALIAS(HV_VREG_ACTLR_EL12, HV_VREG_ACTLR_EL12_PRE, ~0ULL);
         VREG_EL10_KEY(APIAKEYLO, 0);
         VREG_EL10_KEY(APIAKEYHI, 1);
         VREG_EL10_KEY(APIBKEYLO, 2);
