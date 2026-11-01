@@ -556,7 +556,7 @@ static u64 sprr_vector_entry(struct hv_sprr_shadow *sh, u8 level)
         return (u64)*table | PTE_VALID | PTE_TYPE;
     }
 
-    u64 mair = mrs(SYS_MAIR_EL12);
+    u64 mair = sh->mair;
     for (int attr = 0; attr < 8; attr++) {
         u8 value = mair >> (8 * attr);
         if (value == 0xff) /* Normal Memory, Write-back, XS=0, usually at attr = 0 */
@@ -740,6 +740,7 @@ static void hv_sprr_switch_tables(struct hv_sprr_cpu *cpu)
 static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sprr_cpu *cpu,
                                               int ttbr_idx, u64 guest_ttbr, u32 va_bits)
 {
+    u64 mair = mrs(SYS_MAIR_EL12);
     bool el10 = cpu->mmu == &cpu->mmu_el10;
     struct hv_sprr_shadow *slot = NULL;
 
@@ -761,7 +762,7 @@ static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sp
         if (sh->ttbr_idx == ttbr_idx && sh->va_bits == va_bits &&
             ((sh->guest_ttbr ^ guest_ttbr) & SPRR_OA_MASK) == 0 &&
             sh->perm_el0 == cpu->mmu->sprr_perm_el0 && sh->perm_el1 == cpu->mmu->sprr_perm_el1 &&
-            sh->el10 == el10) {
+            sh->mair == mair && sh->el10 == el10) {
             sh->lru = ++sprr_lru_clock;
             return sh;
         }
@@ -786,6 +787,7 @@ static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sp
     slot->ttbr_idx = ttbr_idx;
     slot->perm_el0 = cpu->mmu->sprr_perm_el0;
     slot->perm_el1 = cpu->mmu->sprr_perm_el1;
+    slot->mair = mair;
     slot->el10 = el10;
     sprr_leaf_init(slot);
     slot->lru = ++sprr_lru_clock;
