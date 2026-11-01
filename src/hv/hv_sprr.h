@@ -331,14 +331,24 @@ struct hv_sprr_shadow {
     u8 ttbr_idx;
 };
 
+enum hv_sprr_context {
+    HV_SPRR_XNU,
+    HV_SPRR_SPTM,
+    HV_SPRR_CL4,
+};
+
+struct hv_sprr_exc_regs {
+    u64 spsr, elr, esr, far, afsr1, sp;
+    u64 vbar, aspsr;
+};
+
 struct hv_sprr_cpu {
     bool sprr_en, gxf_en;
-    bool guarded;
+    enum hv_sprr_context context;
     u64 apctl_el1, apctl_el12;
     u64 sctlr_pac;
 
     u64 gxf_enter, gxf_abort;
-    u64 vbar_gl1, vbar_el1;
     u64 sprr_config;
     u64 sprr_perm_el0, sprr_perm_el1;
     u64 sprr_umprr;
@@ -346,11 +356,7 @@ struct hv_sprr_cpu {
     u64 sprr_pperm_sh1, sprr_pperm_sh2, sprr_pperm_sh3;
     u64 sprr_uperm_sh1, sprr_uperm_sh2, sprr_uperm_sh3;
     u64 tpidr_gl1;
-    u64 aspsr_el1, aspsr_gl1;
-
-    struct hv_sprr_exc_regs {
-        u64 spsr, elr, esr, far, afsr1, sp;
-    } el1, gl1;
+    struct hv_sprr_exc_regs exc[3];
 
     u64 guest_ttbr[2];
     struct hv_sprr_shadow *cur[2];
