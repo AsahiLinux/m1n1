@@ -575,8 +575,11 @@ static int pcie_init_controller(int controller, const char *path)
                 break;
         }
 
-        if ((bridge_offset = adt_path_offset(adt, bridge)) < 0)
+        if ((bridge_offset = adt_path_offset(adt, bridge)) < 0) {
+            /* Move to the next PCIe device on this bus. */
+            config_base += (1 << 15);
             continue;
+        }
 
         printf("pcie: Initializing port %d\n", port);
 
