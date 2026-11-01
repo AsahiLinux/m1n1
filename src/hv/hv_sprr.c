@@ -121,7 +121,8 @@ static void sprr_init_cpu(int i)
 {
     struct hv_sprr_cpu *cpu = &hv_sprr_cpus[i];
 
-    cpu->apctl_el1 = APCTL_ENABLE_EL1;
+    cpu->mmu = &cpu->mmu_el20;
+    cpu->mmu_el20.apctl = APCTL_ENABLE_EL1;
     cpu->timer_deadline = 0;
     memset(cpu->shadow, 0, sizeof(cpu->shadow));
 
@@ -176,8 +177,8 @@ static void sprr_update_pac(u64 pstate)
      * to the guest since the keys are opaque anyway and all that matters is that some key
      * is used and that PAC is enabled.
      */
-    u64 pac = cpu->sctlr_pac;
-    if ((cpu->apctl_el1 & APCTL_APPLE_MODE) && (cpu->apctl_el1 & enable))
+    u64 pac = cpu->mmu->sctlr_pac;
+    if ((cpu->mmu->apctl & APCTL_APPLE_MODE) && (cpu->mmu->apctl & enable))
         pac |= SCTRL_PAC_BITS;
 
     u64 sctlr = mrs(SYS_SCTLR_EL12);
@@ -625,7 +626,7 @@ static void sprr_mirror_entry(struct exc_info *ctx, struct sprr_mirror *mirror, 
         mirror->el[i] = 0;
     else {
         u64 descriptor = base | pel;
-        if (sh->ttbr_idx == 0 &&
+        if (!sh->el10 && sh->ttbr_idx == 0 &&
             va == ALIGN_DOWN(SPRR_COMMPAGE_VA, BIT(sprr_lvl_off[mirror->level])))
             descriptor = sprr_commpage_map(mirror->level, descriptor);
         mirror->el[i] = descriptor;
@@ -716,7 +717,7 @@ static void sprr_set_cur_shadow(struct hv_sprr_cpu *cpu, int ttbr_idx, struct hv
 
 static void hv_sprr_switch_tables(struct hv_sprr_cpu *cpu)
 {
-    if (!cpu->sprr_en)
+    if (!cpu->mmu->sprr_en)
         return;
     for (int i = 0; i < 2; i++) {
         struct hv_sprr_shadow *sh = cpu->cur[i];
@@ -725,7 +726,7 @@ static void hv_sprr_switch_tables(struct hv_sprr_cpu *cpu)
         u64 top_pa = (u64)(sprr_guarded(cpu) ? sh->top->gl : sh->top->el);
         // the el/gl trees share the guest ASID but have different permissions while CPUs run in
         // different worlds -> disallow CnP
-        sprr_write_hw_ttbr(i, (cpu->guest_ttbr[i] & ~(SPRR_OA_MASK | TTBR_CNP)) |
+        sprr_write_hw_ttbr(i, (cpu->mmu->guest_ttbr[i] & ~(SPRR_OA_MASK | TTBR_CNP)) |
                                   (top_pa & SPRR_OA_MASK));
     }
 
@@ -739,6 +740,7 @@ static void hv_sprr_switch_tables(struct hv_sprr_cpu *cpu)
 static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sprr_cpu *cpu,
                                               int ttbr_idx, u64 guest_ttbr, u32 va_bits)
 {
+    bool el10 = cpu->mmu == &cpu->mmu_el10;
     struct hv_sprr_shadow *slot = NULL;
 
     if (va_bits < SPRR_PAGE_SHIFT || va_bits > 48 || (guest_ttbr & TTBR_BADDR & (SZ_16K - 1)) ||
@@ -758,7 +760,8 @@ static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sp
         }
         if (sh->ttbr_idx == ttbr_idx && sh->va_bits == va_bits &&
             ((sh->guest_ttbr ^ guest_ttbr) & SPRR_OA_MASK) == 0 &&
-            sh->perm_el0 == cpu->sprr_perm_el0 && sh->perm_el1 == cpu->sprr_perm_el1) {
+            sh->perm_el0 == cpu->mmu->sprr_perm_el0 && sh->perm_el1 == cpu->mmu->sprr_perm_el1 &&
+            sh->el10 == el10) {
             sh->lru = ++sprr_lru_clock;
             return sh;
         }
@@ -781,8 +784,9 @@ static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sp
     slot->guest_ttbr = guest_ttbr;
     slot->va_bits = va_bits;
     slot->ttbr_idx = ttbr_idx;
-    slot->perm_el0 = cpu->sprr_perm_el0;
-    slot->perm_el1 = cpu->sprr_perm_el1;
+    slot->perm_el0 = cpu->mmu->sprr_perm_el0;
+    slot->perm_el1 = cpu->mmu->sprr_perm_el1;
+    slot->el10 = el10;
     sprr_leaf_init(slot);
     slot->lru = ++sprr_lru_clock;
     slot->top =
@@ -801,7 +805,7 @@ static void sprr_update_vbar(struct hv_sprr_cpu *cpu)
 {
     u64 vbar;
 
-    if (cpu->sprr_en) {
+    if (cpu->mmu->sprr_en) {
         if (sprr_mmu_on())
             vbar = SPRR_VECTOR_VA;
         else
@@ -830,8 +834,9 @@ static void sprr_load_shadow(struct exc_info *ctx, struct hv_sprr_cpu *cpu, int 
         hv_exc_proxy(ctx, START_HV, HV_PANIC, NULL);
         return;
     }
-    sprr_set_cur_shadow(cpu, ttbr_idx,
-                        sprr_get_shadow(ctx, cpu, ttbr_idx, cpu->guest_ttbr[ttbr_idx], 64 - tsz));
+    sprr_set_cur_shadow(
+        cpu, ttbr_idx,
+        sprr_get_shadow(ctx, cpu, ttbr_idx, cpu->mmu->guest_ttbr[ttbr_idx], 64 - tsz));
 }
 
 static void sprr_reload_shadows(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
@@ -849,7 +854,7 @@ static void sprr_reload_shadows(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
 
 static void hv_sprr_build(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
 {
-    if (!cpu->sprr_en)
+    if (!cpu->mmu->sprr_en)
         return;
     sprr_reload_shadows(ctx, cpu);
     hv_sprr_switch_tables(cpu);
@@ -860,8 +865,8 @@ static void hv_sprr_activate(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
     if (sprr_guarded(cpu))
         panic("hv_sprr: enabling SPRR in guarded mode is unsupported");
 
-    cpu->guest_ttbr[0] = mrs(SYS_TTBR0_EL12);
-    cpu->guest_ttbr[1] = mrs(SYS_TTBR1_EL12);
+    cpu->mmu->guest_ttbr[0] = mrs(SYS_TTBR0_EL12);
+    cpu->mmu->guest_ttbr[1] = mrs(SYS_TTBR1_EL12);
 
     hv_write_hcr(mrs(HCR_EL2) | HCR_TTLB);
 
@@ -898,7 +903,7 @@ static void hv_sprr_deactivate(struct hv_sprr_cpu *cpu)
 
     sprr_release_shadows(cpu);
     for (int i = 0; i < 2; i++)
-        sprr_write_hw_ttbr(i, cpu->guest_ttbr[i]);
+        sprr_write_hw_ttbr(i, cpu->mmu->guest_ttbr[i]);
 
     hv_write_hcr(mrs(HCR_EL2) & ~HCR_TTLB);
 
@@ -924,7 +929,7 @@ static void hv_sprr_deactivate(struct hv_sprr_cpu *cpu)
 
 static void hv_sprr_rebuild(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
 {
-    if (!cpu->sprr_en)
+    if (!cpu->mmu->sprr_en)
         return;
     if (sprr_mmu_on()) {
         hv_sprr_build(ctx, cpu);
@@ -934,7 +939,7 @@ static void hv_sprr_rebuild(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
 
 static bool sprr_shadows_active(struct hv_sprr_cpu *cpu)
 {
-    return cpu->sprr_en && sprr_mmu_on();
+    return cpu->mmu->sprr_en && sprr_mmu_on();
 }
 
 static u64 sprr_read_ttbr(struct hv_sprr_cpu *cpu, int ttbr_idx)
@@ -942,12 +947,12 @@ static u64 sprr_read_ttbr(struct hv_sprr_cpu *cpu, int ttbr_idx)
     if (!sprr_shadows_active(cpu))
         return ttbr_idx ? mrs(SYS_TTBR1_EL12) : mrs(SYS_TTBR0_EL12);
 
-    return cpu->guest_ttbr[ttbr_idx];
+    return cpu->mmu->guest_ttbr[ttbr_idx];
 }
 
 static void sprr_write_ttbr(struct exc_info *ctx, struct hv_sprr_cpu *cpu, int ttbr_idx, u64 val)
 {
-    cpu->guest_ttbr[ttbr_idx] = val;
+    cpu->mmu->guest_ttbr[ttbr_idx] = val;
 
     if (!sprr_shadows_active(cpu)) {
         sprr_write_hw_ttbr(ttbr_idx, val);
@@ -982,7 +987,7 @@ static void sprr_write_sctlr(struct exc_info *ctx, struct hv_sprr_cpu *cpu, u64 
     if ((val & SCTLR_M) && !sprr_mmu_on())
         hv_sprr_build(ctx, cpu);
 
-    cpu->sctlr_pac = val & SCTRL_PAC_BITS;
+    cpu->mmu->sctlr_pac = val & SCTRL_PAC_BITS;
     msr(SYS_SCTLR_EL12, val);
     sprr_update_pac(ctx->spsr);
     sprr_update_vbar(cpu);
@@ -1081,14 +1086,14 @@ static bool hv_sprr_handle_tlbi(u64 reg, u64 wval)
 // called from hv_handle_msr which also tries to handle some TLBIs and used to skip those if true
 bool hv_sprr_traps_tlbi(void)
 {
-    return hv_sptm_mode == SPTM_EMULATION && hv_sprr_this()->sprr_en;
+    return hv_sptm_mode == SPTM_EMULATION && hv_sprr_this()->mmu->sprr_en;
 }
 
 bool hv_sprr_handle_msr(struct exc_info *ctx, u64 reg, u32 rt, bool is_read)
 {
     struct hv_sprr_cpu *cpu = hv_sprr_this();
 
-    if (hv_sptm_mode != SPTM_EMULATION || !cpu->sprr_en)
+    if (hv_sptm_mode != SPTM_EMULATION || !cpu->mmu->sprr_en)
         return false;
 
     ctx->regs[31] = 0;
@@ -1166,7 +1171,7 @@ static bool hv_gxf_gexit(struct exc_info *ctx)
  */
 #define VREG_EL1_BANKED(vreg_id, hwreg, field)                                                     \
     case vreg_id:                                                                                  \
-        if (cpu->sprr_en) {                                                                        \
+        if (cpu->mmu->sprr_en) {                                                                   \
             if (is_read)                                                                           \
                 rval = cpu->exc[HV_SPRR_XNU].field;                                                \
             else                                                                                   \
@@ -1205,7 +1210,7 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
     u64 rval = 0;
 
     switch (vreg) {
-        VREG_STORED(HV_VREG_APCTL_EL12, apctl_el12);
+        VREG_STORED(HV_VREG_APCTL_EL12, mmu_el10.apctl);
 
         VREG_STORED(HV_VREG_GXF_ENTER_EL1, gxf_enter);
         VREG_STORED(HV_VREG_GXF_ABORT_EL1, gxf_abort);
@@ -1213,15 +1218,15 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
         VREG_STORED(HV_VREG_ASPSR_GL1, exc[HV_SPRR_SPTM].aspsr);
         /* ASPSR_EL1 always describes unguarded exception state and must thus belong to XNU */
         VREG_STORED(HV_VREG_ASPSR_EL1, exc[HV_SPRR_XNU].aspsr);
-        VREG_STORED(HV_VREG_SPRR_AMRANGE_EL1, sprr_amrange);
-        VREG_STORED(HV_VREG_SPRR_UMPRR_EL1, sprr_umprr);
-        VREG_STORED(HV_VREG_SPRR_PMPRR_EL1, sprr_pmprr);
-        VREG_STORED(HV_VREG_SPRR_PPERM_SH1_EL1, sprr_pperm_sh1);
-        VREG_STORED(HV_VREG_SPRR_PPERM_SH2_EL1, sprr_pperm_sh2);
-        VREG_STORED(HV_VREG_SPRR_PPERM_SH3_EL1, sprr_pperm_sh3);
-        VREG_STORED(HV_VREG_SPRR_UPERM_SH1_EL1, sprr_uperm_sh1);
-        VREG_STORED(HV_VREG_SPRR_UPERM_SH2_EL1, sprr_uperm_sh2);
-        VREG_STORED(HV_VREG_SPRR_UPERM_SH3_EL1, sprr_uperm_sh3);
+        VREG_STORED(HV_VREG_SPRR_AMRANGE_EL1, mmu->sprr_amrange);
+        VREG_STORED(HV_VREG_SPRR_UMPRR_EL1, mmu->sprr_umprr);
+        VREG_STORED(HV_VREG_SPRR_PMPRR_EL1, mmu->sprr_pmprr);
+        VREG_STORED(HV_VREG_SPRR_PPERM_SH1_EL1, mmu->sprr_pperm_sh1);
+        VREG_STORED(HV_VREG_SPRR_PPERM_SH2_EL1, mmu->sprr_pperm_sh2);
+        VREG_STORED(HV_VREG_SPRR_PPERM_SH3_EL1, mmu->sprr_pperm_sh3);
+        VREG_STORED(HV_VREG_SPRR_UPERM_SH1_EL1, mmu->sprr_uperm_sh1);
+        VREG_STORED(HV_VREG_SPRR_UPERM_SH2_EL1, mmu->sprr_uperm_sh2);
+        VREG_STORED(HV_VREG_SPRR_UPERM_SH3_EL1, mmu->sprr_uperm_sh3);
 
         VREG_STORED(HV_VREG_VBAR_GL1, exc[HV_SPRR_SPTM].vbar);
         VREG_STORED(HV_VREG_ELR_GL1, exc[HV_SPRR_SPTM].elr);
@@ -1288,14 +1293,14 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
 
         case HV_VREG_SPRR_CONFIG_EL1:
             if (is_read) {
-                rval = cpu->sprr_config;
+                rval = cpu->mmu->sprr_config;
             } else {
                 if (!locked)
                     return false;
                 bool en = wval & SPRR_CONFIG_EN;
-                bool was_en = cpu->sprr_en;
-                cpu->sprr_config = wval;
-                cpu->sprr_en = en;
+                bool was_en = cpu->mmu->sprr_en;
+                cpu->mmu->sprr_config = wval;
+                cpu->mmu->sprr_en = en;
                 if (en && !was_en)
                     hv_sprr_activate(ctx, cpu);
                 else if (!en && was_en)
@@ -1304,9 +1309,9 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
             break;
         case HV_VREG_GXF_CONFIG_EL1:
             if (is_read)
-                rval = cpu->gxf_en ? GXF_CONFIG_EN : 0;
+                rval = cpu->mmu->gxf_en ? GXF_CONFIG_EN : 0;
             else
-                cpu->gxf_en = wval & GXF_CONFIG_EN;
+                cpu->mmu->gxf_en = wval & GXF_CONFIG_EN;
             break;
         case HV_VREG_GXF_STATUS_EL1:
             if (is_read)
@@ -1316,21 +1321,21 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
         // if it writes a new value which would change the way we need to shadow perms
         case HV_VREG_SPRR_PERM_EL0:
             if (is_read) {
-                rval = cpu->sprr_perm_el0;
-            } else if (wval != cpu->sprr_perm_el0) {
+                rval = cpu->mmu->sprr_perm_el0;
+            } else if (wval != cpu->mmu->sprr_perm_el0) {
                 if (!locked)
                     return false;
-                cpu->sprr_perm_el0 = wval;
+                cpu->mmu->sprr_perm_el0 = wval;
                 hv_sprr_rebuild(ctx, cpu);
             }
             break;
         case HV_VREG_SPRR_PERM_EL1:
             if (is_read) {
-                rval = cpu->sprr_perm_el1;
-            } else if (wval != cpu->sprr_perm_el1) {
+                rval = cpu->mmu->sprr_perm_el1;
+            } else if (wval != cpu->mmu->sprr_perm_el1) {
                 if (!locked)
                     return false;
-                cpu->sprr_perm_el1 = wval;
+                cpu->mmu->sprr_perm_el1 = wval;
                 hv_sprr_rebuild(ctx, cpu);
             }
             break;
@@ -1339,7 +1344,7 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
                 rval = cpu->exc[HV_SPRR_XNU].vbar;
             } else {
                 cpu->exc[HV_SPRR_XNU].vbar = wval;
-                if (!cpu->sprr_en)
+                if (!cpu->mmu->sprr_en)
                     sprr_update_vbar(cpu);
             }
             break;
@@ -1368,7 +1373,7 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
             if (is_read) {
                 rval = mrs(SYS_SCTLR_EL12);
                 rval &= ~SCTRL_PAC_BITS;
-                rval |= cpu->sctlr_pac;
+                rval |= cpu->mmu->sctlr_pac;
             } else {
                 if (!locked)
                     return false;
@@ -1378,9 +1383,9 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
 
         case HV_VREG_APCTL_EL1:
             if (is_read) {
-                rval = cpu->apctl_el1;
+                rval = cpu->mmu->apctl;
             } else {
-                cpu->apctl_el1 = wval;
+                cpu->mmu->apctl = wval;
                 sprr_update_pac(ctx->spsr);
             }
             break;
@@ -1442,7 +1447,7 @@ bool hv_sprr_handle_eret(struct exc_info *ctx)
 
     if (hv_sptm_mode != SPTM_EMULATION)
         return false;
-    if (!cpu->sprr_en)
+    if (!cpu->mmu->sprr_en)
         return false;
     if (FIELD_GET(ESR_ISS, ctx->esr) != 0)
         return false;
