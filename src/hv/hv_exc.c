@@ -335,12 +335,14 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
             return true;
 
         /* the hypervisor needs this one for breakpoints and single-stepping */
-        case SYSREG_ISS(SYS_MDSCR_EL1):
+        case SYSREG_ISS(SYS_MDSCR_EL1): {
+            u64 *mdscr = hv_sptm_mode == SPTM_EMULATION ? hv_sprr_mdscr() : &PERCPU(mdscr);
             if (is_read)
-                regs[rt] = PERCPU(mdscr);
+                regs[rt] = *mdscr;
             else
-                PERCPU(mdscr) = regs[rt];
+                *mdscr = regs[rt];
             return true;
+        }
 
         /* shadow the interrupt mode and state flag */
         case SYSREG_ISS(SYS_IMP_APL_PMCR0):
@@ -553,7 +555,7 @@ bool hv_exc_sync(struct exc_info *ctx)
 
     switch (ec) {
         case ESR_EC_ERET:
-            handled = hv_sprr_handle_eret(ctx);
+            handled = hv_sprr_handle_eret(ctx, false);
             break;
         case ESR_EC_MSR:
             hv_wdt_breadcrumb('m');
@@ -605,7 +607,11 @@ bool hv_exc_sync(struct exc_info *ctx)
             break;
         case ESR_EC_ERET:
             hv_wdt_breadcrumb('N');
-            handled = protect_elr = hv_handle_nested_eret(ctx, false);
+            if (hv_sptm_mode == SPTM_EMULATION)
+                handled = hv_sprr_handle_eret(ctx, true);
+            else
+                handled = hv_handle_nested_eret(ctx, false);
+            protect_elr = handled;
             break;
         case ESR_EC_IMPDEF:
             hv_wdt_breadcrumb('A');
