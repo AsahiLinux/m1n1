@@ -31,7 +31,7 @@ def parse_one(regs, xml):
 
         start = end = 0
 
-        if array:
+        if array is not None:
             start = int(array.find("reg_array_start").text)
             end = int(array.find("reg_array_end").text)
 
