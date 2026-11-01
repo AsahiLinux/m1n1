@@ -70,7 +70,8 @@ def parse_one(regs, xml):
 
         width = None
 
-        for fields_elem in reg.findall('reg_fieldsets/fields'):
+        for fields_elem, layout in zip(reg.findall('reg_fieldsets/fields'),
+                                       reg.findall('reg_fieldsets/reg_fieldset')):
 
             fieldset = {}
 
@@ -90,11 +91,13 @@ def parse_one(regs, xml):
 
             single_field = False
 
-            for f in fields_elem.findall('field'):
+            definitions = {f.attrib['id']: f for f in fields_elem.findall('field')}
+            for position in layout.findall('fieldat'):
+                f = definitions[position.attrib['id']]
 
                 if f.attrib.get("rwtype", None) in ("RES0", "RES1", "RAZ", "RAO", "RAZ/WI", "RAO/WI", "UNKNOWN"):
                     continue
-                msb, lsb = int(f.find('field_msb').text), int(f.find('field_lsb').text)
+                msb, lsb = int(position.attrib['msb']), int(position.attrib['lsb'])
 
                 assert not single_field
 
@@ -103,6 +106,8 @@ def parse_one(regs, xml):
 
                 if (name_elem := f.find('field_name')) is not None:
                     name = name_elem.text
+                    if f.find('field_array_indexes') is not None:
+                        name = position.attrib['label']
                 else:
                     assert not fields
                     continue
