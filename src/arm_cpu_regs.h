@@ -198,8 +198,9 @@
 
 #define SYS_SMPRI_EL1 sys_reg(3, 0, 1, 2, 4)
 
-#define SYS_SMCR_EL2 sys_reg(3, 4, 1, 2, 6)
-#define SMCR_EZT0    BIT(30)
+#define SYS_SMCR_EL2  sys_reg(3, 4, 1, 2, 6)
+#define SYS_SMCR_EL12 sys_reg(3, 5, 1, 2, 6)
+#define SMCR_EZT0     BIT(30)
 
 #define SYS_ID_AA64MMFR0_EL1   sys_reg(3, 0, 0, 7, 0)
 #define ID_AA64MMFR0_ECV       GENMASK(63, 60)
