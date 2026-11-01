@@ -377,7 +377,7 @@ static bool hv_handle_msr_unlocked(struct exc_info *ctx, u64 iss)
 
 static bool hv_handle_nested_eret(struct exc_info *ctx, bool is_gexit)
 {
-    if (FIELD_GET(ESR_EC, ctx->esr) != ESR_EC_NESTED_ERET && !is_gexit) return false;
+    if (FIELD_GET(ESR_EC, ctx->esr) != ESR_EC_ERET && !is_gexit) return false;
 
     const char* operation = is_gexit ? "GEXIT" : "ERET";
 
@@ -600,7 +600,7 @@ bool hv_exc_sync(struct exc_info *ctx)
             hv_wdt_breadcrumb('M');
             handled = hv_handle_msr(ctx, FIELD_GET(ESR_ISS, ctx->esr));
             break;
-        case ESR_EC_NESTED_ERET:
+        case ESR_EC_ERET:
             hv_wdt_breadcrumb('N');
             handled = protect_elr = hv_handle_nested_eret(ctx, false);
             break;

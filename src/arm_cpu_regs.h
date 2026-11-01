@@ -66,9 +66,8 @@
 #define ESR_EC_HVC          0b010110
 #define ESR_EC_SMC          0b010111
 #define ESR_EC_MSR          0b011000
-#define ESR_EC_ERET         0b011010
 #define ESR_EC_SVE          0b011001
-#define ESR_EC_NESTED_ERET  0b011010
+#define ESR_EC_ERET         0b011010
 #define ESR_EC_PAUTH_FAIL   0b011100
 #define ESR_EC_IABORT_LOWER 0b100000
 #define ESR_EC_IABORT       0b100001
