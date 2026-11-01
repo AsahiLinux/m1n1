@@ -6,7 +6,7 @@ from ..utils import *
 
 __all__ = [
     "MMIOTraceFlags", "EvtMMIOTrace", "EvtIRQTrace", "HV_EVENT",
-    "VMProxyHookData", "TraceMode",
+    "VMProxyHookData", "VMProxyBufferedHookCollection", "HV_MAX_BUFFERED_HOOKS", "TraceMode",
 ]
 
 class MMIOTraceFlags(Register32):
@@ -39,12 +39,21 @@ class HV_EVENT(IntEnum):
     CPU_SWITCH = 5
     VIRTIO = 6
     PANIC = 7
+    HOOK_VM_BUFFERED = 8
 
 VMProxyHookData = Struct(
     "flags" / RegAdapter(MMIOTraceFlags),
     "id" / Int32ul,
     "addr" / Hex(Int64ul),
     "data" / Array(8, Hex(Int64ul)),
+)
+
+HV_MAX_BUFFERED_HOOKS = 15000
+
+VMProxyBufferedHookCollection = Struct(
+    "count" / Int32ul,
+    "_pad" / Int32ul,
+    "hooks" / Array(HV_MAX_BUFFERED_HOOKS, VMProxyHookData)
 )
 
 class TraceMode(IntEnum):
@@ -58,4 +67,6 @@ Different types of Tracing '''
     WSYNC = 4
     SYNC = 5
     HOOK = 6
-    RESERVED = 7
+    SYNC_BUFFERED = 7
+    SYNC_ON_READ_CHANGE = 8
+    RESERVED = 9

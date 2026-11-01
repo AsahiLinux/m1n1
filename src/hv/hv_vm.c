@@ -58,15 +58,19 @@ extern uint64_t ram_base;
 #define ENTRIES_PER_L3_TABLE BIT(VADDR_L3_INDEX_BITS)
 #define ENTRIES_PER_L4_TABLE BIT(VADDR_L4_INDEX_BITS)
 
-#define SPTE_TRACE_READ    BIT(63)
-#define SPTE_TRACE_WRITE   BIT(62)
-#define SPTE_TRACE_UNBUF   BIT(61)
-#define SPTE_TYPE          GENMASK(52, 50)
-#define SPTE_MAP           0
-#define SPTE_HOOK          1
-#define SPTE_PROXY_HOOK_R  2
-#define SPTE_PROXY_HOOK_W  3
-#define SPTE_PROXY_HOOK_RW 4
+#define SPTE_TRACE_READ             BIT(63)
+#define SPTE_TRACE_WRITE            BIT(62)
+#define SPTE_TRACE_UNBUF            BIT(61)
+#define SPTE_SYNC_ON_READ_CHANGE    BIT(60)
+#define SPTE_TYPE                   GENMASK(52, 50)
+#define SPTE_MAP                    0
+#define SPTE_HOOK                   1
+#define SPTE_PROXY_HOOK_R           2
+#define SPTE_PROXY_HOOK_W           3
+#define SPTE_PROXY_HOOK_RW          4
+#define SPTE_PROXY_HOOK_R_BUFFERED  5
+#define SPTE_PROXY_HOOK_W_BUFFERED  6
+#define SPTE_PROXY_HOOK_RW_BUFFERED 7
 
 #define IS_HW(pte) ((pte) && pte & PTE_VALID)
 #define IS_SW(pte) ((pte) && !(pte & PTE_VALID))
@@ -116,6 +120,64 @@ uint64_t vaddr_bits;
  */
 
 static u64 *hv_Ltop;
+struct hv_vm_proxy_buffered_hook_collection hv_vm_proxy_buffered_hook_buffer;
+
+u64 hv_get_buffered_hook_buffer_addr(void)
+{
+    return (u64)&hv_vm_proxy_buffered_hook_buffer;
+}
+
+#define HV_ON_READ_CHANGE_SLOTS 8
+
+static struct {
+    u64 ipa;
+    u64 val;
+    bool allocated;
+    bool has_initial_read_triggered;
+} hv_on_read_change_last[HV_ON_READ_CHANGE_SLOTS];
+
+static int hv_on_read_change_slot(u64 ipa)
+{
+    for (int i = 0; i < HV_ON_READ_CHANGE_SLOTS; i++)
+        if (hv_on_read_change_last[i].allocated && hv_on_read_change_last[i].ipa == ipa)
+            return i;
+
+    for (int i = 0; i < HV_ON_READ_CHANGE_SLOTS; i++) {
+        if (!hv_on_read_change_last[i].allocated) {
+            hv_on_read_change_last[i].allocated = true;
+            hv_on_read_change_last[i].has_initial_read_triggered = false;
+            hv_on_read_change_last[i].ipa = ipa;
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+void hv_vm_flush_buffered_hooks(struct exc_info *ctx)
+{
+    if (hv_vm_proxy_buffered_hook_buffer.count == 0)
+        return;
+
+    hv_exc_proxy(ctx, START_HV, HV_HOOK_VM_BUFFERED, &hv_vm_proxy_buffered_hook_buffer);
+    hv_vm_proxy_buffered_hook_buffer.count = 0;
+}
+
+static void hv_vm_buffer_hook(struct exc_info *ctx, u64 pte, u64 ipa, u64 *val, int width,
+                              u64 flags, bool is_write)
+{
+    struct hv_vm_proxy_hook_data *hook =
+        &hv_vm_proxy_buffered_hook_buffer.hooks[hv_vm_proxy_buffered_hook_buffer.count++];
+
+    hook->flags = FIELD_PREP(MMIO_EVT_WIDTH, width) | (is_write ? MMIO_EVT_WRITE : 0) | flags;
+    hook->id = FIELD_GET(PTE_TARGET_MASK_L4, pte);
+    hook->addr = ipa;
+    memset(hook->data, 0, sizeof(hook->data));
+    memcpy(hook->data, val, 1 << width);
+
+    if (hv_vm_proxy_buffered_hook_buffer.count >= HV_MAX_BUFFERED_HOOKS)
+        hv_vm_flush_buffered_hooks(ctx);
+}
 
 void hv_pt_init(void)
 {
@@ -1003,6 +1065,8 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
         hv_wdt_breadcrumb('4');
 
         switch (FIELD_GET(SPTE_TYPE, pte)) {
+            case SPTE_PROXY_HOOK_R_BUFFERED:
+                // fallthrough
             case SPTE_PROXY_HOOK_R:
                 paddr = ipa;
                 // fallthrough
@@ -1022,9 +1086,20 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
                         paddr, 1 << width, hook, val);
                 break;
             }
+            case SPTE_PROXY_HOOK_RW_BUFFERED:
+            case SPTE_PROXY_HOOK_W_BUFFERED: {
+                hv_wdt_breadcrumb('b');
+                paddr = ipa;
+                if (!hv_pa_write(ctx, paddr, val, width))
+                    return false;
+                hv_vm_buffer_hook(ctx, pte, ipa, val, width, flags, true);
+                break;
+            }
             case SPTE_PROXY_HOOK_RW:
             case SPTE_PROXY_HOOK_W: {
                 hv_wdt_breadcrumb('7');
+                hv_vm_flush_buffered_hooks(ctx);
+
                 struct hv_vm_proxy_hook_data hook = {
                     .flags = FIELD_PREP(MMIO_EVT_WIDTH, width) | MMIO_EVT_WRITE | flags,
                     .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
@@ -1061,9 +1136,31 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
                         paddr, 1 << width, hook, val);
                 break;
             }
+            case SPTE_PROXY_HOOK_RW_BUFFERED:
+            case SPTE_PROXY_HOOK_R_BUFFERED: {
+                hv_wdt_breadcrumb('B');
+                paddr = ipa;
+                if (!hv_pa_read(ctx, paddr, val, width))
+                    return false;
+
+                hv_vm_buffer_hook(ctx, pte, ipa, val, width, flags, false);
+                break;
+            }
             case SPTE_PROXY_HOOK_RW:
             case SPTE_PROXY_HOOK_R: {
                 hv_wdt_breadcrumb('6');
+                int slot = -1;
+                if ((pte & SPTE_SYNC_ON_READ_CHANGE) && width <= 3) {
+                    slot = hv_on_read_change_slot(ipa);
+                    if (slot >= 0) {
+                        if (!hv_pa_read(ctx, ipa, val, width))
+                            return false;
+                        if (hv_on_read_change_last[slot].has_initial_read_triggered &&
+                            hv_on_read_change_last[slot].val == val[0])
+                            break;
+                    }
+                }
+                hv_vm_flush_buffered_hooks(ctx);
                 struct hv_vm_proxy_hook_data hook = {
                     .flags = FIELD_PREP(MMIO_EVT_WIDTH, width) | flags,
                     .id = FIELD_GET(PTE_TARGET_MASK_L4, pte),
@@ -1071,6 +1168,10 @@ static bool hv_emulate_rw_aligned(struct exc_info *ctx, u64 pte, u64 vaddr, u64 
                 };
                 hv_exc_proxy(ctx, START_HV, HV_HOOK_VM, &hook);
                 memcpy(val, hook.data, 1 << width);
+                if (slot >= 0) {
+                    hv_on_read_change_last[slot].val = val[0];
+                    hv_on_read_change_last[slot].has_initial_read_triggered = true;
+                }
                 break;
             }
             default:

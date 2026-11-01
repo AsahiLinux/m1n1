@@ -634,6 +634,10 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
             reply->retval = cpufreq_init();
             break;
 
+        case P_HV_GET_BUFFER_ADDR:
+            reply->retval = hv_get_buffered_hook_buffer_addr();
+            break;
+
         case P_READ_GIGALOCKER: {
             size_t size = 0;
             void *data = rust_read_gigalocker(&size);
