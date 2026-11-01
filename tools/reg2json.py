@@ -122,7 +122,7 @@ def parse_one(regs, xml):
         start = min(a[1] for a in accessor_arrays.values())
         end = max(a[2] for a in accessor_arrays.values())
         for idx, n in enumerate(range(start, end + 1)):
-            nb = "{0:064b}".format(n)[::-1]
+            nb = "{0:064b}".format(n)
             for name, enc in sorted(encs.items()):
                 var = accessor_arrays[name][0]
                 enc = tuple(insert_n(i, nb, var) for i in enc)
