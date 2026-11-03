@@ -1926,8 +1926,8 @@ static int dt_reserve_dcpext_firmware(void)
          * While t600x and t8103 dcpext node still have their special handling
          * skip over them here.
          */
-        if (fdt_node_check_compatible(dt, dcpext_node, "apple,t6000-dcpext") ||
-            fdt_node_check_compatible(dt, dcpext_node, "apple,t8103-dcpext"))
+        if (!fdt_node_check_compatible(dt, dcpext_node, "apple,t6000-dcpext") ||
+            !fdt_node_check_compatible(dt, dcpext_node, "apple,t8103-dcpext"))
             return 0;
 
         int ret = dt_reserve_asc_firmware(adt_path, NULL, dcpext_alias, true, 0, 0);
