@@ -560,12 +560,12 @@ bool hv_is_nested(void)
     return (hcr | HCR_NV2 | HCR_NV) == hcr;
 }
 
-void hv_enable_genter_trap()
+void hv_enable_genter_trap(void)
 {
     hv_write_hacr(mrs(HACR_EL2) | HACR_TRAP_GENTER);
 }
 
-void hv_disable_genter_trap()
+void hv_disable_genter_trap(void)
 {
     hv_write_hacr(mrs(HACR_EL2) & ~HACR_TRAP_GENTER);
 }
