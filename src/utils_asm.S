@@ -150,6 +150,16 @@ put_simd_state:
     ldp q30, q31, [x0], #32
     ret
 
+.globl put_simd_state_masked
+.type put_simd_state_masked, @function
+put_simd_state_masked:
+    .irp reg,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31
+    tbz w1, #\reg, 1f
+    ldr q\reg, [x0, #(16 * \reg)]
+1:
+    .endr
+    ret
+
 .globl _deep_wfi_helper
 .type _deep_wfi_helper, @function
 _deep_wfi_helper:

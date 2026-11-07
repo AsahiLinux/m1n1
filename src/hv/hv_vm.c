@@ -643,7 +643,7 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         simd[Rt].d[1] = val[1];
         simd[Rt2].d[0] = val[2];
         simd[Rt2].d[1] = val[3];
-        put_simd_state(simd);
+        put_simd_state_masked(simd, BIT(Rt) | BIT(Rt2));
     } else if ((insn & 0x3fc00000) == 0x3d400000) {
         // LDR (immediate, SIMD&FP) Unsigned offset
         *vaddr = regs[Rn] + (uimm12 << *width);
@@ -651,7 +651,7 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         get_simd_state(simd);
         simd[Rt].d[0] = val[0];
         simd[Rt].d[1] = 0;
-        put_simd_state(simd);
+        put_simd_state_masked(simd, BIT(Rt));
     } else if ((insn & 0x3fe00c00) == 0x3c400000) {
         // LDURx (unscaled, SIMD&FP)
         *vaddr = regs[Rn] + imm9;
@@ -659,7 +659,7 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         get_simd_state(simd);
         simd[Rt].d[0] = val[0];
         simd[Rt].d[1] = val[1];
-        put_simd_state(simd);
+        put_simd_state_masked(simd, BIT(Rt));
     } else if ((insn & 0xffc00000) == 0x3dc00000) {
         // LDR (immediate, SIMD&FP) Unsigned offset, 128-bit
         *width = 4;
@@ -668,7 +668,7 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         get_simd_state(simd);
         simd[Rt].d[0] = val[0];
         simd[Rt].d[1] = val[1];
-        put_simd_state(simd);
+        put_simd_state_masked(simd, BIT(Rt));
     } else if ((insn & 0xffe00c00) == 0x3cc00000) {
         // LDURx (unscaled, SIMD&FP, 128-bit)
         *width = 4;
@@ -677,7 +677,7 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         get_simd_state(simd);
         simd[Rt].d[0] = val[0];
         simd[Rt].d[1] = val[1];
-        put_simd_state(simd);
+        put_simd_state_masked(simd, BIT(Rt));
     } else if ((insn & 0x3fe00400) == 0x3c400400) {
         // LDR (immediate, SIMD&FP) Pre/Post-index
         CHECK_RN;
@@ -686,7 +686,7 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         get_simd_state(simd);
         simd[Rt].d[0] = val[0];
         simd[Rt].d[1] = 0;
-        put_simd_state(simd);
+        put_simd_state_masked(simd, BIT(Rt));
     } else if ((insn & 0xffe00400) == 0x3cc00400) {
         // LDR (immediate, SIMD&FP) Pre/Post-index, 128-bit
         *width = 4;
@@ -696,14 +696,14 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         get_simd_state(simd);
         simd[Rt].d[0] = val[0];
         simd[Rt].d[1] = val[1];
-        put_simd_state(simd);
+        put_simd_state_masked(simd, BIT(Rt));
     } else if ((insn & 0x3fe04c00) == 0x3c604800) {
         // LDR (register, SIMD&FP)
         DECODE_OK;
         get_simd_state(simd);
         simd[Rt].d[0] = val[0];
         simd[Rt].d[1] = 0;
-        put_simd_state(simd);
+        put_simd_state_masked(simd, BIT(Rt));
     } else if ((insn & 0xffe04c00) == 0x3ce04800) {
         // LDR (register, SIMD&FP), 128-bit
         *width = 4;
@@ -711,7 +711,7 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         get_simd_state(simd);
         simd[Rt].d[0] = val[0];
         simd[Rt].d[1] = val[1];
-        put_simd_state(simd);
+        put_simd_state_masked(simd, BIT(Rt));
     } else if ((insn & 0xbffffc00) == 0x0d408400) {
         // LD1 (single structure) No offset, 64-bit
         *width = 3;
@@ -719,7 +719,7 @@ static bool emulate_load(struct exc_info *ctx, u32 insn, u64 *val, u64 *width, u
         u64 index = (insn >> 30) & 1;
         get_simd_state(simd);
         simd[Rt].d[index] = val[0];
-        put_simd_state(simd);
+        put_simd_state_masked(simd, BIT(Rt));
     } else if ((insn & 0x3ffffc00) == 0x08dffc00) {
         // LDAR*
         DECODE_OK;

@@ -407,6 +407,7 @@ void memcpy8(void *dst, void *src, size_t size);
 
 void get_simd_state(void *state);
 void put_simd_state(void *state);
+void put_simd_state_masked(const void *state, u32 mask);
 
 void hexdump(const void *d, size_t len);
 void regdump(u64 addr, size_t len);
