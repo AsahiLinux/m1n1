@@ -226,7 +226,7 @@ class GDBServer:
                 self.__hv.ctx.spsr.value = GDBServer.__g.spsr.parse(reg)
             elif number < 66:
                 self.__hv.u.q[number - 34] = GDBServer.__g.q.subcon.subcon.parse(reg)
-                self.__hv.u.push_simd()
+                self.__hv.u.push_simd(mask=1 << (number - 34))
             elif number == 66:
                 self.__hv.u.msr(FPSR, GDBServer.__g.fpsr.parse(reg), silent=True)
             elif number == 67:
