@@ -551,6 +551,7 @@ class M1N1Proxy(Reloadable):
     P_EL3_CALL = 0x012
     P_GET_CHIPID = 0x013
     P_GET_CPU_FEATURES = 0x014
+    P_PUT_SIMD_STATE_MASKED = 0x015
 
     P_WRITE64 = 0x100
     P_WRITE32 = 0x101
@@ -831,6 +832,10 @@ class M1N1Proxy(Reloadable):
         self.request(self.P_GET_SIMD_STATE, buf)
     def put_simd_state(self, buf):
         self.request(self.P_PUT_SIMD_STATE, buf)
+    def put_simd_state_masked(self, buf, mask):
+        if not 0 <= mask < (1 << 32):
+            raise ValueError("SIMD register mask must fit in 32 bits")
+        self.request(self.P_PUT_SIMD_STATE_MASKED, buf, mask)
     def reboot(self):
         self.request(self.P_REBOOT, no_reply=True)
     def sleep(self, deep=False):

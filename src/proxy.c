@@ -123,6 +123,9 @@ int proxy_process(ProxyRequest *request, ProxyReply *reply)
         case P_PUT_SIMD_STATE:
             put_simd_state((void *)request->args[0]);
             break;
+        case P_PUT_SIMD_STATE_MASKED:
+            put_simd_state_masked((void *)request->args[0], request->args[1]);
+            break;
         case P_REBOOT:
             reboot();
             break;

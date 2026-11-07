@@ -98,6 +98,7 @@ class ProxyUtils(Reloadable):
         self.simd_buf = self.malloc(32 * 16)
         self.simd_type = None
         self.simd = None
+        self.simd_original = None
 
         self.glk_arg_buf = self.malloc(16)
 
@@ -376,12 +377,20 @@ class ProxyUtils(Reloadable):
         finally:
             self.proxy.mmu_restore(flags)
 
-    def push_simd(self):
+    def push_simd(self, mask=None):
         if self.simd is not None:
             data = self.simd_type.build(self.simd)
-            self.iface.writemem(self.simd_buf, data)
-            self.proxy.put_simd_state(self.simd_buf)
+            if mask is None:
+                mask = sum(1 << n for n in range(32)
+                           if self.simd_original is None or
+                           data[n * 16:(n + 1) * 16] != self.simd_original[n * 16:(n + 1) * 16])
+            if not 0 <= mask < (1 << 32):
+                raise ValueError("SIMD register mask must fit in 32 bits")
+            if mask:
+                self.iface.writemem(self.simd_buf, data)
+                self.proxy.put_simd_state_masked(self.simd_buf, mask)
             self.simd = self.simd_type = None
+            self.simd_original = None
 
     def get_simd(self, simd_type):
         if self.simd is not None and self.simd_type is not simd_type:
@@ -391,6 +400,7 @@ class ProxyUtils(Reloadable):
         elif self.simd is None:
             self.proxy.get_simd_state(self.simd_buf)
             data = self.iface.readmem(self.simd_buf, 32 * 16)
+            self.simd_original = data
             self.simd = simd_type.parse(data)
             self.simd_type = simd_type
 
