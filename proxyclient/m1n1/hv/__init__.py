@@ -2248,7 +2248,7 @@ class HV(Reloadable):
             # infinite wfi loop instead. Not sure if these are all required since I just ran
             # strings on the kernel and added anything that sounded related and that stopped
             # the panics and hangs I saw
-            self.tba.cmdline += " aprr_jit=0 sprr_tpro=0 sprr_tpro_pagers=0 processor_exit=0 cluster_power=0"
+            self.tba.cmdline += " aprr_jit=0 sprr_tpro=0 sprr_tpro_pagers=0 processor_exit=0 cluster_power=0 -vm_compressor_wk_sw"
             self.tba.cmdline.strip()
         self._write_boot_args(self.guest_base + image_size)
 
