@@ -1560,8 +1560,6 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
         VREG_MASKED(HV_VREG_CTRR_C_UPR_EL12, ~0xfffULL);
         VREG_MASKED(HV_VREG_CTRR_D_LWR_EL12, ~0xfffULL);
         VREG_MASKED(HV_VREG_CTRR_D_UPR_EL12, ~0xfffULL);
-        VREG_MASKED(HV_VREG_CTRR_D_LWR_EL2, ~0xfffULL);
-        VREG_MASKED(HV_VREG_CTRR_D_UPR_EL2, ~0xfffULL);
         VREG_MASKED(HV_VREG_CTXR_A_LWR_EL1, ~0xfffULL);
         VREG_MASKED(HV_VREG_CTXR_A_UPR_EL1, ~0xfffULL);
         VREG_MASKED(HV_VREG_CTXR_B_LWR_EL1, ~0xfffULL);
@@ -1578,6 +1576,15 @@ static bool hv_sprr_emulate_sysreg(struct exc_info *ctx, u32 vreg, bool is_read,
         VREG_MASKED(HV_VREG_CTXR_C_UPR_EL12, ~0xfffULL);
         VREG_MASKED(HV_VREG_CTXR_D_LWR_EL12, ~0xfffULL);
         VREG_MASKED(HV_VREG_CTXR_D_UPR_EL12, ~0xfffULL);
+
+        /*
+         * It seems that XNU reads from _EL2 varient of the following registers while
+         * SPTM writes the _EL1 varient of these registers. On real hardware, this would
+         * refer to the same registers since HCR.E2H (always set on Apple Silcon) is set.
+         * We don't emulate this correctly, but for now, this hack works.
+         */
+        VREG_MASKED_ALIAS(HV_VREG_CTRR_D_LWR_EL2, HV_VREG_CTRR_D_LWR_EL1, ~0xfffULL);
+        VREG_MASKED_ALIAS(HV_VREG_CTRR_D_UPR_EL2, HV_VREG_CTRR_D_UPR_EL1, ~0xfffULL);
 
         /*
          * This is a bit of hack to make SPTM happy since it also checks the per-cluster
