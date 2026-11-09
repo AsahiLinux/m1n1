@@ -2179,6 +2179,7 @@ class HV(Reloadable):
             mm.CL4_dummypage = (0, 0)
             self.adt["chosen"].cl4_entropy = secrets.token_bytes(0xc0)
             self.adt["product"].exclaves_enabled = 1
+            self.adt.create_node("/chosen/exclave-misc").bootargstring = self.tba.cmdline
 
         self.adt["chosen"]["memory-map"].SPTM_rm = (self.adt["chosen"]["memory-map"].SPTM_ro[0], (
             self.adt["chosen"]["memory-map"].SPTM_ro[1] +
