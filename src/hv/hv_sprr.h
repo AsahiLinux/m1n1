@@ -353,6 +353,8 @@ struct hv_sprr_shadow {
     bool el10;
     u64 leaf[2][SPRR_N_INDICES]; // [guarded][guest PTE perm index] -> shadow leaf bits
     u64 active;                  // CPUs holding this shadow in cur[]
+    u64 walkers;                 // CPUs not yet flushed after using this root
+    u32 pins;                    // Host operations borrowing this root or its mirrors
     u32 va_bits;
     u32 lru;
     u8 ttbr_idx;

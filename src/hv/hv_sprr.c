@@ -285,6 +285,15 @@ struct sprr_chunk {
 static struct sprr_chunk *sprr_chunks;
 static void *sprr_free_tables;
 static u64 sprr_pool_base, sprr_pool_top;
+static bool sprr_reclaim_shadow(void);
+
+struct sprr_retired_table {
+    struct sprr_retired_table *next;
+    u64 *table;
+    u64 walkers;
+};
+
+static struct sprr_retired_table *sprr_retired_tables;
 
 void hv_sprr_set_pool(u64 base, u64 size)
 {
@@ -294,6 +303,10 @@ void hv_sprr_set_pool(u64 base, u64 size)
 
 static u64 *sprr_pool_alloc(void)
 {
+    if (!sprr_free_tables &&
+        sprr_pool_top - sprr_pool_base < SPRR_CHUNK_TABLES * SPRR_TABLE_SIZE)
+        sprr_reclaim_shadow();
+
     if (!sprr_free_tables) {
         u64 size = SPRR_CHUNK_TABLES * SPRR_TABLE_SIZE;
         if (sprr_pool_top - sprr_pool_base < size)
@@ -325,6 +338,42 @@ static void sprr_pool_release(u64 *t)
 {
     *(void **)t = sprr_free_tables;
     sprr_free_tables = t;
+}
+
+static void sprr_pool_retire(u64 *table, u64 walkers)
+{
+    if (!walkers) {
+        sprr_pool_release(table);
+        return;
+    }
+
+    /* A hardware walk may still hold this address. Keep metadata out of the table. */
+    struct sprr_retired_table *retired = malloc(sizeof(*retired));
+    retired->table = table;
+    retired->walkers = walkers;
+    retired->next = sprr_retired_tables;
+    sprr_retired_tables = retired;
+}
+
+static void sprr_pool_release_retired(u64 cpus)
+{
+    /* Clear CPU bits after a full TLBI completes, unless the root is still active. */
+    for (int i = 0; i < SPRR_N_CACHED_SHADOWS; i++) {
+        struct hv_sprr_shadow *sh = &sprr_shadows[i];
+        sh->walkers = (sh->walkers & ~cpus) | (sh->active & cpus);
+    }
+
+    for (struct sprr_retired_table **p = &sprr_retired_tables; *p;) {
+        struct sprr_retired_table *retired = *p;
+        retired->walkers &= ~cpus;
+        if (retired->walkers) {
+            p = &retired->next;
+            continue;
+        }
+        *p = retired->next;
+        sprr_pool_release(retired->table);
+        free(retired);
+    }
 }
 
 static void sprr_wp_track(struct exc_info *ctx, struct sprr_mirror *mirror)
@@ -499,20 +548,40 @@ static void sprr_mirror_free(struct sprr_mirror *mirror)
         sprr_mirror_free(c);
     }
     sprr_wp_untrack(mirror);
-    sprr_pool_release(mirror->el);
-    sprr_pool_release(mirror->gl);
+    sprr_pool_retire(mirror->el, mirror->owner->walkers);
+    sprr_pool_retire(mirror->gl, mirror->owner->walkers);
     free(mirror);
 }
 
 static void sprr_shadow_free(struct hv_sprr_shadow *sh)
 {
+    if (sh->active || sh->pins)
+        panic("hv_sprr: freeing busy shadow");
     sprr_mirror_free(sh->top);
 
     for (int i = 0; i < 4; i++)
         if (sh->vector_tables[i])
-            sprr_pool_release(sh->vector_tables[i]);
+            sprr_pool_retire(sh->vector_tables[i], sh->walkers);
 
     memset(sh, 0, sizeof(*sh));
+}
+
+static bool sprr_reclaim_shadow(void)
+{
+    struct hv_sprr_shadow *victim = NULL;
+    for (int i = 0; i < SPRR_N_CACHED_SHADOWS; i++) {
+        struct hv_sprr_shadow *sh = &sprr_shadows[i];
+        /* Pressure cannot justify invalidating translations the guest still needs. */
+        if (!sh->guest_ttbr || !sh->top || sh->active || sh->walkers || sh->pins)
+            continue;
+        if (!victim || sh->lru < victim->lru)
+            victim = sh;
+    }
+    if (!victim)
+        return false;
+
+    sprr_shadow_free(victim);
+    return sprr_free_tables != NULL;
 }
 
 static void sprr_drop_child(struct sprr_mirror *mirror, u32 i)
@@ -521,6 +590,7 @@ static void sprr_drop_child(struct sprr_mirror *mirror, u32 i)
         if ((*p)->idx == i) {
             struct sprr_mirror *c = *p;
             *p = c->sibling;
+            mirror->el[i] = mirror->gl[i] = 0;
             sprr_mirror_free(c);
             return;
         }
@@ -738,6 +808,16 @@ void hv_sprr_pt_updated(struct exc_info *ctx, u64 ipa, u64 bytes)
     u64 first = ipa & ~7UL, end = ipa + bytes;
     u64 pa = sprr_ipa_to_pa(wp->ipa);
 
+    /* Pin all owners before allocating: the next mirror may belong to a cached root. */
+    bool pinned[SPRR_N_CACHED_SHADOWS] = {false};
+    for (struct sprr_mirror *mirror = wp->mirrors; mirror; mirror = mirror->hnext) {
+        u32 index = mirror->owner - sprr_shadows;
+        if (!pinned[index]) {
+            mirror->owner->pins++;
+            pinned[index] = true;
+        }
+    }
+
     struct sprr_mirror *next;
     for (struct sprr_mirror *mirror = wp->mirrors; mirror; mirror = next) {
         next = mirror->hnext;
@@ -745,6 +825,10 @@ void hv_sprr_pt_updated(struct exc_info *ctx, u64 ipa, u64 bytes)
             if (a >= mirror->ipa && (a - mirror->ipa) / sizeof(u64) < mirror->nents)
                 sprr_mirror_entry(ctx, mirror, (a - mirror->ipa) / sizeof(u64), pa);
     }
+
+    for (u32 i = 0; i < SPRR_N_CACHED_SHADOWS; i++)
+        if (pinned[i])
+            sprr_shadows[i].pins--;
 
     // we must not do TLB maintenance here because XNU relies on running on TLBs only while
     // the actual PTEs have changed early when it retypes its pages RO. wait for XNU to issue
@@ -766,13 +850,15 @@ static void sprr_set_cur_shadow(struct hv_sprr_cpu *cpu, int ttbr_idx, struct hv
 
     if (cpu->cur[ttbr_idx])
         cpu->cur[ttbr_idx]->active &= ~BIT(smp_id());
-    if (sh)
+    if (sh) {
         sh->active |= BIT(smp_id());
+        sh->walkers |= BIT(smp_id());
+    }
 
     cpu->cur[ttbr_idx] = sh;
 }
 
-static void hv_sprr_switch_tables(struct hv_sprr_cpu *cpu)
+static void hv_sprr_switch_tables(struct hv_sprr_cpu *cpu, bool locked)
 {
     if (!cpu->mmu->sprr_en)
         return;
@@ -792,6 +878,9 @@ static void hv_sprr_switch_tables(struct hv_sprr_cpu *cpu)
     sysop("tlbi vmalle1");
     sysop("dsb nsh");
     sysop("isb");
+    /* GENTER/GEXIT can reach this path without the big hypervisor lock. */
+    if (locked)
+        sprr_pool_release_retired(BIT(smp_id()));
 }
 
 static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sprr_cpu *cpu,
@@ -823,7 +912,7 @@ static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sp
             sh->lru = ++sprr_lru_clock;
             return sh;
         }
-        if (sh->active)
+        if (sh->active || sh->pins)
             continue;
         if (!slot || (slot->guest_ttbr && sh->lru < slot->lru))
             slot = sh;
@@ -848,9 +937,11 @@ static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sp
     slot->el10 = el10;
     sprr_leaf_init(slot);
     slot->lru = ++sprr_lru_clock;
+    slot->pins++;
     slot->top =
         sprr_mirror_table(ctx, slot, guest_ttbr & SPRR_OA_MASK, start,
                           ttbr_idx ? 0UL - BIT(va_bits) : 0, 1u << (va_bits - sprr_lvl_off[start]));
+    slot->pins--;
 
     return slot;
 }
@@ -916,7 +1007,7 @@ static void hv_sprr_build(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
     if (!cpu->mmu->sprr_en)
         return;
     sprr_reload_shadows(ctx, cpu);
-    hv_sprr_switch_tables(cpu);
+    hv_sprr_switch_tables(cpu, true);
 }
 
 static void hv_sprr_activate(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
@@ -972,6 +1063,7 @@ static void hv_sprr_deactivate(struct hv_sprr_cpu *cpu)
     sysop("tlbi vmalle1");
     sysop("dsb nsh");
     sysop("isb");
+    sprr_pool_release_retired(BIT(smp_id()));
 
     /*
      * After SPRR is disabled we no longer trap exception entry/return and the guest starts
@@ -1011,7 +1103,7 @@ static void sprr_write_ttbr(struct exc_info *ctx, struct hv_sprr_cpu *cpu, int t
     }
 
     sprr_load_shadow(ctx, cpu, ttbr_idx);
-    hv_sprr_switch_tables(cpu);
+    hv_sprr_switch_tables(cpu, true);
     sprr_update_vbar(cpu);
 }
 
@@ -1048,7 +1140,7 @@ static void sprr_drop_asid(u64 asid)
     for (int i = 0; i < SPRR_N_CACHED_SHADOWS; i++) {
         struct hv_sprr_shadow *sh = &sprr_shadows[i];
 
-        if (!sh->guest_ttbr || sh->active)
+        if (!sh->guest_ttbr || sh->active || sh->pins)
             continue;
         if (FIELD_GET(TTBR_ASID, sh->guest_ttbr) != asid)
             continue;
@@ -1064,6 +1156,8 @@ static bool hv_sprr_gxf_tlbi(void)
     sysop("dsb sy");
     sysop("isb");
 
+    sprr_pool_release_retired(~0UL);
+
     return true;
 }
 
@@ -1077,6 +1171,13 @@ static bool hv_sprr_gxf_tlbi(void)
 
 static bool hv_sprr_handle_tlbi(u64 reg, u64 wval)
 {
+    bool full_broadcast = reg == SYSREG_ISS(sys_reg(1, 0, 8, 1, 0)) || // VMALLE1OS
+                          reg == SYSREG_ISS(sys_reg(1, 0, 8, 3, 0));   // VMALLE1IS
+    bool full_local = reg == SYSREG_ISS(sys_reg(1, 0, 8, 7, 0)); // VMALLE1
+
+    if (full_broadcast || full_local)
+        sysop("dsb sy");
+
     // first just replay the instruction that was trapped
     switch (reg) {
         TLBI(1, 0) // VMALLE1OS
@@ -1115,6 +1216,12 @@ static bool hv_sprr_handle_tlbi(u64 reg, u64 wval)
                    FIELD_GET(ESR_ISS_MSR_OP1, reg), FIELD_GET(ESR_ISS_MSR_CRn, reg),
                    FIELD_GET(ESR_ISS_MSR_CRm, reg), FIELD_GET(ESR_ISS_MSR_OP2, reg));
             return false;
+    }
+
+    if (full_broadcast || full_local) {
+        sysop("dsb sy");
+        sysop("isb");
+        sprr_pool_release_retired(full_broadcast ? ~0UL : BIT(smp_id()));
     }
 
     // if XNU drops an ASID we must drop our shadow tables since it might just hand back
@@ -1213,6 +1320,7 @@ static void sprr_switch_mmu(struct exc_info *ctx, struct hv_sprr_cpu *cpu, struc
     sysop("tlbi vmalle1");
     sysop("dsb nsh");
     sysop("isb");
+    sprr_pool_release_retired(BIT(smp_id()));
 }
 
 static void hv_sprr_switch_world(struct exc_info *ctx, struct hv_sprr_cpu *cpu,
@@ -1236,7 +1344,7 @@ static void hv_sprr_switch_world(struct exc_info *ctx, struct hv_sprr_cpu *cpu,
         }
         sprr_switch_mmu(ctx, cpu, mmu);
     } else {
-        hv_sprr_switch_tables(cpu);
+        hv_sprr_switch_tables(cpu, false);
     }
 }
 
