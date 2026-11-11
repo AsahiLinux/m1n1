@@ -285,6 +285,15 @@ struct sprr_chunk {
 static struct sprr_chunk *sprr_chunks;
 static void *sprr_free_tables;
 static u64 sprr_pool_base, sprr_pool_top;
+static bool sprr_reclaim_shadow(void);
+
+struct sprr_retired_table {
+    struct sprr_retired_table *next;
+    u64 *table;
+    u64 walkers;
+};
+
+static struct sprr_retired_table *sprr_retired_tables;
 
 void hv_sprr_set_pool(u64 base, u64 size)
 {
@@ -294,6 +303,10 @@ void hv_sprr_set_pool(u64 base, u64 size)
 
 static u64 *sprr_pool_alloc(void)
 {
+    if (!sprr_free_tables &&
+        sprr_pool_top - sprr_pool_base < SPRR_CHUNK_TABLES * SPRR_TABLE_SIZE)
+        sprr_reclaim_shadow();
+
     if (!sprr_free_tables) {
         u64 size = SPRR_CHUNK_TABLES * SPRR_TABLE_SIZE;
         if (sprr_pool_top - sprr_pool_base < size)
@@ -325,6 +338,42 @@ static void sprr_pool_release(u64 *t)
 {
     *(void **)t = sprr_free_tables;
     sprr_free_tables = t;
+}
+
+static void sprr_pool_retire(u64 *table, u64 walkers)
+{
+    if (!walkers) {
+        sprr_pool_release(table);
+        return;
+    }
+
+    /* A hardware walk may still hold this address. Keep metadata out of the table. */
+    struct sprr_retired_table *retired = malloc(sizeof(*retired));
+    retired->table = table;
+    retired->walkers = walkers;
+    retired->next = sprr_retired_tables;
+    sprr_retired_tables = retired;
+}
+
+static void sprr_pool_release_retired(u64 cpus)
+{
+    /* Clear CPU bits after a full TLBI completes, unless the root is still active. */
+    for (int i = 0; i < SPRR_N_CACHED_SHADOWS; i++) {
+        struct hv_sprr_shadow *sh = &sprr_shadows[i];
+        sh->walkers = (sh->walkers & ~cpus) | (sh->active & cpus);
+    }
+
+    for (struct sprr_retired_table **p = &sprr_retired_tables; *p;) {
+        struct sprr_retired_table *retired = *p;
+        retired->walkers &= ~cpus;
+        if (retired->walkers) {
+            p = &retired->next;
+            continue;
+        }
+        *p = retired->next;
+        sprr_pool_release(retired->table);
+        free(retired);
+    }
 }
 
 static void sprr_wp_track(struct exc_info *ctx, struct sprr_mirror *mirror)
@@ -407,7 +456,6 @@ static u64 *sprr_alloc_table(void)
 #define SPRR_COMMPAGE_VA            0x0000000fffffc000UL
 #define SPRR_COMMPAGE_USER_TIMEBASE 0x90
 #define SPRR_COMMPAGE_CONT_HWCLOCK  0x91
-#define SPRR_COMMPAGE_xPRR_MODE     0x10c
 static struct {
     u64 ipa;
     u8 *data;
@@ -438,8 +486,6 @@ void hv_sprr_commpage_updated(u64 ipa, u64 bytes)
         ((u8 *)value)[SPRR_COMMPAGE_USER_TIMEBASE - off] = 0;
     if (off <= SPRR_COMMPAGE_CONT_HWCLOCK && SPRR_COMMPAGE_CONT_HWCLOCK < end)
         ((u8 *)value)[SPRR_COMMPAGE_CONT_HWCLOCK - off] = 0;
-    if (off <= SPRR_COMMPAGE_xPRR_MODE && SPRR_COMMPAGE_xPRR_MODE < end)
-        ((u8 *)value)[SPRR_COMMPAGE_xPRR_MODE - off] = 0;
 
     u64 dst = (u64)sprr_commpage.data + off;
     switch (bytes) {
@@ -479,7 +525,6 @@ static u64 sprr_commpage_map(u8 level, u64 descriptor)
         memcpy(data, (void *)sprr_ipa_to_pa(ipa), SZ_16K);
         data[SPRR_COMMPAGE_USER_TIMEBASE] = 0;
         data[SPRR_COMMPAGE_CONT_HWCLOCK] = 0;
-        data[SPRR_COMMPAGE_xPRR_MODE] = 0;
 
         sprr_commpage.data = data;
     }
@@ -499,20 +544,40 @@ static void sprr_mirror_free(struct sprr_mirror *mirror)
         sprr_mirror_free(c);
     }
     sprr_wp_untrack(mirror);
-    sprr_pool_release(mirror->el);
-    sprr_pool_release(mirror->gl);
+    sprr_pool_retire(mirror->el, mirror->owner->walkers);
+    sprr_pool_retire(mirror->gl, mirror->owner->walkers);
     free(mirror);
 }
 
 static void sprr_shadow_free(struct hv_sprr_shadow *sh)
 {
+    if (sh->active || sh->pins)
+        panic("hv_sprr: freeing busy shadow");
     sprr_mirror_free(sh->top);
 
     for (int i = 0; i < 4; i++)
         if (sh->vector_tables[i])
-            sprr_pool_release(sh->vector_tables[i]);
+            sprr_pool_retire(sh->vector_tables[i], sh->walkers);
 
     memset(sh, 0, sizeof(*sh));
+}
+
+static bool sprr_reclaim_shadow(void)
+{
+    struct hv_sprr_shadow *victim = NULL;
+    for (int i = 0; i < SPRR_N_CACHED_SHADOWS; i++) {
+        struct hv_sprr_shadow *sh = &sprr_shadows[i];
+        /* Pressure cannot justify invalidating translations the guest still needs. */
+        if (!sh->guest_ttbr || !sh->top || sh->active || sh->walkers || sh->pins)
+            continue;
+        if (!victim || sh->lru < victim->lru)
+            victim = sh;
+    }
+    if (!victim)
+        return false;
+
+    sprr_shadow_free(victim);
+    return sprr_free_tables != NULL;
 }
 
 static void sprr_drop_child(struct sprr_mirror *mirror, u32 i)
@@ -521,6 +586,7 @@ static void sprr_drop_child(struct sprr_mirror *mirror, u32 i)
         if ((*p)->idx == i) {
             struct sprr_mirror *c = *p;
             *p = c->sibling;
+            mirror->el[i] = mirror->gl[i] = 0;
             sprr_mirror_free(c);
             return;
         }
@@ -547,9 +613,7 @@ static const u8 sprr_gl_rwx[16] = {
 };
 /* clang-format on */
 
-// the value that cannot be expressed are over-granted: arbitrary decision since a missing access
-// would be a fault the guest cannot handle but a missing fault might be used for e.g. copy-on-write
-// and break as well. doesn't matter in practise because XNU never seems to use any of these.
+/* Common execution and EL0-access bits; the selected view sets AP_RO below. */
 static u64 sprr_leaf_bits(u8 k, u8 u)
 {
     u64 bits = 0;
@@ -577,12 +641,16 @@ static void sprr_leaf_init(struct hv_sprr_shadow *sh)
 
             // no access from either kernel or userspace -> only way to express it is to just not
             // map it
-            if (!k && !u) {
+            if (!(sh->user ? u : k)) {
                 sh->leaf[guarded][index] = HV_SPRR_NO_ACCESS;
                 continue;
             }
 
             sh->leaf[guarded][index] = sprr_leaf_bits(k, u);
+            /* AP_RO is shared by EL0/EL1. Select it for the level about to run. */
+            sh->leaf[guarded][index] &= ~PTE_AP_RO;
+            if (!((sh->user ? u : k) & SPRR_W))
+                sh->leaf[guarded][index] |= PTE_AP_RO;
         }
     }
 }
@@ -738,6 +806,16 @@ void hv_sprr_pt_updated(struct exc_info *ctx, u64 ipa, u64 bytes)
     u64 first = ipa & ~7UL, end = ipa + bytes;
     u64 pa = sprr_ipa_to_pa(wp->ipa);
 
+    /* Pin all owners before allocating: the next mirror may belong to a cached root. */
+    bool pinned[SPRR_N_CACHED_SHADOWS] = {false};
+    for (struct sprr_mirror *mirror = wp->mirrors; mirror; mirror = mirror->hnext) {
+        u32 index = mirror->owner - sprr_shadows;
+        if (!pinned[index]) {
+            mirror->owner->pins++;
+            pinned[index] = true;
+        }
+    }
+
     struct sprr_mirror *next;
     for (struct sprr_mirror *mirror = wp->mirrors; mirror; mirror = next) {
         next = mirror->hnext;
@@ -745,6 +823,10 @@ void hv_sprr_pt_updated(struct exc_info *ctx, u64 ipa, u64 bytes)
             if (a >= mirror->ipa && (a - mirror->ipa) / sizeof(u64) < mirror->nents)
                 sprr_mirror_entry(ctx, mirror, (a - mirror->ipa) / sizeof(u64), pa);
     }
+
+    for (u32 i = 0; i < SPRR_N_CACHED_SHADOWS; i++)
+        if (pinned[i])
+            sprr_shadows[i].pins--;
 
     // we must not do TLB maintenance here because XNU relies on running on TLBs only while
     // the actual PTEs have changed early when it retypes its pages RO. wait for XNU to issue
@@ -766,13 +848,15 @@ static void sprr_set_cur_shadow(struct hv_sprr_cpu *cpu, int ttbr_idx, struct hv
 
     if (cpu->cur[ttbr_idx])
         cpu->cur[ttbr_idx]->active &= ~BIT(smp_id());
-    if (sh)
+    if (sh) {
         sh->active |= BIT(smp_id());
+        sh->walkers |= BIT(smp_id());
+    }
 
     cpu->cur[ttbr_idx] = sh;
 }
 
-static void hv_sprr_switch_tables(struct hv_sprr_cpu *cpu)
+static void hv_sprr_switch_tables(struct hv_sprr_cpu *cpu, bool locked)
 {
     if (!cpu->mmu->sprr_en)
         return;
@@ -792,6 +876,9 @@ static void hv_sprr_switch_tables(struct hv_sprr_cpu *cpu)
     sysop("tlbi vmalle1");
     sysop("dsb nsh");
     sysop("isb");
+    /* GENTER/GEXIT can reach this path without the big hypervisor lock. */
+    if (locked)
+        sprr_pool_release_retired(BIT(smp_id()));
 }
 
 static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sprr_cpu *cpu,
@@ -819,11 +906,11 @@ static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sp
         if (sh->ttbr_idx == ttbr_idx && sh->va_bits == va_bits &&
             ((sh->guest_ttbr ^ guest_ttbr) & SPRR_OA_MASK) == 0 &&
             sh->perm_el0 == cpu->mmu->sprr_perm_el0 && sh->perm_el1 == cpu->mmu->sprr_perm_el1 &&
-            sh->mair == mair && sh->el10 == el10) {
+            sh->mair == mair && sh->el10 == el10 && sh->user == cpu->user) {
             sh->lru = ++sprr_lru_clock;
             return sh;
         }
-        if (sh->active)
+        if (sh->active || sh->pins)
             continue;
         if (!slot || (slot->guest_ttbr && sh->lru < slot->lru))
             slot = sh;
@@ -846,11 +933,14 @@ static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sp
     slot->perm_el1 = cpu->mmu->sprr_perm_el1;
     slot->mair = mair;
     slot->el10 = el10;
+    slot->user = cpu->user;
     sprr_leaf_init(slot);
     slot->lru = ++sprr_lru_clock;
+    slot->pins++;
     slot->top =
         sprr_mirror_table(ctx, slot, guest_ttbr & SPRR_OA_MASK, start,
                           ttbr_idx ? 0UL - BIT(va_bits) : 0, 1u << (va_bits - sprr_lvl_off[start]));
+    slot->pins--;
 
     return slot;
 }
@@ -916,7 +1006,7 @@ static void hv_sprr_build(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
     if (!cpu->mmu->sprr_en)
         return;
     sprr_reload_shadows(ctx, cpu);
-    hv_sprr_switch_tables(cpu);
+    hv_sprr_switch_tables(cpu, true);
 }
 
 static void hv_sprr_activate(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
@@ -972,6 +1062,7 @@ static void hv_sprr_deactivate(struct hv_sprr_cpu *cpu)
     sysop("tlbi vmalle1");
     sysop("dsb nsh");
     sysop("isb");
+    sprr_pool_release_retired(BIT(smp_id()));
 
     /*
      * After SPRR is disabled we no longer trap exception entry/return and the guest starts
@@ -998,6 +1089,15 @@ static void hv_sprr_rebuild(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
     }
 }
 
+/* Exception vectors contain only the HVC trampoline before this switch. */
+static void sprr_set_user(struct exc_info *ctx, struct hv_sprr_cpu *cpu, bool user)
+{
+    if (cpu->user == user)
+        return;
+    cpu->user = user;
+    hv_sprr_rebuild(ctx, cpu);
+}
+
 static bool sprr_shadows_active(struct hv_sprr_cpu *cpu)
 {
     return cpu->mmu->sprr_en && sprr_mmu_on();
@@ -1011,7 +1111,7 @@ static void sprr_write_ttbr(struct exc_info *ctx, struct hv_sprr_cpu *cpu, int t
     }
 
     sprr_load_shadow(ctx, cpu, ttbr_idx);
-    hv_sprr_switch_tables(cpu);
+    hv_sprr_switch_tables(cpu, true);
     sprr_update_vbar(cpu);
 }
 
@@ -1048,7 +1148,7 @@ static void sprr_drop_asid(u64 asid)
     for (int i = 0; i < SPRR_N_CACHED_SHADOWS; i++) {
         struct hv_sprr_shadow *sh = &sprr_shadows[i];
 
-        if (!sh->guest_ttbr || sh->active)
+        if (!sh->guest_ttbr || sh->active || sh->pins)
             continue;
         if (FIELD_GET(TTBR_ASID, sh->guest_ttbr) != asid)
             continue;
@@ -1064,6 +1164,8 @@ static bool hv_sprr_gxf_tlbi(void)
     sysop("dsb sy");
     sysop("isb");
 
+    sprr_pool_release_retired(~0UL);
+
     return true;
 }
 
@@ -1077,6 +1179,13 @@ static bool hv_sprr_gxf_tlbi(void)
 
 static bool hv_sprr_handle_tlbi(u64 reg, u64 wval)
 {
+    bool full_broadcast = reg == SYSREG_ISS(sys_reg(1, 0, 8, 1, 0)) || // VMALLE1OS
+                          reg == SYSREG_ISS(sys_reg(1, 0, 8, 3, 0));   // VMALLE1IS
+    bool full_local = reg == SYSREG_ISS(sys_reg(1, 0, 8, 7, 0)); // VMALLE1
+
+    if (full_broadcast || full_local)
+        sysop("dsb sy");
+
     // first just replay the instruction that was trapped
     switch (reg) {
         TLBI(1, 0) // VMALLE1OS
@@ -1115,6 +1224,12 @@ static bool hv_sprr_handle_tlbi(u64 reg, u64 wval)
                    FIELD_GET(ESR_ISS_MSR_OP1, reg), FIELD_GET(ESR_ISS_MSR_CRn, reg),
                    FIELD_GET(ESR_ISS_MSR_CRm, reg), FIELD_GET(ESR_ISS_MSR_OP2, reg));
             return false;
+    }
+
+    if (full_broadcast || full_local) {
+        sysop("dsb sy");
+        sysop("isb");
+        sprr_pool_release_retired(full_broadcast ? ~0UL : BIT(smp_id()));
     }
 
     // if XNU drops an ASID we must drop our shadow tables since it might just hand back
@@ -1213,6 +1328,7 @@ static void sprr_switch_mmu(struct exc_info *ctx, struct hv_sprr_cpu *cpu, struc
     sysop("tlbi vmalle1");
     sysop("dsb nsh");
     sysop("isb");
+    sprr_pool_release_retired(BIT(smp_id()));
 }
 
 static void hv_sprr_switch_world(struct exc_info *ctx, struct hv_sprr_cpu *cpu,
@@ -1236,7 +1352,7 @@ static void hv_sprr_switch_world(struct exc_info *ctx, struct hv_sprr_cpu *cpu,
         }
         sprr_switch_mmu(ctx, cpu, mmu);
     } else {
-        hv_sprr_switch_tables(cpu);
+        hv_sprr_switch_tables(cpu, false);
     }
 }
 
@@ -1245,6 +1361,7 @@ static void hv_gxf_genter(struct exc_info *ctx, u8 imm)
     struct hv_sprr_cpu *cpu = hv_sprr_this();
     u64 link_pstate = sprr_virtual_pstate(cpu, ctx->spsr);
     u64 link_pc = ctx->elr;
+    sprr_set_user(ctx, cpu, false);
 
     // genter from GL is weird but allowed ¯\_(ツ)_/¯
     bool from_guarded = sprr_guarded(cpu);
@@ -1276,6 +1393,7 @@ static bool hv_gxf_gexit(struct exc_info *ctx)
 
     u64 ret_pc = cpu->exc[HV_SPRR_SPTM].elr;
     u64 ret_pstate = cpu->exc[HV_SPRR_SPTM].spsr;
+    sprr_set_user(ctx, cpu, (ret_pstate & SPSR_M) == SPSR_M_EL0);
 
     if (!(cpu->exc[HV_SPRR_SPTM].aspsr & ASPSR_GUARDED))
         hv_sprr_switch_world(ctx, cpu, HV_SPRR_XNU);
@@ -1701,6 +1819,9 @@ bool hv_sprr_handle_eret(struct exc_info *ctx, bool locked)
     u64 mode = regs->spsr & SPSR_M;
     bool el2_mode = mode == SPSR_M_EL2T || mode == SPSR_M_EL2H;
     bool el1_mode = mode == SPSR_M_EL1T || mode == SPSR_M_EL1H;
+    bool user = mode == SPSR_M_EL0;
+    if (cpu->user != user && !locked)
+        return false;
     switch (cpu->context) {
         case HV_SPRR_XNU:
             if (mode != SPSR_M_EL0 && !el2_mode)
@@ -1725,6 +1846,7 @@ bool hv_sprr_handle_eret(struct exc_info *ctx, bool locked)
 
     ctx->elr = regs->elr;
     ctx->spsr = sprr_physical_pstate(regs->spsr);
+    sprr_set_user(ctx, cpu, user);
 
     if (context != cpu->context)
         hv_sprr_switch_world(ctx, cpu, context);
@@ -1753,13 +1875,52 @@ static void sprr_cl4_hvc(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
     ctx->elr = regs->vbar + 0x400;
 }
 
-static void hv_sprr_vector_enter(struct exc_info *ctx, u16 imm)
+static bool hv_sprr_vector_enter(struct exc_info *ctx, u16 imm, bool locked)
 {
     struct hv_sprr_cpu *cpu = hv_sprr_this();
     struct hv_sprr_exc_regs *regs = &cpu->exc[cpu->context];
     unsigned slot = FIELD_GET(HV_HVC_VECTOR_SLOT, imm);
     unsigned type = FIELD_GET(SPRR_VECTOR_TYPE, slot);
     u64 offset = slot * SPRR_VECTOR_STRIDE;
+    if (cpu->user && !locked)
+        return false;
+
+    /* Unpatched userspace sees native UPERM accesses as undefined instructions with SPRR disabled. */
+    u64 spsr = mrs(SYS_SPSR_EL12);
+    if (slot == 8 && cpu->mmu->sprr_en && !sprr_guarded(cpu) &&
+        (spsr & SPSR_M) == SPSR_M_EL0 &&
+        FIELD_GET(ESR_EC, mrs(SYS_ESR_EL12)) == ESR_EC_UNKNOWN) {
+        u64 elr = mrs(SYS_ELR_EL12);
+        u64 pa = hv_translate(elr, false, false, NULL);
+        if (pa) {
+            u32 insn = read32(pa);
+            if ((insn & 0xffdfffe0) == 0xd51ef1a0) { /* MRS/MSR S3_6_C15_C1_5 */
+                u32 rt = insn & 31;
+                if (insn & BIT(21)) {
+                    if (rt != 31)
+                        ctx->regs[rt] = cpu->mmu->sprr_perm_el0;
+                } else {
+                    u64 mask = 0;
+                    for (u32 i = 0; i < SPRR_N_INDICES; i++)
+                        mask |= ((cpu->mmu->sprr_umprr >> (2 * i)) & 3) << (4 * i);
+                    u64 value = rt == 31 ? 0 : ctx->regs[rt];
+                    value = (cpu->mmu->sprr_perm_el0 & ~mask) | (value & mask);
+                    if (value != cpu->mmu->sprr_perm_el0) {
+                        if (!locked)
+                            return false;
+                        cpu->mmu->sprr_perm_el0 = value;
+                        hv_sprr_rebuild(ctx, cpu);
+                    }
+                }
+                ctx->elr = elr + 4;
+                ctx->spsr = spsr;
+                hv_set_elr(ctx->elr);
+                hv_set_spsr(ctx->spsr);
+                sprr_update_pac(ctx->spsr);
+                return true;
+            }
+        }
+    }
 
     regs->elr = mrs(SYS_ELR_EL12);
     regs->spsr = sprr_virtual_pstate(cpu, mrs(SYS_SPSR_EL12));
@@ -1793,10 +1954,12 @@ static void hv_sprr_vector_enter(struct exc_info *ctx, u16 imm)
 
     if (sprr_guarded(cpu))
         regs->aspsr |= ASPSR_GUARDED;
+    sprr_set_user(ctx, cpu, false);
     ctx->elr = regs->vbar + offset;
 
     sprr_update_pac(ctx->spsr);
     hv_set_elr(ctx->elr);
+    return true;
 }
 
 bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm)
@@ -1806,10 +1969,8 @@ bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm)
 
     sprr_prepare_cpu(hv_sprr_this());
 
-    if ((imm & HV_HVC_VECTOR_MASK) == HV_HVC_VECTOR_BASE) {
-        hv_sprr_vector_enter(ctx, imm);
-        return true;
-    }
+    if ((imm & HV_HVC_VECTOR_MASK) == HV_HVC_VECTOR_BASE)
+        return hv_sprr_vector_enter(ctx, imm, false);
 
     if (imm & HV_HVC_SYSREG_FLAG)
         return hv_sprr_emulate_sysreg(ctx, FIELD_GET(HV_HVC_SYSREG_VREG, imm),
@@ -1817,10 +1978,12 @@ bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm)
                                       false);
 
     if ((imm & HV_HVC_GENTER_MASK) == HV_HVC_GENTER_BASE) {
-        if (hv_sprr_this()->context == HV_SPRR_CL4)
+        if (hv_sprr_this()->context == HV_SPRR_CL4 || hv_sprr_this()->user)
             return false;
         hv_gxf_genter(ctx, FIELD_GET(HV_HVC_GENTER_IMM, imm));
     } else if (imm == HV_HVC_GEXIT) {
+        if ((hv_sprr_this()->exc[HV_SPRR_SPTM].spsr & SPSR_M) == SPSR_M_EL0)
+            return false;
         if (!hv_gxf_gexit(ctx))
             return false;
     } else {
@@ -1843,6 +2006,22 @@ bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm)
         if ((cpu->shadow[HV_VREG_HCR_EL2] & (HCR_E2H | HCR_TGE | HCR_VM)) != HCR_E2H)
             return false;
         sprr_cl4_hvc(ctx, cpu);
+        return true;
+    }
+
+    if ((imm & HV_HVC_VECTOR_MASK) == HV_HVC_VECTOR_BASE)
+        return hv_sprr_vector_enter(ctx, imm, true);
+    if ((imm & HV_HVC_GENTER_MASK) == HV_HVC_GENTER_BASE && cpu->context != HV_SPRR_CL4) {
+        hv_gxf_genter(ctx, FIELD_GET(HV_HVC_GENTER_IMM, imm));
+        hv_set_spsr(ctx->spsr);
+        hv_set_elr(ctx->elr);
+        msr(SP_EL1, ctx->sp[1]);
+        return true;
+    }
+    if (imm == HV_HVC_GEXIT && hv_gxf_gexit(ctx)) {
+        hv_set_spsr(ctx->spsr);
+        hv_set_elr(ctx->elr);
+        msr(SP_EL1, ctx->sp[1]);
         return true;
     }
 
