@@ -455,7 +455,6 @@ static u64 *sprr_alloc_table(void)
 #define SPRR_COMMPAGE_VA            0x0000000fffffc000UL
 #define SPRR_COMMPAGE_USER_TIMEBASE 0x90
 #define SPRR_COMMPAGE_CONT_HWCLOCK  0x91
-#define SPRR_COMMPAGE_xPRR_MODE     0x10c
 static struct {
     u64 ipa;
     u8 *data;
@@ -486,8 +485,6 @@ void hv_sprr_commpage_updated(u64 ipa, u64 bytes)
         ((u8 *)value)[SPRR_COMMPAGE_USER_TIMEBASE - off] = 0;
     if (off <= SPRR_COMMPAGE_CONT_HWCLOCK && SPRR_COMMPAGE_CONT_HWCLOCK < end)
         ((u8 *)value)[SPRR_COMMPAGE_CONT_HWCLOCK - off] = 0;
-    if (off <= SPRR_COMMPAGE_xPRR_MODE && SPRR_COMMPAGE_xPRR_MODE < end)
-        ((u8 *)value)[SPRR_COMMPAGE_xPRR_MODE - off] = 0;
 
     u64 dst = (u64)sprr_commpage.data + off;
     switch (bytes) {
@@ -527,7 +524,6 @@ static u64 sprr_commpage_map(u8 level, u64 descriptor)
         memcpy(data, (void *)sprr_ipa_to_pa(ipa), SZ_16K);
         data[SPRR_COMMPAGE_USER_TIMEBASE] = 0;
         data[SPRR_COMMPAGE_CONT_HWCLOCK] = 0;
-        data[SPRR_COMMPAGE_xPRR_MODE] = 0;
 
         sprr_commpage.data = data;
     }
@@ -616,9 +612,7 @@ static const u8 sprr_gl_rwx[16] = {
 };
 /* clang-format on */
 
-// the value that cannot be expressed are over-granted: arbitrary decision since a missing access
-// would be a fault the guest cannot handle but a missing fault might be used for e.g. copy-on-write
-// and break as well. doesn't matter in practise because XNU never seems to use any of these.
+/* Common execution and EL0-access bits; the selected view sets AP_RO below. */
 static u64 sprr_leaf_bits(u8 k, u8 u)
 {
     u64 bits = 0;
@@ -646,12 +640,16 @@ static void sprr_leaf_init(struct hv_sprr_shadow *sh)
 
             // no access from either kernel or userspace -> only way to express it is to just not
             // map it
-            if (!k && !u) {
+            if (!(sh->user ? u : k)) {
                 sh->leaf[guarded][index] = HV_SPRR_NO_ACCESS;
                 continue;
             }
 
             sh->leaf[guarded][index] = sprr_leaf_bits(k, u);
+            /* AP_RO is shared by EL0/EL1. Select it for the level about to run. */
+            sh->leaf[guarded][index] &= ~PTE_AP_RO;
+            if (!((sh->user ? u : k) & SPRR_W))
+                sh->leaf[guarded][index] |= PTE_AP_RO;
         }
     }
 }
@@ -907,7 +905,7 @@ static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sp
         if (sh->ttbr_idx == ttbr_idx && sh->va_bits == va_bits &&
             ((sh->guest_ttbr ^ guest_ttbr) & SPRR_OA_MASK) == 0 &&
             sh->perm_el0 == cpu->mmu->sprr_perm_el0 && sh->perm_el1 == cpu->mmu->sprr_perm_el1 &&
-            sh->mair == mair && sh->el10 == el10) {
+            sh->mair == mair && sh->el10 == el10 && sh->user == cpu->user) {
             sh->lru = ++sprr_lru_clock;
             return sh;
         }
@@ -934,6 +932,7 @@ static struct hv_sprr_shadow *sprr_get_shadow(struct exc_info *ctx, struct hv_sp
     slot->perm_el1 = cpu->mmu->sprr_perm_el1;
     slot->mair = mair;
     slot->el10 = el10;
+    slot->user = cpu->user;
     sprr_leaf_init(slot);
     slot->lru = ++sprr_lru_clock;
     slot->pins++;
@@ -1087,6 +1086,15 @@ static void hv_sprr_rebuild(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
         hv_sprr_build(ctx, cpu);
         sprr_update_vbar(cpu);
     }
+}
+
+/* Exception vectors contain only the HVC trampoline before this switch. */
+static void sprr_set_user(struct exc_info *ctx, struct hv_sprr_cpu *cpu, bool user)
+{
+    if (cpu->user == user)
+        return;
+    cpu->user = user;
+    hv_sprr_rebuild(ctx, cpu);
 }
 
 static bool sprr_shadows_active(struct hv_sprr_cpu *cpu)
@@ -1811,6 +1819,9 @@ bool hv_sprr_handle_eret(struct exc_info *ctx, bool locked)
     u64 mode = regs->spsr & SPSR_M;
     bool el2_mode = mode == SPSR_M_EL2T || mode == SPSR_M_EL2H;
     bool el1_mode = mode == SPSR_M_EL1T || mode == SPSR_M_EL1H;
+    bool user = mode == SPSR_M_EL0;
+    if (cpu->user != user && !locked)
+        return false;
     switch (cpu->context) {
         case HV_SPRR_XNU:
             if (mode != SPSR_M_EL0 && !el2_mode)
@@ -1835,6 +1846,7 @@ bool hv_sprr_handle_eret(struct exc_info *ctx, bool locked)
 
     ctx->elr = regs->elr;
     ctx->spsr = sprr_physical_pstate(regs->spsr);
+    sprr_set_user(ctx, cpu, user);
 
     if (context != cpu->context)
         hv_sprr_switch_world(ctx, cpu, context);
@@ -1863,13 +1875,70 @@ static void sprr_cl4_hvc(struct exc_info *ctx, struct hv_sprr_cpu *cpu)
     ctx->elr = regs->vbar + 0x400;
 }
 
-static void hv_sprr_vector_enter(struct exc_info *ctx, u16 imm)
+/* Unpatched userspace sees native UPERM accesses as undefined instructions with SPRR disabled. */
+static enum mmu_sysreg_result hv_sprr_emulate_uperm(struct exc_info *ctx, struct hv_sprr_cpu *cpu,
+                                                    bool locked)
+{
+    u64 spsr = mrs(SYS_SPSR_EL12);
+    if (!cpu->mmu->sprr_en || sprr_guarded(cpu) || (spsr & SPSR_M) != SPSR_M_EL0 ||
+        FIELD_GET(ESR_EC, mrs(SYS_ESR_EL12)) != ESR_EC_UNKNOWN)
+        return MMU_SYSREG_UNHANDLED;
+
+    u64 elr = mrs(SYS_ELR_EL12);
+    u64 pa = hv_translate(elr, false, false, NULL);
+    if (!pa)
+        return MMU_SYSREG_UNHANDLED;
+
+    u32 insn = read32(pa);
+    if ((insn & 0xffdfffe0) != 0xd51ef1a0) /* MRS/MSR S3_6_C15_C1_5 */
+        return MMU_SYSREG_UNHANDLED;
+
+    u32 rt = insn & 31;
+    if (insn & BIT(21)) {
+        if (rt != 31)
+            ctx->regs[rt] = cpu->mmu->sprr_perm_el0;
+    } else {
+        u64 mask = 0;
+        for (u32 i = 0; i < SPRR_N_INDICES; i++)
+            mask |= ((cpu->mmu->sprr_umprr >> (2 * i)) & 3) << (4 * i);
+        u64 value = rt == 31 ? 0 : ctx->regs[rt];
+        value = (cpu->mmu->sprr_perm_el0 & ~mask) | (value & mask);
+        if (value != cpu->mmu->sprr_perm_el0) {
+            if (!locked)
+                return MMU_SYSREG_RETRY_LOCKED;
+            cpu->mmu->sprr_perm_el0 = value;
+            hv_sprr_rebuild(ctx, cpu);
+        }
+    }
+    ctx->elr = elr + 4;
+    ctx->spsr = spsr;
+    hv_set_elr(ctx->elr);
+    hv_set_spsr(ctx->spsr);
+    sprr_update_pac(ctx->spsr);
+    return MMU_SYSREG_HANDLED;
+}
+
+static bool hv_sprr_vector_enter(struct exc_info *ctx, u16 imm, bool locked)
 {
     struct hv_sprr_cpu *cpu = hv_sprr_this();
     struct hv_sprr_exc_regs *regs = &cpu->exc[cpu->context];
     unsigned slot = FIELD_GET(HV_HVC_VECTOR_SLOT, imm);
     unsigned type = FIELD_GET(SPRR_VECTOR_TYPE, slot);
     u64 offset = slot * SPRR_VECTOR_STRIDE;
+    if (cpu->user && !locked)
+        return false;
+
+    if (slot == 8) {
+        enum mmu_sysreg_result result = hv_sprr_emulate_uperm(ctx, cpu, locked);
+        switch (result) {
+            case MMU_SYSREG_HANDLED:
+                return true;
+            case MMU_SYSREG_RETRY_LOCKED:
+                return false;
+            case MMU_SYSREG_UNHANDLED:
+                break;
+        }
+    }
 
     regs->elr = mrs(SYS_ELR_EL12);
     regs->spsr = sprr_virtual_pstate(cpu, mrs(SYS_SPSR_EL12));
@@ -1903,10 +1972,12 @@ static void hv_sprr_vector_enter(struct exc_info *ctx, u16 imm)
 
     if (sprr_guarded(cpu))
         regs->aspsr |= ASPSR_GUARDED;
+    sprr_set_user(ctx, cpu, false);
     ctx->elr = regs->vbar + offset;
 
     sprr_update_pac(ctx->spsr);
     hv_set_elr(ctx->elr);
+    return true;
 }
 
 bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm)
@@ -1916,10 +1987,8 @@ bool hv_hvc_dispatch_unlocked(struct exc_info *ctx, u16 imm)
 
     sprr_prepare_cpu(hv_sprr_this());
 
-    if ((imm & HV_HVC_VECTOR_MASK) == HV_HVC_VECTOR_BASE) {
-        hv_sprr_vector_enter(ctx, imm);
-        return true;
-    }
+    if ((imm & HV_HVC_VECTOR_MASK) == HV_HVC_VECTOR_BASE)
+        return hv_sprr_vector_enter(ctx, imm, false);
 
     if (imm & HV_HVC_SYSREG_FLAG)
         return hv_sprr_emulate_sysreg(ctx, FIELD_GET(HV_HVC_SYSREG_VREG, imm),
@@ -1956,6 +2025,8 @@ bool hv_hvc_dispatch(struct exc_info *ctx, u16 imm)
         return true;
     }
 
+    if ((imm & HV_HVC_VECTOR_MASK) == HV_HVC_VECTOR_BASE)
+        return hv_sprr_vector_enter(ctx, imm, true);
     if (imm == HV_HVC_GXF_TLBI_ALL || (imm & HV_HVC_GXF_TLBI_MASK) == HV_HVC_GXF_TLBI_ARG ||
         (imm & HV_HVC_GXF_TLBI_ARG2_MASK) == HV_HVC_GXF_TLBI_ARG2)
         return hv_sprr_gxf_tlbi();

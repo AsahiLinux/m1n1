@@ -351,6 +351,7 @@ struct hv_sprr_shadow {
     struct sprr_mirror *top;
     u64 perm_el0, perm_el1, mair;
     bool el10;
+    bool user;
     u64 leaf[2][SPRR_N_INDICES]; // [guarded][guest PTE perm index] -> shadow leaf bits
     u64 active;                  // CPUs holding this shadow in cur[]
     u64 walkers;                 // CPUs not yet flushed after using this root
@@ -388,6 +389,7 @@ struct hv_sprr_mmu {
 };
 
 struct hv_sprr_cpu {
+    bool user;
     enum hv_sprr_context context;
     bool initialized;
     struct hv_sprr_mmu mmu_el20, mmu_el10;
