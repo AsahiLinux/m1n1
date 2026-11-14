@@ -61,16 +61,19 @@ for i, ((base, size), devices) in enumerate(sorted(blocks.items())):
     print()
 
 for i, ((base, size), devices) in enumerate(sorted(blocks.items())):
+    if i:
+        print()
     print(f"&pmgr{i} {{")
 
-    for dev in sorted(devices, key=dt.pmgr_dev_get_addr):
+    for j, dev in enumerate(sorted(devices, key=dt.pmgr_dev_get_addr)):
         if dev.flags.no_ps:
             continue
 
         offset = dt.pmgr_dev_get_offset(dev)
         assert base <= (base + offset) <= (base + size)
 
-        print()
+        if j:
+            print()
         print(f"\t{die_node('ps_' + dev.name.lower())}: power-controller@{offset:x} {{")
         print(f"\t\tcompatible = {ps_compatible};")
         print(f"\t\treg = <{offset:#x} 4>;")
@@ -88,4 +91,3 @@ for i, ((base, size), devices) in enumerate(sorted(blocks.items())):
 
         print( "\t};")
     print( "};")
-    print()
