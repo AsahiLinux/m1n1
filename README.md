@@ -89,6 +89,12 @@ under that same license. Starting from version 2.0.0, m1n1 is licensed
 under the terms of the [GNU General Public License version 2](LICENSE) (or later); any
 code checked in thereafter is available under the terms of the GPL exclusively.
 
+The GPL license specifically does not cover kernels loaded by m1n1 that call back
+into it using EFI runtime services exposed by m1n1 by means of the function pointers
+provided to kernels via src/{psci.h,efi.h}. Using these callback is considered
+normal use of m1n1 and does not fall under the heading of "derived work" and thus
+does not require these kernels to be licensed under the GPL.
+
 * Copyright The Asahi Linux Contributors
 
 Please see the Git history for authorship information.
