@@ -14,9 +14,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             compiler: gcc
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             compiler: llvm
           - os: macos-15
             compiler: llvm-brew
@@ -56,7 +56,7 @@ jobs:
           brew install llvm lld
 
       - name: Run pytest with clang
-        if: matrix.os == 'ubuntu-latest' && matrix.compiler == 'llvm'
+        if: matrix.os == 'ubuntu-24.04' && matrix.compiler == 'llvm'
         env:
           USE_CLANG: '1'
         run: PATH="$(llvm-config --prefix)/bin:$PATH" pytest
