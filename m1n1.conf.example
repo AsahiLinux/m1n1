@@ -25,3 +25,13 @@
 # - gofetch: Mitigate the GoFetch vulnerability (disable the DMP systemwide)
 #   Affected CPUs: M1 and M2 series (M3 and later are unaffected)
 #mitigations=gofetch
+
+# PSCI modes
+# Available options:
+# - off: Use spin-table for CPU bringup and leave sleep states to OS
+# - direct: Expose PSCI-via-EFI for CPU bringup and sleep states and expose
+#           a minimal EFI implementation with EFI runtime services to the
+#           OS. This mode is only meant for development when chainloading
+#           the OS kernel directly and will break when another second stage
+#           loader like e.g. u-boot is used.
+#psci=off
