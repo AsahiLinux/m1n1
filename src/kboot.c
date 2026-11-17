@@ -883,20 +883,20 @@ static int dt_set_bluetooth(void)
 
 static int dt_set_multitouch(void)
 {
-    const char *path = fdt_get_alias(dt, "touchbar0");
-    if (path == NULL)
-        return 0;
-
-    int node = fdt_path_offset(dt, path);
-    if (node < 0)
-        bail("FDT: alias points at nonexistent node\n");
-
     const char *adt_touchbar;
-    if (fdt_node_check_compatible(dt, 0, "apple,j293") == 0)
+    int node;
+
+    if (fdt_node_check_compatible(dt, 0, "apple,j293") == 0) {
         adt_touchbar = "/arm-io/spi0/multi-touch";
-    else if (fdt_node_check_compatible(dt, 0, "apple,j493") == 0)
+        node = fdt_node_offset_by_compatible(dt, 0, "apple,j293-touchbar");
+    } else if (fdt_node_check_compatible(dt, 0, "apple,j493") == 0) {
         adt_touchbar = "/arm-io/spi3/touch-bar";
-    else
+        node = fdt_node_offset_by_compatible(dt, 0, "apple,j493-touchbar");
+    } else {
+        return 0;
+    }
+
+    if (node < 0)
         return 0;
 
     int anode = adt_path_offset(adt, adt_touchbar);
