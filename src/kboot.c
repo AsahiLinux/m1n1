@@ -14,6 +14,7 @@
 #include "iodev.h"
 #include "isp.h"
 #include "kboot_atc.h"
+#include "kboot_utils.h"
 #include "malloc.h"
 #include "mcc.h"
 #include "memory.h"
@@ -2529,57 +2530,25 @@ static int dt_set_isp_fwdata(void)
 static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix, int max_devs,
                                    int regnum)
 {
+    int node;
     int ret = -1;
-    int adt_prefix_len = strlen(adt_prefix);
     int dt_prefix_len = strlen(dt_prefix);
 
     int acnt = 0, phcnt = 0;
-    u64 *addrs = calloc(max_devs, sizeof(u64));
+    adt_dev_node_address *addrs = calloc(max_devs, sizeof(adt_dev_node_address));
     u32 *phandles = calloc(max_devs * 5, sizeof(u32)); // Allow up to 5 extra nodes per device
     if (!addrs || !phandles)
         bail_cleanup("FDT: out of memory\n");
 
-    int path[8];
-    int node = adt_path_offset_trace(adt, "/arm-io", path);
-    if (node < 0)
-        bail_cleanup("ADT: /arm-io not found\n");
+    acnt = adt_device_prefix_addrs(adt_prefix, max_devs, regnum, addrs);
+    if (acnt < 0)
+        goto err;
 
-    int pp = 0;
-    while (path[pp])
-        pp++;
-    path[pp + 1] = 0;
-
-    u32 die_count;
-    if (ADT_GETPROP(adt, node, "die-count", &die_count) < 0) {
-        die_count = 1;
-    }
-    if (die_count > 8) {
-        printf("ADT: limiting die-count from %u to 8\n", die_count);
-        die_count = 8;
-    }
-
-    /* Find ADT registers */
-    ADT_FOREACH_CHILD(adt, node)
-    {
-        const char *name = adt_get_name(adt, node);
-        if (strncmp(name, adt_prefix, adt_prefix_len))
-            continue;
-
-        if (name[adt_prefix_len] < '0' || name[adt_prefix_len] > '9')
-            continue;
-
-        path[pp] = node;
-        if (adt_get_reg(adt, path, "reg", regnum, &addrs[acnt++], NULL) < 0)
-            bail_cleanup("Error getting /arm-io/%s regs\n", name);
-    }
+    u32 die_count = adt_die_count();
 
     for (u32 die = 0; die < die_count; ++die) {
-        char path[32] = "/soc";
-
-        if (die_count > 1) {
-            u64 die_unit_addr = die * PMGR_DIE_OFFSET + 0x200000000;
-            snprintf(path, sizeof(path), "/soc@%lx", die_unit_addr);
-        }
+        char path[32];
+        dt_get_soc_path(path, sizeof(path), die, die_count);
 
         int soc = fdt_path_offset(dt, path);
         if (soc < 0)
@@ -2604,7 +2573,7 @@ static int dt_disable_missing_devs(const char *adt_prefix, const char *dt_prefix
 
             int i;
             for (i = 0; i < acnt; i++)
-                if (addrs[i] == addr)
+                if (addrs[i].address == addr)
                     break;
             if (i < acnt)
                 continue;
