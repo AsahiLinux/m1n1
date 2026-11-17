@@ -18,5 +18,6 @@ struct dt_ranges_tbl {
 void dt_parse_ranges(void *dt, int node, struct dt_ranges_tbl *ranges);
 u64 dt_translate(struct dt_ranges_tbl *ranges, const fdt64_t *reg);
 u64 dt_get_address(void *dt, int node);
+u64 dt_get_address_translated(void *dt, int node, unsigned index, struct dt_ranges_tbl *ranges);
 
 #endif

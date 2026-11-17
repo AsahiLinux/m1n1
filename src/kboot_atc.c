@@ -4,6 +4,7 @@
 #include "kboot_atc.h"
 #include "adt.h"
 #include "devicetree.h"
+#include "kboot_utils.h"
 #include "malloc.h"
 #include "pmgr.h"
 #include "utils.h"
@@ -458,27 +459,12 @@ static int dt_append_atc_tunable(void *dt, int adt_node, int fdt_node,
     return 0;
 }
 
-static void dt_copy_atc_tunables(void *dt, const char *adt_path, const char *dt_alias, int port)
+static void dt_copy_atc_tunables(void *dt, int adt_node, int fdt_node, int port)
 {
     int ret;
     const struct adt_tunable_info *tunables;
     size_t tunable_count;
-
-    int adt_node = adt_path_offset(adt, adt_path);
-    if (adt_node < 0)
-        return;
-
-    const char *fdt_path = fdt_get_alias(dt, dt_alias);
-    if (fdt_path == NULL) {
-        printf("FDT: Unable to find alias %s\n", dt_alias);
-        return;
-    }
-
-    int fdt_node = fdt_path_offset(dt, fdt_path);
-    if (fdt_node < 0) {
-        printf("FDT: Unable to find path %s for alias %s\n", fdt_path, dt_alias);
-        return;
-    }
+    const char *adt_path = adt_get_name(adt, adt_node);
 
     ret = dt_append_fuses(dt, adt_node, fdt_node, port);
     if (ret) {
@@ -565,19 +551,60 @@ cleanup:
     printf("FDT: Unable to setup ATC tunables for %s - USB3/Thunderbolt will not work\n", adt_path);
 }
 
+/*
+ * These register mapping is valid for:
+ * - M1 to M4
+ * - M1 Pro/Max/Ultra
+ * - M2 Pro/Max/Ultra
+ * - M3 Pro/Max
+ */
+#define ADT_T8103_USB2PHY_REG_NUM 0
+#define FDT_T8103_USB2PHY_REG_NUM 3
+
 int kboot_setup_atc(void *dt)
 {
-    char adt_path[32];
-    char fdt_alias[32];
+    adt_dev_node_address atc_phy_devs[ADT_MAX_PREFIX_DEVS] = {0};
+    int node = 0;
+    int adt_reg_idx = ADT_T8103_USB2PHY_REG_NUM;
+    int fdt_reg_idx = FDT_T8103_USB2PHY_REG_NUM;
 
-    for (int i = 0; i < MAX_ATC_DEVS; ++i) {
-        memset(adt_path, 0, sizeof(adt_path));
-        snprintf(adt_path, sizeof(adt_path), "/arm-io/atc-phy%d", i);
+    int devs = adt_device_prefix_addrs("atc-phy", MAX_ATC_DEVS, adt_reg_idx, atc_phy_devs);
+    if (devs < 0) {
+        printf("ADT: Failed to collect /arm-io/atc-phy*,.reg[%d]\n", adt_reg_idx);
+        return 0;
+    }
 
-        memset(fdt_alias, 0, sizeof(adt_path));
-        snprintf(fdt_alias, sizeof(fdt_alias), "atcphy%d", i);
+    int die_count = adt_die_count();
+    for (int die = 0; die < die_count; die++) {
+        char path[32];
+        dt_get_soc_path(path, sizeof(path), die, die_count);
 
-        dt_copy_atc_tunables(dt, adt_path, fdt_alias, i);
+        int soc = fdt_path_offset(dt, path);
+        if (soc < 0) {
+            printf("FDT: %s node not found in devtree\n", path);
+            continue;
+        }
+
+        // parse ranges for address translation
+        struct dt_ranges_tbl ranges[DT_MAX_RANGES] = {0};
+        dt_parse_ranges(dt, soc, ranges);
+
+        /* Find "apple,t*-atcphy" compatible devices and their ADT match */
+        fdt_for_each_subnode(node, dt, soc)
+        {
+            if (fdt_node_check_compatible(dt, node, "apple,t8103-atcphy") &&
+                fdt_node_check_compatible(dt, node, "apple,t8122-atcphy"))
+                continue;
+
+            u64 addr = dt_get_address_translated(dt, node, fdt_reg_idx, ranges);
+
+            for (int i = 0; i < devs; ++i) {
+                if ((atc_phy_devs[i].address & ~0xF) == addr) {
+                    dt_copy_atc_tunables(dt, atc_phy_devs[i].node, node, atc_phy_devs[i].port);
+                    break;
+                }
+            }
+        }
     }
 
     return 0;

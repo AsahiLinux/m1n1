@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "devicetree.h"
+#include "utils.h"
 
 #include "libfdt/libfdt.h"
 
@@ -66,4 +67,19 @@ u64 dt_get_address(void *dt, int node)
         return 0;
 
     return dt_translate(ranges, reg);
+}
+
+u64 dt_get_address_translated(void *dt, int node, unsigned index, struct dt_ranges_tbl *ranges)
+{
+    int reg_len = 0;
+    const fdt64_t *reg = fdt_getprop(dt, node, "reg", &reg_len);
+    // assume #addr-cells == #size-cells == 2
+    unsigned addr_idx = index * 2;
+
+    if (!reg || reg_len < (long)((addr_idx + 2) * sizeof(*reg))) {
+        printf("FDT: failed to get reg[%u] of %s\n", index, fdt_get_name(dt, node, NULL));
+        return 0;
+    }
+
+    return dt_translate(ranges, reg + addr_idx);
 }
