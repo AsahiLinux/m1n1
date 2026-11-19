@@ -26,6 +26,9 @@
 // define to '1' to switch the DFU USB-C port to debugusb
 #define USE_DEBUG_USB 0
 
+// Enable debug printf inside PSCI code
+#define PSCI_DEBUG
+
 #ifdef RELEASE
 # define FB_SILENT_MODE
 # ifdef CHAINLOADING

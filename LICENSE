@@ -336,3 +336,12 @@ proprietary programs.  If your program is a subroutine library, you may
 consider it more useful to permit linking proprietary applications with the
 library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.
+
+
+GPL License Exception:
+
+The GPL license specifically does not cover kernels loaded by m1n1 that call back
+into it using EFI runtime services exposed by m1n1 by means of the function pointers
+provided to kernels via src/{psci.h,efi.h}. Using these callback is considered
+normal use of m1n1 and does not fall under the heading of "derived work" and thus
+does not require these kernels to be licensed under the GPL.
