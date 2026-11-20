@@ -402,7 +402,7 @@ int display_configure(const char *config)
     return 0;
 #endif
 
-    if (os_firmware.version >= V15_0B1) {
+    if (firmware_os_in_range(V15_0B1, V_UNKNOWN)) {
         printf("display: Unsupported firmware version %s, skipping configuration\n",
                os_firmware.string);
         return 0;
