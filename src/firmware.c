@@ -271,7 +271,8 @@ bool firmware_iboot_in_range(u32 min[IBOOT_VER_COMP], u32 max[IBOOT_VER_COMP],
 }
 
 // Note: semi-open range
-bool firmware_sfw_in_range(enum fw_version lower_bound, enum fw_version upper_bound)
+static bool firmware_in_range(enum fw_version lower_bound, enum fw_version upper_bound,
+                              const char *iboot_ver)
 {
     u32 min[IBOOT_VER_COMP] = {0};
     u32 max[IBOOT_VER_COMP] = {UINT32_MAX};
@@ -283,9 +284,19 @@ bool firmware_sfw_in_range(enum fw_version lower_bound, enum fw_version upper_bo
     if (upper_bound > V_UNKNOWN && upper_bound < NUM_FW_VERSIONS)
         firmware_parse_version(fw_versions[upper_bound].iboot, max);
 
-    firmware_parse_version(system_firmware.iboot, this);
+    firmware_parse_version(iboot_ver, this);
 
     return firmware_iboot_in_range(min, max, this);
+}
+
+bool firmware_os_in_range(enum fw_version lower_bound, enum fw_version upper_bound)
+{
+    return firmware_in_range(lower_bound, upper_bound, os_firmware.iboot);
+}
+
+bool firmware_sfw_in_range(enum fw_version lower_bound, enum fw_version upper_bound)
+{
+    return firmware_in_range(lower_bound, upper_bound, system_firmware.iboot);
 }
 
 int firmware_init(void)
