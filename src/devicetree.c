@@ -83,3 +83,14 @@ u64 dt_get_address_translated(void *dt, int node, unsigned index, struct dt_rang
 
     return dt_translate(ranges, reg + addr_idx);
 }
+
+bool dt_node_is_compatible(const void *dt, int nodeoffset, const char **compatibles,
+                           size_t num_compatibles)
+{
+    for (size_t c = 0; c < num_compatibles; c++) {
+        if (fdt_node_check_compatible(dt, nodeoffset, compatibles[c]) == 0)
+            return true;
+    }
+
+    return false;
+}
