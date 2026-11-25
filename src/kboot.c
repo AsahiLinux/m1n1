@@ -1138,7 +1138,7 @@ static const struct adt_tunable_info usb4_rc_tunables[] = {
     {"lbw_fabric_tunables", "apple,tunable-rc", 0x8000, 0x4000, true},
 };
 
-static const struct adt_tunable_info usb4_pcie_adapter_tunables[] = {
+__always_unused static const struct adt_tunable_info usb4_pcie_adapter_tunables[] = {
     {"pcie_adapter_regs_tunables", "apple,tunable-pcie-adapter", 0x0, 0x4000, true},
 };
 
@@ -1220,22 +1220,9 @@ static u8 crc8(u8 *b, size_t len)
     return value;
 }
 
-static int dt_copy_usb4_drom(const char *adt_path, const char *dt_alias, u64 router_uuid)
+static int dt_copy_usb4_drom(int adt_node, int fdt_node, u64 router_uuid)
 {
     u8 drom[256];
-
-    int adt_node = adt_path_offset(adt, adt_path);
-    if (adt_node < 0)
-        return -1;
-
-    const char *fdt_path = fdt_get_alias(dt, dt_alias);
-    if (fdt_path == NULL)
-        bail("FDT: Unable to find alias %s\n", dt_alias);
-
-    int fdt_node = fdt_path_offset(dt, fdt_path);
-    if (fdt_node < 0)
-        bail("FDT: Unable to find path %s for alias %s\n", fdt_path, dt_alias);
-
     u32 drom_len;
     const u8 *drom_blob = adt_getprop(adt, adt_node, "thunderbolt-drom", &drom_len);
     if (!drom_blob || !drom_len)
@@ -1252,21 +1239,10 @@ static int dt_copy_usb4_drom(const char *adt_path, const char *dt_alias, u64 rou
     return fdt_setprop(dt, fdt_node, "apple,thunderbolt-drom", drom, drom_len);
 }
 
-static int dt_copy_acio_tunables(const char *adt_path, const char *dt_alias,
-                                 const struct adt_tunable_info *tunables, size_t n_tunables)
+static int __dt_copy_acio_tunables(int adt_node, int fdt_node,
+                                   const struct adt_tunable_info *tunables, size_t n_tunables)
 {
     int ret;
-    int adt_node = adt_path_offset(adt, adt_path);
-    if (adt_node < 0)
-        return -1;
-
-    const char *fdt_path = fdt_get_alias(dt, dt_alias);
-    if (fdt_path == NULL)
-        bail("FDT: Unable to find alias %s\n", dt_alias);
-
-    int fdt_node = fdt_path_offset(dt, fdt_path);
-    if (fdt_node < 0)
-        bail("FDT: Unable to find path %s for alias %s\n", fdt_path, dt_alias);
 
     for (size_t i = 0; i < n_tunables; ++i) {
         ret = dt_append_acio_tunable(adt_node, fdt_node, &tunables[i]);
@@ -1283,36 +1259,55 @@ err:
     return -1;
 }
 
+const char *nhi_compatibles[] = {
+    "apple,t8103-usb4-nhi",
+};
+
+static int dt_copy_acio_tunables(void *dt, int adt_node, int fdt_node, int index, void *data)
+{
+    u64 router_uuid = data ? *(u64 *)data : 0;
+    int node;
+    int ret;
+
+    ret =
+        __dt_copy_acio_tunables(adt_node, fdt_node, usb4_rc_tunables, ARRAY_SIZE(usb4_rc_tunables));
+    if (ret < 0)
+        return ret;
+
+    fdt_for_each_subnode(node, dt, fdt_node)
+    {
+        if (!dt_node_is_compatible(dt, node, nhi_compatibles, ARRAY_SIZE(nhi_compatibles)))
+            continue;
+
+        ret = __dt_copy_acio_tunables(adt_node, node, usb4_nhi_tunables,
+                                      ARRAY_SIZE(usb4_nhi_tunables));
+        if (ret < 0)
+            return ret;
+
+        if (router_uuid)
+            dt_copy_usb4_drom(adt_node, node, router_uuid | index);
+    }
+
+    return 0;
+}
+
+#define ADT_T8103_USB4_ACIO_REG_NUM 2
+#define FDT_T8103_USB4_ACIO_REG_NUM 0
+
+const char *acio_compatibles[] = {
+    "apple,t8103-usb4-acio",
+};
+
 static int dt_set_acio_tunables(void)
 {
-    char adt_path[32];
-    char fdt_alias[32];
     u64 router_uuid = rust_usb4_router_uuid();
 
     if (!router_uuid)
         bail("ADT: unable to generate USB4 router UUID\n");
 
-    for (int i = 0; i < MAX_CIO_DEVS; ++i) {
-        snprintf(adt_path, sizeof(adt_path), "/arm-io/acio%d", i);
-
-        snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_rc", i);
-        if (!fdt_get_alias(dt, fdt_alias))
-            snprintf(fdt_alias, sizeof(fdt_alias), "usb4-%d-acio", i);
-        dt_copy_acio_tunables(adt_path, fdt_alias, usb4_rc_tunables,
-                              sizeof(usb4_rc_tunables) / sizeof(*usb4_rc_tunables));
-
-        snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_pcie_adapter", i);
-        dt_copy_acio_tunables(adt_path, fdt_alias, usb4_pcie_adapter_tunables,
-                              sizeof(usb4_pcie_adapter_tunables) /
-                                  sizeof(*usb4_pcie_adapter_tunables));
-
-        snprintf(fdt_alias, sizeof(fdt_alias), "usb4_%d_nhi", i);
-        if (!fdt_get_alias(dt, fdt_alias))
-            snprintf(fdt_alias, sizeof(fdt_alias), "usb4-%d-nhi", i);
-        dt_copy_acio_tunables(adt_path, fdt_alias, usb4_nhi_tunables,
-                              sizeof(usb4_nhi_tunables) / sizeof(*usb4_nhi_tunables));
-        dt_copy_usb4_drom(adt_path, fdt_alias, router_uuid | i);
-    }
+    kboot_setup_matching_nodes(dt, MAX_CIO_DEVS, "acio", ADT_T8103_USB4_ACIO_REG_NUM,
+                               acio_compatibles, ARRAY_SIZE(acio_compatibles),
+                               FDT_T8103_USB4_ACIO_REG_NUM, dt_copy_acio_tunables, &router_uuid);
 
     return 0;
 }

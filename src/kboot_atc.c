@@ -459,7 +459,8 @@ static int dt_append_atc_tunable(void *dt, int adt_node, int fdt_node,
     return 0;
 }
 
-static int dt_copy_atc_tunables(void *dt, int adt_node, int fdt_node, int port)
+static int dt_copy_atc_tunables(void *dt, int adt_node, int fdt_node, int port,
+                                __always_unused void *data)
 {
     int ret;
     const struct adt_tunable_info *tunables;
@@ -571,5 +572,5 @@ int kboot_setup_atc(void *dt)
 {
     return kboot_setup_matching_nodes(dt, MAX_ATC_DEVS, "atc-phy", ADT_T8103_USB2PHY_REG_NUM,
                                       atcphy_compatibles, ARRAY_SIZE(atcphy_compatibles),
-                                      FDT_T8103_USB2PHY_REG_NUM, dt_copy_atc_tunables);
+                                      FDT_T8103_USB2PHY_REG_NUM, dt_copy_atc_tunables, NULL);
 }
