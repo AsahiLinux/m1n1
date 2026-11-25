@@ -4,8 +4,11 @@
 
 #include "kboot_utils.h"
 #include "adt.h"
+#include "devicetree.h"
 #include "pmgr.h"
 #include "utils.h"
+
+#include "libfdt/libfdt.h"
 
 #define bail(...)                                                                                  \
     do {                                                                                           \
@@ -76,4 +79,51 @@ int dt_get_soc_path(char *path, size_t size, int die, int die_count)
     }
 
     return snprintf(path, size, "/soc");
+}
+
+int kboot_setup_matching_nodes(void *dt, int max_devices, const char *adt_prefix, int adt_reg_idx,
+                               const char **compatibles, size_t num_compatibles, int fdt_reg_idx,
+                               kboot_match_t *match_action)
+{
+    adt_dev_node_address adt_devices[ADT_MAX_PREFIX_DEVS] = {0};
+    int node = 0;
+
+    int devs = adt_device_prefix_addrs(adt_prefix, max_devices, adt_reg_idx, adt_devices);
+    if (devs < 0) {
+        printf("ADT: Failed to collect %s.reg[%d]\n", adt_prefix, adt_reg_idx);
+        return 0;
+    }
+
+    int die_count = adt_die_count();
+    for (int die = 0; die < die_count; die++) {
+        char path[32];
+        dt_get_soc_path(path, sizeof(path), die, die_count);
+
+        int soc = fdt_path_offset(dt, path);
+        if (soc < 0) {
+            printf("FDT: %s node not found in devtree\n", path);
+            continue;
+        }
+
+        // parse ranges for address translation
+        struct dt_ranges_tbl ranges[DT_MAX_RANGES] = {0};
+        dt_parse_ranges(dt, soc, ranges);
+
+        /* Find compatible devices and their ADT match */
+        fdt_for_each_subnode(node, dt, soc)
+        {
+            if (!dt_node_is_compatible(dt, node, compatibles, num_compatibles))
+                continue;
+            u64 addr = dt_get_address_translated(dt, node, fdt_reg_idx, ranges);
+
+            for (int i = 0; i < devs; ++i) {
+                if ((adt_devices[i].address) == addr) {
+                    match_action(dt, adt_devices[i].node, node, adt_devices[i].port);
+                    break;
+                }
+            }
+        }
+    }
+
+    return 0;
 }

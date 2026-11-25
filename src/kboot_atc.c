@@ -459,7 +459,7 @@ static int dt_append_atc_tunable(void *dt, int adt_node, int fdt_node,
     return 0;
 }
 
-static void dt_copy_atc_tunables(void *dt, int adt_node, int fdt_node, int port)
+static int dt_copy_atc_tunables(void *dt, int adt_node, int fdt_node, int port)
 {
     int ret;
     const struct adt_tunable_info *tunables;
@@ -535,7 +535,7 @@ static void dt_copy_atc_tunables(void *dt, int adt_node, int fdt_node, int port)
         goto cleanup;
     }
 
-    return;
+    return 0;
 
 cleanup:
     /*
@@ -549,6 +549,7 @@ cleanup:
     fdt_delprop(dt, fdt_node, "apple,tunable-common");
 
     printf("FDT: Unable to setup ATC tunables for %s - USB3/Thunderbolt will not work\n", adt_path);
+    return 0;
 }
 
 /*
@@ -561,51 +562,14 @@ cleanup:
 #define ADT_T8103_USB2PHY_REG_NUM 0
 #define FDT_T8103_USB2PHY_REG_NUM 3
 
+const char *atcphy_compatibles[] = {
+    "apple,t8103-atcphy",
+    "apple,t8122-atcphy",
+};
+
 int kboot_setup_atc(void *dt)
 {
-    adt_dev_node_address atc_phy_devs[ADT_MAX_PREFIX_DEVS] = {0};
-    int node = 0;
-    int adt_reg_idx = ADT_T8103_USB2PHY_REG_NUM;
-    int fdt_reg_idx = FDT_T8103_USB2PHY_REG_NUM;
-
-    int devs = adt_device_prefix_addrs("atc-phy", MAX_ATC_DEVS, adt_reg_idx, atc_phy_devs);
-    if (devs < 0) {
-        printf("ADT: Failed to collect /arm-io/atc-phy*,.reg[%d]\n", adt_reg_idx);
-        return 0;
-    }
-
-    int die_count = adt_die_count();
-    for (int die = 0; die < die_count; die++) {
-        char path[32];
-        dt_get_soc_path(path, sizeof(path), die, die_count);
-
-        int soc = fdt_path_offset(dt, path);
-        if (soc < 0) {
-            printf("FDT: %s node not found in devtree\n", path);
-            continue;
-        }
-
-        // parse ranges for address translation
-        struct dt_ranges_tbl ranges[DT_MAX_RANGES] = {0};
-        dt_parse_ranges(dt, soc, ranges);
-
-        /* Find "apple,t*-atcphy" compatible devices and their ADT match */
-        fdt_for_each_subnode(node, dt, soc)
-        {
-            if (fdt_node_check_compatible(dt, node, "apple,t8103-atcphy") &&
-                fdt_node_check_compatible(dt, node, "apple,t8122-atcphy"))
-                continue;
-
-            u64 addr = dt_get_address_translated(dt, node, fdt_reg_idx, ranges);
-
-            for (int i = 0; i < devs; ++i) {
-                if ((atc_phy_devs[i].address & ~0xF) == addr) {
-                    dt_copy_atc_tunables(dt, atc_phy_devs[i].node, node, atc_phy_devs[i].port);
-                    break;
-                }
-            }
-        }
-    }
-
-    return 0;
+    return kboot_setup_matching_nodes(dt, MAX_ATC_DEVS, "atc-phy", ADT_T8103_USB2PHY_REG_NUM,
+                                      atcphy_compatibles, ARRAY_SIZE(atcphy_compatibles),
+                                      FDT_T8103_USB2PHY_REG_NUM, dt_copy_atc_tunables);
 }
