@@ -19,10 +19,10 @@ int adt_die_count(void);
 
 int dt_get_soc_path(char *path, size_t size, int die, int die_count);
 
-typedef int(kboot_match_t)(void *dt, int adt_node, int node_offset, int index);
+typedef int(kboot_match_t)(void *dt, int adt_node, int node_offset, int index, void *data);
 
 int kboot_setup_matching_nodes(void *dt, int max_devices, const char *adt_prefix, int adt_reg_idx,
                                const char **compatibles, size_t num_compatibles, int fdt_reg_idx,
-                               kboot_match_t *match_action);
+                               kboot_match_t *match_action, void *action_data);
 
 #endif /* KBOOT_UTILS_H */

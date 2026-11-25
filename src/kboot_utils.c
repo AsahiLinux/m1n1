@@ -83,7 +83,7 @@ int dt_get_soc_path(char *path, size_t size, int die, int die_count)
 
 int kboot_setup_matching_nodes(void *dt, int max_devices, const char *adt_prefix, int adt_reg_idx,
                                const char **compatibles, size_t num_compatibles, int fdt_reg_idx,
-                               kboot_match_t *match_action)
+                               kboot_match_t *match_action, void *action_data)
 {
     adt_dev_node_address adt_devices[ADT_MAX_PREFIX_DEVS] = {0};
     int node = 0;
@@ -118,7 +118,7 @@ int kboot_setup_matching_nodes(void *dt, int max_devices, const char *adt_prefix
 
             for (int i = 0; i < devs; ++i) {
                 if ((adt_devices[i].address) == addr) {
-                    match_action(dt, adt_devices[i].node, node, adt_devices[i].port);
+                    match_action(dt, adt_devices[i].node, node, adt_devices[i].port, action_data);
                     break;
                 }
             }
